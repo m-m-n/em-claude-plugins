@@ -139,8 +139,9 @@ b28a7166e8dce876075fc550ada7fdd7027211fa):
   test_unlaunched_divergence_matchers_flag_absence_in_pre_change_wording
 - test_narrower_than_orchestrator_rule_stated -> new wording -> same proof
   above
-- test_reason_states_fail_open_nets_not_authorities -> new wording -> same
-  proof above
+- test_reason_states_missed_first_launch_detection -> new wording -> same
+  proof above (renamed by task0001 (divergence-fail-open-wording); see
+  below)
 - TestRecycledTaskIdRuleScopedToOrchestrator's group-placement tests -> new
   wording (group anchors) ->
   test_group_anchors_absent_in_pre_change_wording
@@ -206,6 +207,64 @@ belongs to task0020 this round and is not read as changed content by any
 module this task owns (Test Notes: "Do not assert over ... implement-
 phase.md from any module this task owns ... Document agreement across
 the two tasks is a verify-phase item").
+
+task0001 (divergence-fail-open-wording) rewords the I.2.a divergence
+paragraph so it no longer calls the hooks' false-BLOCK behavior
+"fail-open" -- it states the missed-first-launch rationale instead, names
+the consecutive-block cap that bounds the false BLOCK, and adds two
+phrases on I.2.b step 1's relationship to the divergence (its no-event
+reconcile classification is also status-agnostic; `status != merged`
+takes effect only as I.2.a's selection-time filter). A short matching note
+is attached to I.2.b step 1 itself. Covers this task's own Acceptance
+Criteria (feature-docs/divergence-fail-open-wording/tasks/task0001.md):
+
+- AC-1 (FR1, NFR2): the divergence span (from
+  UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE through AUTHORITATIVE_SOURCE_PHRASE)
+  contains no "fail-open" substring and all four NFR2 phrases ->
+  TestDivergenceSpanExcludesFailOpenWording.
+- AC-2 (FR1): the span contains DIVERGENCE_REASON_PHRASE's new rationale
+  value and FALSE_BLOCK_CAP_BOUND_PHRASE ->
+  TestUnlaunchedDetectionDivergenceRecorded /
+  TestDivergenceSpanExcludesFailOpenWording.
+- AC-3 (FR2): the span contains RECONCILE_STATUS_AGNOSTIC_PHRASE and
+  SELECTION_TIME_FILTER_PHRASE -> same classes.
+- AC-4 (FR3): the I.2.b section contains
+  I2B_NO_EVENT_STATUS_AGNOSTIC_NOTE_PHRASE and still contains "the
+  recycled-task-id rule in I.2.a above" -> TestI2bStep1NoEventClassificationNote.
+- AC-5 (FR4): PRE_CHANGE_DIVERGENCE_PARAGRAPH_SAMPLE and
+  PRE_CHANGE_I2B_STEP1_SAMPLE hold verbatim commit-4999893 samples, each
+  guarded by a self-check, and negative-proofed against every AC-2/AC-3/
+  AC-4 phrase above; the renamed
+  test_reason_states_missed_first_launch_detection carries no "fail_open"
+  / "fail-open" in its name, and the only remaining in-module reference to
+  the old name is this docstring's historical note above -> TestPreChangeSampleGuards /
+  TestValidationDetectsRegressions.
+- AC-6 (FR5): covered by the existing test_plugin_version_parity in
+  tests/test_check_plugin_invariants.py, not by a new test here (Test
+  Notes).
+- AC-7: the full suite (`python3 -m unittest discover -s tests`) stays
+  green, including the pins this task does not touch (NFR1, the hook
+  classification table and its anchor, the I.2.a Select line).
+
+Matcher -> negative-proof inventory added by task0001
+(divergence-fail-open-wording; every matcher's negative proof runs against
+PRE_CHANGE_DIVERGENCE_PARAGRAPH_SAMPLE or PRE_CHANGE_I2B_STEP1_SAMPLE,
+verbatim excerpts of this task's own base commit
+4999893afb381fd129b648a992c3a9222770597e):
+
+- test_reason_states_missed_first_launch_detection -> new wording ->
+  test_missed_first_launch_rationale_matcher_flags_absence_in_pre_change_divergence_wording
+- test_false_block_bounded_by_consecutive_block_cap -> new wording ->
+  test_cap_bound_matcher_flags_absence_in_pre_change_divergence_wording
+- test_i2b_relationship_stated -> new wording ->
+  test_i2b_relationship_matchers_flag_absence_in_pre_change_divergence_wording
+- TestDivergenceSpanExcludesFailOpenWording.test_span_contains_no_fail_open_substring
+  -> regression guard (absence of the removed term) -> proved directly by
+  TestPreChangeSampleGuards.test_divergence_paragraph_sample_retains_old_fail_open_phrase,
+  which asserts the OLD phrase IS present in the pre-change sample
+- test_note_phrase_present (TestI2bStep1NoEventClassificationNote) -> new
+  wording ->
+  test_i2b_note_matcher_flags_absence_in_pre_change_i2b_wording
 """
 
 import importlib.util
@@ -436,10 +495,56 @@ NARROWER_THAN_ORCHESTRATOR_PHRASE = (
     "additionally excludes any task whose `status` reads `merged`"
 )
 NO_EQUIVALENT_EXCLUSION_PHRASE = "the hooks carry no equivalent exclusion"
-DIVERGENCE_REASON_PHRASE = "the hooks are fail-open nets, not authorities"
+
+# task0001 (divergence-fail-open-wording): DIVERGENCE_REASON_PHRASE's value
+# is rewritten to state the rationale for treating a no-journal-event task
+# as unlaunched (missed-first-launch detection) instead of calling the
+# hooks' behavior "fail-open" -- the constant NAME is kept (it still
+# describes the same role: the divergence paragraph's stated reason),
+# per Conventions' naming rule.
+DIVERGENCE_REASON_PHRASE = (
+    "treating a task with no journal event at all as unlaunched is what "
+    "detects a missed first launch"
+)
 AUTHORITATIVE_SOURCE_PHRASE = (
     "the orchestrator protocol above together with the I.2.a resume guard "
     "remain the authoritative source of task state"
+)
+
+# task0001 (divergence-fail-open-wording): the false-BLOCK consequence and
+# its bound (design item 3) -- the consecutive-block cap value itself is
+# NOT asserted here (out of scope, NFR1); only the bound's existence and
+# the cap-exceeded fallback are pinned.
+FALSE_BLOCK_CAP_BOUND_PHRASE = (
+    "this false BLOCK is bounded by the consecutive-block cap (3), and "
+    "once the cap is exceeded the hook emits a warning and lets the turn "
+    "end"
+)
+
+# task0001 (divergence-fail-open-wording): the I.2.b step 1 relationship
+# (design item 4) -- two independent phrases, one for the status-agnostic
+# no-event reconcile classification and one for the selection-time filter,
+# so a break in either half fails only that half's assertion.
+RECONCILE_STATUS_AGNOSTIC_PHRASE = (
+    "I.2.b step 1's reconcile also classifies a task with no journal "
+    "event as unlaunched the same way, without consulting status"
+)
+SELECTION_TIME_FILTER_PHRASE = (
+    "the `status != merged` exclusion takes effect as I.2.a's "
+    "selection-time filter"
+)
+
+# task0001 (divergence-fail-open-wording): the FR3 note attached to I.2.b
+# step 1's "no event → unlaunched" classification -- states the same
+# status-agnostic scoping FR2 states in I.2.a's divergence paragraph, and
+# names I.2.a's selection condition as where `status != merged` takes
+# effect. Scoped to the no-event case only (SPEC A7): worded so it cannot
+# be confused with the separate `failed` + `pending` recycled-task-id
+# carve-out a few clauses later in the same step, which DOES read status.
+I2B_NO_EVENT_STATUS_AGNOSTIC_NOTE_PHRASE = (
+    "this no-event classification does not consult the `workflow.yaml` "
+    "status; the `status != merged` exclusion is applied by I.2.a's "
+    "selection condition"
 )
 
 # --- task0001 (recycled-task-id-contract): pre-change wording samples, each
@@ -472,6 +577,55 @@ PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE = (
     "stays append-only (see Supporting cast below) — only the "
     "interpretation of\n"
     "its events is scoped by this rule."
+)
+
+# --- task0001 (divergence-fail-open-wording): pre-change wording samples,
+# each a verbatim excerpt of em-workflow/references/implement-phase.md at
+# this task's own base commit 4999893afb381fd129b648a992c3a9222770597e
+# (Contract 2) -- not paraphrased, not reconstructed, copied the same way
+# the other pre-change samples in this module were captured.
+
+# The I.2.a divergence paragraph this task rewrites, copied verbatim (the
+# whole paragraph, matching the task plan's line range 298-308 at that
+# commit).
+PRE_CHANGE_DIVERGENCE_PARAGRAPH_SAMPLE = (
+    "The other three queue hooks detect a task as **unlaunched** solely "
+    "from the absence of\n"
+    "any journal event for that task id — never from `tasks.{T}.status`.\n"
+    "`queue_stop_guard.py` is the exception: as described above, it also "
+    "reads\n"
+    "`tasks.{T}.status` to apply the recycled-task-id carve-out that "
+    "reclassifies\n"
+    "a `failed` + `pending` task as unlaunched. This is\n"
+    "narrower than the orchestrator's own selection rule above, which\n"
+    "additionally excludes any task whose `status` reads `merged`; the "
+    "hooks\n"
+    "carry no equivalent exclusion. This divergence is recorded, not "
+    "fixed: the\n"
+    "hooks are fail-open nets, not authorities (see 'Supporting cast: "
+    "journal,\n"
+    "hooks, resume' below), and the orchestrator protocol above together "
+    "with\n"
+    "the I.2.a resume guard remain the authoritative source of task "
+    "state."
+)
+
+# I.2.b step 1's reconcile bullet this task adds a note to, copied verbatim
+# (matching the task plan's line range 465-471 at the same commit).
+PRE_CHANGE_I2B_STEP1_SAMPLE = (
+    "1. **Reconcile** — replay the journal (last-event-per-task rule: no "
+    "event →\n"
+    "   unlaunched; `launched` → in-flight; `merged` → merged; `failed` "
+    "→\n"
+    "   failed — except that a task whose journal last event is `failed` "
+    "AND\n"
+    "   whose workflow.yaml `status` is `pending` is unlaunched instead, "
+    "the\n"
+    "   recycled-task-id rule in I.2.a above; a `launched` last event is "
+    "always\n"
+    "   in-flight regardless of workflow.yaml `status`) and cross-check "
+    "against\n"
+    "   git actual state, trust-but-verify:"
 )
 
 # --- task0001 (routeback-admissibility-exits): module-level constants for
@@ -969,7 +1123,13 @@ class TestUnlaunchedDetectionDivergenceRecorded(unittest.TestCase):
     its reason, that the hooks treat a task as unlaunched solely from the
     absence of a journal event for that id, and nowhere promises the
     `status != merged` protection that only the orchestrator's own
-    selection rule applies."""
+    selection rule applies.
+
+    task0001 (divergence-fail-open-wording): the reason is no longer
+    "the hooks are fail-open nets, not authorities" (AC-1, AC-2) -- it
+    states the missed-first-launch rationale and the false-BLOCK
+    consecutive-block-cap bound instead, and gains two more pinned phrases
+    on I.2.b step 1's relationship to this rule (AC-3)."""
 
     @classmethod
     def setUpClass(cls):
@@ -982,9 +1142,76 @@ class TestUnlaunchedDetectionDivergenceRecorded(unittest.TestCase):
         self.assertIn(NARROWER_THAN_ORCHESTRATOR_PHRASE, self.i2a)
         self.assertIn(NO_EQUIVALENT_EXCLUSION_PHRASE, self.i2a)
 
-    def test_reason_states_fail_open_nets_not_authorities(self):
+    def test_reason_states_missed_first_launch_detection(self):
         self.assertIn(DIVERGENCE_REASON_PHRASE, self.i2a)
         self.assertIn(AUTHORITATIVE_SOURCE_PHRASE, self.i2a)
+
+    def test_false_block_bounded_by_consecutive_block_cap(self):
+        self.assertIn(FALSE_BLOCK_CAP_BOUND_PHRASE, self.i2a)
+
+    def test_i2b_relationship_stated(self):
+        self.assertIn(RECONCILE_STATUS_AGNOSTIC_PHRASE, self.i2a)
+        self.assertIn(SELECTION_TIME_FILTER_PHRASE, self.i2a)
+
+
+class TestDivergenceSpanExcludesFailOpenWording(unittest.TestCase):
+    """AC-1, AC-2, AC-3 (task0001, divergence-fail-open-wording): within the
+    whitespace-normalized I.2.a section, the divergence span -- from the
+    start of UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE through the end of
+    AUTHORITATIVE_SOURCE_PHRASE -- contains no "fail-open" substring, and
+    every phrase pinned for the new rationale, the cap bound and the I.2.b
+    relationship lies inside it (not merely somewhere in I.2.a). The check
+    is limited to this span, not the whole document, because the
+    Supporting cast section keeps "All of the hooks above are fail-open
+    nets, not authorities" verbatim (NFR1, out of scope; SPEC A4/A8)."""
+
+    @classmethod
+    def setUpClass(cls):
+        i2a = _normalize_ws(_i2a_section(_read()))
+        start = i2a.index(UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE)
+        end = i2a.index(AUTHORITATIVE_SOURCE_PHRASE, start) + len(
+            AUTHORITATIVE_SOURCE_PHRASE
+        )
+        cls.span = i2a[start:end]
+
+    def test_span_contains_no_fail_open_substring(self):
+        self.assertNotIn("fail-open", self.span)
+
+    def test_span_contains_nfr2_phrases(self):
+        for phrase in (
+            UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE,
+            NARROWER_THAN_ORCHESTRATOR_PHRASE,
+            NO_EQUIVALENT_EXCLUSION_PHRASE,
+            AUTHORITATIVE_SOURCE_PHRASE,
+        ):
+            self.assertIn(phrase, self.span)
+
+    def test_span_contains_new_rationale_and_cap_bound(self):
+        self.assertIn(DIVERGENCE_REASON_PHRASE, self.span)
+        self.assertIn(FALSE_BLOCK_CAP_BOUND_PHRASE, self.span)
+
+    def test_span_contains_i2b_relationship_phrases(self):
+        self.assertIn(RECONCILE_STATUS_AGNOSTIC_PHRASE, self.span)
+        self.assertIn(SELECTION_TIME_FILTER_PHRASE, self.span)
+
+
+class TestI2bStep1NoEventClassificationNote(unittest.TestCase):
+    """AC-4 (FR3, task0001 divergence-fail-open-wording): I.2.b step 1's
+    "no event → unlaunched" classification carries a note stating it does
+    not consult the workflow.yaml status and that the `status != merged`
+    exclusion is applied by I.2.a's selection condition; the pre-existing
+    citation of the recycled-task-id rule (for the SEPARATE `failed` +
+    `pending` carve-out clause) survives verbatim."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2b = _normalize_ws(_i2b_section(_read()))
+
+    def test_note_phrase_present(self):
+        self.assertIn(I2B_NO_EVENT_STATUS_AGNOSTIC_NOTE_PHRASE, self.i2b)
+
+    def test_recycled_task_id_citation_survives(self):
+        self.assertIn("the recycled-task-id rule in I.2.a above", self.i2b)
 
 
 class TestProtectedRawLiteralsSurvive(unittest.TestCase):
@@ -1396,6 +1623,34 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         with self.assertRaises(ValueError):
             sample.index(READS_OPENING_ANCHOR)
 
+    # --- task0001 (divergence-fail-open-wording): negative proofs for this
+    # task's own new-wording matchers, run against this task's own
+    # pre-change samples (base commit
+    # 4999893afb381fd129b648a992c3a9222770597e).
+
+    def test_missed_first_launch_rationale_matcher_flags_absence_in_pre_change_divergence_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_DIVERGENCE_PARAGRAPH_SAMPLE)
+        self.assertNotIn(DIVERGENCE_REASON_PHRASE, sample)
+
+    def test_cap_bound_matcher_flags_absence_in_pre_change_divergence_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_DIVERGENCE_PARAGRAPH_SAMPLE)
+        self.assertNotIn(FALSE_BLOCK_CAP_BOUND_PHRASE, sample)
+
+    def test_i2b_relationship_matchers_flag_absence_in_pre_change_divergence_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_DIVERGENCE_PARAGRAPH_SAMPLE)
+        self.assertNotIn(RECONCILE_STATUS_AGNOSTIC_PHRASE, sample)
+        self.assertNotIn(SELECTION_TIME_FILTER_PHRASE, sample)
+
+    def test_i2b_note_matcher_flags_absence_in_pre_change_i2b_wording(self):
+        sample = _normalize_ws(PRE_CHANGE_I2B_STEP1_SAMPLE)
+        self.assertNotIn(I2B_NO_EVENT_STATUS_AGNOSTIC_NOTE_PHRASE, sample)
+
 
 class TestPreChangeSampleGuards(unittest.TestCase):
     """AC-2 / Contract 4: each pre-change wording sample carries a RETAINED
@@ -1486,6 +1741,21 @@ class TestPreChangeSampleGuards(unittest.TestCase):
         self.assertIn(anchor, sample)
         self.assertIn(
             anchor, _normalize_ws(_supporting_cast_section(_read()))
+        )
+
+    # --- task0001 (divergence-fail-open-wording): self-checks (SPEC A8) for
+    # this task's own pre-change samples -- each asserts the sample
+    # contains an expected OLD phrase, so an empty or wrong sample cannot
+    # make this task's negative proofs above pass vacuously.
+
+    def test_divergence_paragraph_sample_retains_old_fail_open_phrase(self):
+        sample = _normalize_ws(PRE_CHANGE_DIVERGENCE_PARAGRAPH_SAMPLE)
+        self.assertIn("the hooks are fail-open nets, not authorities", sample)
+
+    def test_i2b_step1_sample_identifies_no_event_classification(self):
+        sample = _normalize_ws(PRE_CHANGE_I2B_STEP1_SAMPLE)
+        self.assertIn(
+            "last-event-per-task rule: no event → unlaunched", sample
         )
 
 
