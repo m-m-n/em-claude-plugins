@@ -1,0 +1,17 @@
+schema_version: 1
+feature: recycled-test-docs-drift
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 94ba9a1cde0a79fc3de453ed3d332db889d7252f
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
