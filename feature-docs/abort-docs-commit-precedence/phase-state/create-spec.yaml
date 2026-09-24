@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 2730a2ff4f335aa0cd4d0eff6b7f1cdcc405db0e
 last_input_digest: sha256:700d84341f372c85ddb2ab05dde77a52ce4687bad583fee2a519a5fb93d9a4bc
-active_request_id: create-spec-run-0005
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -105,10 +105,16 @@ worker_runs:
   input_digest: sha256:700d84341f372c85ddb2ab05dde77a52ce4687bad583fee2a519a5fb93d9a4bc
   output_digest: null
 - request_id: create-spec-run-0005
-  status: dispatched
+  status: completed
   input_digest: null
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/abort-docs-commit-precedence/REQUIREMENTS.md
+  sha256: sha256:0bd85bccc09a41deac98097474414a3ddaf53f6ba4955dd5dda710826460f45a
+  produced_by: create-spec-run-0005
+- path: feature-docs/abort-docs-commit-precedence/SPEC.md
+  sha256: sha256:d3bd4254c8437df35336358a93babebad4f05b3cf713db9929a9c76b50ca14e0
+  produced_by: create-spec-run-0005
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
