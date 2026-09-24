@@ -29,3 +29,30 @@ records:
   freeform: 'declined deviation tests/test_codex_wrapper_fallback_removal_version_bump.py'
   normalized_answer: 'not auto-added to tasks.task0004.files'
   resolution_note: 'task_id: task0004; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; missing evidence part: identifier (no AC-n of task0004 plan or registered requirement id named); path and observable failure (test_em_workflow_manifest_and_entry_agree_on_the_current_version regresses) were given. Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:27:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation em-workflow/.claude-plugin/plugin.json'
+  normalized_answer: 'not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; declined path: em-workflow/.claude-plugin/plugin.json; path falls under workflow control path em-workflow/** (never auto-added); also no AC-n / requirement id named (cause given: plugin-version-guard hook denied commit). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:27:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation .claude-plugin/marketplace.json'
+  normalized_answer: 'not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; declined path: .claude-plugin/marketplace.json; missing evidence part: identifier (no AC-n of task0002 plan or registered requirement id named; cause given: plugin-version-guard hook denied commit). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:27:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation tests/test_codex_wrapper_fallback_removal_version_bump.py'
+  normalized_answer: 'not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; missing evidence part: identifier (no AC-n of task0002 plan or registered requirement id named). Surfaces as an ordinary deviation for the containment check.'
