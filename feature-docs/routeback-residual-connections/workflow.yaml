@@ -87,7 +87,7 @@ workflow:
   status: completed
   completed_at_commit: f7613b9b70e3f8c35bde1268de0b20ee7a4277ab
 - id: implement
-  status: completed
+  status: pending
   base_commit: 92c8d604a97fd2740a5649c313b04477e75115c9
   completed_at_commit: ccf4569f79e6a29950502ddd9d108edbebb45693
 - id: review
@@ -133,6 +133,26 @@ tasks:
     - NFR9
     status: merged
     branch: em-workflow/routeback-residual-connections/task0001
+  task0002:
+    title: Update the em-workflow literal version pin in the codex-wrapper version test to 0.2.1
+    plan: tasks/task0002.md
+    files:
+    - tests/test_codex_wrapper_fallback_removal_version_bump.py
+    - test-docs/routeback-residual-connections/task0002.tests.yaml
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR7
+    - NFR1
+    - NFR2
+    status: pending
+    provenance:
+      source: review
+      source_ids:
+      - aef23290e7d97475
+      review_round: 1
 review:
   status: pending
   plan:
@@ -209,8 +229,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
+    - TS-8
   NFR1:
     title: Documentation-only
     status: ok
@@ -218,8 +240,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
+    - TS-8
   NFR2:
     title: Edit-forbidden modules
     status: ok
@@ -227,6 +251,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-6
   NFR3:
