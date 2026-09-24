@@ -339,6 +339,9 @@ REASON_CODES = (
     # Added by task-tier-reduction/task0004: the pre-run no-work stop.
     "no_work_required",
     "context_budget_reached",
+    # Added by stop-reason-coverage/task0001: the catch-all fallback code
+    # for every batch-terminating stop no other row names.
+    "unmapped_stop",
 )
 FIELD_NAME_TOKENS = (
     "`state`",
@@ -893,18 +896,20 @@ class TestReadInstructionMatcherCanFail(unittest.TestCase):
         )
 
 
-class TestOwnReasonCodeTupleIsThirteen(unittest.TestCase):
-    """AC-4/AC-6 (task0005/D9, extended by task0003/D8/SC5, extended again by
-    task-tier-reduction/task0004): this module's own `REASON_CODES` tuple --
-    used for absence checks only, never asserted against the contract
-    document itself (D9/D5 cross-task safety) -- lists all thirteen codes:
-    the original eleven, plus `no_work_required` (task-tier-reduction/
-    task0004: the pre-run no-work stop), plus the reserved
-    `context_budget_reached` (D8: reserved by the consumer, documented but
-    never emitted by em-workflow)."""
+class TestOwnReasonCodeTupleIsFourteen(unittest.TestCase):
+    """AC-4/AC-6 (task0005/D9, extended by task0003/D8/SC5, extended by
+    task-tier-reduction/task0004, extended again by stop-reason-coverage/
+    task0003): this module's own `REASON_CODES` tuple -- used for absence
+    checks only, never asserted against the contract document itself (D9/D5
+    cross-task safety) -- lists all fourteen codes: the original eleven,
+    plus `no_work_required` (task-tier-reduction/task0004: the pre-run
+    no-work stop), plus the reserved `context_budget_reached` (D8: reserved
+    by the consumer, documented but never emitted by em-workflow), plus
+    `unmapped_stop` (stop-reason-coverage/task0001: the catch-all fallback
+    code for every batch-terminating stop no other row names)."""
 
-    def test_reason_codes_tuple_has_thirteen_members(self):
-        self.assertEqual(len(REASON_CODES), 13)
+    def test_reason_codes_tuple_has_fourteen_members(self):
+        self.assertEqual(len(REASON_CODES), 14)
 
     def test_reason_codes_tuple_includes_the_two_rework_codes(self):
         self.assertIn("feature_resolution_aborted", REASON_CODES)
@@ -915,6 +920,10 @@ class TestOwnReasonCodeTupleIsThirteen(unittest.TestCase):
 
     def test_reason_codes_tuple_includes_no_work_required(self):
         self.assertIn("no_work_required", REASON_CODES)
+
+    def test_reason_codes_tuple_includes_unmapped_stop(self):
+        # AC-1 (stop-reason-coverage/task0003).
+        self.assertIn("unmapped_stop", REASON_CODES)
 
     def test_reason_codes_tuple_has_no_duplicates(self):
         self.assertEqual(len(REASON_CODES), len(set(REASON_CODES)))
@@ -1217,6 +1226,35 @@ class TestReasonNoneShapeMatcherCanFail(unittest.TestCase):
         violations = _find_contract_literal_violations(section)
         self.assertTrue(
             violations, "matcher failed to detect the forged reason=none shape"
+        )
+
+
+class TestUnmappedStopWideningProof(unittest.TestCase):
+    """AC-3 (stop-reason-coverage/task0003): a synthetic pointer-document
+    excerpt naming `unmapped_stop` is flagged by
+    `_find_contract_literal_violations`, proving the widened `REASON_CODES`
+    tuple actually takes part in the matcher. The matcher's SHAPE is
+    unchanged (only its domain widened), so per this module's own
+    convention (Test Notes: "Widening an existing matcher's domain needs no
+    second negative proof") this single flagged-excerpt test is the whole
+    proof -- no separate negative proof is required."""
+
+    FORGED_TEXT = (
+        "...\n\n"
+        f"{NEW_SUBSECTION_HEADING}\n\n"
+        "未分類の終端停止では reason は unmapped_stop になる。\n\n"
+        f"{FILE_END_MARKER}\n"
+    )
+
+    def test_forged_excerpt_is_well_formed_and_found(self):
+        section = _section(self.FORGED_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER)
+        self.assertIn("unmapped_stop", section)
+
+    def test_matcher_flags_unmapped_stop_restatement(self):
+        section = _section(self.FORGED_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER)
+        violations = _find_contract_literal_violations(section)
+        self.assertTrue(
+            violations, "matcher failed to detect the unmapped_stop restatement"
         )
 
 
