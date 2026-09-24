@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 56dd1cbb2757b2dbce332c336eaac4954df03bb2
 last_input_digest: sha256:48e48d97b6d4bee4b698d2be7d80e3711b87aeed7b740a59d074f97cd7526ed3
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
   input_digest: sha256:0a3a74344a2bcac6cfe9591c2a229e8391c93bef7b44a50c8f6af8c99cb42f19
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:48e48d97b6d4bee4b698d2be7d80e3711b87aeed7b740a59d074f97cd7526ed3
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/repo-suite-pinned-test-drift/REQUIREMENTS.md
+  sha256: sha256:858e648138f1e53c354792e13b3bcaabfee72642f7d7a2acd0603efa1e840812
+  produced_by: create-spec-run-0002
+- path: feature-docs/repo-suite-pinned-test-drift/SPEC.md
+  sha256: sha256:f56f53a8eac8d2c62b6739293878d2fd04be270f9877f5a8b4d36b073cc71a7f
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
