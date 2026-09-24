@@ -1,0 +1,34 @@
+schema_version: 1
+feature: classification-table-escaped-pipe
+phase: create-plan
+status: completed
+generation: 1
+base_revision: ab3e110def43186244051d4859d06478e588b148
+last_input_digest: sha256:d7263ee0d10ab6a55da78913c3cd5205b39cf4b80f503ba488e3fb6f3fb403cb
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:d7263ee0d10ab6a55da78913c3cd5205b39cf4b80f503ba488e3fb6f3fb403cb
+  output_digest: sha256:1a67aa0f5dfd653cd58c9d5b3b7a88142eb712e0fecfbe665a1ddca98ed567a8
+artifacts:
+- path: feature-docs/classification-table-escaped-pipe/IMPLEMENTATION.md
+  sha256: sha256:a7c58dae7d7cd854e7e3979a85dee329e60c0d337c425a27d4582dc40a9fb92e
+  produced_by: create-plan-run-0001
+- path: feature-docs/classification-table-escaped-pipe/VERIFICATION.md
+  sha256: sha256:78628124115bdb5913a388ae6ade64f006c58c0732e3507c50eada126bf6cad7
+  produced_by: create-plan-run-0001
+- path: feature-docs/classification-table-escaped-pipe/tasks/task0001.md
+  sha256: sha256:65fdcdcbe7da52cbed9fb5ba1a9dbca17aaab77fa6b3707efff970b58e2767dd
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:d7263ee0d10ab6a55da78913c3cd5205b39cf4b80f503ba488e3fb6f3fb403cb
+  base_workflow_blob: 7b3c443c29655fcb10e1d780bea02b48902f0b87
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
