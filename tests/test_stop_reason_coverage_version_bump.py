@@ -5,10 +5,11 @@ Covers task0004 Acceptance Criteria
 (feature-docs/stop-reason-coverage/tasks/task0004.md):
 
 - AC-1: `em-workflow/.claude-plugin/plugin.json` parses as JSON, its
-  `version` reads `0.2.1`, and its `name` reads `em-workflow`.
+  `version` is well-formed and at least `0.2.1`, and its `name` reads
+  `em-workflow`.
 - AC-2: `.claude-plugin/marketplace.json` parses as JSON. The `em-workflow`
-  entry's `version` reads `0.2.1` and equals the manifest's. The `em-review`
-  entry is unchanged.
+  entry's `version` is well-formed and at least `0.2.1`, and equals the
+  manifest's. The `em-review` entry is unchanged.
 - AC-3: the new baseline matcher accepts the live versions and rejects a
   forged `0.2.0`, with a non-vacuity guard showing the forged value parses.
 - AC-4: the new equality matcher accepts the live pair and rejects a forged
@@ -20,9 +21,13 @@ Covers task0004 Acceptance Criteria
 Per IMPLEMENTATION.md D7, the baseline matcher asserts a version strictly
 greater than (0, 2, 0) under per-component numeric comparison -- it never
 pins the literal `0.2.1`, so a later legitimate bump keeps this module
-green. The literal `0.2.1` itself is verified only by the plan's own AC-1 /
-AC-2 tests below, which read the live files directly. JSON files are parsed,
-never pattern-matched, following the pattern established by
+green. The plan's own AC-1 / AC-2 tests below, which read the live files
+directly, used to pin the literal `0.2.1` as well; per FR7 of
+repo-suite-pinned-test-drift/task0003, they now check the same shape as the
+baseline matcher -- well-formed and at least a recorded floor (`0.2.1`),
+never a literal-equality pin -- so this module also stays green at any
+later em-workflow version. JSON files are parsed, never pattern-matched,
+following the pattern established by
 tests/test_batch_stop_contract_version_bump.py.
 """
 
@@ -83,6 +88,24 @@ def _assert_versions_equal(test, version_a, version_b):
     test.assertEqual(version_a, version_b)
 
 
+# FR7 (repo-suite-pinned-test-drift/task0003): a floor, not an equality
+# target. Historical value; used only through the lower-bound comparison
+# below, never compared against the current em-workflow version.
+FR7_VERSION_FLOOR = "0.2.1"
+
+
+def _assert_version_at_least_the_floor(test, version, label, floor=FR7_VERSION_FLOOR):
+    """FR7's per-registry matcher: `version` passes the form rule and is at
+    or above `floor` under per-component numeric comparison. FR7 has no
+    agreement column -- each registry is checked on its own."""
+    parts = _parse_version(version)
+    test.assertIsNotNone(parts, f"{label} version {version!r} is not of the form X.Y.Z")
+    floor_parts = _parse_version(floor)
+    test.assertGreaterEqual(
+        parts, floor_parts, f"{label} version {version!r} is below the floor {floor!r}"
+    )
+
+
 EM_REVIEW_NAME = "em-review"
 EM_REVIEW_AUTHOR = {"name": "em"}
 EM_REVIEW_CATEGORY = "code-review"
@@ -113,7 +136,8 @@ def _assert_em_review_entry_unchanged(test, entry):
 
 class TestPluginManifestVersion(unittest.TestCase):
     """AC-1: the plugin manifest parses as JSON, its version is past
-    baseline and reads the literal 0.2.1, and its name field reads
+    baseline (the durable (0, 2, 0) matcher) and is also well-formed and at
+    least FR7_VERSION_FLOOR (0.2.1), and its name field reads
     em-workflow."""
 
     @classmethod
@@ -123,13 +147,12 @@ class TestPluginManifestVersion(unittest.TestCase):
     def test_version_is_past_baseline(self):
         _assert_version_past_baseline(self, self.data.get("version"))
 
-    def test_version_is_the_literal_bump_target(self):
-        # AC-1's literal check: read directly, never pinned by the durable
-        # baseline matcher above.
-        # abort-docs-commit-precedence/task0001: bumped to 0.2.2, per
-        # tests/test_codex_wrapper_fallback_removal_version_bump.py's
-        # documented convention for later version bumps.
-        self.assertEqual(self.data.get("version"), "0.2.2")
+    def test_version_is_well_formed_and_at_least_0_2_1(self):
+        # FR7 (repo-suite-pinned-test-drift/task0003): form + floor check,
+        # read directly, never pinned by the durable baseline matcher
+        # above nor by a literal-equality comparison -- so the check stays
+        # green at any later em-workflow version.
+        _assert_version_at_least_the_floor(self, self.data.get("version"), "plugin.json")
 
     def test_name_field_reads_em_workflow(self):
         self.assertEqual(self.data.get("name"), "em-workflow")
@@ -137,7 +160,8 @@ class TestPluginManifestVersion(unittest.TestCase):
 
 class TestMarketplaceEntryVersion(unittest.TestCase):
     """AC-2: the em-workflow marketplace entry parses, its version is past
-    baseline, reads the literal 0.2.1, and matches the plugin manifest."""
+    baseline, is well-formed and at least FR7_VERSION_FLOOR (0.2.1) on its
+    own (FR7 has no agreement column), and matches the plugin manifest."""
 
     @classmethod
     def setUpClass(cls):
@@ -152,9 +176,10 @@ class TestMarketplaceEntryVersion(unittest.TestCase):
     def test_entry_version_is_past_baseline(self):
         _assert_version_past_baseline(self, self.entry.get("version"))
 
-    def test_entry_version_is_the_literal_bump_target(self):
-        # abort-docs-commit-precedence/task0001: bumped to 0.2.2.
-        self.assertEqual(self.entry.get("version"), "0.2.2")
+    def test_entry_version_is_well_formed_and_at_least_0_2_1(self):
+        # FR7 (repo-suite-pinned-test-drift/task0003): form + floor check,
+        # checked on its own -- FR7 has no agreement column in D2.
+        _assert_version_at_least_the_floor(self, self.entry.get("version"), "marketplace entry")
 
     def test_entry_version_matches_plugin_manifest(self):
         _assert_versions_equal(self, self.entry.get("version"), self.manifest.get("version"))
@@ -259,6 +284,30 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertIsNone(_parse_version("not-a-version"))
         self.assertIsNone(_parse_version(None))
         self.assertIsNotNone(_parse_version("0.2.1"))
+
+
+# Malformed values from the same kinds the Version form rule rejects: two
+# components, a non-digit component, a "v" prefix, a pre-release suffix, an
+# empty string, a non-string value.
+FR7_MALFORMED_VERSIONS = ["0.2", "0.2.x", "v0.2.4", "0.2.4-rc1", "", None]
+
+
+class TestFr7VersionMatcherNegativeProofs(unittest.TestCase):
+    """AC-4: the FR7 per-registry matcher's verdicts against forged
+    values -- hermetic, never touches the real manifest files."""
+
+    def test_accepts_a_forged_higher_version(self):
+        _assert_version_at_least_the_floor(self, "99.0.0", "forged")  # must not raise
+
+    def test_rejects_a_version_below_the_floor(self):
+        with self.assertRaises(AssertionError):
+            _assert_version_at_least_the_floor(self, "0.2.0", "forged")
+
+    def test_rejects_a_malformed_value(self):
+        for malformed in FR7_MALFORMED_VERSIONS:
+            with self.subTest(malformed=malformed):
+                with self.assertRaises(AssertionError):
+                    _assert_version_at_least_the_floor(self, malformed, "forged")
 
 
 class TestOwnModuleStdlibOnly(unittest.TestCase):
