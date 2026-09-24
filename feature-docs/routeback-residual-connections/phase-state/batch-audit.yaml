@@ -28,3 +28,12 @@ records:
     freeform: null
     normalized_answer: "task0001 deviation not auto-added: tests/test_codex_wrapper_fallback_removal_version_bump.py"
     resolution_note: "task_id: task0001; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; failed checks: (1) not a path-addition claim - the implementer did not edit the file (task plan Test Notes forbid editing out-of-scan version modules), (2) the path's failing test is TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version, which hardcodes 0.2.0 and fails for any bump; no existing AC of task0001 is dropped without it. Left to verify (TS-6 full-suite exit 0) to catch and route."
+  - question_id: develop.once-boundary-review-rework
+    packet_id: null
+    answered_at: "2026-09-24T10:58:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [continue_into_implement]
+    freeform: null
+    normalized_answer: "Review-sourced batch auto-rework (implement completed->pending via append_rework) is not a --once phase boundary; continue into implement in the same launch and end the turn when implement completes"
+    resolution_note: "gate: orchestrator interpretation (launch instruction: consult Codex on unclear points); options: (A) end the turn now as a boundary / (B) continue into implement; chosen: (B); not chosen: (A); key points: the SKILL.md boundary table is an exhaustive list of four kinds, review-sourced rework is neither the verify-sourced rework boundary nor a needs_update auto-reentry, and review returns to pending so the normal completed/skipped boundary does not apply either; (A) is only supported by symmetry with verify rework and would extend the listed boundaries by interpretation; risk: none beyond a longer launch; codex_consulted: true; opus_escalation: false"
