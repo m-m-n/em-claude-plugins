@@ -1,0 +1,77 @@
+task_id: task0004
+baseline_failures:
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+final_failures:
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+      - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+    red_confirmed: true
+    red_reason: "Baseline run (pre-change): AssertionError \"'0.2.3' != '0.2.2'\" (em-workflow) and \"'0.5.13' != '0.5.11'\" (em-review) -- both tests compared against the stale PLUGIN_SPECS['expected'] literal. Now green after rewriting to the form/floor/agreement matcher."
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: "Structural criterion, not a red/green test: verified by grep that no PLUGIN_SPECS entry has an 'expected' key (no match), that every entry has a 'floor' key, and that no 'later features update this literal' comment remains in the file (no match)."
+  AC-3:
+    tests:
+      - test_codex_wrapper_fallback_removal_version_bump.TestFR8NegativeProofs.test_forged_higher_version_in_both_is_accepted
+      - test_codex_wrapper_fallback_removal_version_bump.TestFR8NegativeProofs.test_forged_version_below_floor_in_both_is_rejected
+      - test_codex_wrapper_fallback_removal_version_bump.TestFR8NegativeProofs.test_forged_malformed_manifest_version_is_rejected
+      - test_codex_wrapper_fallback_removal_version_bump.TestFR8NegativeProofs.test_forged_malformed_entry_version_is_rejected
+      - test_codex_wrapper_fallback_removal_version_bump.TestFR8NegativeProofs.test_forged_disagreeing_values_are_rejected
+      - test_codex_wrapper_fallback_removal_version_bump.TestFR8NegativeProofs.test_forged_version_above_floor_numerically_but_below_lexicographically_is_accepted
+    red_confirmed: true
+    red_reason: "New tests written alongside the FR8 matcher rather than strictly before it, so red was confirmed post-hoc by deliberately breaking the matcher and re-running: (1) neutering the matcher body to a no-op made the 4 'rejected' tests fail with 'AssertionError not raised' as expected; (2) swapping the floor comparison for a naive string comparison made the lexicographic-vs-numeric accept test fail with \"'0.10.0' not greater than or equal to '0.9.0'\", proving it actually exercises numeric comparison. Both breakages were reverted and the file diff-verified identical to the intended version before re-running the full module green."
+  AC-4:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+    red_confirmed: true
+    red_reason: "Baseline run (pre-change): AssertionError \"'0.5.13' != '0.5.11'\" from the old exact version comparison against EM_REVIEW_VERSION. Now green after switching to a form-only check; EM_REVIEW_VERSION was renamed to EM_REVIEW_SAMPLE_VERSION and is no longer compared with the live entry."
+  AC-5:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_a_forged_higher_version_with_identity_fields_unchanged
+    red_confirmed: true
+    red_reason: "The malformed-version subTest ('version', '0.5.x') and the new accept-case test were written alongside the form-only check; red confirmed post-hoc: (1) reverting _assert_em_review_entry_unchanged to an exact-literal version comparison made the new accept test fail with \"'99.0.0' != '0.5.11'\"; (2) removing the version check entirely made the 'version' subTest of test_em_review_matcher_rejects_altered_identity_field fail with 'AssertionError not raised', while the other 4 subTests (name/author/category/source) kept passing unaffected. Both breakages were reverted before re-running the full module green."
+  AC-6:
+    tests:
+      - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+      - test_muse_consent_version_bump.TestValidationDetectsRegressions.test_digest_check_rejects_a_mutated_nonversion_field
+      - test_muse_consent_version_bump.TestValidationDetectsRegressions.test_digest_check_ignores_only_the_version_field
+    red_confirmed: true
+    red_reason: "test_em_workflow_manifest_nonversion_content_unchanged, baseline: AssertionError \"'bf70d710...' != 'c4f8b9a9...'\" (stale digest constant). Now green after updating EM_WORKFLOW_MANIFEST_NONVERSION_SHA256 to bf70d7104511c338b6f076c3d9ab08b6a19b757b59d45397324242f11008ebf0, verified equal to the live canonicalized non-version content of em-workflow/.claude-plugin/plugin.json by direct computation. The two digest negative-proof tests are pre-existing and unchanged by this task (their logic did not move); confirmed they still pass against the updated constant."
+  AC-7:
+    tests:
+      - test_codex_wrapper_fallback_removal_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - test_batch_structured_result_output_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - test_muse_consent_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "Cross-cutting non-regression criterion, not a fresh red/green cycle: verified via grep that none of the three modified files contains the literals 0.2.3, 0.2.4 or 0.5.13 (NFR2), and via full-module runs of all three files showing every pre-existing test (91 total: 24+21+24, plus baseline diff) keeps passing. The stdlib-only guard tests listed here are pre-existing and unaffected by this change; included to show they still pass."
