@@ -1,0 +1,39 @@
+schema_version: 1
+feature: exemption-registry-section-scope
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.23
+    '1': 0.68
+    '2': 0.09
+    '3': 0.0
+  expectation_clear: 0.9
+  confidence: 0.68
+  observed_at: '2026-09-24T19:56:35+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.19
+    '1': 0.74
+    '2': 0.07
+    '3': 0.0
+  expectation_clear: 0.9
+  confidence: 0.73
+  observed_at: '2026-09-24T19:56:35+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_gate_option_vocabulary_doc.py
+  - tests/_gate_vocabulary.py
+  changed_lines_approx: 220
+  new_functions_needed: 4
+  new_files_needed: 1
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  rationale: 'HEAD 271781a81a1de1f5108464cfadbf655d6e2a8ce0 でも不具合は残っているよ。消費側の286〜299行は文書全体の表からIDを収集し、595〜596行で該当ゲートをスキップしているよ。メモリ上で説明用テーブルを追加すると
+    {''create-spec.feature-identity''} が返り、文書側の免除行は [] のままだったよ。セル数違反、reason・guaranteeの空欄、未知のゲートも例外なく受理されたよ。文書側114・137行のパーサと検証は未共有で、284行の切り出しは終了見出しを
+    ## Scope に固定しているよ。共通ヘルパへ既存処理を移し、次の第2レベル見出しまでの抽出と検証済みID取得を追加する修正を勧めるよ。新規関数4個は処理2個と回帰テスト2個を想定し、移動する既存関数は含めていないよ。既存テストの見出し
+    ''# Exemption registry'' と架空ID ''some.gate'' も修正が必要だよ。関連テストはあるけれど、この誤免除の回帰テストはないよ。書き込みを伴わない既存54テストは成功したよ。全スイートにはファイル作成処理があるため実行していないよ。文書・実行時コードの変更は不要と見積もっていて、今回ファイル変更は行っていないよ'
+decided_at: '2026-09-24T19:56:50+09:00'
