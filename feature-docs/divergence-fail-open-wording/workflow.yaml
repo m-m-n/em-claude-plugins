@@ -148,7 +148,7 @@ workflow:
   completed_at_commit: 4ada1ade1962f6b3f569f4a5029b1fba87694318
   base_commit: f6576f6ccdd36763c9231ec9825b031882fbee2c
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -180,8 +180,16 @@ tasks:
     status: merged
     branch: em-workflow/divergence-fail-open-wording/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: divergence の正当化を fail-open 以外の語で書き直す
