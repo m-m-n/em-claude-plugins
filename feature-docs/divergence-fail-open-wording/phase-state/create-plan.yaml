@@ -1,7 +1,7 @@
 schema_version: 1
 feature: divergence-fail-open-wording
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: ad49efff6a668ed7fe6cf944aef9dc4a88b5e373
 last_input_digest: sha256:e67de208c27ead6db6a716c496ba5270c37f3a8ec7596bea8dba41263fb8d9b3
@@ -10,11 +10,24 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:e67de208c27ead6db6a716c496ba5270c37f3a8ec7596bea8dba41263fb8d9b3
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:3657c0f9e7a853c301a76d15a57d1b50e0c4bb94d9ce453a602023ae36e45b98
+artifacts:
+- path: feature-docs/divergence-fail-open-wording/IMPLEMENTATION.md
+  sha256: sha256:cd556019d9153eb3dfb1b30e8dfa12180c0ae742caee6e266d37de9629de49d8
+  produced_by: create-plan-run-0001
+- path: feature-docs/divergence-fail-open-wording/VERIFICATION.md
+  sha256: sha256:4070a6f69e24483ef4297e85e2d9464bf1a1dfd831cd3e3120e105efd603c50b
+  produced_by: create-plan-run-0001
+- path: feature-docs/divergence-fail-open-wording/tasks/task0001.md
+  sha256: sha256:eecb3a22e334a86ed10203c24ef2818c03ac0a587323dc0c200f58f5fc82a685
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:e67de208c27ead6db6a716c496ba5270c37f3a8ec7596bea8dba41263fb8d9b3
+  base_workflow_blob: 8161447b0ddb62a700129327007ce95d83cd8bbd
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
