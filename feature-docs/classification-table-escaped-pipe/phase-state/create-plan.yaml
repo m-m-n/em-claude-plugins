@@ -1,0 +1,21 @@
+schema_version: 1
+feature: classification-table-escaped-pipe
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: ab3e110def43186244051d4859d06478e588b148
+last_input_digest: sha256:d7263ee0d10ab6a55da78913c3cd5205b39cf4b80f503ba488e3fb6f3fb403cb
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:d7263ee0d10ab6a55da78913c3cd5205b39cf4b80f503ba488e3fb6f3fb403cb
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
