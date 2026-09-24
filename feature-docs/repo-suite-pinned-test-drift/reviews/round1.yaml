@@ -1,0 +1,85 @@
+round: 1
+executed_at: '2026-09-25T00:06:14+09:00'
+scope:
+  review_mode: diff
+  base_commit: cf57f36c053b974c09785369a859398062c70d71
+  head_commit: 3ce6a963e367ea7d36c24cc64baf0c608a80d3d2
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/repo-suite-pinned-test-drift/task0001.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0002.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0003.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0004.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0005.tests.yaml
+  - tests/test_abort_terminal_commit_precedence.py
+  - tests/test_batch_structured_result_output_version_bump.py
+  - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  - tests/test_develop_once_option.py
+  - tests/test_muse_consent_version_bump.py
+  - tests/test_reviewers_primary_chains.py
+  - tests/test_step_c_verify_failed_default.py
+  - tests/test_stop_reason_coverage_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 06a1f6ce89db564b
+  severity: medium
+  category: comprehensive
+  file: tests/test_abort_terminal_commit_precedence.py
+  line: 67
+  title: version 形式検査が末尾改行と非 ASCII 数字を受理する
+  description: VERSION_FORM_RE = re.compile(r"^\d+\.\d+\.\d+$") を re.match で使っている。Python の str 正規表現では \d が全角などの Unicode 数字にも一致し、$ は末尾改行の直前にも一致する。int() も両方を受理する。評価側で再現し、'0.2.10\n' と '０.２.１０' がどちらも形式検査を通り (0, 2, 10) として扱われることを確認した。docstring と IMPLEMENTATION.md の Version form rule は「ASCII 10 進数字だけ、前後の空白なし」と定めているので、FR6 の matcher は AC3 / NFR3 の「形式不正を拒否する」を満たしきれていない。同じ正規表現 ^(\d+)\.(\d+)\.(\d+)$ は tests/test_codex_wrapper_fallback_removal_version_bump.py:43（FR8）、tests/test_batch_structured_result_output_version_bump.py:103（FR9）、tests/test_stop_reason_coverage_version_bump.py:47（FR7）にもある。追加された否定証明はどれも 'v0.2.4'・'0.2.4-rc1'・'' などしか使っておらず、この抜けを検出できない。実際のマニフェストがこの形になる可能性は低く、影響はテストの厳密さに限られる
+  suggestion: 4 モジュールとも、isinstance(value, str) を確認したうえで re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value)（またはフラグ re.ASCII と \Z）に置き換える。batch-structured-result の VERSION_RE.match(version or "") は、非文字列の値で AssertionError ではなく TypeError を出すので、isinstance による判定も加える。各モジュールの形式不正ケース一覧に '0.2.10\n'、' 0.2.10'、'０.２.１０' を足し、両レジストリが同じ不正値でも拒否されることを示す
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の auto-fix 対象外（critical/high のみ）。別タスクとして起票する
+evaluation:
+  round_summary: 'Round 1（diff モード、cross_validation なし）。3 本の reviewer はすべて完了した。carry forward した指摘は 1 件で、medium の version 形式検査の抜け（comprehensive#0）。評価側で再現して確認し、FR7 の stop_reason モジュールにも同じ正規表現があるので同じ指摘にまとめた。critical / high の指摘はなく、dismissed_sites は空。reviewer 出力に命令の注入の試みはなかった。security: corroborated。spec: corroborated（FR1 と FR5 の対象ファイル、test-docs は読み取り予算の都合で未確認）。'
+  recommended_action: auto_fix
+  action_rationale: 残ったのは medium 1 件だけで、修正は機械的で範囲も限られる。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
