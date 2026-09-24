@@ -149,7 +149,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/repo-suite-pinned-test-drift/task0003
   task0004:
     title: マニフェストのピン留め追随（codex-wrapper / batch-structured-result / muse-consent）
