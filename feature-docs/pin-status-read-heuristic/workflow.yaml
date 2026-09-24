@@ -135,7 +135,12 @@ workflow:
   status: completed
   completed_at_commit: d533261d11beed184074a3e3ef689ebd01259d9c
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 6b552940015378566c11dd307ed844e7277aa981
+  result: pass
+  failed_items: []
+  excluded_scenarios: []
+  summary: '5659 tests OK (python3 -m unittest discover -s tests); TS-1..TS-10 all pass'
 - id: retrospect
   status: pending
 tasks:
