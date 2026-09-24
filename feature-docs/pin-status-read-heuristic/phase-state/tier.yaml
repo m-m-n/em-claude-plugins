@@ -1,0 +1,34 @@
+schema_version: 1
+feature: pin-status-read-heuristic
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.12
+    '1': 0.79
+    '2': 0.09
+    '3': 0.0
+  expectation_clear: 0.91
+  confidence: 0.79
+  observed_at: '2026-09-25T02:24:56+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.01
+    '1': 0.78
+    '2': 0.21
+    '3': 0.0
+  expectation_clear: 0.88
+  confidence: 0.78
+  observed_at: '2026-09-25T02:24:56+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_hook_classification_pin.py
+  changed_lines_approx: 110
+  new_functions_needed: 3
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  rationale: 指定HEADには未修正の判定が残っているよ。関数名の正規表現と定義・呼び出しの照合に依存している（tests/test_hook_classification_pin.py:212、251、266）。読み込むソースだけをメモリ上で差し替えて確認すると、pending_from_workflowによるstatus読み出しを追加しても観測はFalseで、既存pinは通過した。既存ヘルパの改名だけでは観測がFalseになり、不一致が1件発生した。見積もりは、提案されたdocstring除去後のworkflow.yamlとstatusのAND条件への置換、説明の更新、合成ソース・改名・分類不一致検出の回帰テスト3メソッド追加を想定している。既存の分類pinとbash_guardの否定テストはあるが、命名に依存しない読み出しを検出する回帰テストはない（tests/test_hook_classification_pin.py:423、445、459、498、569）。既存5ファイルの観測はqueue_stop_guardだけTrueで、提案条件でも同じ結果を確認した（em-workflow/references/implement-phase.md:1065、tests/test_hook_classification_pin.py:432）。ただし文字列ANDは実際のper-task参照を厳密に証明できず、工程側のstatusとも区別できない点には注意が必要だよ（em-workflow/hooks/queue_stop_guard.py:89、105）。変更はルート配下のテスト内で完結する見込みなので、プラグインのバージョン更新対象には該当しない（.claude/rules/core-plugin-version-bump.md:7）。ファイルの作成・変更・削除は行わず、既存テスト2件とメモリ上の再現確認だけを実行し、全テストは実行していないよ
+decided_at: '2026-09-25T02:26:30+09:00'
