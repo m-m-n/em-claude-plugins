@@ -193,6 +193,56 @@ where the old count was in the name). Every matcher and negative proof in
 this module is otherwise unchanged in substance -- it is the CONSTANTS
 these tests compare the live document against that grow, not the
 checking logic.
+
+--- stop-reason-coverage/task0002 additions ---
+
+This module also carries task0002's guards for the two regions
+`feature-docs/stop-reason-coverage/tasks/task0002.md` (IMPLEMENTATION.md
+SC2) assigns it: the `step` bullet's `no-step` clause (FR6), and the
+"Precedence rule:" paragraph (FR7, FR8). task0001's own region (the
+`reason` bullet, `## Stop reason codes`, and the rest of `## Stop point
+coverage`) is untouched by this task.
+
+- `NO_STEP_STOP_POINTS` (AC-2): gains a fourth member, `stop-condition-4`
+  -- the condition-based `no-step` bullet's explicit stop-condition-4
+  case. `PRE_CHANGE_NO_STEP_STOP_POINTS` keeps the old three-member value
+  for the negative proof below.
+- `_assert_no_step_condition_based_wording_stated` (NEW, AC-1/AC-2/TS-7):
+  the executed-step/outside-Step-B condition, the example framing, the
+  stop-condition-4 case with its fallback to the general rule, and the
+  Step A.5 case naming the refusal-pattern hard fail in prose only.
+  Negative proof: `TestNoStepConditionBasedWordingMatcherNegativeProof`,
+  built from the real pre-change `step` bullet (`PRE_CHANGE_STEP_BULLET`),
+  which still matches the `no-step` anchor and still yields its
+  pre-change, three-member key set.
+- `test_field_values_defines_the_sentinel_and_its_condition`: the
+  sentinel-condition assertion moves from the retired "no
+  `workflow.yaml` step is in effect" phrase to the new condition phrase
+  (AC-1).
+- `_assert_precedence_rule_stated` (RETARGETED, AC-3/AC-4/TS-8): now reads
+  only the "Precedence rule:" paragraph (`_extract_precedence_rule_paragraph`,
+  SC4) rather than the whole `## Stop point coverage` section, and asserts
+  the route-based restriction (SPEC FR8's own anchors, "through that
+  phase's own abort route" / "no route of the current run produced")
+  rather than the retired state-based phrase ("no phase-specific row
+  covers", asserted absent). `no-work-required` is asserted not named in
+  this paragraph. Negative proof:
+  `TestPrecedenceRuleRouteBasedMatcherNegativeProof`, built from the real
+  pre-change paragraph (`PRE_CHANGE_PRECEDENCE_PARAGRAPH`). The pre-existing
+  table-only negative proof (`TestPrecedenceMatcherNegativeProof`, over a
+  forged section with no "Precedence rule:" label at all) is unchanged.
+- `_assert_docs_commit_conflict_no_status_stated` (NEW, AC-3/TS-9): the
+  paragraph states that `implement-second-failure` and `verify-rework-cap`
+  write a step's status `failed`, and that `docs-commit-conflict` aborts
+  without writing any status because the failed status write is itself
+  its stop cause; the retired collective claim ("all three leave a step's
+  status `failed`") is asserted absent. Negative proof:
+  `TestDocsCommitConflictNoStatusMatcherNegativeProof`, same
+  pre-change paragraph.
+
+Every one of these matchers has a negative proof built from the real
+pre-change wording (itself "otherwise well formed" on every point except
+the one under test) and a non-vacuity guard, per NFR4.
 """
 
 import os
@@ -286,7 +336,17 @@ STOP_POINT_KEYS = frozenset(
     }
 )
 
-NO_STEP_STOP_POINTS = frozenset({"stop-condition-6", "step-a-abort", "step-c-abort"})
+NO_STEP_STOP_POINTS = frozenset(
+    {"stop-condition-6", "step-a-abort", "step-c-abort", "stop-condition-4"}
+)
+
+# Pre-change value of NO_STEP_STOP_POINTS (three members), used only by
+# task0002's negative proof over the real pre-change `step` bullet -- that
+# bullet's `no-step` clause is condition-less and never names
+# `stop-condition-4`.
+PRE_CHANGE_NO_STEP_STOP_POINTS = frozenset(
+    {"stop-condition-6", "step-a-abort", "step-c-abort"}
+)
 
 STATE_VALUES = frozenset({"completed", "stopped", "phase_done"})
 ONCE_BOUNDARY_STATE_VALUE = "phase_done"
@@ -531,24 +591,79 @@ def _extract_no_step_stop_points(field_values_section_text):
     return tokens - {"no-step"}
 
 
+def _extract_precedence_rule_paragraph(coverage_section_text):
+    """task0002 (SC4): slices the "Precedence rule:" paragraph out of the
+    full `## Stop point coverage` section text, from its label to the next
+    blank line -- task0002's matchers read only this paragraph, never
+    task0001's fallback-rule region or the coverage table (SC2/SC4: the two
+    tasks' regions never share a matcher). Returns "" when the label is
+    absent, so a caller's assertion fails cleanly rather than a bare
+    `.index()` raising ValueError."""
+    idx = coverage_section_text.find("Precedence rule:")
+    if idx == -1:
+        return ""
+    end = coverage_section_text.find("\n\n", idx)
+    if end == -1:
+        end = len(coverage_section_text)
+    return coverage_section_text[idx:end]
+
+
+# task0002/FR7/FR8: the retired state-based restriction phrase, replaced by
+# the route-based wording. Asserted absent everywhere the new matcher runs.
+PRECEDENCE_RULE_OLD_STATE_BASED_PHRASE = "no phase-specific row covers"
+
+# task0002/FR7: the retired, inaccurate collective status claim.
+PRECEDENCE_RULE_OLD_ALL_THREE_PHRASE = "all three leave a step's status `failed`"
+
+
 def _assert_precedence_rule_stated(test, coverage_section_text):
-    """Validation for the precedence-rule matcher: the coverage section
-    states that a phase-specific stop point takes precedence over the
-    generic `stop-condition-N` rows, names the three overlapping cases, and
-    restricts `stop-condition-3`'s meaning to the states no phase-specific
-    row covers."""
-    normalized = _normalize(coverage_section_text)
+    """Validation for the precedence-rule matcher (task0002/FR7, FR8):
+    reads ONLY the "Precedence rule:" paragraph (SC4), not the whole
+    `## Stop point coverage` section -- states that a phase-specific stop
+    point takes precedence over the generic `stop-condition-N` rows, names
+    the three overlapping cases, and restricts `stop-condition-3`'s meaning
+    by ROUTE (the current run's own abort route) rather than by state. The
+    retired state-based phrase is asserted absent, and `no-work-required`
+    is asserted not named in this paragraph (it is a task0001 stop point
+    with no route through `stop-condition-3`)."""
+    paragraph = _extract_precedence_rule_paragraph(coverage_section_text)
+    test.assertTrue(paragraph, "no 'Precedence rule:' paragraph found")
+    normalized = _normalize(paragraph)
     test.assertIn(
         "phase-specific stop point takes precedence over the generic",
         normalized,
     )
     for key in ("implement-second-failure", "verify-rework-cap", "docs-commit-conflict"):
         with test.subTest(key=key):
-            test.assertIn(f"`{key}`", coverage_section_text)
-    test.assertIn("`stop-condition-3`", coverage_section_text)
-    test.assertIn("`failed`", coverage_section_text)
-    test.assertIn("`needs_update`", coverage_section_text)
-    test.assertIn("no phase-specific row covers", normalized)
+            test.assertIn(f"`{key}`", paragraph)
+    test.assertIn("`stop-condition-3`", paragraph)
+    test.assertIn("`failed`", paragraph)
+    test.assertIn("`needs_update`", paragraph)
+    # FR8: route-based restriction, SPEC's own anchor phrases.
+    test.assertIn("through that phase's own abort route", normalized)
+    test.assertIn("no route of the current run produced", normalized)
+    test.assertNotIn(PRECEDENCE_RULE_OLD_STATE_BASED_PHRASE, normalized)
+    test.assertNotIn("no-work-required", paragraph)
+
+
+def _assert_docs_commit_conflict_no_status_stated(test, coverage_section_text):
+    """TS-9 (FR7): the Precedence rule paragraph states that
+    `implement-second-failure` and `verify-rework-cap` write a step's
+    status `failed`, and that `docs-commit-conflict` aborts without
+    writing any status because the failed status write is itself its stop
+    cause -- replacing the old, inaccurate collective claim that all three
+    leave a step's status `failed`."""
+    paragraph = _extract_precedence_rule_paragraph(coverage_section_text)
+    test.assertTrue(paragraph, "no 'Precedence rule:' paragraph found")
+    normalized = _normalize(paragraph)
+    test.assertIn("`implement-second-failure`", paragraph)
+    test.assertIn("`verify-rework-cap`", paragraph)
+    test.assertIn("write a step's status", normalized)
+    test.assertIn("`docs-commit-conflict`", paragraph)
+    test.assertIn("aborts without writing any status", normalized)
+    test.assertIn("the failed status write is", normalized)
+    test.assertIn("itself its stop cause", normalized)
+    test.assertNotIn(PRECEDENCE_RULE_OLD_ALL_THREE_PHRASE, normalized)
 
 
 def _assert_context_budget_reached_exception_stated(test, coverage_section_text):
@@ -946,6 +1061,12 @@ class TestContractDocumentStructure(unittest.TestCase):
     def test_field_values_step_domain_declared(self):
         _assert_step_value_domain_declared(
             self, self.sections["Field values"], STEP_VALUE_DOMAIN
+        )
+
+    def test_field_values_no_step_condition_based_wording_stated(self):
+        """task0002/TS-7 (FR6, AC-1, AC-2)."""
+        _assert_no_step_condition_based_wording_stated(
+            self, self.sections["Field values"]
         )
 
     def test_step_domain_declaration_precedes_no_step_anchor(self):
@@ -1713,6 +1834,83 @@ class TestNoStepAnchorUnaffectedByDomainDeclaration(unittest.TestCase):
         self.assertNotIn("create-plan", extracted)
 
 
+# -- task0002 (FR6/TS-7): condition-based `no-step` wording -----------------
+
+
+def _assert_no_step_condition_based_wording_stated(test, field_values_section_text):
+    """TS-7 (FR6): the `no-step` bullet states the executed-step /
+    outside-Step-B condition (which governs, with the named stop points as
+    non-exhaustive examples), the stop-condition-4 case with its fallback
+    to the general rule, and the Step A.5 case naming the refusal-pattern
+    hard fail in prose only (never by a backticked coverage key, D4)."""
+    normalized = _normalize(field_values_section_text)
+    test.assertIn(
+        "no `workflow.yaml` step was executed in that turn, or the stop "
+        "occurs outside Step B",
+        normalized,
+    )
+    test.assertIn("examples, not an exhaustive list", normalized)
+    test.assertIn(
+        "`stop-condition-4` stop takes `no-step` when no step was "
+        "executed in that turn",
+        normalized,
+    )
+    test.assertIn("otherwise the general rule applies", normalized)
+    test.assertIn("raised in Step A.5", normalized)
+    test.assertIn("command-approval refusal-pattern hard fail", normalized)
+
+
+# Real pre-change `step` bullet, verbatim (captured from the base commit
+# before this task's edit) -- the forged sample for TS-7's negative proof.
+# It already carries the domain declaration, the general rule, the
+# precedence sentence and the Step C asymmetry (all untouched by this
+# task), but its `no-step` clause is the retired, condition-less
+# enumeration: no executed-step/outside-Step-B condition, no example
+# framing, no stop-condition-4 case and no Step A.5 case.
+PRE_CHANGE_STEP_BULLET = (
+    "- `step` — a closed value domain: one of the seven `workflow.yaml` step\n"
+    "  ids (`create-spec`, `design`, `create-plan`, `implement`, `review`,\n"
+    "  `verify`, `retrospect`), or the single sentinel `no-step`. The general\n"
+    "  rule: `step` names the step EXECUTED in that turn, never the step the\n"
+    "  next launch resumes at; at the verify-fail rework boundary the value is\n"
+    "  `verify`, even though the next launch resumes at `implement`. Two rules\n"
+    "  take precedence over the general rule: the single sentinel `no-step`,\n"
+    "  and the rule for `state` `completed`. `no-step` applies whenever no\n"
+    "  `workflow.yaml` step is in effect at the stop point: `stop-condition-6`\n"
+    "  (Step 0's git-setup abort), `step-a-abort` (Step A's feature-resolution\n"
+    "  failure), and `step-c-abort` (Step C's abort — every workflow step has\n"
+    "  already completed by then, and the stop happens outside any of them).\n"
+    "  When `state` is `completed` the value is always `retrospect` — the\n"
+    "  final workflow step, which a completed run has always reached. Because\n"
+    "  Step C is not a `workflow.yaml` step, a turn that executes Step C takes\n"
+    "  its value from whichever precedence rule applies rather than from the\n"
+    "  general rule: normal completion is `retrospect` (the `state` `completed`\n"
+    "  rule), while `step-c-abort` is `no-step` (the sentinel rule) — this\n"
+    "  asymmetry is intentional, not an omission.\n"
+)
+
+
+class TestNoStepConditionBasedWordingMatcherNegativeProof(unittest.TestCase):
+    """TS-7 (FR6): the forged sample is the real pre-change `step` bullet,
+    verbatim -- it still matches the `no-step` anchor and still yields its
+    (pre-change, three-member) key set, but states none of the new
+    condition-based wording."""
+
+    def test_pre_change_bullet_is_otherwise_well_formed(self):
+        match = NO_STEP_BULLET_RE.search(PRE_CHANGE_STEP_BULLET)
+        self.assertIsNotNone(
+            match, "the pre-change bullet must still match the `no-step` anchor"
+        )
+        extracted = _extract_no_step_stop_points(PRE_CHANGE_STEP_BULLET)
+        self.assertEqual(extracted, PRE_CHANGE_NO_STEP_STOP_POINTS)
+
+    def test_pre_change_bullet_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_no_step_condition_based_wording_stated(
+                self, PRE_CHANGE_STEP_BULLET
+            )
+
+
 class TestStopPointCoverage(unittest.TestCase):
     """AC-4."""
 
@@ -1746,6 +1944,10 @@ class TestStopPointCoverage(unittest.TestCase):
 
     def test_precedence_rule_stated(self):
         _assert_precedence_rule_stated(self, self.section)
+
+    def test_docs_commit_conflict_no_status_stated(self):
+        """task0002/TS-9 (FR7)."""
+        _assert_docs_commit_conflict_no_status_stated(self, self.section)
 
     def test_context_budget_reached_exception_stated(self):
         _assert_context_budget_reached_exception_stated(self, self.section)
@@ -1850,6 +2052,77 @@ class TestPrecedenceMatcherNegativeProof(unittest.TestCase):
             )
 
 
+# -- task0002 (TS-8/TS-9, FR7/FR8): route-based precedence + no-status ------
+# statement matcher negative proofs. The forged sample is the real
+# pre-change "Precedence rule:" paragraph, verbatim (captured from the base
+# commit before this task's edit) -- it already carries the
+# phase-specific-over-generic principle, the three colliding keys and the
+# `failed_kind` restriction, but states the retired state-based restriction
+# ("no phase-specific row covers") and the retired, inaccurate collective
+# status claim ("all three leave a step's status `failed`") rather than the
+# new route-based wording and the per-stop-point status claims.
+
+PRE_CHANGE_PRECEDENCE_PARAGRAPH = (
+    "Precedence rule: when a stop matches more than one row above, the\n"
+    "phase-specific stop point takes precedence over the generic\n"
+    "`stop-condition-N` rows, so exactly one code applies.\n"
+    "`implement-second-failure`, `verify-rework-cap` and `docs-commit-conflict`\n"
+    "are the stop points that can also match `stop-condition-3` — all three\n"
+    "leave a step's status `failed`, which is `stop-condition-3`'s own trigger —\n"
+    "and in each case the phase-specific row wins. Correspondingly, the\n"
+    "`stop-condition-3` row's meaning is restricted to `failed` / `needs_update`\n"
+    "states that no phase-specific row covers, and, for the `implement` step's\n"
+    "`failed`, further restricted to the cases where `failed_kind` reads\n"
+    "`decision`, or where the automatic-resume attempt count has reached its cap\n"
+    "per `skills/develop/SKILL.md` (see the `step_needs_intervention` row above)."
+)
+
+
+class TestPrecedenceRuleRouteBasedMatcherNegativeProof(unittest.TestCase):
+    """TS-8 (FR7, FR8)."""
+
+    def test_pre_change_paragraph_is_otherwise_well_formed(self):
+        extracted = _extract_precedence_rule_paragraph(PRE_CHANGE_PRECEDENCE_PARAGRAPH)
+        self.assertTrue(extracted)
+        normalized = _normalize(extracted)
+        self.assertIn(
+            "phase-specific stop point takes precedence over the generic",
+            normalized,
+        )
+        for key in ("implement-second-failure", "verify-rework-cap", "docs-commit-conflict"):
+            self.assertIn(f"`{key}`", extracted)
+        self.assertIn("`stop-condition-3`", extracted)
+        self.assertIn("`failed`", extracted)
+        self.assertIn("`needs_update`", extracted)
+
+    def test_pre_change_paragraph_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_precedence_rule_stated(self, PRE_CHANGE_PRECEDENCE_PARAGRAPH)
+
+
+class TestDocsCommitConflictNoStatusMatcherNegativeProof(unittest.TestCase):
+    """TS-9 (FR7): same forged pre-change paragraph -- it names all three
+    stop points, but as a single collective claim that all three leave a
+    step's status `failed`, never the per-stop-point write/no-write split
+    this task states."""
+
+    def test_pre_change_paragraph_is_otherwise_well_formed(self):
+        extracted = _extract_precedence_rule_paragraph(PRE_CHANGE_PRECEDENCE_PARAGRAPH)
+        self.assertTrue(extracted)
+        self.assertIn("`implement-second-failure`", extracted)
+        self.assertIn("`verify-rework-cap`", extracted)
+        self.assertIn("`docs-commit-conflict`", extracted)
+        self.assertIn(
+            PRECEDENCE_RULE_OLD_ALL_THREE_PHRASE, _normalize(extracted)
+        )
+
+    def test_pre_change_paragraph_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_docs_commit_conflict_no_status_stated(
+                self, PRE_CHANGE_PRECEDENCE_PARAGRAPH
+            )
+
+
 FORGED_NONEXISTENT_SOURCE_ROW_TABLE = (
     "| Stop point | Reason code | Source |\n"
     "|---|---|---|\n"
@@ -1891,9 +2164,16 @@ class TestNoResultOnWaitTurnAndSentinel(unittest.TestCase):
         self.assertIn("implement", section)
 
     def test_field_values_defines_the_sentinel_and_its_condition(self):
+        """task0002/FR6: the sentinel-condition assertion moved to the new,
+        condition-based phrase (executed-step / outside-Step-B), replacing
+        the retired "no `workflow.yaml` step is in effect" phrasing."""
         section = self.sections["Field values"]
         self.assertIn(f"`{SENTINEL}`", section)
-        self.assertIn("no `workflow.yaml` step is in effect", _normalize(section))
+        self.assertIn(
+            "no `workflow.yaml` step was executed in that turn, or the "
+            "stop occurs outside Step B",
+            _normalize(section),
+        )
 
     def test_no_step_bullet_names_the_stop_points_as_a_set(self):
         coverage_section = _sections(_read(CONTRACT_PATH))["Stop point coverage"]
