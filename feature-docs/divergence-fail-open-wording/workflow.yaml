@@ -157,7 +157,8 @@ workflow:
   failed_items: []
   summary: 'python3 -m unittest discover -s tests: 5668 tests OK. TS-1..TS-7 pass; manual checks (FR2/FR3 wording, A7 scope, NFR1 untouched paths, A5 test-docs untouched, NFR3 imports, A8 verbatim 4999893 samples) confirmed.'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: bedeae0b873c5c331d1ff43d7a2bfa15f36194c0
 tasks:
   task0001:
     title: Reword the divergence paragraph and I.2.b step 1, re-pin tests, bump em-workflow
