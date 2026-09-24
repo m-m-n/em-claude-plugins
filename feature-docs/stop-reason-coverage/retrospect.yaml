@@ -1,0 +1,46 @@
+feature: stop-reason-coverage
+collected_at: "2026-09-24T10:54:48+09:00"
+session_ids: [01a0d11e-abe0-7422-bfdd-7766f85549b7]
+signals:
+  review_critical_high: []
+  conflict_reworks:
+    - {task: task0001, retries: 1}
+    - {task: task0002, retries: 1}
+  file_prediction_misses:
+    - task: task0001
+      files:
+        - .claude-plugin/marketplace.json
+        - em-workflow/.claude-plugin/plugin.json
+        - tests/test_batch_quiet_output_discipline.py
+        - tests/test_codex_wrapper_fallback_removal_version_bump.py
+    - task: task0002
+      files:
+        - .claude-plugin/marketplace.json
+        - em-workflow/.claude-plugin/plugin.json
+        - tests/test_codex_wrapper_fallback_removal_version_bump.py
+    - task: task0004
+      files:
+        - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_only and description_plus_code readings both resolved to full; no reductions"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.0, '1': 0.0, '2': 0.46, '3': 0.54}
+      - basis: description_plus_code
+        probabilities: {'0': 0.0, '1': 0.0, '2': 0.4, '3': 0.6}
+    pre_survey_estimate:
+      changed_lines_approx: 280
+      new_functions_needed: 6
+      new_files_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "task0001/task0002 both edited plugin.json and marketplace.json to bump the version although only task0004 declared them; the per-task version-bump reflex caused parent-side adoption on both."
+  - "tests/test_codex_wrapper_fallback_removal_version_bump.py pins the current version and had to be touched by three tasks; version pins in old feature tests keep spilling into later features."
+  - "Review round 1 left two medium findings (9d15f5e2209bf367, 99655b192443cbd1) unresolved on batch-terminal-line.md precedence; follow-up filed."
+  - "Verify passed with 9 pre-existing baseline test failures (same on base 917455b) after Codex consultation."
