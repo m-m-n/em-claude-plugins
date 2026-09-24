@@ -1,0 +1,71 @@
+feature: routeback-residual-connections
+collected_at: '2026-09-24T11:10:44+09:00'
+session_ids:
+- 01a0d12d-130a-72f7-bd02-5b6835ede518
+signals:
+  review_critical_high:
+  - stable_id: aef23290e7d97475
+    category: comprehensive
+    file: tests/test_codex_wrapper_fallback_removal_version_bump.py
+    title: em-workflow を 0.2.1 に上げたことで、既存の版数固定テストが新たに失敗する
+    resolution: 'fixed by batch auto-rework task0002 (round 2 prior_round_status:
+      fixed)'
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    bases:
+    - basis: description_only
+      probabilities:
+        '0': 0.01
+        '1': 0.54
+        '2': 0.45
+      expectation_clear: 0.93
+      confidence: 0.32
+      observed_at: '2026-09-24T09:32:44+09:00'
+    - basis: description_plus_code
+      probabilities:
+        '0': 0.0
+        '1': 0.65
+        '2': 0.35
+      expectation_clear: 0.92
+      confidence: 0.48
+      observed_at: '2026-09-24T09:32:44+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/references/implement-phase.md
+      - tests/test_routeback_reset_scope_consistency.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      changed_lines_approx: 200
+      new_functions_needed: 12
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      evidence: 'main@6cb09c6 を確認したよ。残るのは2件だよ
+
+        MANUAL-3：解消済み。em-workflow/references/implement-phase.md:249 は I.2.c を below
+        で参照し、:828 の独立した journal 直接判定につながるため、reconciled state 経由の循環を避けている。:253 には退役IDを再利用しない根拠もある
+
+        MANUAL-1：未解決。implement-phase.md:872 のreset対象は reconciled failed だけで、:883 の全failed解消を保証できない。:663
+        はreport由来でもworkflow.yamlをfailedにし、em-workflow/references/workflow-patch.md:128
+        はfailedが残るreplace_allを拒否する。両failed集合の和集合への拡張と、:896 のcleanup除外をゲートの帰結として説明する修正が必要だよ
+
+        MANUAL-2：未解決。implement-phase.md:896 の confirmed not merged は無条件のままで、未記録マージの残余説明もない。祖先検証は:642
+        のmerged申告タスクだけ。em-workflow/scripts/merge-task.sh:125 はref更新後にjournalを記録し、:64
+        は記録失敗でも警告だけで継続する。確認範囲の限定と残余状態の明記が必要だよ
+
+        テスト：既存の部分的なカバーはある。TS-12相当は tests/test_recycled_task_id_consistency.py:900、tests/test_implement_routeback_gate.py:1540、tests/test_routeback_reset_scope_consistency.py:598
+        にある。TS-10・TS-11の核心は未カバーで、同ファイル:429 はreconciled対象、:463 はcleanup範囲の既存表現だけを検査している。新規関数12個は追加テストメソッドの概算だよ
+
+        両manifestは現在0.2.0（em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27）なので、依頼の制約に従う同時更新を見積もったよ。ファイル変更はしていない。全件テストは一時ファイルを作るため実行していない（tests/test_merge_task_journal.py:36）'
+follow_up_drafts: []
+lessons_candidates:
+- プラグインの version bump が、別 feature の版数固定テスト（tests/test_codex_wrapper_fallback_removal_version_bump.py）を壊し
+  review rework が 1 回発生した。計画時に既存の版数リテラル固定テストを grep して files に含めると防げる
+- verify で既存の 9 件の失敗（base 92c8d60 と同一）を 0 new failures 基準で pass とした。既存失敗の解消は別タスクに委ねた
