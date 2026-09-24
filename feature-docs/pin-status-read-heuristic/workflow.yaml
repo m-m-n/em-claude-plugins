@@ -132,7 +132,8 @@ workflow:
   completed_at_commit: 8ee03f3ba0b2626fdde74c8fb4c910d569bca7de
   base_commit: 72f08817d6ebb7862d3e1d39dab516f8d1c37a42
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: d533261d11beed184074a3e3ef689ebd01259d9c
 - id: verify
   status: pending
 - id: retrospect
@@ -166,8 +167,8 @@ tasks:
     status: merged
     branch: em-workflow/pin-status-read-heuristic/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -176,7 +177,11 @@ review:
     - spec
     discretionary: []
     cross_validation: false
-  perspectives: {}
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
