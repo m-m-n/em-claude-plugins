@@ -5,11 +5,15 @@ status: dispatching
 generation: 1
 base_revision: 2730a2ff4f335aa0cd4d0eff6b7f1cdcc405db0e
 last_input_digest: sha256:b616a12b949eddff8a2e2a027ebd2d6279ff04c8d6f2d618c4c9e5b956a28502
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
+  status: invalid_input
+  input_digest: sha256:b616a12b949eddff8a2e2a027ebd2d6279ff04c8d6f2d618c4c9e5b956a28502
+  output_digest: null
+- request_id: create-spec-run-0002
   status: dispatched
   input_digest: sha256:b616a12b949eddff8a2e2a027ebd2d6279ff04c8d6f2d618c4c9e5b956a28502
   output_digest: null
@@ -18,4 +22,6 @@ patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-spec-run-0001 invalid_input: orchestrator dispatch prompt carried
+  an unsubstituted task_description placeholder; re-dispatched with the verbatim task
+  text'
