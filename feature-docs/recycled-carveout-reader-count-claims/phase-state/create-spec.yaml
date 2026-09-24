@@ -1,7 +1,7 @@
 schema_version: 1
 feature: recycled-carveout-reader-count-claims
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 1ad90ef144a1238feb3211233e086aac29695daa
 last_input_digest: sha256:c28ac4d013f3802ef1e144b916b7892b87b798c64ce49d7d9309f185913df2e6
