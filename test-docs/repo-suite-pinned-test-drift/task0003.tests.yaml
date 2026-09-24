@@ -1,0 +1,114 @@
+task_id: task0003
+baseline_failures:
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+final_failures:
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_well_formed_and_at_least_0_2_2
+      - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_well_formed_at_least_0_2_2_and_agrees_with_manifest
+    red_confirmed: true
+    red_reason: >-
+      Captured in the 4a baseline run (repo at 0.2.3): the pre-change
+      tests test_plugin_manifest_version_is_0_2_2 and
+      test_marketplace_em_workflow_entry_version_is_0_2_2 both failed with
+      AssertionError: '0.2.3' != '0.2.2' (string-equality against
+      EXPECTED_VERSION). Renamed and rewritten to the form+floor+agreement
+      matchers here, which pass against the same live files at 0.2.3.
+  AC-2:
+    tests:
+      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_accepts_a_forged_higher_version_in_both_registries
+      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_accepts_a_two_digit_patch_component_via_numeric_comparison
+      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_a_version_below_the_floor_in_both_registries
+      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_a_malformed_value_in_either_registry
+      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_disagreeing_registries
+    red_confirmed: true
+    red_reason: >-
+      Two rounds of deliberate weakening, both reverted after observing
+      the failures: (1) well-formed check stubbed to always True, floor
+      and agreement comparisons stubbed to no-ops -- the three
+      reject-verdict tests (below-floor, malformed, disagreeing) all
+      failed with "AssertionError: AssertionError not raised". (2) floor
+      comparison direction flipped (assertGreaterEqual -> assertLess) --
+      the two accept-verdict tests (forged-higher, two-digit-patch) both
+      failed since 99.0.0 / 0.2.10 no longer compared as >= the floor.
+      Implementation restored after each round; full module re-run green.
+  AC-3:
+    tests:
+      - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_well_formed_and_at_least_0_2_1
+      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_well_formed_and_at_least_0_2_1
+    red_confirmed: true
+    red_reason: >-
+      Captured in the 4a baseline run (repo at 0.2.3): the pre-change
+      tests test_version_is_the_literal_bump_target and
+      test_entry_version_is_the_literal_bump_target both failed with
+      AssertionError: '0.2.3' != '0.2.2' (string-equality against the
+      "0.2.2" literal). Renamed and rewritten to the form+floor (0.2.1)
+      matcher here, which passes against the same live files at 0.2.3.
+  AC-4:
+    tests:
+      - test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_accepts_a_forged_higher_version
+      - test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_rejects_a_version_below_the_floor
+      - test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_rejects_a_malformed_value
+    red_confirmed: true
+    red_reason: >-
+      Two rounds of deliberate weakening, both reverted after observing
+      the failures: (1) form+floor body stubbed to a no-op -- the two
+      reject-verdict tests (below-floor, malformed) both failed with
+      "AssertionError: AssertionError not raised". (2) comparison
+      direction flipped (assertGreaterEqual -> assertLess) -- the
+      accept-verdict test (forged-higher) failed since 99.0.0 no longer
+      compared as >= the floor. Implementation restored after each round;
+      full module re-run green.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not independently testable as a positive/negative assertion pair;
+      verified by manual code review of both files after the edit:
+      EXPECTED_VERSION no longer exists (renamed to FR6_VERSION_FLOOR /
+      FR7_VERSION_FLOOR), and grep for "0.2.2" / literal-equality wording
+      in method names, docstrings and comments in both changed files
+      turned up only floor-framed uses ("at least 0.2.2", "floor
+      constant"), never an equality-target claim.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by review, not a single test: grepped both changed files
+      for "0.2.3", "0.2.4" and "0.5.13" post-change — no match in any
+      changed check. Both modules' imports (ast-checked by the existing
+      test_only_standard_library_imports test in
+      test_stop_reason_coverage_version_bump.py, and by inspection for
+      test_abort_terminal_commit_precedence.py, which imports only json,
+      re, unittest and pathlib) are standard-library only. "Every other
+      test in both modules keeps passing" is shown by the full-module
+      green runs recorded in final_failures being a strict subset of
+      baseline_failures for both files.
