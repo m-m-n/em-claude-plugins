@@ -1,0 +1,209 @@
+schema_version: 1
+feature: repo-suite-pinned-test-drift
+created: '2026-09-24'
+base_branch: main
+goal: "# リポジトリスイートが main で 6 件失敗したままになっている（ドキュメント・マニフェストのピン留め追随漏れ）\n\n## 現象 (必須)\n`python3 -m unittest\
+  \ discover -s tests` が main で 6 件失敗する。\n```plain text\nRan 4596 tests\nFAILED (failures=6)\n```\n失敗しているテスト:\n\
+  - `test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens`\n\
+  - `test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present`\n\
+  - `test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present`\n\
+  - `test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged`\n\
+  - `test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78`\n\
+  - `test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget`\n\
+  ## 再現手順 (必須)\n1. `em-claude-plugins` のリポジトリルートで `python3 -m unittest discover -s tests` を実行する\n2. 上記\
+  \ 6 件が FAIL する\n## 期待する挙動 (必須)\nリポジトリスイートが終了コード 0 で全件通る。\n各テストは em-workflow プラグインのドキュメント本文・マニフェストの値をピン留めして\n\
+  いる。ドキュメントやマニフェストを変更したコミットが、対応するピン留めテストを同じ\n変更の中で追随させるべきだった。追随漏れが残ったまま main に載っている。\n## 完了の定義 (必須)\n\
+  - [ ] 再現手順で現象が起きない（`python3 -m unittest discover -s tests` が終了コード 0）\n- [ ] 再発を検出するテストがある（既存の 6 件がその役割を果たす。期待値を現状に\n\
+  合わせて更新するのか、ドキュメント側を戻すのかを 1 件ずつ判断する）\n## 該当箇所 (任意)\n失敗の性質は大きく 3 群に分かれる。\n1. develop スキル本文のピン留め（4 件）\n\
+  \t- `em-workflow/skills/develop/SKILL.md` の「引数処理」の argument-hint 行と Step C 本文\n\t- 直接の原因コミットは `fba3d7e\
+  \ feat(develop): add --pr flag for PR creation` と\n見込まれる。`--pr` の追加で argument-hint 行と Step C の完了方式の文面が変わり、\n\
+  旧文面を期待するテストが FAIL するようになった\n- 対象: `tests/test_develop_once_option.py`、`tests/test_step_c_verify_failed_default.py`、\n\
+  `tests/test_muse_consent_no_new_questions.py`（develop / review ドキュメントの\n質問数バジェット）\n1. マニフェストの version\
+  \ ピン留め（1 件）\n\t- `tests/test_codex_wrapper_fallback_removal_version_bump.py` が em-workflow の\nversion\
+  \ を `0.1.78` に固定している。プラグインの version は変更のたびに上がる\n運用（`.claude/rules/core-plugin-version-bump.md`）なので、特定値のピン留めが\n\
+  成立し続けない\n1. マニフェストの非 version フィールドのピン留め（1 件）\n\t- `tests/test_muse_consent_version_bump.py` の\n`test_em_workflow_manifest_nonversion_content_unchanged`\n\
+  原因コミットの確定には `git bisect` が有効。\n## 実害・発生条件 (任意)\nem-workflow の verify フェーズは `workflow.yaml` の `project.components.main.test_command`\n\
+  としてこのスイートを実行する。スイートが常に非ゼロで終わるため、どの feature の verify\nでも「この feature が壊したのか、元から壊れていたのか」を毎回 base commit\
+  \ との比較で\n切り分ける必要があり、判定コストが乗り続ける。\n実際に feature `destructive-guard-quoted-substitution-fail-open` の verify\
+  \ で発生した。\nbase commit `dbeb7fb` と HEAD の双方で同一 6 件が失敗することを一時 worktree で実測し、\n新規回帰ゼロを確認したうえで pass と判定した。この切り分けは本来不要な作業。\n\
+  ピン留めテストが赤のままだと、本物の回帰が混ざっても気づけなくなる点がより重い。\n"
+parent_branch: em-workflow/repo-suite-pinned-test-drift/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.01
+      '1': 0.91
+      '2': 0.08
+    expectation_clear: 0.93
+    confidence: 0.87
+    observed_at: '2026-09-24T23:17:59+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.71
+      '2': 0.29
+    expectation_clear: 0.91
+    confidence: 0.56
+    observed_at: '2026-09-24T23:17:59+09:00'
+  at: '2026-09-24T23:18:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 44a9a30da356a6c9ec1a791aac9030c35efae517
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI・画面・視覚要素を持たない、テストの期待値とドキュメント 1 箇所・マニフェスト version の変更のみ
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: argument-hint 期待値の追随
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Step C batch 自動選択文面の追随
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Non-packet gates 参照検査の空白正規化
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: develop SKILL.md の AskUserQuestion 出現数を上限内に戻す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: em-workflow マニフェスト非 version ダイジェストの追随
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: abort-terminal-commit-precedence の version リテラル固定の撤去
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: stop-reason-coverage の version リテラル固定の撤去
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: codex-wrapper-fallback-removal の version リテラル固定の撤去
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: batch-structured-result-output の em-review version 固定の撤去
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: review-rules.yaml 期待値の追随
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: em-workflow の version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 現行 version リテラルとの非比較
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 否定証明テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: マニフェストの version 以外不変
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
