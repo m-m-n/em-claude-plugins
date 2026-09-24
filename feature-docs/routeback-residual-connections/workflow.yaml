@@ -147,7 +147,7 @@ tasks:
     - FR7
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     branch: em-workflow/routeback-residual-connections/task0002
     provenance:
       source: review
