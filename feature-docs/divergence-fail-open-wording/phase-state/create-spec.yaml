@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: eaed38f317780bb9ef205fe01343caa2ebb36be3
 last_input_digest: sha256:bb070b7a63d9b976b190c38181de19b166e1e1b0f4ea506dc384ce852bda2522
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -18,10 +18,16 @@ worker_runs:
   input_digest: sha256:4e7b91d763c48dba0c4f980c0ab21357190db3d2d530f4cb865a99e99d52ed62
   output_digest: sha256:bc095539d8cc52feab1d6ac4c11d0c0db9f537f771a6740c84f211cb66a291ce
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:bb070b7a63d9b976b190c38181de19b166e1e1b0f4ea506dc384ce852bda2522
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/divergence-fail-open-wording/REQUIREMENTS.md
+  sha256: sha256:3762c515e2676de020feab241ef5e32421475ebdd3d1c0ff04c0256bb49f16b2
+  produced_by: create-spec-run-0003
+- path: feature-docs/divergence-fail-open-wording/SPEC.md
+  sha256: sha256:4b7c9a7108e60b0a0e3675c2661ea0f1aaa9cf661c00a285ef931d02f72df987
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
