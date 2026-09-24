@@ -2,7 +2,8 @@ schema_version: 1
 feature: recycled-carveout-reader-count-claims
 created: '2026-09-25'
 base_branch: main
-goal: '# em-workflow: recycled-task-id-carveout の TS-13 とテスト docstring の reader-count 主張が実測と一致しない
+goal: '# em-workflow: recycled-task-id-carveout の TS-13 とテスト docstring の reader-count
+  主張が実測と一致しない
 
 
   ## 現象
@@ -12,22 +13,29 @@ goal: '# em-workflow: recycled-task-id-carveout の TS-13 とテスト docstring
 
   (1) VERIFICATION.md TS-13 が出典より広い全称文になっている
 
-  `feature-docs/recycled-task-id-carveout/VERIFICATION.md` の TS-13 は出典として SPEC AC-6 を挙げている。AC-6 の本文は「`ORCHESTRATOR_ONLY_SCOPE_PHRASE` の改訂の結果として single-reader の module-level 定数を残さない」であり、その改訂が孤立させた定数を対象にしている。
+  `feature-docs/recycled-task-id-carveout/VERIFICATION.md` の TS-13 は出典として SPEC AC-6
+  を挙げている。AC-6 の本文は「`ORCHESTRATOR_ONLY_SCOPE_PHRASE` の改訂の結果として single-reader の module-level
+  定数を残さない」であり、その改訂が孤立させた定数を対象にしている。
 
-  一方 TS-13 の Expected Result 欄は「Count reader sites per module-level constant; every constant has 0 (retired with its readers) or >= 2」という、モジュール内の全定数に対する全称文になっている。
+  一方 TS-13 の Expected Result 欄は「Count reader sites per module-level constant; every
+  constant has 0 (retired with its readers) or >= 2」という、モジュール内の全定数に対する全称文になっている。
 
   実測では `tests/test_recycled_task_id_consistency.py` に reader 1 の定数が 6 個残る:
 
-  - `PLUGIN_ROOT`、`IMPLEMENT_PHASE_PATH`、`ABORT_PHASE_TERMINAL_PHRASE`、`STOP_CONDITION_3_PHRASE` — 本 feature 以前から single-reader
+  - `PLUGIN_ROOT`、`IMPLEMENT_PHASE_PATH`、`ABORT_PHASE_TERMINAL_PHRASE`、`STOP_CONDITION_3_PHRASE`
+  — 本 feature 以前から single-reader
 
-  - `STOP_HOOK_BULLET_START`、`NEXT_SUPPORTING_CAST_BULLET_START` — task0001 が追加したセクション切り出し用アンカー。ヘルパー関数 `_stop_hook_bullet()` の内部でのみ読まれる
+  - `STOP_HOOK_BULLET_START`、`NEXT_SUPPORTING_CAST_BULLET_START` — task0001 が追加したセクション切り出し用アンカー。ヘルパー関数
+  `_stop_hook_bullet()` の内部でのみ読まれる
 
   AC-6 の基準では合格だが、TS-13 の文字どおりでは不合格になる。
 
 
   (2) モジュール docstring の reader-count 主張が実測と不一致
 
-  `tests/test_recycled_task_id_consistency.py` の docstring（task0004 の AC-5/AC-6 の説明）が「leaving no module-level constant in this module with fewer than two reader sites」と書いているが、reader 1 の定数が 6 個ある。
+  `tests/test_recycled_task_id_consistency.py` の docstring（task0004 の AC-5/AC-6 の説明）が「leaving
+  no module-level constant in this module with fewer than two reader sites」と書いているが、reader
+  1 の定数が 6 個ある。
 
 
   ## 再現手順
@@ -52,7 +60,8 @@ goal: '# em-workflow: recycled-task-id-carveout の TS-13 とテスト docstring
 
   - [ ] TS-13 の Expected Result が実測可能かつ実測と一致する基準になっている
 
-  - [ ] tests/test_recycled_task_id_consistency.py の docstring から、実測と一致しない reader-count 主張が消えている
+  - [ ] tests/test_recycled_task_id_consistency.py の docstring から、実測と一致しない reader-count
+  主張が消えている
 
   - [ ] `python3 -m unittest discover -s tests` が通る
 
@@ -119,7 +128,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: c2c5ec7aaec1b25b100c9f48ef016ac3415e57e6
 - id: implement
   status: pending
   base_commit: d19dffccfb49dfa6ef49d693d815296e78a59299
@@ -131,7 +141,26 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Narrow TS-13 row and its manual item to the AC-6 constants
+    plan: tasks/task0001.md
+    files:
+    - feature-docs/recycled-task-id-carveout/VERIFICATION.md
+    skills: []
+    domains: []
+    complexity: low
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -141,50 +170,65 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR2:
     title: TS-13 の手動確認項目を同じく絞る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   FR3:
     title: モジュール docstring に誤った読み取り箇所数の主張が無いことを確認する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
   FR4:
     title: 変更を VERIFICATION.md の 2 箇所に限る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   NFR1:
     title: プラグインの version を上げない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   NFR2:
     title: 過去の記録を変更しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   NFR3:
     title: テストスイートが通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
 batch:
   review_rework_count: 0
   verify_rework:
