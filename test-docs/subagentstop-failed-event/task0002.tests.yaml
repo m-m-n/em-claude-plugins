@@ -1,0 +1,92 @@
+task_id: task0002
+# Deviation note: after the doc/test edit, `git commit` was denied by the
+# local plugin-version-guard hook (em-workflow/.claude-plugin/plugin.json's
+# version unchanged while em-workflow/references/implement-phase.md
+# changed). task0003 had already merged into the parent integration branch
+# by this point (version 0.2.3 -> 0.2.4); this task's branch was
+# fast-forwarded onto that parent tip (a plain `git merge`, no conflicts,
+# no files this task owns touched), and the version was bumped one more
+# patch (0.2.4 -> 0.2.5) in the same commit as this task's own change, to
+# satisfy the guard -- consistent with the established repo precedent of a
+# blocked commit self-bumping rather than stopping (multiple prior
+# task0002 commits across earlier features, e.g. "task0002: bump
+# em-workflow to 0.1.81"). tests/test_subagentstop_failed_event_version_bump.py
+# (task0003's own module, merged in via the fast-forward) only asserts a
+# strict bump over the 0.2.3 baseline and manifest/marketplace agreement,
+# so 0.2.5 does not break it. Reported as a deviation in this task's final
+# report (files outside expected_files: .claude-plugin/marketplace.json,
+# em-workflow/.claude-plugin/plugin.json).
+baseline_failures:
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+final_failures:
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_both_agent_type_values_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_block_source_phrase_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_agent_index_fallback_phrase_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_items_appear_in_fixed_order
+    red_confirmed: true
+    red_reason: "AssertionError: '`em-workflow:implementer`' not found in bullet text (and ValueError from .index() in the order test) before the passage was extended"
+  AC-2:
+    tests:
+      - test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_exclusive_lock_statement_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_failed_only_when_neither_terminal_statement_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_at_most_one_failed_line_statement_present
+    red_confirmed: true
+    red_reason: "AssertionError: 'Replay and append happen inside one exclusive-lock critical section on the journal' not found in bullet text before the passage was extended"
+  AC-3:
+    tests:
+      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_diagnostics_log_path_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_all_nine_outcome_codes_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_missing_line_meaning_statement_present
+      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_not_a_journal_no_writer_statement_present
+    red_confirmed: true
+    red_reason: "AssertionError: '`.claude/worktrees/em-workflow/subagent-stop-diagnostics.jsonl`' not found in bullet text (and each of the nine `subTest` outcome-code checks failed) before the passage was extended"
+  AC-4:
+    tests:
+      - test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_observable_missing_diagnostics_line_statement_present
+      - test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_pinned_neither_event_phrase_present
+      - test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_pinned_extended_branch_phrase_present
+    red_confirmed: true
+    red_reason: "AssertionError: 'Such a stop is also observable as a missing diagnostics line' not found in caveat text before the new sentence was added (the two pinned phrases were already present pre-existing, so only this sub-check was red)"
+  AC-5:
+    tests:
+      - test_subagentstop_failure_net_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "This AC asserts a property of the test module itself (asserts AC-1..AC-4 against the real file, each matcher has a negative proof, stdlib-only imports); it has no independent 'before' state to observe red against -- satisfied by the module's own construction (32 tests total: 15 positive matchers + 1 order test + 15 negative-proof tests + 1 stdlib-import test) and verified by inspection rather than a red/green cycle of its own."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "Outcome verified by diff inspection (git diff -- em-workflow/references/implement-phase.md shows only the two edited passages changed) and by the full-suite run (python3 -m unittest discover -s tests: 5566 tests, same 16 pre-existing baseline failures as before the edit, zero new failures), not by a dedicated test."
