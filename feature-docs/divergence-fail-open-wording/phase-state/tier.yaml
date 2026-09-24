@@ -1,0 +1,48 @@
+schema_version: 1
+feature: divergence-fail-open-wording
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.09
+    '1': 0.15
+    '2': 0.76
+    '3': 0.0
+  expectation_clear: 0.94
+  confidence: 0.68
+  observed_at: '2026-09-25T00:32:38+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.01
+    '1': 0.02
+    '2': 0.95
+    '3': 0.02
+  expectation_clear: 0.93
+  confidence: 0.94
+  observed_at: '2026-09-25T00:34:26+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - tests/test_recycled_task_id_consistency.py
+  - test-docs/recycled-task-id-contract/task0001.tests.yaml
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_hook_classification_pin.py
+  - tests/test_queue_stop_guard.py
+  - tests/test_plugin_version_parity.py
+  work_still_required: true
+  rationale: HEAD d19dffccfb49dfa6ef49d693d815296e78a59299 では未解消だよ。implement-phase.md:298-308
+    は差異を fail-open で説明しており、1167-1171 の exit 0 という定義と矛盾しているよ。465-470 の no event → unlaunched
+    分類と、247-248 の status != merged 選択条件、796-798 の再突入の関係を明記する修正が必要だよ。queue_stop_guard.py:200-205
+    に初回 launch の取りこぼし検出という根拠があり、398-400 は status 無参照で分類し、518-544 は同じ判定状態で3回まで exit
+    2、以降は警告付き exit 0 にする実装だよ。指定の DIVERGENCE_DELIBERATE_PHRASE は HEAD に存在せず、相当する固定文言は
+    tests/test_recycled_task_id_consistency.py:439 の DIVERGENCE_REASON_PHRASE だよ。978-987
+    の既存テストと1338-1350 の negative proof を拡張し、現在の誤った文言への退行も検出する想定だよ。テスト名の修正に伴い test-docs/recycled-task-id-contract/task0001.tests.yaml:35
+    の参照も更新するよ。.claude/rules/core-plugin-version-bump.md:7-11 に従う版番号2箇所の更新も見積もりに含めたよ。ファイルは変更しておらず、一時ファイルを作る全テスト実行も行っていないよ
+decided_at: '2026-09-25T00:34:41+09:00'
