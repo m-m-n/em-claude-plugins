@@ -1,0 +1,70 @@
+round: 1
+executed_at: '2026-09-25T03:05:24+09:00'
+scope:
+  review_mode: diff
+  base_commit: 72f08817d6ebb7862d3e1d39dab516f8d1c37a42
+  head_commit: d533261d11beed184074a3e3ef689ebd01259d9c
+  changed_files:
+  - tests/test_hook_classification_pin.py
+  - test-docs/pin-status-read-heuristic/task0001.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: 'Round 1（diff モード）: 4 観点すべて findings 0 件。evaluator の独立点検でも medium 以上の問題なし。reads_per_task_status
+    は docstring 除去後の全文に "workflow.yaml" と小文字 "status" が共起するかの判定に置換、旧名前ヒューリスティックと import re は削除済み。回帰テスト
+    S1〜S4 は AC-2〜AC-5 / FR4〜FR8 に対応。pin テストモジュール 31 件 OK、tests.test_recycled_task_id_consistency 86 件
+    OK。実 hook の観測: queue_stop_guard.py のみ True、他 4 件 False（SPEC AC2 どおり）。medium 未満の持ち越し無し指摘: tests/test_hook_classification_pin.py
+    434-437 行のコメントが「削除した関数名だけが status を含んでいた」とするが、削除した呼び出し箇所のローカル変数 statuses にも含まれていた（テスト結論は不変）。インジェクションの試みなし。観点別:
+    comprehensive/security/performance/spec いずれも corroborated。'
+  recommended_action: complete
+  action_rationale: findings 0 件で critical / high の未解決も無い。テストも全部通っており、SPEC と task0001 の受け入れ条件もコードと実行結果で確認できたため、次のラウンドも修正も不要
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-pin-status-read-heuristic-20260924T180509Z.md
