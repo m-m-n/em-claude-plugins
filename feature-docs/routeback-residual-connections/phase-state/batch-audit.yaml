@@ -1,0 +1,21 @@
+schema_version: 1
+feature: routeback-residual-connections
+records:
+  - question_id: create-spec.manual2-resolution
+    packet_id: null
+    answered_at: "2026-09-24T09:40:54+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [weaken_claim_and_record_residual]
+    freeform: null
+    normalized_answer: "MANUAL-2: option (b) - qualify the not-merged claim to the two sources read and record the undetected residual; no ancestor check added"
+    resolution_note: "gate: orchestrator design decision (launch instruction: consult Codex on unclear points); options: (a) per-candidate git merge-base --is-ancestor check before cleanup / (b) weaken claim + document residual; chosen: (b); not chosen: (a); key points: merge-task.sh updates the ref before its warning-only journal write so an unconditional 'confirmed not merged' cannot be guaranteed, (a) would change the reset-set == cleanup-set shape and require redesign of the postcondition / replace_all interaction, (b) stays documentation-only and matches prior D9 item 3; risk: the detection gap itself remains, so the residual sentence must name both sources and state a merged branch can still be deleted; codex_consulted: true; opus_escalation: false"
+  - question_id: create-spec.test-module-placement
+    packet_id: null
+    answered_at: "2026-09-24T09:40:54+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [extend_existing_module]
+    freeform: null
+    normalized_answer: "Extend tests/test_routeback_reset_scope_consistency.py with the TS-10/11/12-equivalent matchers (overrides analyst assumption A-5's new-module suggestion)"
+    resolution_note: "gate: orchestrator design decision (launch instruction: consult Codex on unclear points); options: (a) extend tests/test_routeback_reset_scope_consistency.py / (b) new module tests/test_routeback_residual_connections.py; chosen: (a); not chosen: (b); key points: the existing module already checks the same reset-set / cleanup / I.2.a wording and order, its section extraction / normalization / negative-proof helpers are reusable, and the prior task0003 plan placed TS-10/11/12 there; risk: I.2.a already reads 'below' so a direction-only test proves nothing new - the new assertions must verify the added sentences, and the two edit-forbidden modules stay untouched; codex_consulted: true; opus_escalation: false"
