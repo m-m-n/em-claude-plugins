@@ -1,0 +1,52 @@
+feature: exemption-registry-section-scope
+collected_at: '2026-09-24T20:51:00+09:00'
+session_ids:
+- 01a0d340-1198-7352-bb9a-41d5ea4d3f91
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0001
+    files:
+    - tests/test_assumptions_reversible_criterion.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    bases:
+    - basis: description_only
+      probabilities:
+        '0': 0.23
+        '1': 0.68
+        '2': 0.09
+        '3': 0.0
+      expectation_clear: 0.9
+      confidence: 0.68
+      observed_at: '2026-09-24T19:56:35+09:00'
+    - basis: description_plus_code
+      probabilities:
+        '0': 0.19
+        '1': 0.74
+        '2': 0.07
+        '3': 0.0
+      expectation_clear: 0.9
+      confidence: 0.73
+      observed_at: '2026-09-24T19:56:35+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - tests/test_gate_option_vocabulary.py
+      - tests/test_gate_option_vocabulary_doc.py
+      - tests/_gate_vocabulary.py
+      changed_lines_approx: 220
+      new_functions_needed: 4
+      new_files_needed: 1
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+- tests/ 配下に非テストヘルパを新設すると、既存の標準ライブラリ限定 import ガード（tests/test_assumptions_reversible_criterion.py）に掛かり、宣言外ファイルの変更が発生した。計画時に import ガードの存在を確認して files に含めると防げる
+- 上記ガードの除外範囲が tests/*.py 全体に広がり、テスト同士の import 検知が弱まった（review round 1 の medium 5ee44cb00a4a7529、unresolved）。宣言範囲外の変更（37d137ce7723409d、medium、unresolved）と合わせて別タスクで扱う
+- verify で既存の 9 件の失敗（base 4a75e04 と同一）を 0 new failures 基準で pass とした。既存失敗の解消は別タスクに委ねた
