@@ -33,6 +33,15 @@ workflow.yaml `workflow[implement].base_commit`.
 | TS-5 | FR7, AC-7: Both manifests parse. The em-workflow version is strictly greater than 0.2.0 by per-component numeric comparison, and the two registries are equal. Negative proofs with a forged 0.2.0 and a forged differing pair. | All pass. Both manifests read 0.2.1. | Unit (JSON) |
 | TS-6 | AC-8, NFR2, NFR3, NFR5, NFR6, NFR7, NFR9: `python3 -m unittest discover -s tests` exits 0. This runs every pre-existing anchor, ordering, byte-identity and bare-git-line guard in `tests/test_recycled_task_id_consistency.py`, `tests/test_implement_routeback_gate.py`, `tests/test_routeback_reset_scope_consistency.py` and `tests/test_routeback_reset_scope_version_bump.py`. `git diff` from the base to the integration branch is empty for the two edit-forbidden modules. The new modules import only the standard library. | Exit 0. Empty diff for both edit-forbidden modules. | Integration (suite) |
 | TS-7 | NFR1, planner-added (SPEC gives NFR1 no scenario): `git diff --name-only` from the base to the integration branch lists only `em-workflow/references/implement-phase.md`, `em-workflow/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `tests/test_routeback_reset_scope_consistency.py`, `tests/test_routeback_residual_connections_version_bump.py`, and paths under `feature-docs/routeback-residual-connections/` and `test-docs/routeback-residual-connections/`. | No other path appears. In particular, nothing under `em-workflow/scripts/`, `em-workflow/hooks/`, `em-workflow/agents/` or `em-workflow/skills/` changes. | Integration (diff) |
+| TS-8 | FR7, NFR1, rework review round 1 (task0002, finding aef23290e7d97475): In `tests/test_codex_wrapper_fallback_removal_version_bump.py`, `PLUGIN_SPECS["em-workflow"]["expected"]` is "0.2.1", and the module still compares it to both manifests by exact equality. `TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version` passes. The adjacent comment block has a new line naming routeback-residual-connections and 0.2.1. `git diff --name-only` from the base to the integration branch lists TS-7's paths plus this one module, and nothing else. | The module exits 0 when run alone (`python3 -m unittest discover -s tests -p 'test_codex_wrapper_fallback_removal_version_bump.py'`). No path appears outside TS-7's list plus this module. | Unit (JSON) + Integration (diff) |
+
+### Rework Coverage (review round 1)
+
+- task0002 (finding aef23290e7d97475) adds `tests/test_codex_wrapper_fallback_removal_version_bump.py`
+  to the change set. TS-7's allowed-path list is read together with TS-8, and this one
+  module is the only addition to it.
+- TS-6 (the full suite exits 0) also covers task0002. The finding was the only new
+  failure in that suite.
 
 ### Edge Cases (from SPEC.md)
 
@@ -145,5 +154,6 @@ that PR's MANUAL-n.
 | Document-contract tests | 4 (TS-1–TS-4) | 4 | 0 | 0 |
 | Manifest version test | 1 (TS-5) | 1 | 0 | 0 |
 | Suite / diff checks | 2 (TS-6, TS-7) | 2 | 0 | 0 |
+| Rework version-pin check | 1 (TS-8) | 1 | 0 | 0 |
 | Manual reading | 4 (MANUAL-1–MANUAL-4) | 0 | 0 | 4 |
-| **Total** | 11 | 7 | 0 | 4 |
+| **Total** | 12 | 8 | 0 | 4 |
