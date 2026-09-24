@@ -1,0 +1,167 @@
+schema_version: 1
+feature: version-bump-entry-count-guard
+created: '2026-09-25'
+base_branch: main
+goal: |
+  em-workflow: version bump テストが marketplace 全体のエントリ数を固定し、プラグイン追加で無関係に落ちる
+
+  ## 現象（必須）
+  `tests/test_recycled_task_id_contract_version_bump.py` の `MARKETPLACE_NAME_SOURCE_BASELINE` が `.claude-plugin/marketplace.json` の全エントリ（em-review / em-workflow の 2 件）のスナップショットを literal で持ち、`test_entry_count_unchanged` が `len(plugins) == 2` を主張している。
+  このモジュールの責務は「task0002 が em-workflow の version を 1 patch 上げた」ことの検証であって、リポジトリのプラグイン構成ではない。CLAUDE.md はこのリポジトリへのプラグイン追加（`plugins[]` へのエントリ追加）を通常運用として明記しているので、3 つ目のプラグインを追加した時点で、version bump とは無関係なこのテストが落ちる。
+  落ちたテスト名（`test_entry_count_unchanged`）からは原因が version bump と無関係だと分からず、誤った切り分けを誘発する。
+  ## 再現手順（必須）
+  1. `.claude-plugin/marketplace.json` の `plugins[]` に 3 つ目のプラグインエントリを追加する（内容は何でもよい）。
+  2. `python3 -m unittest discover -s tests` を実行する。
+  3. `test_entry_count_unchanged` が `2 != 3` で落ちる。
+  ## 期待する挙動（必須）
+  プラグインの追加はこのテストを落とさない。AC-3 が意図する「このタスクが触らないフィールドが変わっていないこと」は em-workflow エントリに限定して検証する。
+  ## 完了の定義（必須）
+  - [ ] 再現手順（3 つ目のプラグイン追加）でこのモジュールが落ちない
+  - [ ] em-workflow エントリの name / source が変わったら落ちることは維持されている
+  ## 該当箇所（任意）
+  `tests/test_recycled_task_id_contract_version_bump.py` の `MARKETPLACE_NAME_SOURCE_BASELINE` と `test_entry_count_unchanged`
+  ## 実害・発生条件（任意）
+  既存の同種モジュール（`test_batch_policy_option_id_version_bump.py` / `test_batch_stop_contract_version_bump.py`）にはこのエントリ数ガードが無く、本モジュールだけが導入している。レビュアーからは (a) `assertGreaterEqual(len(plugins), len(BASELINE))` に緩める、(b) 2 つのテストごと削除して `test_em_workflow_entry_name_and_source_unchanged` に一本化する、のいずれかが提案されている。修正する場合は `test-docs/recycled-task-id-contract/task0002.tests.yaml` の AC-3 の tests 一覧も対応させる。
+  由来: PR https://github.com/m-m-n/em-claude-plugins/pull/16 のレビュー finding `61b85ceaf53452ce`（comprehensive、medium、confidence 65）。medium のため auto-fix ゲート（critical/high）に該当せず deferred とした。
+parent_branch: em-workflow/version-bump-entry-count-guard/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.23
+      '1': 0.26
+      '2': 0.51
+      '3': 0.0
+    expectation_clear: 0.93
+    confidence: 0.27
+    observed_at: '2026-09-25T06:35:04+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.06
+      '1': 0.15
+      '2': 0.79
+      '3': 0.0
+    expectation_clear: 0.93
+    confidence: 0.72
+    observed_at: '2026-09-25T06:35:04+09:00'
+  at: '2026-09-25T06:36:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: a518366940e5657ac5018526a4fcb87452215135
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や見た目の変更を含まない、テストコードとテスト対応表だけの修正であるため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 件数ガードとエントリ全体スナップショットの撤去
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: em-workflow エントリの name / source 検査の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: モジュール内の記述の整合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: テスト対応表の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: テスト内で作った値による確認
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 変更ファイルを 2 つに限定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 標準ライブラリのみ import、JSON はパースして読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: em-workflow 配下と marketplace.json を変更しない（version 据え置き）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: unittest discover でスイート全体が通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

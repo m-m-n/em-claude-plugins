@@ -1,7 +1,7 @@
 schema_version: 1
 feature: version-bump-entry-count-guard
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: fed2e289f673c288f9f63a947c270a2a1675ccd7
 last_input_digest: sha256:db02d8dac3831378225f2d9487b0ff5ea9159ed4211e561e572248e41caf9ae5
