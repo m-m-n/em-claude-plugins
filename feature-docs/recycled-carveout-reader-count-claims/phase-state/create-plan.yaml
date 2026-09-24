@@ -1,0 +1,21 @@
+schema_version: 1
+feature: recycled-carveout-reader-count-claims
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: bb0e3472f5be8e93d493e4460dd8f1498beac082
+last_input_digest: sha256:39d6c385a59323cf678e3f5652c712cdbdb94f871268d98dc6a262f964498c9c
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:39d6c385a59323cf678e3f5652c712cdbdb94f871268d98dc6a262f964498c9c
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
