@@ -121,7 +121,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: adfab1fa83a51ab714de3da1f827030b31a23239
 tasks:
   task0001:
     title: Scope the marketplace AC-3 check to the em-workflow entry
