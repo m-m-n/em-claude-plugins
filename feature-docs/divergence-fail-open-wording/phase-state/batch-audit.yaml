@@ -1,0 +1,52 @@
+schema_version: 1
+feature: divergence-fail-open-wording
+records:
+- question_id: create-spec.assumption-review.a5-test-rename
+  packet_id: null
+  answered_at: '2026-09-25T00:43:31+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: A
+  normalized_answer: A
+  resolution_note: 'ユーザー指示（不明点は Codex に相談し比較して良い方を採る）による requirements-analyst の仮定の確認。options:
+    A) 改名し test-docs の過去記録は書き換えない / B) 改名し test-docs も更新 / C) 改名しない; chosen: A; 要点:
+    A を採用。旧名は修正後の検査内容と食い違う。過去の実行記録 task0001.tests.yaml は当時の名前を保つ方が正確。同モジュール内の対応一覧（メソッド名の参照）は新名に揃える;
+    codex_consulted: true (codex entry, 1 turn); opus_escalation: false'
+- question_id: create-spec.assumption-review.a3-both-sites
+  packet_id: null
+  answered_at: '2026-09-25T00:43:31+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: A
+  normalized_answer: A
+  resolution_note: 'ユーザー指示（不明点は Codex に相談し比較して良い方を採る）による requirements-analyst の仮定の確認。options:
+    A) divergence 段落と I.2.b step 1 注記の両方 / B) divergence 段落のみ / C) I.2.b 注記のみ; chosen:
+    A; 要点: A を採用。完了の定義は『どちらか一方を読んでも誤読しない』ことを求めるため両箇所で分類と選択条件を区別する。Codex 補足: 『status
+    を参照しない』の範囲は journal イベントが無い場合の分類に限定し、failed+pending の例外と混同させない; codex_consulted:
+    true (codex entry, 1 turn); opus_escalation: false'
+- question_id: create-spec.assumption-review.negative-proof-sample
+  packet_id: null
+  answered_at: '2026-09-25T00:43:31+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: A
+  normalized_answer: A
+  resolution_note: 'ユーザー指示（不明点は Codex に相談し比較して良い方を採る）による requirements-analyst の仮定の確認。options:
+    A) 変更前の文面を一字一句写したサンプル定数で新句不在・旧句存在を assert / B) 既存 negative proof の期待値を入れ替えるだけ;
+    chosen: A; 要点: A を採用。既存サンプルは divergence 段落追加前の文面で、期待値の入れ替えだけでは今回の誤った説明を検出できる証明にならない。Codex
+    補足: サンプル自体の欠落検出も置き、本文での旧句不在検査は divergence 段落に限定する; codex_consulted: true (codex
+    entry, 1 turn); opus_escalation: false'
+- question_id: create-spec.assumption-review.a6-version
+  packet_id: null
+  answered_at: '2026-09-25T00:43:31+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: A
+  normalized_answer: A
+  resolution_note: 'ユーザー指示（不明点は Codex に相談し比較して良い方を採る）による requirements-analyst の仮定の確認。options:
+    A) 0.2.8（patch） / B) 0.3.0（minor）; chosen: A; 要点: A を採用。説明とテストの修正で機能追加を伴わないため
+    patch; codex_consulted: true (codex entry, 1 turn); opus_escalation: false'
