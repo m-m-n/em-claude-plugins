@@ -148,7 +148,8 @@ workflow:
     parse and read 0.2.2; check-plugin-invariants exit 0; scripts/hooks diff is commit-docs.sh
     comment lines only; TS-1..TS-10 and both manual reading checks pass'
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 26d0f577720ad56672b21ddb130e674cd6d76895
 tasks:
   task0001:
     title: Precedence rule binds the abort terminal-commit stop to one code
