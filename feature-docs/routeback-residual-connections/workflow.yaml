@@ -130,7 +130,7 @@ tasks:
     - NFR7
     - NFR8
     - NFR9
-    status: in_progress
+    status: merged
     branch: em-workflow/routeback-residual-connections/task0001
 review:
   status: pending
