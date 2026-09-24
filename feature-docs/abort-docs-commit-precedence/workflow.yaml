@@ -2,7 +2,8 @@ schema_version: 1
 feature: abort-docs-commit-precedence
 created: '2026-09-24'
 base_branch: main
-goal: '# em-workflow: batch abort の commit 新設で batch-terminal-line の stop reason code が二重該当しうる
+goal: '# em-workflow: batch abort の commit 新設で batch-terminal-line の stop reason code
+  が二重該当しうる
 
 
   Notion: https://www.notion.so/3bf3509ec8ee81b0a6a6ef3465aeadda
@@ -10,15 +11,18 @@ goal: '# em-workflow: batch abort の commit 新設で batch-terminal-line の s
 
   ## 現象（必須）
 
-  `em-workflow/references/batch-terminal-line.md` の Stop point coverage 表で、1 つの停止点が phase-specific な 2 行に同時該当し、batch run が最終行に出す reason code が未定義になる。
+  `em-workflow/references/batch-terminal-line.md` の Stop point coverage 表で、1 つの停止点が
+  phase-specific な 2 行に同時該当し、batch run が最終行に出す reason code が未定義になる。
 
-  batch の 2 回目失敗 abort パスで `commit-docs.sh` の exit-4 recovery を使い切って停止した場合、その停止点は次の 2 行の両方に該当する。
+  batch の 2 回目失敗 abort パスで `commit-docs.sh` の exit-4 recovery を使い切って停止した場合、その停止点は次の
+  2 行の両方に該当する。
 
   - `implement-second-failure` → `implement_task_failed`
 
   - `docs-commit-conflict` → `docs_commit_conflict_aborted`
 
-  同ファイルの Precedence rule は「phase-specific \> generic `stop-condition-N`」しか解決せず、phase-specific 同士の衝突を解決しないまま「so exactly one code applies」と宣言している。
+  同ファイルの Precedence rule は「phase-specific \> generic `stop-condition-N`」しか解決せず、phase-specific
+  同士の衝突を解決しないまま「so exactly one code applies」と宣言している。
 
   ## 再現手順（必須）
 
@@ -26,11 +30,13 @@ goal: '# em-workflow: batch abort の commit 新設で batch-terminal-line の s
 
   2. あるタスクを 2 回連続で failed にする（1 回目は自動 retry、2 回目で abort phase へ入る）
 
-  3. abort phase の terminal status commit で `commit-docs.sh` が exit 4 を返す状況を作る（並行する `merge-task.sh` がブランチ ref を進める）
+  3. abort phase の terminal status commit で `commit-docs.sh` が exit 4 を返す状況を作る（並行する
+  `merge-task.sh` がブランチ ref を進める）
 
   4. exit-4 recovery の 1 回リトライも exit 4 で失敗させ、フェーズを停止させる
 
-  5. `references/batch-terminal-line.md` の Stop point coverage 表を引いて、この停止点に対応する reason code を決めようとする
+  5. `references/batch-terminal-line.md` の Stop point coverage 表を引いて、この停止点に対応する reason
+  code を決めようとする
 
   ## 期待する挙動（必須）
 
@@ -38,7 +44,8 @@ goal: '# em-workflow: batch abort の commit 新設で batch-terminal-line の s
 
   ## 完了の定義（必須）
 
-  - [ ] phase-specific 同士が同時該当した場合の優先関係が、`references/batch-terminal-line.md` の Precedence rule か `references/implement-phase.md` の abort 記述のどちらかに明記されている
+  - [ ] phase-specific 同士が同時該当した場合の優先関係が、`references/batch-terminal-line.md` の Precedence
+  rule か `references/implement-phase.md` の abort 記述のどちらかに明記されている
 
   - [ ] abort の terminal commit で exit-4 recovery を使い切って停止したときの reason code が、本文から一意に読み取れる
 
@@ -46,17 +53,24 @@ goal: '# em-workflow: batch abort の commit 新設で batch-terminal-line の s
 
   - [ ] `python3 -m unittest discover -s tests` が通る
 
-  - [ ] `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を同じ変更で lockstep bump している
+  - [ ] `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json`
+  の version を同じ変更で lockstep bump している
 
   ## 該当箇所（任意）
 
-  `em-workflow/references/batch-terminal-line.md`（Stop point coverage 表と Precedence rule）、`em-workflow/references/implement-phase.md` Step I.2.c の batch-mode 段落（L490 前後）。
+  `em-workflow/references/batch-terminal-line.md`（Stop point coverage 表と Precedence
+  rule）、`em-workflow/references/implement-phase.md` Step I.2.c の batch-mode 段落（L490
+  前後）。
 
   ## 実害・発生条件（任意）
 
-  外部サービスは terminal line の reason code でフォローアップタスクを起票するため、docs コミット競合が「タスク 2 回失敗」として、あるいはその逆として誤って帰属される。発生条件は「batch の 2 回目失敗 abort」かつ「その terminal commit で exit 4 が 2 回連続」なので頻度は低いが、起きたときに人間へ届く唯一の確認面が誤った内容になる。
+  外部サービスは terminal line の reason code でフォローアップタスクを起票するため、docs コミット競合が「タスク 2 回失敗」として、あるいはその逆として誤って帰属される。発生条件は「batch
+  の 2 回目失敗 abort」かつ「その terminal commit で exit 4 が 2 回連続」なので頻度は低いが、起きたときに人間へ届く唯一の確認面が誤った内容になる。
 
-  PR https://github.com/m-m-n/em-claude-plugins/pull/13 のレビュー round 1 で comprehensive 観点が検出した medium。記録は `feature-docs/abort-phase-terminal/reviews/round1.yaml` の `676ce984493653e6`。severity medium のため review phase R4 の auto-fix 候補ゲート（critical/high のみ）に該当せず、`resolution: unresolved` のまま残した。PR #13 以前は abort パスに commit が一切無かったため、この 2 行が同時該当することは起き得なかった。
+  PR https://github.com/m-m-n/em-claude-plugins/pull/13 のレビュー round 1 で comprehensive
+  観点が検出した medium。記録は `feature-docs/abort-phase-terminal/reviews/round1.yaml` の `676ce984493653e6`。severity
+  medium のため review phase R4 の auto-fix 候補ゲート（critical/high のみ）に該当せず、`resolution:
+  unresolved` のまま残した。PR #13 以前は abort パスに commit が一切無かったため、この 2 行が同時該当することは起き得なかった。
 
 
   '
@@ -109,13 +123,15 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: Documentation-only change to protocol reference files, tests and version manifests; there is no UI surface.
+  skipped_reason: Documentation-only change to protocol reference files, tests and
+    version manifests; there is no UI surface.
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: fea8f85116bc0040054c1f91d5807a06363e3bb2
 - id: implement
   status: pending
 - id: review
@@ -124,7 +140,61 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Precedence rule binds the abort terminal-commit stop to one code
+    plan: tasks/task0001.md
+    files:
+    - tests/test_abort_terminal_commit_precedence.py
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR8
+    - FR10
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+  task0002:
+    title: 'Uncommitted terminal write: exception, resume discard and re-derivation'
+    plan: tasks/task0002.md
+    files:
+    - tests/test_abort_terminal_write_resume.py
+    - em-workflow/references/implement-phase.md
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/scripts/commit-docs.sh
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills: []
+    domains:
+    - api-contract
+    - concurrency
+    - config-infra
+    - data-persistence
+    - external-io
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -132,86 +202,127 @@ requirements:
   FR1:
     title: Phase-specific vs phase-specific precedence
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
     tbd_reason: null
   FR2:
     title: Same run never reaches Step B
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
     tbd_reason: null
   FR3:
     title: Written-but-uncommitted vs no status write
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
     tbd_reason: null
   FR4:
     title: Uncommitted terminal write and the NFR2 exception
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-3
     tbd_reason: null
   FR5:
     title: Discard at develop's resume entry
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-4
     tbd_reason: null
   FR6:
     title: Re-derivation from committed facts
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-5
     tbd_reason: null
   FR7:
     title: detail / resume_conditions content
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-5
     tbd_reason: null
   FR8:
     title: Scope limited to the batch abort
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-3
+    - TS-6
     tbd_reason: null
   FR9:
     title: commit-docs.sh NFR2 restatement consistent
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-9
     tbd_reason: null
   FR10:
     title: Lockstep version bump
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-7
     tbd_reason: null
   NFR1:
     title: Code and row set unchanged
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
     tbd_reason: null
   NFR2:
     title: Pinned text preserved
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-3
+    - TS-4
+    - TS-8
+    - TS-9
     tbd_reason: null
   NFR3:
     title: No new test failures
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
     tbd_reason: null
   NFR4:
     title: Documentation-only
     status: ok
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-9
+    - TS-10
     tbd_reason: null
 batch:
   review_rework_count: 0
