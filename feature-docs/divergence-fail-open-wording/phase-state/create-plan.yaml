@@ -1,0 +1,21 @@
+schema_version: 1
+feature: divergence-fail-open-wording
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: ad49efff6a668ed7fe6cf944aef9dc4a88b5e373
+last_input_digest: sha256:e67de208c27ead6db6a716c496ba5270c37f3a8ec7596bea8dba41263fb8d9b3
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:e67de208c27ead6db6a716c496ba5270c37f3a8ec7596bea8dba41263fb8d9b3
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
