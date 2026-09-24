@@ -1,0 +1,114 @@
+round: 1
+executed_at: '2026-09-24T10:45:15+09:00'
+scope:
+  review_mode: diff
+  base_commit: 917455b79a0dd0d64ba20d99e381ee0664fe598a
+  head_commit: 5e0cf633f6b3ac79118358d352f725df21ffe374
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-terminal-line.md
+  - test-docs/stop-reason-coverage/task0001.tests.yaml
+  - test-docs/stop-reason-coverage/task0002.tests.yaml
+  - test-docs/stop-reason-coverage/task0003.tests.yaml
+  - test-docs/stop-reason-coverage/task0004.tests.yaml
+  - tests/test_batch_quiet_output_discipline.py
+  - tests/test_batch_stop_contract.py
+  - tests/test_batch_stop_contract_skill_wiring.py
+  - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  - tests/test_develop_once_option.py
+  - tests/test_failed_kind_batch_docs.py
+  - tests/test_no_work_required_stop.py
+  - tests/test_stop_reason_catch_all.py
+  - tests/test_stop_reason_coverage_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 9d15f5e2209bf367
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/batch-terminal-line.md
+  line: 215
+  title: 同じ走行で出た通常の failed / needs_update が停止条件3から外れ、unmapped_stop に落ちる
+  description: stop-condition-3 の意味が「現在の走行のどの経路も作っていない failed / needs_update」に限定されたため、同じ走行の review failed
+    や cap 未到達の verify failed が次の Step B 評価で止まる場合に専用行も stop-condition-3 も当てはまらず、Fallback rule で unmapped_stop
+    になる。step_needs_intervention の Meaning 欄（155 行）と矛盾する。実装は SPEC FR8 の文言どおりで、ずれは SPEC の文言側にある。
+  suggestion: 固定句は残したまま、「現在の走行が step 自身の通常の失敗として書いた failed / needs_update（専用行のある停止経路を通らないもの）も stop-condition-3
+    に結び付く」旨を 1 文足し、同じ走行の review failed と前の走行から残った failed の両方をテストで照合する。
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix candidate gate is critical/high only; follow-up task filed'
+- stable_id: 99655b192443cbd1
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/batch-terminal-line.md
+  line: 81
+  title: 「Step B の外で止まれば no-step」が優先されると、cap 到達走行の step=verify と矛盾する
+  description: no-step 条件「停止が Step B の外で起きた」が優先すると明記されたため、Step C 完了後に停止として結果を出す verify-rework-cap（SKILL.md
+    は step を verify と明記）が no-step になり食い違う。
+  suggestion: no-step の段に「verify-rework-cap の停止は Step C 完了後に結果を出すが step は verify とする」例外と優先関係を足し、verify-rework-cap
+    の step 値を照合するテストを追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix candidate gate is critical/high only; follow-up task filed'
+evaluation:
+  round_summary: 第1ラウンド（相互検証あり）。comprehensive の medium 2 件は SKILL.md を直接読んで裏付け。2 件とも実装は SPEC FR6 / FR8
+    の文言どおりで、SPEC の文言と SKILL.md が食い違っている。security・architecture・spec の空の結果は evaluator が読み直して裏付け。evaluator
+    自身の low 1 件（test_stop_reason_coverage_version_bump.py が 0.2.1 を直接固定）は R3b step 2 で除外。注入の試みなし。読んだのは上限
+    10 のうち 9 ファイル。FR9 の固定値同期のうち test_batch_stop_contract_skill_wiring.py・test_failed_kind_batch_docs.py・test_no_work_required_stop.py・test_develop_once_option.py
+    は読み取り上限のため未確認。
+  recommended_action: auto_fix
+  action_rationale: medium 2 件は batch-terminal-line.md に限定の 1 文を足せば直る。critical / high なし。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null

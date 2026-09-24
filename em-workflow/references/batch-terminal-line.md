@@ -79,10 +79,15 @@ character, including non-BMP characters, is emitted unchanged.
   `verify`, even though the next launch resumes at `implement`. Two rules
   take precedence over the general rule: the single sentinel `no-step`,
   and the rule for `state` `completed`. `no-step` applies whenever no
-  `workflow.yaml` step is in effect at the stop point: `stop-condition-6`
-  (Step 0's git-setup abort), `step-a-abort` (Step A's feature-resolution
-  failure), and `step-c-abort` (Step C's abort — every workflow step has
-  already completed by then, and the stop happens outside any of them).
+  `workflow.yaml` step was executed in that turn, or the stop occurs
+  outside Step B; this condition governs, and the stop points named below
+  are examples, not an exhaustive list: `stop-condition-6` (Step 0's
+  git-setup abort), `step-a-abort` (Step A's feature-resolution failure),
+  and `step-c-abort` (Step C's abort; every workflow step has already
+  completed). A `stop-condition-4` stop takes `no-step` when no step was
+  executed in that turn; otherwise the general rule applies. A stop
+  raised in Step A.5, including the command-approval refusal-pattern hard
+  fail, also takes `no-step`.
   When `state` is `completed` the value is always `retrospect` — the
   final workflow step, which a completed run has always reached. Because
   Step C is not a `workflow.yaml` step, a turn that executes Step C takes
@@ -90,12 +95,12 @@ character, including non-BMP characters, is emitted unchanged.
   general rule: normal completion is `retrospect` (the `state` `completed`
   rule), while `step-c-abort` is `no-step` (the sentinel rule) — this
   asymmetry is intentional, not an omission.
-- `reason` — one of thirteen documented values, or the reserved value
-  `none`. The thirteen are the twelve stop reason codes listed below, plus
-  `context_budget_reached` — a value the consumer defines and reserves,
-  that em-workflow never emits. `none` is reserved for the non-stop
-  terminal states — `state` `completed` and `state` `phase_done` — and is
-  never used when `state` is `stopped`.
+- `reason` — one of fourteen documented values, or the reserved value
+  `none`. The fourteen are the thirteen stop reason codes listed below,
+  plus `context_budget_reached` — a value the consumer defines and
+  reserves, that em-workflow never emits. `none` is reserved for the
+  non-stop terminal states — `state` `completed` and `state` `phase_done`
+  — and is never used when `state` is `stopped`.
 - `detail` — a human-facing, non-empty description. Before escaping, its
   value is normalized: every CR, LF and TAB in it is replaced with a
   single space, runs of spaces are then collapsed to one, and the result
@@ -142,7 +147,7 @@ character, including non-BMP characters, is emitted unchanged.
 
 ## Stop reason codes
 
-Closed set of twelve stop reason codes:
+Closed set of thirteen stop reason codes:
 
 | Code | Meaning | Applies to `state` |
 |---|---|---|
@@ -150,7 +155,7 @@ Closed set of twelve stop reason codes:
 | `step_needs_intervention` | A workflow step reported `needs_update`, or reported `failed` — for the `implement` step, `failed` counts when `failed_kind` reads `decision` (including the missing-value case per `references/workflow-schema.md`), or when the automatic-resume attempt count has reached its cap per `skills/develop/SKILL.md`; other steps' `failed` is unchanged | `stopped` |
 | `workflow_yaml_unparseable` | `workflow.yaml` could not be parsed | `stopped` |
 | `git_setup_aborted` | Step 0's git setup aborted (e.g. gitleaks missing) | `stopped` |
-| `gate_fail_closed` | A gate was classified fail-closed: the aborts `references/question-resolution.md` keeps fail-closed in both modes, plus, in interactive, that mode's own additional aborts | `stopped` |
+| `gate_fail_closed` | A gate was classified fail-closed: the aborts `references/question-resolution.md` keeps fail-closed in both modes, plus, in interactive, that mode's own additional aborts, plus the command-approval refusal-pattern hard fail `references/batch-policies.yaml` keeps (`create-spec.command-approval`) | `stopped` |
 | `gate_option_unavailable` | A policy gate's option was unavailable | `stopped` |
 | `implement_task_failed` | A task failed a second time in the implement phase | `stopped` |
 | `verify_rework_cap_reached` | The verify phase's rework cap was reached | `stopped` |
@@ -158,8 +163,9 @@ Closed set of twelve stop reason codes:
 | `feature_resolution_aborted` | Step A's feature-resolution failed and the batch run aborted | `stopped` |
 | `docs_commit_conflict_aborted` | A phase aborted after a second consecutive `commit-docs.sh` exit 4 | `stopped` |
 | `no_work_required` | The pre-run estimate reported that no work remains before any workflow step began | `stopped` |
+| `unmapped_stop` | A terminating stop that no other coverage row names, bound to this code by the Fallback rule below | `stopped` |
 
-`context_budget_reached` is a thirteenth, reserved value in the `reason`
+`context_budget_reached` is a fourteenth, reserved value in the `reason`
 domain (`## Field values`): the consumer defines it and em-workflow never
 emits it, so no row above binds it to a stop point (see `## Stop point
 coverage`).
@@ -172,9 +178,12 @@ field.
 
 ## Stop point coverage
 
-Every terminating stop point is bound to exactly one reason code above.
-The third column names the document where the stop point is specified;
-this table only maps it to a reason code, it does not redefine it.
+Every batch-terminating stop binds to exactly one code by construction:
+the code of the row below that names it, with the Precedence rule
+settling a stop that two named rows match, or otherwise `unmapped_stop`,
+through the Fallback rule below, when no other row names it. The third
+column names the document where the stop point is specified; this table
+only maps it to a reason code, it does not redefine it.
 
 | Stop point | Reason code | Source |
 |---|---|---|
@@ -184,30 +193,63 @@ this table only maps it to a reason code, it does not redefine it.
 | `stop-condition-6` | `git_setup_aborted` | `skills/develop/SKILL.md` |
 | `fail-closed-abort` | `gate_fail_closed` | `references/question-resolution.md` |
 | `policy-option-unavailable` | `gate_option_unavailable` | `references/batch-policies.yaml` |
+| `command-refusal` | `gate_fail_closed` | `references/batch-policies.yaml` |
 | `implement-second-failure` | `implement_task_failed` | `references/implement-phase.md` |
 | `verify-rework-cap` | `verify_rework_cap_reached` | `skills/develop/SKILL.md` |
 | `step-c-abort` | `completion_aborted` | `skills/develop/SKILL.md` |
 | `step-a-abort` | `feature_resolution_aborted` | `skills/develop/SKILL.md` |
 | `docs-commit-conflict` | `docs_commit_conflict_aborted` | `references/phase-state.md` |
 | `no-work-required` | `no_work_required` | `skills/develop/SKILL.md` |
+| `unmapped-terminating-stop` | `unmapped_stop` | `references/batch-terminal-line.md` |
 
 Precedence rule: when a stop matches more than one row above, the
 phase-specific stop point takes precedence over the generic
 `stop-condition-N` rows, so exactly one code applies.
-`implement-second-failure`, `verify-rework-cap` and `docs-commit-conflict`
-are the stop points that can also match `stop-condition-3` — all three
-leave a step's status `failed`, which is `stop-condition-3`'s own trigger —
-and in each case the phase-specific row wins. Correspondingly, the
-`stop-condition-3` row's meaning is restricted to `failed` / `needs_update`
-states that no phase-specific row covers, and, for the `implement` step's
-`failed`, further restricted to the cases where `failed_kind` reads
-`decision`, or where the automatic-resume attempt count has reached its cap
-per `skills/develop/SKILL.md` (see the `step_needs_intervention` row above).
+`implement-second-failure` and `verify-rework-cap` write a step's status
+`failed`, which is `stop-condition-3`'s own trigger; `docs-commit-conflict`
+aborts without writing any status, because the failed status write is
+itself its stop cause. A phase-specific row wins when the current run
+reaches the stop through that phase's own abort route. This includes
+`implement-second-failure`, which the same run realizes through its next
+Step B evaluation when that evaluation reads the `failed` the run wrote.
+Correspondingly, the `stop-condition-3` row's meaning binds a stop at Step
+B's entry evaluation that reads a `failed` / `needs_update` status no
+route of the current run produced — for example, a `failed` left by an
+earlier run's `implement-second-failure` — and, for the `implement`
+step's `failed`, further restricted to the cases where `failed_kind`
+reads `decision`, or where the automatic-resume attempt count has reached
+its cap per `skills/develop/SKILL.md` (see the `step_needs_intervention`
+row above).
 
 Exactly one documented `reason` code, `context_budget_reached`, has no
 stop point in the table above: it is reserved by the consumer and never
 emitted by em-workflow, so this asymmetry is intentional, not an
 omission.
+
+Fallback rule: a batch-terminating stop that no other row above names
+binds to `unmapped_stop`. Every other row takes precedence over this
+catch-all, including the generic `stop-condition-N` rows and the
+`command-refusal` row; the catch-all applies last, after the Precedence
+rule above has settled any match among named rows. Non-exhaustive
+examples this catch-all reaches: `references/contracts/designer-contract.md`'s
+`kind: none` × token-present abort, including its batch abort when
+candidate discovery is truncated; that same contract's `em_workflow` ×
+`tokens.html`-only abort before dispatch; `references/phase-state.md`'s
+unknown `schema_version` abort; and the remaining untabled aborts of
+`references/question-resolution.md` and `references/batch-policies.yaml`.
+
+Scope: the fallback applies only to a stop that ends a batch run with
+`state` `stopped`. It never applies to: a wait turn — develop's stop
+condition 5, or implement's launch and wake turns (see `## No result on
+a wait turn`); normal completion; a `--once` phase boundary
+(`phase_done`); the infra auto-resume, which is not a stop; or the 64
+KiB size-collision outcome, which emits no result and, per `## Consumer
+constraints`, adds no reason code and no coverage row.
+
+Catch-all result: when `reason` is `unmapped_stop`, `detail` names the
+stop site — the owning document, and the step or section where the stop
+occurred — and the concrete cause. `resume_conditions` stays mandatory
+and non-whitespace, as for every `stopped` result.
 
 ## Consumer constraints
 

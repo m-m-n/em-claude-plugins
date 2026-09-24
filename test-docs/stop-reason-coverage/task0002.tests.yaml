@@ -1,0 +1,150 @@
+task_id: task0002
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_domain_declared
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_field_values_defines_the_sentinel_and_its_condition
+      - tests.test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration.test_anchor_matches_on_one_physical_line
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_no_step_condition_based_wording_stated
+    red_confirmed: true
+    red_reason: >-
+      test_field_values_defines_the_sentinel_and_its_condition: directly
+      observed AssertionError ("no `workflow.yaml` step is in effect" not
+      found) once the doc's no-step clause was edited but this test's
+      assertion had not yet been retargeted.
+      test_field_values_no_step_condition_based_wording_stated: first
+      observed failing due to a case-sensitivity typo in my own anchor
+      text ("a `stop-condition-4`" vs the doc's sentence-initial "A
+      `stop-condition-4`"), fixed in the same round; the companion
+      negative proof (TestNoStepConditionBasedWordingMatcherNegativeProof
+      .test_pre_change_bullet_is_rejected) directly confirms the same
+      matcher raises AssertionError against the verbatim pre-change
+      bullet, which has no condition phrase, no example framing, no
+      stop-condition-4 case and no Step A.5 case.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_no_step_condition_based_wording_stated
+      - tests.test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration.test_extracted_stop_points_still_match_the_coverage_table
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_no_step_bullet_names_the_stop_points_as_a_set
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_precedence_stated
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_c_asymmetry_stated
+    red_confirmed: true
+    red_reason: >-
+      test_extracted_stop_points_still_match_the_coverage_table and
+      test_no_step_bullet_names_the_stop_points_as_a_set: directly
+      observed AssertionError (extracted set
+      {stop-condition-6, step-a-abort, step-c-abort, stop-condition-4} !=
+      the old, three-member NO_STEP_STOP_POINTS) once the doc's no-step
+      clause was edited but NO_STEP_STOP_POINTS had not yet been updated
+      to add stop-condition-4. test_field_values_step_precedence_stated
+      and test_field_values_step_c_asymmetry_stated are pre-existing
+      regression guards over the untouched "When state is completed..."
+      span; they passed throughout since that span is byte-for-byte
+      unchanged (design constraint), so they are carried here as the
+      still-passing half of AC-2's own "Step C asymmetry and
+      step-precedence matchers still pass" clause.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_docs_commit_conflict_no_status_stated
+      - tests.test_batch_stop_contract.TestDocsCommitConflictNoStatusMatcherNegativeProof.test_pre_change_paragraph_is_rejected
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_three_phase_specific_stop_points_unchanged
+    red_confirmed: true
+    red_reason: >-
+      TestDocsCommitConflictNoStatusMatcherNegativeProof
+      .test_pre_change_paragraph_is_rejected: directly observed
+      AssertionError when the new matcher ran against the verbatim
+      pre-change "Precedence rule:" paragraph, which states the retired
+      collective claim ("all three leave a step's status `failed`")
+      instead of the per-stop-point write / no-write split this task
+      states. test_docs_commit_conflict_no_status_stated (the live-doc
+      positive test) was written after the doc region was already
+      edited, so it was not independently observed red against the
+      pre-change doc on its own -- the negative proof above is the
+      direct red/green evidence for this matcher.
+      test_three_phase_specific_stop_points_unchanged is a pre-existing
+      regression guard (the three keys stay named) that passed
+      throughout.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_precedence_rule_stated
+      - tests.test_batch_stop_contract.TestPrecedenceRuleRouteBasedMatcherNegativeProof.test_pre_change_paragraph_is_rejected
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_phase_specific_row_restriction
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_both_restrictions_are_one_coherent_statement
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_failed_kind_restriction_for_implement
+    red_confirmed: true
+    red_reason: >-
+      test_precedence_rule_stated: directly observed AssertionError
+      ("no phase-specific row covers" not found) once the doc's
+      Precedence rule paragraph was edited but _assert_precedence_rule_stated
+      had not yet been rewritten to the route-based wording.
+      test_states_the_phase_specific_row_restriction: directly observed
+      AssertionError (old state-based phrase not found) before this
+      assertion was retargeted. test_both_restrictions_are_one_coherent_statement:
+      directly observed a ValueError ("substring not found") from its own
+      `.index()` call on the retired phrase, before the lookup was
+      retargeted -- an uncaught exception rather than an AssertionError,
+      but the same "red for the right reason" (implementation moved,
+      assertion had not). TestPrecedenceRuleRouteBasedMatcherNegativeProof
+      .test_pre_change_paragraph_is_rejected additionally confirms the
+      rewritten matcher rejects the verbatim pre-change paragraph.
+      test_states_the_failed_kind_restriction_for_implement is a
+      pre-existing regression guard (the failed_kind restriction is
+      retained) that passed throughout.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract.TestNoStepConditionBasedWordingMatcherNegativeProof.test_pre_change_bullet_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestNoStepConditionBasedWordingMatcherNegativeProof.test_pre_change_bullet_is_rejected
+      - tests.test_batch_stop_contract.TestPrecedenceRuleRouteBasedMatcherNegativeProof.test_pre_change_paragraph_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestPrecedenceRuleRouteBasedMatcherNegativeProof.test_pre_change_paragraph_is_rejected
+      - tests.test_batch_stop_contract.TestDocsCommitConflictNoStatusMatcherNegativeProof.test_pre_change_paragraph_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestDocsCommitConflictNoStatusMatcherNegativeProof.test_pre_change_paragraph_is_rejected
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_phase_specific_row_restriction
+    red_confirmed: true
+    red_reason: >-
+      Each *_is_rejected test directly observed AssertionError when its
+      matcher ran against the real, verbatim pre-change wording (the
+      pre-change `step` bullet or the pre-change "Precedence rule:"
+      paragraph, both captured from the base commit before this task's
+      edit). Each *_is_otherwise_well_formed companion is a non-vacuity
+      guard: it does not itself go red/green across the implementation
+      (it is not expected to fail at either point) -- it proves the
+      forged sample is not trivially malformed on every OTHER point, so
+      the *_is_rejected failure is attributable to the one point under
+      test rather than to a degenerate forged sample.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a unit-test-shaped criterion: region discipline (only the SC2
+      regions differ from the base document; `## Result format`,
+      `## Escaping` and `## Responsibility boundary` byte-identical; nine
+      headings unchanged) was verified by inspecting `git diff` on
+      `em-workflow/references/batch-terminal-line.md` after implementing,
+      not by a dedicated test. The suite-pass and invariants-pass halves
+      were verified by running the commands directly:
+      `python3 -m unittest discover -s tests` (5354 tests, failures
+      identical to the 9-test baseline above, i.e. zero regressions) and
+      `python3 em-workflow/scripts/check-plugin-invariants.py .` (exit 0,
+      all 7 checks PASS). There is no meaningful pre-implementation red
+      state for a diff-region/full-suite check, so red_confirmed is false
+      by nature rather than by a gap.

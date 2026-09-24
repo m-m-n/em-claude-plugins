@@ -1,0 +1,416 @@
+schema_version: 1
+feature: stop-reason-coverage
+created: '2026-09-24'
+base_branch: main
+goal: '# em-workflow: 終端行契約の停止理由コード閉集合が全終端停止点を網羅していない
+
+
+  Notion: https://www.notion.so/3be3509ec8ee8175956dd3e7f5b38f08
+
+
+  ## やりたいこと（必須）
+
+  `em-workflow/references/batch-terminal-line.md` の終端行契約について、停止理由コードの閉集合が「全ての終端停止点を網羅する」という主張を実態に一致させる。あわせて `step` 値の欠落と優先規則の記述矛盾を解消する。
+
+  ## 背景・なぜ（必須）
+
+  PR [https://github.com/m-m-n/em-claude-plugins/pull/8](https://github.com/m-m-n/em-claude-plugins/pull/8) で終端行契約を導入した際のレビュー round 2 で検出した 6 件（high 1 / medium 5）。batch mode の rework 上限に到達したため deferred として残した。詳細は同 PR の `feature-docs/batch-stop-contract/reviews/round2.yaml`。
+
+  契約は「Every terminating stop point is bound to exactly one reason code above」と宣言しているが、round 1 で 2 つの穴を塞いだ直後の round 2 で更に 4 つ見つかっている。閉集合の網羅性を人手で維持する構造そのものが収束しない。
+
+  ## 受け入れ条件 / 完了の定義（必須）
+
+  - [ ] `b654786a7fb8e13c` (high): coverage 表に無い終端停止が reason code を持つ。対象は (1) `references/contracts/designer-contract.md` の `kind: none` × token 実在 ABORT と候補探索 truncated 時の batch abort、(2) 同 contract の `em_workflow` × html のみ実在（dispatch 中止）、(3) `references/phase-state.md` の未知 `schema_version` による plugin version mismatch abort、(4) `references/batch-policies.yaml` の `create-spec.command-approval` の `refusal_patterns: hard_fail`。catch-all code + fallback 規則を置くか、行を足したうえで owner 文書側にアンカーを書いて双方向チェックできる形にする
+
+  - [ ] `6d3ffa3e04510229` / `454755f74a3e8a04` (medium): `stop-condition-4`（workflow.yaml parse エラー）と Step A.5 のゲート停止で `step` に出せる値がある。`no-step` の列挙を網羅的定義から例示に落とすか、`step` の fallback 規則を明記する
+
+  - [ ] `e0aba3d91cffcb97` (medium): 優先規則の「3 停止点すべてが step を `failed` にする」という記述を Source 文書に合わせて修正する。`docs-commit-conflict` は status を書かずに中断する（そもそも書けなかったのが停止理由）
+
+  - [ ] `c1e94c9399f18b7d` (medium): 優先規則の `stop-condition-3` 限定文を状態ベースから経路ベースへ改め、前回ランが残した `failed` での再突入停止に code が付くようにする
+
+  - [ ] `9e5ce22b85677b38` (medium): refusal-pattern hard fail が coverage 表に載るか、`gate_fail_closed` への写像が明示される
+
+  - [ ] 変更に応じて `tests/test_batch_stop_contract.py` / `tests/test_batch_stop_contract_skill_wiring.py` の pin 定数（`REASON_CODES` / `STOP_POINT_KEYS` / `_KEY_CODE_PAIRS_IN_ORDER` / `NO_STEP_STOP_POINTS`）を同期する
+
+  - [ ] `python3 -m unittest discover -s tests` が通る
+
+  - [ ] `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を同じ値で bump する
+
+  ## スコープ外（任意）
+
+  loop-develop 側での終端行の受け取りと Notion ステータス遷移の実装。
+
+  ## 制約・前提（任意）
+
+  - PR #8 がマージされていることが前提
+
+  - prefix・フィールド名・reason code の literal は `batch-terminal-line.md` だけが持つ。ポインタ文書（`batch-mode.md` / `skills/develop/SKILL.md`）に再掲しない — 契約テストがこの単独所有を強制している
+
+  - `em-workflow/scripts/check-plugin-invariants.py` が緑のままであること。新しい識別子は `gate_id` 判定に誤認されない形にする（ドットを含めない）
+
+
+  '
+parent_branch: em-workflow/stop-reason-coverage/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.46
+      '3': 0.54
+    observed_at: '2026-09-24T09:34:47+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.4
+      '3': 0.6
+    observed_at: '2026-09-24T09:34:48+09:00'
+  at: '2026-09-24T09:35:08+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 879cb68b2c67569eaff72c047cafa2eb6859f8ba
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: The change touches only contract Markdown, tests and version fields; there is no UI surface.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: fbea509cf53736c69b14a22f74900246deb3fcbf
+- id: implement
+  status: completed
+  base_commit: 917455b79a0dd0d64ba20d99e381ee0664fe598a
+  completed_at_commit: c5241f2358fe61d18649645e0b4897eafdeda065
+- id: review
+  status: completed
+  completed_at_commit: 5e0cf633f6b3ac79118358d352f725df21ffe374
+- id: verify
+  status: completed
+  completed_at_commit: c3510ec339f5607ac7d177368965d5951d54fd4c
+  result: pass
+  failed_items: []
+  note: >-
+    Round 1. Test suite: 5407 tests, 9 failures, all reproduced unchanged on
+    the implement base commit 917455b (5346 tests, same 9 failures; 0 new
+    failures vs base). TS-14's exit-0 expectation is therefore not met
+    literally; recorded as a pass with this explicit exception after a Codex
+    consultation (pre-existing baseline failures are out of scope and are
+    tracked as a follow-up). Failing baseline tests: test_develop_once_option
+    argument-hint, test_muse_consent_no_new_questions budget,
+    test_muse_consent_version_bump manifest, four test_reviewers_primary_chains
+    cases, two test_step_c_verify_failed_default cases. All new tests pass.
+    Static analysis: check-plugin-invariants.py all PASS, exit 0. Build /
+    format / e2e: no command configured. M-3: unmapped_stop occurs only in
+    references/batch-terminal-line.md; SKILL.md, batch-mode.md and
+    implement-phase.md unchanged since base. Version 0.2.1 in both manifests.
+    No requirement is excluded.
+- id: retrospect
+  status: completed
+  completed_at_commit: e1c6072e978b9cdd7f71f1f356dd19dbbb434dd7
+tasks:
+  task0001:
+    title: Catch-all reason code, refusal-pattern row and fallback rule
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/batch-terminal-line.md
+    - tests/test_batch_stop_contract.py
+    - tests/test_failed_kind_batch_docs.py
+    - tests/test_no_work_required_stop.py
+    - tests/test_stop_reason_catch_all.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/stop-reason-coverage/task0001
+  task0002:
+    title: Condition-based no-step rule and route-based precedence rule
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/batch-terminal-line.md
+    - tests/test_batch_stop_contract.py
+    - tests/test_failed_kind_batch_docs.py
+    - tests/test_no_work_required_stop.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/stop-reason-coverage/task0002
+  task0003:
+    title: Literal-ownership guards for the new reason code
+    plan: tasks/task0003.md
+    files:
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_develop_once_option.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: low
+    requirements:
+    - FR9
+    - FR11
+    - NFR1
+    status: merged
+    branch: em-workflow/stop-reason-coverage/task0003
+  task0004:
+    title: em-workflow version bump to 0.2.1
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_stop_reason_coverage_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR10
+    - NFR1
+    - NFR4
+    status: merged
+    branch: em-workflow/stop-reason-coverage/task0004
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+requirements:
+  FR1:
+    title: Catch-all reason code and coverage row
+    status: ok
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-6
+    tbd_reason: null
+    excluded_reason: null
+  FR2:
+    title: Fallback rule with lowest precedence
+    status: ok
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+    tbd_reason: null
+    excluded_reason: null
+  FR3:
+    title: Catch-all scope limited to batch-terminating stops
+    status: ok
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-11
+    tbd_reason: null
+    excluded_reason: null
+  FR4:
+    title: detail and resume_conditions for a catch-all stop
+    status: ok
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    tbd_reason: null
+    excluded_reason: null
+  FR5:
+    title: Refusal-pattern hard fail mapped to gate_fail_closed (9e5ce22b85677b38)
+    status: ok
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-12
+    tbd_reason: null
+    excluded_reason: null
+  FR6:
+    title: Condition-based no-step rule (6d3ffa3e04510229 / 454755f74a3e8a04)
+    status: ok
+    tasks:
+    - task0002
+    tests:
+    - TS-7
+    tbd_reason: null
+    excluded_reason: null
+  FR7:
+    title: Precedence text matches Source documents (e0aba3d91cffcb97)
+    status: ok
+    tasks:
+    - task0002
+    tests:
+    - TS-8
+    - TS-9
+    tbd_reason: null
+    excluded_reason: null
+  FR8:
+    title: Route-based stop-condition-3 restriction (c1e94c9399f18b7d)
+    status: ok
+    tasks:
+    - task0002
+    tests:
+    - TS-8
+    tbd_reason: null
+    excluded_reason: null
+  FR9:
+    title: Test pin sync and new catch-all tests
+    status: ok
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    tbd_reason: null
+    excluded_reason: null
+  FR10:
+    title: Version bump
+    status: ok
+    tasks:
+    - task0004
+    tests:
+    - TS-16
+    tbd_reason: null
+    excluded_reason: null
+  FR11:
+    title: Literal ownership preserved
+    status: ok
+    tasks:
+    - task0003
+    tests:
+    - TS-10
+    tbd_reason: null
+    excluded_reason: null
+  NFR1:
+    title: Test suite passes with standard-library-only test modules
+    status: ok
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-14
+    tbd_reason: null
+    excluded_reason: null
+  NFR2:
+    title: check-plugin-invariants.py stays green; new identifiers contain no dot
+    status: ok
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-15
+    tbd_reason: null
+    excluded_reason: null
+  NFR3:
+    title: Result format / Escaping / Responsibility boundary sections byte-identical; nine level-2 headings unchanged
+    status: ok
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-13
+    tbd_reason: null
+    excluded_reason: null
+  NFR4:
+    title: Negative proof and non-vacuity guard per new matcher; no cross-module test import
+    status: ok
+    tasks:
+    - task0001
+    - task0002
+    - task0004
+    tests:
+    - TS-1
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-12
+    - TS-16
+    tbd_reason: null
+    excluded_reason: null
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
