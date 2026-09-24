@@ -111,7 +111,7 @@ tasks:
     - FR4
     - FR11
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/repo-suite-pinned-test-drift/task0001
   task0002:
     title: develop SKILL.md ピン留めテストの追随（argument-hint / Step C）
