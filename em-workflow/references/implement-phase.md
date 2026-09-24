@@ -252,7 +252,13 @@ journal directly, independent of the ancestor check — that gate never
 admits route-back while such an event stands. No retired task id is ever
 re-issued, so a task whose workflow.yaml `status` is `pending` can never
 carry an inherited `merged` journal last event; the recycled-task-id
-carve-out above stays correctly scoped to `failed` only. The
+carve-out above stays correctly scoped to `failed` only. The carve-out
+reclassifies only a task whose journal last event is `failed` and whose
+workflow.yaml `status` is `pending`, and its outcome cannot change a
+`merged` or a `launched` classification, so Step I.2.b step 1's `merged`
+and in-flight classifications below — the inputs Step I.2.c's gate below
+reads — never consult it, and the carve-out / gate / reconciled-state
+chain terminates there instead of closing back into a loop. The
 recycled-task-id carve-out above is applied by two parties: the
 orchestrator's own interpretation of the journal (this rule), and the Stop
 hook, `queue_stop_guard.py`, which reads `tasks.{T}.status` and applies the
@@ -870,9 +876,10 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   (`git -C "$WT_ROOT/integration" reset --hard
   em-workflow/{feature}/integration`),
   then make one ordered workflow.yaml write set over the reset target
-  set — every task whose Step I.2.b step 1 reconciled state is
-  `failed`: set `create-plan` to `needs_update`, set the `implement`
-  step back to `pending`, clear `failed_kind`
+  set — the union of every task whose Step I.2.b step 1 reconciled
+  state is `failed` and every task that workflow.yaml reports as
+  `status: failed`: set `create-plan` to `needs_update`, set the
+  `implement` step back to `pending`, clear `failed_kind`
   (`references/workflow-schema.md`) back to null in that same write set —
   re-asserting the null value Step I.1's phase-start write already set on
   this entry, so this adds no extra write and no extra commit — record
@@ -885,7 +892,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   planner's `replace_planning` operation admissible on re-entry
   (`references/workflow-patch.md`'s `replace_all` permission
   conditions own the full condition set and the protocol-error rule —
-  not restated here). Commit that write set next, BEFORE any cleanup:
+  not restated here). The two members can diverge — Step I.2.b step 3
+  owns workflow.yaml's own `failed` write, cited here not restated —
+  and since the postcondition above and `references/workflow-patch.md`'s
+  `replace_all` permission conditions and protocol-error rule are all
+  read off workflow.yaml's own statuses, covering both members is what
+  makes that postcondition true. Commit that write set next, BEFORE any cleanup:
   `commit-docs.sh "$WT_ROOT/integration"
   "docs({feature}): implement route back to planning" "$ROUTEBACK_TIP"`
   (exit 4 cannot occur at this call site — see the Branch & Worktree
@@ -893,14 +905,28 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   exit here stops the phase immediately with a report, at a point where
   no worktree or branch has been deleted). Only once that commit
   succeeds, clean up worktrees and branches for exactly the tasks the
-  write set just reset — confirmed not merged; a task whose reconciled
-  state is `merged` is never a cleanup target, whatever workflow.yaml
-  says (`git worktree remove --force
+  write set just reset — neither workflow.yaml `status` nor Step I.2.b
+  step 1's reconciled state reports any of these tasks `merged`, the two
+  sources this cleanup step reads; a task whose reconciled state is
+  `merged` is never a cleanup target, whatever workflow.yaml says — the
+  gate above already refused route-back whenever such a task exists, so
+  the set just reset contains none, and the gate stays the single owner
+  of that decision, this sentence adding no filter of its own, only the
+  consequence (`git worktree remove --force
   "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`, for
   every {T} just reset) — this order's one residual leftover state is the
   commit succeeding and the cleanup not yet running, i.e. stale
   worktrees for tasks now `pending`, which Step I.2.a's resume guard and
-  its recycled-task-id rule already cover. End the phase with a
+  its recycled-task-id rule already cover. A task whose merge already
+  moved the integration branch's ref through merge-task.sh's
+  `git update-ref`, while its `merged` event never reached the journal,
+  is invisible to both sources above: this happens when merge-task.sh's own
+  journal write fails (reported only as a warning, with the script
+  still exiting 0), or when the implementer stops between the ref
+  update and the journal write and leaves no report; such a task reads
+  here exactly like a failed one, so route-back can still reset it and
+  delete its branch — a known residual this gate does not close,
+  verifying nothing further and changing no behaviour. End the phase with a
   clear report; create-plan re-enters afterwards. The develop state
   machine does **not** stop on this `needs_update` —
   `skills/develop/SKILL.md` Step B's stop-condition-3 precedence clause
