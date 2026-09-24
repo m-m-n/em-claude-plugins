@@ -1,0 +1,102 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestDivergenceSpanExcludesFailOpenWording.test_span_contains_no_fail_open_substring
+      - tests.test_recycled_task_id_consistency.TestDivergenceSpanExcludesFailOpenWording.test_span_contains_nfr2_phrases
+    red_confirmed: true
+    red_reason: >-
+      Before the document edit, the divergence span's normalized text still
+      ended with "...hooks are fail-open nets, not authorities...", so
+      assertNotIn("fail-open", self.span) raised AssertionError (the
+      substring was found). test_span_contains_nfr2_phrases passed even
+      pre-edit (the four NFR2 phrases were already present and untouched by
+      this task), so its own red was not observed; its assertions are a
+      retention check, not a criterion this task's edit makes newly true.
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestDivergenceSpanExcludesFailOpenWording.test_span_contains_new_rationale_and_cap_bound
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_reason_states_missed_first_launch_detection
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_false_block_bounded_by_consecutive_block_cap
+    red_confirmed: true
+    red_reason: >-
+      Before the document edit: test_span_contains_new_rationale_and_cap_bound
+      and test_false_block_bounded_by_consecutive_block_cap both raised
+      AssertionError (DIVERGENCE_REASON_PHRASE's new value and
+      FALSE_BLOCK_CAP_BOUND_PHRASE were both absent -- the old text still
+      read "the hooks are fail-open nets, not authorities"), and
+      test_reason_states_missed_first_launch_detection raised AssertionError
+      on assertIn(DIVERGENCE_REASON_PHRASE, self.i2a) for the same reason.
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestDivergenceSpanExcludesFailOpenWording.test_span_contains_i2b_relationship_phrases
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_i2b_relationship_stated
+    red_confirmed: true
+    red_reason: >-
+      Before the document edit both raised AssertionError: neither
+      RECONCILE_STATUS_AGNOSTIC_PHRASE nor SELECTION_TIME_FILTER_PHRASE
+      occurred anywhere in the I.2.a section (the sentence was entirely
+      new).
+  AC-4:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestI2bStep1NoEventClassificationNote.test_note_phrase_present
+      - tests.test_recycled_task_id_consistency.TestI2bStep1NoEventClassificationNote.test_recycled_task_id_citation_survives
+    red_confirmed: true
+    red_reason: >-
+      test_note_phrase_present raised AssertionError before the I.2.b edit
+      (I2B_NO_EVENT_STATUS_AGNOSTIC_NOTE_PHRASE was absent -- the note did
+      not exist yet). test_recycled_task_id_citation_survives passed even
+      pre-edit (that phrase already existed for the unrelated
+      failed+pending clause and this task never touches it), so its own red
+      was not observed; it is a retention check.
+  AC-5:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_divergence_paragraph_sample_retains_old_fail_open_phrase
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2b_step1_sample_identifies_no_event_classification
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_missed_first_launch_rationale_matcher_flags_absence_in_pre_change_divergence_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_cap_bound_matcher_flags_absence_in_pre_change_divergence_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_i2b_relationship_matchers_flag_absence_in_pre_change_divergence_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_i2b_note_matcher_flags_absence_in_pre_change_i2b_wording
+    red_confirmed: false
+    red_reason: >-
+      These tests operate on constants only (the two pre-change samples,
+      copied verbatim from commit 4999893, plus the phrase constants they
+      are checked against) and pass as soon as the samples/constants exist
+      -- they were written and immediately green, per the tdd-testing
+      skill's guidance for this exact case ("The pre-change samples, their
+      self-checks and the negative proofs operate on constants only; they
+      pass as soon as the samples are added."). Byte-for-byte fidelity of
+      both samples was independently verified with a standalone script
+      comparing them against implement-phase.md line ranges 298-308 and
+      465-471 before any implementation edit, so the self-checks and
+      negative proofs are not vacuous despite never having been red.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No new test pins the literal version value, per the task plan's Test
+      Notes ("AC-6 is covered by the existing test_plugin_version_parity
+      plus the diff; do not add a test that pins the literal version
+      value."). Verified by diff: em-workflow/.claude-plugin/plugin.json
+      and the em-workflow entry of .claude-plugin/marketplace.json both
+      read "0.2.7" before this task's edit and "0.2.8" after it (confirmed
+      by direct inspection before/after each edit); the pre-existing
+      tests/test_plugin_version_parity.py
+      (test_em_workflow_entry_version_is_past_baseline,
+      test_em_workflow_entry_version_matches_plugin_manifest) continues to
+      pass, confirming parity and monotonic advancement without this task
+      adding a literal-value pin.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by running `python3 -m unittest discover -s tests` at the
+      repository root after all edits: 5668 tests, 0 failures (up from the
+      4a baseline of 5654, all green). This is a full-suite gate, not an
+      individual criterion with its own red/green transition -- the
+      existing pins on the I.2.a Select-line raw literal
+      (TestProtectedRawLiteralsSurvive), the hook classification table and
+      its anchor, and the four NFR2 phrases were never made to fail by this
+      task's changes, so no red state exists to confirm for this AC.
