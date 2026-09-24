@@ -170,7 +170,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/repo-suite-pinned-test-drift/task0004
   task0005:
     title: review-rules.yaml ピン留めテストの追随
