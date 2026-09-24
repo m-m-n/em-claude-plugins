@@ -1,0 +1,31 @@
+feature: repo-suite-pinned-test-drift
+collected_at: "2026-09-25T00:11:43+09:00"
+session_ids:
+  - 01a0d3f6-b176-71d9-9c9b-cca0999ddff3
+  - 01a0d3f7-f57d-73a0-bd0d-da6560094027
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_only は tier 1 (0.91)、description_plus_code は tier 1 (0.71) だが confidence 0.56。評価器の判定で full を採用"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.01, '1': 0.91, '2': 0.08}
+      - basis: description_plus_code
+        probabilities: {'0': 0.0, '1': 0.71, '2': 0.29}
+    pre_survey_estimate:
+      changed_lines_approx: 120
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "タスク記述の 6 件に対し、事前調査で追加 10 件（version 0.2.2 / 0.5.11 固定、review-rules.yaml 追随漏れ）の失敗が見つかった。起票時点の失敗一覧は実行時点で古くなる"
+  - "review round1 の medium finding 06a1f6ce89db564b（version 形式検査が末尾改行と非 ASCII 数字を受理する）は未解決のまま残った"
