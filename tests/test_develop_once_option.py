@@ -42,12 +42,20 @@ Extended by batch-structured-result-output/task0003 (AC-6): the SKILL.md
 state-literal absence guard is retargeted/widened from the narrower
 `_restates_state_value_literal` (state-value shape only) to
 `_find_sc5_literal_violations`, covering the full IMPLEMENTATION.md SC5
-forbidden-literal set (the eight field-name tokens as a group, all twelve
+forbidden-literal set (the eight field-name tokens as a group, all fourteen
 `reason` codes, the `no-step` sentinel, the removed SC6 prefix, and the
 ordinary word "none" checked by `reason={value}` shape). The narrower
 function and its existing forged-sample negative proof / false-positive
 proof over ordinary step-status vocabulary are kept unchanged and reused by
 the wider one.
+
+Extended again by stop-reason-coverage/task0003: `SC5_REASON_CODES` gains
+`no_work_required` (task-tier-reduction/task0004, previously missing from
+this module's copy of the set) and `unmapped_stop`
+(stop-reason-coverage/task0001), for fourteen total -- absence checks only,
+matching this module's own cross-task-safety convention (D9-style: the
+contract document defining these codes may not have merged into this
+worktree yet).
 """
 
 import ast
@@ -108,7 +116,12 @@ SC5_REASON_CODES = (
     "completion_aborted",
     "feature_resolution_aborted",
     "docs_commit_conflict_aborted",
+    # Added by task-tier-reduction/task0004: the pre-run no-work stop.
+    "no_work_required",
     "context_budget_reached",
+    # Added by stop-reason-coverage/task0001: the catch-all fallback code
+    # for every batch-terminating stop no other row names.
+    "unmapped_stop",
 )
 SC5_SENTINEL_VALUE = "no-step"
 # SC5's `reason` domain also includes the ordinary English word "none" --
@@ -575,6 +588,28 @@ class TestSc5LiteralMatcherCanFail(unittest.TestCase):
             "another was skipped, and the run stopped cleanly afterward."
         )
         self.assertEqual(_find_sc5_literal_violations(ordinary_prose), [])
+
+
+class TestSc5ReasonCodesIncludesLatestCodes(unittest.TestCase):
+    """AC-4 (stop-reason-coverage/task0003): `SC5_REASON_CODES` -- the
+    absence-only forbidden-literal set `_find_sc5_literal_violations`
+    checks against -- includes `no_work_required` (task-tier-reduction/
+    task0004: the pre-run no-work stop) and `unmapped_stop`
+    (stop-reason-coverage/task0001: the catch-all fallback code for every
+    batch-terminating stop no other row names), so the absence guard above
+    (`test_no_sc5_literal_anywhere_in_skill_md`) now covers both. This tuple
+    is never asserted against the contract document itself (cross-task
+    worktree-independence, matching this module's own D9-style convention
+    for absence-only literal sets)."""
+
+    def test_includes_no_work_required(self):
+        self.assertIn("no_work_required", SC5_REASON_CODES)
+
+    def test_includes_unmapped_stop(self):
+        self.assertIn("unmapped_stop", SC5_REASON_CODES)
+
+    def test_reason_codes_have_no_duplicates(self):
+        self.assertEqual(len(SC5_REASON_CODES), len(set(SC5_REASON_CODES)))
 
 
 class TestOwnModuleStdlibOnly(unittest.TestCase):
