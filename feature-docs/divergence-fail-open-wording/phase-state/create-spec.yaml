@@ -1,0 +1,33 @@
+schema_version: 1
+feature: divergence-fail-open-wording
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: eaed38f317780bb9ef205fe01343caa2ebb36be3
+last_input_digest: sha256:4e7b91d763c48dba0c4f980c0ab21357190db3d2d530f4cb865a99e99d52ed62
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:4e7b91d763c48dba0c4f980c0ab21357190db3d2d530f4cb865a99e99d52ed62
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/references/implement-phase.md
+      - tests/test_recycled_task_id_consistency.py
+      - test-docs/recycled-task-id-contract/task0001.tests.yaml
+      - em-workflow/hooks/queue_stop_guard.py
+      - tests/test_queue_stop_guard.py
+      - tests/test_hook_classification_pin.py
+      - tests/test_plugin_version_parity.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+last_error: null
