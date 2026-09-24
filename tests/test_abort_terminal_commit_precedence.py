@@ -32,10 +32,13 @@ Covers task0001 Acceptance Criteria
   pre-change sample of the paragraph, captured from the base revision
   (`git show HEAD:em-workflow/references/batch-terminal-line.md` before
   this task's edit) -- proving each assertion is non-vacuous.
-- AC-7 (FR10, NFR3, NFR4, TS-7, TS-8): both manifests read exactly
-  `0.2.2` for em-workflow (the existing version-lockstep test in
-  test_plugin_version_parity.py only checks "past baseline" and
-  "registries agree", not this literal, so it is pinned here instead).
+- AC-7 (FR10, NFR3, NFR4, TS-7, TS-8): both manifests' em-workflow version
+  is well-formed and at least `0.2.2`, and the two agree with each other
+  (the existing version-lockstep test in test_plugin_version_parity.py
+  only checks its own "past baseline" and "registries agree" columns;
+  repo-suite-pinned-test-drift/task0003 replaced this module's `0.2.2`
+  literal-equality pin with the same floor + form + agreement shape, so
+  the check stays green at any later em-workflow version).
 
 Test authoring follows this repository's doc-contract convention (see
 tests/test_batch_stop_contract.py): read the file relative to the test
@@ -55,7 +58,13 @@ CONTRACT_PATH = PLUGIN_ROOT / "references" / "batch-terminal-line.md"
 PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 
-EXPECTED_VERSION = "0.2.2"
+# FR6: a floor, not an equality target -- the em-workflow version must be
+# at least this value, never exactly this value. See the Version form rule
+# / Lower-bound comparison / Registry agreement contracts in
+# IMPLEMENTATION.md Shared Components.
+FR6_VERSION_FLOOR = "0.2.2"
+
+VERSION_FORM_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 # The exact call-site phrase this feature's Shared Components table fixes
 # for new document text (IMPLEMENTATION.md Shared Components: "Call-site
@@ -112,6 +121,60 @@ PRE_CHANGE_PRECEDENCE_PARAGRAPH = (
 
 def _read(path):
     return path.read_text(encoding="utf-8")
+
+
+# --- FR6 version matchers (form / lower-bound / registry agreement) -------
+
+
+def _is_version_well_formed(value):
+    """Version form rule: a string of exactly three dot-separated
+    components, each a non-empty run of ASCII decimal digits."""
+    return isinstance(value, str) and VERSION_FORM_RE.match(value) is not None
+
+
+def _version_parts(value):
+    return tuple(int(part) for part in value.split("."))
+
+
+def _assert_version_well_formed(test, value, label):
+    test.assertTrue(
+        _is_version_well_formed(value),
+        f"{label} version {value!r} is not of the form X.Y.Z",
+    )
+
+
+def _assert_version_at_least(test, value, floor, label):
+    """Lower-bound comparison: `value` passes the form rule and its three
+    components, compared as integers left to right, are at or above
+    `floor`'s. Never a string comparison."""
+    _assert_version_well_formed(test, value, label)
+    test.assertGreaterEqual(
+        _version_parts(value),
+        _version_parts(floor),
+        f"{label} version {value!r} is below the floor {floor!r}",
+    )
+
+
+def _assert_versions_agree(test, value_a, value_b, label_a, label_b):
+    """Registry agreement: both sides pass the form rule and are identical.
+    Neither side is compared with a literal."""
+    _assert_version_well_formed(test, value_a, label_a)
+    _assert_version_well_formed(test, value_b, label_b)
+    test.assertEqual(
+        value_a,
+        value_b,
+        f"{label_a} ({value_a!r}) disagrees with {label_b} ({value_b!r})",
+    )
+
+
+def _assert_fr6_pair_valid(test, manifest_version, entry_version, floor=FR6_VERSION_FLOOR):
+    """FR6's combined matcher, used by the negative proofs below: each side
+    is well-formed and at least `floor`, and the two sides agree."""
+    _assert_version_at_least(test, manifest_version, floor, "plugin.json")
+    _assert_version_at_least(test, entry_version, floor, "marketplace entry")
+    _assert_versions_agree(
+        test, entry_version, manifest_version, "marketplace entry", "plugin.json"
+    )
 
 
 def _normalize(text):
@@ -364,23 +427,80 @@ class TestNegativeProofs(unittest.TestCase):
 
 
 class TestVersionBump(unittest.TestCase):
-    """AC-7: both manifests read exactly 0.2.2 for em-workflow. The
-    existing test_plugin_version_parity.py only checks "past baseline" and
-    "registries agree" (by design, so it survives future bumps); this
-    module pins the literal this task's plan requires."""
+    """AC-7: both manifests' em-workflow version is well-formed and at
+    least FR6_VERSION_FLOOR (0.2.2), and the two agree with each other. The
+    existing test_plugin_version_parity.py checks its own "past baseline"
+    and "registries agree" columns; this module additionally enforces the
+    0.2.2 floor this task's plan requires -- never a literal-equality pin,
+    so the checks stay green at any later em-workflow version."""
 
-    def test_plugin_manifest_version_is_0_2_2(self):
-        data = json.loads(_read(PLUGIN_MANIFEST_PATH))
-        self.assertEqual(data.get("version"), EXPECTED_VERSION)
-
-    def test_marketplace_em_workflow_entry_version_is_0_2_2(self):
-        data = json.loads(_read(MARKETPLACE_PATH))
-        entry = next(
-            (p for p in data.get("plugins", []) if p.get("name") == "em-workflow"),
+    @classmethod
+    def setUpClass(cls):
+        cls.manifest_data = json.loads(_read(PLUGIN_MANIFEST_PATH))
+        marketplace_data = json.loads(_read(MARKETPLACE_PATH))
+        cls.entry = next(
+            (p for p in marketplace_data.get("plugins", []) if p.get("name") == "em-workflow"),
             None,
         )
-        self.assertIsNotNone(entry, "no marketplace entry named 'em-workflow'")
-        self.assertEqual(entry.get("version"), EXPECTED_VERSION)
+
+    def test_plugin_manifest_version_is_well_formed_and_at_least_0_2_2(self):
+        _assert_version_at_least(
+            self, self.manifest_data.get("version"), FR6_VERSION_FLOOR, "plugin.json"
+        )
+
+    def test_marketplace_em_workflow_entry_version_is_well_formed_at_least_0_2_2_and_agrees_with_manifest(
+        self,
+    ):
+        self.assertIsNotNone(self.entry, "no marketplace entry named 'em-workflow'")
+        _assert_version_at_least(
+            self, self.entry.get("version"), FR6_VERSION_FLOOR, "marketplace entry"
+        )
+        _assert_versions_agree(
+            self,
+            self.entry.get("version"),
+            self.manifest_data.get("version"),
+            "marketplace entry",
+            "plugin.json",
+        )
+
+
+# Malformed values from every kind the Version form rule rejects: two
+# components, a non-digit component, a "v" prefix, a pre-release suffix, an
+# empty string, a non-string value.
+FR6_MALFORMED_VERSIONS = ["0.2", "0.2.x", "v0.2.4", "0.2.4-rc1", "", None]
+
+
+class TestFr6VersionMatcherNegativeProofs(unittest.TestCase):
+    """AC-2: the FR6 combined matcher's verdicts against forged values --
+    hermetic (NFR3), never touches the real manifest files."""
+
+    def test_accepts_a_forged_higher_version_in_both_registries(self):
+        _assert_fr6_pair_valid(self, "99.0.0", "99.0.0")  # must not raise
+
+    def test_accepts_a_two_digit_patch_component_via_numeric_comparison(self):
+        # Proves the comparison is per-component numeric, not lexicographic:
+        # lexicographically "0.2.10" < "0.2.2" (the character '1' < '2').
+        _assert_fr6_pair_valid(self, "0.2.10", "0.2.10")  # must not raise
+
+    def test_rejects_a_version_below_the_floor_in_both_registries(self):
+        with self.assertRaises(AssertionError):
+            _assert_fr6_pair_valid(self, "0.2.1", "0.2.1")
+
+    def test_rejects_a_malformed_value_in_either_registry(self):
+        # 5.5.5: an arbitrary well-formed, above-floor companion value --
+        # never a current-version literal (NFR2) -- so the malformed side
+        # alone is what triggers the rejection.
+        for malformed in FR6_MALFORMED_VERSIONS:
+            with self.subTest(malformed=malformed, side="manifest"):
+                with self.assertRaises(AssertionError):
+                    _assert_fr6_pair_valid(self, malformed, "5.5.5")
+            with self.subTest(malformed=malformed, side="entry"):
+                with self.assertRaises(AssertionError):
+                    _assert_fr6_pair_valid(self, "5.5.5", malformed)
+
+    def test_rejects_disagreeing_registries(self):
+        with self.assertRaises(AssertionError):
+            _assert_fr6_pair_valid(self, "5.5.5", "5.5.6")
 
 
 if __name__ == "__main__":
