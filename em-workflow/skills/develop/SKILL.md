@@ -190,7 +190,18 @@ feature-docs はもう main 作業ツリーを走査しない。feature の実�
 3. **ブートストラップ状態の判定**（1. でパス引数から解決した既存 feature の
    み対象。新規 feature ルートは上記で解決済み）: 確保した worktree 内の
    `feature-docs/{feature}/workflow.yaml` の有無で分岐する:
-   - **存在する**（通常の再開）: そのまま Step A.5 → Step B へ進む
+   - **存在する**（通常の再開）: Step A.5 → Step B へ進む前に、この
+     integration worktree を
+     `git -C {integration worktree の絶対パス} reset --hard
+     em-workflow/{feature}/integration` で refresh する。この refresh は
+     abort terminal-commit exception
+     （`em-workflow/references/implement-phase.md` Branch & Worktree
+     Model）が残しうる未コミットの terminal status write を破棄するため
+     のもので、この分岐を通るたびに、対話 / batch を問わず無条件で行う
+     （その停止を検出したかどうかにはゲートしない）。Step A.5 が何かを
+     読み書きするより前、かつ Step B が workflow.yaml を読むより前に行う。
+     破棄するのは追跡対象ファイルの未コミット変更のみで、untracked
+     ファイルは残る。refresh の後、そのまま Step A.5 → Step B へ進む
    - **存在しない**（ブランチ + worktree だけが作られ、create-spec が
      workflow.yaml を書き切る前に中断された状態）: 新規 feature 扱いには
      せず、create-spec フェーズへ実際に再突入する前に、下記「### tier
