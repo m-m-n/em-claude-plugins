@@ -1,0 +1,105 @@
+task_id: task0003
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_subagentstop_failed_event_version_bump.TestEmWorkflowVersionBump.test_manifest_and_marketplace_agree
+    red_confirmed: false
+    red_reason: >-
+      At baseline both files already read the same value (0.2.3 == 0.2.3),
+      so the equality assertion held before any implementation. The
+      criterion (manifest and marketplace agree) genuinely pre-existed and
+      this task's edit changes both values in lockstep, so there is no
+      implementation step that could make this assertion fail first. AC-2
+      (the bump-over-baseline test) is the criterion that does carry an
+      observed red for this same edit.
+  AC-2:
+    tests:
+      - tests.test_subagentstop_failed_event_version_bump.TestEmWorkflowVersionBump.test_manifest_version_is_a_bump_over_baseline
+      - tests.test_subagentstop_failed_event_version_bump.TestEmWorkflowVersionBump.test_marketplace_entry_version_is_a_bump_over_baseline
+    red_confirmed: true
+    red_reason: >-
+      Before the version edit, both tests failed with
+      "AssertionError: (0, 2, 3) not greater than (0, 2, 3)" (manifest and
+      marketplace entry both still read 0.2.3, equal to but not greater
+      than the baseline). After bumping both files to 0.2.4, both tests
+      passed.
+  AC-3:
+    tests: []
+    red_reason: >-
+      Verified by diff inspection, not a permanent assertion (an exact-value
+      pin would break at the next legitimate bump). `git diff -- em-workflow/.claude-plugin/plugin.json .claude-plugin/marketplace.json`
+      shows exactly two changed lines, one per file, each changing only
+      "version": "0.2.3" to "version": "0.2.4"; every other key, the
+      em-review entry, the description strings and file formatting are
+      byte-identical.
+  AC-4:
+    tests:
+      - tests.test_subagentstop_failed_event_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_fails_on_a_missing_entry_name
+      - tests.test_subagentstop_failed_event_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_succeeds_on_a_present_entry_name
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_forged_baseline_version_is_well_formed
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_bump_matcher_rejects_forged_baseline_version
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_matcher_accepts_a_minor_or_major_advance_over_baseline
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_bump_matcher_rejects_malformed_version_shape
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_matched_name_with_malformed_version_fails_the_parse_assertion
+      - tests.test_subagentstop_failed_event_version_bump.TestValidationDetectsRegressions.test_parse_version_distinguishes_parse_failure_from_none
+      - tests.test_subagentstop_failed_event_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      These are self-contained matcher/guard proofs against synthetic
+      (forged) data and an AST-based import scan of the module's own
+      source; none of them depends on the repo's version files, so none of
+      them could be made to fail by the version-bump implementation itself.
+      Each negative-proof test was written and run to confirm it correctly
+      raises AssertionError against its forged bad input (proving the
+      guard fires), and each has a paired well-formedness/non-vacuity
+      test proving the forged sample is not itself degenerate.
+  AC-5:
+    tests: []
+    red_reason: >-
+      Property of the whole tests/ run. `python3 -m unittest discover -s
+      tests` was run before (baseline, 5534 tests, 16 pre-existing
+      failures unrelated to this task) and after (5549 tests = 5534 + 15
+      new, still exactly 16 failures, the identical set by name) the
+      version bump. tests/test_stale_launched_version_bump.py passed in
+      both runs.
+notes: >-
+  16 pre-existing baseline failures (unrelated to this task, mostly other
+  in-flight features' stale version pins at 0.2.2 and a content-hash pin
+  predating this task) reproduce identically before and after; see
+  baseline_failures/final_failures and the deviation note in the report.
