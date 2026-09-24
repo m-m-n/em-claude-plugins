@@ -79,10 +79,15 @@ character, including non-BMP characters, is emitted unchanged.
   `verify`, even though the next launch resumes at `implement`. Two rules
   take precedence over the general rule: the single sentinel `no-step`,
   and the rule for `state` `completed`. `no-step` applies whenever no
-  `workflow.yaml` step is in effect at the stop point: `stop-condition-6`
-  (Step 0's git-setup abort), `step-a-abort` (Step A's feature-resolution
-  failure), and `step-c-abort` (Step C's abort — every workflow step has
-  already completed by then, and the stop happens outside any of them).
+  `workflow.yaml` step was executed in that turn, or the stop occurs
+  outside Step B; this condition governs, and the stop points named below
+  are examples, not an exhaustive list: `stop-condition-6` (Step 0's
+  git-setup abort), `step-a-abort` (Step A's feature-resolution failure),
+  and `step-c-abort` (Step C's abort; every workflow step has already
+  completed). A `stop-condition-4` stop takes `no-step` when no step was
+  executed in that turn; otherwise the general rule applies. A stop
+  raised in Step A.5, including the command-approval refusal-pattern hard
+  fail, also takes `no-step`.
   When `state` is `completed` the value is always `retrospect` — the
   final workflow step, which a completed run has always reached. Because
   Step C is not a `workflow.yaml` step, a turn that executes Step C takes
@@ -194,15 +199,21 @@ this table only maps it to a reason code, it does not redefine it.
 Precedence rule: when a stop matches more than one row above, the
 phase-specific stop point takes precedence over the generic
 `stop-condition-N` rows, so exactly one code applies.
-`implement-second-failure`, `verify-rework-cap` and `docs-commit-conflict`
-are the stop points that can also match `stop-condition-3` — all three
-leave a step's status `failed`, which is `stop-condition-3`'s own trigger —
-and in each case the phase-specific row wins. Correspondingly, the
-`stop-condition-3` row's meaning is restricted to `failed` / `needs_update`
-states that no phase-specific row covers, and, for the `implement` step's
-`failed`, further restricted to the cases where `failed_kind` reads
-`decision`, or where the automatic-resume attempt count has reached its cap
-per `skills/develop/SKILL.md` (see the `step_needs_intervention` row above).
+`implement-second-failure` and `verify-rework-cap` write a step's status
+`failed`, which is `stop-condition-3`'s own trigger; `docs-commit-conflict`
+aborts without writing any status, because the failed status write is
+itself its stop cause. A phase-specific row wins when the current run
+reaches the stop through that phase's own abort route. This includes
+`implement-second-failure`, which the same run realizes through its next
+Step B evaluation when that evaluation reads the `failed` the run wrote.
+Correspondingly, the `stop-condition-3` row's meaning binds a stop at Step
+B's entry evaluation that reads a `failed` / `needs_update` status no
+route of the current run produced — for example, a `failed` left by an
+earlier run's `implement-second-failure` — and, for the `implement`
+step's `failed`, further restricted to the cases where `failed_kind`
+reads `decision`, or where the automatic-resume attempt count has reached
+its cap per `skills/develop/SKILL.md` (see the `step_needs_intervention`
+row above).
 
 Exactly one documented `reason` code, `context_budget_reached`, has no
 stop point in the table above: it is reserved by the consumer and never
