@@ -1,0 +1,203 @@
+schema_version: 1
+feature: exemption-registry-section-scope
+created: '2026-09-24'
+base_branch: main
+goal: |
+  # em-workflow: 免除レジストリのパースがセクション非限定で、2つ目のテーブル追記により gate が無言で免除される
+
+  Notion: https://www.notion.so/3be3509ec8ee8164b546e9b5fca1162c
+
+
+  ## 現象（必須）
+  `tests/test_gate_option_vocabulary.py` の `load_exempt_gate_ids()` が、`em-workflow/references/gate-option-vocabulary.md` の **ドキュメント全体** から Markdown テーブル行を集めている。`## Exemption registry` セクションに限定していない。
+  そのため、このドキュメントに 2 つ目のテーブルが追記されると、その行の 1 セル目のバックティック内文字列が免除 gate_id として読み取られ、`test_every_select_gate_option_is_declared_at_every_issuing_site` が該当ゲートを `if gate_id in exempt: continue` で静かにスキップする。テストは 1 件も落ちない。
+  `## Canonical declaration format` セクションはこのテーブル形式を散文で説明していて実例テーブルがまだ無いため、実例の追記は十分ありうる編集。
+  ## 再現手順（必須）
+  1. `em-workflow/references/gate-option-vocabulary.md` の `## Canonical declaration format` セクションに、説明用の `## Gate option vocabulary` 実例テーブルを 1 つ追記する（1 セル目に \`` `create-spec.feature-identity` `\` を含む行）
+  2. `python3 -m unittest discover -s tests` を実行する
+  3. スイートは green のまま。`load_exempt_gate_ids()` は `{'create-spec.feature-identity'}` を返し、そのゲートは correspondence sweep から外れている（`tests/test_gate_option_vocabulary_doc.py` の `parse_exemption_table_rows()` は 0 行と報告しつづける）
+  ## 期待する挙動（必須）
+  免除は `## Exemption registry` セクションのテーブル行**だけ**から読み取られる。ドキュメントの他の場所にあるテーブルは免除として解釈されない。読み取った行には doc 側と同じ検証（3 セル・reason 非空・compensating guarantee 非空・gate_id が `action: select` に属する）が掛かり、違反時は例外で落ちる。
+  ## 完了の定義（必須）
+  - [ ] `load_exempt_gate_ids()` が `## Exemption registry` 見出しから次の `## ` 見出しまでを切り出してからテーブル行を集める（`tests/test_gate_option_vocabulary_doc.py` の `_registry_section` と同じアンカーの取り方）
+  - [ ] 読み取った免除行に `validate_exemption_rows` 相当の検証が掛かり、不正な行は例外になる
+  - [ ] 共通のパーサ／バリデータが 1 箇所（例 `tests/_gate_vocabulary.py` のような非テストヘルパ）に置かれ、doc 側モジュールと消費側モジュールの双方がそれを使う
+  - [ ] hermetic テスト追加: 無関係なテーブル + 0 行の `## Exemption registry` を含む合成ドキュメントが `set()` を返す
+  - [ ] `python3 -m unittest discover -s tests` が通る
+  ## 該当箇所（任意）
+  - `tests/test_gate_option_vocabulary.py:271`（`load_exempt_gate_ids`、テーブル行の収集は 286 行付近）
+  - `tests/test_gate_option_vocabulary_doc.py:114` / `:137`（正しくセクション限定している側の `parse_exemption_table_rows` / `validate_exemption_rows`）
+  - `em-workflow/references/gate-option-vocabulary.md:72`（`## Exemption registry`）
+  ## 実害・発生条件（任意）
+  `gate-option-vocabulary.md` に 2 つ目のテーブルが追記されたときに発生する。発生しても一切の失敗シグナルが出ないため、該当ゲートの batch 実行が `question-resolution.md` Batch resolution sequence step 6 の protocol-error abort に戻る — この feature がまさに塞いだ穴が、無言で再び開く。
+  feature `batch-policy-option-id-consistency`（PR https://github.com/m-m-n/em-claude-plugins/pull/11 ）のレビューで、comprehensive / architecture / spec の 3 観点が独立に同じ欠陥を指摘した（`stable_id`: `c1exempt271scan` / `a2exempt271split` / `s1exempt286anchor`）。3 件とも severity: medium だったため review フェーズの auto-fix 候補ゲート（critical/high のみ）に掛からず未着手のまま残った。
+parent_branch: em-workflow/exemption-registry-section-scope/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.23
+      '1': 0.68
+      '2': 0.09
+      '3': 0.0
+    expectation_clear: 0.9
+    confidence: 0.68
+    observed_at: '2026-09-24T19:56:35+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.19
+      '1': 0.74
+      '2': 0.07
+      '3': 0.0
+    expectation_clear: 0.9
+    confidence: 0.73
+    observed_at: '2026-09-24T19:56:35+09:00'
+  at: '2026-09-24T19:56:50+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3186cd6930c895c072a02ea7c5f63997498edbf4
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'The change is confined to Python test code and a test helper under tests/. It has no UI, visual, or interaction surface. Design-system candidates: 0.'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Section-scoped extraction
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Row parsing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Row validation
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Single shared helper
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: load_exempt_gate_ids behavior
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Hermetic regression tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Existing hermetic tests updated
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: Real repository unchanged in outcome
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Standard library only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: No em-workflow change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: ISSUING_SITE_MAP location
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Frozen digest pins unaffected
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: No test-to-test imports
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
