@@ -1,0 +1,49 @@
+feature: subagentstop-failed-event
+collected_at: "2026-09-25T00:16:23+09:00"
+session_ids: [01a0d3fc-46fc-7248-a890-f1fe6b1bd2a9]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0002
+      files:
+        - em-workflow/.claude-plugin/plugin.json
+        - .claude-plugin/marketplace.json
+    - task: task0001
+      files:
+        - em-workflow/.claude-plugin/plugin.json
+        - .claude-plugin/marketplace.json
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_only と description_plus_code の読みが一致せず、評価器が full を返した"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.01, '1': 0.47, '2': 0.52, '3': 0.0}
+        expectation_clear: 0.92
+        confidence: 0.51
+        observed_at: '2026-09-24T22:58:09+09:00'
+      - basis: description_plus_code
+        probabilities: {'0': 0.0, '1': 0.0, '2': 0.74, '3': 0.26}
+        expectation_clear: 0.85
+        confidence: 0.74
+        observed_at: '2026-09-24T22:58:10+09:00'
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/queue_failure_net.py
+        - em-workflow/references/implement-phase.md
+        - tests/test_queue_failure_net.py
+        - tests/test_queue_taskstop_net.py
+      changed_lines_approx: 200
+      new_functions_needed: 7
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "タスクごとのコミットで plugin-version-guard が version bump を強制するため、version 番号を仕様に文字どおり書くと（FR9/AC-7/TS-10 の 0.2.4）並列タスク数だけずれて実値 0.2.6 になった。仕様側は「上げる」だけを書き、具体値を固定しない方がよい"
+  - "task0001 の implementer が JSON ではなく markdown の完了報告を返した（journal の merged と merge-base で受理）"
+  - "review で low に落とされた 3 件（version 表記差、agent-index の遅延 SubagentStop の窓、implement-phase.md:1137 の文言の広さ）は findings に残らない"
