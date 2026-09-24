@@ -11,9 +11,9 @@ Covers task0002 Acceptance Criteria
   parses as JSON and its `version` is byte-identical to the plugin
   manifest's version.
 - AC-3 (FR6): no field other than the two version values changes in either
-  file -- the plugin manifest's `name`, and the marketplace entries' `name`
-  and `source` values, are unchanged; the marketplace `plugins` array gains
-  or loses no entry.
+  file. This module verifies AC-3 through the marketplace em-workflow
+  entry's `name` and `source` values only -- the check does not inspect the
+  array length, entry order, or any entry other than em-workflow.
 - AC-4 (NFR1, NFR2): this module lives under `tests/` as a `test_*.py`
   module, is discovered by `python3 -m unittest discover -s tests` from the
   repository root, imports only the standard library, and asserts AC-1 to
@@ -62,14 +62,6 @@ MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 # a fixed literal ("0.1.45") would go stale on the next unrelated bump.
 BASELINE_PATCH = 44
 
-# Snapshot of the marketplace entries' name/source fields, taken before this
-# task's edit (task0002.md, Scope: "no other entry and no other field
-# changes"; AC-3).
-MARKETPLACE_NAME_SOURCE_BASELINE = {
-    "em-review": "./em-review",
-    "em-workflow": "./em-workflow",
-}
-
 
 def _load_json(path):
     try:
@@ -116,6 +108,17 @@ def _assert_versions_equal(test, version_a, version_b):
     )
 
 
+def _assert_em_workflow_entry_unchanged(test, data):
+    """Module-local check for task0002 AC-3: the em-workflow marketplace
+    entry's `name` and `source` are unchanged. Looks the entry up by name
+    (never by array index) and never inspects the array length, entry
+    order, or any entry other than em-workflow (task0001.md, em-workflow
+    entry check contract)."""
+    entry = _marketplace_entry(data, "em-workflow")
+    test.assertEqual(entry.get("name"), "em-workflow")
+    test.assertEqual(entry.get("source"), "./em-workflow")
+
+
 class TestPluginManifestVersion(unittest.TestCase):
     """AC-1 (FR6): the plugin manifest parses as JSON, its version is one
     patch increment above the pre-change value with the major/minor family
@@ -152,29 +155,50 @@ class TestMarketplaceEntryVersion(unittest.TestCase):
         )
 
     def test_em_workflow_entry_name_and_source_unchanged(self):
-        self.assertEqual(self.entry.get("name"), "em-workflow")
-        self.assertEqual(self.entry.get("source"), "./em-workflow")
+        _assert_em_workflow_entry_unchanged(self, self.data)
 
 
-class TestMarketplaceOtherFieldsUnchanged(unittest.TestCase):
-    """AC-3 (FR6): no field other than the two version values changes --
-    every marketplace entry's `name`/`source` matches the pre-task snapshot,
-    and the `plugins` array gains or loses no entry."""
+class TestEmWorkflowEntryCheckInTestData(unittest.TestCase):
+    """In-test data cases for the em-workflow entry check (FR5,
+    task0001.md AC-1/AC-2/AC-3). Each case builds its marketplace mapping
+    inside the test; the mapping is independent of the repository file's
+    contents and nothing is written to disk."""
 
-    @classmethod
-    def setUpClass(cls):
-        cls.data = _load_json(MARKETPLACE_PATH)
+    def test_extra_plugin_entry_is_tolerated(self):
+        """AC-1: em-review, em-workflow (source ./em-workflow), and a third
+        plugin entry -- the check passes."""
+        data = {
+            "plugins": [
+                {"name": "em-review", "source": "./em-review"},
+                {"name": "em-workflow", "source": "./em-workflow"},
+                {"name": "third-plugin", "source": "./third-plugin"},
+            ]
+        }
+        _assert_em_workflow_entry_unchanged(self, data)
 
-    def test_entry_count_unchanged(self):
-        self.assertEqual(
-            len(self.data.get("plugins", [])),
-            len(MARKETPLACE_NAME_SOURCE_BASELINE),
-        )
+    def test_em_workflow_source_drift_raises(self):
+        """AC-2: the em-workflow entry present with a source other than
+        ./em-workflow -- the check raises an assertion failure."""
+        data = {
+            "plugins": [
+                {"name": "em-review", "source": "./em-review"},
+                {"name": "em-workflow", "source": "./somewhere-else"},
+            ]
+        }
+        with self.assertRaises(AssertionError):
+            _assert_em_workflow_entry_unchanged(self, data)
 
-    def test_every_entry_name_and_source_matches_baseline(self):
-        for name, source in MARKETPLACE_NAME_SOURCE_BASELINE.items():
-            entry = _marketplace_entry(self.data, name)
-            self.assertEqual(entry.get("source"), source)
+    def test_em_workflow_name_drift_raises(self):
+        """AC-3: the em-workflow entry renamed so no entry is named
+        em-workflow -- the check raises an assertion failure."""
+        data = {
+            "plugins": [
+                {"name": "em-review", "source": "./em-review"},
+                {"name": "em-workflow-renamed", "source": "./em-workflow"},
+            ]
+        }
+        with self.assertRaises(AssertionError):
+            _assert_em_workflow_entry_unchanged(self, data)
 
 
 class TestValidationDetectsRegressions(unittest.TestCase):
