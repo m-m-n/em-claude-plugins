@@ -1,0 +1,93 @@
+task_id: task0002
+baseline_failures:
+  - test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)
+  - test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)
+  - test_em_review_entry_unchanged (test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged)
+  - test_em_review_manifest_and_entry_agree_on_the_current_version (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version)
+  - test_em_workflow_manifest_and_entry_agree_on_the_current_version (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_entry_version_is_the_literal_bump_target (test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target)
+  - test_marketplace_em_workflow_entry_version_is_0_2_2 (test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_plugin_manifest_version_is_0_2_2 (test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2)
+  - test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)
+  - test_version_is_the_literal_bump_target (test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target)
+final_failures:
+  - test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)
+  - test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)
+  - test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)
+  - test_em_review_entry_unchanged (test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged)
+  - test_em_review_manifest_and_entry_agree_on_the_current_version (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version)
+  - test_em_workflow_manifest_and_entry_agree_on_the_current_version (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_entry_version_is_the_literal_bump_target (test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target)
+  - test_marketplace_em_workflow_entry_version_is_0_2_2 (test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_plugin_manifest_version_is_0_2_2 (test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2)
+  - test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)
+  - test_version_is_the_literal_bump_target (test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target)
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'argument-hint: "[feature-path] [--report-only]
+      [--batch] [--once] [task-description]"' not found in SKILL.md text
+      (the real line 4 already carries [--pr] between [--once] and
+      [task-description], so the old constant without --pr did not match).
+  AC-2:
+    tests:
+      - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'batch:質問せず自動で「ブランチを残す」を選ぶ。
+      マージ・push・PR作成のいずれも行わない' not found in the
+      strip_ws'd Step C section (real text has the `--pr 未指定なら`
+      prefix the old constant lacked).
+  AC-3:
+    tests:
+      - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: '`batch-mode.md` の Non-packet gates 表' not found in
+      the plain (non-strip_ws) Step C section text -- the reference wraps
+      across SKILL.md lines 918-919 with a newline + indentation between
+      "の" and "Non-packet", which a plain assertIn could not bridge.
+  AC-4:
+    tests:
+      - test_develop_once_option.TestArgumentHintTokenMatcherCanFail.test_matcher_rejects_line_missing_pr
+      - test_step_c_verify_failed_default.TestBatchAutoSelectMatcherCanFail.test_matcher_rejects_old_phrase_only_text
+      - test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_accepts_wrapped_reference
+      - test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_missing_reference
+      - test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_reference_with_altered_word
+    red_confirmed: true
+    red_reason: >-
+      Matcher and its negative-proof test were authored together (same
+      convention as this file's pre-existing *MatcherCanFail classes), so
+      red was confirmed by monkey-patching each matcher to a naive stub
+      (always-True for the three reject proofs; a plain non-strip_ws
+      substring check for the accept proof) and re-running: all five
+      assertions failed against the naive stub
+      (AssertionError: True is not false / False is not true), then passed
+      once the correct strip_ws-based matcher was restored.
+  AC-5:
+    tests:
+      - test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_askuserquestion_and_three_way_wording_present
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing passing test, untouched by this task; verified it still
+      passes after the change (regression guard, not a red-to-green
+      criterion of this task).
+  AC-6:
+    tests: []
+    red_reason: >-
+      Verified by inspection and by the AC-1/AC-2/AC-3 tests reading the
+      real file: `git diff --stat` shows only tests/test_develop_once_option.py
+      and tests/test_step_c_verify_failed_default.py changed; SKILL.md is
+      untouched. Both modules' pre-existing TestOwnModuleStdlibOnly tests
+      (stdlib-only import check) pass unchanged.
