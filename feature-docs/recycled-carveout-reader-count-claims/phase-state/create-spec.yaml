@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 1ad90ef144a1238feb3211233e086aac29695daa
 last_input_digest: sha256:c28ac4d013f3802ef1e144b916b7892b87b798c64ce49d7d9309f185913df2e6
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -56,10 +56,16 @@ worker_runs:
   input_digest: sha256:836d2cfb5eaeb5cd18a753ea7bcfae68cb6caa8aaa5aeebb39a5ac0067e29a0d
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:c28ac4d013f3802ef1e144b916b7892b87b798c64ce49d7d9309f185913df2e6
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/recycled-carveout-reader-count-claims/REQUIREMENTS.md
+  sha256: sha256:a3b54f8d473a20795fa8b801a408fdec82de4dc1e5740c6412ad2272e0173546
+  produced_by: create-spec-run-0003
+- path: feature-docs/recycled-carveout-reader-count-claims/SPEC.md
+  sha256: sha256:9bc938732b3beabfe38560932c8cd3300be36d3081727ee940fcea35f3a6f2d4
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
