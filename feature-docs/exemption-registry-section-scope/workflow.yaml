@@ -118,7 +118,8 @@ workflow:
   completed_at_commit: 60142241ebeb9009733541550281935168757060
   base_commit: 4a75e04a09a5d0bed3dfbf3b4d875ae4f43736b7
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 37db56e02e180373722f6a5a6557c6022c0645ad
 - id: verify
   status: pending
 - id: retrospect
@@ -155,7 +156,7 @@ tasks:
     branch: em-workflow/exemption-registry-section-scope/task0001
     merge_commit: 4352a73e63a6e66287f66c42e73fcb6957f00b10
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -164,7 +165,8 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   residual_critical_high: 0
   needs_rework: false
 requirements:
