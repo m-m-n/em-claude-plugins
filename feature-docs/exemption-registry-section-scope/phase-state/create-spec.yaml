@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 3dfd31d1f89e39f10fb076d56c4c5a149d15ae06
 last_input_digest: sha256:cf91feea80df5289a00bef85fe55f0e0e47d54fca3e0226930ca388a3f6598ba
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
   input_digest: sha256:7012a3a2cc66a0c907cc305309e9ce3cc1f3a087826b8ac456d698c07806e26d
   output_digest: sha256:8cae07b6b44ed0e493957f1bb880af862d9dd097008864ee6ee7d73a69276a54
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:cf91feea80df5289a00bef85fe55f0e0e47d54fca3e0226930ca388a3f6598ba
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/exemption-registry-section-scope/REQUIREMENTS.md
+  sha256: sha256:aa4f8918c4717412db0653e805bed6b9bb34ed5f4db7a99d585b3163167e803f
+  produced_by: create-spec-run-0002
+- path: feature-docs/exemption-registry-section-scope/SPEC.md
+  sha256: sha256:a778d0730f5279a14e5c3f58f3b249cb9bfa97aa051b8062a53b94d80612905b
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
