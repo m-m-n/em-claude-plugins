@@ -1,0 +1,40 @@
+schema_version: 1
+feature: recycled-carveout-reader-count-claims
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.17
+    '1': 0.15
+    '2': 0.68
+    '3': 0.0
+  expectation_clear: 0.9
+  confidence: 0.51
+  observed_at: '2026-09-25T02:21:58+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.46
+    '1': 0.12
+    '2': 0.42
+    '3': 0.0
+  expectation_clear: 0.87
+  confidence: 0.03
+  observed_at: '2026-09-25T02:24:43+09:00'
+pre_survey_estimate:
+  files_expected:
+  - feature-docs/recycled-task-id-carveout/VERIFICATION.md
+  changed_lines_approx: 4
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - feature-docs/recycled-task-id-carveout/SPEC.md
+  - feature-docs/recycled-task-id-carveout/tasks/task0004.md
+  - feature-docs/recycled-task-id-carveout/workflow.yaml
+  - test-docs/recycled-task-id-carveout/task0004.tests.yaml
+  - tests/test_recycled_task_id_consistency.py
+  work_still_required: true
+  rationale: 指定HEADと一致し、作業は一部残っているよ。feature-docs/recycled-task-id-carveout/VERIFICATION.md:36のTS-13と同ファイル:89の手動確認には全定数を対象とする主張が残っているため、SPEC.md:35のAC-6に対応する対象と除外条件を明記する修正が必要だよ。2行の置換として追加・削除合計約4行を見込むよ。一方、tests/test_recycled_task_id_consistency.py:1から始まる現在のdocstringには問題のreader-count主張がなく、この修正は不要だよ。現在の単一参照定数は文字列集計で7個、コメントを除いた構文解析では8個あり、依頼記載の6個とは異なるよ（同ファイル:232、233、239、251、289、290、309、310）。TS-13は目視確認項目で、この記述を直接検証する自動テストはないよ。対象モジュールの86テストはpython3
+    -Bで成功したよ。全体テストは一時ファイルを作成するため実行していないよ（tests/test_queue_hook_status_read_pin.py:202、238）。プラグイン配下の変更は不要なので、.claude/rules/core-plugin-version-bump.md:7に基づく版上げも不要だよ。ファイルの変更・作成・削除はしていないよ
+decided_at: '2026-09-25T02:26:10+09:00'

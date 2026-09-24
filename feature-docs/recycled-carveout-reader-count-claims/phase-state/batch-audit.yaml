@@ -1,0 +1,17 @@
+schema_version: 1
+feature: recycled-carveout-reader-count-claims
+records:
+  - question_id: create-spec.command-approval
+    packet_id: null
+    answered_at: "2026-09-25T03:05:00+09:00"
+    source: batch-decision-table
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "auto_record"
+    normalized_answer: "auto_record"
+    resolution_note: >-
+      gate: create-spec.command-approval (batch policy action auto_record).
+      workflow.yaml project.components のコマンドは
+      'python3 -m unittest discover -s tests' の 1 本。bash_guard.py --list で
+      既に承認済みであることを確認したため、この走行で新たに自動承認した
+      コマンドは 0 本。refusal パターンの検出なし。

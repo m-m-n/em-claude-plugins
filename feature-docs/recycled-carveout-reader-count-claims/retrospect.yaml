@@ -1,0 +1,50 @@
+feature: recycled-carveout-reader-count-claims
+collected_at: "2026-09-25T03:10:59+09:00"
+session_ids: ["01a0d49b-807b-74d6-ae2e-3930129b7d29"]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_only は 2 を 0.68 で支持し、description_plus_code は 0（0.46）と 2（0.42）に割れて confidence 0.03 と低かったため、何も引かない full を採用した"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.17, '1': 0.15, '2': 0.68, '3': 0.0}
+        expectation_clear: 0.9
+        confidence: 0.51
+        observed_at: '2026-09-25T02:21:58+09:00'
+      - basis: description_plus_code
+        probabilities: {'0': 0.46, '1': 0.12, '2': 0.42, '3': 0.0}
+        expectation_clear: 0.87
+        confidence: 0.03
+        observed_at: '2026-09-25T02:24:43+09:00'
+    pre_survey_estimate:
+      files_expected:
+        - feature-docs/recycled-task-id-carveout/VERIFICATION.md
+      changed_lines_approx: 4
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules:
+        - feature-docs/recycled-task-id-carveout/SPEC.md
+        - feature-docs/recycled-task-id-carveout/tasks/task0004.md
+        - feature-docs/recycled-task-id-carveout/workflow.yaml
+        - test-docs/recycled-task-id-carveout/task0004.tests.yaml
+        - tests/test_recycled_task_id_consistency.py
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - |
+    タスク記述の (2)（テストモジュール docstring の reader-count 主張）は、
+    着手時点の HEAD では既に存在せず、Codex 事前調査がそれを指摘した。
+    タスクチケットの記述が起票後の変更で古くなるケースがあり、事前調査が
+    その差分を拾えている。
+  - |
+    タスク記述は reader 1 の定数を 6 個としていたが、事前調査では文字列集計で
+    7 個・構文解析で 8 個と数え方で値が揺れた。全称的な数の主張を
+    ドキュメントに書くと、数え方の定義が無い限り再びズレる。

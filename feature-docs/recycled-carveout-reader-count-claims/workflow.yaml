@@ -1,0 +1,257 @@
+schema_version: 1
+feature: recycled-carveout-reader-count-claims
+created: '2026-09-25'
+base_branch: main
+goal: '# em-workflow: recycled-task-id-carveout の TS-13 とテスト docstring の reader-count
+  主張が実測と一致しない
+
+
+  ## 現象
+
+  recycled-task-id-carveout feature の検証ドキュメントとテストモジュール docstring が、実測と一致しない主張を書いている。
+
+
+  (1) VERIFICATION.md TS-13 が出典より広い全称文になっている
+
+  `feature-docs/recycled-task-id-carveout/VERIFICATION.md` の TS-13 は出典として SPEC AC-6
+  を挙げている。AC-6 の本文は「`ORCHESTRATOR_ONLY_SCOPE_PHRASE` の改訂の結果として single-reader の module-level
+  定数を残さない」であり、その改訂が孤立させた定数を対象にしている。
+
+  一方 TS-13 の Expected Result 欄は「Count reader sites per module-level constant; every
+  constant has 0 (retired with its readers) or >= 2」という、モジュール内の全定数に対する全称文になっている。
+
+  実測では `tests/test_recycled_task_id_consistency.py` に reader 1 の定数が 6 個残る:
+
+  - `PLUGIN_ROOT`、`IMPLEMENT_PHASE_PATH`、`ABORT_PHASE_TERMINAL_PHRASE`、`STOP_CONDITION_3_PHRASE`
+  — 本 feature 以前から single-reader
+
+  - `STOP_HOOK_BULLET_START`、`NEXT_SUPPORTING_CAST_BULLET_START` — task0001 が追加したセクション切り出し用アンカー。ヘルパー関数
+  `_stop_hook_bullet()` の内部でのみ読まれる
+
+  AC-6 の基準では合格だが、TS-13 の文字どおりでは不合格になる。
+
+
+  (2) モジュール docstring の reader-count 主張が実測と不一致
+
+  `tests/test_recycled_task_id_consistency.py` の docstring（task0004 の AC-5/AC-6 の説明）が「leaving
+  no module-level constant in this module with fewer than two reader sites」と書いているが、reader
+  1 の定数が 6 個ある。
+
+
+  ## 再現手順
+
+  1. VERIFICATION.md の TS-13 行と SPEC.md の AC-6 を突き合わせる
+
+  2. tests/test_recycled_task_id_consistency.py の module-level 定数（`^[A-Z][A-Z0-9_]+\s*=`）ごとに、定義行を除いた出現回数を数える
+
+  3. reader 1 の定数が 6 個あることを確認する
+
+  4. 同モジュールの docstring の該当文を読む
+
+
+  ## 期待する挙動
+
+  - TS-13 の Expected Result が、出典の SPEC AC-6 と同じ範囲（当該改訂が孤立させた定数、および matcher リテラル定数）に限定されている。あるいは全称文のまま維持するなら、対象外とする定数の種類を明示している
+
+  - モジュール docstring の reader-count に関する記述が実測と一致している
+
+
+  ## 完了の定義
+
+  - [ ] TS-13 の Expected Result が実測可能かつ実測と一致する基準になっている
+
+  - [ ] tests/test_recycled_task_id_consistency.py の docstring から、実測と一致しない reader-count
+  主張が消えている
+
+  - [ ] `python3 -m unittest discover -s tests` が通る
+
+
+  ## 該当箇所
+
+  - feature-docs/recycled-task-id-carveout/VERIFICATION.md — TS-13 行（35-36 行付近）
+
+  - tests/test_recycled_task_id_consistency.py — module docstring（118-121 行付近）
+
+  '
+parent_branch: em-workflow/recycled-carveout-reader-count-claims/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.17
+      '1': 0.15
+      '2': 0.68
+      '3': 0.0
+    expectation_clear: 0.9
+    confidence: 0.51
+    observed_at: '2026-09-25T02:21:58+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.46
+      '1': 0.12
+      '2': 0.42
+      '3': 0.0
+    expectation_clear: 0.87
+    confidence: 0.03
+    observed_at: '2026-09-25T02:24:43+09:00'
+  at: '2026-09-25T02:26:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 38ff65e0048cc76080a32f37e88fa411b8c601dc
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI・画面・視覚要素を持たない、検証文書のテキスト編集のみ
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: c2c5ec7aaec1b25b100c9f48ef016ac3415e57e6
+- id: implement
+  status: completed
+  completed_at_commit: 487a39e1f6f790fc056862980a11ec61d8b22553
+  base_commit: d19dffccfb49dfa6ef49d693d815296e78a59299
+- id: review
+  status: completed
+  completed_at_commit: c8cd88bfcc19a95333e31a43c6d62e0d30441d32
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 7582e674a6bbfe332e414f3d80846f42107b1734
+  notes: 'TS-1..TS-4 inspection pass (lines 36/89 name only HOOK_FILENAMES and JOURNAL_ONLY_HOOK_FILENAMES; HOOK_FILENAMES has 3 reader sites, JOURNAL_ONLY_HOOK_FILENAMES absent; no reader claim in module; diff limited to lines 36/89 plus feature-docs/test-docs roots, line count 105 unchanged). TS-5: 5654 tests OK.'
+- id: retrospect
+  status: completed
+  completed_at_commit: 4981b950fabc226a1756daac752b6148429fa06f
+tasks:
+  task0001:
+    title: Narrow TS-13 row and its manual item to the AC-6 constants
+    plan: tasks/task0001.md
+    files:
+    - feature-docs/recycled-task-id-carveout/VERIFICATION.md
+    skills: []
+    domains: []
+    complexity: low
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/recycled-carveout-reader-count-claims/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: TS-13 行を AC-6 の対象定数に絞る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+  FR2:
+    title: TS-13 の手動確認項目を同じく絞る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR3:
+    title: モジュール docstring に誤った読み取り箇所数の主張が無いことを確認する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+  FR4:
+    title: 変更を VERIFICATION.md の 2 箇所に限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  NFR1:
+    title: プラグインの version を上げない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  NFR2:
+    title: 過去の記録を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  NFR3:
+    title: テストスイートが通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
