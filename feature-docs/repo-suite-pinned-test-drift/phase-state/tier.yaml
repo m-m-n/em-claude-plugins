@@ -1,0 +1,89 @@
+schema_version: 1
+feature: repo-suite-pinned-test-drift
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.01
+    '1': 0.91
+    '2': 0.08
+  expectation_clear: 0.93
+  confidence: 0.87
+  observed_at: '2026-09-24T23:17:59+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.0
+    '1': 0.71
+    '2': 0.29
+  expectation_clear: 0.91
+  confidence: 0.56
+  observed_at: '2026-09-24T23:17:59+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_develop_once_option.py
+  - tests/test_step_c_verify_failed_default.py
+  - tests/test_muse_consent_version_bump.py
+  - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  - tests/test_abort_terminal_commit_precedence.py
+  - tests/test_stop_reason_coverage_version_bump.py
+  - tests/test_batch_structured_result_output_version_bump.py
+  - tests/test_reviewers_primary_chains.py
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 120
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_abort_terminal_commit_precedence.py
+  - tests/test_stop_reason_coverage_version_bump.py
+  - tests/test_batch_structured_result_output_version_bump.py
+  - tests/test_reviewers_primary_chains.py
+  work_still_required: true
+  rationale: 'main の HEAD fb8b73667a33e272fcf6f004874bc6392ba13380 では修正がまだ必要だよ。tests
+    ディレクトリから python3 -B -m unittest で読み取り専用の32モジュールを実行し、609件中16件の失敗を確認したよ。指定の5モジュールでは109件中7件が失敗したよ。全スイートには一時ファイルを作る処理があるため実行しておらず、失敗総数が16件だけとは断定できないよ（tests/test_muse_guard.py:185）。ファイルの変更・作成・削除はしていないよ
+
+
+    指定された失敗のうち、test_argument_hint_line_includes_once_and_retains_existing_tokens は現在も失敗するよ（tests/test_develop_once_option.py:288）。期待値の158行目には
+    --pr がなく、本文の em-workflow/skills/develop/SKILL.md:4 には追加されているよ。fba3d7e の機能追加を維持し、期待値を更新するのが妥当だよ
+
+
+    test_batch_auto_select_wording_present も失敗するよ（tests/test_step_c_verify_failed_default.py:283）。本文は「--pr
+    未指定なら」という条件付きになっているので、105行目の期待文を更新するよ（em-workflow/skills/develop/SKILL.md:917）。同じモジュールの
+    test_batch_non_packet_gates_reference_present も失敗するけれど、参照自体は本文の918～919行目に残っているよ。289行目の比較に既存の空白正規化を適用すればよく、本文を戻す必要はないよ
+
+
+    test_em_workflow_manifest_nonversion_content_unchanged は失敗するよ（tests/test_muse_consent_version_bump.py:214）。fba3d7e
+    で変わった非 version フィールドは description だけで、--pr 指定時の動作説明が追加されているよ（em-workflow/.claude-plugin/plugin.json:3）。同コミットの親では期待ハッシュと一致し、変更後から現在までは
+    bf70d7104511c338b6f076c3d9ab08b6a19b757b59d45397324242f11008ebf0 になっているよ。説明を戻さず、63行目の固定ハッシュと基準を説明するコメントを更新するのが妥当だよ
+
+
+    報告にある test_em_workflow_reads_0_1_78 は現在は存在せず、test_em_workflow_manifest_and_entry_agree_on_the_current_version
+    に改名されているよ。こちらと test_em_review_manifest_and_entry_agree_on_the_current_version
+    の両方が失敗するよ（tests/test_codex_wrapper_fallback_removal_version_bump.py:161、169）。期待値は0.2.2／0.5.11だけれど、現在は0.2.3／0.5.13で配布情報とも一致しているよ（両プラグインの
+    .claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:17、27）。版を戻さず、固定値比較を各機能の導入版以上という数値比較と配布先との一致検証へ変更するのを勧めるよ
+
+
+    test_no_develop_or_review_document_exceeds_its_pinned_budget も失敗するよ（tests/test_muse_consent_no_new_questions.py:237）。develop
+    の出現回数は上限7に対して8で、増分は fba3d7e が追加した「AskUserQuestion を出さない」という説明だよ（em-workflow/skills/develop/SKILL.md:106）。実際の質問追加ではないよ。テストの27行目と
+    feature-docs/muse-spark-contributor-consent/tasks/task0005.md:58 は上限引き上げを認めていないので、上限を変えず、本文を「質問を出さない」へ言い換える修正を勧めるよ。--pr
+    の機能は維持するよ
+
+
+    追加で、tests/test_abort_terminal_commit_precedence.py:372 の test_plugin_manifest_version_is_0_2_2
+    と376行目の test_marketplace_em_workflow_entry_version_is_0_2_2、tests/test_stop_reason_coverage_version_bump.py:126
+    の test_version_is_the_literal_bump_target と155行目の test_entry_version_is_the_literal_bump_target
+    が失敗するよ。いずれも0.2.2の固定が原因だよ。また tests/test_batch_structured_result_output_version_bump.py:219
+    の test_em_review_entry_unchanged は174行目の0.5.11固定で失敗するよ。これらもマニフェストを戻さず、導入版を下限とする検証、形式検証、配布先との一致検証へ更新するのが妥当だよ
+
+
+    さらに tests/test_reviewers_primary_chains.py の test_baseline_unchanged（351行目）、test_rules_block_unchanged（354行目）、test_cross_validation_data_block_unchanged（376行目）、test_computation_semantics_preserved_in_prose（422行目）が失敗するよ。6c4971e
+    が security を常時選択へ変更した際の追随漏れだよ。期待値をそれぞれ「baseline に security を含める」「不要になった条件付き security
+    選択を除く」「cross_validation は complexity: high のみ」「Layer 1で値が確定しLayer 2では変更しない」へ更新するのが妥当だよ（em-workflow/references/review-rules.yaml:41、43、55、24）。選定規則を戻す必要はないよ
+
+
+    見積もりは以上の既存テスト修正と本文1箇所の言い換えを含むよ。本文を変更する場合は .claude/rules/core-plugin-version-bump.md:7
+    に従い、em-workflow と marketplace の版を同時に上げるため、その2ファイルも含めているよ'
+decided_at: '2026-09-24T23:18:30+09:00'
