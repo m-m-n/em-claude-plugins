@@ -1,0 +1,60 @@
+task_id: task0002
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+    red_confirmed: true
+    red_reason: "AssertionError: '0.2.1' != '0.2.0' (manifest/marketplace already read 0.2.1 from task0001; literal expected was still 0.2.0)"
+  AC-2:
+    tests:
+      - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+    red_confirmed: true
+    red_reason: "Same assertion as AC-1; exact-equality form was already in place before the edit and remains unchanged after it. git diff of the module shows exactly one changed line (the expected value) plus one added comment line."
+  AC-3:
+    tests: []
+    red_reason: "Not test-observable: verified by inspecting the diff directly. Before the edit, the comment block next to the em-workflow expected value had no line naming routeback-residual-connections; after the edit it does, and the existing comment lines are byte-identical (confirmed via git diff, which shows only an added line and the changed value line)."
+  AC-4:
+    tests:
+      - "full suite: python3 -m unittest discover -s tests"
+    red_confirmed: false
+    red_reason: "This criterion is a full-suite regression gate, not a criterion with its own new failing test. Verified by comparing the baseline run (10 failures, listed in baseline_failures) against the post-implementation run (9 failures, listed in final_failures): final_failures is a strict subset of baseline_failures, with test_em_workflow_manifest_and_entry_agree_on_the_current_version being the only one resolved and no new failure introduced."
+  AC-5:
+    tests: []
+    red_reason: "Verified by `git status --short` and `git diff --stat`: only tests/test_codex_wrapper_fallback_removal_version_bump.py is modified in this task's commits. tests/test_recycled_task_id_consistency.py, tests/test_implement_routeback_gate.py, everything under em-workflow/, and .claude-plugin/marketplace.json were not touched (not in git status output), so they remain byte-identical to the integration base."
+notes:
+  - "AC-3 and AC-5 have no dedicated automated test (they are diff-shape / scope
+    constraints); verified manually via git diff / git status as recorded above."
+  - "AC-4's red_confirmed is false because the acceptance criterion itself is a
+    non-regression gate (compare baseline vs final), not a specific test that
+    was made to fail first; the underlying AC-1 test change is red_confirmed."
+  - "Deviation candidate (per task plan Design 'No other modules'):
+    tests/test_muse_consent_version_bump.py::TestNoOtherFieldsChanged::test_em_workflow_manifest_nonversion_content_unchanged
+    was already failing in the baseline before this task's edit (present in
+    baseline_failures) and remains failing after it (present in
+    final_failures). It compares a content hash of the em-workflow manifest's
+    non-version fields, not the version pin itself, and this task's edit
+    touched only tests/test_codex_wrapper_fallback_removal_version_bump.py, so
+    it did not change the manifest content this test hashes. Left untouched
+    per the task plan's Design and Out of Scope sections (edit only the
+    module named in review finding aef23290e7d97475)."
