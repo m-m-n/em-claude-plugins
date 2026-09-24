@@ -1,0 +1,21 @@
+schema_version: 1
+feature: stop-reason-coverage
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: aab14c273c9be59b391f88e17cd01e7df3573dd9
+last_input_digest: sha256:0efd4fd1de1e76dff71a6d54f15520f4bd99b61f479426ae5331db37dfbe8cb3
+active_request_id: cp-stop-reason-coverage-001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: cp-stop-reason-coverage-001
+    status: dispatched
+    input_digest: sha256:0efd4fd1de1e76dff71a6d54f15520f4bd99b61f479426ae5331db37dfbe8cb3
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
