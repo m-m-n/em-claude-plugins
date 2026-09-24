@@ -1,0 +1,134 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection (NFR2 forbids new tests): loaded
+      test-docs/recycled-task-id-contract/task0002.tests.yaml as YAML and
+      checked whether acceptance_tests.AC-4 has a red_confirmed key. Run
+      against the pre-edit file (git HEAD, before this task's edits): AC-4's
+      keys were only {tests, red_reason} -- red_confirmed absent, so the
+      "every entry has all three keys" check FAILED. Re-run against the
+      post-edit file: AC-4 now has red_confirmed: false alongside its
+      unchanged tests: [] and red_reason, and every acceptance_tests entry
+      in both task0001.tests.yaml and task0002.tests.yaml has all three
+      keys -- PASSED.
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection: extracted the first quoted span from
+      task0001.tests.yaml AC-3's red_reason and searched for it,
+      whitespace-normalized, in whitespace-normalized
+      em-workflow/references/implement-phase.md; also counted occurrences
+      of the literal string "All four hooks" in task0001.tests.yaml. Run
+      against the pre-edit file: the quoted span was 'All four hooks detect
+      a task as unlaunched solely from the absence ...', which does NOT
+      occur in implement-phase.md (found = False), and "All four hooks"
+      occurred 1 time -- FAILED. Re-run against the post-edit file: the
+      quoted span is now 'The other three queue hooks detect a task as
+      **unlaunched** solely from the absence of any journal event for that
+      task id', which IS found in implement-phase.md once normalized, and
+      "All four hooks" occurs 0 times -- PASSED.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection: counted task0001.tests.yaml AC-6's tests: list length and
+      grepped each of the three FR3 method names against
+      tests/test_hook_classification_pin.py. Run against the pre-edit file:
+      AC-6 tests: had 4 entries, not 7 -- FAILED. Re-run against the
+      post-edit file: AC-6 tests: has exactly 7 entries (the 4 pre-existing
+      plus the 3 FR3 identifiers), and each of
+      test_bash_guard_reads_workflow_yaml_but_not_task_status,
+      test_bare_workflow_yaml_mention_without_status_accessor_is_false, and
+      test_removing_the_status_carveout_flips_observation_to_false matches
+      exactly one `def` in tests/test_hook_classification_pin.py -- PASSED.
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection: read task0001.tests.yaml AC-6's red_reason text for the
+      re-observation statement, the base commit 48386b9^, and the three
+      test names, and ran `git diff` on
+      tests/test_hook_classification_pin.py. Run against the pre-edit file:
+      AC-6 red_reason contained none of "re-observ", "48386b9^", or the
+      three FR3 test names -- FAILED. Re-run against the post-edit file:
+      AC-6 red_reason states the re-observation was performed in feature
+      recycled-test-docs-drift (not at auto-fix time), names base commit
+      48386b9^ and that reads_per_task_status in
+      tests/test_hook_classification_pin.py was the reverted helper, and
+      gives each of the three tests' individually observed outcome --
+      PASSED. `git status --short` / `git diff --stat` on
+      tests/test_hook_classification_pin.py show no diff against the
+      task's base -- PASSED (this part is unchanged pre/post since the
+      revert-and-restore cycle used during FR4's measurement always ends
+      with the file restored).
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection: read task0001.tests.yaml AC-7's red_confirmed value and
+      searched its red_reason for 1493 and 1506. Run against the pre-edit
+      file: AC-7 red_confirmed was true, and red_reason contained 1493 but
+      not 1506, with no stated reason for a false red_confirmed -- FAILED
+      (both the red_confirmed value and the missing 1506/reason). Re-run
+      against the post-edit file: AC-7 red_confirmed is false; red_reason
+      states 1493 (1452 baseline + 41 new, at task0001 implementation time)
+      and 1506 (the recycled-task-id-contract integration branch after the
+      review round 1 auto-fix), each with when it was taken, plus the
+      reason red_confirmed is false (a pre-implementation empty git diff is
+      trivially true, not an observed failure); the existing check items
+      (2) to (4) are still present verbatim -- PASSED.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection: read task0001.tests.yaml's top-level notes for a
+      universal claim about every Acceptance Criterion's red state. Run
+      against the pre-edit file: notes opened with "Every Acceptance
+      Criterion's red state was reconfirmed by temporarily restoring
+      em-workflow/references/implement-phase.md ..." -- a universal claim
+      that already contradicted AC-7's own red_reason (which described its
+      "red" as inherently true rather than an observed reconfirmation), and
+      would additionally misdescribe AC-6's post-edit re-observation method
+      once FR3/FR4 landed -- FAILED. Re-run against the post-edit file:
+      notes narrow the reconfirmation claim to AC-1 through AC-5 and AC-6's
+      four pre-existing tests, separately describe AC-6's three new tests as
+      re-observed via a different method, and state that AC-7's
+      red_confirmed is false rather than reconfirmed -- no statement
+      contradicts AC-6's re-observation record or AC-7's red_confirmed:
+      false -- PASSED.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural/diff-scope and suite-pass criterion, not independently
+      red/green testable before any edit exists: a pre-edit git diff is
+      empty by construction, so there is nothing to observe failing for the
+      "diff is exactly these two files" and "suite passes" parts. Verified
+      directly post-edit instead: `git diff --name-only` against the task's
+      base lists exactly test-docs/recycled-task-id-contract/task0001.tests.yaml
+      and test-docs/recycled-task-id-contract/task0002.tests.yaml; the diff
+      hunks touch only the entries/fields named in the task plan's edit
+      table (confirmed by reading the full `git diff` output); AC-1, AC-2,
+      AC-4, AC-5 of task0001.tests.yaml, AC-1, AC-2, AC-3, AC-5 of
+      task0002.tests.yaml, task_id/baseline_failures/final_failures of both
+      files, and task0003.tests.yaml are all byte-identical to the pre-edit
+      git HEAD blobs (checked programmatically); both edited files load as
+      YAML via yaml.safe_load with no error; `python3 -m unittest discover
+      -s tests` from the repository root finishes with 0 failures both
+      before (5654 tests) and after (5654 tests) this task's edits.
+notes: >-
+  All six content criteria (AC-1 through AC-6) were verified by inspection
+  against both the pre-edit git HEAD blobs of
+  test-docs/recycled-task-id-contract/{task0001,task0002}.tests.yaml and the
+  post-edit working copy, so each entry's red_confirmed: true reflects an
+  actually-observed pre-edit failure, not an inferred one. AC-7's
+  red_confirmed is false because its scope/preservation/suite-pass checks
+  have no meaningful pre-edit failure state to observe (an empty diff is
+  trivially true before editing begins), per implementer.md's documented
+  exception for criteria with no observable pre/post difference.
