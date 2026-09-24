@@ -43,27 +43,23 @@ MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
 # Pre-feature baseline major.minor.patch per plugin (Design: both registries
-# read these values before this task's edit). `expected` tracks the current
-# released value: the two registries must agree on it, and it must still be a
-# patch bump over the baseline. Later features that bump a plugin update it
-# here rather than leaving a rotting literal behind.
+# read these values before this task's edit). `baseline` backs the
+# patch-bump-over-baseline checks below (TestPluginVersionBumps /
+# TestValidationDetectsRegressions). `floor` (repo-suite-pinned-test-drift
+# task0004, FR8) reuses that same already-recorded lower bound as the floor
+# for the form/floor/agreement matcher (IMPLEMENTATION.md D2, Shared
+# Components: Lower-bound comparison) -- a historical value, used only
+# through comparison, never compared with the current version (NFR2).
 PLUGIN_SPECS = {
     "em-workflow": {
         "manifest_path": REPO_ROOT / "em-workflow" / ".claude-plugin" / "plugin.json",
         "baseline": (0, 1, 76),
-        # task-tier-reduction/task0008 (NFR4): bumped to the next minor
-        # value on the current line. Later features that bump em-workflow
-        # again update this literal here, per this module's own convention
-        # (see the class docstring below).
-        # routeback-residual-connections: bumped to 0.2.1.
-        # stop-reason-coverage/task0004: bumped to the next patch value.
-        # abort-docs-commit-precedence/task0001: bumped to 0.2.2.
-        "expected": "0.2.2",
+        "floor": "0.1.76",
     },
     "em-review": {
         "manifest_path": REPO_ROOT / "em-review" / ".claude-plugin" / "plugin.json",
         "baseline": (0, 5, 9),
-        "expected": "0.5.11",
+        "floor": "0.5.9",
     },
 }
 
@@ -114,6 +110,41 @@ def _assert_versions_equal(test, version_a, version_b):
     test.assertEqual(version_a, version_b)
 
 
+def _is_well_formed_version(value):
+    """Version form rule (IMPLEMENTATION.md D2, Shared Components): `value`
+    is well-formed only if it is a string of exactly three dot-separated
+    components, each a non-empty run of ASCII decimal digits. Everything
+    else -- wrong component count, a non-digit component, a "v" prefix, a
+    pre-release/build suffix, surrounding whitespace, the empty string, or a
+    non-string value -- is malformed."""
+    return isinstance(value, str) and VERSION_RE.match(value) is not None
+
+
+def _assert_well_formed_version(test, value):
+    test.assertTrue(
+        _is_well_formed_version(value), f"version {value!r} is not well-formed"
+    )
+
+
+def _assert_manifest_and_entry_pass_floor_and_agree(
+    test, manifest_version, entry_version, floor
+):
+    """FR8 matcher (IMPLEMENTATION.md D2 row): the manifest version and the
+    marketplace entry version are each well-formed (Version form rule) and
+    identical to each other (Registry agreement), and the manifest version
+    sits at or above the plugin's recorded floor (Lower-bound comparison).
+    Never a fixed current-version literal (NFR2)."""
+    _assert_well_formed_version(test, manifest_version)
+    _assert_well_formed_version(test, entry_version)
+    _assert_well_formed_version(test, floor)
+    test.assertEqual(
+        manifest_version,
+        entry_version,
+        f"registries disagree: {manifest_version!r} != {entry_version!r}",
+    )
+    test.assertGreaterEqual(_parse_version(manifest_version), _parse_version(floor))
+
+
 class TestPluginVersionBumps(unittest.TestCase):
     """AC-1/AC-2/AC-3: each plugin's manifest and marketplace entry agree
     and are a patch bump over that plugin's own pre-feature baseline."""
@@ -156,23 +187,75 @@ class TestPluginVersionBumps(unittest.TestCase):
 
 
 class TestSpecificVersionValues(unittest.TestCase):
-    """AC-1/AC-2: the concrete values this task writes."""
+    """AC-1 (FR8, repo-suite-pinned-test-drift task0004): for each plugin,
+    the manifest version and the marketplace entry version are both
+    well-formed (Version form rule), agree with each other (Registry
+    agreement), and the manifest version sits at or above that plugin's
+    recorded floor (Lower-bound comparison)."""
 
     def test_em_workflow_manifest_and_entry_agree_on_the_current_version(self):
-        manifest = _load_json(PLUGIN_SPECS["em-workflow"]["manifest_path"])
+        spec = PLUGIN_SPECS["em-workflow"]
+        manifest = _load_json(spec["manifest_path"])
         marketplace = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(marketplace, "em-workflow")
-        expected = PLUGIN_SPECS["em-workflow"]["expected"]
-        self.assertEqual(manifest.get("version"), expected)
-        self.assertEqual(entry.get("version"), expected)
+        _assert_manifest_and_entry_pass_floor_and_agree(
+            self, manifest.get("version"), entry.get("version"), spec["floor"]
+        )
 
     def test_em_review_manifest_and_entry_agree_on_the_current_version(self):
-        manifest = _load_json(PLUGIN_SPECS["em-review"]["manifest_path"])
+        spec = PLUGIN_SPECS["em-review"]
+        manifest = _load_json(spec["manifest_path"])
         marketplace = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(marketplace, "em-review")
-        expected = PLUGIN_SPECS["em-review"]["expected"]
-        self.assertEqual(manifest.get("version"), expected)
-        self.assertEqual(entry.get("version"), expected)
+        _assert_manifest_and_entry_pass_floor_and_agree(
+            self, manifest.get("version"), entry.get("version"), spec["floor"]
+        )
+
+
+class TestFR8NegativeProofs(unittest.TestCase):
+    """repo-suite-pinned-test-drift task0004, AC-3: the FR8 negative proofs
+    from the task plan's Design -- forged (manifest, entry, floor) triples
+    fed to the FR8 matcher (NFR3: hermetic, forged in-memory data only)."""
+
+    def test_forged_higher_version_in_both_is_accepted(self):
+        _assert_manifest_and_entry_pass_floor_and_agree(
+            self, "99.0.0", "99.0.0", PLUGIN_SPECS["em-workflow"]["floor"]
+        )  # must not raise
+
+    def test_forged_version_below_floor_in_both_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_manifest_and_entry_pass_floor_and_agree(
+                self, "0.1.0", "0.1.0", PLUGIN_SPECS["em-workflow"]["floor"]
+            )
+
+    def test_forged_malformed_manifest_version_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_manifest_and_entry_pass_floor_and_agree(
+                self, "not-a-version", "0.2.0", PLUGIN_SPECS["em-workflow"]["floor"]
+            )
+
+    def test_forged_malformed_entry_version_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_manifest_and_entry_pass_floor_and_agree(
+                self, "0.2.0", "not-a-version", PLUGIN_SPECS["em-workflow"]["floor"]
+            )
+
+    def test_forged_disagreeing_values_are_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_manifest_and_entry_pass_floor_and_agree(
+                self, "0.2.0", "0.2.1", PLUGIN_SPECS["em-workflow"]["floor"]
+            )
+
+    def test_forged_version_above_floor_numerically_but_below_lexicographically_is_accepted(
+        self,
+    ):
+        # "0.10.0" sorts below "0.9.0" as a raw string but is numerically
+        # above it (Lower-bound comparison: integers, never strings).
+        naive_string_pass = "0.10.0" > "0.9.0"
+        self.assertFalse(naive_string_pass)
+        _assert_manifest_and_entry_pass_floor_and_agree(
+            self, "0.10.0", "0.10.0", "0.9.0"
+        )  # must not raise
 
 
 class TestMarketplaceEntryLookupGuard(unittest.TestCase):

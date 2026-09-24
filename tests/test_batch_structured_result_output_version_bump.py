@@ -12,8 +12,11 @@ Covers task0006 Acceptance Criteria
   comparison used is numeric.
 - AC-3: the marketplace entry is located by its `name` field; a forged
   marketplace document missing that entry is rejected.
-- AC-4: the `em-review` entry's `name`, `author`, `category`, `source` and
-  `version` are unchanged from their pre-change values.
+- AC-4: the `em-review` entry's `name`, `author`, `category` and `source`
+  are unchanged from their pre-change values, and its `version` is
+  well-formed (repo-suite-pinned-test-drift task0004, FR9: checked by form
+  only, never against a literal -- em-review's version keeps advancing
+  independently of this module).
 - AC-5: both manifests still parse as JSON, and every other key of each file
   is unchanged.
 - AC-6: this module is discovered by `python3 -m unittest discover -s
@@ -83,13 +86,19 @@ MARKETPLACE_NONVERSION_SHA256 = (
     "91990cece50d28af2864b67d70eb1171e6bbb5ded548e6ca200ecfb5f8a3e363"
 )
 
-# The em-review entry's identity fields and version, pinned to their exact
-# pre-change values (AC-4) -- this task never touches the em-review plugin.
+# The em-review entry's identity fields, pinned to their exact pre-change
+# values (AC-4) -- this task never touches the em-review plugin. The
+# version is checked by form only (repo-suite-pinned-test-drift task0004,
+# FR9): versions rise with every plugin change, so it is never compared
+# with a literal (NFR2).
 EM_REVIEW_NAME = "em-review"
 EM_REVIEW_AUTHOR = {"name": "em"}
 EM_REVIEW_CATEGORY = "code-review"
 EM_REVIEW_SOURCE = "./em-review"
-EM_REVIEW_VERSION = "0.5.11"
+
+# A well-formed sample version, used only to build forged entries for the
+# negative proofs below -- never compared with the live entry's version.
+EM_REVIEW_SAMPLE_VERSION = "0.5.11"
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
@@ -165,13 +174,20 @@ def _sha256(text):
 
 
 def _assert_em_review_entry_unchanged(test, entry):
-    """AC-4: identity fields AND version pinned exactly to their pre-change
-    values -- this task must not touch the em-review plugin at all."""
+    """AC-4 (repo-suite-pinned-test-drift task0004, FR9): identity fields
+    pinned exactly to their pre-change values -- this task must not touch
+    the em-review plugin at all. The version is checked by the Version form
+    rule only (IMPLEMENTATION.md D2, Shared Components), never against a
+    literal (NFR2): em-review's version keeps advancing independently of
+    this module."""
     test.assertEqual(entry.get("name"), EM_REVIEW_NAME)
     test.assertEqual(entry.get("author"), EM_REVIEW_AUTHOR)
     test.assertEqual(entry.get("category"), EM_REVIEW_CATEGORY)
     test.assertEqual(entry.get("source"), EM_REVIEW_SOURCE)
-    test.assertEqual(entry.get("version"), EM_REVIEW_VERSION)
+    version = entry.get("version")
+    test.assertIsNotNone(
+        VERSION_RE.match(version or ""), f"version {version!r} is not well-formed"
+    )
 
 
 class TestPluginManifestVersion(unittest.TestCase):
@@ -293,7 +309,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         "author": EM_REVIEW_AUTHOR,
         "category": EM_REVIEW_CATEGORY,
         "source": EM_REVIEW_SOURCE,
-        "version": EM_REVIEW_VERSION,
+        "version": EM_REVIEW_SAMPLE_VERSION,
     }
 
     def test_em_review_matcher_rejects_altered_identity_field(self):
@@ -302,12 +318,24 @@ class TestValidationDetectsRegressions(unittest.TestCase):
             ("author", {"name": "someone-else"}),
             ("category", "other"),
             ("source", "./em-review-forked"),
-            ("version", "99.0.0"),
+            # Malformed, not a value comparison (NFR2): the version is
+            # checked by form only, so this case must fail the form check
+            # rather than a literal mismatch.
+            ("version", "0.5.x"),
         ):
             with self.subTest(field=field):
                 forged = dict(self.FORGED_EM_REVIEW_ENTRY, **{field: forged_value})
                 with self.assertRaises(AssertionError):
                     _assert_em_review_entry_unchanged(self, forged)
+
+    def test_em_review_matcher_accepts_a_forged_higher_version_with_identity_fields_unchanged(
+        self,
+    ):
+        # The version is checked by form only (NFR2): a well-formed but
+        # very different version value must be accepted as long as the
+        # identity fields are unchanged.
+        forged = dict(self.FORGED_EM_REVIEW_ENTRY, version="99.0.0")
+        _assert_em_review_entry_unchanged(self, forged)  # must not raise
 
     def test_digest_check_rejects_a_mutated_nonversion_field(self):
         # Non-vacuity guard for TestNoOtherFieldsChanged: a manifest whose

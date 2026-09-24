@@ -339,9 +339,92 @@ class TestReviewersYamlHeaderProse(unittest.TestCase):
         self.assertIn("agreement scoring", synthetic_lower)
 
 
+# review-rules.yaml matchers (task0005, repo-suite-pinned-test-drift).
+#
+# Matcher / loader separation (IMPLEMENTATION.md Conventions): each matcher
+# below takes already-loaded text (or a block already sliced out of it) and
+# returns True/False. The live tests in TestReviewRulesDataUnchanged /
+# TestReviewRulesHeaderProse load review-rules.yaml's real text and pass it
+# in; TestReviewRulesMatchersRejectForgedInput passes forged in-memory text
+# built with the same textual shape (module docstring: no YAML library, so
+# extraction is `str.index` slicing, and forged input keeps the surrounding
+# markers that slicing depends on -- Test Notes, task0005 plan).
+
+CURRENT_BASELINE_LINE = "baseline: [comprehensive, security]"
+
+CURRENT_RULES_BLOCK = (
+    "rules:\n"
+    "  - if_domains: [data-persistence]\n"
+    "    require: [performance]\n"
+    "  - if_domains: [concurrency, external-io]\n"
+    "    require: [performance]\n"
+    "  - if_domains: [api-contract]\n"
+    "    require: [architecture]\n"
+    "  - if_complexity: high\n"
+    "    require: [architecture, comprehensive]"
+)
+
+CURRENT_WHEN_ANY_BLOCK = (
+    "cross_validation:\n"
+    "  when_any:\n"
+    "    - complexity: high"
+)
+
+CURRENT_COMPUTATION_PHRASE = "Layer 1 settles the value and Layer 2 cannot change it"
+
+
+def baseline_matches_current(text):
+    """AC-1 matcher: True iff the current baseline line (exactly
+    [comprehensive, security]) appears verbatim in `text`."""
+    return CURRENT_BASELINE_LINE in text
+
+
+def extract_rules_block(text):
+    """Loader: slice the `rules:` block out of `text`, from the `rules:`
+    line up to (not including) the blank line before `spec_review:`."""
+    start = text.index("rules:\n")
+    end = text.index("\n\nspec_review:", start)
+    return text[start:end]
+
+
+def rules_block_matches_current(block):
+    """AC-2 matcher: True iff `block` equals the current four-rule contract
+    exactly, in content and order."""
+    return block == CURRENT_RULES_BLOCK
+
+
+def extract_when_any_block(text):
+    """Loader: slice the `cross_validation:` block out of `text`, from its
+    start to the end of `text` (it is the file's last block)."""
+    start = text.index("cross_validation:\n  when_any:")
+    return text[start:].rstrip("\n")
+
+
+def when_any_matches_current(block):
+    """AC-3 matcher: True iff `block` equals the current single-condition
+    when_any (complexity: high only) exactly."""
+    return block == CURRENT_WHEN_ANY_BLOCK
+
+
+def prose_has_current_computation_phrase(text):
+    """AC-4 matcher: True iff the current computation-semantics phrase is
+    present in `text` after normalization (norm_yaml_comment_block),
+    tolerant of the phrase wrapping across comment lines (D4)."""
+    return CURRENT_COMPUTATION_PHRASE in norm_yaml_comment_block(text)
+
+
 class TestReviewRulesDataUnchanged(unittest.TestCase):
     """AC-6, data half: baseline / rules / spec_review / cross_validation
-    keep their values; the domains vocabulary comment block stays intact."""
+    match review-rules.yaml's current definitions; the domains vocabulary
+    comment block stays intact.
+
+    task0005: baseline, rules and cross_validation.when_any are checked
+    against the file's current values -- baseline: [comprehensive,
+    security], the four current rules in file order, and when_any holding
+    only complexity: high -- each via a matcher/loader pair above, which
+    also backs the forged-input negative proofs in
+    TestReviewRulesMatchersRejectForgedInput.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -349,40 +432,30 @@ class TestReviewRulesDataUnchanged(unittest.TestCase):
             cls.text = fh.read()
 
     def test_baseline_unchanged(self):
-        self.assertIn("baseline: [comprehensive]", self.text)
+        # AC-1: baseline is exactly [comprehensive, security].
+        self.assertTrue(
+            baseline_matches_current(self.text),
+            f"expected {CURRENT_BASELINE_LINE!r} in the file text",
+        )
 
     def test_rules_block_unchanged(self):
-        start = self.text.index("rules:\n")
-        end = self.text.index("\n\nspec_review:", start)
-        block = self.text[start:end]
-        expected = (
-            "rules:\n"
-            "  - if_domains: [auth, input-handling]\n"
-            "    require: [security]\n"
-            "  - if_domains: [data-persistence]\n"
-            "    require: [security, performance]\n"
-            "  - if_domains: [concurrency, external-io]\n"
-            "    require: [performance]\n"
-            "  - if_domains: [api-contract]\n"
-            "    require: [architecture]\n"
-            "  - if_complexity: high\n"
-            "    require: [architecture, comprehensive]"
+        # AC-2: exactly the four current rules, in content and in order.
+        block = extract_rules_block(self.text)
+        self.assertTrue(
+            rules_block_matches_current(block),
+            f"rules block did not match the current contract:\n{block}",
         )
-        self.assertEqual(block, expected)
 
     def test_spec_review_unchanged(self):
         self.assertIn("spec_review: always", self.text)
 
     def test_cross_validation_data_block_unchanged(self):
-        start = self.text.index("cross_validation:\n  when_any:")
-        block = self.text[start:].rstrip("\n")
-        expected = (
-            "cross_validation:\n"
-            "  when_any:\n"
-            "    - complexity: high\n"
-            "    - selected_perspective: security"
+        # AC-3: when_any holds exactly one condition: complexity high.
+        block = extract_when_any_block(self.text)
+        self.assertTrue(
+            when_any_matches_current(block),
+            f"cross_validation block did not match the current contract:\n{block}",
         )
-        self.assertEqual(block, expected)
 
     def test_domains_vocabulary_header_intact(self):
         expected_lines = [
@@ -398,7 +471,13 @@ class TestReviewRulesDataUnchanged(unittest.TestCase):
 
 class TestReviewRulesHeaderProse(unittest.TestCase):
     """AC-6, prose half: the header no longer describes a claude +
-    cross-model double run."""
+    cross-model double run.
+
+    task0005: test_computation_semantics_preserved_in_prose requires the
+    current phrase "Layer 1 settles the value and Layer 2 cannot change
+    it" (tolerant of its comment-line wrap after "cannot"), and no longer
+    requires the retired "re-evaluates it after Layer 2" wording.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -425,7 +504,13 @@ class TestReviewRulesHeaderProse(unittest.TestCase):
         self.assertIn(
             "fires when ANY task has complexity: high", self.norm
         )
-        self.assertIn("re-evaluates it after Layer 2", self.norm)
+        # task0005 AC-4: the current phrase replaces the retired
+        # "re-evaluates it after Layer 2" wording; tolerant of the phrase's
+        # comment-line wrap (D4).
+        self.assertTrue(
+            prose_has_current_computation_phrase(self.header),
+            f"expected {CURRENT_COMPUTATION_PHRASE!r} in the normalized header",
+        )
 
     def test_non_vacuity_of_double_run_check(self):
         synthetic_lower = (
@@ -435,6 +520,115 @@ class TestReviewRulesHeaderProse(unittest.TestCase):
         self.assertIn("double-run", synthetic_lower)
         self.assertIn("claude + that entry's model", synthetic_lower)
         self.assertIn("agreement scoring", synthetic_lower)
+
+
+class TestReviewRulesMatchersRejectForgedInput(unittest.TestCase):
+    """AC-5 (task0005): negative proofs for the four review-rules.yaml
+    matchers above. Every case here uses forged in-memory text built with
+    the same textual shape review-rules.yaml has (module docstring: no YAML
+    library, so extraction is `str.index` slicing) -- nothing is read from
+    or written to disk (NFR3, hermetic negative proofs)."""
+
+    # -- baseline (AC-1) -----------------------------------------------
+
+    def test_baseline_rejects_prior_value_without_security(self):
+        forged = "baseline: [comprehensive]\n"
+        self.assertFalse(baseline_matches_current(forged))
+
+    def test_baseline_rejects_value_lacking_security(self):
+        forged = "baseline: [comprehensive, performance]\n"
+        self.assertFalse(baseline_matches_current(forged))
+
+    # -- rules (AC-2) ----------------------------------------------------
+
+    def test_rules_block_rejects_prior_five_rule_set(self):
+        forged = (
+            "rules:\n"
+            "  - if_domains: [auth, input-handling]\n"
+            "    require: [security]\n"
+            "  - if_domains: [data-persistence]\n"
+            "    require: [security, performance]\n"
+            "  - if_domains: [concurrency, external-io]\n"
+            "    require: [performance]\n"
+            "  - if_domains: [api-contract]\n"
+            "    require: [architecture]\n"
+            "  - if_complexity: high\n"
+            "    require: [architecture, comprehensive]"
+            "\n\nspec_review: always\n"
+        )
+        block = extract_rules_block(forged)
+        self.assertFalse(rules_block_matches_current(block))
+
+    def test_rules_block_rejects_missing_rule(self):
+        forged = (
+            "rules:\n"
+            "  - if_domains: [data-persistence]\n"
+            "    require: [performance]\n"
+            "  - if_domains: [concurrency, external-io]\n"
+            "    require: [performance]\n"
+            "  - if_complexity: high\n"
+            "    require: [architecture, comprehensive]"
+            "\n\nspec_review: always\n"
+        )
+        block = extract_rules_block(forged)
+        self.assertFalse(rules_block_matches_current(block))
+
+    def test_rules_block_rejects_extra_rule(self):
+        forged = (
+            CURRENT_RULES_BLOCK
+            + "\n  - if_domains: [ui]\n"
+            "    require: [comprehensive]"
+            "\n\nspec_review: always\n"
+        )
+        block = extract_rules_block(forged)
+        self.assertFalse(rules_block_matches_current(block))
+
+    # -- cross_validation.when_any (AC-3) --------------------------------
+
+    def test_when_any_rejects_prior_dual_condition_value(self):
+        forged = (
+            "cross_validation:\n"
+            "  when_any:\n"
+            "    - complexity: high\n"
+            "    - selected_perspective: security\n"
+        )
+        block = extract_when_any_block(forged)
+        self.assertFalse(when_any_matches_current(block))
+
+    def test_when_any_rejects_condition_other_than_complexity_high(self):
+        forged = (
+            "cross_validation:\n"
+            "  when_any:\n"
+            "    - selected_perspective: security\n"
+        )
+        block = extract_when_any_block(forged)
+        self.assertFalse(when_any_matches_current(block))
+
+    # -- computation-semantics prose (AC-4) ------------------------------
+
+    def test_prose_rejects_text_with_only_the_retired_phrase(self):
+        forged = (
+            "# tasks metadata alone, so Layer 1 re-evaluates it after Layer\n"
+            "# 2's discretionary additions.\n"
+        )
+        self.assertFalse(prose_has_current_computation_phrase(forged))
+
+    def test_prose_accepts_current_phrase_wrapped_at_a_different_word(self):
+        # Wraps after "settles" -- a different word than the real file's
+        # wrap point (after "cannot") -- and still normalizes to one
+        # contiguous phrase.
+        forged = (
+            "# tasks metadata alone, so Layer 1 settles\n"
+            "# the value and Layer 2 cannot change it. More text follows.\n"
+        )
+        self.assertTrue(prose_has_current_computation_phrase(forged))
+
+    def test_prose_rejects_current_phrase_with_one_word_altered(self):
+        forged = (
+            "# tasks metadata alone, so Layer 1 settles the value and\n"
+            "# Layer 2 cannot alter it. More text follows.\n"
+        )
+        self.assertFalse(prose_has_current_computation_phrase(forged))
 
 
 if __name__ == "__main__":
