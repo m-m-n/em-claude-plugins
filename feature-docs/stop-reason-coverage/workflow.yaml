@@ -108,7 +108,8 @@ workflow:
   base_commit: 917455b79a0dd0d64ba20d99e381ee0664fe598a
   completed_at_commit: c5241f2358fe61d18649645e0b4897eafdeda065
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 5e0cf633f6b3ac79118358d352f725df21ffe374
 - id: verify
   status: pending
 - id: retrospect
@@ -198,8 +199,15 @@ tasks:
     status: merged
     branch: em-workflow/stop-reason-coverage/task0004
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
