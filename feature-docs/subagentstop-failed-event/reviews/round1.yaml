@@ -1,0 +1,58 @@
+round: 1
+executed_at: "2026-09-25T00:08:33+09:00"
+scope:
+  review_mode: diff
+  base_commit: 24385411dde11fd75239c9521785d6681d1b8bc3
+  head_commit: 19a4c474644e59968736011184a467ea17cac79e
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/queue_failure_net.py
+    - em-workflow/references/implement-phase.md
+    - test-docs/subagentstop-failed-event/task0001.tests.yaml
+    - test-docs/subagentstop-failed-event/task0002.tests.yaml
+    - test-docs/subagentstop-failed-event/task0003.tests.yaml
+    - tests/test_queue_failure_net.py
+    - tests/test_queue_failure_net_cross_hook.py
+    - tests/test_subagentstop_failed_event_version_bump.py
+    - tests/test_subagentstop_failure_net_doc_contract.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+# R3b step 2 dropped the evaluator's three low-severity findings (severity not in {critical, high, medium}):
+#   - spec: em-workflow version is 0.2.6, FR9/AC-7 say 0.2.4 (plugin.json:7; per-task commit bumps under the per-commit guard)
+#   - comprehensive: agent-index staleness window for a late second SubagentStop (queue_failure_net.py:353; shared with queue_taskstop_net.py by FR3 parity)
+#   - comprehensive: implement-phase.md:1137 "at most one failed line ever" is overbroad across retries
+evaluation:
+  round_summary: "All 5 perspective runs completed; no injection detected. spec#0 highs (version 0.2.6 vs FR9 0.2.4) consolidated into one low finding (per-commit bump guard explains 0.2.6). comprehensive#0 race demoted to low (narrow residual shared with queue_taskstop_net.py by spec-mandated parity). architecture#0 duplication not carried (FR4/NFR2/A-3 mandate separate stdlib-only copies with parity tests). Evaluator added one low doc-wording finding (implement-phase.md:1137). Not read by evaluator: tests/test_queue_failure_net.py, tests/test_subagentstop_failure_net_doc_contract.py, test-docs/*.tests.yaml."
+  recommended_action: complete
+  action_rationale: "No critical, high or medium finding survives evaluation."
+dismissed_sites:
+  - file: .claude-plugin/marketplace.json
+    line: 27
+    run_id: "spec#0"
+    reason: "duplicate of another finding"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-subagentstop-failed-event-20260924T150816Z.md
