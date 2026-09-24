@@ -205,9 +205,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagentstop-failed-event/task0001
   task0002:
     title: 'implement-phase.md: SubagentStop failure net bullet and Stale-launched
       caveat'
@@ -223,9 +223,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagentstop-failed-event/task0002
   task0003:
     title: em-workflow version bump to 0.2.4
     plan: tasks/task0003.md
@@ -242,9 +242,9 @@ tasks:
     - FR9
     - NFR2
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagentstop-failed-event/task0003
 review:
   status: pending
   rounds_completed: 0
