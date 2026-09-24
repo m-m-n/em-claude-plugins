@@ -91,7 +91,7 @@ workflow:
   base_commit: 92c8d604a97fd2740a5649c313b04477e75115c9
   completed_at_commit: ccf4569f79e6a29950502ddd9d108edbebb45693
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -134,7 +134,11 @@ tasks:
     status: merged
     branch: em-workflow/routeback-residual-connections/task0001
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
