@@ -1,0 +1,21 @@
+schema_version: 1
+feature: repo-suite-pinned-test-drift
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 56dd1cbb2757b2dbce332c336eaac4954df03bb2
+last_input_digest: sha256:0a3a74344a2bcac6cfe9591c2a229e8391c93bef7b44a50c8f6af8c99cb42f19
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:0a3a74344a2bcac6cfe9591c2a229e8391c93bef7b44a50c8f6af8c99cb42f19
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
