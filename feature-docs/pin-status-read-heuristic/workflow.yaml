@@ -142,7 +142,7 @@ workflow:
   excluded_scenarios: []
   summary: '5659 tests OK (python3 -m unittest discover -s tests); TS-1..TS-10 all pass'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Name-independent per-task-status observation rule for the hook classification
