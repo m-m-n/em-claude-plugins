@@ -132,6 +132,100 @@ feature's implement base commit
 same way the protected modules' pre-change samples were captured -- and
 each sample's non-vacuity is guarded in `TestPreChangeSampleGuards` (D8
 point 3).
+
+task0001 (routeback-residual-connections) closes three connections left
+unproven in Step I.2.a / Step I.2.c after PR #7: the carve-out / gate /
+reconciled-state chain now has a stated end point (Site B), the route-back
+reset target set covers both `failed` sources (Site C), and the cleanup's
+not-merged claim is limited to what is actually read, with the undetected
+residual recorded (Site D, Site E). FR1 is a pin, not an edit -- the I.2.a
+premise already read `below` and named I.2.c's third conjunct; the negative
+proof reuses this module's own SAMPLE_7_I2A_WIDENED_GATE_PREMISE, captured
+at `b3d8824da4182071c2a5d7490925fee1aba951e1` (D3). All other new-wording
+negative proofs below run against verbatim excerpts of
+`em-workflow/references/implement-phase.md` captured at
+`9f9502487a8da29220aece87f253058becda432e` (D4), read from the git object
+store, never paraphrased. All new material (constants, samples, classes)
+is additive, per this module's own C7: no pre-existing constant, test
+method or class is modified.
+
+Covers task0001 Acceptance Criteria
+(feature-docs/routeback-residual-connections/tasks/task0001.md):
+
+- AC-1 (FR1; TS-1): I.2.a names I.2.c's route-back gate as `below` in the
+  journal-`merged` premise (unchanged); I.2.c states the third-conjunct
+  phrase that premise refers to; no I.2.c gate/conjunct reference in I.2.a
+  is followed by `above`, proven tight against the "(the widened I.2.c
+  gate above)" sample without catching "the recycled-task-id carve-out
+  above".
+- AC-2 (FR2; TS-2): I.2.a's new chain-termination sentence, placed after
+  the first "correctly scoped to `failed` only." and before "is applied by
+  two parties", states the `failed`+`pending`-only reclassification, that
+  the carve-out's outcome cannot change a `merged`/`launched`
+  classification, that Step I.2.b step 1's classifications therefore never
+  consult it, and that the carve-out/gate/reconciled-state chain
+  terminates there; the premise-to-first-scoped-anchor span keeps exactly
+  one "Because " and one " so ".
+- AC-3 (FR3; TS-3): I.2.c's reset target set is the union of the existing
+  reconciled-state-`failed` literal (leading, verbatim) and a new
+  workflow.yaml-`status: failed` member; a sentence before "Commit that
+  write set next, BEFORE any cleanup" cites Step I.2.b step 3 and
+  `replace_all` in the same slice, without restating either rule; the
+  first `tasks.{T}.status` still has `pending` within 60 characters.
+- AC-4 (FR4, FR5; TS-4): the cleanup sentence's not-merged claim names only
+  workflow.yaml `status` and Step I.2.b step 1's reconciled state (the
+  bare "confirmed not merged" is gone); the gate above is given as the
+  reason no reconciled-`merged` task is ever a cleanup target; a residual
+  sentence between the leftover-state sentence and "End the phase with a"
+  names merge-task.sh's `git update-ref`, the journal-write-failure window
+  and the stop-without-report window, and states the residual is known and
+  unclosed; `git branch -D` still occurs exactly once in I.2.c.
+- AC-5 (FR6, NFR9): every new-wording literal above is one module-level
+  constant read by both its positive assertion and its negative proof;
+  every new excerpt is copied verbatim from its named revision with a
+  non-vacuity guard on a retained anchor.
+
+Matcher -> negative-proof inventory (D8; every new matcher this task
+adds):
+
+- test_direction_below_phrase_present -> RETENTION/pin matcher (D3), no
+  proof needed
+- test_third_conjunct_referent_present_in_i2c -> RETENTION/pin matcher
+  (D3), no proof needed
+- test_no_gate_or_conjunct_reference_followed_by_above_in_i2a -> regression
+  guard -> test_absence_matcher_flags_the_pre_change_widened_gate_sample
+  (reuses SAMPLE_7_I2A_WIDENED_GATE_PREMISE and its existing non-vacuity
+  guard, D3)
+- test_reclassify_phrase_present, test_outcome_phrase_present,
+  test_never_consult_phrase_present, test_chain_terminates_phrase_present
+  -> new wording ->
+  test_termination_matchers_flag_absence_in_pre_change_wording
+- test_causal_span_still_has_single_because_and_so -> ordering/regression
+  guard, no proof needed
+- test_second_reset_member_present_and_follows_first ->
+  test_reset_union_matchers_flag_absence_in_pre_change_wording
+- test_diverge_sentence_present, test_step_i2b_step3_owner_citation_present,
+  test_citation_and_replace_all_share_one_sentence -> new wording -> same
+  proof above
+- test_first_tasks_status_has_pending_within_60_chars -> ordering guard, no
+  proof needed
+- test_source_qualified_not_merged_phrase_present,
+  test_bare_confirmed_not_merged_absent -> new wording / regression guard
+  -> test_cleanup_matchers_flag_the_pre_change_wording
+- test_gate_reason_phrase_present -> new wording -> same proof above
+- test_retained_cleanup_literals_survive -> RETENTION matcher, no proof
+  needed
+- test_residual_sentence_present_between_leftover_and_end_of_phase,
+  test_residual_names_merge_task_sh_update_ref,
+  test_residual_states_warning_and_stop_without_report_windows,
+  test_residual_states_known_and_unclosed -> new wording -> same proof
+  above (SAMPLE_9F95024_CLEANUP)
+- test_git_branch_d_still_occurs_exactly_once -> regression guard, no
+  proof needed
+
+Each new pre-change excerpt's non-vacuity is guarded in
+`TestTask0001PreChangeSampleGuards`, on a retained anchor present in both
+the excerpt and the live document.
 """
 
 import re
@@ -875,6 +969,403 @@ class TestPreChangeSampleGuards(unittest.TestCase):
             "to `failed` only",
             sample,
         )
+
+
+# =====================================================================
+# task0001 (routeback-residual-connections): additive material only, per
+# this module's own C7 -- no constant, test method or class above this
+# line is modified. TS-1..TS-4 below map to task0001's own AC-1..AC-5
+# (feature-docs/routeback-residual-connections/tasks/task0001.md).
+# =====================================================================
+
+# --- TS-1 (FR1; AC-1): I.2.a's direction wording naming I.2.c's gate as
+# "below" (Site A -- a pin, not an edit: D3), and I.2.c's own third-conjunct
+# phrase that premise refers to. The negative proof reuses this module's
+# own SAMPLE_7_I2A_WIDENED_GATE_PREMISE and its existing non-vacuity guard
+# above (D3) -- no new pre-change sample is captured for this pin.
+DIRECTION_BELOW_PHRASE = "Step I.2.c's route-back gate below"
+THIRD_CONJUNCT_MERGED_BLOCK_PHRASE = (
+    "the last-event-per-task replay alone reports any task's journal "
+    "last event as `merged`, route-back is inadmissible"
+)
+# Tight absence matcher (Design note): must catch a direct "gate"/"conjunct"
+# ... "above" reference (e.g. "(the widened I.2.c gate above)") without
+# catching "the recycled-task-id carve-out above", which I.2.a legitimately
+# says (including in task0001's own new Site B sentence below). Bounded to
+# 60 characters and never crosses a sentence boundary ("." acts as a hard
+# stop), so a "gate"/"conjunct" occurrence followed, later in the SAME
+# sentence, by an unrelated "... carve-out above" in the NEXT sentence can
+# never be caught.
+GATE_OR_CONJUNCT_FOLLOWED_BY_ABOVE_RE = re.compile(
+    r"\b(?:gate|conjunct)\b(?:(?!\.)[\s\S]){0,60}\babove\b"
+)
+
+# --- TS-2 (FR2; AC-2): I.2.a's new chain-termination sentence (Site B),
+# inserted after the first "correctly scoped to `failed` only." and before
+# "is applied by two parties". Negative proof: a verbatim excerpt of
+# `implement-phase.md` at 9f9502487a8da29220aece87f253058becda432e, from
+# the journal-`merged` premise through the start of the two-parties
+# sentence (D4).
+CARVE_OUT_SCOPED_ANCHOR = "correctly scoped to `failed` only."
+TWO_PARTIES_OPENING_ANCHOR = "is applied by two parties"
+TERMINATION_RECLASSIFY_PHRASE = (
+    "The carve-out reclassifies only a task whose journal last event is "
+    "`failed` and whose workflow.yaml `status` is `pending`"
+)
+TERMINATION_OUTCOME_PHRASE = (
+    "its outcome cannot change a `merged` or a `launched` classification"
+)
+TERMINATION_NEVER_CONSULT_PHRASE = (
+    "Step I.2.b step 1's `merged` and in-flight classifications below — "
+    "the inputs Step I.2.c's gate below reads — never consult it"
+)
+TERMINATION_CHAIN_TERMINATES_PHRASE = (
+    "the carve-out / gate / reconciled-state chain terminates there"
+)
+
+SAMPLE_9F95024_I2A_TERMINATION = (
+    "Because Step I.2.c's route-back gate below blocks route-back\n"
+    "whenever any task's journal last event is `merged` — read from the\n"
+    "journal directly, independent of the ancestor check — that gate never\n"
+    "admits route-back while such an event stands. No retired task id is "
+    "ever\n"
+    "re-issued, so a task whose workflow.yaml `status` is `pending` can "
+    "never\n"
+    "carry an inherited `merged` journal last event; the recycled-task-id\n"
+    "carve-out above stays correctly scoped to `failed` only. The\n"
+    "recycled-task-id carve-out above is applied by two parties:"
+)
+
+# --- TS-3 (FR3; AC-3): I.2.c's reset-target-set union and its connecting
+# sentence (Site C). Negative proof: a verbatim excerpt of
+# `implement-phase.md` at 9f9502487a8da29220aece87f253058becda432e, from
+# "then make one ordered workflow.yaml write set" through the `replace_all`
+# citation (D4).
+SECOND_RESET_MEMBER_PHRASE = (
+    "every task that workflow.yaml reports as `status: failed`"
+)
+DIVERGE_SENTENCE_OPENING_PHRASE = "The two members can diverge"
+STEP_I2B_STEP3_OWNER_CITATION_PHRASE = (
+    "Step I.2.b step 3 owns workflow.yaml's own `failed` write, cited "
+    "here not restated"
+)
+
+SAMPLE_9F95024_WRITE_SET = (
+    "  then make one ordered workflow.yaml write set over the reset "
+    "target\n"
+    "  set — every task whose Step I.2.b step 1 reconciled state is\n"
+    "  `failed`: set `create-plan` to `needs_update`, set the `implement`\n"
+    "  step back to `pending`, clear `failed_kind`\n"
+    "  (`references/workflow-schema.md`) back to null in that same write "
+    "set —\n"
+    "  re-asserting the null value Step I.1's phase-start write already "
+    "set on\n"
+    "  this entry, so this adds no extra write and no extra commit — "
+    "record\n"
+    "  each such task's failure reason (the implementer's report "
+    "`notes`) in\n"
+    "  `tasks.{T}.notes`, and set `tasks.{T}.status` back to `pending` "
+    "for\n"
+    "  every task in that set — the\n"
+    "  gate above already established that no task is `merged` or\n"
+    "  `in_progress` at this point, so the result is that no task is "
+    "left\n"
+    "  `merged` or `in_progress` or `failed`, which is exactly what "
+    "makes the\n"
+    "  planner's `replace_planning` operation admissible on re-entry\n"
+    "  (`references/workflow-patch.md`'s `replace_all` permission\n"
+    "  conditions own the full condition set and the protocol-error "
+    "rule —\n"
+    "  not restated here)."
+)
+
+# --- TS-4 (FR4, FR5; AC-4): I.2.c's source-qualified cleanup claim, gate-
+# reason sentence (Site D) and the residual sentence (Site E). Negative
+# proof: a verbatim excerpt of `implement-phase.md` at
+# 9f9502487a8da29220aece87f253058becda432e, from "Only once that commit"
+# through "already cover." (D4).
+SOURCE_QUALIFIED_NOT_MERGED_PHRASE = (
+    "neither workflow.yaml `status` nor Step I.2.b step 1's reconciled "
+    "state reports any of these tasks `merged`"
+)
+GATE_REASON_PHRASE = (
+    "the gate above already refused route-back whenever such a task "
+    "exists, so the set just reset contains none"
+)
+RESIDUAL_MERGE_TASK_SH_UPDATE_REF_PHRASE = "merge-task.sh's `git update-ref`"
+RESIDUAL_OPENING_PHRASE = "is invisible to both sources above"
+RESIDUAL_WARNING_EXIT0_PHRASE = (
+    "reported only as a warning, with the script still exiting 0"
+)
+RESIDUAL_STOP_WITHOUT_REPORT_PHRASE = (
+    "stops between the ref update and the journal write and leaves no "
+    "report"
+)
+RESIDUAL_KNOWN_RESIDUAL_PHRASE = "a known residual this gate does not close"
+OLD_CONFIRMED_NOT_MERGED_PHRASE = "confirmed not merged"
+
+SAMPLE_9F95024_CLEANUP = (
+    "  no worktree or branch has been deleted). Only once that commit\n"
+    "  succeeds, clean up worktrees and branches for exactly the tasks "
+    "the\n"
+    "  write set just reset — confirmed not merged; a task whose "
+    "reconciled\n"
+    "  state is `merged` is never a cleanup target, whatever "
+    "workflow.yaml\n"
+    "  says (`git worktree remove --force\n"
+    '  "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`, for\n'
+    "  every {T} just reset) — this order's one residual leftover state "
+    "is the\n"
+    "  commit succeeding and the cleanup not yet running, i.e. stale\n"
+    "  worktrees for tasks now `pending`, which Step I.2.a's resume "
+    "guard and\n"
+    "  its recycled-task-id rule already cover."
+)
+
+
+class TestTask0001I2aGateDirectionIsPinnedBelow(unittest.TestCase):
+    """AC-1 / FR1 (TS-1): I.2.a's premise names I.2.c's route-back gate as
+    `below` (a pin, not an edit: D3); I.2.c's own third conjunct states the
+    journal-`merged` block that premise refers to; no I.2.c gate/conjunct
+    reference in normalized I.2.a is followed by `above`."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read()
+        cls.i2a = _normalize_ws(_i2a_section(text))
+        cls.i2c = _normalize_ws(_i2c_section(text))
+
+    def test_direction_below_phrase_present(self):
+        self.assertIn(DIRECTION_BELOW_PHRASE, self.i2a)
+
+    def test_third_conjunct_referent_present_in_i2c(self):
+        self.assertIn(THIRD_CONJUNCT_MERGED_BLOCK_PHRASE, self.i2c)
+
+    def test_no_gate_or_conjunct_reference_followed_by_above_in_i2a(self):
+        self.assertIsNone(GATE_OR_CONJUNCT_FOLLOWED_BY_ABOVE_RE.search(self.i2a))
+
+    def test_absence_matcher_flags_the_pre_change_widened_gate_sample(self):
+        # Reuses this module's own SAMPLE_7_I2A_WIDENED_GATE_PREMISE (D3)
+        # and its existing non-vacuity guard
+        # (test_sample7_retains_carve_out_scoped_anchor above) -- no new
+        # sample is captured for this pin.
+        sample = _normalize_ws(SAMPLE_7_I2A_WIDENED_GATE_PREMISE)
+        self.assertIsNotNone(GATE_OR_CONJUNCT_FOLLOWED_BY_ABOVE_RE.search(sample))
+        self.assertNotIn(DIRECTION_BELOW_PHRASE, sample)
+
+
+class TestTask0001I2aChainTerminationSentence(unittest.TestCase):
+    """AC-2 / FR2 (TS-2, Site B): the new sentence -- placed after the
+    first "correctly scoped to `failed` only." and before "is applied by
+    two parties" -- states the `failed`+`pending`-only reclassification,
+    that the carve-out's outcome cannot change a `merged`/`launched`
+    classification, that Step I.2.b step 1's classifications therefore
+    never consult it, and that the chain terminates there; the
+    premise-to-scoped-anchor span keeps a single causal construction."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+        start = cls.i2a.index(CARVE_OUT_SCOPED_ANCHOR) + len(
+            CARVE_OUT_SCOPED_ANCHOR
+        )
+        end = cls.i2a.index(TWO_PARTIES_OPENING_ANCHOR, start)
+        cls.slice_ = cls.i2a[start:end]
+
+    def test_reclassify_phrase_present(self):
+        self.assertIn(TERMINATION_RECLASSIFY_PHRASE, self.slice_)
+
+    def test_outcome_phrase_present(self):
+        self.assertIn(TERMINATION_OUTCOME_PHRASE, self.slice_)
+
+    def test_never_consult_phrase_present(self):
+        self.assertIn(TERMINATION_NEVER_CONSULT_PHRASE, self.slice_)
+
+    def test_chain_terminates_phrase_present(self):
+        self.assertIn(TERMINATION_CHAIN_TERMINATES_PHRASE, self.slice_)
+
+    def test_causal_span_still_has_single_because_and_so(self):
+        start = self.i2a.index("Because " + DIRECTION_BELOW_PHRASE)
+        end = self.i2a.index(CARVE_OUT_SCOPED_ANCHOR, start) + len(
+            CARVE_OUT_SCOPED_ANCHOR
+        )
+        span = self.i2a[start:end]
+        self.assertEqual(span.count("Because "), 1)
+        self.assertEqual(span.count(" so "), 1)
+
+
+class TestTask0001I2cResetTargetIsUnionOfBothMembers(unittest.TestCase):
+    """AC-3 / FR3 (TS-3, Site C): the reset target set names the existing
+    reconciled-state-`failed` literal (leading, verbatim, RESET_TARGET_PHRASE
+    above) and a new workflow.yaml-`status: failed` member; the connecting
+    sentence cites Step I.2.b step 3 and `replace_all` in the same
+    sentence; the first `tasks.{T}.status` still has `pending` within 60
+    characters."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+
+    def test_second_reset_member_present_and_follows_first(self):
+        first_idx = self.section.index(RESET_TARGET_PHRASE)
+        second_idx = self.section.index(SECOND_RESET_MEMBER_PHRASE)
+        self.assertLess(first_idx, second_idx)
+
+    def test_diverge_sentence_present(self):
+        self.assertIn(DIVERGE_SENTENCE_OPENING_PHRASE, self.section)
+
+    def test_step_i2b_step3_owner_citation_present(self):
+        self.assertIn(STEP_I2B_STEP3_OWNER_CITATION_PHRASE, self.section)
+
+    def test_citation_and_replace_all_share_one_sentence(self):
+        # "replace_all" already occurs elsewhere in I.2.c (the write-set's
+        # own permission-conditions citation), so a whole-section presence
+        # check proves nothing -- slice to the connecting sentence itself.
+        start = self.section.index(DIVERGE_SENTENCE_OPENING_PHRASE)
+        end = self.section.index(
+            "Commit that write set next, BEFORE any cleanup", start
+        )
+        sentence = self.section[start:end]
+        self.assertIn(STEP_I2B_STEP3_OWNER_CITATION_PHRASE, sentence)
+        self.assertIn("replace_all", sentence)
+
+    def test_diverge_sentence_precedes_commit(self):
+        diverge_idx = self.section.index(DIVERGE_SENTENCE_OPENING_PHRASE)
+        commit_idx = self.section.index(
+            "Commit that write set next, BEFORE any cleanup"
+        )
+        self.assertLess(diverge_idx, commit_idx)
+
+    def test_first_tasks_status_has_pending_within_60_chars(self):
+        idx = self.section.index("tasks.{T}.status")
+        window = self.section[idx : idx + 60]
+        self.assertIn("pending", window)
+
+
+class TestTask0001I2cCleanupIsSourceQualified(unittest.TestCase):
+    """AC-4 / FR4, first part of FR5 (TS-4, Site D): the not-merged claim
+    names only workflow.yaml `status` and Step I.2.b step 1's reconciled
+    state; the bare "confirmed not merged" is gone; the gate above is
+    given as the reason no reconciled-`merged` task is ever a cleanup
+    target; the retained cleanup literals survive verbatim; `git branch -D`
+    still occurs exactly once in I.2.c."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+
+    def test_source_qualified_not_merged_phrase_present(self):
+        self.assertIn(SOURCE_QUALIFIED_NOT_MERGED_PHRASE, self.section)
+
+    def test_bare_confirmed_not_merged_absent(self):
+        self.assertNotIn(OLD_CONFIRMED_NOT_MERGED_PHRASE, self.section)
+
+    def test_gate_reason_phrase_present(self):
+        self.assertIn(GATE_REASON_PHRASE, self.section)
+
+    def test_gate_reason_sits_inside_cleanup_sentence_slice(self):
+        start = self.section.index("Only once that commit")
+        end = self.section.index(
+            "this order's one residual leftover state"
+        )
+        slice_ = self.section[start:end]
+        self.assertIn(GATE_REASON_PHRASE, slice_)
+        self.assertIn(SOURCE_QUALIFIED_NOT_MERGED_PHRASE, slice_)
+
+    def test_retained_cleanup_literals_survive(self):
+        self.assertIn(CLEANUP_TARGET_SCOPE_PHRASE, self.section)
+        self.assertIn(CLEANUP_CONFIRMED_NOT_MERGED_PHRASE, self.section)
+
+    def test_git_branch_d_still_occurs_exactly_once(self):
+        occurrences = [
+            m.start()
+            for m in re.finditer(re.escape("git branch -D"), self.section)
+        ]
+        self.assertEqual(len(occurrences), 1)
+
+
+class TestTask0001I2cResidualSentence(unittest.TestCase):
+    """AC-4 / second part of FR5 (TS-4, Site E): the residual sentence sits
+    between the leftover-state sentence and "End the phase with a", names
+    merge-task.sh's `git update-ref`, the journal-write-failure window
+    (warning, exit 0) and the stop-without-report window, and states the
+    residual is known and unclosed, verifying nothing and changing no
+    behaviour."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+        start = cls.section.index(
+            "this order's one residual leftover state"
+        )
+        end = cls.section.index("End the phase with a", start)
+        cls.slice_ = cls.section[start:end]
+
+    def test_residual_sentence_present_between_leftover_and_end_of_phase(self):
+        self.assertIn(RESIDUAL_OPENING_PHRASE, self.slice_)
+
+    def test_residual_names_merge_task_sh_update_ref(self):
+        self.assertIn(RESIDUAL_MERGE_TASK_SH_UPDATE_REF_PHRASE, self.slice_)
+
+    def test_residual_states_warning_and_stop_without_report_windows(self):
+        self.assertIn(RESIDUAL_WARNING_EXIT0_PHRASE, self.slice_)
+        self.assertIn(RESIDUAL_STOP_WITHOUT_REPORT_PHRASE, self.slice_)
+
+    def test_residual_states_known_and_unclosed(self):
+        self.assertIn(RESIDUAL_KNOWN_RESIDUAL_PHRASE, self.slice_)
+
+    def test_residual_contains_neither_append_nor_rework(self):
+        self.assertNotIn("append", self.slice_)
+        self.assertNotIn("rework", self.slice_)
+
+    def test_residual_contains_no_literal_git_branch_dash_d(self):
+        self.assertNotIn("git branch -D", self.slice_)
+
+
+class TestTask0001ValidationDetectsRegressions(unittest.TestCase):
+    """D8 / AC-5: proof that every new-wording matcher above fails
+    meaningfully -- demonstrated against captured pre-change wording
+    samples, each normalized by this module's own helper."""
+
+    def test_termination_matchers_flag_absence_in_pre_change_wording(self):
+        sample = _normalize_ws(SAMPLE_9F95024_I2A_TERMINATION)
+        self.assertNotIn(TERMINATION_RECLASSIFY_PHRASE, sample)
+        self.assertNotIn(TERMINATION_OUTCOME_PHRASE, sample)
+        self.assertNotIn(TERMINATION_NEVER_CONSULT_PHRASE, sample)
+        self.assertNotIn(TERMINATION_CHAIN_TERMINATES_PHRASE, sample)
+
+    def test_reset_union_matchers_flag_absence_in_pre_change_wording(self):
+        sample = _normalize_ws(SAMPLE_9F95024_WRITE_SET)
+        self.assertNotIn(SECOND_RESET_MEMBER_PHRASE, sample)
+        self.assertNotIn(DIVERGE_SENTENCE_OPENING_PHRASE, sample)
+        self.assertNotIn(STEP_I2B_STEP3_OWNER_CITATION_PHRASE, sample)
+
+    def test_cleanup_matchers_flag_the_pre_change_wording(self):
+        sample = _normalize_ws(SAMPLE_9F95024_CLEANUP)
+        self.assertIn(OLD_CONFIRMED_NOT_MERGED_PHRASE, sample)
+        self.assertNotIn(SOURCE_QUALIFIED_NOT_MERGED_PHRASE, sample)
+        self.assertNotIn(GATE_REASON_PHRASE, sample)
+        self.assertNotIn(RESIDUAL_OPENING_PHRASE, sample)
+        self.assertNotIn(RESIDUAL_MERGE_TASK_SH_UPDATE_REF_PHRASE, sample)
+        self.assertNotIn(RESIDUAL_KNOWN_RESIDUAL_PHRASE, sample)
+
+
+class TestTask0001PreChangeSampleGuards(unittest.TestCase):
+    """D8 point 3: each new pre-change sample carries a RETAINED anchor --
+    present in both the sample and the live document -- so the negative
+    proofs above cannot silently degrade into a tautology."""
+
+    def test_termination_sample_retains_carve_out_scoped_anchor(self):
+        sample = _normalize_ws(SAMPLE_9F95024_I2A_TERMINATION)
+        self.assertIn(CARVE_OUT_SCOPED_ANCHOR, sample)
+
+    def test_write_set_sample_retains_create_plan_anchor(self):
+        sample = _normalize_ws(SAMPLE_9F95024_WRITE_SET)
+        self.assertIn("`create-plan` to `needs_update`", sample)
+
+    def test_cleanup_sample_retains_just_reset_anchor(self):
+        sample = _normalize_ws(SAMPLE_9F95024_CLEANUP)
+        self.assertIn("every {T} just reset", sample)
 
 
 if __name__ == "__main__":

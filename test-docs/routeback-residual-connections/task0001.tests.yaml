@@ -1,0 +1,179 @@
+task_id: task0001
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_direction_below_phrase_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_third_conjunct_referent_present_in_i2c
+      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_no_gate_or_conjunct_reference_followed_by_above_in_i2a
+      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_absence_matcher_flags_the_pre_change_widened_gate_sample
+    red_confirmed: true
+    red_reason: >-
+      FR1 is a pin (D3): the three positive assertions are green on the base
+      document by design (the premise and the third conjunct already existed
+      pre-task). The observed red is the discriminating power of the tight
+      absence matcher itself: GATE_OR_CONJUNCT_FOLLOWED_BY_ABOVE_RE.search()
+      returns a match ("gate above") against the module's own
+      SAMPLE_7_I2A_WIDENED_GATE_PREMISE (the pre-9f95024 wording carrying
+      "(the widened I.2.c gate above)"), and returns None against the live
+      (both base and post-task) I.2.a text -- confirmed directly by running
+      the regex against both texts before writing any implementation.
+  AC-2:
+    tests:
+      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_reclassify_phrase_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_outcome_phrase_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_never_consult_phrase_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_chain_terminates_phrase_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_causal_span_still_has_single_because_and_so
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-edit em-workflow/references/implement-phase.md
+      (restored from HEAD before any Site B edit): setUpClass's own
+      cls.i2a.index(CARVE_OUT_SCOPED_ANCHOR)...index(TWO_PARTIES_OPENING_ANCHOR)
+      slice was empty/adjacent (no new sentence yet present), so
+      test_reclassify_phrase_present / test_outcome_phrase_present /
+      test_never_consult_phrase_present / test_chain_terminates_phrase_present
+      each raised AssertionError "not found in ''" (the four new-wording
+      constants are absent from the pre-edit slice).
+  AC-3:
+    tests:
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_second_reset_member_present_and_follows_first
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_diverge_sentence_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_step_i2b_step3_owner_citation_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_citation_and_replace_all_share_one_sentence
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_diverge_sentence_precedes_commit
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_first_tasks_status_has_pending_within_60_chars
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-edit document: test_second_reset_member_present_and_follows_first
+      raised "ValueError: substring not found" (SECOND_RESET_MEMBER_PHRASE
+      absent); test_diverge_sentence_present and
+      test_step_i2b_step3_owner_citation_present raised AssertionError
+      (DIVERGE_SENTENCE_OPENING_PHRASE / STEP_I2B_STEP3_OWNER_CITATION_PHRASE
+      not in section); test_citation_and_replace_all_share_one_sentence and
+      test_diverge_sentence_precedes_commit raised "ValueError: substring not
+      found" at self.section.index(DIVERGE_SENTENCE_OPENING_PHRASE). Only
+      test_first_tasks_status_has_pending_within_60_chars was already green
+      pre-edit (an ordering guard on pre-existing text, unaffected by this
+      site).
+  AC-4:
+    tests:
+      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_source_qualified_not_merged_phrase_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_bare_confirmed_not_merged_absent
+      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_gate_reason_phrase_present
+      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_gate_reason_sits_inside_cleanup_sentence_slice
+      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_retained_cleanup_literals_survive
+      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_git_branch_d_still_occurs_exactly_once
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_sentence_present_between_leftover_and_end_of_phase
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_names_merge_task_sh_update_ref
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_states_warning_and_stop_without_report_windows
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_states_known_and_unclosed
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_contains_neither_append_nor_rework
+      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_contains_no_literal_git_branch_dash_d
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-edit document: test_bare_confirmed_not_merged_absent,
+      test_source_qualified_not_merged_phrase_present,
+      test_gate_reason_phrase_present and
+      test_gate_reason_sits_inside_cleanup_sentence_slice failed with
+      AssertionError (the bare "confirmed not merged" was present, the new
+      source-qualified/gate-reason constants were absent).
+      test_residual_sentence_present_between_leftover_and_end_of_phase,
+      test_residual_names_merge_task_sh_update_ref,
+      test_residual_states_warning_and_stop_without_report_windows and
+      test_residual_states_known_and_unclosed failed with AssertionError (the
+      residual sentence did not exist yet). test_retained_cleanup_literals_survive,
+      test_git_branch_d_still_occurs_exactly_once,
+      test_residual_contains_neither_append_nor_rework and
+      test_residual_contains_no_literal_git_branch_dash_d were already true
+      pre-edit (retention/regression guards on pre-existing text or trivial
+      absences, unaffected by this site's own new wording).
+  AC-5:
+    tests:
+      - test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_termination_matchers_flag_absence_in_pre_change_wording
+      - test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_reset_union_matchers_flag_absence_in_pre_change_wording
+      - test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_cleanup_matchers_flag_the_pre_change_wording
+      - test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_termination_sample_retains_carve_out_scoped_anchor
+      - test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_write_set_sample_retains_create_plan_anchor
+      - test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_cleanup_sample_retains_just_reset_anchor
+    red_confirmed: false
+    red_reason: >-
+      This criterion asserts structural properties of the test module itself
+      (one constant per new-wording literal shared by positive+negative
+      tests; every new excerpt captured verbatim from
+      9f9502487a8da29220aece87f253058becda432e with a non-vacuity guard;
+      docstring inventory; stdlib only; pre-existing constants/methods/classes
+      byte-identical), not a document-state transition that goes red/green on
+      an edit to implement-phase.md -- these particular tests are green in
+      both the pre-edit and post-edit states (the samples and guards are
+      static excerpts). Verified instead by direct inspection: `git diff` of
+      tests/test_routeback_reset_scope_consistency.py shows only additive
+      hunks (no pre-existing line changed), the three excerpt constants
+      (SAMPLE_9F95024_I2A_TERMINATION / _WRITE_SET / _CLEANUP) were read from
+      `git show 9f9502487a8da29220aece87f253058becda432e:em-workflow/references/implement-phase.md`
+      and diffed byte-for-byte against that revision before use, and the
+      full module (91 tests) plus the two edit-forbidden modules (343 tests
+      combined) pass together.
+  AC-6:
+    tests:
+      - test_routeback_residual_connections_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - test_routeback_residual_connections_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - test_routeback_residual_connections_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: true
+    red_reason: >-
+      Run with both manifests temporarily reverted to 0.2.0 (git show
+      HEAD:...): test_version_is_past_baseline (TestPluginManifestVersion)
+      and test_em_workflow_entry_version_is_past_baseline
+      (TestMarketplaceEntryVersion) both raised AssertionError "(0, 2, 0) not
+      greater than (0, 2, 0)". Restored to 0.2.1 afterward and re-ran green.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/lint outcome, not a single test: `python3 -m unittest discover -s
+      tests` was run from the repository root before any edit (baseline: 9
+      pre-existing failures, unrelated to this task, in
+      test_develop_once_option / test_muse_consent_no_new_questions /
+      test_muse_consent_version_bump / test_reviewers_primary_chains (x4) /
+      test_step_c_verify_failed_default (x2)) and after every edit (final: the
+      same 9, plus exactly one new failure --
+      test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+      -- which hardcodes em-workflow's "current" version as the literal
+      "0.2.0" and is broken by ANY valid version bump. This exact scenario is
+      pre-anticipated in task0001.md's own Test Notes ("Out-of-scan modules"):
+      "If one then fails on 0.2.1, that is a deviation to report. Do not edit
+      that module to make it pass." Per that explicit instruction the module
+      was left untouched (out of expected_files, and belongs to a different,
+      already-shipped feature). `git diff --name-only` from base confirms
+      changed files are limited to this task's Scope
+      (em-workflow/references/implement-phase.md,
+      em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json,
+      tests/test_routeback_reset_scope_consistency.py,
+      tests/test_routeback_residual_connections_version_bump.py [new],
+      test-docs/routeback-residual-connections/task0001.tests.yaml [new]);
+      `git diff` against tests/test_recycled_task_id_consistency.py and
+      tests/test_implement_routeback_gate.py is empty (byte-identical); the
+      two new modules import only the standard library (`re`, `json`,
+      `unittest`, `pathlib.Path`).
