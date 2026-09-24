@@ -169,6 +169,8 @@ EXPECTED_REASON_CODE_STATE_PAIRS = [
     ("docs_commit_conflict_aborted", "stopped"),
     # Added by task-tier-reduction/task0004: the pre-run no-work stop.
     ("no_work_required", "stopped"),
+    # Added by stop-reason-coverage/task0001: the catch-all code.
+    ("unmapped_stop", "stopped"),
 ]
 
 EXPECTED_COVERAGE_ROW = (
@@ -306,10 +308,16 @@ class TestPrecedenceParagraphStatesBothRestrictions(TerminalLineDocTestCase):
         )
 
     def test_states_the_phase_specific_row_restriction(self):
+        """stop-reason-coverage/task0002 (FR7, FR8): the state-based
+        restriction phrase ("restricted to `failed` / `needs_update` states
+        that no phase-specific row covers") is replaced by the route-based
+        wording -- the pin's intent (a `stop-condition-3` restriction is
+        stated) is unchanged."""
         paragraph = _norm(self._paragraph())
         self.assertIn(
-            "restricted to `failed` / `needs_update` states that no "
-            "phase-specific row covers",
+            "binds a stop at Step B's entry evaluation that reads a "
+            "`failed` / `needs_update` status no route of the current "
+            "run produced",
             paragraph,
         )
 
@@ -322,11 +330,12 @@ class TestPrecedenceParagraphStatesBothRestrictions(TerminalLineDocTestCase):
         # Both restrictions live in the same sentence/paragraph rather than
         # being scattered -- checked by requiring the failed_kind
         # restriction to appear after, and joined to, the phase-specific
-        # one within the same paragraph text.
+        # (now route-based) one within the same paragraph text.
         paragraph = _norm(self._paragraph())
         phase_specific_idx = paragraph.index(
-            "restricted to `failed` / `needs_update` states that no "
-            "phase-specific row covers"
+            "binds a stop at Step B's entry evaluation that reads a "
+            "`failed` / `needs_update` status no route of the current "
+            "run produced"
         )
         failed_kind_idx = paragraph.index("`failed_kind` reads `decision`")
         self.assertLess(phase_specific_idx, failed_kind_idx)

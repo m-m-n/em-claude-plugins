@@ -1,0 +1,152 @@
+task_id: task0001
+
+# Recorded before any edit (4a); refreshed after merging the parent in
+# during the conflict cycle (parent-side adoption pulled in task0003's
+# and task0004's work, growing the suite from 5346 to 5399 tests). The
+# failing NAME set is byte-identical before and after that merge -- all
+# nine are pre-existing failures in unrelated, concurrently-developing
+# features/tasks (review-rules.yaml wording, --once argument-hint line,
+# muse-consent budget/version-bump pins, step-c batch-auto-select
+# Japanese wording) -- none touch batch-terminal-line.md or its
+# reason-code/coverage machinery.
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+
+# Identical to baseline_failures: full-suite run after implementation,
+# and again after the parent-side-adoption merge above, produced the
+# exact same 9 failures and nothing else (verified subset check both
+# directions each time).
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_documented_as_fourteenth_never_emitted
+      - tests.test_stop_reason_catch_all.TestReasonCodeSetMatcher.test_thirteen_code_set_including_unmapped_stop_applies_stopped
+      - tests.test_stop_reason_catch_all.TestCatchAllMeaningMatcher.test_meaning_states_no_other_row_names_and_no_unknown_wording
+    red_confirmed: true
+    red_reason: >-
+      Before the doc edit: set(codes) was the 12-member pre-existing
+      REASON_CODES (missing unmapped_stop) so assertEqual against the
+      widened 13-member frozenset failed; "thirteen" was not in the
+      section text (still said "twelve"); "fourteenth" was not in the
+      normalized section text (still said "thirteenth"); and the
+      catch-all meaning matcher raised AssertionError "no `unmapped_stop`
+      row found" since no such row existed in the table yet.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_source_paths_resolve_to_existing_files
+      - tests.test_stop_reason_catch_all.TestRefusalRowMatcher.test_refusal_row_and_meaning_stated
+      - tests.test_stop_reason_catch_all.TestResolutionMatcher.test_named_fixtures_are_present_in_live_coverage_keys
+    red_confirmed: true
+    red_reason: >-
+      Before the doc edit: sorted(keys_seen) (12 pre-existing keys) did
+      not equal sorted(STOP_POINT_KEYS) (widened to 14, gaining
+      command-refusal and unmapped-terminating-stop), so the
+      bidirectional-coverage and pairing-equality assertions failed;
+      TestRefusalRowMatcher raised AssertionError "'command-refusal' not
+      found in {mapping of the 12 pre-existing keys}"; the
+      named-fixtures-present subTest for key='command-refusal' failed
+      the same way against the live coverage-key set.
+  AC-3:
+    tests:
+      - tests.test_stop_reason_catch_all.TestRefusalRowMatcher.test_refusal_row_and_meaning_stated
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWording.test_coverage_wording_stated
+    red_confirmed: true
+    red_reason: >-
+      TestRefusalRowMatcher (same test as AC-2, its "gate_fail_closed
+      Meaning names the refusal-pattern hard fail" half) failed for the
+      same "no command-refusal row" reason before the doc edit, since
+      the Meaning cell did not yet name the refusal-pattern hard fail
+      either. test_coverage_wording_stated is a pre-existing regression
+      guard (citation / "both modes" / "interactive" wording, no leaked
+      reserved-code terms) that stayed green throughout since I only
+      extended, never removed, the wording it checks; carried here to
+      show AC-3's "still satisfies the existing matcher" half held.
+  AC-4:
+    tests:
+      - tests.test_stop_reason_catch_all.TestFallbackPrecedenceMatcher.test_fallback_precedence_and_construction_statement
+    red_confirmed: true
+    red_reason: >-
+      AssertionError "-1 == -1 : label 'Fallback rule:' not found" --
+      the label and its paragraph did not exist in the document yet, and
+      the by-construction exactly-one statement / absence of the old
+      "Every terminating stop point is bound to exactly one reason code
+      above" sentence could not be checked either.
+  AC-5:
+    tests:
+      - tests.test_stop_reason_catch_all.TestScopeMatcher.test_scope_exclusions_stated
+      - tests.test_stop_reason_catch_all.TestScopeMatcher.test_consumer_constraints_64kib_no_reason_code_no_row_wording_regression
+      - tests.test_no_work_required_stop.TestExactlyOneCodeHasNoStopPoint.test_uncovered_reason_codes_is_exactly_context_budget_reached
+    red_confirmed: true
+    red_reason: >-
+      test_scope_exclusions_stated: AssertionError "'Scope:' not found in
+      ''" -- the Scope paragraph did not exist yet.
+      test_consumer_constraints_64kib_no_reason_code_no_row_wording_regression
+      and test_uncovered_reason_codes_is_exactly_context_budget_reached
+      are pure regression guards (NFR4-exempt from a negative proof):
+      both were already true against the base document (Consumer
+      constraints and the context_budget_reached paragraph are
+      byte-identical to base, verified by `git diff` touching neither),
+      so they were never red -- carried here as AC-5's "unchanged"
+      half, proved by diff rather than by a red-green cycle.
+  AC-6:
+    tests:
+      - tests.test_stop_reason_catch_all.TestResolutionMatcher.test_named_key_resolves_to_its_own_code
+      - tests.test_stop_reason_catch_all.TestResolutionMatcher.test_untabled_site_resolves_to_unmapped_stop
+      - tests.test_stop_reason_catch_all.TestResolutionMatcher.test_negative_proof_precedence_ignoring_resolver_fails_stop_condition_3
+      - tests.test_stop_reason_catch_all.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: true
+    red_reason: >-
+      The three resolver tests raised KeyError('unmapped-terminating-
+      stop') before the doc edit, since `_resolve_stop_point_code`
+      (and its precedence-ignoring negative-proof variant) look up the
+      catch-all row's own bound code from the LIVE coverage pairs, and
+      that row did not exist yet. test_only_standard_library_imports is
+      a structural self-check of this new module (AST-parses its own
+      imports); it was true from the module's first commit (the module
+      never imported anything beyond re/unittest/pathlib/ast/sys), so it
+      never observed a red state -- there is no missing-implementation
+      condition that could make a stdlib-only file fail this check.
+      Carried in unconfirmed_reds.
+  AC-7:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_nine_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_escaping_section_unchanged
+      - tests.test_no_work_required_stop.TestResponsibilityBoundaryByteIdentical.test_section_byte_identical_to_pre_change_text
+    red_confirmed: false
+    red_reason: >-
+      These are pure regression guards over sections this task's own
+      Design explicitly keeps untouched (Result format / Escaping /
+      Responsibility boundary byte-identical; nine headings and their
+      order unchanged; the step bullet and the Precedence rule paragraph
+      untouched -- verified directly by `git diff` showing zero hunks in
+      those regions rather than by a dedicated test). They were already
+      green against the base document and stayed green throughout, so no
+      red was ever observed or expected. The two commands this AC also
+      names (`python3 -m unittest discover -s tests`, `python3
+      em-workflow/scripts/check-plugin-invariants.py .`) both exit 0
+      after implementation; they have no red/green cycle of their own
+      to confirm, only a final pass/fail this report's "tests: pass"
+      status and merge attempt already stand for.
