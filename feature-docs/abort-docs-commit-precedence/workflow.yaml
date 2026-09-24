@@ -137,7 +137,8 @@ workflow:
   completed_at_commit: 833a4d1605391c751dd055f503e4fa0ddb94926f
   base_commit: b29f14343f99f3c8ac72b12f295799109a646b38
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 372124ccdcf0f62983b6912067dca0c9f821efb0
 - id: verify
   status: pending
 - id: retrospect
@@ -200,7 +201,7 @@ tasks:
     status: merged
     branch: em-workflow/abort-docs-commit-precedence/task0002
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -210,7 +211,8 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
   residual_critical_high: 0
   needs_rework: false
 requirements:
