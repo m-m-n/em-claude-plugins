@@ -113,7 +113,8 @@ workflow:
     configured. MANUAL-1..MANUAL-4 read and hold; EC-3 left unspecified as
     expected. No requirement is excluded.
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: b6b57b2f372714e237651f66168e6b4fbbaaca62
 tasks:
   task0001:
     title: Close I.2.a/I.2.c route-back residual connections, pin them with contract tests, bump em-workflow to 0.2.1
