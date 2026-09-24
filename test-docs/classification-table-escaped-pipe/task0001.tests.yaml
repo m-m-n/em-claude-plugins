@@ -1,0 +1,88 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_hook_cell_raises_with_unsupported_notice
+    red_confirmed: true
+    red_reason: >-
+      Before the parser change, AssertionError: 'not supported' not found in
+      'malformed classification table row (expected exactly 2 columns): '
+      (the message ended there -- no notice segment existed yet).
+  AC-2:
+    tests:
+      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_classification_cell_raises_with_unsupported_notice
+    red_confirmed: true
+    red_reason: >-
+      Same failure as AC-1's test, observed in the same pre-implementation
+      run: AssertionError: 'not supported' not found in 'malformed
+      classification table row (expected exactly 2 columns): ' -- the
+      reproduction value (escaped pipe inside the classification cell) also
+      raised the unchanged pre-task message, with no unsupported-escape
+      notice.
+  AC-3:
+    tests:
+      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_hook_cell_raises_with_unsupported_notice
+      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_classification_cell_raises_with_unsupported_notice
+    red_confirmed: false
+    red_reason: >-
+      The two-column-expectation wording and the offending row's repr in the
+      message already existed before this task's change (unmodified
+      pre-existing message content) -- there is no observable change for
+      this criterion in isolation, so this assertion was never red on its
+      own. In the same test methods, execution reached this assertion only
+      after the (task-new) unsupported-notice assertion above it passed;
+      pre-implementation, that earlier assertion failed first, so this one
+      was never independently exercised red. Verified green post-
+      implementation by asserting "expected exactly 2" and repr(row_line)
+      are both present in the raised message.
+  AC-4:
+    tests:
+      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_row_without_escaped_pipe_wrong_column_count_raises_without_notice
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's own Test Notes ("Case C already passes before the
+      change; it guards the unchanged branch"): this test already passed
+      before the parser change (a row with no `\|` never gains the notice,
+      which is true both before and after this task). Confirmed by running
+      the test before implementing: it reported "ok", not a failure. It
+      guards the unchanged branch rather than proving the new behavior.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Docstring content (task plan Test Notes: "AC-5 is TDD-awkward;
+      verified by inspection in review / verify, no dedicated test
+      required"). Verifiable outcome: the Raises paragraph of
+      parse_classification_table() now states, in English, that `\|`
+      escapes are not interpreted and that a malformed row containing `\|`
+      raises ClassificationTableError with an unsupported-escape notice.
+      Confirmed by reading the edited docstring directly.
+  AC-6:
+    tests:
+      - test_hook_classification_pin.TestParseClassificationTable.test_parses_the_real_document_without_error
+      - test_hook_classification_pin.TestParseClassificationTable.test_exactly_four_rows
+      - test_hook_classification_pin.TestParseClassificationTable.test_row_hook_names_match_the_four_queue_hooks_no_more_no_fewer
+      - test_hook_classification_pin.TestParseClassificationTable.test_every_row_path_is_repo_relative_and_resolves
+      - test_hook_classification_pin.TestParseClassificationTable.test_every_classification_is_from_the_fixed_vocabulary
+      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_malformed_row_wrong_column_count_raises
+    red_confirmed: false
+    red_reason: >-
+      Regression guard, not a new-behavior red: these existing tests (all
+      untouched -- neither modified nor deleted) passed before and after
+      this task's change, proving row splitting, the column-count check and
+      classification-vocabulary validation are unchanged, and that the real
+      document still parses to 4 rows. `python3 -m unittest discover -s
+      tests` ran 5657 tests (baseline was 5654; +3 for the tests this task
+      adds) with 0 failures both before and after implementation.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by diff inspection (VERIFICATION.md TS-7), not a test: `git
+      diff --stat` against the parent branch shows only
+      tests/test_hook_classification_pin.py changed; that file's imports
+      (ast, re, tempfile, unittest, pathlib) are unchanged and
+      standard-library only; no file under em-workflow/hooks/ was written;
+      no plugin.json/marketplace.json version was touched.
