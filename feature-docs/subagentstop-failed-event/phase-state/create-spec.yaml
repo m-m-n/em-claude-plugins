@@ -1,21 +1,29 @@
 schema_version: 1
 feature: subagentstop-failed-event
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 485fe4fef3c1458ccafcead463e4cde86e072d5a
 last_input_digest: sha256:c937e8b24627d8d99b603fc267d56049f0b8dfb61ed4bf47a3e0ab3b14504291
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
-  create-spec-run-0001:
-    worker: requirements-analyst
-    status: completed
-    input_digest: sha256:c937e8b24627d8d99b603fc267d56049f0b8dfb61ed4bf47a3e0ab3b14504291
-    completed_at: '2026-09-24T23:03:22+09:00'
-    validated: true
-artifacts: {}
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:c937e8b24627d8d99b603fc267d56049f0b8dfb61ed4bf47a3e0ab3b14504291
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:c937e8b24627d8d99b603fc267d56049f0b8dfb61ed4bf47a3e0ab3b14504291
+  output_digest: null
+artifacts:
+- path: feature-docs/subagentstop-failed-event/REQUIREMENTS.md
+  sha256: sha256:2fce2d9986f2d84c2e51519db7f2db283d8bfc2da80585f3aa70849a786c62e4
+  produced_by: create-spec-run-0002
+- path: feature-docs/subagentstop-failed-event/SPEC.md
+  sha256: sha256:537b8c9a14307a5e89dfd5e326fd773dcf2d62bf8892a055f0bcf7f40fb8993f
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
