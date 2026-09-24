@@ -19,3 +19,12 @@ records:
     freeform: null
     normalized_answer: "Extend tests/test_routeback_reset_scope_consistency.py with the TS-10/11/12-equivalent matchers (overrides analyst assumption A-5's new-module suggestion)"
     resolution_note: "gate: orchestrator design decision (launch instruction: consult Codex on unclear points); options: (a) extend tests/test_routeback_reset_scope_consistency.py / (b) new module tests/test_routeback_residual_connections.py; chosen: (a); not chosen: (b); key points: the existing module already checks the same reset-set / cleanup / I.2.a wording and order, its section extraction / normalization / negative-proof helpers are reusable, and the prior task0003 plan placed TS-10/11/12 there; risk: I.2.a already reads 'below' so a direction-only test proves nothing new - the new assertions must verify the added sentences, and the two edit-forbidden modules stay untouched; codex_consulted: true; opus_escalation: false"
+  - question_id: implement.deviation-auto-addition
+    packet_id: null
+    answered_at: "2026-09-24T10:31:00+09:00"
+    source: batch-deviation-decline
+    answer_mode: select
+    selected_option_ids: [declined]
+    freeform: null
+    normalized_answer: "task0001 deviation not auto-added: tests/test_codex_wrapper_fallback_removal_version_bump.py"
+    resolution_note: "task_id: task0001; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; failed checks: (1) not a path-addition claim - the implementer did not edit the file (task plan Test Notes forbid editing out-of-scan version modules), (2) the path's failing test is TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version, which hardcodes 0.2.0 and fails for any bump; no existing AC of task0001 is dropped without it. Left to verify (TS-6 full-suite exit 0) to catch and route."
