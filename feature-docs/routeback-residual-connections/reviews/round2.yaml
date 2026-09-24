@@ -1,0 +1,62 @@
+round: 2
+executed_at: "2026-09-24T11:01:57+09:00"
+scope:
+  review_mode: diff
+  base_commit: 92c8d604a97fd2740a5649c313b04477e75115c9
+  head_commit: 02b75cc1d1bf3d84c7e062d506cde1bb53816b71
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/routeback-residual-connections/task0001.tests.yaml
+    - test-docs/routeback-residual-connections/task0002.tests.yaml
+    - tests/test_codex_wrapper_fallback_removal_version_bump.py
+    - tests/test_routeback_reset_scope_consistency.py
+    - tests/test_routeback_residual_connections_version_bump.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+dropped_below_threshold:
+  # evaluator findings removed by R3b step 2 (severity not in {critical, high, medium}); kept here for the human evaluator
+  - {severity: low, category: architecture, file: tests/test_codex_wrapper_fallback_removal_version_bump.py, line: 58, title: "Divergent version-contract enforcement guarantees per-bump fan-out edits (reviewer medium, evaluator demoted to low; pre-existing literal-pin convention of another feature)"}
+  - {severity: low, category: comprehensive, file: em-workflow/references/implement-phase.md, line: 258, title: "Chain-termination sentence says in-flight classification never consults the carve-out while the I.2.c gate still cites it"}
+  - {severity: low, category: comprehensive, file: test-docs/routeback-residual-connections/task0002.tests.yaml, line: 34, title: "task0002 tests record omits red_confirmed for AC-3 and AC-5"}
+prior_round_status:
+  - {stable_id: aef23290e7d97475, observed: fixed, note: "task0002 updated the literal pin to 0.2.1; security/comprehensive/evaluator confirmed"}
+evaluation:
+  round_summary: "Round 2 (cross_validation=true). Prior finding aef23290e7d97475 fixed by task0002. No critical/high remain. architecture#0's two high findings on implement-phase.md 876/892 dismissed after fact-check (merge-task.sh WARNING-then-exit-0 window is the SPEC-chosen documented residual, FR5 / A-1 option b; no hook/script contract changed, queue_stop_guard.py 403-412 already matches; NFR1 forbids script/hook changes). architecture medium demoted to low; evaluator added two low findings. No injection detected. Coverage: security corroborated; comprehensive findings (low); architecture findings (low kept, highs refuted); spec corroborated (FR1-FR7, NFR1)."
+  recommended_action: complete
+  action_rationale: "residual_critical_high = 0; the architecture highs request runtime changes that SPEC NFR1 / Out of Scope / A-1 exclude; remaining findings are low."
+dismissed_sites:
+  - file: em-workflow/references/implement-phase.md
+    line: 876
+    run_id: "architecture#0"
+    reason: "false positive: the ref-moved/journal-missing window predates this change and SPEC chose to document it (A-1 option b, FR5); NFR1 forbids changing merge-task.sh/journal writers/hooks; the FR3 union does not widen exposure since the gate blocks reconciled in-flight/merged and a ref-merged task always has at least a launched event; branch commits stay reachable from the integration ref (SPEC EC-2)."
+  - file: em-workflow/references/implement-phase.md
+    line: 892
+    run_id: "architecture#0"
+    reason: "false positive: no hook/script-implemented contract changed; the I.2.a sentence restates the existing carve-out scope already implemented by queue_stop_guard.py 403-412; the I.2.c union and cleanup wording govern only the orchestrator's own write set; no diff under em-workflow/scripts or hooks."
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-routeback-residual-connections-20260924T020136Z.md
+  note: "no vulnerability findings; listing degraded (listing_exit_nonzero) so the report branch was taken; report written under the main working tree tmp/"
