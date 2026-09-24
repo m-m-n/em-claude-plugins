@@ -142,7 +142,7 @@ workflow:
     check: helper docstring states the three fail-safe degrade conditions and
     that everything else raises.
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Section-scoped exemption registry in a shared test helper
