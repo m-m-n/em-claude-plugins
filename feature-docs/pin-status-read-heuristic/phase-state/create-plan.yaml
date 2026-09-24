@@ -1,7 +1,7 @@
 schema_version: 1
 feature: pin-status-read-heuristic
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 90b1b36e6087c5480204072ce3f1a8eb9134d395
 last_input_digest: sha256:8ffa2bddc2f5931e4cb2961837b5f8bcc4680863a27c54552518d40ac64842f2
@@ -10,11 +10,24 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: cp-pin-status-read-heuristic-001
-  status: dispatched
+  status: completed
   input_digest: sha256:8ffa2bddc2f5931e4cb2961837b5f8bcc4680863a27c54552518d40ac64842f2
   output_digest: null
-artifacts: []
-patches: []
+artifacts:
+- path: feature-docs/pin-status-read-heuristic/IMPLEMENTATION.md
+  sha256: sha256:04c904ac8875733c09ac6d58e956a20846ea5af09a4bb41a64a747678380c7a2
+  produced_by: cp-pin-status-read-heuristic-001
+- path: feature-docs/pin-status-read-heuristic/VERIFICATION.md
+  sha256: sha256:7b323543f4863f17b75fa9a685751bd57671a356ee8c7bbaa14f6fca313b176e
+  produced_by: cp-pin-status-read-heuristic-001
+- path: feature-docs/pin-status-read-heuristic/tasks/task0001.md
+  sha256: sha256:7ccec3b33cd96a684cb16402bfcf36fb450247e48e5fb0336b85596af06768e9
+  produced_by: cp-pin-status-read-heuristic-001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:8ffa2bddc2f5931e4cb2961837b5f8bcc4680863a27c54552518d40ac64842f2
+  base_workflow_blob: 6da2ba37ae1564374798bd7e9f62218d277d9252
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
