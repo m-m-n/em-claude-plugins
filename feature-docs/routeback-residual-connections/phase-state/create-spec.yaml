@@ -1,0 +1,17 @@
+schema_version: 1
+feature: routeback-residual-connections
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 1bc7a5472438971101e888aaa4206065a49b1989
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
