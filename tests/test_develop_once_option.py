@@ -155,7 +155,30 @@ ITEMS_1_TO_6_VERBATIM = '1. `workflow` 配列の全 step が `completed`、た�
 
 ITEM_7_VERBATIM = '7. `--once` 指定時、1 フェーズが完了したとき（フェーズ境界の定義は下記\n   「`--once` のフェーズ境界」参照）'
 
-ARGUMENT_HINT_LINE = 'argument-hint: "[feature-path] [--report-only] [--batch] [--once] [task-description]"'
+# repo-suite-pinned-test-drift/task0002: SKILL.md's `--pr` item was added by
+# a prior feature (batch-pr-option), gaining a `--pr` token on this line that
+# this module's pin had not followed. Updated to the current line 4,
+# character for character.
+ARGUMENT_HINT_LINE = 'argument-hint: "[feature-path] [--report-only] [--batch] [--once] [--pr] [task-description]"'
+
+# The tokens the argument-hint line must retain. Kept as a matcher (below)
+# rather than an inline loop, so the check carries a negative proof
+# (IMPLEMENTATION.md Conventions: matcher / loader separation, NFR3).
+ARGUMENT_HINT_REQUIRED_TOKENS = (
+    "feature-path",
+    "--report-only",
+    "--batch",
+    "--once",
+    "--pr",
+    "task-description",
+)
+
+
+def _argument_hint_line_has_required_tokens(line):
+    """FR1 / NFR3 matcher: true iff `line` contains every token the
+    argument-hint line must retain, `--pr` included alongside every token
+    required before it."""
+    return all(token in line for token in ARGUMENT_HINT_REQUIRED_TOKENS)
 
 
 def _read(path):
@@ -287,6 +310,28 @@ class TestArgumentProcessingOnceOption(unittest.TestCase):
 
     def test_argument_hint_line_includes_once_and_retains_existing_tokens(self):
         self.assertIn(ARGUMENT_HINT_LINE, self.text)
+        self.assertTrue(
+            _argument_hint_line_has_required_tokens(ARGUMENT_HINT_LINE),
+            "expected the argument-hint line to retain every required "
+            "token, --pr included",
+        )
+
+
+class TestArgumentHintTokenMatcherCanFail(unittest.TestCase):
+    """AC-4 / NFR3: negative proof plus non-vacuity guard for
+    `_argument_hint_line_has_required_tokens` -- a forged argument-hint line
+    equal to the current one but without `--pr`."""
+
+    FORGED_LINE_WITHOUT_PR = (
+        'argument-hint: "[feature-path] [--report-only] [--batch] '
+        '[--once] [task-description]"'
+    )
+
+    def test_forged_line_is_well_formed_and_missing_pr(self):
+        # Non-vacuity guard: the forged line genuinely lacks `--pr` while
+        # retaining every other required token, so the rejection below
+        # exercises the token check, not a fixture defect.
+        self.assertNotIn("--pr", self.FORGED_LINE_WITHOUT_PR)
         for token in (
             "feature-path",
             "--report-only",
@@ -294,7 +339,13 @@ class TestArgumentProcessingOnceOption(unittest.TestCase):
             "--once",
             "task-description",
         ):
-            self.assertIn(token, ARGUMENT_HINT_LINE)
+            self.assertIn(token, self.FORGED_LINE_WITHOUT_PR)
+
+    def test_matcher_rejects_line_missing_pr(self):
+        self.assertFalse(
+            _argument_hint_line_has_required_tokens(self.FORGED_LINE_WITHOUT_PR),
+            "matcher failed to detect the missing --pr token",
+        )
 
 
 class TestStopCondition7AppendedWithoutAlteringExisting(unittest.TestCase):
