@@ -172,7 +172,18 @@ workflow:
   status: completed
   completed_at_commit: 19a4c474644e59968736011184a467ea17cac79e
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 5621 tests, 16 failures, identical
+    set to base main fb8b736 (0 new failures). Feature tests (210) pass. TS-1..TS-10
+    covered by passing tests; TS-11 meets the VERIFICATION.md criterion (no failure
+    absent on the base). Build/format: not configured. Deviation noted: FR9/AC-7/TS-10
+    name 0.2.4, actual version is 0.2.6 in both files (task0002 and task0001 each
+    bumped again under the plugin-version-guard hook); accepted per Codex consultation
+    (batch-audit verify.version-deviation). Manual checks (A-2, A-4 real-run checks,
+    version diff review, cache check) remain for the human before merge.'
+  completed_at_commit: 2f5fff1ca4597986159c294f72e8fe67133e65e6
 - id: retrospect
   status: pending
 tasks:
