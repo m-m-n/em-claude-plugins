@@ -1,0 +1,52 @@
+feature: abort-docs-commit-precedence
+collected_at: "2026-09-24T21:32:03+09:00"
+session_ids: [01a0d366-0c8f-7571-87c0-3b5bdc5e2c9d]
+signals:
+  review_critical_high: []      # round1 produced two findings, both severity medium
+  conflict_reworks:
+    - task: task0002
+      retries: 1                # merge 10f8756: conflicts in two version-pin test files, resolved via parent-side adoption
+  file_prediction_misses:
+    - task: task0001
+      files:
+        - tests/test_codex_wrapper_fallback_removal_version_bump.py
+        - tests/test_stop_reason_coverage_version_bump.py
+    - task: task0002
+      files:
+        - tests/test_codex_wrapper_fallback_removal_version_bump.py
+        - tests/test_stop_reason_coverage_version_bump.py
+  verification_failures: []     # verify result: pass, failed_items: []
+  discretionary_perspectives: [] # review plan had no Layer-2 additions
+  declined_findings: []          # no finding was resolved as `declined`
+  unresolved_findings:
+    - stable_id: 675fbef42bb2c387
+      category: comprehensive
+      severity: medium
+      file: em-workflow/references/implement-phase.md
+      resolution: unresolved
+      title: 「no other exit-4 call site leaves uncommitted state」は事実と合わない
+    - stable_id: 0f4aa139a270d09d
+      category: comprehensive
+      severity: medium
+      file: em-workflow/skills/develop/SKILL.md
+      resolution: unresolved
+      title: 再開時 refresh のコマンドが Step A 自身のクォート規則に反している
+  tier_decision:
+    tier: full
+    rationale: "description_only and description_plus_code both read tier 2 (0.88 / 0.89); no reductions"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.0, '1': 0.11, '2': 0.88, '3': 0.01}
+      - basis: description_plus_code
+        probabilities: {'0': 0.02, '1': 0.08, '2': 0.89, '3': 0.01}
+    pre_survey_estimate:
+      files_expected: 9
+      changed_lines_approx: 120
+      new_files_needed: 0
+      covering_tests_exist: true
+follow_up_drafts: []
+lessons_candidates:
+  - >-
+    Both tasks independently bumped the same stale 0.2.1 version-pin literals in
+    two tests not listed in either task's `files`; the planner did not predict
+    that a lockstep version bump drags pre-existing version-pin tests along.
