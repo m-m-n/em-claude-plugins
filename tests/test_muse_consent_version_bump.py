@@ -57,10 +57,17 @@ EM_REVIEW_BASELINE_VERSION = "0.5.7"
 
 # SHA-256 digests of each file's content with its `version` field(s)
 # stripped and canonicalized via `_canonicalize_manifest` /
-# `_canonicalize_marketplace` below, computed from the tree as it stood
-# immediately before this task's edit (AC-3).
+# `_canonicalize_marketplace` below. EM_WORKFLOW_MANIFEST_NONVERSION_SHA256
+# (repo-suite-pinned-test-drift task0004, FR5) is the digest of the current
+# non-version content of `em-workflow/.claude-plugin/plugin.json` --
+# em-workflow's version keeps advancing, but its other fields are what this
+# digest guards, so the reference point is "now", not a one-time-past
+# snapshot. The other two digests below were computed from the tree as it
+# stood immediately before this module's original task's edit (AC-3) and
+# remain valid because em-review's manifest and the marketplace's
+# non-version content have not changed since.
 EM_WORKFLOW_MANIFEST_NONVERSION_SHA256 = (
-    "c4f8b9a97b62b34f648b99b32e53b14c76d3ddbbd533d29dac10bbe34b5286b4"
+    "bf70d7104511c338b6f076c3d9ab08b6a19b757b59d45397324242f11008ebf0"
 )
 EM_REVIEW_MANIFEST_NONVERSION_SHA256 = (
     "6f6b717184be5c2a250c80e39f0a526e103f9d752d039fa47f6343e9bd0dc3b3"
