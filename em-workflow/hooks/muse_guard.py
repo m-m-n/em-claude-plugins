@@ -18,7 +18,8 @@ network and makes no LLM call, and it never emits `ask` or `allow` -- only
 confidence).
 
 CLI mode -- the sole writer of the consent store; never invoked by the hook
-path and never invoked by the workflow itself:
+path. The review phase invokes only the read-only --list, to decide whether
+a `muse-spark` chain entry is dispatched as the contributor tier:
   muse_guard.py --record --project-dir DIR
   muse_guard.py --remove --project-dir DIR
   muse_guard.py --list   --project-dir DIR

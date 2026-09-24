@@ -82,6 +82,12 @@ em-review is the standalone counterpart of the em-workflow review phase:
    or out of budget surfaces as a reviewer skip and is handled by the R2b
    chain walk. An environment without the plugin behaves exactly as before
    litellm support existed — every chain falls through to its codex entry.
+   When `litellm_available`, also probe `contributor_consented` — true
+   exactly when this command prints a line (the project key), false when
+   it prints nothing or fails:
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/hooks/muse_guard.py" --list --project-dir "{project_root}"
+   ```
 9. Load prior runs: glob `{records_base}/reviews-*/round*.yaml`; if any
    exist, build `round_context` = list of
    `{stable_id, file, line, resolution}` for all recorded findings. This is
@@ -186,9 +192,9 @@ Read references/reviewers.yaml. For each selected perspective (skip
   - Exception to the prohibition above: when `M` is `muse-spark`, reading
     this chain entry as the contributor tier is permitted, but only
     through the single reading the Contributor-tier pre-dispatch criteria
-    below define — never a free choice of model — and only when that
-    reading's two checks already passed before this dispatch step is
-    reached: never decided inside the reviewer, and never after a hop has
+    below define — never a free choice of model — and only on the
+    `contributor_consented` value Phase R0 settled before this dispatch
+    step is reached: never decided inside the reviewer, and never after a hop has
     already been spent.
   Record the chain INDEX picked per perspective — R2b resumes the walk from
   the entry after it.
@@ -198,29 +204,13 @@ the file list — never diff content (each reviewer fetches its own data).
 
 ### Contributor-tier pre-dispatch criteria (muse-spark read-mapping)
 
-When `muse-spark` is the chain entry the registry selected, reading it as
-the contributor tier is permitted only after two checks both pass: consent
-for this project is recorded — mechanical, decided by the consent store,
-not by prose — and this particular dispatch may use it — a per-dispatch
-judgment made by the dispatching LLM. The chain itself is never edited to
-reach the contributor tier; the registry defines exactly one permitted
-reading and no other.
-
-**Per-dispatch: do not use**
-
-- A change whose core is an unpublished idea: a new feature whose design or
-  approach is the project's own differentiator. The per-dispatch default is
-  to use the contributor tier; this is not a fail-closed gate, and the
-  security perspective is not excluded from it.
-
-**Outside the scope of consent**
-
-- Secrets present in the diff (API keys, credentials, internal endpoints,
-  customer data).
-- Third-party work (vendored code, externally supplied patches,
-  contributors' pull requests).
-- If the repository is currently private, or its license is not the one
-  the consent was reasonable under, do not use the contributor tier.
+When `muse-spark` is the chain entry the registry selected, dispatch it as
+the contributor tier (`model: muse-spark-contributor`) exactly when
+`contributor_consented` (Phase R0) is true, and as `muse-spark` otherwise.
+Recorded consent is the only condition; no per-dispatch judgment is added
+on top of it. The chain itself is never edited to reach the
+contributor tier; the registry defines exactly one permitted reading and
+no other.
 
 ## Phase R2b: Cross-model fallback (chain walk)
 
