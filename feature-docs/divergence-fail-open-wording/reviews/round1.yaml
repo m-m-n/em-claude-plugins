@@ -1,0 +1,44 @@
+round: 1
+executed_at: "2026-09-25T01:19:28+09:00"
+scope:
+  review_mode: diff
+  base_commit: f6576f6ccdd36763c9231ec9825b031882fbee2c
+  head_commit: 694bff856ce3cba7539406742fda885fe467204e
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/implement-phase.md
+  - test-docs/divergence-fail-open-wording/task0001.tests.yaml
+  - tests/test_recycled_task_id_consistency.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "round 1（diff モード、cross_validation なし）。4 観点すべてが空の findings を返し、evaluator 自身の確認でも medium 以上の問題は無かった。reviewer 出力に命令注入の試みは無い。観点ごと: comprehensive#0 / security#0 / architecture#0 / spec#0 = corroborated。確認内容: (1) I.2.a divergence 段落から fail-open が消え、初回 launch 取りこぼし検出の根拠と consecutive-block cap (3) による誤 BLOCK の有界化が明記されている（queue_stop_guard.py の MAX_CONSECUTIVE_BLOCKS = 3 と照合済み）。(2) I.2.b step 1 の注記と既存固定句の維持（FR2 / FR3）。(3) 変更前サンプル定数が 4999893 時点の implement-phase.md と一致。(4) plugin.json / marketplace.json の version が 0.2.8 で一致。(5) hooks/ 配下に差分無し（NFR1）。(6) 関連 118 テストが通る。severity 下限未満の細かい点 2 つ: tests/test_recycled_task_id_consistency.py の docstring 243 行目が test_plugin_version_parity の所在を tests/test_check_plugin_invariants.py と誤記（実際は tests/test_plugin_version_parity.py）、238-240 行目が旧メソッド名が docstring の履歴メモに残ると書くが実際には残っていない。"
+  recommended_action: complete
+  action_rationale: "全観点で critical / high / medium の問題が無く、evaluator 自身の確認とも矛盾しない。SPEC の FR1〜FR5 と AC-1〜AC-7 を満たし、関連テストも通る。docstring の細かい誤りは報告対象外の軽さ。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-divergence-fail-open-wording-20260924T161911Z.md
+  note: "vulnerability 観点は未選択で未解決 vulnerability findings は 0 件。ntd 入口は検出されたが listing が非 0 終了したため report 分岐へ degraded（degraded_reason: listing_exit_nonzero）"
