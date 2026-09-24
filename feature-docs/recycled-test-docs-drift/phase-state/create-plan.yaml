@@ -1,0 +1,21 @@
+schema_version: 1
+feature: recycled-test-docs-drift
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: a63afd30d24d9b87c452f4b201e994e08772e0f2
+last_input_digest: sha256:c9cf66ce5d1418b7bb8eb92a07ad157434d4be73273e3eba70054fc1fdd0abde
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:c9cf66ce5d1418b7bb8eb92a07ad157434d4be73273e3eba70054fc1fdd0abde
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
