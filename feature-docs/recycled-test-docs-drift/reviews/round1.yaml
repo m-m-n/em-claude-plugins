@@ -55,7 +55,9 @@ findings:
   - codex:comprehensive
   confidence: 90
   resolution: unresolved
-  resolution_reason: medium は Phase R4 の auto-fix 対象外（critical/high のみ）。別タスクとして起票する
+  resolution_reason: 'medium は Phase R4 の auto-fix 対象外（critical/high のみ）。別タスクとして起票済み:
+    https://app.notion.com/p/em-workflow-recycled-task-id-contract-task0001-tests-yaml-notes-AC-6-4-red-3e53509ec8ee815c84d2f2ec5b3df9ef
+    （重複チェックは unverified: 判定フェーズで duplicate-task-judge が候補ファイルを読めなかった）'
 evaluation:
   round_summary: 3 ファイルとも YAML として読め、FR1〜FR5・NFR1 は満たす。FR6 は notes が AC-6 の既存 4 件すべてを再確認済みとしている点で満たしきれていない（comprehensive#0
     の medium 指摘をコードで確認）。security は実行コードの無い記録 YAML のみで指摘なし。spec#0 は指摘 0 件、FR6 の食い違いは
