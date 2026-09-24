@@ -1,0 +1,43 @@
+schema_version: 1
+feature: stop-reason-coverage
+phase: create-plan
+status: completed
+generation: 1
+base_revision: aab14c273c9be59b391f88e17cd01e7df3573dd9
+last_input_digest: sha256:0efd4fd1de1e76dff71a6d54f15520f4bd99b61f479426ae5331db37dfbe8cb3
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: cp-stop-reason-coverage-001
+  status: completed
+  input_digest: sha256:0efd4fd1de1e76dff71a6d54f15520f4bd99b61f479426ae5331db37dfbe8cb3
+  output_digest: null
+artifacts:
+- path: feature-docs/stop-reason-coverage/IMPLEMENTATION.md
+  sha256: sha256:77c127450cb6cb0a5d555a5b264a67464261945760eab7564b5bc3bddd16dc5c
+  produced_by: cp-stop-reason-coverage-001
+- path: feature-docs/stop-reason-coverage/VERIFICATION.md
+  sha256: sha256:06d2027d94cc5304c78aa9e4a7b4f88735e56d6ca42f52733fe6e26678511f49
+  produced_by: cp-stop-reason-coverage-001
+- path: feature-docs/stop-reason-coverage/tasks/task0001.md
+  sha256: sha256:ee5637c4db72ebcf151c8ae2e9a0cae374382b96393493c9227941eea581da48
+  produced_by: cp-stop-reason-coverage-001
+- path: feature-docs/stop-reason-coverage/tasks/task0002.md
+  sha256: sha256:477e33efe7f2fe75e49f58382b3009030d1d180ce6600922be22f5b31470212d
+  produced_by: cp-stop-reason-coverage-001
+- path: feature-docs/stop-reason-coverage/tasks/task0003.md
+  sha256: sha256:a97e5e6fdd4adf8ed868eaf32f28134d7271c8104a197f5c4d48a1f301c38910
+  produced_by: cp-stop-reason-coverage-001
+- path: feature-docs/stop-reason-coverage/tasks/task0004.md
+  sha256: sha256:d1454f6febdbbe8989fdf6dc099746898765784a43e886635e87067380b66ed0
+  produced_by: cp-stop-reason-coverage-001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:0efd4fd1de1e76dff71a6d54f15520f4bd99b61f479426ae5331db37dfbe8cb3
+  base_workflow_blob: 00341438d42303333e89e1ae8f4765896220dd2f
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

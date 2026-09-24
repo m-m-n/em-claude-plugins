@@ -1,0 +1,54 @@
+schema_version: 1
+feature: stop-reason-coverage
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 9751eb29cc150f6bfba69a125af34101973d4669
+last_input_digest: sha256:d33fff328bdd27cddc101e316c18315901bc6d764308a679d56ca3cf756e771d
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-24T09:43:35+09:00'
+    questions:
+    - question_id: requirement.coverage-structure
+      status: answered
+answers:
+  requirement.coverage-structure:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-24T09:43:35+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - catch_all_fallback
+    freeform: Codex 相談（run_codex_exec.sh readonly、1 ターン）で catch_all_fallback を推奨。オーケストレーターが選択肢に写像できると判断して採用。
+    normalized_answer: 'catch_all_fallback を採用。条件: (1) 新コード・新行キーはドットを含めない（例 unmapped_stop
+      / unmapped-terminating-stop）、意味は「原因不明」ではなく「既存行に該当しない終端停止」。(2) 既存行（stop-condition-N
+      を含む）と refusal-pattern の gate_fail_closed 行が常に優先し、catch-all は最後の補完。(3) 補完対象はバッチ実行を終了させる停止に限る（待機・正常終了・結果を出さない
+      64KiB 例外は含まない）。(4) detail に停止箇所と具体的原因を残し、resume_conditions 必須を維持。(5) 未掲載停止への適用と既存行優先をテストで検証。(6)
+      loop-develop 側の新値受理はスコープ外として残件化する。'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:29f2d61e07ac3a753f9857ccebe00d7b6f7fc977af83fec98295bc3fe45f3f80
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:d33fff328bdd27cddc101e316c18315901bc6d764308a679d56ca3cf756e771d
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:2a776c9b1fd5ef992b5ee4f9c0a13d9bb7f6124711c82e9cbe7f4e030bdcde07
+  output_digest: null
+artifacts:
+- path: feature-docs/stop-reason-coverage/REQUIREMENTS.md
+  sha256: sha256:17065fa845e4dc37f5c009930f5130d0ff846e04a9cedc5ba24da1fa20f9b236
+  produced_by: create-spec-run-0003
+- path: feature-docs/stop-reason-coverage/SPEC.md
+  sha256: sha256:de28aa37091d214e5e7c3437400ced19120db90d20dd74d2b61a3e96dae295a2
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

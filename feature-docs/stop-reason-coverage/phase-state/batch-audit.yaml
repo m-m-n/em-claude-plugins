@@ -1,0 +1,94 @@
+schema_version: 1
+feature: stop-reason-coverage
+records:
+- question_id: requirement.coverage-structure
+  packet_id: create-spec-q0001
+  answered_at: '2026-09-24T09:43:35+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - catch_all_fallback
+  freeform: Codex 相談（run_codex_exec.sh readonly、1 ターン）で catch_all_fallback を推奨。オーケストレーターが選択肢に写像できると判断して採用。
+  normalized_answer: 'catch_all_fallback を採用。条件: (1) 新コード・新行キーはドットを含めない（例 unmapped_stop
+    / unmapped-terminating-stop）、意味は「原因不明」ではなく「既存行に該当しない終端停止」。(2) 既存行（stop-condition-N
+    を含む）と refusal-pattern の gate_fail_closed 行が常に優先し、catch-all は最後の補完。(3) 補完対象はバッチ実行を終了させる停止に限る（待機・正常終了・結果を出さない
+    64KiB 例外は含まない）。(4) detail に停止箇所と具体的原因を残し、resume_conditions 必須を維持。(5) 未掲載停止への適用と既存行優先をテストで検証。(6)
+    loop-develop 側の新値受理はスコープ外として残件化する。'
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation);
+    option chosen: catch_all_fallback; options not chosen: rows_with_owner_anchors
+    (anchor 付け忘れの停止が検査から漏れ網羅性問題が残る), hybrid_rows_anchors_and_catch_all (網羅保証は結局補完規則が担い、個別行+anchor
+    は今回の目的に過剰); key points: 現行の双方向テストは固定集合との一致検査で文書全体の停止を発見しない / catch-all なら今後の列挙漏れも規則で吸収
+    / owner 文書を変更せず理由コードの管理元を一つに保てる; codex_consulted: true (codex entry, 1 turn);
+    opus_escalation: not run'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:20:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation tests/test_codex_wrapper_fallback_removal_version_bump.py'
+  normalized_answer: 'not auto-added to tasks.task0004.files'
+  resolution_note: 'task_id: task0004; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; missing evidence part: identifier (no AC-n of task0004 plan or registered requirement id named); path and observable failure (test_em_workflow_manifest_and_entry_agree_on_the_current_version regresses) were given. Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:27:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation em-workflow/.claude-plugin/plugin.json'
+  normalized_answer: 'not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; declined path: em-workflow/.claude-plugin/plugin.json; path falls under workflow control path em-workflow/** (never auto-added); also no AC-n / requirement id named (cause given: plugin-version-guard hook denied commit). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:27:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation .claude-plugin/marketplace.json'
+  normalized_answer: 'not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; declined path: .claude-plugin/marketplace.json; missing evidence part: identifier (no AC-n of task0002 plan or registered requirement id named; cause given: plugin-version-guard hook denied commit). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:27:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation tests/test_codex_wrapper_fallback_removal_version_bump.py'
+  normalized_answer: 'not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; missing evidence part: identifier (no AC-n of task0002 plan or registered requirement id named). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:45:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation tests/test_batch_quiet_output_discipline.py'
+  normalized_answer: 'not auto-added to tasks.task0001.files'
+  resolution_note: 'task_id: task0001; declined path: tests/test_batch_quiet_output_discipline.py; missing evidence part: identifier (no AC-n of task0001 plan or registered requirement id named; cause given: pre-change coverage row count pin 12 -> 14). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:45:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation em-workflow/.claude-plugin/plugin.json'
+  normalized_answer: 'not auto-added to tasks.task0001.files'
+  resolution_note: 'task_id: task0001; declined path: em-workflow/.claude-plugin/plugin.json; path falls under workflow control path em-workflow/** (never auto-added); also no AC-n / requirement id named (cause given: plugin-version-guard hook denied commit). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:45:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation .claude-plugin/marketplace.json'
+  normalized_answer: 'not auto-added to tasks.task0001.files'
+  resolution_note: 'task_id: task0001; declined path: .claude-plugin/marketplace.json; missing evidence part: identifier (no AC-n of task0001 plan or registered requirement id named; cause given: plugin-version-guard hook denied commit). Surfaces as an ordinary deviation for the containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:45:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation tests/test_codex_wrapper_fallback_removal_version_bump.py'
+  normalized_answer: 'not auto-added to tasks.task0001.files'
+  resolution_note: 'task_id: task0001; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; missing evidence part: identifier (no AC-n of task0001 plan or registered requirement id named). Surfaces as an ordinary deviation for the containment check.'

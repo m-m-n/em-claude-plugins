@@ -56,6 +56,7 @@ PLUGIN_SPECS = {
         # again update this literal here, per this module's own convention
         # (see the class docstring below).
         # routeback-residual-connections: bumped to 0.2.1.
+        # stop-reason-coverage/task0004: bumped to the next patch value.
         "expected": "0.2.1",
     },
     "em-review": {
