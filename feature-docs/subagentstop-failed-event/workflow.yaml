@@ -242,7 +242,7 @@ tasks:
     - FR9
     - NFR2
     - NFR7
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/subagentstop-failed-event/task0003
 review:
