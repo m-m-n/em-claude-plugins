@@ -1,0 +1,72 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection check. The original line 36 Expected Result cell
+      ("Count reader sites per module-level constant; every constant has 0
+      (retired with its readers) or >= 2") omitted the reader-site
+      definition (code references outside the definition line; comments and
+      docstrings not counted) entirely and stated the criterion generically
+      rather than tied to the two named constants. Observed via Read before
+      editing.
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection check. The original line 36 contained both forbidden
+      phrases verbatim: "is left with fewer than two reader sites" and
+      "every constant has 0 (retired with its readers) or >= 2". Confirmed
+      via Read before editing; both phrases are absent from the row after
+      the rewrite.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection check. The original line 89 contained "every module-level
+      constant" verbatim ("Count the reader sites of every module-level
+      constant in that module..."). Confirmed via Read before editing;
+      phrase is absent after the rewrite.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Measures the pre-existing tests/test_recycled_task_id_consistency.py
+      module, not the VERIFICATION.md edit under this task. The criterion
+      already held before this task started: HOOK_FILENAMES is defined once
+      (line 303) and referenced at lines 1290, 1291, 1429 (3 reader sites);
+      JOURNAL_ONLY_HOOK_FILENAMES has no definition and no reference
+      anywhere in the module (grep found zero matches). The task plan
+      explicitly notes AC-4 holds at the base already and instructs
+      re-checking against the integrated module rather than expecting red.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Measures the pre-existing module docstring, not the VERIFICATION.md
+      edit. A case-insensitive grep for "reader" across the whole module
+      (tests/test_recycled_task_id_consistency.py) found zero matches
+      before this task started. The task plan explicitly notes AC-5 holds
+      at the base already; the module is never edited (NFR2).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Scope/byte-identity invariant checked via `git diff` against the
+      implement base and `wc -l`, not a unit test. It holds vacuously before
+      any edit exists (empty diff is trivially confined to lines 36/89), so
+      it cannot be observed red beforehand. Verified after the edit: `git
+      diff` shows exactly two changed lines (36 and 89), `wc -l` reports 105
+      both before and after, and `git status` shows only
+      feature-docs/recycled-task-id-carveout/VERIFICATION.md modified.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/suite-exit check, not a targeted unit test. The suite already
+      exited 0 at baseline (`python3 -m unittest discover -s tests`, 5654
+      tests, 0 failures) before this task's edit, so it was not observed
+      red. Re-run after the edit: still 5654 tests, 0 failures, exit 0.
