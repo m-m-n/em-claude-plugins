@@ -1,0 +1,21 @@
+schema_version: 1
+feature: pin-status-read-heuristic
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 90b1b36e6087c5480204072ce3f1a8eb9134d395
+last_input_digest: sha256:8ffa2bddc2f5931e4cb2961837b5f8bcc4680863a27c54552518d40ac64842f2
+active_request_id: cp-pin-status-read-heuristic-001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: cp-pin-status-read-heuristic-001
+  status: dispatched
+  input_digest: sha256:8ffa2bddc2f5931e4cb2961837b5f8bcc4680863a27c54552518d40ac64842f2
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
