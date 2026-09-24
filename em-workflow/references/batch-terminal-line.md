@@ -219,7 +219,26 @@ earlier run's `implement-second-failure` — and, for the `implement`
 step's `failed`, further restricted to the cases where `failed_kind`
 reads `decision`, or where the automatic-resume attempt count has reached
 its cap per `skills/develop/SKILL.md` (see the `step_needs_intervention`
-row above).
+row above). The one such collision: the batch second-failure abort's
+terminal status commit (Step I.2.c abort-phase terminal status commit)
+returns exit 4 on its first attempt and exit 4 again on its single
+exit-4 retry. That stop matches both `implement-second-failure` and
+`docs-commit-conflict`. The row whose commit failure directly caused the
+stop wins, and this stop binds to `docs_commit_conflict_aborted`, not to
+`implement_task_failed`. This stop ends the run: the run never reaches a
+Step B entry evaluation that reads the uncommitted `implement: failed`,
+so neither `implement-second-failure` nor `stop-condition-3` applies to
+that run. A first exit 4 followed by a successful retry instead commits
+the terminal status write, and that stop keeps `implement_task_failed`.
+In this collision's case, the terminal status write — the pair
+`implement: failed` / `failed_kind: decision` — exists in the
+integration worktree but stays uncommitted and never reaches the
+branch; this is distinct from "no status written". How that leftover is
+disposed of and handled by the next run is defined by the abort
+terminal-commit exception in implement-phase.md's Branch & Worktree
+Model. This resolution is confined to that one collision: the Step I.1
+baseline, Step I.2.a launch, Step I.2.b wake and Step I.3 completion
+exit-4 stops keep their binding to `docs_commit_conflict_aborted` alone.
 
 Exactly one documented `reason` code, `context_budget_reached`, has no
 stop point in the table above: it is reserved by the consumer and never
