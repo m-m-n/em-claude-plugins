@@ -17,6 +17,7 @@ packets:
       status: answered
 answers:
   requirement.ts13-scope:
+    question_id: requirement.ts13-scope
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T02:50:00+09:00'
     source: batch-codex-consultation
@@ -37,6 +38,7 @@ answers:
       Codex found _PIN_PATH also single-reader beyond the 8 listed, so B as proposed
       would not hold. codex_consulted: true; opus_escalation: false.'
   design-step.decision:
+    question_id: design-step.decision
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T02:50:00+09:00'
     source: batch-decision-table
