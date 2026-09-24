@@ -1,0 +1,21 @@
+schema_version: 1
+feature: stop-reason-coverage
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 9751eb29cc150f6bfba69a125af34101973d4669
+last_input_digest: sha256:29f2d61e07ac3a753f9857ccebe00d7b6f7fc977af83fec98295bc3fe45f3f80
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:29f2d61e07ac3a753f9857ccebe00d7b6f7fc977af83fec98295bc3fe45f3f80
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
