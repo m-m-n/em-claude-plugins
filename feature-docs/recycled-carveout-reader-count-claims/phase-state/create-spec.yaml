@@ -1,11 +1,11 @@
 schema_version: 1
 feature: recycled-carveout-reader-count-claims
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 1ad90ef144a1238feb3211233e086aac29695daa
-last_input_digest: sha256:3ed87a1499f3b1e39675fdcf2f91f9b8f4ea7d8050d5dc3cbd8be5cca1af549c
-active_request_id: null
+last_input_digest: sha256:836d2cfb5eaeb5cd18a753ea7bcfae68cb6caa8aaa5aeebb39a5ac0067e29a0d
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -50,6 +50,10 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:3ed87a1499f3b1e39675fdcf2f91f9b8f4ea7d8050d5dc3cbd8be5cca1af549c
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:836d2cfb5eaeb5cd18a753ea7bcfae68cb6caa8aaa5aeebb39a5ac0067e29a0d
   output_digest: null
 artifacts: []
 patches: []
