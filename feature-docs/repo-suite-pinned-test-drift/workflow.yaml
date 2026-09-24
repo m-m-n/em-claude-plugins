@@ -90,7 +90,7 @@ workflow:
   base_commit: cf57f36c053b974c09785369a859398062c70d71
   completed_at_commit: 6c9d0ad80fd90126e057caf54d323021002e4c15
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -190,8 +190,15 @@ tasks:
     status: merged
     branch: em-workflow/repo-suite-pinned-test-drift/task0005
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: argument-hint 期待値の追随
