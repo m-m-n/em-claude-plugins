@@ -186,7 +186,7 @@ tasks:
     - FR10
     - NFR1
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/repo-suite-pinned-test-drift/task0005
 review:
   status: pending
