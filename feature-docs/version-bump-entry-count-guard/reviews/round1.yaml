@@ -1,0 +1,40 @@
+round: 1
+executed_at: "2026-09-25T07:11:35+09:00"
+scope:
+  review_mode: diff
+  base_commit: 425c5da36e3d6c3cf38ff947bd83697b39ec36c4
+  head_commit: 7530b4d2d282474da3a15cf2118ebe8785adcb2a
+  changed_files:
+    - test-docs/recycled-task-id-contract/task0002.tests.yaml
+    - test-docs/version-bump-entry-count-guard/task0001.tests.yaml
+    - tests/test_recycled_task_id_contract_version_bump.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "ラウンド1（diff モード、cross_validation=false）。3 観点（comprehensive / security / spec）とも指摘 0 件。evaluator が SPEC.md の FR1〜FR5・NFR1〜NFR4・A-3 に照らして独自に確認し、変更したテストモジュールを実行して 11 件すべて成功した。reviewer_outputs にプロンプト注入の試みは無かった。観点ごとの確認結果: comprehensive=corroborated; security=corroborated; spec=corroborated。"
+  recommended_action: complete
+  action_rationale: "3 観点とも指摘 0 件で、evaluator の独自確認でも SPEC からの逸脱・欠陥は見つからなかった。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-version-bump-entry-count-guard-20260924T221121Z.md
