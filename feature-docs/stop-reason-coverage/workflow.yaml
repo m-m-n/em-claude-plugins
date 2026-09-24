@@ -137,7 +137,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/stop-reason-coverage/task0001
   task0002:
     title: Condition-based no-step rule and route-based precedence rule
     plan: tasks/task0002.md
@@ -159,7 +160,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/stop-reason-coverage/task0002
   task0003:
     title: Literal-ownership guards for the new reason code
     plan: tasks/task0003.md
@@ -174,7 +176,8 @@ tasks:
     - FR9
     - FR11
     - NFR1
-    status: pending
+    status: in_progress
+    branch: em-workflow/stop-reason-coverage/task0003
   task0004:
     title: em-workflow version bump to 0.2.1
     plan: tasks/task0004.md
@@ -191,7 +194,8 @@ tasks:
     - FR10
     - NFR1
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/stop-reason-coverage/task0004
 review:
   status: pending
   rounds_completed: 0
