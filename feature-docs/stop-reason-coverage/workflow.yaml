@@ -131,7 +131,8 @@ workflow:
     implement-phase.md unchanged since base. Version 0.2.1 in both manifests.
     No requirement is excluded.
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: e1c6072e978b9cdd7f71f1f356dd19dbbb434dd7
 tasks:
   task0001:
     title: Catch-all reason code, refusal-pattern row and fallback rule
