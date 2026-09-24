@@ -1,0 +1,139 @@
+task_id: task0002
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseAbortExceptionNamedAndScoped.test_names_the_exception
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseAbortExceptionNamedAndScoped.test_names_the_call_site
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseAbortExceptionNamedAndScoped.test_states_the_uncommitted_write_fact
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseAbortExceptionNamedAndScoped.test_scopes_to_the_never_carries_uncommitted_state_claim
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseAbortExceptionNamedAndScoped.test_points_to_develop_skill_step_a_for_the_discard
+    red_confirmed: true
+    red_reason: >-
+      Stashed the implementation edits (git stash), leaving the new test
+      module in place, and ran `python3 -m unittest
+      tests.test_abort_terminal_write_resume` against the pre-change files:
+      all five assertions in this class failed with `AssertionError: '...'
+      not found in "..."` against the Branch & Worktree Model section, since
+      the "abort terminal-commit exception" bullet did not exist yet. Popped
+      the stash to restore the implementation; re-run went green.
+  AC-2:
+    tests:
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseReDerivationAndBinding.test_re_derivation_names_committed_task_status
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseReDerivationAndBinding.test_re_derivation_names_retry_consumed_marker
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseReDerivationAndBinding.test_re_derivation_names_the_journal
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseReDerivationAndBinding.test_grants_no_additional_automatic_retry
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseReDerivationAndBinding.test_successful_commit_binds_to_implement_task_failed
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-run cycle as AC-1: all five assertions failed
+      (`AssertionError: 'committed task status' not found in ...`, and
+      similarly for the retry-consumed marker, the journal, the
+      no-additional-retry statement, and the implement-second-failure
+      binding) against the pre-change Branch & Worktree Model section.
+  AC-3:
+    tests:
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseDetailAndResumeConditions.test_detail_names_call_site_tasks_and_uncommitted_state
+      - tests.test_abort_terminal_write_resume.TestImplementPhaseDetailAndResumeConditions.test_resume_conditions_states_discard_and_re_derivation
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-run cycle: both assertions failed with
+      AssertionError (the `detail` / `resume_conditions` sentences did not
+      exist in the pre-change section).
+  AC-4:
+    tests:
+      - tests.test_abort_terminal_write_resume.TestSkillResumeRefresh.test_contains_the_refresh_command
+      - tests.test_abort_terminal_write_resume.TestSkillResumeRefresh.test_refresh_precedes_step_a5_handoff
+      - tests.test_abort_terminal_write_resume.TestSkillResumeRefresh.test_states_purpose_is_discarding_the_exception_leftover
+      - tests.test_abort_terminal_write_resume.TestSkillResumeRefresh.test_states_runs_for_batch_and_interactive_alike
+      - tests.test_abort_terminal_write_resume.TestSkillResumeRefresh.test_states_unconditional_not_gated_on_detection
+      - tests.test_abort_terminal_write_resume.TestSkillResumeRefresh.test_states_runs_before_step_b_reads_workflow_yaml
+      - tests.test_abort_terminal_write_resume.TestSkillResumeRefresh.test_states_discards_tracked_only_untracked_remain
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-run cycle: six assertions failed with AssertionError
+      (the refresh command and its accompanying statements were absent from
+      the pre-change resume branch) and
+      test_refresh_precedes_step_a5_handoff raised a ValueError from
+      `str.index` (the refresh phrase was not found at all, so its position
+      could not even be computed) -- both outcomes confirm the criterion did
+      not hold before the implementation.
+  AC-5:
+    tests:
+      - tests.test_abort_terminal_write_resume.TestCommitDocsRecoveryContractQualified.test_unqualified_justification_no_longer_present
+      - tests.test_abort_terminal_write_resume.TestCommitDocsRecoveryContractQualified.test_names_the_exception_and_defers_to_implement_phase
+      - tests.test_abort_terminal_write_resume.TestCommitDocsRecoveryContractQualified.test_fr9_pinned_phrases_intact
+      - tests.test_abort_terminal_write_resume.TestCommitDocsRecoveryContractQualified.test_carve_out_sentence_is_byte_identical
+      - tests.test_abort_terminal_write_resume.TestCommitDocsRecoveryContractQualified.test_recapture_then_refresh_phrasing_still_pinned
+    red_confirmed: true
+    red_reason: >-
+      test_unqualified_justification_no_longer_present and
+      test_names_the_exception_and_defers_to_implement_phase failed against
+      the pre-change commit-docs.sh (the old unqualified NFR2 justification
+      was present verbatim and the exception name was absent); confirmed via
+      the same stash-and-run cycle. test_fr9_pinned_phrases_intact,
+      test_carve_out_sentence_is_byte_identical and
+      test_recapture_then_refresh_phrasing_still_pinned were already true
+      pre-change (they pin pre-existing, untouched text) -- included here as
+      regression guards for this task's own edit, not as red-then-green
+      proofs; see AC-6 note below for why that is not a fabricated
+      red_confirmed.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      This criterion is "the existing byte-identity / exit-4 リカバリ pins
+      stay unchanged" -- a negative claim about regions this task's diff
+      never touches (tests/test_tip_capture_idiom_uniformity.py and other
+      existing modules own these pins per IMPLEMENTATION.md's "no task
+      modifies an existing test module" convention). Those pins were already
+      green before this task and remain green after; there is no
+      implementation-introduced red-to-green transition to observe for this
+      criterion specifically, so red_confirmed is honestly false rather than
+      fabricated. Verified by running
+      tests/test_tip_capture_idiom_uniformity.py (and the full suite) after
+      the implementation: all its assertions pass.
+  AC-7:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+      - tests.test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+      - tests.test_routeback_residual_connections_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: >-
+      After bumping both manifests to 0.2.2 (and before updating these two
+      pre-existing test modules' literal pins), the full suite run showed
+      `AssertionError: '0.2.2' != '0.2.1'` for all three listed
+      test_*_version_bump.py assertions -- these two modules pin the exact
+      "current" version literal per their own documented maintenance
+      convention (test_codex_wrapper_fallback_removal_version_bump.py's
+      PLUGIN_SPECS comment: "Later features that bump a plugin update it
+      here rather than leaving a rotting literal behind"). Advanced the
+      literal from 0.2.1 to 0.2.2 in both files (tdd-testing's carve-out:
+      "unless the task plan EXPLICITLY changes that behavior -- then update
+      the test to assert the new specified behavior" -- FR10/D3 explicitly
+      mandate this exact bump); re-run went green. The
+      routeback-residual-connections module's baseline-matcher tests never
+      pinned a literal and stayed green throughout, included here as
+      corroborating (not red-then-green) evidence that both manifests still
+      report 0.2.2 in lockstep.
