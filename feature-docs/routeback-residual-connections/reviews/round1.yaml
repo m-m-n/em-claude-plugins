@@ -1,0 +1,64 @@
+round: 1
+executed_at: "2026-09-24T10:42:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 92c8d604a97fd2740a5649c313b04477e75115c9
+  head_commit: 801b7f5423b1eb34881f1386412efae8d1bf709d
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/routeback-residual-connections/task0001.tests.yaml
+    - tests/test_routeback_reset_scope_consistency.py
+    - tests/test_routeback_residual_connections_version_bump.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: aef23290e7d97475
+    severity: high
+    category: comprehensive
+    file: tests/test_codex_wrapper_fallback_removal_version_bump.py
+    line: 58
+    title: "em-workflow を 0.2.1 に上げたことで、既存の版数固定テストが新たに失敗する"
+    description: "PLUGIN_SPECS[\"em-workflow\"][\"expected\"] が \"0.2.0\" のまま残っている。TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version（163-164 行目）は、この値との完全一致を plugin.json と marketplace.json の両方に求めるため、両方を 0.2.1 に上げたこの変更で失敗する。関連 5 モジュール（404 テスト）の実行で失敗はこの 1 件のみ。task0001.tests.yaml の final_failures にも baseline_failures に無い新規失敗として記録されている。このモジュールは 46-49 行目と 54-57 行目で、後から em-workflow の版を上げる機能がこのリテラルを更新すると自ら記述しており、NFR2 の編集禁止 2 モジュールにも入っていない。結果として SPEC の AC-8 / TS-6（unittest discover が通ること）を満たさない。"
+    suggestion: "58 行目の expected を \"0.2.1\" に更新し、54-57 行目のコメントに routeback-residual-connections で更新した旨を書き足す。完全一致で固定する形そのものは変えない。このファイルは宣言済み変更集合の外にあるため、逸脱として記録する。"
+    sources: [codex:comprehensive]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "auto-fix candidate gate excluded (file outside changed_files); batch auto-rework round 1"
+evaluation:
+  round_summary: "high 1 件を採用（em-workflow 0.2.1 化で tests/test_codex_wrapper_fallback_removal_version_bump.py の完全一致版数テストが新規失敗。404 件中 1 件失敗を実行で確認）。architecture#0 の marketplace.json:27 は同根の重複として除外。architecture#0 の implement-phase.md:915（journal 未記録のマージ済みタスクを route-back がリセットしブランチ削除する）は、今回の差分以前からの残余で SPEC FR5 / A-1 / NFR1 が「挙動は変えず残余を明記」を選んでいること、update-ref 済みコミットは統合ブランチから辿れ branch -D でコミットは失われないこと、FR3 の和集合拡大でこの残余への露出が増えないことから誤検知として除外。security = corroborated、spec は AC-8 / TS-6 未達のため全 AC 充足の主張は裏付けられない。プロンプトインジェクションの試みは無し。"
+  recommended_action: "auto_fix"
+  action_rationale: "残る high は既存テストモジュールのリテラル 1 行の機械的修正で直る。ただし修正対象は宣言済み変更集合の外にあるため、受け入れ判断はオーケストレーターに委ねる。"
+dismissed_sites:
+  - file: .claude-plugin/marketplace.json
+    line: 27
+    run_id: "architecture#0"
+    reason: "duplicate of another finding"
+  - file: em-workflow/references/implement-phase.md
+    line: 915
+    run_id: "architecture#0"
+    reason: "false positive"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 1
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-routeback-residual-connections-20260924T013935Z.md
