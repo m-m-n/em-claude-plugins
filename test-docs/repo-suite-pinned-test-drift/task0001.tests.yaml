@@ -1,0 +1,105 @@
+task_id: task0001
+baseline_failures:
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+final_failures:
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a test-observable outcome; verified by inspecting `git diff` of
+      em-workflow/skills/develop/SKILL.md, which shows exactly one changed
+      line (line 106, the --pr item), with "AskUserQuestion を出さない"
+      replaced by "質問を出さない" and every other line byte-identical.
+  AC-2:
+    tests:
+      - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: AssertionError: Lists differ:
+      ['em-workflow/skills/develop/SKILL.md'] != [] : interactive-question
+      budget exceeded in: em-workflow/skills/develop/SKILL.md (8 occurrences
+      against budget 7). Re-confirmed by temporarily stashing the
+      implementation and re-running this test in isolation, then restoring
+      the stash. tests/test_muse_consent_no_new_questions.py, including
+      BASELINE_COUNTS, was not modified.
+  AC-3:
+    tests:
+      - test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_askuserquestion_and_three_way_wording_present
+    red_confirmed: false
+    red_reason: >-
+      Non-regression criterion: this test was already green before the
+      change (Step C's AskUserQuestion at line 910 is untouched) and stays
+      green after. There is no behavior to drive red-to-green for; verified
+      by running the test both before and after the edit.
+  AC-4:
+    tests:
+      - test_plugin_version_parity (module; floor/agreement checks, does not pin the literal current version per NFR2)
+    red_confirmed: false
+    red_reason: >-
+      test_plugin_version_parity.py uses a historical floor (0.1.50) and
+      agreement/comparison logic, not a literal-current-version pin, so it
+      was already green before this task's edit and stays green after (18
+      tests, OK both times). The literal values (em-workflow 0.2.4 in both
+      registries, em-review 0.5.13 unchanged in both) were verified by
+      direct inspection of em-workflow/.claude-plugin/plugin.json and
+      .claude-plugin/marketplace.json, consistent with NFR2 (no test may
+      pin the current version literal).
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by inspecting `git diff` of both manifest files: each diff
+      is a single-line change of the version value only (0.2.3 -> 0.2.4),
+      all other keys, key order, whitespace and the description field
+      byte-identical.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by `git log`: the SKILL.md phrase change and both version
+      edits are committed together in a single commit
+      (task0001: reword --pr AskUserQuestion phrase and bump em-workflow to 0.2.4).
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Full-suite run before the edit: 5534 tests, 16 failures (listed under
+      baseline_failures). Full-suite run after the edit: 5534 tests, 15
+      failures (listed under final_failures), an exact subset of the
+      baseline with only
+      test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+      removed. No test outside this task's file set pins the literal 0.2.3
+      or the replaced phrase "AskUserQuestion を出さない" (confirmed by
+      grepping tests/ for both strings, no matches), so there is nothing to
+      report as a plan deviation.
