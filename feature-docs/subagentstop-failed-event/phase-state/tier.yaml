@@ -1,0 +1,97 @@
+schema_version: 1
+feature: subagentstop-failed-event
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.01
+    '1': 0.47
+    '2': 0.52
+    '3': 0.0
+  expectation_clear: 0.92
+  confidence: 0.51
+  observed_at: '2026-09-24T22:58:09+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.0
+    '1': 0.0
+    '2': 0.74
+    '3': 0.26
+  expectation_clear: 0.85
+  confidence: 0.74
+  observed_at: '2026-09-24T22:58:10+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/queue_failure_net.py
+  - em-workflow/references/implement-phase.md
+  - tests/test_queue_failure_net.py
+  - tests/test_queue_taskstop_net.py
+  changed_lines_approx: 200
+  new_functions_needed: 7
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/hooks/queue_launch_guard.py
+  - em-workflow/hooks/queue_taskstop_net.py
+  - em-workflow/hooks/hooks.json
+  - em-workflow/scripts/recover-orphaned-task.py
+  - em-workflow/scripts/journal-append-failed.py
+  work_still_required: true
+  rationale: 'main の HEAD は fb8b73667a33e272fcf6f004874bc6392ba13380 だよ。ファイルの作成・変更・削除はしていないよ。通常経路と復旧経路は実装済みだけど、同時実行時の重複と識別処理の不一致が残っているため、全完了とは判定できないよ。
+
+
+    完了条件①「未マージ終了で failed が1行」は通常入力なら満たすよ。queue_failure_net.py:225 は対象タスクの最終イベントが merged/failed
+    以外なら追記するよ。tests/test_queue_failure_net.py:134 の test_launched_last_event_via_agent_type_appends_failed
+    があるよ。ただし、通知の未到達や識別失敗まで保証していないよ。
+
+
+    完了条件②「追記後に同じタスクを再起動」は満たすよ。queue_launch_guard.py:224 は launched/merged だけを拒否し、:235
+    で再起動の launched を追記するよ。tests/test_queue_launch_guard.py:146 の test_launch_allowed_after_failed_retry、tests/test_queue_taskstop_net.py:639
+    の test_launch_guard_allows_retry_after_taskstop_recorded_failure があるよ。今回も実コードをメモリ上の入出力で動かし、launched
+    → failed → launched と拒否出力なしを確認したよ。
+
+
+    完了条件③「両フック合わせて failed が最大1行」は同時実行では未達だよ。queue_failure_net.py:225 の読み取りはロック外で、:191
+    のロック内では再確認せず :193 で追記するよ。対して queue_taskstop_net.py:384 は読み取りと追記を同じロック内で行うよ。SubagentStop
+    の読み取り後、追記前に TaskStop を挟む順序を実コードとメモリ上の模擬入出力で再現すると、launched → failed → failed になったよ。これは欠落した元事例の原因とは別の不具合だよ。
+
+
+    完了条件④「再現テスト」は部分的に満たすよ。tests/test_queue_taskstop_net.py:1227 の test_taskstop_then_subagentstop_leaves_one_failed_line
+    と :1249 の逆順テストは逐次実行だけだよ。tests/test_queue_failure_net.py:527 の並行テストも異なるタスクを使っていて、同一タスクで両フックが競合する場合を検証していないよ。実際のバックグラウンド終了通知の未到達を再現するテストも確認できなかったよ。
+
+
+    完了条件⑤「全 unittest 成功」は確認できていないよ。全件実行は一時ファイルを作るため今回の条件では行っていないよ。読み取りだけの test_stale_launched_doc_contract.py
+    は python3 -B で実行し、28件成功したよ。直近の保存結果は commit 26d0f57 と feature-docs/abort-docs-commit-precedence/workflow.yaml:147
+    にあり、5509件中9件の既存失敗が記録されているよ。「新規失敗なし」は全件成功とは異なるよ。
+
+
+    欠落原因の切り分けでは、hooks.json:105 の SubagentStop 登録に matcher はなく、現在の設定で matcher 不一致を原因とする根拠はないよ。Task/Agent
+    の名称差も hooks.json:62 と :74 で対応済みで、修正 commit は 3ffcef4 だよ。queue_failure_net.py:204
+    は非空の agent_type が em-workflow:implementer と異なると終了するよ。フィールド欠落時は処理を続けるけど、:120 でプロンプトか
+    agent_transcript_path が必要で、:98 は最初の user メッセージだけを読むよ。メモリ上の確認では、agent_type=implementer、プロンプト／子エージェントの記録パスなし、割り当てが2番目の
+    user メッセージにある入力はいずれも launched のままだったよ。:239 は例外も黙って処理するため、当時のフック実行記録と入力なしには未発火と識別失敗を区別できないよ。
+
+
+    merged 判定自体は queue_failure_net.py:161 でタスクを絞り、ファイル順の最終イベントを使うので、提示された task0001/2
+    の merged が正しく識別された task0003 を抑止することはないよ。ただし識別には具体的な不一致があるよ。queue_launch_guard.py:74
+    は割り当て見出しより後を解析する一方、queue_failure_net.py:136 は全文を検索するよ。見出し前に task0001 の例、見出し後に
+    task0003 の割り当てを置くと、前者は task0003、後者は task0001 を返すことを確認したよ。この場合、別タスクの merged を読んで追記を省く可能性があるけど、元事例がこの入力だった証拠はないよ。
+
+
+    バックグラウンドだから必ず未発火とも断定できないよ。feature-docs/taskstop-journal-failed-event/IMPLEMENTATION.md:16
+    の過去の比較実験では自然終了で failed が記録され、TaskStop 停止では記録されなかったよ。現在は後者を別フックで補っているよ。公式資料でも SubagentStop
+    は応答完了時のイベントで、完了済みエージェントは SendMessage で再開できるため、「再開可能」だけでは未発火の証拠にならないよ：[フック仕様](https://code.claude.com/docs/en/hooks#subagentstop)、[再開の仕様](https://code.claude.com/docs/en/sub-agents#resume-subagents)
+
+
+    依頼文の「抜ける手段がない」は現在の main にはそのまま当てはまらないよ。commit beea1f2 で同一セッションの stale-launched
+    復旧経路が追加され、implement-phase.md:616 と :1165 に記載されているよ。recover-orphaned-task.py:684
+    は対象実行の終了証拠、:690 は同じエージェントの not-running 結果を要求し、journal-append-failed.py:195 はロック内で起動の同一性を確認して追記するよ。tests/test_stale_launched_recovery_chain.py:237
+    の test_ac1_all_evidence_proving_reports_recovered_and_invokes_stub_once、tests/test_stale_launched_retry_reachability.py:130
+    の test_allows_relaunch_and_appends_one_launched_line もあるよ。ただし、これは条件付きの復旧で、SubagentStop
+    自体の発火を保証する修正ではないよ。
+
+
+    残作業は、当時の実行記録・入力による原因確認、SubagentStop 側の読み取りと追記の一体化、割り当て解析の統一、同一タスクの競合と識別差の回帰テスト、説明の更新を見込んでいるよ。約200行・新規関数7個はテスト関数を含む概算で、未診断の既存9失敗の修正量は含めていないよ。spillover_modules
+    は影響確認先で、すべての変更が必要と判断したわけではないよ'
+decided_at: '2026-09-24T22:58:25+09:00'
