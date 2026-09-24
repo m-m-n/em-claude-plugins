@@ -196,7 +196,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/abort-docs-commit-precedence/task0002
 review:
   status: pending
