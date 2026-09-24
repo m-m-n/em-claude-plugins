@@ -130,7 +130,7 @@ tasks:
     - FR3
     - NFR1
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/repo-suite-pinned-test-drift/task0002
   task0003:
     title: em-workflow version リテラル固定の撤去（abort-terminal-commit-precedence / stop-reason-coverage）
