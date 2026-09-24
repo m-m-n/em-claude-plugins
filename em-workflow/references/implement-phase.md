@@ -80,6 +80,27 @@ document is written; this phase never creates them itself.
   develop run advances this ref; the route-back call site's own
   stop-with-report terminal (Step I.2.c below) covers the case where that
   assumption fails and an unexpected non-zero exit occurs there anyway.
+- **abort terminal-commit exception**: when the batch second-failure
+  abort's Step I.2.c abort-phase terminal status commit hits a second exit
+  4, the re-applied terminal status write (`implement: failed`, with its
+  accompanying kind field valued `decision`) stays uncommitted in the
+  integration worktree and is not on the branch. This is the one
+  exception to the claim above that the integration worktree never
+  carries uncommitted state across turns — it covers exactly this stop;
+  no other exit-4 call site leaves uncommitted state. The leftover is
+  discarded by the resume-entry refresh in `skills/develop/SKILL.md`
+  Step A — cited here, not restated. After that discard, the resumed
+  implement phase re-derives the abort only from committed facts: the
+  committed task status, the retry-consumed marker in `tasks.{T}.notes`,
+  and the journal (named above). It grants no additional automatic retry.
+  It re-applies and commits the terminal status write; when that commit
+  succeeds, the stop follows the existing `implement-second-failure`
+  binding (`references/batch-terminal-line.md`'s Precedence rule — cited
+  here, not restated). For this stop: `detail` names the Step I.2.c
+  abort-phase terminal status commit, the failing task(s), and that the
+  terminal status write is uncommitted; `resume_conditions` states that
+  the next run discards the leftover write at develop's resume entry and
+  re-derives the abort from committed facts.
 - Every workflow artifact — `feature-docs/{feature}/` (REQUIREMENTS.md,
   SPEC.md, workflow.yaml, IMPLEMENTATION.md, VERIFICATION.md, tasks/,
   reviews/, retrospect.yaml), `test/README.md`, `design-system/` — is written
