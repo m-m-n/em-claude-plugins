@@ -150,8 +150,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/exemption-registry-section-scope/task0001
+    merge_commit: 4352a73e63a6e66287f66c42e73fcb6957f00b10
 review:
   status: pending
   rounds_completed: 0
