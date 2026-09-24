@@ -1,0 +1,242 @@
+schema_version: 1
+feature: pin-status-read-heuristic
+created: '2026-09-25'
+base_branch: main
+goal: '# em-workflow: hook 分類 pin の観測規則が識別子名ヒューリスティックに依存し、命名次第で drift を見逃す
+
+
+  Notion タスク: https://www.notion.so/3c03509ec8ee8122937ad98e214f0d74 （種別: バグ）
+
+
+  ## 現象（必須）
+
+  `tests/test_hook_classification_pin.py` の `reads_per_task_status()` が、hook が `tasks.{T}.status` を読むかどうかを識別子名のヒューリスティックで判定している。判定条件は「docstring
+  除去後の実行コードに `workflow.yaml` が現れる」AND「`_TASK_STATUS_NAME_RE`（`task[a-z_]*status|status[a-z_]*task`）に一致する名前の関数が定義され、かつ実際に呼ばれている」。
+
+  このため、いずれかの queue hook が `tasks.{T}.status` を読み始めても、そのヘルパ名が "task" と "status" を同一識別子内に含まなければ observed
+  が does-not-read のままになり、分類テーブルと一致してしまって pin がグリーンで通る。逆に既存の `task_statuses_from_workflow` を `statuses_from_workflow`
+  へ改名しただけでも偽の赤が出る。
+
+
+  ## 再現手順（必須）
+
+  1. `em-workflow/hooks/queue_launch_guard.py` に、workflow.yaml を読んで per-task の status を取り出す処理を追加する。ヘルパ名は
+  `pending_from_workflow` のように "task" と "status" が同一識別子に共起しない名前にする。
+
+  2. `em-workflow/references/implement-phase.md` の hook classification table は `queue_launch_guard.py`
+  を `does not read` のままにしておく。
+
+  3. `python3 -m unittest discover -s tests` を実行する。
+
+  4. pin テスト（`TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row`）が通ってしまう。
+
+
+  ## 期待する挙動（必須）
+
+  識別子名に依存せず、実際に per-task status を読んでいるかどうかで判定する。ドキュメント側の分類と実装が食い違った時点で pin が落ちる。
+
+
+  ## 完了の定義（必須）
+
+  - [ ] 再現手順で pin テストが落ちる
+
+  - [ ] 既存 5 ファイル（queue_stop_guard / queue_launch_guard / queue_failure_net / queue_taskstop_net / bash_guard）の観測結果が現状と変わらない
+
+  - [ ] 「status 読み出しを追加したがヘルパ名が規則に合わない合成ソース」に対して観測が True になることを固定するテストがある
+
+
+  ## 該当箇所（任意）
+
+  `tests/test_hook_classification_pin.py` の `reads_per_task_status()` と `_TASK_STATUS_NAME_RE`
+
+
+  ## 実害・発生条件（任意）
+
+  この pin は「ドキュメントの分類ルールと hook 実装の対応を機械的に固定する」ことが唯一の存在理由なので、検出漏れがあると設計不変量が再び誰にも守られない状態に戻る。レビュアーからは、docstring
+  除去後の実行コードに `workflow.yaml` と `status` の両方が出現する条件への差し替えが提案されている（現行 5 ファイルすべてで同じ正答を出しつつ、ヘルパ名に依存しない）。
+
+  由来: PR https://github.com/m-m-n/em-claude-plugins/pull/16 のレビュー finding `8a1f0c4d2e6b7935`（comprehensive、medium、confidence
+  65）。medium のため auto-fix ゲート（critical/high）に該当せず deferred とした。
+
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote へ push し、base_branch に対して gh pr create で PR を作成する。integration ブランチはローカルにも
+  remote にも残す（base_branch への自動マージはしない）。
+
+  - 不明点は Codex に相談し、比較して良いと判断した選択肢を採る。
+
+  - その議論内容を Notion に記録する。
+
+  '
+parent_branch: em-workflow/pin-status-read-heuristic/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.12
+      '1': 0.79
+      '2': 0.09
+      '3': 0.0
+    expectation_clear: 0.91
+    confidence: 0.79
+    observed_at: '2026-09-25T02:24:56+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.01
+      '1': 0.78
+      '2': 0.21
+      '3': 0.0
+    expectation_clear: 0.88
+    confidence: 0.78
+    observed_at: '2026-09-25T02:24:56+09:00'
+  at: '2026-09-25T02:26:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 8e5a3b8ac69701e1ba6613950ca4e9738fda3231
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: テストモジュール内の判定関数とテストの修正だけで、UI も新しいモジュール構成も無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 観測規則を識別子名に依存しない条件へ差し替える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 名前ヒューリスティックの削除
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 既存の前提条件と docstring 除去を維持する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: ヘルパ名が旧規則に合わない status 読み出しの回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 再現手順が pin を落とすことのテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 改名で偽の赤が出ないことのテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 大文字だけの STATUS は数えないことのテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 呼ばれない status 読み出しヘルパも True になることのテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: 説明文の更新と既知の限界の明記
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: テストコードは標準ライブラリのみを import する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: em-workflow/hooks/ 配下を書き換えず、合成ソースは tempfile の一時ファイルに限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 観測規則は 1 つだけで hook ごとの特別扱いなし、pin テストは 1 件のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 変更は repo ルートの tests/ 配下に限り、version は上げない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

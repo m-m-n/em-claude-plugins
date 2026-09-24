@@ -1,7 +1,7 @@
 schema_version: 1
 feature: pin-status-read-heuristic
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: ac2fc1ba8a9146fd0db22874c59830899adb2f2d
 last_input_digest: sha256:74bf4cb66c080965c5c2e241f399a8ba041cb1c4175375910a82c32400fadf2f
