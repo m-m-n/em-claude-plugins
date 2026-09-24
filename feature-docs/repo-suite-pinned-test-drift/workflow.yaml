@@ -90,7 +90,8 @@ workflow:
   base_commit: cf57f36c053b974c09785369a859398062c70d71
   completed_at_commit: 6c9d0ad80fd90126e057caf54d323021002e4c15
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 3ce6a963e367ea7d36c24cc64baf0c608a80d3d2
 - id: verify
   status: pending
 - id: retrospect
@@ -190,8 +191,14 @@ tasks:
     status: merged
     branch: em-workflow/repo-suite-pinned-test-drift/task0005
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
