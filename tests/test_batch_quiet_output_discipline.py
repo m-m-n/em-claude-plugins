@@ -774,11 +774,14 @@ class TestExceptions(unittest.TestCase):
 
     def test_stop_point_coverage_table_has_twelve_keys(self):
         """Non-vacuity for the coverage read: the contract's stop-point
-        coverage table extracts to twelve keys (task-tier-reduction/task0004
-        adds `no-work-required`), matching the real document -- proves the
-        set-level rule below actually ranges over all twelve, per Test
-        Notes."""
-        self.assertEqual(len(self.stop_point_keys), 12)
+        coverage table extracts to fourteen keys (task-tier-reduction/
+        task0004 adds `no-work-required`; stop-reason-coverage/task0001
+        adds `command-refusal` and `unmapped-terminating-stop` -- a
+        surprise pin outside that task's own expected_files, minimally
+        synced per IMPLEMENTATION.md's Risk Assessment), matching the real
+        document -- proves the set-level rule below actually ranges over
+        all fourteen, per Test Notes."""
+        self.assertEqual(len(self.stop_point_keys), 14)
 
     def test_stop_abort_exception_is_set_level_rule(self):
         _assert_stop_abort_exception_is_set_level(
@@ -877,8 +880,12 @@ class TestContractDocumentUnchangedExceptOneSentence(unittest.TestCase):
 
     def test_stop_point_table_row_count_unchanged(self):
         # task-tier-reduction/task0004 adds one row (`no-work-required`).
+        # stop-reason-coverage/task0001 adds two more (`command-refusal`,
+        # `unmapped-terminating-stop`) -- a surprise pin outside that
+        # task's own expected_files, minimally synced per
+        # IMPLEMENTATION.md's Risk Assessment.
         rows = _table_rows(self.sections["Stop point coverage"])
-        self.assertEqual(len(rows), 12)
+        self.assertEqual(len(rows), 14)
 
     def test_marker_prefix_literal_absent(self):
         self.assertNotIn(MARKER_PREFIX, self.text)
