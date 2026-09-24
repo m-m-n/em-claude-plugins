@@ -165,7 +165,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/abort-docs-commit-precedence/task0001
   task0002:
     title: 'Uncommitted terminal write: exception, resume discard and re-derivation'
     plan: tasks/task0002.md
@@ -195,7 +196,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/abort-docs-commit-precedence/task0002
 review:
   status: pending
   rounds_completed: 0
