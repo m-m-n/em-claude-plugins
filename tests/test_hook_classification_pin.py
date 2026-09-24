@@ -107,7 +107,10 @@ def parse_classification_table(text=None):
     Raises `ClassificationTableError` on a missing anchor, a duplicated
     anchor (the table contract requires it be unique), a missing table
     immediately after it, a malformed row (not exactly two pipe-delimited
-    columns), or an unrecognized classification value.
+    columns), or an unrecognized classification value. `\\|` escapes are
+    not interpreted when a row is split into columns; a malformed row
+    whose text contains `\\|` raises `ClassificationTableError` with a
+    message noting that the escape is not supported by this parser.
 
     Does NOT check that each hook path resolves to an existing file -- that
     precondition belongs to `reads_per_task_status` (Design point 2), so a
@@ -162,10 +165,15 @@ def parse_classification_table(text=None):
     for row_line in row_lines:
         cells = [cell.strip() for cell in row_line.strip("|").split("|")]
         if len(cells) != 2:
-            raise ClassificationTableError(
+            message = (
                 f"malformed classification table row (expected exactly 2 "
                 f"columns): {row_line!r}"
             )
+            if "\\|" in row_line:
+                message += (
+                    "; `\\|` escapes are not supported by this parser"
+                )
+            raise ClassificationTableError(message)
         hook_cell, classification_cell = cells
         hook_path = hook_cell.strip("`").strip()
         classification = classification_cell.strip()
@@ -376,6 +384,82 @@ class TestParseClassificationTableFailureModes(unittest.TestCase):
         )
         with self.assertRaises(ClassificationTableError):
             parse_classification_table(text)
+
+    def _assert_unsupported_notice_present(self, message, row_line):
+        # Pitfall (task0001 Test Notes): repr of a row line holding one
+        # backslash shows that backslash doubled, and the doubled form
+        # still contains the backslash + pipe substring, so a whole-message
+        # substring check for `\|` would pass even without the notice.
+        # Strip the embedded row repr first, so the check below can only
+        # pass because the notice itself carries the literal.
+        remainder = message.replace(repr(row_line), "", 1)
+        self.assertIn("not supported", remainder)
+        self.assertIn("\\|", remainder)
+
+    def _assert_no_unsupported_notice(self, message):
+        self.assertNotIn("not supported", message)
+
+    def test_escaped_pipe_in_hook_cell_raises_with_unsupported_notice(self):
+        # AC-1: a row whose HOOK cell holds a `\|` sequence splits into more
+        # than two cells (the parser does not interpret the escape), so it
+        # still raises -- but now with the unsupported-escape notice.
+        hook_cell = r"em-workflow/hooks/queue\|stop_guard.py"
+        row_line = f"| `{hook_cell}` | {READS_STATUS} |"
+        text = (
+            TABLE_ANCHOR + " caption.\n\n"
+            "| Hook | Classification |\n"
+            "|---|---|\n"
+            f"{row_line}\n"
+        )
+        with self.assertRaises(ClassificationTableError) as cm:
+            parse_classification_table(text)
+        message = str(cm.exception)
+        self._assert_unsupported_notice_present(message, row_line)
+        # AC-3: existing content (two-column expectation, offending row
+        # repr) is still present.
+        self.assertIn("expected exactly 2", message)
+        self.assertIn(repr(row_line), message)
+
+    def test_escaped_pipe_in_classification_cell_raises_with_unsupported_notice(
+        self,
+    ):
+        # AC-2: the reproduction value -- an escaped pipe inside the
+        # CLASSIFICATION cell -- must raise instead of the row being
+        # silently dropped, with the same unsupported-escape notice.
+        classification_cell = r"reads `tasks.{T}.status` \| `journal`"
+        row_line = (
+            "| `em-workflow/hooks/queue_stop_guard.py` | "
+            f"{classification_cell} |"
+        )
+        text = (
+            TABLE_ANCHOR + " caption.\n\n"
+            "| Hook | Classification |\n"
+            "|---|---|\n"
+            f"{row_line}\n"
+        )
+        with self.assertRaises(ClassificationTableError) as cm:
+            parse_classification_table(text)
+        message = str(cm.exception)
+        self._assert_unsupported_notice_present(message, row_line)
+        # AC-3: existing content (two-column expectation, offending row
+        # repr) is still present.
+        self.assertIn("expected exactly 2", message)
+        self.assertIn(repr(row_line), message)
+
+    def test_row_without_escaped_pipe_wrong_column_count_raises_without_notice(
+        self,
+    ):
+        # AC-4: a malformed row with no `\|` anywhere keeps the existing
+        # message, unchanged -- no unsupported-escape notice.
+        text = (
+            TABLE_ANCHOR + " caption.\n\n"
+            "| Hook | Classification |\n"
+            "|---|---|\n"
+            "| only-one-column |\n"
+        )
+        with self.assertRaises(ClassificationTableError) as cm:
+            parse_classification_table(text)
+        self._assert_no_unsupported_notice(str(cm.exception))
 
     def test_well_formed_table_parses_to_the_expected_row(self):
         # Non-vacuity guard for the failure-mode tests above: proves a
