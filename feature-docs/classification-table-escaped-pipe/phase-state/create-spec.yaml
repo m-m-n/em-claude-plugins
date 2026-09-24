@@ -1,12 +1,22 @@
 schema_version: 1
 feature: classification-table-escaped-pipe
 phase: create-spec
-status: in_progress
+status: dispatching
 generation: 1
 base_revision: 6a959092eec021bbc22f7b44da3b5455f55b624a
 last_input_digest: sha256:bc50f4f7dc3046d7ea1f506fe336721f121ed48c249ea4cd0c54bb000cb28964
 active_request_id: create-spec-run-0002
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-25T06:40:49+09:00'
+    questions:
+    - question_id: create-spec.expected-behavior-option
+      status: answered
+    - question_id: create-spec.sibling-parser-scope
+      status: answered
+    - question_id: create-spec.trailing-escaped-pipe
+      status: answered
 answers:
   create-spec.expected-behavior-option:
     packet_id: create-spec-q0001
@@ -22,6 +32,7 @@ answers:
     resolution_note: 'orchestrator が analyst の assumption A1（(a) エスケープ解釈を採用）を不明点として
       Codex に相談。Codex: 列数不一致は既にClassificationTableErrorになるため、報告で許容された（b）を満たしているよ（tests/test_hook_classification_pin.py:164）。実表にはエスケープがなく、今回は解析方法を変えない方が変更リスクを抑えられる（em-workflow/references/implement-phase.md:1063）。再現操作に対応するテストでは、パス側に\|を含め、分類には正規値を使って列数エラーを検証するといいよ。既存の列数テストは1列の例なので、この入力を追加する価値がある（tests/test_hook_classification_pin.py:347）。新テストは現状でも通る想定で、修正内容は挙動の固定になるよ。既存のエラーには列数と該当行が出るため、文言変更も必須ではない（tests/test_hook_classification_pin.py:166）
       / orchestrator 判断: HEAD で既に明示的失敗を満たし、実表にエスケープが無いため、パーサの分割方式を変えない (b) が変更リスクが小さく比較的良い。報告の『パーサの限界が原因であることが即座に分かる』を満たすため、エラーメッセージに非対応の旨を加える点のみ追加した。'
+    question_id: create-spec.expected-behavior-option
   create-spec.sibling-parser-scope:
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T06:40:49+09:00'
@@ -32,6 +43,7 @@ answers:
     freeform: null
     normalized_answer: tests/_gate_vocabulary.py の parse_exemption_table_rows() は今回の対象外とし変更しない。
     resolution_note: 'Codex: こちらは免除登録表を扱う別の関数で、3列でなければ既にValueErrorを出すよ（tests/_gate_vocabulary.py:68、tests/_gate_vocabulary.py:91）。分類表の再現入力をテストで固定するために変更する必要はなく、同じ分割方法という理由だけで範囲を広げない方がいいよ'
+    question_id: create-spec.sibling-parser-scope
   create-spec.trailing-escaped-pipe:
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T06:40:49+09:00'
@@ -42,6 +54,7 @@ answers:
     freeform: null
     normalized_answer: (b) 採用のため、行末の `\|` を外枠パイプとして扱うかの要件（analyst の FR2 / AC3 / TS3）は設けない。
     resolution_note: 'Codex: 現在のstrip(''|'')は、末尾の\|からも「|」を取り除くよ（tests/test_hook_classification_pin.py:163）。そのため（a）では、エスケープされていない末尾の区切りだけを外枠として扱うことを明記し、テストする価値があるよ。ただし最終セルは分類列なので、「|」を保持した値は固定語彙の検証でClassificationTableErrorになる（tests/test_hook_classification_pin.py:172）。分割処理での文字保持と、分類検証での拒否を分けて確認するといいよ。今回選ぶ（b）では、この対応は対象外にする'
+    question_id: create-spec.trailing-escaped-pipe
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
@@ -57,11 +70,35 @@ progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache:
   reference_scan_targets:
-  - tests/test_hook_classification_pin.py
-  - tests/test_recycled_task_id_consistency.py
-  - em-workflow/references/implement-phase.md
-  - tests/_gate_vocabulary.py
-  e2e: []
-  design_system_candidates: []
-  package_files: []
+    generation_digest: sha256:62a7cbeaae7732eedd93a6af090779773eebdb263ce55b5df16d6ddbeb93fe86
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/references/implement-phase.md
+    - tests/_gate_vocabulary.py
+    - tests/test_hook_classification_pin.py
+    - tests/test_recycled_task_id_consistency.py
+    digests:
+      em-workflow/references/implement-phase.md: sha256:a839a7aab35392925bec7ce8e7b034611723e07b64b25f46b0d2521bf1a07f18
+      tests/_gate_vocabulary.py: sha256:7aba39c2b1a67720bf157eca299711d0d63053c03f171bcbdc7cc53941151826
+      tests/test_hook_classification_pin.py: sha256:67a5604f31bf8db438e9f2da31067a4826bd7bff23ce84ab6cb4a158011ce50c
+      tests/test_recycled_task_id_consistency.py: sha256:3e8dea3b5f83436347cbdfcb087333952f9b64971050612d9b099dbb005878e7
+    truncated: false
+  e2e:
+    generation_digest: sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  design_system_candidates:
+    generation_digest: sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  package_files:
+    generation_digest: sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
