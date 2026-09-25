@@ -6,9 +6,45 @@ generation: 1
 base_revision: f060826b12010760c68d6bd46f1660bb9c820bcf
 last_input_digest: sha256:307091a1c88cb420a539fb254e00e3216a6a5d0a19101e48801edf1d073648a2
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-q0001:
+    iteration: 1
+    questions:
+    - requirement.final-failures-record-form
+    - design-step.decision
+answers:
+  requirement.final-failures-record-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T09:31:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - comment_rerun_required_unless_untouched
+    freeform: null
+    normalized_answer: キーは増やさずコメント形式。final_failures のコメントには再実行した回の実出力を書く。再実行を省けるのはスイートが読むファイル（ソース・テスト・テストが読むドキュメント）を一切変えていない場合だけで、その場合は『再実行せず
+      baseline を継承』と理由付きで書き、report にも未実行を明記する。Step 6 の親側採用後は必ず再実行する。省略条件を確認できなければ再実行する
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation; codex_consulted: true (turn 1, harness codex); mapped to
+      an existing option_id. Codex の理由: 4c の既存形式を保ちつつ実測と継承を区別でき、ドキュメントを読む document-contract
+      テスト（tests/test_stale_launched_doc_contract.py 等）があるので省略条件に文書の未変更を含めるのは妥当。Step
+      6 の親側採用後の再実行も維持できる。採らなかった選択肢: structured_key（機械判定の要件が示されておらずスキーマ追加は過剰）、comment_always_rerun（読むものに変更が無い場合まで再実行を強いて負担増）。リスク:
+      コメントは機械検証しづらい／間接的に読む設定や実行環境の変化を見落としうる。経過時間の一致だけで再実行しなかったとは断定できない'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T09:31:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design ステップは skipped。requirements-analyst の推奨をそのまま採用
+    resolution_note: 'gate: create-spec.design-step; references/batch-policies.yaml
+      -> option_id: decide_autonomously'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:307091a1c88cb420a539fb254e00e3216a6a5d0a19101e48801edf1d073648a2
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
