@@ -1,0 +1,117 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringRemovedPhrase.test_removed_phrase_absent_from_live_docstring
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringRemovedPhrase.test_matcher_detects_phrase_in_pre_change_sample
+    red_confirmed: true
+    red_reason: >-
+      test_removed_phrase_absent_from_live_docstring failed before the
+      docstring edit: AssertionError: 'a recycled task id left behind by a
+      route-back re-plan' unexpectedly found in the whitespace-normalized
+      live docstring. The negative-proof test already passed against the
+      pre-change sample literal (it is designed to pass pre- and
+      post-change, proving the matcher fires on the removed phrase).
+  AC-2:
+    tests:
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringOwnIdDescription.test_own_id_description_present_in_live_docstring
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringOwnIdDescription.test_matcher_absent_from_pre_change_sample
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringLabelRetention.test_pre_change_sample_carries_no_carveout_label
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringLabelRetention.test_every_pre_change_label_still_present_live
+    red_confirmed: true
+    red_reason: >-
+      test_own_id_description_present_in_live_docstring failed before the
+      docstring edit: AssertionError: "the task's own id, returned from
+      `failed` to `pending` by route-back" not found in the live
+      docstring. The label-retention tests passed both before and after
+      (the pre-change docstring carries neither 'recycled-task-id
+      carve-out' nor 'recycled-task-id rule', so the retention clause is
+      vacuously true; test_pre_change_sample_carries_no_carveout_label
+      pins that fact).
+  AC-3:
+    tests:
+      - tests.test_task_id_allocation_ssot_comments.TestValidatorCommentReDeclareRemoved.test_removed_phrase_absent_from_live_comment
+      - tests.test_task_id_allocation_ssot_comments.TestValidatorCommentReDeclareRemoved.test_matcher_detects_phrase_in_pre_change_sample
+      - tests.test_task_id_allocation_ssot_comments.TestValidatorCommentCarriedDescription.test_carried_description_present_in_live_comment
+      - tests.test_task_id_allocation_ssot_comments.TestValidatorCommentCarriedDescription.test_matcher_absent_from_pre_change_sample
+    red_confirmed: true
+    red_reason: >-
+      test_removed_phrase_absent_from_live_comment failed before the
+      comment edit: AssertionError: '`entries` must re-declare every task
+      id already registered in `workflow.yaml`' unexpectedly found in the
+      live comment block (located via the 'replace-all-task-id-reused'
+      identifier anchor). test_carried_description_present_in_live_comment
+      failed with: the carried_task_ids/disjoint-sets description not
+      found in the live comment. Both negative-proof tests already passed
+      against the pre-change sample literal.
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard
+      - tests.test_validate_worker_output
+    red_confirmed: false
+    red_reason: >-
+      Behaviour-invariance criterion: these existing suites are required
+      to pass UNCHANGED before and after (no red phase is expected or
+      possible -- the criterion is that nothing regresses). Both ran green
+      before the edit (211 tests in test_validate_worker_output alone) and
+      remained green after, unmodified. The syntax-tree comparison
+      (parsing each edited file with its docstrings stripped) was run as a
+      one-off ad hoc check (per the task plan's Test Notes: not persisted,
+      re-run at feature verify) comparing git HEAD's blob against the
+      worktree file for both em-workflow/hooks/queue_stop_guard.py and
+      em-workflow/scripts/validate-worker-output.py: ast.dump() output was
+      byte-identical in both cases, confirming only docstring/comment
+      lines changed.
+  AC-5:
+    tests:
+      - tests.test_task_id_allocation_ssot_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_task_id_allocation_ssot_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: >-
+      test_version_is_past_baseline and
+      test_em_workflow_entry_version_is_past_baseline both failed before
+      the version bump: AssertionError: (0, 2, 8) not greater than (0, 2,
+      8) (both registries still read the pre-change 0.2.8). "Exactly one
+      patch step above the pre-change version" and "no other marketplace
+      entry changes" are diff facts (per the task plan's Test Notes, not
+      persisted as a literal equality) -- confirmed manually: git diff
+      shows only the em-workflow entry's version line changed in
+      marketplace.json (0.2.8 -> 0.2.9), and only plugin.json's version
+      field changed otherwise.
+  AC-6:
+    tests:
+      - tests.test_task_id_allocation_ssot_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_task_id_allocation_ssot_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_task_id_allocation_ssot_version_bump.TestValidationDetectsRegressions
+      - tests.test_task_id_allocation_ssot_version_bump.TestVersionComparisonIsPerComponentNumeric
+    red_confirmed: true
+    red_reason: >-
+      Same failing observation as AC-5 (both past-baseline tests failed
+      pre-bump with (0, 2, 8) not greater than (0, 2, 8)). The baseline
+      (0, 2, 8) is the pre-change em-workflow version, which is at least
+      the largest baseline pinned by any existing tests/*_version_bump.py
+      module at the time of writing ((0, 2, 3), in
+      test_subagentstop_failed_event_version_bump.py).
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Full-suite outcome, not unit-testable from inside the suite (a test
+      cannot assert its own full-suite result). Verified by running
+      `python3 -m unittest discover -s tests` directly: 5700 tests, all
+      passing, after the implementation (baseline was 5677; the 23 new
+      tests in the two new task0002 modules account for the difference).
+notes: >-
+  Deviation: tests/test_gate_option_vocabulary.py's
+  TestFrozenMachineReadSurface.VALIDATE_WORKER_OUTPUT_SHA256 pins the exact
+  byte content of em-workflow/scripts/validate-worker-output.py. Editing
+  the re-planning allocation comment (required by AC-3/FR7) changed that
+  file's bytes and broke the pin. This module has an established
+  "Refreshed again by <feature>/<task>: ... Same rationale: refresh, don't
+  remove" convention, used repeatedly by prior tasks for exactly this
+  situation. Applied that convention: added a dated refresh comment and
+  updated the hash literal to the new value. tests/test_validate_worker_output.py
+  and its TEST_VALIDATE_WORKER_OUTPUT_SHA256 pin were not touched (only
+  the script file changed, not its test module).
