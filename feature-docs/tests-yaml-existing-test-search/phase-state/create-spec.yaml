@@ -1,7 +1,7 @@
 schema_version: 1
 feature: tests-yaml-existing-test-search
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 9057738d48177af88a8e7c18218041902e5bb123
 last_input_digest: sha256:31fc0ebf32cb050d25bdcf6e9b3aafa0316bd106fccabe816b3cb56cd6065d23
