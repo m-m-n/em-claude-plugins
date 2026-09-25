@@ -74,6 +74,41 @@ is authoritative when present.
   and do not let them block your task. Silently "fixing" someone else's
   failing test hides a real defect from whoever owns it.
 
+## Search existing tests before declaring none exist
+
+Before an acceptance-test entry in `*.tests.yaml` declares that no
+existing test covers a criterion — whether by writing `tests: []`, or by
+citing the absence of an existing test as the reason for
+`red_confirmed: false` — you must search the project's test directory for
+existing tests that reference the file(s) you changed. This applies even
+when the criterion's verifiable outcome is a build or a lint check rather
+than a test: `tests: []` is still allowed there, but only after the same
+search.
+
+Search by both keys: the file's repository-relative path AND its bare
+filename (basename). A test that builds the path from parts (joining
+directory components, or splitting a path string) will not match a
+relative-path search, so the basename search catches it.
+
+If the search finds an existing test that genuinely reads/exercises the
+changed file:
+
+- List that test's module/class under `tests:` for the criterion.
+- Write `red_reason` in this shape: a dedicated new module is out of
+  scope, but the existing `<test>` detects `<behavior>`; no red state
+  occurred for this change.
+- Record `red_confirmed` as whatever you actually observed — `true` only
+  if you watched that existing test fail before your change existed,
+  `false` otherwise. Finding an existing test does not by itself justify
+  `red_confirmed: true`.
+
+A hit against a synthetic fixture (e.g. a copy built in a temporary
+directory) rather than the actual changed file does not count as
+coverage — discard that hit and keep searching.
+
+If the search finds nothing, proceed as before: `tests: []` and a
+`red_reason` stating that no existing test covers the criterion.
+
 ## When TDD fits poorly
 
 Some work resists test-first (pure config wiring, generated assets, visual
