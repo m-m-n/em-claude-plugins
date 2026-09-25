@@ -1,0 +1,233 @@
+schema_version: 1
+feature: tests-yaml-existing-test-search
+created: '2026-09-25'
+base_branch: main
+goal: |
+  # em-workflow: implementer の *.tests.yaml が既存テストの存在を検索せず「テストなし」と断定する
+
+  ## 現象（必須）
+  implementer が書く `*.tests.yaml` の `red_reason` が、既存テストの網羅範囲を検索せずに「そのようなテストは存在しない」と断定することがある。
+  feature `declared-change-set-implementation`（PR https://github.com/m-m-n/em-claude-plugins/pull/18 ）の `test-docs/declared-change-set-implementation/task0002.tests.yaml` で発生した。AC-1 / AC-2 / AC-3 の `red_reason` は「No automated assertion reads either manifest」、AC-5 は「the suite does not read either manifest, so it cannot go red for this change」と述べ、全 AC を `tests: []` / `red_confirmed: false` の目視確認扱いにしている。
+  しかし既存の `tests/test_spec_file_set_completeness_version_bump.py` は `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` を実際に `json.loads(path.read_text())` で読み、(1) version が `X.Y.Z` 形式で `(major, minor) == (0, 1)` かつ patch が前進していること、(2) 2 つのレジストリの version が一致すること、(3) 両ファイルのトップレベルキー集合が期待値と一致すること、を assert している。同種の `*_version_bump.py` は他フィーチャー分にも複数ある。
+  つまり片方のレジストリだけを bump した・JSON を壊した・キーを増やした場合はスイートが実際に red になるので、記録の「red になり得ないので目視のみ」という根拠は事実と異なる。
+  ## 再現手順（必須）
+  1. プラグインのマニフェスト version bump だけを行うタスクを em-workflow の implement フェーズで実行する。
+  2. 生成された `test-docs/{feature}/{T}.tests.yaml` の `red_reason` を読む。
+  3. `tests/` 配下を `grep -l "marketplace.json" tests/*.py` などで検索し、実際にはマニフェストを読む既存テストが存在することを確認する。
+  ## 期待する挙動（必須）
+  `red_reason` で「テストが存在しない」と断定する前に、implementer が対象ファイルを読む既存テストの有無を検索して確認する。存在する場合は `tests:` にそのモジュール／クラスを列挙し、`red_reason` は「専用の新規モジュール追加はスコープ外だが、既存の X が Y を検出する。今回の変更では red 状態が発生しなかった」という趣旨にする。
+  ## 完了の定義（必須）
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  ## 該当箇所（任意）
+  - `em-workflow/skills/tdd-testing/SKILL.md`（`*.tests.yaml` の記録規律。`red_confirmed: false` を書くときに既存テストの検索を必須にする箇所）
+  - `em-workflow/agents/implementer.md`
+  - 実例: PR #18 の `test-docs/declared-change-set-implementation/task0002.tests.yaml`（review round1 の stable_id `6bdb784aa896a7d7`、severity medium）
+  ## 実害・発生条件（任意）
+  `*.tests.yaml` は verify / retrospect フェーズが参照する永続記録なので、既存の耐久不変条件（レジストリ一致・patch 前進）が存在しないと読み手に誤認させる。冗長な検証モジュールの追加、または「ここは元々ノーガードだから」という誤った前提での退行を招く。
+  発生条件: タスクの変更対象が、専用テストを持たないように見えるが実は横断的なテスト（`*_invariants.py` / `*_version_bump.py` 等）にカバーされているファイルであるとき。
+parent_branch: em-workflow/tests-yaml-existing-test-search/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.21
+      '1': 0.78
+      '2': 0.01
+    expectation_clear: 0.7
+    confidence: 0.68
+    observed_at: '2026-09-25T09:16:16+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.01
+      '1': 0.98
+      '2': 0.01
+    expectation_clear: 0.77
+    confidence: 0.97
+    observed_at: '2026-09-25T09:18:29+09:00'
+  at: '2026-09-25T09:19:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: bc8206afc36ef4234cf952411b653eee6099d610
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない変更（エージェント定義・スキル文書・テスト・マニフェストのみ）。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 9020a0b9f8d6f086eb9cb52afcbc1f93533abce2
+- id: implement
+  status: completed
+  base_commit: e062f44ba2134b43414ae731b92808e744082cbb
+  completed_at_commit: a574dd3e687a3582093066221521bda608b24261
+- id: review
+  status: completed
+  completed_at_commit: 719213e73f6f7ea66ac4747df3661d36762ec053
+- id: verify
+  status: completed
+  completed_at_commit: e36af44ca8df257b03ffed4b74ae38d0cf0876a9
+  result: pass
+  failed_items: []
+  excluded_scenarios: []
+  summary: 'TS-1..TS-8 pass; SC-1..SC-8 pass; python3 -m unittest discover -s tests: 5699 tests, OK; check-plugin-invariants.py: 7/7 PASS, exit 0; plugin.json / marketplace.json em-workflow version 0.2.8 -> 0.2.9 (version lines only); manual checks on task0001.tests.yaml, SKILL.md and implementer.md Step 4c pass. build/format/e2e commands are empty (not applicable).'
+- id: retrospect
+  status: completed
+  completed_at_commit: 21fefda9924e7af3640144673189173ed9bd05b5
+tasks:
+  task0001:
+    title: 既存テスト検索の規律追加・再発検出テスト・version bump
+    plan: tasks/task0001.md
+    files:
+    - tests/test_existing_test_search_discipline.py
+    - em-workflow/skills/tdd-testing/SKILL.md
+    - em-workflow/agents/implementer.md
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/tests-yaml-existing-test-search/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, spec]
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
+requirements:
+  FR1:
+    title: 既存テスト検索の必須化（tdd-testing）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-4
+  FR2:
+    title: 既存テストが見つかった場合の記録方法
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-4
+  FR3:
+    title: implementer エージェント定義への反映
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+  FR4:
+    title: 再発検出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-8
+  FR5:
+    title: プラグイン version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR1:
+    title: テスト規約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+  NFR2:
+    title: テスト全通過
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+  NFR3:
+    title: version bump 専用テストを追加しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR4:
+    title: 禁止見出し
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
