@@ -176,7 +176,7 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/task-id-allocation-ssot/task0001
   task0002:
     title: Align stop-guard docstring and validator comment with the owning rule; bump em-workflow version
