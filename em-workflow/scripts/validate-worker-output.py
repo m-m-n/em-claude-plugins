@@ -1489,11 +1489,11 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
     # - Mandatory `preserve` per operation (workflow-patch.md's table row):
     #   `workflow.implement.base_commit` is mandatory on the re-planning
     #   path, not mandatory at all on the initial-planning path.
-    # - Re-planning task-id allocation: `entries` must re-declare every
-    #   task id already registered in `workflow.yaml` (never drop one), and
-    #   any genuinely new id must be allocated above the highest registered
-    #   id -- the high-water mark is `max(registered ids)`, read directly
-    #   from `workflow`, never a number the validator has to store itself.
+    # - Re-planning task-id allocation (workflow-patch.md "Re-planning
+    #   task-id allocation"): ids already registered in `workflow.yaml`
+    #   are carried via `tasks_patch.carried_task_ids` and are not
+    #   re-declared under `tasks_patch.entries`; `entries` names only ids
+    #   not yet registered; the two id sets are disjoint.
     if mode == "replace_all":
         tasks = workflow.get("tasks", {}) or {}
         create_plan_step = workflow_find_step(workflow, "create-plan")
