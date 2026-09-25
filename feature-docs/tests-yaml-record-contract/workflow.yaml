@@ -173,7 +173,12 @@ workflow:
   status: completed
   completed_at_commit: 92e8098c35d8880a06cebdcdc4094c0008cea44c
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded_scenarios: []
+  summary: 'python3 -m unittest discover -s tests: Ran 5691 tests, OK. TS-1..TS-5 covered by the contract test (14 tests pass). TS-6: contract test against base eed7805 implementer.md fails (23 subTest failures), passes at head. TS-7: plugin.json and marketplace.json em-workflow both 0.2.9 (base 0.2.8). TS-8: suite green. TS-9: tests.yaml key set identical at base and head. TS-10: changed files limited to the 5 planned paths; only implementer.md carries red_confirmed rules. Manual check 3 (task0001.tests.yaml AC-7 red_confirmed true without an observed failing check) is already recorded as review finding ab5031648a732de9 (medium, unresolved).'
+  completed_at_commit: 585c643a5083af21137eaa25c4c8babdd038e471
 - id: retrospect
   status: pending
 tasks:
