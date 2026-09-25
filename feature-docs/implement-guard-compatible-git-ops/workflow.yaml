@@ -1,0 +1,226 @@
+schema_version: 1
+feature: implement-guard-compatible-git-ops
+created: '2026-09-25'
+base_branch: main
+goal: |
+  # em-workflow: implement フェーズの git 操作が destructive-guard hook に拒否されて完走できない
+
+  ## 現象（必須）
+  em-workflow の implement フェーズが規定する git 操作が、ユーザー環境の PreToolUse hook
+  `destructive-guard` に拒否されて実行できない。無人実行（`--batch`）でも同じで、オーケストレーター
+  が代替手順を自力で組み立てないと進めない。
+  拒否された 2 箇所:
+  1. **integration worktree の refresh** — `implement-phase.md` の Branch & Worktree Model と
+  I.2.b step 2、および `phase-state.md` の exit-4 recovery が規定する
+  `git -C {integration_worktree} reset` の hard 形が
+  `destructive-guard/git-reset-hard` に拒否される
+  1. **マージ済み task ブランチの削除** — `implement-phase.md` I.2.b step 4 が規定する
+  `git branch -D "em-workflow/{feature}/{T}"` が
+  `destructive-guard/git-branch-force-delete` に拒否される。プロトコル本文には `-d` ではなく
+  `-D` を使う理由（オーケストレーターの HEAD は base_branch なので `-d` は refuse する）が
+  コメントとして明記されている
+  副次的に、hook のパターンマッチは Bash コマンド文字列全体を走査するため、**ドキュメント本文として**
+  危険なコマンド名を含む heredoc も拒否される。retrospect.yaml に上記の経緯を書こうとして
+  `reset --hard` の文字列が本文に入った時点で拒否された。
+  ## 再現手順（必須）
+  1. `/em-workflow:develop --batch <task>` を実行する
+  2. implement フェーズの wake phase に到達する
+  3. integration worktree の refresh で hook に拒否される
+  4. task ブランチ削除でも拒否される
+  実例: PR [https://github.com/m-m-n/em-claude-plugins/pull/19](https://github.com/m-m-n/em-claude-plugins/pull/19)
+  を生成した run。
+  ## 期待する挙動（必須）
+  プロトコルどおりの手順が hook に拒否されずに通る。または、プロトコル側が hook と両立する手順を
+  規定している。
+  今回オーケストレーターが使った代替手順（いずれも安全性は同等）:
+  - refresh: `git -C {wt} restore --source=HEAD --staged --worktree -- <個別パス>`
+  （linked worktree では branch ref が update-ref で動いても HEAD 自体は新しい tip を指しており、
+  stale なのは index と working tree だけ。個別パス指定なら guard を通る）
+  - ブランチ削除: integration worktree 内で `git branch -d`
+  （そちらの HEAD は integration ブランチなので、マージ済み判定が通り `-d` で消せる）
+  ## 完了の定義（必須）
+  - [ ] implement フェーズが規定する git 操作が、`destructive-guard` 有効環境で拒否されずに完走する
+  - [ ] 方針が決まっている — プロトコル側に代替手順を書くか、hook 側に em-workflow の worktree パスの
+  除外を入れるか
+  - [ ] 再発を検出する手段がある
+  ## 該当箇所（任意）
+  - `em-workflow/references/implement-phase.md` — Branch & Worktree Model、I.2.b step 2 / step 4、
+  I.2.c の refresh 手順
+  - `em-workflow/references/phase-state.md` — Phase-state exit-4 recovery / Artifact-commit exit-4
+  recovery
+  - `~/.claude/hooks/` 配下の destructive-guard
+  ## 実害・発生条件（任意）
+  `destructive-guard` を有効にしている環境の全 em-workflow run で発生する。無人実行では
+  オーケストレーターが代替手順を自力で導けないと停止する。今回は代替手順を導けたので完走したが、
+  プロトコルに書かれていない判断に依存しており再現性がない。
+parent_branch: em-workflow/implement-guard-compatible-git-ops/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.19
+      '1': 0.81
+      '2': 0.0
+    expectation_clear: 0.72
+    confidence: 0.71
+    observed_at: '2026-09-25T13:36:47+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+    expectation_clear: 0.71
+    confidence: 0.79
+    observed_at: '2026-09-25T13:40:44+09:00'
+  at: '2026-09-25T13:41:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    hooks:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 8c370fa3eafddfee22b31cf0cc106503a912b620
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI の変更が無い（batch-policies create-spec.design-step: decide_autonomously）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: マージ済み task ブランチを -d で削除する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: -d が拒否されたときも強制削除しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: refresh のリテラル形を維持し、対象の書き方を明記する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: ドキュメントの書き込みとヒアドキュメント
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: hook ケース表にプロトコル形状を追加する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 文書抽出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 延期した箇所を記録する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: version を上げる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: hook ロジック不変
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 既存ケースの維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストの依存と隔離
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 既存テストのアンカー保護
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: I.2.c の文言維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
