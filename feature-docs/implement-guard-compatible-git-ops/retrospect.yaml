@@ -1,0 +1,31 @@
+feature: implement-guard-compatible-git-ops
+collected_at: "2026-09-25T14:56:20+09:00"
+session_ids:
+  - 01a0d721-8917-750f-ae39-37112edff813
+  - 01a0d700-1501-75fd-93bb-ab12e61679f6
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "HEAD e808d95 では refresh と文書用 heredoc は既に allow。残る問題は implement-phase.md の branch -D（通常経路）と、再試行経路の worktree remove --force / branch -D。回帰テストの追加とバージョン 2 箇所の更新を含めて見積もった"
+    bases:
+      - basis: description_only
+        probabilities: {"0": 0.19, "1": 0.81, "2": 0.0}
+      - basis: description_plus_code
+        probabilities: {"0": 0.0, "1": 0.86, "2": 0.14}
+    pre_survey_estimate:
+      changed_lines_approx: 300
+      new_functions_needed: 6
+      new_files_needed: 1
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で評価者が low 1 件を返し、R3b の severity ゲートで除外した: tests/test_protocol_git_ops_pass_destructive_guard.py:604 の CLAUDE_BATCH 除去テストが実際の guard 呼び出しを通しておらず失敗し得ない"
+  - "この run の再開時、Step A.3 の integration worktree refresh（ブランチ名指定の hard reset）は destructive-guard に拒否されずに通った"
