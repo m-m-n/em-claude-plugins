@@ -127,7 +127,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 30ab7ed5bef1caf2aa0a04763bb36eb450fdb684
 tasks:
   task0001:
     title: Guard-compatible step 4 cleanup, protocol write rules, and document-extraction test
