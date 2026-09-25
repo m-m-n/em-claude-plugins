@@ -122,7 +122,7 @@ workflow:
   status: completed
   completed_at_commit: c65a50f1463611273153afe5c0d681076246547d
 - id: verify
-  status: pending
+  status: in_progress
 - id: retrospect
   status: pending
 tasks:
