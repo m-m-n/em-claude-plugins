@@ -1,0 +1,144 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_existing_test_search_discipline.TestMatcherM1TriggerAndMandatorySearch.test_real_skill_section_passes
+      - tests.test_existing_test_search_discipline.TestMatcherM2SearchKeys.test_real_skill_section_passes
+    red_confirmed: true
+    red_reason: >-
+      Wrote the test module before SKILL.md carried the new section.
+      TestMatcherM1TriggerAndMandatorySearch.test_real_skill_section_passes
+      and TestMatcherM2SearchKeys.test_real_skill_section_passes both errored
+      with "ValueError: substring not found" from
+      _extract_section_to_next_heading(full, "## Search existing tests
+      before declaring none exist") -- the heading did not exist yet. Went
+      green after adding the section to SKILL.md.
+  AC-2:
+    tests:
+      - tests.test_existing_test_search_discipline.TestMatcherM3FoundCase.test_real_skill_section_passes
+      - tests.test_existing_test_search_discipline.TestMatcherM4SyntheticFixtureExclusion.test_real_skill_section_passes
+    red_confirmed: true
+    red_reason: >-
+      Same red cause as AC-1 (section heading absent):
+      TestMatcherM3FoundCase.test_real_skill_section_passes and
+      TestMatcherM4SyntheticFixtureExclusion.test_real_skill_section_passes
+      both errored with "ValueError: substring not found" before the section
+      existed. Went green after adding the section.
+  AC-3:
+    tests:
+      - tests.test_existing_test_search_discipline.TestMatcherM5Reference.test_real_implementer_step4c_references_real_skill_section
+      - tests.test_existing_test_search_discipline.TestNewSectionHeadingExistsInSkillDocument.test_section_title_is_a_real_heading_line_in_skill_md
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+    red_confirmed: true
+    red_reason: >-
+      Searched tests/ for existing coverage of implementer.md and
+      tdd-testing/SKILL.md by both path and filename before writing this
+      entry (per the discipline this task adds): found
+      tests/test_check_plugin_invariants.py's TestRepositoryLevelInvariant,
+      which already runs check-plugin-invariants.py against the real
+      repository root and therefore already covers the "no `# Task
+      assignment` heading in implementer.md" half of this criterion (it
+      exercises check_forbidden_task_assignment_heading among the seven
+      checks) -- a dedicated new test for that half is out of scope; no red
+      state occurred for this change, since implementer.md never gained
+      that heading. The reference half is new: before implementer.md's Step
+      4c referenced the section,
+      TestMatcherM5Reference.test_real_implementer_step4c_references_real_skill_section
+      failed with "AssertionError: False is not true", and
+      TestNewSectionHeadingExistsInSkillDocument.test_section_title_is_a_real_heading_line_in_skill_md
+      failed the same way because the heading did not exist in SKILL.md yet.
+      Both went green after the edits.
+  AC-4:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestStandardLibraryOnlyImports.test_every_test_module_imports_only_stdlib
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/ by filename/behavior before writing this entry: a
+      dedicated new test asserting "this specific module is discoverable
+      and stdlib-only" is out of scope, but the existing
+      TestStandardLibraryOnlyImports.test_every_test_module_imports_only_stdlib
+      already scans every module under tests/, including the new one, for
+      non-stdlib imports; no red state occurred for this change, since
+      test_existing_test_search_discipline.py only ever imported `re`,
+      `unittest`, and `pathlib`. Discoverability is confirmed operationally
+      rather than by a dedicated test: the full-suite run went from
+      5677 tests (4a baseline) to 5699 tests after adding this module --
+      exactly +22, the module's own test count -- proving `unittest
+      discover` picked it up. Class/method naming against NFR1 (`Test
+      <Behavior>` / `test_<condition>_<expected_result>`) was checked by
+      reading, not by an automated test; none exists for naming style in
+      this repository.
+  AC-5:
+    tests:
+      - tests.test_existing_test_search_discipline.TestMatcherM1TriggerAndMandatorySearch.test_fake_full_section_passes
+      - tests.test_existing_test_search_discipline.TestMatcherM1TriggerAndMandatorySearch.test_fake_section_missing_trigger_and_mandate_fails
+      - tests.test_existing_test_search_discipline.TestMatcherM2SearchKeys.test_fake_full_section_passes
+      - tests.test_existing_test_search_discipline.TestMatcherM2SearchKeys.test_fake_section_missing_search_keys_fails
+      - tests.test_existing_test_search_discipline.TestMatcherM3FoundCase.test_fake_full_section_passes
+      - tests.test_existing_test_search_discipline.TestMatcherM3FoundCase.test_fake_section_missing_found_case_fails
+      - tests.test_existing_test_search_discipline.TestMatcherM4SyntheticFixtureExclusion.test_fake_full_section_passes
+      - tests.test_existing_test_search_discipline.TestMatcherM4SyntheticFixtureExclusion.test_fake_section_missing_exclusion_fails
+      - tests.test_existing_test_search_discipline.TestMatcherM5Reference.test_fake_full_reference_and_real_heading_passes
+      - tests.test_existing_test_search_discipline.TestMatcherM5Reference.test_fake_step4c_missing_reference_fails
+      - tests.test_existing_test_search_discipline.TestMatcherM5Reference.test_fake_step4c_references_a_heading_absent_from_skill_fails
+      - tests.test_existing_test_search_discipline.TestMatcherM5Reference.test_fake_reference_present_but_skill_lacks_the_heading_fails
+    red_confirmed: false
+    red_reason: >-
+      These are self-contained unit tests of the five matcher functions
+      (M1-M5) against fixed fake fixtures defined in the same module. The
+      matcher implementations and these positive/negative proofs were
+      authored together in a single pass rather than test-first against a
+      not-yet-implemented matcher, so no red state was observed for these
+      specific cases -- both directions (fails on a fake sample missing the
+      element, passes on a fake sample with every element) already held the
+      first time the module ran. Genuine red WAS observed and recorded for
+      the real-document assertions these same matchers back (see AC-1/AC-2/
+      AC-3), which is what exercises the matchers' actual acceptance
+      purpose.
+  AC-6:
+    tests:
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_author_field_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_description_field_retains_stable_anchor
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_agrees_with_manifest
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_top_level_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_name_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_author_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_category_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_source_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_description_retains_stable_anchor
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: false
+    red_reason: >-
+      Per NFR3/Test Notes, no version-specific new test was added; searched
+      tests/ by filename ("plugin.json"/"marketplace.json") first, per the
+      discipline this task adds. A dedicated new module is out of scope
+      (NFR3), but the existing tests listed above already detect
+      version-past-baseline, manifest/marketplace version agreement, and
+      field-stability (name/author/category/source/description/key-set)
+      for exactly the two files this AC touches. No red state occurred for
+      this change: the baseline (0, 1, 40) these tests check against was
+      already exceeded by the pre-existing 0.2.8, so they were green before
+      the 0.2.8 -> 0.2.9 bump and remain green after; the bump itself
+      doesn't cross their assertion boundary. The em-review entry and every
+      other field of both files were left untouched, confirmed by `git
+      diff` showing only the two version lines changed.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/suite-level outcome, not a single test's assertion -- searched
+      for an existing meta-test asserting "the full discover run exits 0"
+      and found none (a test cannot assert its own containing run's exit
+      code non-recursively). Verified by the full-suite runs themselves:
+      the 4a baseline run was 5677/5677 passing, 0 failures, 0 errors; the
+      post-implementation run was 5699/5699 passing, 0 failures, 0 errors
+      (the +22 delta being exactly this task's new module).
