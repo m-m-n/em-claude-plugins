@@ -1,0 +1,217 @@
+schema_version: 1
+feature: tests-yaml-record-contract
+created: '2026-09-25'
+base_branch: main
+goal: |
+  # em-workflow: implementer の tests.yaml が final_failures と red_confirmed で implementer.md 4c の契約から外れる
+
+  Notion: https://www.notion.so/3c03509ec8ee81e9b94fc28f8aef3fdb
+
+  ## 現象（必須）
+  feature `i2c-routeback-reconciliation` の review round 1 で、implementer が書いた
+  `test-docs/i2c-routeback-reconciliation/task0001.tests.yaml` に medium 2 件が出た。どちらも
+  `em-workflow/agents/implementer.md` Step 4c が定めるテスト記録の契約と実運用の齟齬。severity が
+  medium だったため review-phase の auto-fix ゲート（critical/high のみ）に該当せず `unresolved`
+  のまま残っている。
+  **finding 1（stable_id: \`e42a404cafa83c7b\`）**
+  `baseline_failures` のコメントは成果物を書く前の実行結果として `Ran 1522 tests in 12.759s / OK`
+  を、`final_failures` のコメントは成果物を書いた後の再実行結果として同じ
+  `Ran 1522 tests in 12.759s / OK` を記録している。1522 件のスイートを独立に 2 回走らせて経過時間が
+  ミリ秒単位まで一致することは実質的に起こらないため、2 回目の実行を実際には観測せず baseline の
+  出力を写した可能性が高い。オーケストレーターが verify フェーズで同じコマンドを実行したときは
+  `Ran 1522 tests in 12.496s / OK` で、件数は一致するが経過時間は当然異なった。
+  **finding 2（stable_id: \`7ad9024270d98c72\`）**
+  `notes` が `red_confirmed` を「対応する記録セクションを書く前に該当アンカーを読んだこと」と、この
+  ファイルだけで通用する意味にローカル再定義したうえで、AC-1〜AC-8 すべてを `tests: []` かつ
+  `red_confirmed: true` にしている。フィールドの意味を所有する `implementer.md` Step 4c では
+  `red_confirmed: true` は「実装が存在しない状態でテストが落ちるのを実際に見た」ことを意味し、
+  observe できなかった red に true を書くなと明示されている。実行可能な red が原理的に存在しない
+  ケースの契約側の指定は `false` + `red_reason` であって、true にして意味を差し替えることではない。
+  機械的に読む後続タスク・verify・`unconfirmed_reds` 集計は「8 件すべてで red→green の証跡がある」
+  と解釈するが、実際には 0 件。
+  ## 再現手順（必須）
+  1. 成果物がドキュメントだけで実行可能な単体が存在しないタスクを em-workflow で実装させる
+  2. implementer が書く `test-docs/{feature}/{task}.tests.yaml` を見る
+  3. `final_failures` が baseline のコピーになっていないか、`red_confirmed` が観測なしで true に
+  なっていないかを確認する
+  実例: PR [https://github.com/m-m-n/em-claude-plugins/pull/19](https://github.com/m-m-n/em-claude-plugins/pull/19) の
+  `test-docs/i2c-routeback-reconciliation/task0001.tests.yaml`
+  ## 期待する挙動（必須）
+  - `final_failures` は実際に再実行した回の出力を根拠にする。再実行していないなら「source / test を
+  変更していないため再実行せず baseline を継承」と主張のとおりに書く。同一の実行結果を 2 つの
+  独立した観測であるかのように提示しない。
+  - 実行可能な red を観測していない criterion は `red_confirmed: false` にし、理由を `red_reason` に
+  書いて report の `unconfirmed_reds` に載せる。フィールドの意味を `notes` でローカル再定義しない。
+  - ドキュメント型タスク（実行可能な単体が存在しない）を `implementer.md` Step 4c がどう扱うのかを
+  契約側に明記する。今回は implementer が自分で解釈を作ってしまった。
+  ## 完了の定義（必須）
+  - [ ] `em-workflow/agents/implementer.md` Step 4c に、実行可能な red が存在しないタスクでの
+  `red_confirmed` / `tests` / `red_reason` の書き方が明記されている
+  - [ ] `final_failures` の記録規律（再実行の有無を明示する）が同 SSOT に書かれている
+  - [ ] 上記を固定する document-contract テストがある
+  ## 該当箇所（任意）
+  - `em-workflow/agents/implementer.md` Step 4c（tests.yaml 契約の所有者）
+  - `em-workflow/references/implement-phase.md`（`tests_yaml_path` の受け渡し）
+  - 実例: `test-docs/i2c-routeback-reconciliation/task0001.tests.yaml`（PR #19）
+  ## 実害・発生条件（任意）
+  成果物がドキュメントのみのタスクで発生する。後続タスク・verify フェーズが tests.yaml を
+  「red→green の証跡がある」と誤読するため、失敗の帰属が狂う。`implementer.md` 自身が
+  「捏造エントリは以後それを読む全タスクを汚染する」と書いている箇所に該当する。
+parent_branch: em-workflow/tests-yaml-record-contract/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.42
+      '1': 0.58
+      '2': 0.0
+    expectation_clear: 0.76
+    confidence: 0.37
+    observed_at: '2026-09-25T09:18:29+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 1.0
+      '2': 0.0
+    expectation_clear: 0.79
+    confidence: 1.0
+    observed_at: '2026-09-25T09:18:29+09:00'
+  at: '2026-09-25T09:19:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: ecba12a23911d88eec84acabc79855848961be23
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や視覚的な成果物を含まない（エージェント定義文書・テスト・マニフェストの変更のみ）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: Recording form for a criterion with no executable red
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 'Fix the meaning of red_confirmed: true and forbid local redefinition'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 'Align the report destination of red_confirmed: false with unconfirmed_reds'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: final_failures recording discipline (comment form)
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Mandatory re-run after parent-side adoption
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Document-contract test
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 'Schema stability: tests.yaml key structure unchanged; final_failures re-run status expressed in a comment'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: No machine validation mechanism (validator/hook) for tests.yaml is added
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 'Single owner: tests.yaml contract stays in implementer.md Step 4c, not duplicated elsewhere'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 'Test conventions: stdlib unittest only, tests/test_*.py'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: No regression in python3 -m unittest discover -s tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
