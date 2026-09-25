@@ -1,0 +1,12 @@
+schema_version: 1
+feature: task-id-allocation-ssot
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-25T14:45:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation"
+    normalized_answer: "declined files deviation"
+    resolution_note: "task_id: task0001; declined paths: em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json; failed check: path falls under a workflow control path (em-workflow/**) and the evidence part naming an acceptance criterion that would otherwise be dropped is missing (rationale was a local plugin-version-guard hook requirement). The bump to 0.2.9 is identical to task0002's owned bump, so the merged tree carries a single 0.2.9 bump."

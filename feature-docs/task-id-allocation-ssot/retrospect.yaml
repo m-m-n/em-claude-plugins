@@ -1,0 +1,28 @@
+feature: task-id-allocation-ssot
+collected_at: "2026-09-25T14:56:15+09:00"
+session_ids: [01a0d721-8917-750f-ae39-37112edff813]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "2 本の判定が割れた（description_only は 2、description_plus_code は 1 が最尤）ため、評価器が何も引かない tier を返した"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.0, '1': 0.22, '2': 0.78}
+      - basis: description_plus_code
+        probabilities: {'0': 0.02, '1': 0.8, '2': 0.18}
+    pre_survey_estimate:
+      changed_lines_approx: 180
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査の files_expected は workflow-patch.md の変更を見込んだが、実際は所有 SSOT 側を不変に保ち implement-phase.md 側だけを書き換える計画になった"

@@ -1,0 +1,63 @@
+schema_version: 1
+feature: task-id-allocation-ssot
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.0
+    '1': 0.22
+    '2': 0.78
+  expectation_clear: 0.82
+  confidence: 0.66
+  observed_at: '2026-09-25T13:39:52+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.02
+    '1': 0.8
+    '2': 0.18
+  expectation_clear: 0.85
+  confidence: 0.71
+  observed_at: '2026-09-25T13:39:53+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/hooks/queue_stop_guard.py
+  - tests/test_recycled_task_id_consistency.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_queue_stop_guard.py
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 180
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/hooks/queue_launch_guard.py
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - tests/test_workflow_patch_doc.py
+  - tests/test_replanning_carry_over.py
+  - tests/test_validate_worker_output.py
+  - tests/test_routeback_reset_scope_consistency.py
+  - tests/test_queue_launch_guard.py
+  work_still_required: true
+  rationale: 'HEAD e808d95では一部修正済みだよ。implement-phase.md:258 はすでに workflow-patch.md
+    の割当規則を参照しているけど、同ファイル:865 には「replace_all が全IDを再利用する」、:876 には再採番による継承の説明が残っているよ
+
+
+    コードとテストに合うのは「登録済み最大IDより後から採番し、別タスクには再発行しない」規則だよ。所有元は em-workflow/references/workflow-patch.md:133
+    が妥当で、em-workflow/scripts/validate-worker-output.py:1537 は既存IDの再登録を拒否し、:1567 は最大ID以下の新規IDを拒否しているよ。tests/test_workflow_patch_doc.py:912
+    もこの規則を検査しているよ
+
+
+    規定の再計画経路では別タスクのjournal継承は起きないけど、既存の防止策は残す判断になるよ。deny_already_merged は同一タスクの二重実行を防ぐよ（em-workflow/hooks/queue_launch_guard.py:185）。同一タスクをpendingへ戻す処理は残り、その記録も引き継がれるので、failed＋pendingの扱いは必要だよ（em-workflow/references/implement-phase.md:911、em-workflow/scripts/validate-worker-output.py:1651）。この構造から、journal直読み条件も、merged記録が残る同一タスクを起動不能なpendingへ戻さないために必要と判断するよ
+
+
+    見積もりは文書・コメントと既存テストの修正が中心だよ。tests/test_implement_routeback_gate.py:1555 と :2276
+    は古い再利用説明を要求しているので更新が必要だよ。em-workflow/hooks/queue_stop_guard.py:17 と tests/test_queue_stop_guard.py:515
+    にも古い説明があるよ。版は現在両方0.2.8なので同時に上げる想定だよ（em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27）。ファイルは変更していないよ。テストは一時ファイルを作るため実行せず、全件通過は未確認だよ（tests/test_queue_stop_guard.py:523）'
+decided_at: '2026-09-25T13:40:06+09:00'
