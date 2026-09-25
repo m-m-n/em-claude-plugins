@@ -14,9 +14,11 @@ boundary).
 Decision (per the first in-progress feature, stable ordering by feature
 name, that has refillable work):
   - Any task's last journal event is `failed`, UNLESS that task's own
-    workflow.yaml status still reads exactly `pending` (a recycled task id
-    left behind by a route-back re-plan) -> exit 0 (no block; user decision
-    pending). A recycled id is instead treated as unlaunched.
+    workflow.yaml status still reads exactly `pending` (the task's own id,
+    returned from `failed` to `pending` by route-back, per
+    references/workflow-patch.md's "Re-planning task-id allocation") ->
+    exit 0 (no block; user decision pending). Such a task is instead
+    treated as unlaunched.
   - No unlaunched tasks, or no free slot (>= MAX_PARALLEL_IMPLEMENTERS
     in-flight) -> exit 0.
   - Otherwise -> BLOCK: exit 2, stderr names the feature, the free-slot
