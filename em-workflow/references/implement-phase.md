@@ -862,8 +862,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   the owning rule, not restated. The second source is what makes the gate
   admit route-back only when every task in the current plan whose journal
   carries any event has a terminal journal last event (`merged` or
-  `failed`) — the planner's `replace_all` recycles every id, not only the
-  failed ones, so a task with no journal event at all has nothing to
+  `failed`) — task ids are never re-issued
+  (`references/workflow-patch.md`'s 'Re-planning task-id allocation'
+  section, cited here, not restated), so no task ever carries another
+  task's journal terminal event: every terminal event a task has is its
+  own. A task with no journal event at all therefore has nothing to
   inherit and never blocks route-back. A third conjunct blocks
   independently of both halves above, closing a gap neither sees: whenever
   the last-event-per-task replay alone reports any task's journal last
@@ -873,13 +876,31 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   `merged` even when that verification fails. The reason is one fact,
   cited here from its owning bullet under 'Supporting cast: journal,
   hooks, resume' below rather than restated: the launch guard denies a
-  launch whose journal last event is `merged`, so a renumbered task id
-  inheriting such an event could never be launched. This narrows the
+  launch whose journal last event is `merged`, so resetting a task whose
+  own last event is `merged` to `pending` would leave that task's own id
+  permanently unlaunchable. This narrows the
   terminal journal last event named just above: of `merged` and `failed`,
-  only the failed one leaves a recycled id launchable. This conjunct is
-  never narrowed to admit route-back for that state: no recycled id can
-  ever inherit a journal `merged` the launch guard denies through this
-  phase's own write set. The state it protects still has a way out that
+  only a task whose own last event is `failed` stays launchable after a
+  reset. This conjunct is
+  never narrowed to admit route-back for that state: no task's own
+  `merged` event is ever reset to `pending` through this phase's own write
+  set, which is what keeps the launch guard's denial from ever falling on
+  that same task's own relaunch.
+
+  Re-judgment under the owning rule: a task id is never re-issued, so none
+  of the following three countermeasures depends on id reuse — yet all
+  three remain necessary, each for a reason stated in terms of the task's
+  own id. `deny_already_merged` (`em-workflow/hooks/queue_launch_guard.py`)
+  prevents a second launch of the task's own merged id. The third conjunct
+  above blocks route-back for a task whose own last journal event is
+  `merged`, for the reason just stated. The recycled-task-id carve-out
+  (I.2.a) reclassifies a task's own `failed` status, once route-back has
+  returned it to `pending`, as unlaunched — the re-planning `replace_all`
+  carries that same id verbatim (`references/workflow-patch.md`'s
+  'Re-planning task-id allocation' section), so the carve-out is what lets
+  that same task relaunch.
+
+  The state it protects still has a way out that
   is not this section's own gate-rejected or abort terminal — a way into
   this failed-handling branch, not a way out of it once reached: when the
   ancestor verification fails for a task the journal (or its own report)
@@ -965,9 +986,13 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   `skills/develop/SKILL.md` Step B's stop-condition-3 precedence clause
   ("停止条件 3 との優先関係") owns that precedence and dispatches the
   planner with the step still `needs_update` (not restated here). The
-  planner re-scopes the failed task (split it, change the approach) — or,
-  when a requirement itself must be dropped, routes that change through
-  the normal SPEC.md update path first. When the gate does not hold —
+  reset failed task keeps its id: `references/workflow-patch.md`'s
+  'Re-planning task-id allocation' section carries its plan, files and
+  `pending` status verbatim through the re-planning pass. Any additional
+  work the planner takes on is added as new tasks with fresh ids above the
+  high-water mark, per that same section. When a requirement itself must
+  be dropped, that change still routes through the normal SPEC.md update
+  path first. When the gate does not hold —
   because a task has status `merged`, because Step I.2.b step 1's
   reconciled state reports a task `merged` though workflow.yaml does
   not, because a task has status `in_progress`, because Step I.2.b's
