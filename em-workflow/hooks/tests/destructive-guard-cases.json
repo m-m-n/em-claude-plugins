@@ -282,5 +282,14 @@
   ["deny", "コマンド語静的不明(rm-recursive): -c ペイロード内の置換頭部でも、素のスペルと同じく rm 破壊形状に照合する", "bash -c '$(which rm) -rf /home/sakura/valuable'"],
 
   ["ask", "動的目標(rm-unresolvable): クォート付き $() スペルでのチケット再現コマンドを固定する（両スペル対称性の $() 側）", "rm -rf \"$(printf /home/sakura/valuable)\""],
-  ["ask", "動的目標(rm-unresolvable): クォート付きバッククォートスペルでのチケット再現コマンドを固定する（両スペル対称性のバッククォート側）", "rm -rf \"`printf /home/sakura/valuable`\""]
+  ["ask", "動的目標(rm-unresolvable): クォート付きバッククォートスペルでのチケット再現コマンドを固定する（両スペル対称性のバッククォート側）", "rm -rf \"`printf /home/sakura/valuable`\""],
+
+  ["allow", "FR5(リフレッシュ, 全リフレッシュサイト共通): integration ワークツリーへの literal ブランチ名 reset --hard は allow", "git -C /home/sakura/.claude/worktrees/em-workflow/some-feature/integration reset --hard em-workflow/some-feature/integration"],
+  ["allow", "FR5(Step I.2.b step 4, ブランチ削除): integration ワークツリー内でのマージ済みタスクブランチの非強制削除は allow", "git -C /home/sakura/.claude/worktrees/em-workflow/some-feature/integration branch -d em-workflow/some-feature/task0001"],
+  ["allow", "FR5(Step I.2.b step 4, ワークツリー削除): タスクワークツリーの非強制削除は allow", "git worktree remove /home/sakura/.claude/worktrees/em-workflow/some-feature/task0001"],
+  ["deny", "FR3対照(reset 対象の除外形): refs/heads/ 接頭辞付きの対象は literal ブランチ名と一致せず deny", "git -C /home/sakura/.claude/worktrees/em-workflow/some-feature/integration reset --hard refs/heads/em-workflow/some-feature/integration"],
+  ["deny", "FR3対照(reset 対象の除外形): ダブルクォートされたシェル変数 \"$BRANCH\" は literal ではなく deny", "git -C /home/sakura/.claude/worktrees/em-workflow/some-feature/integration reset --hard \"$BRANCH\""],
+  ["deny", "FR3対照(reset 対象の除外形): HEAD は literal ブランチ名ではなく deny", "git -C /home/sakura/.claude/worktrees/em-workflow/some-feature/integration reset --hard HEAD"],
+  ["deny", "FR3対照(reset 対象の除外形): 40桁16進数のコミット SHA は literal ブランチ名ではなく deny", "git -C /home/sakura/.claude/worktrees/em-workflow/some-feature/integration reset --hard 1234567890abcdef1234567890abcdef12345678"],
+  ["deny", "FR3対照(reset 対象の除外形): 対象省略は literal ブランチ名ではなく deny", "git -C /home/sakura/.claude/worktrees/em-workflow/some-feature/integration reset --hard"]
 ]
