@@ -86,7 +86,8 @@ workflow:
   base_commit: e062f44ba2134b43414ae731b92808e744082cbb
   completed_at_commit: a574dd3e687a3582093066221521bda608b24261
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 719213e73f6f7ea66ac4747df3661d36762ec053
 - id: verify
   status: pending
 - id: retrospect
@@ -118,7 +119,11 @@ tasks:
     status: merged
     branch: em-workflow/tests-yaml-existing-test-search/task0001
 review:
-  status: in_progress
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
