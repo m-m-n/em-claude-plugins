@@ -149,6 +149,13 @@ or locating a document or an anchor is not observing a red. The meaning of
 `tests`, `red_confirmed` and `red_reason` must not be locally redefined in
 `notes` or in any other text of the tests.yaml or the report.
 
+Before any entry states that no existing test covers a criterion — either
+by writing `tests: []` or by citing the absence of an existing test as the
+reason for `red_confirmed: false` — follow the `tdd-testing` skill's
+"Search existing tests before declaring none exist" section: search the
+test directory by both repository-relative path and filename before you
+conclude nothing exists.
+
 `red_confirmed: false` means the test passed before you wrote any
 implementation — it is not proving what the criterion claims. Rewrite the
 test so it actually fails first. If you cannot (the behavior genuinely
