@@ -188,6 +188,7 @@ tasks:
     - .claude-plugin/marketplace.json
     - tests/test_task_id_allocation_ssot_comments.py
     - tests/test_task_id_allocation_ssot_version_bump.py
+    - tests/test_gate_option_vocabulary.py
     skills:
     - infra-impl
     domains:
@@ -200,7 +201,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/task-id-allocation-ssot/task0002
 review:
   status: pending
