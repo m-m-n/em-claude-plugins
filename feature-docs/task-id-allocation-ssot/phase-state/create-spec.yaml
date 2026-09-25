@@ -1,14 +1,101 @@
 schema_version: 1
 feature: task-id-allocation-ssot
 phase: create-spec
-status: in_progress
+status: dispatching
 generation: 1
 base_revision: dfd3f4be5c1ca2347815c445b40e79aa8a2febd6
 last_input_digest: null
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
-worker_runs: []
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    question_ids:
+    - requirement.owning-ssot
+    - requirement.countermeasure-disposition
+    - requirement.carve-out-terminology
+    - requirement.rescope-sentence-scope
+    - design-step.recommendation
+answers:
+  requirement.owning-ssot:
+    question_id: requirement.owning-ssot
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:54:21+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - workflow_patch_no_reissue
+    freeform: null
+    normalized_answer: task id 割当規則の所有 SSOT は workflow-patch.md の Re-planning task-id
+      allocation（再発行しない・登録済み最大 id より上から採番・carried_task_ids で既存 id をそのまま保持）。implement-phase.md
+      は引用のみ
+    resolution_note: 'Codex 相談 1 ターン（run_codex_exec.sh readonly、収束）で workflow_patch_no_reissue
+      を推奨。根拠: workflow-patch.md:135/:144 の規則を validate-worker-output.py:1537/:1572
+      が機械的に強制しており、implement-phase.md:258 は既に引用済み。矛盾は I.2.c（:865 付近）の説明文のみ。analyst
+      推奨と一致。オーケストレーター判断で採用し、record_as_assumption に従い仮定として記録'
+  requirement.countermeasure-disposition:
+    question_id: requirement.countermeasure-disposition
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:54:21+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_behavior_rewrite_rationale
+    freeform: null
+    normalized_answer: deny_already_merged・I.2.c 第三条件（journal 直読み）・failed+pending
+      carve-out の 3 つは挙動を変えずに維持し、根拠の説明を『タスク自身の id が自身の終端イベントを持つ』に書き直す。再判定の結果を記録する
+    resolution_note: 'Codex 相談 1 ターン（run_codex_exec.sh readonly、収束）で keep_behavior_rewrite_rationale
+      を推奨。根拠: queue_launch_guard.py:227 は自身の merged でも再起動を拒否する、implement-phase.md:681
+      で祖先確認失敗時も merged が残るため第三条件を削ると起動不能 pending を許す、:911 のリセットと workflow-patch.md:144
+      の保持規則で自身の failed+pending は残る。analyst 推奨と一致。仮定として記録'
+  requirement.carve-out-terminology:
+    question_id: requirement.carve-out-terminology
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:54:21+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_term_fix_premise
+    freeform: null
+    normalized_answer: 『recycled-task-id carve-out』の名称は参照ラベルとして維持し、id が再利用・再採番されると述べる文（I.2.c、queue_stop_guard.py
+      docstring）だけを直す
+    resolution_note: 'Codex 相談 1 ターン（run_codex_exec.sh readonly、収束）で keep_term_fix_premise
+      を推奨。根拠: 名称は develop SKILL.md:563 と tests/test_failed_kind_resume_reentry.py:274
+      などに固定されており、改名は変更範囲を広げる。名称が id 再発行を意味しないことを明示すれば足りる。誤った説明を固定するテスト（test_implement_routeback_gate.py:1556/:1737/:2280
+      付近）は併せて更新。analyst 推奨と一致。仮定として記録'
+  requirement.rescope-sentence-scope:
+    question_id: requirement.rescope-sentence-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:54:21+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - in_scope_fix_wording
+    freeform: null
+    normalized_answer: I.2.c の『planner が失敗タスクを再スコープする（分割・方針変更）』の文を、この feature の中で
+      carried-verbatim 規則に合わせて書き直す（失敗 id はそのまま保持し、planner は最大 id より上に新規タスクを追加する）。所有
+      SSOT への引用で説明する
+    resolution_note: 'Codex 相談 1 ターン（run_codex_exec.sh readonly、収束）で in_scope_fix_wording
+      を推奨（analyst 推奨の out_of_scope_record とは不一致）。Codex の根拠: implement-phase.md:968
+      は workflow-patch.md:146 の保持規則と矛盾し、同じ再計画規則の説明なので今回直すのが妥当、引用で説明すれば挙動は広げない。オーケストレーター判断:
+      完了の定義『規則が文面から一意に読み取れる』に直結し、同じ文書・同じ節の小さな文言修正で済むため、別タスクに持ち越すより比較的良いと判断して Codex
+      案を採用。仮定として記録'
+  design-step.recommendation:
+    question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:54:21+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を skip する（analyst の推奨をそのまま採用）
+    resolution_note: batch-policies.yaml create-spec.design-step = decide_autonomously（analyst
+      の design_step_recommendation をそのまま採用）。推奨は skip
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:dc266a2071fa21d0f6cdeb96e90807231526a634a5cde2b74ea02ff29fbb5734
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
