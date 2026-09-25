@@ -1,0 +1,21 @@
+schema_version: 1
+feature: task-id-allocation-ssot
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 2554ac6dfd663a5fcae98c11a6bf78fd97693e28
+last_input_digest: sha256:50b78b2465f7ad466fe600148a2b0d53be42a98f7d99a1dfe94471e1945f84bf
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:50b78b2465f7ad466fe600148a2b0d53be42a98f7d99a1dfe94471e1945f84bf
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
