@@ -1,11 +1,11 @@
 schema_version: 1
 feature: tests-yaml-record-contract
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: f060826b12010760c68d6bd46f1660bb9c820bcf
 last_input_digest: sha256:13cea17b6e4359197e0a43277c1893ac920d213d372a5f8b8c616481ac314a6f
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     iteration: 1
@@ -49,7 +49,17 @@ worker_runs:
   status: completed
   input_digest: sha256:13cea17b6e4359197e0a43277c1893ac920d213d372a5f8b8c616481ac314a6f
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:8917c58cd0336954163aae0d096621deb9f93c0d029ba3269f9028e53b89cd11
+  output_digest: null
+artifacts:
+- path: feature-docs/tests-yaml-record-contract/REQUIREMENTS.md
+  sha256: sha256:a501b308b17d5948026d4e6dffdbdf0956e5fda0ca26e36deb77503d8d83142d
+  produced_by: create-spec-run-0003
+- path: feature-docs/tests-yaml-record-contract/SPEC.md
+  sha256: sha256:834c0628dc753f9e1ecc4e0bb9be9dca94f082f89144df1e7c6a48d1672afcb6
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
