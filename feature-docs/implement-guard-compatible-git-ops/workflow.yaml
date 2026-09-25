@@ -119,7 +119,8 @@ workflow:
   completed_at_commit: cf04df800d3a7564dab8bc20e37eb8f4133373bf
   base_commit: c28a47652ad92ae1e2e333d0bbd51f50fc0407fb
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: c65a50f1463611273153afe5c0d681076246547d
 - id: verify
   status: pending
 - id: retrospect
@@ -175,7 +176,11 @@ tasks:
     status: merged
     branch: em-workflow/implement-guard-compatible-git-ops/task0002
 review:
-  status: in_progress
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
