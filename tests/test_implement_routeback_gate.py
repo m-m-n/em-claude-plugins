@@ -322,7 +322,8 @@ THIRD_CONJUNCT_LAUNCH_GUARD_CITATION_PHRASE = (
     "hooks, resume' below rather than restated"
 )
 THIRD_CONJUNCT_NARROWING_PHRASE = (
-    "only the failed one leaves a recycled id launchable"
+    "only a task whose own last event is `failed` stays launchable after a "
+    "reset"
 )
 I2B_STEP1_RECOVERY_CITATION_PHRASE = "Step I.2.b step 1's recovery"
 
@@ -426,8 +427,9 @@ THIRD_CONJUNCT_NEVER_NARROWED_PHRASE = (
     "This conjunct is never narrowed to admit route-back for that state"
 )
 NO_RECYCLED_ID_INHERITS_MERGED_VIA_WRITE_SET_PHRASE = (
-    "no recycled id can ever inherit a journal `merged` the launch "
-    "guard denies through this phase's own write set"
+    "no task's own `merged` event is ever reset to `pending` through this "
+    "phase's own write set, which is what keeps the launch guard's denial "
+    "from ever falling on that same task's own relaunch"
 )
 ANCESTOR_FAILURE_EXIT_CITES_RECONCILED_STATE_PHRASE = (
     "Step I.2.b step 1's reconciled state for that task is `failed`"
@@ -2273,11 +2275,26 @@ class TestPreChangeSampleGuards(unittest.TestCase):
         self.assertIn(anchor, sample)
         self.assertIn(anchor, _normalize_ws(_supporting_cast_section(_read())))
 
-    def test_task0002_third_conjunct_tail_sample_retains_recycled_id_launchable_anchor(
+    def test_task0002_third_conjunct_tail_sample_retains_worktree_branch_gone_anchor(
         self,
     ):
+        # task0001 (task-id-allocation-ssot) rewrites the recycled-id
+        # rationale this sample's first sentence carried ("only the failed
+        # one leaves a recycled id launchable" no longer appears in the live
+        # document -- see TestThirdGateConjunctMergedLastEventAlone and
+        # TestThirdConjunctNeverNarrowedHasStatedExit for the new own-id
+        # rationale's positive/negative pins), so this sample's retained
+        # anchor moves to its second sentence, which that rewrite leaves
+        # untouched -- still proving the sample is a genuine, non-tautological
+        # excerpt rather than one an empty-string negative proof would pass
+        # vacuously.
         sample = _normalize_ws(TASK0002_PRE_CHANGE_I2C_THIRD_CONJUNCT_TAIL_SAMPLE)
-        anchor = "only the failed one leaves a recycled id launchable"
+        old_recycled_id_anchor = "only the failed one leaves a recycled id launchable"
+        self.assertIn(old_recycled_id_anchor, sample)
+        anchor = (
+            "A task the journal reports in-flight whose worktree and "
+            "branch are both gone is decided elsewhere"
+        )
         self.assertIn(anchor, sample)
         self.assertIn(anchor, _normalize_ws(_i2c_section(_read())))
 
