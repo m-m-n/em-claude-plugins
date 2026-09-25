@@ -1,0 +1,31 @@
+schema_version: 1
+feature: tests-yaml-existing-test-search
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 9057738d48177af88a8e7c18218041902e5bb123
+last_input_digest: sha256:31fc0ebf32cb050d25bdcf6e9b3aafa0316bd106fccabe816b3cb56cd6065d23
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:17eec0c404f0928365deda3615f094ef94747fd3296baa611d04b6796de3fb75
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:31fc0ebf32cb050d25bdcf6e9b3aafa0316bd106fccabe816b3cb56cd6065d23
+  output_digest: null
+artifacts:
+- path: feature-docs/tests-yaml-existing-test-search/REQUIREMENTS.md
+  sha256: sha256:ade45ca283cbf05e1cd7a3c84026db02f9f3313bcbe3fa494de4deaee5b87379
+  produced_by: create-spec-run-0002
+- path: feature-docs/tests-yaml-existing-test-search/SPEC.md
+  sha256: sha256:68cc15d8f9dc682c00de7bddedb5811dc62b1231c6a987f290982e91c86e1520
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
