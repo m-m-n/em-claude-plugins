@@ -151,7 +151,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/implement-guard-compatible-git-ops/task0001
   task0002:
     title: 'Hook case table: protocol command shapes and contrast cases; version bump'
     plan: tasks/task0002.md
@@ -170,7 +171,8 @@ tasks:
     - FR8
     - NFR1
     - NFR2
-    status: pending
+    status: in_progress
+    branch: em-workflow/implement-guard-compatible-git-ops/task0002
 review:
   status: pending
 requirements:
