@@ -1,14 +1,18 @@
 schema_version: 1
 feature: implement-guard-compatible-git-ops
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 3f0a834c5e5c5ce600687cd14dc146a710629dca
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:55c565af6a217a5c6d3f1a6353d66f559030e673e34a415bb05ed7fb4121f55b
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:55c565af6a217a5c6d3f1a6353d66f559030e673e34a415bb05ed7fb4121f55b
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
