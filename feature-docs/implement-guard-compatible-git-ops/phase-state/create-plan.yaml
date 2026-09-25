@@ -1,0 +1,21 @@
+schema_version: 1
+feature: implement-guard-compatible-git-ops
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: bd5ce87c12bd481450ea50ce0f6e4ff030d307ff
+last_input_digest: sha256:f3d8e0edb3f6f23299581816ad0ec6b4a229697d3e85ca632ec4682b81027478
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:f3d8e0edb3f6f23299581816ad0ec6b4a229697d3e85ca632ec4682b81027478
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
