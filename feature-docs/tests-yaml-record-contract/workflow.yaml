@@ -170,7 +170,7 @@ workflow:
   base_commit: eed780576bee6bf0f1bf5d72c43bd27157c57a7e
   completed_at_commit: ceed9e5a230af4d2ff9af8bb2ff9b0d4a8d6059a
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -205,7 +205,15 @@ tasks:
     status: merged
     branch: em-workflow/tests-yaml-record-contract/task0001
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: Recording form for a criterion with no executable red
