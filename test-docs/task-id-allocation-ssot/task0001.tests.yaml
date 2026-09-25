@@ -1,0 +1,120 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_task_id_allocation_ssot_i2c.TestAC1RemovedPremisePhrasesAbsent.test_recycles_every_id_absent
+      - tests.test_task_id_allocation_ssot_i2c.TestAC1RemovedPremisePhrasesAbsent.test_renumbered_task_id_absent
+      - tests.test_task_id_allocation_ssot_i2c.TestAC1RemovedPremisePhrasesAbsent.test_leaves_a_recycled_id_launchable_absent
+      - tests.test_task_id_allocation_ssot_i2c.TestAC1RemovedPremisePhrasesAbsent.test_no_recycled_id_can_ever_inherit_absent
+      - tests.test_task_id_allocation_ssot_i2c.TestAC1RemovedPremisePhrasesAbsent.test_old_rescope_sentence_absent
+    red_confirmed: true
+    red_reason: >-
+      Before the implement-phase.md edit, each assertNotIn failed with
+      "'<phrase>' unexpectedly found in ...", e.g. for
+      test_recycles_every_id_absent the whitespace-normalized I.2.c section
+      still contained "the planner's `replace_all` recycles every id".
+      Positive proof that each phrase genuinely existed pre-change is pinned
+      separately in TestPreChangeSampleContainsRemovedPhrases (non-vacuity
+      guard).
+  AC-2:
+    tests:
+      - tests.test_task_id_allocation_ssot_i2c.TestAC2OwnershipStatementCitesOwningSection.test_names_workflow_patch_with_heading
+      - tests.test_task_id_allocation_ssot_i2c.TestAC2OwnershipStatementCitesOwningSection.test_states_task_ids_never_reissued_and_terminal_events_are_own
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, test_names_workflow_patch_with_heading raised
+      ValueError: substring not found (the pre-change I.2.c text never
+      mentions the heading "Re-planning task-id allocation"), and
+      test_states_task_ids_never_reissued_and_terminal_events_are_own raised
+      AssertionError: 'task ids are never re-issued' not found in the
+      whitespace-normalized I.2.c section.
+  AC-3:
+    tests:
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_opening_present
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_source_phrase_present
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_independent_of_ancestor_verification
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_states_narrowing
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_third_conjunct_never_narrowed
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_no_recycled_id_can_inherit_merged_via_write_set
+      - tests.test_implement_routeback_gate.TestPreChangeSampleGuards.test_task0002_third_conjunct_tail_sample_retains_worktree_branch_gone_anchor
+    red_confirmed: true
+    red_reason: >-
+      The four anchor-presence tests (opening/source/independence/
+      never-narrowed) were never red -- their literals are required to stay
+      byte-identical across this edit and never changed. The other three
+      were observed red immediately after the implement-phase.md edit
+      landed (test file constants still held the OLD wording at that
+      point): test_third_conjunct_states_narrowing and
+      test_no_recycled_id_can_inherit_merged_via_write_set both raised
+      AssertionError, e.g. "'only the failed one leaves a recycled id
+      launchable' not found in ..." / "\"no recycled id can ever inherit a
+      journal `merged` the launch guard denies through this phase's own
+      write set\" not found in ...", and the anchor-retention test (then
+      still named test_task0002_third_conjunct_tail_sample_retains_
+      recycled_id_launchable_anchor) failed with the same missing-anchor
+      message. Updating THIRD_CONJUNCT_NARROWING_PHRASE and
+      NO_RECYCLED_ID_INHERITS_MERGED_VIA_WRITE_SET_PHRASE to the new
+      wording, and moving the retention test's anchor to the still-present
+      "A task the journal reports in-flight whose worktree and branch are
+      both gone is decided elsewhere" sentence, turned all three green.
+  AC-4:
+    tests:
+      - tests.test_task_id_allocation_ssot_i2c.TestAC4ReJudgmentPassageNamesAllThreeCountermeasures.test_re_judgment_passage_names_all_three
+      - tests.test_task_id_allocation_ssot_i2c.TestAC4ReJudgmentPassageNamesAllThreeCountermeasures.test_re_judgment_reasons_are_stated_in_terms_of_the_own_id
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, test_re_judgment_passage_names_all_three raised
+      ValueError: substring not found (no "Re-judgment under the owning
+      rule" passage existed in the pre-change I.2.c text at all).
+      test_re_judgment_reasons_are_stated_in_terms_of_the_own_id raised the
+      same ValueError for the same reason (it slices from the same,
+      then-absent, opening anchor).
+  AC-5:
+    tests:
+      - tests.test_task_id_allocation_ssot_i2c.TestAC5RescopeReplacementGrantsOnlyPermittedActions.test_rescope_states_id_carried_verbatim
+      - tests.test_task_id_allocation_ssot_i2c.TestAC5RescopeReplacementGrantsOnlyPermittedActions.test_rescope_states_new_tasks_above_high_water_mark
+      - tests.test_task_id_allocation_ssot_i2c.TestAC5RescopeReplacementGrantsOnlyPermittedActions.test_rescope_cites_replanning_allocation_section
+      - tests.test_task_id_allocation_ssot_i2c.TestAC5RescopeReplacementGrantsOnlyPermittedActions.test_rescope_keeps_spec_md_update_path
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: test_rescope_states_id_carried_verbatim and
+      test_rescope_states_new_tasks_above_high_water_mark raised
+      AssertionError (neither "The reset failed task keeps its id" nor
+      "added as new tasks with fresh ids above the high-water mark" existed
+      in the pre-change text, which instead read "The planner re-scopes the
+      failed task (split it, change the approach)");
+      test_rescope_cites_replanning_allocation_section raised ValueError:
+      substring not found (its slice starts from the then-absent "The reset
+      failed task keeps its id" anchor); test_rescope_keeps_spec_md_update_
+      path raised AssertionError because the pre-change sentence read
+      "routes that change through the normal SPEC.md update path first"
+      rather than "that change still routes through the normal SPEC.md
+      update path first".
+  AC-6:
+    tests:
+      - tests.test_task_id_allocation_ssot_i2c.TestAC6LabelRetentionAndNoRestatement.test_carve_out_label_still_present_in_implement_phase_and_skill
+      - tests.test_task_id_allocation_ssot_i2c.TestAC6LabelRetentionAndNoRestatement.test_i2c_omits_high_water_mark_expression_and_full_field_list
+      - tests.test_task_id_allocation_ssot_i2c.TestAC6LabelRetentionAndNoRestatement.test_same_matchers_detect_both_in_owning_section
+    red_confirmed: false
+    red_reason: >-
+      All three are retention/invariant checks that were already true
+      before this task's edit and stayed true after it: the
+      'recycled-task-id carve-out' label already existed in I.2.a and in
+      skills/develop/SKILL.md pre-change (this task does not add, rename or
+      remove it), and I.2.c never contained the high-water-mark expression
+      or the carried record's full field list either before or after this
+      edit -- this task only ever paraphrases the consequence ("above the
+      high-water mark", "plan, files and pending status"), never the
+      expression/list itself. These three tests guard the invariant going
+      forward; they were not observed to go red because the criterion was
+      never violated at any point during this task's implementation.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by running the full suite (`python3 -m unittest discover -s
+      tests`, 5703 tests) after every edit in this task, ending green (exit
+      0). Not a single named test; the outcome named by this criterion is
+      the whole-suite run itself.
