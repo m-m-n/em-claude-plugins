@@ -145,7 +145,7 @@ workflow:
   completed_at_commit: 9a9fea752a69fde404cd335e3b9a8b475d4ea12e
   base_commit: ab233355a6483aba6be32889cd9c9da53ad28aff
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -205,8 +205,16 @@ tasks:
     status: merged
     branch: em-workflow/task-id-allocation-ssot/task0002
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Single owning SSOT for task-id allocation
