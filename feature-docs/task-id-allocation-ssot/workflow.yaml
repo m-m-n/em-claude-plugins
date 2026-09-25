@@ -1,0 +1,208 @@
+schema_version: 1
+feature: task-id-allocation-ssot
+created: '2026-09-25'
+base_branch: main
+goal: |
+  # em-workflow: task id 割当規則が implement-phase.md と workflow-patch.md で矛盾している
+
+  Notion: https://www.notion.so/3cc3509ec8ee81cd9cc2cb30ab277474
+
+  ## 現象（必須）
+  task id の割当規則が 2 つの SSOT で食い違っている。
+  - `em-workflow/references/implement-phase.md` I.2.a は、planner の `replace_all` が
+  task を `task0001` から再採番すると述べる。この feature（`recycled-task-id-consistency` /
+  `routeback-admissibility-exits`）が扱ってきた「再採番された id が退役 id の journal
+  最終イベントを継承する」問題は、この再採番を前提にしている。
+  - `em-workflow/references/workflow-patch.md` の Re-planning task-id allocation は、
+  id はそれまでに登録された最大 id より上から continue し、決して再発行されないと述べる。
+  後者が正なら、route-back 経路で recycled-task-id の継承はそもそも発生し得ない。
+  つまり `recycled-task-id-consistency` 以降の一連の対策が前提としている状態が、別の SSOT
+  では起こり得ないことになっている。どちらが正なのかが文面から決まらない。
+  ## 再現手順（必須）
+  1. `em-workflow/references/implement-phase.md` の I.2.a、`replace_all` による再採番の
+  記述を読む
+  1. `em-workflow/references/workflow-patch.md` の Re-planning task-id allocation を読む
+  2. 2 つの規則が同じ `replace_all` パッチに対して両立しないことを確認する
+  ## 期待する挙動（必須）
+  task id 割当の規則が 1 箇所で定義され、もう一方はそれを引用するだけになっている。
+  どちらの規則を採るかが決まったうえで、recycled-task-id 継承が起こり得るのか否かが
+  文面から一意に読み取れる。
+  ## 完了の定義（必須）
+  - [ ] task id 割当規則の所有 SSOT が 1 つに定まっている
+  - [ ] もう一方の文書は所有 SSOT を引用する形になっている
+  - [ ] recycled-task-id 継承が起こり得るか否かが文面から一意に決まる
+  - [ ] 既存の recycled-task-id 対策（launch guard の `deny_already_merged`、route-back
+  gate の journal 直読み conjunct 等）が、決まった規則の下で必要か不要かを判定し直して
+  いる
+  - [ ] `python3 -m unittest discover -s tests` が通る
+  - [ ] プラグイン配下を変更するので、同じ変更に含めて `em-workflow/.claude-plugin/plugin.json`
+  と `.claude-plugin/marketplace.json` の version を bump する
+  ## 該当箇所（任意）
+  - `em-workflow/references/implement-phase.md` の I.2.a（`replace_all` 再採番の記述）
+  - `em-workflow/references/workflow-patch.md` の Re-planning task-id allocation
+  ## 実害・発生条件（任意）
+  feature `routeback-admissibility-exits` の rework round 1 で rework-planner が
+  `warnings` として報告した。この feature 自体は implement-phase.md の文言を根拠に計画
+  されており、矛盾はスコープ外として持ち越している。放置すると、実装済みの対策が実は
+  到達不能な状態に対するものだったという可能性が残り続ける。
+parent_branch: em-workflow/task-id-allocation-ssot/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.22
+      '2': 0.78
+    expectation_clear: 0.82
+    confidence: 0.66
+    observed_at: '2026-09-25T13:39:52+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.02
+      '1': 0.8
+      '2': 0.18
+    expectation_clear: 0.85
+    confidence: 0.71
+    observed_at: '2026-09-25T13:39:53+09:00'
+  at: '2026-09-25T13:40:06+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 0d74f90ce958a83792537678756530710a6ccfb1
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や見た目の変更を含まない、参照文書の文言・hook の docstring・スクリプトのコメント・テスト・version だけの修正であるため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Single owning SSOT for task-id allocation
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Remove the recycling/renumbering premise from I.2.c
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Inheritance impossibility stated unambiguously
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Countermeasures kept, rationale rewritten
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Align the I.2.c re-scope sentence with carried-verbatim
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Keep the carve-out term; fix only the premise
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Validator comment alignment
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: Version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Test suite passes
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: No runtime behaviour change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Test conventions
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Cite, do not restate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
