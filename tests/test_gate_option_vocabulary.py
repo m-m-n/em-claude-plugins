@@ -1228,8 +1228,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # containment, existence, size) still applies unconditionally.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
     # Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by task-id-allocation-ssot/task0002: the re-planning
+    # allocation comment above the replace_all carry-over checks is
+    # reworded to describe what the code enforces (registered ids are
+    # carried via tasks_patch.carried_task_ids and are not re-declared
+    # under tasks_patch.entries) instead of the stale "entries must
+    # re-declare every registered id" premise; it now cites
+    # workflow-patch.md "Re-planning task-id allocation" (IMPLEMENTATION.md
+    # C1). No executable-code line changes. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh,
+    # don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "64d4ba979aedf1636dec704b6dd0002c8ae0975cceaf527927c064fa99209391"
+        "c92a6529b6d0f71a7b2e76ff988a6b7f17b212985b547aa3c6d72d829dd4c92a"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
