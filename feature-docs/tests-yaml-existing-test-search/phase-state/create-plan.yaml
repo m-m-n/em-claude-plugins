@@ -1,0 +1,21 @@
+schema_version: 1
+feature: tests-yaml-existing-test-search
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 35ee9bf117bc2fcd88af8791a45642da497afd5f
+last_input_digest: sha256:4124fafca9f0e66305757805fed71b502802ad74fe3ce0c98e23f2398e952871
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:4124fafca9f0e66305757805fed71b502802ad74fe3ce0c98e23f2398e952871
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
