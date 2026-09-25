@@ -1,0 +1,17 @@
+schema_version: 1
+feature: tests-yaml-record-contract
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: f060826b12010760c68d6bd46f1660bb9c820bcf
+last_input_digest: sha256:307091a1c88cb420a539fb254e00e3216a6a5d0a19101e48801edf1d073648a2
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
