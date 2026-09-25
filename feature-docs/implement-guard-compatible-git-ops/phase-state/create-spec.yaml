@@ -27,6 +27,7 @@ packets:
       status: answered
 answers:
   requirement.git-ops.policy:
+    question_id: requirement.git-ops.policy
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T13:58:00+09:00'
     source: batch-codex-consultation
@@ -39,6 +40,7 @@ answers:
     resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
       opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
   requirement.scope.unmerged-cleanup:
+    question_id: requirement.scope.unmerged-cleanup
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T13:58:00+09:00'
     source: batch-codex-consultation
@@ -51,6 +53,7 @@ answers:
     resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
       opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
   requirement.refresh.form:
+    question_id: requirement.refresh.form
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T13:58:00+09:00'
     source: batch-codex-consultation
@@ -64,6 +67,7 @@ answers:
     resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
       opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
   requirement.heredoc.false-positive:
+    question_id: requirement.heredoc.false-positive
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T13:58:00+09:00'
     source: batch-codex-consultation
@@ -76,6 +80,7 @@ answers:
     resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
       opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
   requirement.recurrence.detection:
+    question_id: requirement.recurrence.detection
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T13:58:00+09:00'
     source: batch-codex-consultation
@@ -90,6 +95,7 @@ answers:
     resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
       opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
   requirement.user-hook.scope:
+    question_id: requirement.user-hook.scope
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T13:58:00+09:00'
     source: batch-codex-consultation
@@ -102,6 +108,7 @@ answers:
     resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
       opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
   design-step.recommendation:
+    question_id: design-step.recommendation
     packet_id: create-spec-q0001
     answered_at: '2026-09-25T13:58:00+09:00'
     source: batch-decision-table
