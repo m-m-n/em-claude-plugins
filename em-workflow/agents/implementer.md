@@ -114,7 +114,7 @@ Write `tests_yaml_path` (create parent directories as needed):
 ```yaml
 task_id: task0005
 baseline_failures: []          # from 4a — what was already red when you started
-final_failures: []             # after implementation; must be ⊆ baseline_failures
+final_failures: []             # actually re-executed run after implementation, or "not re-run; baseline inherited" + reason when nothing the suite reads changed; must be ⊆ baseline_failures
 acceptance_tests:
   AC-1:
     tests: [parser::tests::rejects_empty]
@@ -130,14 +130,44 @@ Every Acceptance Criterion in your task plan gets an entry, including ones
 whose verifiable outcome is a build or a lint check rather than a test
 (`tests: []` with the outcome named in `red_reason`).
 
+When an Acceptance Criterion has no executable check — test, build, lint, or
+similar — that can be made to fail, record it as `tests: []`,
+`red_confirmed: false`, and state why no executable red exists in
+`red_reason`; list the criterion in the Step 7 report's `unconfirmed_reds`.
+Documentation-only tasks are covered by this rule. Apply it per criterion:
+in a task that mixes criteria with and without an executable check, only
+the criteria lacking one use this form. Naming documentation-only tasks
+here is not a blanket exemption — when a document-contract test that reads
+the document can be written, the criterion has an executable red and the
+normal rule applies.
+
+`red_confirmed: true` means only that, with no implementation present, the
+executed check was actually observed to fail. A criterion verified by a
+build or lint result gets `red_confirmed: true` only if the failure of that
+check was actually observed before implementation. Reading, searching for,
+or locating a document or an anchor is not observing a red. The meaning of
+`tests`, `red_confirmed` and `red_reason` must not be locally redefined in
+`notes` or in any other text of the tests.yaml or the report.
+
 `red_confirmed: false` means the test passed before you wrote any
 implementation — it is not proving what the criterion claims. Rewrite the
 test so it actually fails first. If you cannot (the behavior genuinely
 pre-existed, the criterion is a refactor with no observable change), leave
-it `false`, say why in `red_reason`, and carry it into your report's
-`notes`. Never write `true` for a red you did not observe: this file is the
-evidence a later failure gets attributed with, and a fabricated entry
-poisons every task that reads it afterwards.
+it `false`, say why in `red_reason`, and list the criterion in the Step 7
+report's `unconfirmed_reds`. Never write `true` for a red you did not
+observe: this file is the evidence a later failure gets attributed with,
+and a fabricated entry poisons every task that reads it afterwards.
+
+The `final_failures` comment records the output of the run actually
+re-executed after implementation. The re-run may be skipped only when no
+file the suite reads — source, tests, and documents the tests read — was
+changed at all; when skipped, the comment says "not re-run; baseline
+inherited" together with the reason, and the report's `notes` also states
+that no re-run was performed. Re-run whenever it cannot be confirmed that
+the skip condition holds — a task that changed a document the tests read
+cannot skip. The same run result is never written into both
+`baseline_failures` and `final_failures` as if they were two independent
+observations.
 
 ### Step 5: Commit
 
@@ -161,7 +191,11 @@ and branch on its exit code exactly as `worktree-task-workflow` specifies:
   you re-test against is a NEW inheritance: re-run the suite right after
   adopting the parent side and replace `baseline_failures` with that result,
   then update `final_failures` from the post-re-implementation run. The
-  subset rule is re-evaluated against the refreshed baseline.
+  subset rule is re-evaluated against the refreshed baseline. After
+  parent-side adoption, the `final_failures` skip condition never applies:
+  the suite is always re-run, and both `baseline_failures` and
+  `final_failures` are updated. This holds on every adoption within this
+  conflict loop, not only the first.
 - `2` → error. Diagnose (uncommitted changes? missing branch?); fix what is
   yours to fix and retry once; otherwise report `failed`.
 
