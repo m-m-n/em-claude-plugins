@@ -1,0 +1,17 @@
+schema_version: 1
+feature: task-id-allocation-ssot
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: dfd3f4be5c1ca2347815c445b40e79aa8a2febd6
+last_input_digest: null
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
