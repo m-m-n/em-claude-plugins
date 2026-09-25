@@ -1,0 +1,43 @@
+schema_version: 1
+feature: tests-yaml-record-contract
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.42
+    '1': 0.58
+    '2': 0.0
+  expectation_clear: 0.76
+  confidence: 0.37
+  observed_at: '2026-09-25T09:18:29+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.0
+    '1': 1.0
+    '2': 0.0
+  expectation_clear: 0.79
+  confidence: 1.0
+  observed_at: '2026-09-25T09:18:29+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/tdd-testing/SKILL.md
+  - tests/test_implementer_test_record_contract.py
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 150
+  new_functions_needed: 8
+  new_files_needed: 1
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/skills/tdd-testing
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  work_still_required: true
+  rationale: 'HEAD e808d95 では完了条件が未達だよ。Step 4c は未観測の red を true にすることを禁止しているけど、文書だけのタスクでの
+    tests: []・false・red_reason・unconfirmed_reds の扱いと、final_failures の再実行／baseline
+    継承の明示が不足しているよ。実例の問題記録も残っていて、これらを直接固定する契約テストは見当たらないよ。Step 4c の明文化と専用テストを追加し、全件再実行を要求する
+    tdd-testing 側は同契約への参照で整合させる見積もりだよ。関数8件はテストと補助処理を想定しているよ。リポジトリ規則に従うバージョン更新2箇所も含めたよ。implement-phase.md
+    のパス受け渡しは変更不要と判断したよ。ファイル変更・テスト実行はしていないよ。Notion は接続できず、依頼本文とHEADを根拠に調査したよ'
+decided_at: '2026-09-25T09:19:10+09:00'

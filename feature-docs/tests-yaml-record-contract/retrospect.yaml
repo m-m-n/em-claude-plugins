@@ -1,0 +1,46 @@
+feature: tests-yaml-record-contract
+collected_at: "2026-09-25T10:06:15+09:00"
+session_ids: [01a0d618-937d-75c7-80dd-bc69e56ba5d7]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_only は tier 1 寄り（信頼度 0.37）、description_plus_code は tier 1（信頼度 1.0）。評価器の結果 full を採用"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.42, '1': 0.58, '2': 0.0}
+        expectation_clear: 0.76
+        confidence: 0.37
+        observed_at: '2026-09-25T09:18:29+09:00'
+      - basis: description_plus_code
+        probabilities: {'0': 0.0, '1': 1.0, '2': 0.0}
+        expectation_clear: 0.79
+        confidence: 1.0
+        observed_at: '2026-09-25T09:18:29+09:00'
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/agents/implementer.md
+        - em-workflow/skills/tdd-testing/SKILL.md
+        - tests/test_implementer_test_record_contract.py
+        - em-workflow/.claude-plugin/plugin.json
+        - .claude-plugin/marketplace.json
+      changed_lines_approx: 150
+      new_functions_needed: 8
+      new_files_needed: 1
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules:
+        - em-workflow/skills/tdd-testing
+        - em-workflow/.claude-plugin/plugin.json
+        - .claude-plugin/marketplace.json
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "今回の成果物自身の task0001.tests.yaml で、AC-7 が観測なしの red_confirmed: true になった（review ab5031648a732de9, medium, unresolved）。新しく書いた契約を、それを書いた implementer 自身が守れていない"
+  - "契約テスト R1 は 4 つの語を Step 4c 全体の部分文字列として個別に見るため、核心の 1 文を消しても通る（review 4478b1a38832a702, medium, unresolved）"
+  - "medium の finding は Phase R4 の auto-fix ゲート（critical/high のみ）を通らず unresolved のまま残る。元の Notion タスクもこの経路で起票された"
