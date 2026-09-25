@@ -1,0 +1,21 @@
+schema_version: 1
+feature: tests-yaml-record-contract
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 2463c56328c85476e1420a54900fbda5631e0bba
+last_input_digest: sha256:0fc9be007c27f2e754a7f07d23e6f0d6c51dd0815b29c8cd1dbfa1990d212fe6
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:0fc9be007c27f2e754a7f07d23e6f0d6c51dd0815b29c8cd1dbfa1990d212fe6
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
