@@ -39,7 +39,10 @@ document is written; this phase never creates them itself.
   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
   (safe: the integration worktree never carries uncommitted state across
   turns — every workflow.yaml / document write, in every phase, is followed
-  by a `commit-docs.sh` commit in the same step; NFR2).
+  by a `commit-docs.sh` commit in the same step; NFR2). The reset target of
+  every such refresh is always written as the literal branch name
+  `em-workflow/{feature}/integration` — never a shell variable, a captured
+  SHA, `HEAD`, a `refs/heads/`-prefixed name, or an omitted target.
 - **exit-4 recovery** (bounded; applies to every `commit-docs.sh` call site
   in the implement phase EXCEPT Step I.2.c's route-back commit (carved out
   below) — for example, Step I.1's baseline commit, Step
@@ -106,6 +109,8 @@ document is written; this phase never creates them itself.
   reviews/, retrospect.yaml), `test/README.md`, `design-system/` — is written
   directly at its project-relative path inside the integration worktree, each
   write followed by a `commit-docs.sh` commit (`docs({feature}): {summary}`).
+  Every such write uses the Write tool, never a Bash heredoc, and the Bash
+  call that runs `commit-docs.sh` itself contains no heredoc.
   Nothing is ever written to the main working tree by the workflow (the sole
   exceptions are the gitignore-guard `.gitignore` append and the final Step C
   merge below). There is no separate main-tree copy of any artifact and no
@@ -796,15 +801,15 @@ Triggered whenever a launched implementer's `Task()` call returns.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"
-   git branch -D "em-workflow/{feature}/{T}"   # -D: merge already verified
-                                               # via merge-base --is-ancestor.
-                                               # -d would REFUSE here: the
-                                               # orchestrator's HEAD is
-                                               # base_branch, which does not
-                                               # contain the task branch (it
-                                               # was merged into integration,
-                                               # not base_branch).
+   git -C {integration_worktree} branch -d "em-workflow/{feature}/{T}"
+   # -d succeeds here: the integration worktree's HEAD is the integration
+   # branch, which already contains the task branch (its merge was
+   # verified with merge-base --is-ancestor in step 1).
    ```
+   If this branch deletion fails, do NOT fall back to a forced deletion
+   (`-D` / `--force`): leave the branch in place and write its name into
+   this wake phase's own report. The task's status set in step 3 above is
+   unaffected, and step 5 below proceeds as before.
 5. **Refill**: if no task's reconciled status is `failed`, re-enter the
    launch phase (I.2.a) with the freed slot(s) and any still-unlaunched
    tasks, then end the turn again. If every task is now `merged`, proceed to
