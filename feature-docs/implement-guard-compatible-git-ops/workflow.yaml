@@ -119,7 +119,7 @@ workflow:
   completed_at_commit: cf04df800d3a7564dab8bc20e37eb8f4133373bf
   base_commit: c28a47652ad92ae1e2e333d0bbd51f50fc0407fb
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -175,7 +175,16 @@ tasks:
     status: merged
     branch: em-workflow/implement-guard-compatible-git-ops/task0002
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: マージ済み task ブランチを -d で削除する
