@@ -1,18 +1,121 @@
 schema_version: 1
 feature: implement-guard-compatible-git-ops
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 3f0a834c5e5c5ce600687cd14dc146a710629dca
 last_input_digest: sha256:55c565af6a217a5c6d3f1a6353d66f559030e673e34a415bb05ed7fb4121f55b
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-25T13:50:00+09:00'
+    questions:
+    - question_id: requirement.git-ops.policy
+      status: answered
+    - question_id: requirement.scope.unmerged-cleanup
+      status: answered
+    - question_id: requirement.refresh.form
+      status: answered
+    - question_id: requirement.heredoc.false-positive
+      status: answered
+    - question_id: requirement.recurrence.detection
+      status: answered
+    - question_id: requirement.user-hook.scope
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.git-ops.policy:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - protocol_side
+    freeform: null
+    normalized_answer: 'I.2.b step 4 を integration worktree 内の `git branch -d` に書き換え、hook
+      の検知力は削らない。Codex: 強制削除の拒否を維持したままマージ済みブランチを削除できる。'
+    resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
+      opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
+  requirement.scope.unmerged-cleanup:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - defer_followup
+    freeform: null
+    normalized_answer: 'I.2.a resume guard / I.2.c route-back の未マージ片付け（worktree remove
+      --force / branch -D）は範囲外とし、既知の未対応として後続タスクに起票する。Codex: batch 経路はこれらの操作を通らず、未マージ内容の扱い変更は分離できる。延期箇所を完了扱いにしないこと。'
+    resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
+      opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
+  requirement.refresh.form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_reset_literal
+    freeform: null
+    normalized_answer: 'refresh は `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
+      のリテラル形を維持し、対象をリテラルのブランチ名で書く（変数・SHA・HEAD・refs/heads/・省略を禁止）ことを明記する。Codex: 両 hook
+      で allow を確認済み。'
+    resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
+      opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
+  requirement.heredoc.false-positive:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - protocol_guidance
+    freeform: null
+    normalized_answer: 'ドキュメントの書き込みは Write ツールで行い、commit-docs.sh と同じ Bash 呼び出しにヒアドキュメントを混ぜない、とプロトコルで規定する。Codex:
+      リポジトリ hook だけ直しても利用者側 hook が deny するため、この run の制約に合う。worker 推奨（fix_hook_repo）とは異なる選択。'
+    resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
+      opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
+  requirement.recurrence.detection:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - cases_plus_doc_extraction
+    freeform: null
+    normalized_answer: destructive-guard-cases.json にプロトコル形状の allow ケースを足し、tests/
+      に文書抽出テストを置く。抽出対象は範囲内の箇所（全 refresh 箇所と I.2.b step 4）に限定し、延期した箇所は明示的な除外リストに載せる。Codex
+      はターン 1 で cases_only、オーケストレーターの反論（範囲限定と除外リストで延期方針と両立し、本文の drift を検出できる）を受けてターン
+      2 でこちらに変更。
+    resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
+      opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
+  requirement.user-hook.scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - repo_only
+    freeform: null
+    normalized_answer: '変更はリポジトリ内に限る。利用者側 ~/.claude/hooks のコピーに要る変更は手作業項目として報告に残す。Codex:
+      無人実行ではリポジトリ外へ書き込めない。'
+    resolution_note: 'codex_consulted: true (harness entry: codex, 2 turns, converged);
+      opus_escalation: false; recorded as assumption per batch-policies create-spec.requirement-clarification.record_as_assumption'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T13:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨どおり design をスキップ（UI 変更なし）
+    resolution_note: 'batch-policies create-spec.design-step: decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:55c565af6a217a5c6d3f1a6353d66f559030e673e34a415bb05ed7fb4121f55b
-  output_digest: null
+  output_digest: sha256:e0d88ce026fe1bde2253801a3483297fd54424174bfbba0fbf8efa3c47c3df22
 artifacts: []
 patches: []
 progress_fingerprint: null
