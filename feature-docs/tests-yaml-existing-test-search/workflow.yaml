@@ -96,7 +96,8 @@ workflow:
   excluded_scenarios: []
   summary: 'TS-1..TS-8 pass; SC-1..SC-8 pass; python3 -m unittest discover -s tests: 5699 tests, OK; check-plugin-invariants.py: 7/7 PASS, exit 0; plugin.json / marketplace.json em-workflow version 0.2.8 -> 0.2.9 (version lines only); manual checks on task0001.tests.yaml, SKILL.md and implementer.md Step 4c pass. build/format/e2e commands are empty (not applicable).'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 21fefda9924e7af3640144673189173ed9bd05b5
 tasks:
   task0001:
     title: 既存テスト検索の規律追加・再発検出テスト・version bump

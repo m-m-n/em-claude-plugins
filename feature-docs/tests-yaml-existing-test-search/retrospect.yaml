@@ -1,0 +1,59 @@
+feature: tests-yaml-existing-test-search
+collected_at: '2026-09-25T10:02:25+09:00'
+session_ids:
+- 01a0d614-ddc4-731e-a6ff-961bfb3d3b9e
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: 両読み（description_only / description_plus_code）とも最頻クラス 1 で一致し、tier full
+      を採用した
+    bases:
+    - basis: description_only
+      probabilities:
+        '0': 0.21
+        '1': 0.78
+        '2': 0.01
+      expectation_clear: 0.7
+      confidence: 0.68
+      observed_at: '2026-09-25T09:16:16+09:00'
+    - basis: description_plus_code
+      probabilities:
+        '0': 0.01
+        '1': 0.98
+        '2': 0.01
+      expectation_clear: 0.77
+      confidence: 0.97
+      observed_at: '2026-09-25T09:18:29+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/skills/tdd-testing/SKILL.md
+      - em-workflow/agents/implementer.md
+      - tests/test_implementer_existing_test_discovery.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      changed_lines_approx: 150
+      new_functions_needed: 6
+      new_files_needed: 1
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules:
+      - em-workflow/.claude-plugin
+      - .claude-plugin
+      work_still_required: true
+      rationale: HEAD e808d95 では、implementer.md:110–140 と tdd-testing/SKILL.md:77–88
+        に既存テストの検索義務がなく、test-docs/declared-change-set-implementation/task0002.tests.yaml:9–44
+        に誤った不存在の断定が残っているよ。元のタスク計画にも同じ誤認があるため、計画の記述を検索・実読で確認する規律が必要だよ（feature-docs/declared-change-set-implementation/tasks/task0002.md:76–82）。既存の
+        tests/test_spec_file_set_completeness_version_bump.py:162–166、224–273 は両マニフェストの読み込み、バージョン一致、キー集合を検査していて、読み取り専用の実行で23テストが成功したよ。ただし
+        HEAD のバージョン条件は major/minor 固定ではなく、数値組が (0,1,40) より大きいことになっているよ（同:179–190）。検索と記録の規律を直接検査する既存テストは見つからなかったため、規律の欠落を検出する新規テスト1ファイルを見積もったよ。新規関数6個はテストと補助関数を想定しているよ。標準
+        unittest を使う構成なので依存追加は不要だよ（test/README.md:7–12）。プラグイン変更時の規則に従い、両マニフェストの patch
+        更新も含めているよ（.claude/rules/core-plugin-version-bump.md:7–14）。実際の生成結果が期待どおりになるかは、修正後に再現手順で確認する必要があるよ
+follow_up_drafts: []
+lessons_candidates:
+- review round1 の medium 2 件（9e33b437bf4f3a41 / b59990edc5b0dffe）は resolution_reason
+  に「後続タスクとして起票」とあるが triage_filing.filed は空のまま
