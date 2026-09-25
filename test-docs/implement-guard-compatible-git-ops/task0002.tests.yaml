@@ -1,0 +1,94 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests (5677 tests) and
+                                # python3 em-workflow/hooks/tests/run-destructive-guard.py
+                                # (276/276) were both fully green before any edit.
+final_failures: []             # after implementation: 5687 unittest tests (10 new, from the
+                                # version-bump module) and 284/284 case-table cases, all green.
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Case-table entries pinning existing hook behaviour, not new code (task
+      plan Test Notes: "the hook is unchanged and already allows these
+      shapes, SPEC A3 -- the case table pins current behaviour; it does not
+      drive a code change"). Before the entries existed there was nothing to
+      run, so no red state was observable. Verified directly by probing the
+      guard subprocess with the three exact FR5 allow commands before
+      touching destructive-guard-cases.json (all three returned `allow`,
+      rc=0), then confirmed again via
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` after
+      adding the entries (284/284 passed, including these three as `ok`).
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same reasoning as AC-1: deny contrast cases pin existing behaviour.
+      Probed the guard subprocess with all five contrast commands
+      (refs/heads/-prefixed target, "$BRANCH", HEAD, a 40-hex-digit SHA, and
+      an omitted target) before editing the case table -- all five returned
+      `deny`, rc=0. Confirmed again via the runner after adding the entries
+      (284/284 passed).
+  AC-3:
+    tests:
+      - tests/test_destructive_guard_command_substitution.py::TestCaseTableDiscipline::test_every_pre_task_command_preserved_with_only_named_changes
+      - tests/test_destructive_guard_command_substitution.py::TestCaseTableDiscipline::test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      Regression guard over pre-existing entries; it was already green at
+      baseline (nothing in this task's diff removes, reorders, or changes
+      an existing entry's expectation or label, and the
+      `git reset --hard HEAD~1` deny entry is untouched). No code change
+      makes this criterion newly true -- it is a non-regression check, so
+      there is no red state to observe. Confirmed to still pass after the
+      edit as part of the 5687-test full-suite run.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same case-table-pins-current-behaviour reasoning as AC-1/AC-2.
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` exited 0
+      and reported "284/284 passed" after the edit (up from the baseline's
+      "276/276 passed").
+  AC-5:
+    tests:
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestPluginManifestVersion::test_version_is_past_baseline
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestPluginManifestVersion::test_name_field_unchanged
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_is_past_baseline
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_matches_plugin_manifest
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_source_unchanged
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_version_not_dragged_along
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_equality_matcher_rejects_forged_differing_versions
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_forged_pre_bump_version_is_well_formed
+      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_forged_differing_versions_are_both_well_formed
+    red_confirmed: true
+    red_reason: >-
+      Wrote the module against the unbumped manifests (both still 0.2.8) and
+      ran `python3 -m unittest tests.test_implement_guard_compatible_git_ops_version_bump
+      -v`: test_version_is_past_baseline and
+      test_em_workflow_entry_version_is_past_baseline both failed with
+      "AssertionError: (0, 2, 8) not greater than (0, 2, 8)" (the other 8
+      tests passed even pre-bump, since they check name/source/equality
+      invariants and the matchers' own negative proofs, none of which depend
+      on the version having moved). After bumping both manifests to 0.2.9,
+      all 10 tests pass.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not test-observable; verified from the task's own diff. `git status`
+      / `git diff --stat` after all edits show only
+      .claude-plugin/marketplace.json, em-workflow/.claude-plugin/plugin.json,
+      em-workflow/hooks/tests/destructive-guard-cases.json (modified) and
+      tests/test_implement_guard_compatible_git_ops_version_bump.py (new).
+      em-workflow/hooks/destructive-guard.py does not appear.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Full-suite regression guard, already true at baseline (5677/5677
+      green before any edit) -- not new behaviour this task introduces, so
+      no red state to observe. `python3 -m unittest discover -s tests`
+      after the edit: "Ran 5687 tests ... OK" (5677 baseline + 10 new from
+      the version-bump module).
