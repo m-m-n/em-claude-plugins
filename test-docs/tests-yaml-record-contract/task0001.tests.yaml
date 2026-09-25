@@ -1,0 +1,111 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any file was
+                                # touched: "Ran 5677 tests in 41.526s / OK" -- no failures inherited.
+final_failures: []             # same command, run again after implementer.md/plugin.json/
+                                # marketplace.json were edited and the new test module added: "Ran
+                                # 5691 tests in 41.596s / OK" (+14 tests, exactly this task's new
+                                # module). This task changes a document the suite's new module
+                                # reads (implementer.md), so the re-run could not be skipped.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implementer_tests_yaml_record_contract.TestR1NoExecutableRedRecording.test_required_phrases_present
+    red_confirmed: true
+    red_reason: >
+      Ran `python3 -m unittest tests.test_implementer_tests_yaml_record_contract -v` against the
+      pre-edit implementer.md: this method failed on subTest phrases 'unconfirmed_reds',
+      'Documentation-only tasks are covered by this rule', 'Apply it per criterion', and 'not a
+      blanket exemption' (none present in Step 4c before the edit). After adding the R1 paragraph
+      to Step 4c, re-ran the same command: the method passed.
+  AC-2:
+    tests:
+      - tests.test_implementer_tests_yaml_record_contract.TestR2RedConfirmedTrueMeaning.test_required_phrases_present
+    red_confirmed: true
+    red_reason: >
+      Same run, pre-edit: failed on subTest phrases 'with no implementation present, the executed
+      check was actually observed to fail', 'the failure of that check was actually observed
+      before implementation', 'Reading, searching for, or locating a document or an anchor is not
+      observing a red.', and 'must not be locally redefined in `notes` or in any other text' (none
+      present before the edit). Passed after adding the R2 paragraph to Step 4c.
+  AC-3:
+    tests:
+      - tests.test_implementer_tests_yaml_record_contract.TestR3UnconfirmedRedsIsTheReportDestination.test_unconfirmed_reds_named_as_destination
+      - tests.test_implementer_tests_yaml_record_contract.TestR3UnconfirmedRedsIsTheReportDestination.test_pre_change_notes_routing_phrase_is_gone
+      - tests.test_implementer_tests_yaml_record_contract.TestR3UnconfirmedRedsIsTheReportDestination.test_new_legitimate_notes_mentions_remain
+    red_confirmed: true
+    red_reason: >
+      Pre-edit: test_unconfirmed_reds_named_as_destination failed (destination phrase absent);
+      test_pre_change_notes_routing_phrase_is_gone failed because the pre-change phrase "and carry
+      it into your report's `notes`." was still present (asserted absent); test_new_legitimate_notes_mentions_remain
+      failed (the R2/R4 `notes` mentions did not exist yet). All three passed after the Step 4c
+      edit removed the old routing phrase and added the `unconfirmed_reds` destination plus the
+      new legitimate `notes` mentions.
+  AC-4:
+    tests:
+      - tests.test_implementer_tests_yaml_record_contract.TestR4FinalFailuresRecordingDiscipline.test_required_phrases_present
+      - tests.test_implementer_tests_yaml_record_contract.TestR4FinalFailuresRecordingDiscipline.test_tests_yaml_schema_keys_unchanged
+    red_confirmed: true
+    red_reason: >
+      Pre-edit: test_required_phrases_present failed on all eight subTest phrases ('records the
+      output of the run actually re-executed after implementation', 'no file the suite reads',
+      'source, tests, and documents the tests read', 'not re-run; baseline inherited', "the
+      report's `notes` also states that no re-run was performed", 'cannot be confirmed that the
+      skip condition holds', 'a task that changed a document the tests read cannot skip',
+      'never written into both `baseline_failures` and `final_failures`') -- none present before
+      the edit. Passed after adding the R4 paragraph and the updated `final_failures` comment.
+      test_tests_yaml_schema_keys_unchanged passed both before and after (NFR1: no key added or
+      removed), confirming the comment-only change did not touch the schema.
+  AC-5:
+    tests:
+      - tests.test_implementer_tests_yaml_record_contract.TestR5MandatoryRerunAfterParentSideAdoption.test_required_phrases_present
+    red_confirmed: true
+    red_reason: >
+      Pre-edit: failed on all four subTest phrases ("After parent-side adoption, the
+      `final_failures` skip condition never applies", 'the suite is always re-run', 'both
+      `baseline_failures` and `final_failures` are updated', 'on every adoption within this
+      conflict loop, not only the first') -- none present in Step 6 before the edit. Passed after
+      appending the R5 sentence to Step 6's conflict-cycle bullet.
+  AC-6:
+    tests:
+      - tests.test_implementer_tests_yaml_record_contract
+    red_confirmed: true
+    red_reason: >
+      Composite of AC-1 to AC-5's individual red-to-green observations above (all five rule
+      methods failed against the pre-edit document, then passed after the edit).
+      `python3 -m unittest discover -s tests` collects this module without configuration changes:
+      the full-suite count moved from 5677 (pre-edit baseline) to 5691 (post-edit final), exactly
+      +14 -- this module's test count. `TestOwnModuleStdlibOnly.test_only_standard_library_imports`
+      confirms the module imports only `ast`, `re`, `sys`, `unittest`, `pathlib` (all stdlib).
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      No automated test (Out of Scope: a version-equality test between the two manifests is
+      explicitly excluded from this task). Manually verified: before the bump, `python3 -c "import
+      json; print(json.load(open('em-workflow/.claude-plugin/plugin.json'))['version'])"` and the
+      equivalent read of the em-workflow entry in `.claude-plugin/marketplace.json` (found via
+      `grep -n '"version": "0.2.8"' .claude-plugin/marketplace.json`, a single match at the
+      em-workflow entry) both read "0.2.8" -- equal to the task-base baseline, so a "strictly past
+      baseline" check would fail. After editing both files to "0.2.9" and re-running
+      `python3 -c "import json; json.load(open(...))"` on both, both files parse as valid JSON and
+      both read "0.2.9": equal to each other, and exactly one patch increment above the 0.2.8
+      baseline. No other plugin's version field was touched in either manifest (single-match grep
+      before editing confirmed only the em-workflow entry read 0.2.8).
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      The tests.yaml key structure described in implementer.md (task_id, baseline_failures,
+      final_failures, acceptance_tests, tests, red_confirmed, red_reason) and the task's file
+      scope (em-workflow/agents/implementer.md, tests/test_implementer_tests_yaml_record_contract.py,
+      em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json, plus this generated
+      test-docs/tests-yaml-record-contract/task0001.tests.yaml record) already held before any
+      edit in this task, so no failing check could be observed for either property (NFR2: no
+      validator or hook was added to check tests.yaml mechanically; NFR3: no other document
+      restates the recording rules). The change set was kept to exactly those files -- verified by
+      not touching any other path. The third item (no suite regression) is verified by the
+      discover run recorded in `final_failures` above, not by an AC-8-specific red/green pair.
+notes: >
+  AC-7 and AC-8 have no automated test per this task's own R1 rule (no executable check that can
+  be made to fail, for AC-8; a deliberately non-permanent manual check for AC-7, per Out of
+  Scope). AC-8 is carried into the report's `unconfirmed_reds` as `red_confirmed: false`.
