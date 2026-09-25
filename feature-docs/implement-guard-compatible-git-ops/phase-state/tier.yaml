@@ -1,0 +1,56 @@
+schema_version: 1
+feature: implement-guard-compatible-git-ops
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.19
+    '1': 0.81
+    '2': 0.0
+  expectation_clear: 0.72
+  confidence: 0.71
+  observed_at: '2026-09-25T13:36:47+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.0
+    '1': 0.86
+    '2': 0.14
+  expectation_clear: 0.71
+  confidence: 0.79
+  observed_at: '2026-09-25T13:40:44+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - tests/test_implement_destructive_guard_compatibility.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_routeback_reset_scope_consistency.py
+  - tests/test_recycled_task_id_consistency.py
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 300
+  new_functions_needed: 6
+  new_files_needed: 1
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - implement の再試行・計画への差し戻し・task ID 再利用
+  - phase-state の共通復旧手順の互換性検査
+  - destructive-guard の回帰テスト
+  - プラグインの配布バージョン
+  work_still_required: true
+  rationale: 'HEAD e808d95 では一部解決済みだよ。配布 hook の em-workflow/hooks/destructive-guard.py:1341
+    とユーザー環境の /home/sakura/.claude/hooks/destructive-guard.py:361 は、integration ブランチ名を指定した
+    reset --hard を既に許可しているよ。phase-state.md:247、:281 の復旧手順もこの形だよ。heredoc 本文の除外も両方にあるよ（配布版:713、ユーザー版:229）。両
+    hook にコマンド文字列を渡した確認では、通常・無人実行とも refresh と文書用 heredoc は allow、branch -D は deny
+    だったよ
+
+
+    残る通常経路の問題は em-workflow/references/implement-phase.md:799 の強制削除だよ。integration worktree
+    内で branch -d を実行する手順への変更を勧めるよ。完了条件を再試行経路まで満たす見積もりとして、同ファイル:403 と :948 の worktree
+    remove --force／branch -D も含めたよ。こちらは未マージ状態を扱うため、単純な -d への置換では足りず、既存状態を保持・退避して再開する手順の整理が必要だよ。refresh
+    は既存例外を利用し、削除・再試行をプロトコル側で修正する前提だよ
+
+
+    既存テストは部分的にあるよ。配布 hook の検査は276件すべて通ったけれど、この完走条件を直接検査するテストは不足しているよ。強制削除の文字列を要求する既存検査も更新が必要だよ（tests/test_routeback_reset_scope_consistency.py:568、tests/test_implement_routeback_gate.py:997、tests/test_recycled_task_id_consistency.py:1382）。新規1ファイル・約6関数は回帰テスト用として見積もったよ。バージョン2箇所の更新も含めたよ（.claude/rules/core-plugin-version-bump.md:7）。ファイル変更や実際のGit更新操作、workflow全体の実行はしていないよ'
+decided_at: '2026-09-25T13:41:30+09:00'
