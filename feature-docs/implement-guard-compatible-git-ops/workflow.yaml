@@ -112,7 +112,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 8fce2d2199fd5395614d32c5ce5bee5a78aff5d3
 - id: implement
   status: pending
 - id: review
@@ -121,7 +122,54 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Guard-compatible step 4 cleanup, protocol write rules, and document-extraction test
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_implement_phase_guard_compatible_wording.py
+    - tests/test_protocol_git_ops_pass_destructive_guard.py
+    skills:
+    - infra-impl
+    domains:
+    - external-io
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+  task0002:
+    title: 'Hook case table: protocol command shapes and contrast cases; version bump'
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_implement_guard_compatible_git_ops_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR5
+    - FR8
+    - NFR1
+    - NFR2
+    status: pending
 review:
   status: pending
 requirements:
@@ -130,92 +178,133 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+    - TS-6
+    - TS-9
   FR2:
     title: -d が拒否されたときも強制削除しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   FR3:
     title: refresh のリテラル形を維持し、対象の書き方を明記する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-6
+    - TS-11
   FR4:
     title: ドキュメントの書き込みとヒアドキュメント
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
   FR5:
     title: hook ケース表にプロトコル形状を追加する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
   FR6:
     title: 文書抽出テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-7
+    - TS-8
   FR7:
     title: 延期した箇所を記録する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   FR8:
     title: version を上げる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-13
   NFR1:
     title: hook ロジック不変
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-14
   NFR2:
     title: 既存ケースの維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-5
+    - TS-15
   NFR3:
     title: テストの依存と隔離
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-16
   NFR4:
     title: 既存テストのアンカー保護
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-17
   NFR5:
     title: I.2.c の文言維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-17
 batch:
   review_rework_count: 0
   verify_rework:
