@@ -1,0 +1,101 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_phase_guard_compatible_wording.TestStep4BranchDeletionShape
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document (base revision
+      6adfa1146151f119c553fee7026e639ef7c30ebf), test_no_forced_branch_delete_spelling
+      failed ('git branch -D' present), test_canonical_step4_branch_deletion_present
+      failed (canonical shape absent), test_old_force_justification_comment_gone
+      failed (old comment still present), and test_new_comment_names_integration_head_and_verified_merge
+      failed (new comment absent). Verified by temporarily restoring the base
+      revision's implement-phase.md and re-running the module (19 failures / 3
+      errors observed across the whole module).
+  AC-2:
+    tests:
+      - tests.test_implement_phase_guard_compatible_wording.TestStep4FailureRule
+      - tests.test_implement_phase_guard_compatible_wording.TestBatchModeParagraphAfterStep5Untouched
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document, test_no_forced_fallback_named_only_as_flags,
+      test_branch_left_in_place, test_name_written_into_wake_phase_report and
+      test_step3_status_and_step5_unaffected all failed with AssertionError
+      (phrases not found) since the failure-rule paragraph did not exist yet.
+  AC-3:
+    tests:
+      - tests.test_implement_phase_guard_compatible_wording.TestLiteralRefreshTargetRule
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document, test_rule_present raised ValueError
+      turned AssertionError-equivalent failure (anchor sentence absent);
+      test_rule_names_all_five_excluded_forms, test_rule_occurs_exactly_once_in_whole_file
+      and test_added_text_has_no_git_prefixed_code_span all failed since the
+      rule text did not exist in the refresh bullet yet.
+  AC-4:
+    tests:
+      - tests.test_implement_phase_guard_compatible_wording.TestArtifactWriteRule
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document, test_states_write_tool_never_bash_heredoc
+      and test_states_commit_docs_call_has_no_heredoc both failed (phrase
+      absent) since the artifact-write rule sentence did not exist in the
+      "Every workflow artifact" bullet yet.
+  AC-5:
+    tests:
+      - tests.test_protocol_git_ops_pass_destructive_guard.TestEveryInScopeSiteExtractsAndPasses
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document, the "I.2.b step 4 branch deletion" site
+      extracted 'git branch -D "em-workflow/some-feature/task0001"   # -D: merge
+      already verified' and the guard returned verdict='deny' for it
+      (git-branch-force-delete), matching the task plan's Test Notes
+      prediction exactly ("Expected red before the edit"). All other sites
+      already passed pre-change (SPEC A3), consistent with the plan.
+  AC-6:
+    tests:
+      - tests.test_protocol_git_ops_pass_destructive_guard.TestMissingAnchorOrZeroExtractionFailsNamingSite
+    red_confirmed: true
+    red_reason: >-
+      Written test-first: before _verify_site()/_extract_candidates() existed,
+      calling the (not-yet-implemented) helper raised NameError/ImportError
+      for all three tests in this class. After implementing the extraction
+      engine, each test was confirmed to genuinely exercise the failure path
+      it claims (synthetic sample with a missing anchor / zero commands of the
+      expected kind / only a wrong-kind command), each raising AssertionError
+      naming the synthetic site, caught by assertRaises and asserted to name
+      the site.
+  AC-7:
+    tests:
+      - tests.test_protocol_git_ops_pass_destructive_guard.TestExclusionList
+    red_confirmed: true
+    red_reason: >-
+      Same as AC-6: written before _exclusion_spans()/_verify_site() existed
+      (NameError). Once implemented, test_no_selected_command_originates_inside_an_excluded_region
+      was confirmed to genuinely distinguish include/exclude: against the
+      pre-change document it additionally caught the guard-deny failure at the
+      "I.2.b step 4" sites (a real defect, expected per AC-5's red), showing
+      the exclusion-region filtering itself was already correctly scoped
+      (only I.2.a resume-guard and I.2.c route-back cleanup commands were
+      excluded; the I.2.b step 4 site's own commands, in scope, were not).
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-8 is a hygiene/full-suite criterion (stdlib-only imports, CLAUDE_BATCH
+      removed from the guard's child environment, no files written, both new
+      modules discovered by `python3 -m unittest discover -s tests`, six named
+      pre-existing modules stay green, and the two version manifests read the
+      IMPLEMENTATION.md plugin version value 0.2.9) rather than a single
+      behavior with an observable red/green transition of its own; it is
+      verified by running the full suite (5721/5721 passed, up from the 5677
+      baseline; the five named modules --
+      test_tip_capture_idiom_uniformity, test_exit4_tip_argument_consistency,
+      test_routeback_reset_scope_consistency, test_implement_routeback_gate,
+      test_recycled_task_id_consistency -- are unmodified and pass within that
+      run) and by direct inspection (env.pop("CLAUDE_BATCH", None) in both
+      modules' guard-invocation helper/import list; plugin.json and
+      marketplace.json version fields both read "0.2.9").
