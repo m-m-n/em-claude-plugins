@@ -1,0 +1,17 @@
+schema_version: 1
+feature: implement-guard-compatible-git-ops
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 3f0a834c5e5c5ce600687cd14dc146a710629dca
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
