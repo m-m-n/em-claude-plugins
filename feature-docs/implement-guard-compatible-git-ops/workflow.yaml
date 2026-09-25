@@ -151,7 +151,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/implement-guard-compatible-git-ops/task0001
   task0002:
     title: 'Hook case table: protocol command shapes and contrast cases; version bump'
