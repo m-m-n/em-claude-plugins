@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 519d157cbd6713ee3bf81fab7ea8d7dfe1333bd1
 last_input_digest: sha256:c8e04e47807ac3a2fc63bad2c146c1d5aec0378b3ab044715b073f8d9d658cf8
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -87,8 +87,14 @@ worker_runs:
   status: completed
   input_digest: sha256:c8e04e47807ac3a2fc63bad2c146c1d5aec0378b3ab044715b073f8d9d658cf8
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:3dc0f308949ef35e3af4546e060a211c61ff18d4ccfa2b1f0806923c962b6c5e
-artifacts: []
+artifacts:
+- path: feature-docs/routeback-deferred-findings/REQUIREMENTS.md
+  sha256: sha256:a991e1692d0685bf16d93ba0970a9bf509d06f89a2bff9bcb58a6874745ca656
+  produced_by: create-spec-run-0003
+- path: feature-docs/routeback-deferred-findings/SPEC.md
+  sha256: sha256:0206294120a37223920d42f7ae7036dd228f82b0fa162f88564508299144417a
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
