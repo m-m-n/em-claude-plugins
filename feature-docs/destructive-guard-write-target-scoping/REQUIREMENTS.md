@@ -28,7 +28,7 @@ status: draft
 
 **対象外**:
 
-- `check_rm` および `SAFE_DELETE`（FR6）。rm 関連には既に誤爆がないため、今回の変更対象に含めない。
+- `check_rm` および `SAFE_DELETE`（FR6）。本体は変更対象に含めないが、`head()` のラッパー値フラグ消費（`WRAPPER_VALUE_FLAGS`）と `statements()` の `-c` / eval / ヒアストリング本文再走査により `check_rm` が受け取る入力は変わり、`sudo -u root rm -rf $HOME/x`、`bash -c 'rm -rf $HOME/x'`、`eval 'rm -rf $HOME/x'` は allow から ask（`CLAUDE_BATCH` 下では deny）に変わった。
 
 ## 2. ビジネス要件
 
@@ -138,11 +138,11 @@ status: draft
 | ID | 機能名 | 説明 | 優先度 |
 |----|--------|------|--------|
 | FR1 | 誤爆ケースを先にテストスイートへ追加する | allow 期待の 5 ケースを追加し、追加時点で red を確認する | 高 |
-| FR2 | 書き込み先パス集合を組み立て、その要素にだけ SELF_CONFIG / TRANSCRIPT を当てる | segment 全体への正規表現検索からパス集合照合へ書き換える | 高 |
+| FR2 | 書き込み先パス集合を組み立て、その要素にだけ SELF_CONFIG / TRANSCRIPT を当てる | segment 全体への正規表現検索から、(a)〜(d) の書き込み先パス集合に対する照合へ書き換える | 高 |
 | FR3 | 書き込み先が存在しない場合は判定しない | 集合が空のセグメントは判定せずに戻る | 高 |
 | FR4 | 読み取り元が `~/.claude` にあるだけのコマンドは allow にする | source 側にあるだけでは発火させない | 高 |
 | FR5 | 既存の検知力を維持する | ask / deny の既存判定を保つ | 高 |
-| FR6 | rm 系の判定には手を入れない | `check_rm` と `SAFE_DELETE` は変更対象外 | 中 |
+| FR6 | `check_rm` / `SAFE_DELETE` の本体には手を入れない | 本体は変更対象外だが、`head()` / `statements()` の入力整形変更により `check_rm` が受け取る入力は変わる | 中 |
 | FR7 | プラグイン version を 2 箇所同値で patch 上げする | 0.1.55 → 0.1.56 | 中 |
 
 ### 4.2 機能詳細
@@ -162,11 +162,12 @@ status: draft
 
 #### FR2: 書き込み先パス集合を組み立て、その要素にだけ SELF_CONFIG / TRANSCRIPT を当てる
 
-**説明**: `check_self_modification` を、segment 全体への正規表現検索から「書き込み先パスの集合に対する照合」へ書き換える。集合の抽出元は 3 つ:
+**説明**: `check_self_modification` を、segment 全体への正規表現検索から「書き込み先パスの集合に対する照合」へ書き換える。集合の抽出元は次の (a)〜(d):
 
 - (a) 出力リダイレクトのターゲット（`split_redirects()` は演算子とターゲットを両方 `redirects` に入れるため、演算子でない側を取る。入力リダイレクト `<` 系は含めない）
 - (b) `INPLACE_WRITERS`（tee / truncate / shred / install / patch）と `sed -i` の対象引数
-- (c) rm / mv / cp / ln / chmod / chown の対象引数（cp / mv / ln は宛先が最後の引数）
+- (c) rm / chmod / chown の対象引数（フラグでない引数すべて）。mv もフラグでない引数すべて（mv は各ソースを unlink するため書き込み先になる）に加え `-t` / `--target-directory` の値。cp / ln は宛先を最後の位置引数（フラグ値除去後）とするか、`-t` / `--target-directory` が与えられた場合はその値だけを対象とする。
+- (d) コマンド固有の宛先: rsync の最後の位置引数（フラグ値除去後）、git clone の最後の位置引数（位置引数が 2 つ以上のとき）、tar の `-C` / `--directory`（extract モードのみ）、unzip の `-d`、curl の `-o` / `--output`、wget の `-O` / `--output-document`
 
 `SELF_CONFIG` と `TRANSCRIPT` はこの集合の要素にだけ適用する。
 
@@ -174,7 +175,7 @@ status: draft
 
 **ビジネスルール**:
 
-- 「対象引数」とはフラグでない引数を指す。cp / mv / ln は最後の 1 つを宛先として扱い、rm / chmod / chown はフラグでない引数すべてを対象として扱う。
+- 「対象引数」とはフラグでない引数を指す。rm / chmod / chown はフラグでない引数すべてを対象として扱う。mv もフラグでない引数すべてを対象として扱い（mv は各ソースを unlink するため書き込み先になる）、加えて `-t` / `--target-directory` の値も対象とする。cp / ln は最後の位置引数（フラグ値除去後）だけを宛先として扱うか、`-t` / `--target-directory` が与えられた場合はその値だけを対象とする。
 - 入力リダイレクト（`<` / `<<` / `<<<`）由来のトークンは集合に入れない。
 
 **エラーケース**:
@@ -221,9 +222,9 @@ status: draft
 
 **関連受け入れ基準**: AC-4、AC-6、AC-7
 
-#### FR6: rm 系の判定には手を入れない
+#### FR6: `check_rm` / `SAFE_DELETE` の本体には手を入れない
 
-**説明**: `SAFE_DELETE` と既存の誤爆修正により rm 関連には誤爆がない（`rm /tmp/foo` / `rm -rf node_modules` / `rm -rf /tmp/x 2>/dev/null` / `grep -rn "rm -rf /" ~/.claude/hooks/` はいずれも allow）。`check_rm` および `SAFE_DELETE` は今回の変更対象に含めない。
+**説明**: `check_rm` と `SAFE_DELETE` の本体は変更対象に含めない。`SAFE_DELETE` と既存の誤爆修正により rm 関連には誤爆がない（`rm /tmp/foo` / `rm -rf node_modules` / `rm -rf /tmp/x 2>/dev/null` / `grep -rn "rm -rf /" ~/.claude/hooks/` はいずれも allow のまま）。ただし `head()` のラッパー値フラグ消費（`WRAPPER_VALUE_FLAGS`）と `statements()` の `-c` / eval / ヒアストリング本文再走査により `check_rm` が受け取る入力は変わり、`sudo -u root rm -rf $HOME/x`、`bash -c 'rm -rf $HOME/x'`、`eval 'rm -rf $HOME/x'` は allow から ask（無人実行下では deny）に変わった。
 
 **状態**: resolved
 
@@ -351,7 +352,7 @@ status: draft
 
 | 課題 | 影響度 | 対応策 |
 |------|--------|--------|
-| 書き込み先集合の抽出漏れがそのまま検知漏れになる | 高 | 抽出元を (a) 出力リダイレクト、(b) `INPLACE_WRITERS` と `sed -i`、(c) rm / mv / cp / ln / chmod / chown の 3 つに揃える（FR2） |
+| 書き込み先集合の抽出漏れがそのまま検知漏れになる | 高 | 抽出元を (a) 出力リダイレクト、(b) `INPLACE_WRITERS` と `sed -i`、(c) rm / chmod / chown および mv の対象引数、(d) cp / ln の宛先とコマンド固有の宛先（rsync / git clone / tar `-C`（extract モードのみ）/ unzip `-d` / curl `-o` / wget `-O`）の 4 つに揃える（FR2） |
 | 書き込み先が変数・グロブで静的に確定できない（`rm -rf ~/.claude/skills/*` 等） | 中 | rm 系は既存の rm-unresolvable / rm-recursive が先に ask/deny を出す。self-modification 側の集合照合が新たな穴を作らないこと |
 | フラグを対象引数と誤認する（`tee -a ~/.claude/settings.json`） | 中 | 対象引数はフラグでない引数に限る。ask を維持する |
 | `sed -i.bak` / `sed -i ''` の変種でスクリプト引数が集合に混じる | 低 | 現行判定 `a.startswith("-i")` のまま。スクリプト引数は `SELF_CONFIG` に一致しないため判定は変わらない |
@@ -390,7 +391,7 @@ status: draft
 - [ ] 正常系: `python3 em-workflow/hooks/tests/run-destructive-guard.py <path-to-installed-guard-copy>`（TS-3）— version bump 後、インストール済みキャッシュ側に修正が反映されたかの確認（任意）。
 - [ ] 異常系: 既存の deny / ask ケース（self-modification / transcript-write）が判定を変えないこと。
 - [ ] 境界値: `2>&1` のターゲット側 fd 番号、書き込み先集合が空のセグメント、追記リダイレクト `>>` / `2>>`、入力リダイレクト `<` / `<<` / `<<<`。
-- [ ] 境界値: `cp ~/.claude/settings.json /tmp/` → allow、`cp /tmp/x ~/.claude/settings.json` → ask、`mv a b c dir/` の宛先は最後の 1 つ、`ln -sf x ~/.claude/hooks/y` は最後の引数側が作られる。
+- [ ] 境界値: `cp ~/.claude/settings.json /tmp/` → allow、`cp /tmp/x ~/.claude/settings.json` → ask、`mv a b c dir/` は a, b, c, dir/ の全てが書き込み先になる、`ln -sf x ~/.claude/hooks/y` は最後の引数側が作られる。
 - [ ] セキュリティ: 書き込み先集合の抽出漏れによる検知漏れがないこと（`ALLOW_NON_DESTRUCTIVE=True` のため未一致は allow になる）。
 - [ ] パフォーマンス: 該当なし
 
@@ -406,7 +407,7 @@ status: draft
 | `SAFE_DELETE` | rm 判定側の既存の許容ルール |
 | `split_redirects()` | セグメントからリダイレクトを分離する関数。演算子とターゲットを両方 `redirects` に入れる |
 | `statements()` | コマンド文字列をセグメントへ分割する関数。パイプの各段は別セグメントになる |
-| 書き込み先パス集合 | FR2 が定義する、(a) 出力リダイレクトのターゲット、(b) `INPLACE_WRITERS` と `sed -i` の対象引数、(c) rm / mv / cp / ln / chmod / chown の対象引数からなる集合 |
+| 書き込み先パス集合 | FR2 が定義する、(a) 出力リダイレクトのターゲット、(b) `INPLACE_WRITERS` と `sed -i` の対象引数、(c) rm / chmod / chown および mv の対象引数、(d) cp / ln の宛先とコマンド固有の宛先（rsync / git clone / tar `-C`（extract モードのみ）/ unzip `-d` / curl `-o` / wget `-O`）からなる集合 |
 
 ## 14. 確認事項
 
@@ -414,7 +415,7 @@ status: draft
 
 - [x] version bump の基準値: 現在のリポジトリ値 0.1.55（タスク記述の 0.1.51 ではない）。patch 1 つ分なので 0.1.56。
 - [x] version bump 先: `plugin.json` と `marketplace.json` の 2 箇所。
-- [x] FR2 の (b)(c) における「対象引数」: フラグでない引数を指す。cp / mv / ln は最後の 1 つを宛先として扱い、rm / chmod / chown はフラグでない引数すべてを対象として扱う。
+- [x] FR2 の (b)(c)(d) における「対象引数」: フラグでない引数を指す。rm / chmod / chown はフラグでない引数すべてを対象として扱う。mv もフラグでない引数すべてを対象として扱い、加えて `-t` / `--target-directory` の値も対象とする。cp / ln は最後の位置引数（フラグ値除去後）だけを宛先として扱うか、`-t` / `--target-directory` が与えられた場合はその値だけを対象とする。
 - [x] 入力リダイレクト（`<` / `<<` / `<<<`）由来のトークン: 書き込み先集合に入れない。
 - [x] `2>&1` のターゲット側トークン: ファイルディスクリプタ番号であり、`SELF_CONFIG` / `TRANSCRIPT` のどちらにも一致しないため集合に混じっても判定に影響しない。
 - [x] `SELF_CONFIG` の先頭アンカー `(?:^|["'\s=])`: 集合の要素（単独トークン）に対して `^` 側の分岐で一致するため、正規表現自体の変更は不要。
