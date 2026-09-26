@@ -446,6 +446,29 @@ THIRD_CONJUNCT_CAUSE_IN_ENUMERATION_PHRASE = (
     "1's reconciled state does not verify it"
 )
 
+# task0004 (routeback-deferred-findings) AC-3, AC-6: the three phrases
+# above -- ANCESTOR_FAILURE_EXIT_CITES_RECONCILED_STATE_PHRASE,
+# RETRY_REACHES_PERMISSION_DENIAL_PHRASE, EXIT_REACHED_WITHOUT_ABORT_PHRASE
+# -- are removed from I.2.c's ancestor-failure paragraph by that task: it
+# now states that the task reaches the ordinary retry / route back to
+# planning / abort menu, carrying the journal `failed` event I.2.b step
+# 1's ancestor-check branch records for it, instead of the old dead-end /
+# human-only / status-semantics-unmet prose. The three constants above
+# stay defined (their historical negative proof against
+# TASK0002_PRE_CHANGE_I2C_THIRD_CONJUNCT_TAIL_SAMPLE below is unaffected),
+# but the positive tests that once asserted their presence are converted
+# below into absence assertions paired with a positive assertion for the
+# replacement wording (full new-wording coverage:
+# tests/test_merge_unverified_exit_doc_contract.py).
+NEW_ANCESTOR_FAILURE_EXIT_ORDINARY_MENU_PHRASE = (
+    "the task reaches the ordinary retry / route back to planning / "
+    "abort menu here exactly like any other failed task"
+)
+NEW_ANCESTOR_FAILURE_EXIT_CITATION_PHRASE = (
+    "carrying the journal `failed` event that Step I.2.b step 1's "
+    "ancestor-check branch records for it"
+)
+
 # task0002: module-level constants for I.2.b step 1's own ancestor-check
 # reconciled-state rule (the upstream half of Site C's exit).
 ANCESTOR_CHECK_FAILURE_RECONCILED_FAILED_PHRASE = (
@@ -699,6 +722,15 @@ ORPHAN_JOURNAL_HELPER_INVOCATION_PHRASE = (
 ORPHAN_ONLY_CASE_PHRASE = (
     "This is the ONLY case in which the orchestrator's own action results "
     "in an append to `journal.jsonl`"
+)
+
+# task0004 (routeback-deferred-findings) AC-5, AC-6: ORPHAN_ONLY_CASE_PHRASE
+# is removed by that task -- the orphan-recovery attempt's own invocation
+# is no longer claimed as the only orchestrator-caused append; it is now
+# named as one of two invocation sites of the single helper exception.
+NEW_ORPHAN_INVOCATION_SITE_PHRASE = (
+    "This invocation is one of the invocation sites of the single helper "
+    "exception the Supporting cast Journal bullet below states"
 )
 ORPHAN_RESIDUAL_REASON_CODES = (
     "no-agent-entry",
@@ -1723,11 +1755,20 @@ class TestAgentIndexOrchestratorReadRuleDefinesLookup(unittest.TestCase):
 class TestThirdConjunctNeverNarrowedHasStatedExit(unittest.TestCase):
     """AC-4 (FR1, FR2; TS-10, task0002 Site C): for a task whose journal
     last event is `merged` while `git merge-base --is-ancestor` fails, the
-    document states an outcome other than the gate-rejected/abort terminal
-    that is reached without the user selecting abort; and states that no
-    path admits route-back while a recycled id could inherit a journal
-    `merged` the launch guard denies (the third conjunct is never
-    narrowed)."""
+    document states that no path admits route-back while a recycled id
+    could inherit a journal `merged` the launch guard denies (the third
+    conjunct is never narrowed).
+
+    task0004 (routeback-deferred-findings) AC-3, AC-6: the old outcome --
+    reached without the user selecting abort, in effect a dead end -- is
+    replaced by an automated exit: the task now reaches the ordinary
+    retry / route back to planning / abort menu, carrying the journal
+    `failed` event I.2.b step 1's ancestor-check branch records for it.
+    The three tests below that used to assert the old wording's presence
+    are converted into absence assertions paired with a positive
+    assertion for the replacement wording (AC-6 pin-conversion
+    discipline); full new-wording coverage for the replacement lives in
+    tests/test_merge_unverified_exit_doc_contract.py."""
 
     @classmethod
     def setUpClass(cls):
@@ -1741,16 +1782,33 @@ class TestThirdConjunctNeverNarrowedHasStatedExit(unittest.TestCase):
             NO_RECYCLED_ID_INHERITS_MERGED_VIA_WRITE_SET_PHRASE, self.section
         )
 
-    def test_exit_cites_i2b_step1_reconciled_state(self):
-        self.assertIn(
+    def test_exit_no_longer_cites_i2b_step1_reconciled_state_directly(self):
+        # task0004 AC-3, AC-6: converted from a presence assertion. The
+        # old citation sentence is gone; the replacement cites the
+        # ancestor-check branch's own `failed` event instead.
+        self.assertNotIn(
             ANCESTOR_FAILURE_EXIT_CITES_RECONCILED_STATE_PHRASE, self.section
         )
+        self.assertIn(
+            NEW_ANCESTOR_FAILURE_EXIT_CITATION_PHRASE, self.section
+        )
 
-    def test_retry_reaches_harness_level_failure_diagnostic_path(self):
-        self.assertIn(RETRY_REACHES_PERMISSION_DENIAL_PHRASE, self.section)
+    def test_retry_no_longer_reaches_harness_level_failure_diagnostic_path(
+        self,
+    ):
+        # task0004 AC-3, AC-6: converted from a presence assertion.
+        self.assertNotIn(RETRY_REACHES_PERMISSION_DENIAL_PHRASE, self.section)
+        self.assertIn(
+            NEW_ANCESTOR_FAILURE_EXIT_ORDINARY_MENU_PHRASE, self.section
+        )
 
-    def test_outcome_reached_without_selecting_abort(self):
-        self.assertIn(EXIT_REACHED_WITHOUT_ABORT_PHRASE, self.section)
+    def test_outcome_no_longer_reached_without_selecting_abort(self):
+        # task0004 AC-3, AC-6: converted from a presence assertion -- abort
+        # is now reachable exactly like any other failed task.
+        self.assertNotIn(EXIT_REACHED_WITHOUT_ABORT_PHRASE, self.section)
+        self.assertIn(
+            NEW_ANCESTOR_FAILURE_EXIT_ORDINARY_MENU_PHRASE, self.section
+        )
 
 
 class TestGateRejectedEnumerationIncludesThirdConjunct(unittest.TestCase):
@@ -2393,12 +2451,20 @@ class TestI2bOrphanRecoveryOwningSection(unittest.TestCase):
     the I.2.b step 1 Recovery / Residual block owns the orphan-recovery
     rule in full -- the candidate conditions (reused from the existing
     not-live candidate set, cited not restated), the evidence order with
-    its SC6 residual reason codes, the invocation protocol for the two new
-    helpers (`recover-orphaned-task.py`, `journal-append-failed.py`)
-    including the D2 marker emission that precedes it, and the statement
-    that this is the only case in which the orchestrator appends a journal
-    event -- and no other location in this document restates the reason
-    codes."""
+    its SC6 residual reason codes, and the invocation protocol for the two
+    new helpers (`recover-orphaned-task.py`, `journal-append-failed.py`)
+    including the D2 marker emission that precedes it -- and no other
+    location in this document restates the reason codes.
+
+    task0004 (routeback-deferred-findings) AC-5, AC-6: the orphan-recovery
+    attempt's invocation is no longer claimed as the ONLY orchestrator-
+    caused journal append -- it is now named as one of two invocation
+    sites of the single helper exception, the other being I.2.b step 1's
+    ancestor-check branch. The test below that used to assert the old
+    "only case" wording is converted into an absence assertion paired
+    with a positive assertion for the replacement wording (AC-6
+    pin-conversion discipline); full new-wording coverage lives in
+    tests/test_merge_unverified_exit_doc_contract.py."""
 
     @classmethod
     def setUpClass(cls):
@@ -2424,8 +2490,11 @@ class TestI2bOrphanRecoveryOwningSection(unittest.TestCase):
     def test_states_journal_helper_invocation_on_proof(self):
         self.assertIn(ORPHAN_JOURNAL_HELPER_INVOCATION_PHRASE, self.i2b)
 
-    def test_states_only_case_orchestrator_appends_journal(self):
-        self.assertIn(ORPHAN_ONLY_CASE_PHRASE, self.i2b)
+    def test_no_longer_states_only_case_orchestrator_appends_journal(self):
+        # task0004 (routeback-deferred-findings) AC-5, AC-6: converted from
+        # a presence assertion.
+        self.assertNotIn(ORPHAN_ONLY_CASE_PHRASE, self.i2b)
+        self.assertIn(NEW_ORPHAN_INVOCATION_SITE_PHRASE, self.i2b)
 
     def test_reason_codes_not_restated_outside_i2b(self):
         # NFR7: the evidence order / reason codes are owned exclusively by
