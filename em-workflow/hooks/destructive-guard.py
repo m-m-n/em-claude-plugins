@@ -420,7 +420,7 @@ class _TrackingLexer(shlex.shlex):
 
 
 def lex_segments(chunk):
-    """Split a chunk into statements, each returned as (tokens, lexed).
+    """Split a chunk into statements, each returned as (tokens, lexed, sep).
 
     Separators only count when they sit OUTSIDE quotes, and telling those
     apart is the whole reason shlex does the splitting rather than a regex.
@@ -434,11 +434,20 @@ def lex_segments(chunk):
     a word/quoted span — the signal split_redirects() needs to tell a real
     `>` apart from a quoted string that merely looks like one.
 
+    SEP (task0001, case-pattern tracking) is the raw separator text that
+    ended this statement (possibly fused with an adjacent separator, e.g.
+    `;;\n` when a newline directly follows a double-semicolon with no
+    space — punctuation_chars fuses contiguous punctuation regardless of
+    which characters they are), or None for the trailing statement, which
+    has nothing following it in this chunk. statements() reads whether
+    `";;"` occurs in SEP to know a case item just ended; nothing else in
+    this file consults it.
+
     Falls back to the regex split when the chunk will not parse — an
     unbalanced quote, usually. That path keeps the old false positives and
-    returns LEXED False, since per-token provenance is unavailable there; a
-    parse failure is rare, and waving the chunk through unexamined would be
-    a hole rather than a nuisance.
+    returns LEXED False (and SEP always None, since separator provenance is
+    unavailable there too); a parse failure is rare, and waving the chunk
+    through unexamined would be a hole rather than a nuisance.
     """
     try:
         lex = _TrackingLexer(chunk, posix=True, punctuation_chars=PUNCTUATION)
@@ -452,7 +461,9 @@ def lex_segments(chunk):
             toks.append(Tok(raw, lex.last_was_operator))
     except ValueError:
         return [
-            (tokens(seg), False) for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()
+            (tokens(seg), False, None)
+            for seg in SEGMENT_SPLIT.split(chunk)
+            if seg.strip()
         ]
 
     out, current = [], []
@@ -487,11 +498,11 @@ def lex_segments(chunk):
             segs = [t]
         for seg in segs:
             if seg and all(c in SEGMENT_CHARS for c in seg):
-                out.append((current, True))
+                out.append((current, True, seg))
                 current = []
             else:
                 current.append(seg)
-    out.append((current, True))
+    out.append((current, True, None))
     return out
 
 
@@ -915,13 +926,38 @@ def _strip_unresolved_marks(toks, chunk_subs=None):
 
 
 def statements(command):
-    """Yield (text, tokens, lexed) per command segment, substitution bodies
-    included.
+    """Yield (text, tokens, lexed, shaped_tokens) per command segment,
+    substitution bodies included.
 
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
     parse-success flag — False only on the parse-failure fallback, where
     token provenance is unavailable.
+
+    SHAPED_TOKENS (task0001 D1) is TOKENS with every grouping/compound-
+    construct token at command position removed — see _shape_leading()'s
+    docstring for the full vocabulary and CASE_STACK's semantics — and any
+    bare `)` operator token dropped from what remains (task0001 FR3: a
+    closer is never counted among a command's arguments). It is `[]` for a
+    statement that consists entirely of such syntax (no command here).
+    TOKENS itself (the second yielded value) is UNCHANGED by this: it is
+    still exactly what shaping produced before this task, so main()'s
+    deferral computation (strip_grouping_prefix()/_deferral_head()/
+    matches_target_shape()) keeps working from it precisely as before —
+    only the destructive checks (check_rm(), check_git(), check_file_
+    destruction(), check_external(), check_permissions(), check_self_
+    modification(), and the substitution-headed route) read
+    SHAPED_TOKENS. CASE_STACK is reset to `[]` at the start of each chunk
+    below (never carried across a substitution body, here-doc body, or
+    `-c`/eval/here-string payload boundary — task0001 "the same command
+    string or payload"), and a statement's own trailing separator flips a
+    "body" frame back to "pattern" when it contains `;;` (`ends_case_item`
+    below), so a case construct's pattern/body alternation survives across
+    the `;;`-separated statements of one chunk. Only ever applied when
+    LEXED is True — grouping/closer recognition needs the `.is_operator`
+    provenance the parse-failure fallback does not have, so SHAPED_TOKENS
+    equals TOKENS unchanged there, matching every other lexed-dependent
+    feature in this file.
 
     The shell-payload extraction below runs on MARKED tokens — the direct
     output of lex_segments(), still carrying raw UNRESOLVED_MARK residue —
@@ -995,12 +1031,30 @@ def statements(command):
         offset = len(all_subs)
         all_subs.extend(chunk_subs)
         quoted_segments = lex_segments(_mark_quoted_substitutions(chunk))
-        for seg_index, (marked, lexed) in enumerate(
+        # task0001: case-pattern/body state, scoped to this one chunk only.
+        case_stack = []
+        for seg_index, (marked, lexed, sep) in enumerate(
             lex_segments(_mark_substitutions(chunk, offset))
         ):
             toks = _strip_unresolved_marks(marked, all_subs)
             if toks:
-                yield " ".join(toks), toks, lexed
+                if lexed:
+                    fused_split = _split_fused_closer_redirects(toks)
+                    lead = _shape_leading(fused_split, case_stack)
+                    if lead >= len(fused_split):
+                        shaped_toks = []
+                    else:
+                        shaped_toks = [
+                            a
+                            for a in fused_split[lead:]
+                            if not (a == ")" and getattr(a, "is_operator", False))
+                        ]
+                    ends_case_item = bool(sep and ";;" in sep)
+                    if ends_case_item and case_stack and case_stack[-1] == "body":
+                        case_stack[-1] = "pattern"
+                else:
+                    shaped_toks = toks
+                yield " ".join(toks), toks, lexed, shaped_toks
                 if budget[0] > 0:
                     quoted_marked = (
                         quoted_segments[seg_index][0]
@@ -1021,35 +1075,31 @@ def tokens(segment):
         return segment.split()
 
 
-def _skip_to_command_word(toks):
+def _skip_assignments_and_wrappers(toks):
     """Advance past VAR=value assignments, WRAPPERS (and their value-taking
-    options), and mise/asdf `exec` prefixes — exactly the skip loop head()
-    has always applied — additionally tracking whether a `.substitution_only`
-    token (an argument built entirely from a command substitution) was
-    skipped along the way (task0001 FR1/FR2/FR3, AS-2).
+    options), and mise/asdf `exec` prefixes — the skip loop head() has
+    always applied, minus its `.substitution_only` handling.
 
-    Returns (index, saw_substitution, last_substitution_tok). INDEX is where
-    the scan stops: either a real candidate token, or len(TOKS) when none
-    remains — head() turns this into its own (word, args) return unchanged.
-    SAW_SUBSTITUTION and LAST_SUBSTITUTION_TOK feed the "statically unknown
-    command word" classification in main() (task0002 FR11:
-    LAST_SUBSTITUTION_TOK is the `.substitution_only` token closest to the
-    stop index, whose `.raw_substitution_body` route_substitution_headed_
-    statement() reads as evidence; None when no such token was skipped).
-    head() itself ignores both, so its own return shape and behaviour are
-    unchanged by this refactor.
+    Factored out of _skip_to_command_word() (task0001) so that the
+    grouping/case-aware scan in statements() (_shape_leading()) can
+    interleave this same skip with its own — a subshell wrapping a WRAPPER
+    (`( sudo rm -rf /home/sakura/x )`), or a reserved word introducing a
+    VAR=value prefix (`then HOME=/home/sakura/y`) — WITHOUT also consuming
+    a `.substitution_only` token: that token must survive intact at the
+    front of the shaped remainder statements() produces, so main()'s
+    separate, unchanged call to _skip_to_command_word() on the shaped
+    tokens still finds it and still drives route_substitution_headed_
+    statement() exactly as it does for an unwrapped statement (see
+    _shape_leading()'s docstring).
+
+    Returns the index in TOKS where this stops — 0 when TOKS[0] itself
+    doesn't match anything here (including when it is `.substitution_only`,
+    which this function does not look at all).
     """
     i = 0
     n = len(toks)
-    saw_substitution = False
-    last_substitution_tok = None
     while i < n:
         t = toks[i]
-        if getattr(t, "substitution_only", False):
-            saw_substitution = True
-            last_substitution_tok = t
-            i += 1
-            continue
         if re.match(r"^[A-Za-z_]\w*=", t):  # VAR=value prefix
             i += 1
             continue
@@ -1074,6 +1124,50 @@ def _skip_to_command_word(toks):
             i += 1  # step past the `--`
             continue
         break
+    return i
+
+
+def _skip_to_command_word(toks):
+    """Advance past VAR=value assignments, WRAPPERS (and their value-taking
+    options), and mise/asdf `exec` prefixes (_skip_assignments_and_
+    wrappers()) — exactly the skip loop head() has always applied —
+    additionally tracking whether a `.substitution_only` token (an argument
+    built entirely from a command substitution) was skipped along the way
+    (task0001 FR1/FR2/FR3, AS-2).
+
+    Any grouping/case/reserved-word syntax at command position (task0001
+    FR1/FR2) has already been stripped upstream, in statement shaping
+    (statements(), via _shape_leading()) — see that function's docstring —
+    before this function ever sees the tokens; it does not look for such
+    syntax itself, exactly as before this task.
+
+    Returns (index, saw_substitution, last_substitution_tok). INDEX is where
+    the scan stops: either a real candidate token, or len(TOKS) when none
+    remains — head() turns this into its own (word, args) return unchanged.
+    SAW_SUBSTITUTION and LAST_SUBSTITUTION_TOK feed the "statically unknown
+    command word" classification in main() (task0002 FR11:
+    LAST_SUBSTITUTION_TOK is the `.substitution_only` token closest to the
+    stop index, whose `.raw_substitution_body` route_substitution_headed_
+    statement() reads as evidence; None when no such token was skipped).
+    head() itself ignores both, so its own return shape and behaviour are
+    unchanged by this refactor.
+    """
+    i = 0
+    n = len(toks)
+    saw_substitution = False
+    last_substitution_tok = None
+    while i < n:
+        t = toks[i]
+        if getattr(t, "substitution_only", False):
+            saw_substitution = True
+            last_substitution_tok = t
+            i += 1
+            continue
+        advance = _skip_assignments_and_wrappers(toks[i:])
+        if advance:
+            i += advance
+            continue
+        break
     return i, saw_substitution, last_substitution_tok
 
 
@@ -1087,7 +1181,15 @@ def head(toks):
     of it in main() (task0001 FR1/FR2/FR3; task0002 FR11/FR13 rebuilt that
     routing around read command-name evidence rather than remainder shape),
     are local to this file and do not change the shape of this function's
-    return value, which stays the 2-tuple both files already agree on.
+    return value, which stays the 2-tuple both files already agree on. The
+    grouping/case-aware skip that now runs upstream of this function, in
+    statement shaping (statements(), via _shape_leading()) — subshells,
+    brace groups, reserved words, case patterns, function definitions
+    (task0001 FR1/FR2/FR3) — is, the same as `.substitution_only`, local to
+    this file: that mirror's own head() has no grouping awareness at all,
+    and stays that way. This function's callers already receive tokens
+    with that vocabulary already stripped, so this function itself needs
+    no change for it.
 
     A token flagged `.substitution_only` (an argument built entirely from a
     command substitution, task0001 Design Part 1) sits where a command name
@@ -1099,6 +1201,184 @@ def head(toks):
     if i >= len(toks):
         return None, []
     return os.path.basename(toks[i]), toks[i + 1 :]
+
+
+# Reserved words that carry no command of their own wherever they sit at
+# command position (task0001 FR2): the `if`/`while`/`until` family and its
+# body-introducing counterparts, `!`, and the two bare closers/terminators
+# that never need CASE_STACK to be recognised (unlike `)`, `esac`, and a
+# case pattern, which do — see _shape_leading()). `case`, `esac`, `for`,
+# and `select` are handled separately in _shape_leading() itself, since
+# each needs more than a single-token skip.
+RESERVED_SKIP_WORDS = frozenset(
+    {"if", "then", "elif", "else", "while", "until", "do", "!", "fi", "done"}
+)
+
+
+def _split_fused_closer_redirects(toks):
+    """Split a token that is an unquoted `)` immediately fused to a real
+    redirect operator with no space between them (`)>`, `)>>`, `)2>` and
+    similar) into the closer and the redirect (task0001 FR3).
+
+    shlex's punctuation_chars fuses ANY run of contiguous punctuation
+    characters into one raw token regardless of which characters they are,
+    and lex_segments()'s own fused-token splitter only re-splits a run
+    whose characters fall in two different SEGMENT_CHARS/non-SEGMENT_CHARS
+    buckets (needed so a `;`-adjacent operator like `;>` still separates
+    correctly) — `)` and `>` land in the SAME bucket (neither is a
+    SEGMENT_CHARS separator), so they survive as one token, and
+    split_redirects() — which matches REDIRECT against a token's WHOLE
+    text — never recognises `)>` as a redirect at all. Without this split,
+    a statement like `(cp /tmp/x ~/.claude/settings.json)>/dev/null` reads
+    `)>/dev/null` as one ordinary (non-redirect) word.
+
+    Applied to a statement's full token list before _shape_leading() scans
+    it, so a fused closer is already clean by the time closer-recognition
+    (leading or case-pattern-closing) runs, and split_redirects() —
+    called by statements()'s caller afterward, on the shaped result — sees
+    a real, separately-matchable redirect operator token.
+    """
+    out = []
+    for t in toks:
+        if (
+            getattr(t, "is_operator", False)
+            and len(t) > 1
+            and t[0] == ")"
+            and REDIRECT.fullmatch(t[1:])
+        ):
+            out.append(Tok(")", True))
+            out.append(Tok(t[1:], True))
+        else:
+            out.append(t)
+    return out
+
+
+def _shape_leading(toks, case_stack):
+    """Advance past every construct that can sit at command position:
+    grouping and compound-construct syntax (task0001 FR1/FR2 — the
+    subshell opener `(` as an unquoted operator token only, the
+    brace-group opener `{`, the reserved words in RESERVED_SKIP_WORDS, a
+    case pattern, and a function-definition prefix), interleaved with the
+    existing VAR=value/WRAPPERS/mise-asdf skip
+    (_skip_assignments_and_wrappers()) so a combination like `then
+    HOME=/home/sakura/y` or `( sudo rm -rf /home/sakura/x )` unwraps fully
+    (task0001 "Nested and combined forms unwrap fully").
+
+    Deliberately does NOT call _skip_to_command_word() and does NOT look at
+    `.substitution_only` itself: a `.substitution_only` token never matches
+    any check here (its text is SUBSTITUTION_STANDIN, `$(...)`, matching
+    neither a reserved word nor `(`/`{`/`)`/`}` nor IDENT), so it always
+    stops this scan and survives, untouched, as the first token of the
+    shaped remainder — exactly where main()'s own, separate call to
+    _skip_to_command_word() (on that shaped remainder, unchanged from
+    before this task) expects to find it, so route_substitution_headed_
+    statement() keeps working for a command name hidden behind grouping
+    exactly as it does for an unwrapped statement.
+
+    CASE_STACK (task0001 "Case patterns") is a list of per-case-construct
+    stage strings, carried by the caller across every statement of one
+    chunk (reset per chunk — case context does not cross a substitution
+    body, here-doc body, or `-c`/eval/here-string payload boundary, each of
+    which is its own chunk): "await_subject" (just saw `case`, next token
+    is the subject word), "await_in" (subject consumed, next token is
+    expected to be `in`), "pattern" (reading pattern text — everything
+    up to the next real `)` operator token is opaque content, including
+    text that happens to look like a reserved word or a command name, and
+    including `esac`, which closes the whole construct even here — a case
+    statement with no items at all, `case x in esac`, is valid), and
+    "body" (past a pattern's closing `)`; ordinary command-position
+    scanning resumes, including recognising a NESTED `case`). The caller
+    (statements()) additionally flips a "body" frame back to "pattern"
+    when the statement's own trailing separator contains `;;`, since a
+    pattern can itself be split across statements by `|` (segment-split,
+    like a pipe) or by a newline (see this function's per-statement
+    scope: a pattern that continues into the NEXT statement leaves
+    CASE_STACK's top at "pattern" when this scan reaches the end of TOKS
+    without finding the closing `)`).
+
+    Returns the index in TOKS where the scan stops: either the token that
+    starts the shaped remainder, or len(TOKS) when every token in this
+    statement was consumed as pure syntax (no command here — task0001 FR2
+    "closers... carry no command of their own", and the `for`/`select`
+    header, whose WORDS are never a command either).
+    """
+    i, n = 0, len(toks)
+    while i < n:
+        top = case_stack[-1] if case_stack else None
+        t = toks[i]
+
+        if top in ("await_subject", "await_in", "pattern"):
+            if top == "await_subject":
+                case_stack[-1] = "await_in"
+                i += 1
+                continue
+            if top == "await_in":
+                case_stack[-1] = "pattern"
+                i += 1  # the subject WORD does not need its own text read
+                continue
+            # top == "pattern": opaque content until a real `)` closes it,
+            # or `esac` closes the whole case with no items left in it.
+            if t == "esac":
+                case_stack.pop()
+                i += 1
+                continue
+            if t == ")" and getattr(t, "is_operator", False):
+                case_stack[-1] = "body"
+                i += 1
+                continue
+            i += 1
+            continue
+
+        # top is "body" or CASE_STACK is empty: ordinary command-position
+        # scanning, interleaved with the existing assignment/wrapper skip.
+        advance = _skip_assignments_and_wrappers(toks[i:])
+        if advance:
+            i += advance
+            continue
+
+        if t == "esac" and case_stack:
+            case_stack.pop()
+            i += 1
+            continue
+        if t == "case":
+            case_stack.append("await_subject")
+            i += 1
+            continue
+        if t in RESERVED_SKIP_WORDS:
+            i += 1
+            continue
+        if t == "}":
+            i += 1
+            continue
+        if t == ")" and getattr(t, "is_operator", False):
+            i += 1  # a bare closer with nothing (recognised) open — FR3
+            continue
+        if t in ("for", "select") and i + 2 < n and toks[i + 2] == "in":
+            i = n  # the header's WORDS are never a command (FR2)
+            continue
+        if t == "(" and getattr(t, "is_operator", False):
+            i += 1
+            continue
+        if t == "{":
+            i += 1
+            continue
+        if (
+            i + 2 < n
+            and IDENT.match(t)
+            and toks[i + 1] == FUNC_SIGNATURE
+            and toks[i + 2] == "{"
+        ):
+            i += 2  # `NAME() {` — the `{` itself is picked up next round
+            continue
+        if t == "function" and i + 1 < n and IDENT.match(toks[i + 1]):
+            if i + 3 < n and toks[i + 2] == FUNC_SIGNATURE and toks[i + 3] == "{":
+                i += 3  # `function NAME() {`
+                continue
+            if i + 2 < n and toks[i + 2] == "{":
+                i += 2  # `function NAME {`
+                continue
+        break
+    return i
 
 
 def _deferral_head(words):
@@ -2175,12 +2455,16 @@ def strip_grouping_prefix(toks):
     the real operand never changes the result, and stripping it here would
     only add code with no observable effect.
 
-    Only ever feeds the deferral check in main(): check_git()/check_rm()/the
-    other destructive checks keep calling head() on the UNSTRIPPED tokens,
-    so no existing verdict changes because of this function — a subshell- or
-    brace-wrapped destructive command is exactly as unexamined by those
-    checks after this change as before it (out of scope for this task; see
-    the task plan's "Which side moves").
+    Only ever feeds the deferral check in main(): it strips its own smaller
+    grouping-construct vocabulary (no reserved words, no case patterns) from
+    the UNSHAPED tokens statements() yields, so this function's own
+    behaviour and the deferral verdicts it drives are unchanged by task0001.
+    check_git()/check_rm()/the other destructive checks no longer keep
+    calling head() on those unstripped tokens, though — since task0001,
+    they read the SEPARATELY grouping/case-aware SHAPED tokens statements()
+    also yields (see that function's docstring and _shape_leading()), so a
+    subshell- or brace-wrapped destructive command IS now examined by those
+    checks, unlike before this task.
     """
     toks = list(toks)
     changed = True
@@ -2372,14 +2656,21 @@ def main():
     # is emitted once, after every segment has been examined.
     rm_decisions = []
 
-    for segment, toks, lexed in statements(command):
+    for segment, toks, lexed, shaped_toks in statements(command):
         check_bypass(segment, toks)
 
-        words, redirects = split_redirects(toks, lexed)
-        word, args = head(words)
+        # task0001 D1: every check below reads SHAPED_WORDS/SHAPED_REDIRECTS
+        # — statements()'s grouping/case-aware unwrap of TOKS (see that
+        # function's docstring and _shape_leading()) — so a command sitting
+        # behind a subshell, a brace group, a reserved word, a case pattern,
+        # or a function definition is judged exactly as the same command
+        # written alone. The deferral computation below deliberately keeps
+        # using the UNSHAPED words instead; see its own comment.
+        shaped_words, shaped_redirects = split_redirects(shaped_toks, lexed)
+        word, args = head(shaped_words)
         # `> ~/.claude/settings.json` のようにコマンド語を持たない純リダイレクト
         # 文も対象を切り詰める。word が無くても redirects だけで判定する。
-        check_self_modification(word or "", args, redirects, segment, lexed)
+        check_self_modification(word or "", args, shaped_redirects, segment, lexed)
 
         # task0001 FR1/FR2/FR3 (AS-2), rebuilt by task0002 FR1/FR2/FR3/FR11/
         # FR13: a statement whose command word is a `.substitution_only`
@@ -2398,11 +2689,13 @@ def main():
         # matchers' own verdict tier and reason id verbatim (R5: no new
         # stage, no new reason id, no verdict produced by the
         # classification itself).
-        skip_index, saw_substitution, substitution_tok = _skip_to_command_word(words)
+        skip_index, saw_substitution, substitution_tok = _skip_to_command_word(
+            shaped_words
+        )
         if saw_substitution:
             rm_decisions.extend(
                 route_substitution_headed_statement(
-                    words[skip_index:],
+                    shaped_words[skip_index:],
                     getattr(substitution_tok, "raw_substitution_body", None),
                     segment,
                 )
@@ -2410,11 +2703,16 @@ def main():
 
         # The deferral is judged on the statement's REAL head — leading
         # grouping tokens (subshell `(`, brace group `{`, a function
-        # signature) stripped first (D7) — never on the unstripped WORD/ARGS
-        # check_git()/check_rm()/the rest of this loop use below. A
-        # subshell's `(` is itself WORD when ungrouped ("(" != "git"), so
-        # this must run even when WORD is None or not "git"/"gh"; it is
-        # placed before the `continue` below for that reason.
+        # signature) stripped first (D7) — over the UNSHAPED words TOKS
+        # itself produces (task0001: deliberately not SHAPED_WORDS above;
+        # the deferral's own, narrower grouping-construct vocabulary —
+        # strip_grouping_prefix(), unchanged by this task — and its pinned
+        # verdicts stay exactly as they were; see that function's
+        # docstring). A subshell's `(` is itself WORD when ungrouped
+        # ("(" != "git"), so this must run even when WORD is None or not
+        # "git"/"gh"; it is placed before the `continue` below for that
+        # reason.
+        words, _ = split_redirects(toks, lexed)
         gword, gargs = _deferral_head(strip_grouping_prefix(words))
         if matches_target_shape(gword, gargs, cwd):
             defer_to_new_guard = True
