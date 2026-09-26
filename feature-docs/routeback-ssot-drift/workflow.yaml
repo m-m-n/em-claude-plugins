@@ -136,7 +136,7 @@ tasks:
     - FR6
     - FR7
     - NFR1
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/routeback-ssot-drift/task0002
 review:
