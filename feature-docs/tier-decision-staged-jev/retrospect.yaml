@@ -1,5 +1,5 @@
 feature: tier-decision-staged-jev
-collected_at: "2026-09-26T18:10:00+09:00"
+collected_at: "2026-09-26T17:56:00+09:00"
 session_ids: [01a0dced-abfa-758d-a518-fec29cf9f3c2]
 signals:
   review_critical_high: []
