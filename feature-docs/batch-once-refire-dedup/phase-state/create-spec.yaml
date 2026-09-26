@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-once-refire-dedup
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 396b00884a4ca102f4cdf4c7477da8c669a3867e
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:14c2ac443fbd36f18f6165dc0f1e3c7a7e4f314d75969c79512507107b6ab315
+active_request_id: create-spec-run-0001
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -17,8 +17,12 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: batch-once-refire-dedup
-    resolution_note: 'gate: create-spec.feature-identity -> derive_from_task_description (batch-policies.yaml); feature name derived from the Notion task title (--batch --once re-fire creates duplicate features)'
-worker_runs: []
+    resolution_note: 'gate: create-spec.feature-identity -> derive_from_task_description (batch-policies.yaml);
+      feature name derived from the Notion task title (--batch --once re-fire creates duplicate features)'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:14c2ac443fbd36f18f6165dc0f1e3c7a7e4f314d75969c79512507107b6ab315
 artifacts: {}
 patches: []
 progress_fingerprint: null
