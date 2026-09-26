@@ -70,7 +70,9 @@ character, including non-BMP characters, is emitted unchanged.
   its turn at a single phase boundary, with `reason` `none` and a
   non-empty `detail`, using the same eight-key structured result as every
   other terminal outcome. A consumer that sees `state` as `phase_done`
-  re-launches the same feature to continue it.
+  re-launches the same feature to continue it: it passes the result's
+  `feature` value as the path argument and does not pass the task
+  description again.
 - `step` — a closed value domain: one of the seven `workflow.yaml` step
   ids (`create-spec`, `design`, `create-plan`, `implement`, `review`,
   `verify`, `retrospect`), or the single sentinel `no-step`. The general
