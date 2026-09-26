@@ -184,7 +184,7 @@ workflow:
   completed_at_commit: b3cb866b5bbef9b25b092cb2eea4e68419b3985e
   base_commit: 4cfd5c4c7b4f536eaeb44caf591022d6f68dd0ba
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -220,9 +220,16 @@ tasks:
     status: merged
     branch: em-workflow/batch-once-refire-dedup/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
