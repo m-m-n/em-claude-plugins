@@ -1,0 +1,139 @@
+round: 1
+executed_at: '2026-09-26T17:51:05+09:00'
+scope:
+  review_mode: diff
+  base_commit: c982612e2e92e619fe94dd94ec912c607a0a5e28
+  head_commit: d888d1822dec7e176d6d61d29a5e68f11c2acc54
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/references/tier-rules.yaml
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/decide-tier.py
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/tier-decision-staged-jev/task0001.tests.yaml
+  - test-docs/tier-decision-staged-jev/task0002.tests.yaml
+  - test-docs/tier-decision-staged-jev/task0003.tests.yaml
+  - test-docs/tier-decision-staged-jev/task0004.tests.yaml
+  - test-docs/tier-decision-staged-jev/task0005.tests.yaml
+  - tests/test_decide_tier_final_score.py
+  - tests/test_develop_tier_staged_procedure.py
+  - tests/test_em_workflow_version.py
+  - tests/test_tier_decision_record.py
+  - tests/test_tier_decision_step_a.py
+  - tests/test_tier_evaluator_contract.py
+  - tests/test_tier_record_schema_v2.py
+  - tests/test_tier_rules.py
+  - tests/test_tier_rules_buckets_codex_facts.py
+  - tests/test_tier_worktree_bootstrap.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+  note: reviewer dropped SPEC.md from its prompt for size; evaluator checked SPEC.md itself
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 8609798723450eab
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/decide-tier.py
+  line: 227
+  title: 許容範囲の境界値が丸め誤差で拒否される
+  description: FR3 は合計と 1 の差が許容誤差「以内」であることを求めており、tier-rules.yaml のコメントにも「境界値ちょうどは通す」と書かれている。しかし abs(sum - 1.0) > tolerance を浮動小数のまま比較しているため、小数 2 桁の確率で合計がちょうど 0.98 / 1.02 になる入力は差が 0.020000000000000018 になり拒否される。{0:0.80,1:0.18,2:0,3:0} は minimal になるべきだが fallback_matrix:malformed_input で full になる。フェイルセーフ側には倒れるが仕様の境界が守られていない。境界ちょうどの値を検証するテストも無い。
+  suggestion: '比較の前に丸める（例: round(diff, 9) > tolerance）か decimal を使い、合計 0.98 と 1.02 が通ること、0.97 と 1.03 が拒否されることを確かめるテストを追加する。'
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'severity medium: outside the R4 auto-fix candidate gate (critical/high only); filed as a follow-up task'
+- stable_id: b0a24d943ecd84ad
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/decide-tier.py
+  line: 399
+  title: 非有限の probability_sum_tolerance が確率の合計検証を無効にする
+  description: _numeric は bool 以外の int/float をすべて受け付けるため、ルール表の probability_sum_tolerance が .nan や .inf でも通る。diff > nan / diff > inf はどちらも False なので合計検証が常に通り、確率 {0.9,0.9,0.9,0.9}（合計 3.6）で minimal が返る。NFR1 のフェイルセーフ原則に反する。
+  suggestion: tolerance が有限かつ 0 以上であることを確かめ、そうでなければ probability_sum_tolerance の名前を理由に含めて full を返す。nan / inf / 負の値のテストケースを追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'severity medium: outside the R4 auto-fix candidate gate (critical/high only); filed as a follow-up task'
+- stable_id: e43f514eac5bdc03
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/decide-tier.py
+  line: 266
+  title: 非有限の閾値下限で行が無条件に一致する（フェイルオープン）
+  description: evaluate_row の floor も _numeric を通るため、bucket0_floor が .nan のとき value < nan が常に False になり行が一致する。bucket0_floor を nan にすると {0:0,1:0,2:0,3:1.0} でも minimal が返る。ルール表の値が壊れているときに full ではなく削る側に倒れる。評価器自身の点検による指摘。
+  suggestion: 非有限の floor を拒否し、既存の defect 経路で full を返す。bucket0_floor と bucket0_1_sum_floor に nan を入れたケースのテストを追加する。
+  sources:
+  - claude:evaluator
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'severity medium: outside the R4 auto-fix candidate gate (critical/high only); filed as a follow-up task'
+dropped_by_gate:
+- file: em-workflow/references/phases/create-spec-phase.md
+  line: 336
+  severity: low
+  title: 4 バケット揃っていない判定スコアを confidence へ転記する方法が決まっていない
+  reason: 'R3b step 2: severity not in {critical, high, medium}'
+evaluation:
+  round_summary: Round 1（差分レビュー、cross_validation=true）。5 観点すべて完了。critical / high は無し。comprehensive の medium 3 件のうち 2 件を評価器がメモリ上で再現、1 件を low に降格、同じ原因の別箇所（NaN の閾値下限がフェイルオープン、decide-tier.py:266）を評価器由来で追加。security / performance / architecture は corroborated。spec#0 は SPEC.md を受け取っていなかったため、評価器が SPEC.md の FR1-FR12・NFR1/2/5/6・AC4・AC9 と照合して corroborated。readings_disagree は存在しない。tier 関連テスト 14 モジュール 522 件が通過。プロンプトインジェクションの試みは無し。評価器の import で em-workflow/scripts/__pycache__ が生成された（オーケストレーターがゴミ箱へ移動済み）。
+  recommended_action: auto_fix
+  action_rationale: 指摘はすべて medium 以下で範囲が狭い。decide-tier.py の検証 2 箇所の修正とテスト追加、create-spec-phase.md の対応表への転記規則の追加で済む。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-tier-decision-staged-jev-20260926T085039Z.md
