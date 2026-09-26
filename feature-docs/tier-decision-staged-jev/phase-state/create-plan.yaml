@@ -1,11 +1,11 @@
 schema_version: 1
 feature: tier-decision-staged-jev
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 12d7a66f0047805af997db3842c34a044edca9a1
 last_input_digest: sha256:d28be85541f19eb7da645784224e3ee21d901d9ef383fed6b31017409983e2cd
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -37,7 +37,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:d28be85541f19eb7da645784224e3ee21d901d9ef383fed6b31017409983e2cd
   base_workflow_blob: 5b2fb1d46556e979e60292d2027111f6bec2f4a6
 progress_fingerprint: null
