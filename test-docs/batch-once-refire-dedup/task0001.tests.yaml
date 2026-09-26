@@ -1,0 +1,127 @@
+task_id: task0001
+baseline_failures: []          # full suite (python3 -m unittest discover -s
+                                # tests) was 6188/6188 OK before any change
+final_failures: []             # full suite was 6217/6217 OK after the change
+                                # (6188 baseline + 29 new tests in
+                                # tests/test_batch_once_relaunch_contract.py)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_once_relaunch_contract.TestC1ReLaunchContractInBatchMode.test_passes_on_the_real_document
+      - tests.test_batch_stop_contract.TestBatchModePointerSc5Compliance.test_names_the_contract_document
+      - tests.test_batch_stop_contract.TestBatchModePointerSc5Compliance.test_restates_no_sc5_literal
+    red_confirmed: true
+    red_reason: >
+      test_passes_on_the_real_document raised "AssertionError: missing
+      anchor A1: '`feature` value as the path argument'" when run against
+      the pre-edit batch-mode.md Step A row (anchors A1/A2 and the
+      batch-terminal-line.md pointer were absent). TestBatchModePointerSc5Compliance
+      already passed before this task's edit (it is an existing, unmodified
+      guard against the current batch-mode.md content) and continues to
+      pass after the appended sentence, proving the appended text does not
+      trip the whole-file pointer-literal guard. The row's "one physical
+      line, two cells" shape was preserved by construction: only prose was
+      appended inside the existing second cell, with no `|` character
+      added.
+  AC-2:
+    tests:
+      - tests.test_batch_once_relaunch_contract.TestC3ExistingStepARules.test_passes_on_the_real_document
+      - tests.test_batch_once_relaunch_contract.TestC3ExistingStepARules.test_fails_when_each_phrase_removed
+    red_confirmed: false
+    red_reason: >
+      The four existing Step A rule phrases were already present, verbatim,
+      in batch-mode.md before this task touched the file (the task only
+      appends a new sentence after them); C3's real-document check
+      therefore already passed on the very first run of the new module,
+      before batch-mode.md was edited, and never observed a red state
+      caused by this task. The negative-proof (test_fails_when_each_phrase_removed)
+      is a permanent regression pin, not evidence of a red-to-green
+      transition. The second half of this criterion (SKILL.md has no diff
+      against its content at the task's start) has no permanent test per
+      the task plan's Test Notes; it was verified by running
+      `git diff --stat -- em-workflow/skills/develop/SKILL.md` in the
+      worktree, which produced no output.
+  AC-3:
+    tests:
+      - tests.test_batch_once_relaunch_contract.TestC2ReLaunchContractInTerminalLine.test_passes_on_the_real_document
+    red_confirmed: true
+    red_reason: >
+      test_passes_on_the_real_document raised "AssertionError: missing
+      anchor A1: '`feature` value as the path argument'" when run against
+      the pre-edit batch-terminal-line.md `state` bullet, before the
+      re-launch-contract sentence was added to it.
+  AC-4:
+    tests:
+      - tests.test_batch_once_relaunch_contract.TestC1ReLaunchContractInBatchMode.test_passes_on_the_real_document
+      - tests.test_batch_once_relaunch_contract.TestC2ReLaunchContractInTerminalLine.test_passes_on_the_real_document
+      - tests.test_batch_once_relaunch_contract.TestC3ExistingStepARules.test_passes_on_the_real_document
+      - tests.test_batch_once_relaunch_contract.TestC4SkillNoPathArgItem.test_passes_on_the_real_document
+    red_confirmed: true
+    red_reason: >
+      Running the new module against the real documents before any edit
+      showed 2 of these 4 checks failing (C1 and C2, both missing anchor
+      A1); C3 and C4 already passed because their underlying content
+      pre-existed. All four pass together after the batch-mode.md and
+      batch-terminal-line.md edits (see the final full-suite run below).
+  AC-5:
+    tests:
+      - tests.test_batch_once_relaunch_contract.TestStepARowExtractor.test_fails_when_section_absent
+      - tests.test_batch_once_relaunch_contract.TestStepARowExtractor.test_fails_when_row_absent
+      - tests.test_batch_once_relaunch_contract.TestStepARowExtractor.test_fails_when_row_matches_more_than_once
+      - tests.test_batch_once_relaunch_contract.TestStateBulletExtractor.test_fails_when_section_absent
+      - tests.test_batch_once_relaunch_contract.TestStateBulletExtractor.test_fails_when_bullet_absent
+      - tests.test_batch_once_relaunch_contract.TestStateBulletExtractor.test_excludes_the_next_top_level_bullet
+      - tests.test_batch_once_relaunch_contract.TestNoPathArgItemExtractor.test_fails_when_step0_heading_absent
+      - tests.test_batch_once_relaunch_contract.TestNoPathArgItemExtractor.test_fails_when_item_absent
+      - tests.test_batch_once_relaunch_contract.TestC1ReLaunchContractInBatchMode.test_fails_when_anchor_a1_removed
+      - tests.test_batch_once_relaunch_contract.TestC1ReLaunchContractInBatchMode.test_fails_when_anchor_a2_removed
+      - tests.test_batch_once_relaunch_contract.TestC1ReLaunchContractInBatchMode.test_fails_when_pointer_removed
+      - tests.test_batch_once_relaunch_contract.TestC1ReLaunchContractInBatchMode.test_fails_when_anchors_appear_only_in_a_different_row
+      - tests.test_batch_once_relaunch_contract.TestC2ReLaunchContractInTerminalLine.test_fails_when_relaunch_phrase_removed
+      - tests.test_batch_once_relaunch_contract.TestC2ReLaunchContractInTerminalLine.test_fails_when_anchor_a1_removed
+      - tests.test_batch_once_relaunch_contract.TestC2ReLaunchContractInTerminalLine.test_fails_when_anchor_a2_removed
+      - tests.test_batch_once_relaunch_contract.TestC2ReLaunchContractInTerminalLine.test_fails_when_anchors_appear_only_in_the_feature_bullet
+      - tests.test_batch_once_relaunch_contract.TestC3ExistingStepARules.test_fails_when_each_phrase_removed
+      - tests.test_batch_once_relaunch_contract.TestC4SkillNoPathArgItem.test_fails_when_each_phrase_removed
+    red_confirmed: false
+    red_reason: >
+      These are meta-tests over the extractor and matcher functions
+      written in this same task: the functions and their tests were
+      authored together in one file, so there was no prior observable
+      state in which the test existed while the implementation was absent
+      or incorrect. Every one of AC-5's negative-proof and
+      extraction-failure tests already passed on the first run of this
+      module, before the target documents were edited (only the two
+      real-document checks named under AC-1/AC-3 were red at that point).
+      Correctness of each forged case was verified by inspection (each
+      forgery deliberately omits or misplaces exactly the element the
+      corresponding extractor/matcher is required to reject) rather than
+      by observing a genuine red-to-green transition.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Version bump is a manifest inspection, not an executable check per
+      the task plan's Test Notes (a literal-version test would break on
+      the next bump, so none is written). Verified by reading both
+      manifests: em-workflow/.claude-plugin/plugin.json `version` and the
+      em-workflow entry's `version` in .claude-plugin/marketplace.json
+      both read "0.2.13" (previously "0.2.12"); the em-review entry in
+      .claude-plugin/marketplace.json is unchanged at "0.5.13".
+  AC-7:
+    tests:
+      - tests.test_batch_once_relaunch_contract.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >
+      This criterion verifies the absence of regressions across the full
+      suite plus a static property of the new module (stdlib-only
+      imports); this task caused neither to be red beforehand -- the
+      baseline full-suite run (python3 -m unittest discover -s tests) was
+      already 6188/6188 OK before any change in this task, and the
+      stdlib self-check passed as soon as it was written, since the module
+      never imported anything non-stdlib. The evidence for this AC is the
+      baseline vs. final full-suite run recorded above (6188 OK -> 6217
+      OK, the delta being exactly this task's 29 new tests, including
+      unmodified passes of tests/test_develop_once_option.py's SC5 /
+      `state`-literal guards and all of tests/test_batch_stop_contract.py),
+      not a red-to-green transition.
