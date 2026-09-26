@@ -189,7 +189,7 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/routeback-deferred-findings/task0004
   task0005:
