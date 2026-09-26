@@ -1,0 +1,246 @@
+schema_version: 1
+feature: routeback-deferred-findings
+created: '2026-09-26'
+base_branch: main
+goal: |
+  # em-workflow: routeback-admissibility-exits の review round 3 deferred findings 6 件
+
+  ## 現象（必須）
+  feature `routeback-admissibility-exits`（PR [https://github.com/m-m-n/em-claude-plugins/pull/20](https://github.com/m-m-n/em-claude-plugins/pull/20)）の review round 3 で、batch の rework cap（`batch.review_rework_count` = 1）に達したため `deferred` のまま完了させた findings が 6 件残っている。critical 1 件 / high 3 件 / medium 2 件で、すべて `em-workflow/references/implement-phase.md` の I.2.b / I.2.c 周辺。
+  | stable_id | severity | 観点 | 指摘 |
+  | --- | --- | --- | --- |
+  | `12839a507a7df994` | critical | spec | FR3/AC-2 が名指しする stale `launched` 状態に abort 以外の復旧路が無い |
+  | `2da3c75adac32650` | high | spec | ancestor 検証失敗 `merged` タスクが自認の行き止まりになり Objectives 第 1 項に反する |
+  | `bc57aa350bb027c7` | high | spec | 候補集合を前セッション由来の `launched` に限定したため、同一セッション内 stale `launched` に復旧が届かない |
+  | `59e58726b1b22211` | high | architecture | Failed-task resolution invariant violated for ancestor-check-failure state |
+  | `94de80a315821a55` | medium | architecture | `agents.jsonl` の読み手集合と欠損時の影響が SSOT（`workflow-schema.md`）とドリフトしている |
+  | `9cc0ce6b64087d2f` | medium | architecture | status semantics 不変条件を破る状態を SSOT 未更新のまま consumer 側で宣言している |
+  `59e58726b1b22211` / `94de80a315821a55` / `9cc0ce6b64087d2f` は修正の本体が `em-workflow/references/workflow-schema.md` への編集を要し、review-editor の single-file スコープ外のため auto-fix loop が abort している。
+  ## 再現手順（必須）
+  1. `em-workflow/routeback-admissibility-exits/integration` ブランチをチェックアウトする
+  2. `feature-docs/routeback-admissibility-exits/reviews/round3.yaml` の `resolution: deferred` の項目を読む
+  3. 各 finding が指す `em-workflow/references/implement-phase.md` の該当行を確認する
+  ## 期待する挙動（必須）
+  deferred の 6 件がいずれも解消され、`implement-phase.md` と `workflow-schema.md` の間に status semantics / `agents.jsonl` 読み手集合のドリフトが無い状態になる。
+  ## 完了の定義（必須）
+  - [ ] critical / high の 4 件が解消されている
+  - [ ] medium の 2 件について、SSOT（`workflow-schema.md`）側を更新するか、指摘を明示的に却下した根拠が残っている
+  - [ ] `python3 -m unittest discover -s tests` が通る
+  - [ ] プラグイン配下を変更するので、同じ変更に含めて `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を bump する
+  ## 該当箇所（任意）
+  - `em-workflow/references/implement-phase.md` 388 / 426 / 633 / 639 / 641 / 816
+  - `em-workflow/references/workflow-schema.md`
+  - 記録: `feature-docs/routeback-admissibility-exits/reviews/round3.yaml`
+  ## 実害・発生条件（任意）
+  stale `launched` を持つプランで route-back を選べず abort しか残らない経路と、ancestor 検証に落ちた `merged` タスクが行き止まりになる経路が protocol 上に残る。無人実行が中断したあとの再開でだけ露出するため、対話実行では気づきにくい。
+
+parent_branch: em-workflow/routeback-deferred-findings/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.05
+      '1': 0.05
+      '2': 0.81
+      '3': 0.09
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.94
+      '3': 0.05
+  at: '2026-09-26T21:36:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 7b0f22bc07461a0fa79f56f56ee97c726f9680ce
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無い変更（プロトコル文書・Python スクリプト・テスト・manifest のみ）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Stale launched with missing artifacts via existing proof chains
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: Proof-chain script accepts observed artifact absence
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR3:
+    title: bc57aa350bb027c7 recorded as resolved and pinned
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR4:
+    title: Automated exit for merged task failing ancestor check
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR5:
+    title: Helper accepts merge-unverified only over locked merged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR6:
+    title: Remove failed-task status-semantics exception
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+    - TS-6
+  FR7:
+    title: Writer-set paragraph records merge-unverified
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR8:
+    title: agents.jsonl reader set and missing-index impact
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR9:
+    title: Version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR10:
+    title: Tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: No new journal writer
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR2:
+    title: I.2.c has no rework/append token
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR3:
+    title: I.2.c batch paragraph byte-identical
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR4:
+    title: SC6 codes only in I.2.b
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Doubt never produces a journal write
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: journal append-only under flock
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: launch guard and merge-task.sh unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR8:
+    title: stdlib-only tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
