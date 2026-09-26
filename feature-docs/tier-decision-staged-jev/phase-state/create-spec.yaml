@@ -5,13 +5,134 @@ status: dispatching
 generation: 1
 base_revision: c89257fe26d2d75b3f9ca0223d09418e7550ec76
 last_input_digest: sha256:34305bf42f79e71e6c88b747c344fab3d47c2cae081099dbdc572fe05d17e6e8
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-26T16:09:15+09:00'
+    questions:
+    - question_id: create-spec.tier.reduced-threshold
+      status: answered
+    - question_id: create-spec.tier.rule-plus-test-bucket
+      status: answered
+    - question_id: create-spec.tier.codex-unavailable
+      status: answered
+    - question_id: create-spec.tier.minimal-expectation-clear
+      status: answered
+    - question_id: create-spec.tier.bucket-description-home
+      status: answered
+    - question_id: create-spec.tier.probability-validation
+      status: answered
+    - question_id: create-spec.design-step
+      status: answered
+answers:
+  create-spec.tier.reduced-threshold:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T16:09:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - drop_p0_floor
+    freeform: null
+    normalized_answer: reduced 条件は P(0)+P(1)≥0.85 のみ（P(0)≥0.40 の下限を外す）
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex); opus_escalation:
+      false; Codex suggestion mapped onto option drop_p0_floor (matches worker tentative);
+      codex reason: 現行の reduced は P(0)>=0.40 を要求し、P(0)=0.37・P(1)=0.59 でも full になることをテストで固定しているよ（em-workflow/references/tier-rules.yaml:58、tests/test_tier_rules.py:309）。下限を残す案では
+      bucket 1 が優勢な小規模作業を除外する原因が残るため、minimal を先に判定した後は P(0)+P(1)>=0.85 だけで reduced
+      にする案を選ぶよ'
+  create-spec.tier.rule-plus-test-bucket:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T16:09:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - bucket_1
+    freeform: null
+    normalized_answer: ルール追加＋テスト追加は段階 1 に置く（0 はテスト変更を伴わない文言・ルール修正のみ）
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex); opus_escalation:
+      false; Codex suggestion mapped onto option bucket_1 (matches worker tentative);
+      codex reason: 現行の minimal は reduced より削減範囲が広く、SPEC.md の TASK.md への置換に加えてタスク分割や
+      VERIFICATION.md も削減するよ（em-workflow/skills/develop/SKILL.md:588、em-workflow/skills/develop/SKILL.md:589）。ルール＋テスト追加を
+      bucket 0 に広げるより、bucket 1 に置いて Q1 の下限撤廃で reduced に届かせる方が、削減範囲の区別を保ちながら問題を解消できると判断するよ。なお、テストスイート全体の維持は全
+      tier 共通なので、この選択はテストを実行するかどうかの区別ではないよ（em-workflow/skills/develop/SKILL.md:591）'
+  create-spec.tier.codex-unavailable:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T16:09:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - full
+    freeform: null
+    normalized_answer: Codex 事前調査が使用不可なら最終判定の Jev を呼ばず full。tier-rules.yaml・評価器・テストを
+      SKILL.md に揃える
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex); opus_escalation:
+      false; Codex suggestion mapped onto option full (matches worker tentative);
+      codex reason: Step A は Codex 使用不可なら full と明記している一方、規則表は description_only の閾値評価を指定し、テストも
+      Codex 不在で minimal を期待しているよ（em-workflow/skills/develop/SKILL.md:273、em-workflow/references/tier-rules.yaml:104、tests/test_tier_rules.py:405）。実装も
+      Codex の可用性が真偽値であることを確認した後、不在による打ち切りを入れずに閾値評価へ進むよ（em-workflow/scripts/decide-tier.py:345、em-workflow/scripts/decide-tier.py:375）。調査結果なしで最終
+      Jev を呼ぶ経路を設けるより、使用不可時は最終 Jev を呼ばず full に統一し、規則表・評価器・テストを Step A に揃える案を選ぶよ'
+  create-spec.tier.minimal-expectation-clear:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T16:09:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - probabilities_only
+    freeform: null
+    normalized_answer: tier 行は最終判定の 0〜3 の確率だけを見る。expectation_clear・confidence は記録のみ
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex); opus_escalation:
+      false; Codex suggestion mapped onto option probabilities_only (matches worker
+      tentative); codex reason: 現行の minimal 行には expectation_clear_floor: 0.5 があり、評価器も確率とは別の比較条件として扱っているよ（em-workflow/references/tier-rules.yaml:51、em-workflow/scripts/decide-tier.py:113）。維持案では最終確率が同じでも
+      expectation_clear によって結果が変わるため、最終確率だけで tier を決める要件を満たせないよ。expectation_clear
+      と confidence は記録に残し、tier の直接の判定条件から外す案を選ぶよ'
+  create-spec.tier.bucket-description-home:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T16:09:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - tier_rules_yaml
+    freeform: null
+    normalized_answer: 0〜3 の段階の説明文は tier-rules.yaml の question_set に置く
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex); opus_escalation:
+      false; Codex suggestion mapped onto option tier_rules_yaml (matches worker tentative);
+      codex reason: Step A は送信する質問セットの定義先として、すでに tier-rules.yaml を参照しているよ（em-workflow/skills/develop/SKILL.md:243）。外部
+      Jev スキルに置く案より、区分の説明を question_set に置く方が確率の意味と閾値を同じリポジトリで管理できるため、質問文を外部所有とする現行コメントも更新する案を選ぶよ（em-workflow/references/tier-rules.yaml:21、em-workflow/references/tier-rules.yaml:25）。重複禁止テストが確認するのは外部スキル文面の転記なので、区分の説明を独自に定義する方針と両立できるよ（tests/test_tier_rules.py:221、tests/test_tier_rules.py:236）'
+  create-spec.tier.probability-validation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T16:09:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - four_buckets_and_sum
+    freeform: null
+    normalized_answer: 最終判定の確率は "0"〜"3" すべて必須・[0,1] の有限値・合計が 1 から許容幅以内（許容幅は tier-rules.yaml）。外れたら
+      full
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex); opus_escalation:
+      false; Codex suggestion mapped onto option four_buckets_and_sum (matches worker
+      tentative); codex reason: 現行評価器は各行が必要とする値だけを読み、最初に一致した行で戻るため、4 区分全体の妥当性を確認していないよ（em-workflow/scripts/decide-tier.py:222、em-workflow/scripts/decide-tier.py:268）。必要な区分だけ読む案では未参照の欠損や異常を見逃し、4
+      区分の存在と範囲だけを確認する案でも合計が 1 でない分布を排除できないよ。既存の有限性・範囲検査と異常時 full の方針を全区分に適用し、合計も tier-rules.yaml
+      に置く許容誤差で閾値評価前に検証する案を選ぶよ（em-workflow/scripts/decide-tier.py:169、tests/test_tier_evaluator_contract.py:303）'
+  create-spec.design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T16:09:15+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design ステップは推奨どおりスキップ（UI なし）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:34305bf42f79e71e6c88b747c344fab3d47c2cae081099dbdc572fe05d17e6e8
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:34305bf42f79e71e6c88b747c344fab3d47c2cae081099dbdc572fe05d17e6e8
 artifacts: []
 patches: []
 progress_fingerprint: null
