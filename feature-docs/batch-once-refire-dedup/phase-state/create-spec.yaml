@@ -1,0 +1,27 @@
+schema_version: 1
+feature: batch-once-refire-dedup
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 396b00884a4ca102f4cdf4c7477da8c669a3867e
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-09-27T01:05:07+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: batch-once-refire-dedup
+    resolution_note: 'gate: create-spec.feature-identity -> derive_from_task_description (batch-policies.yaml); feature name derived from the Notion task title (--batch --once re-fire creates duplicate features)'
+worker_runs: []
+artifacts: {}
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
