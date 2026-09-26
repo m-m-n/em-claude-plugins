@@ -50,6 +50,33 @@ TestCLIEntryPoint exercises the new flags through the command-line entry
 point (IMPLEMENTATION.md Conventions: "scripts are exercised through their
 command-line entry point plus function-level calls"), on top of the
 function-level coverage above.
+
+Extended by feature-docs/routeback-deferred-findings/tasks/task0002.md
+(SC-2, D1, D2): step 1's artifact observations become genuine evidence
+(`yes` or `no`, both kept) rather than a `yes`-only gate. Its own
+Acceptance Criteria (distinct from the AC numbering above, which belongs to
+the stale-launched-retry-recovery feature):
+
+- AC-1: TestChainMissingArtifactRecovery -- each of the three
+  missing-artifact pairs reaches `recovered`, via `decide()` and via a
+  direct `evaluate_stale_launched_chain` call.
+- AC-2: the unrecognized-token/absent-observation conversions and additions
+  in TestChainOrderedUnmetConditions, and the unrecognized-token conversion
+  in TestChainStepOrderDirect.
+- AC-3: TestChainMissingArtifactLaterStepsUnaffected -- the termination and
+  stop-result checks are unaffected by which artifact is missing.
+- AC-4: TestChainTaskWorktreeExistenceIrrelevant -- a nonexistent
+  `--task-worktree` path still binds when it matches the recorded
+  worktree (pre-existing, unchanged behaviour, pinned as a regression
+  guard).
+- AC-5: no new test here -- tests/test_recover_orphaned_task.py's
+  pre-existing tests continue to pass unmodified.
+- AC-6: TestCLIEntryPoint's two added cases -- `--worktree-present no
+  --branch-present no` reaches `recovered`; `--worktree-present maybe`
+  (same flags) reports `task-artifacts-missing`.
+- AC-7: TestModuleDocstringChain -- the removed phrases are absent from the
+  live docstring, proven with a negative-proof control and a
+  retained-anchor guard against a verbatim pre-change excerpt.
 """
 
 import importlib.util
@@ -303,15 +330,34 @@ class TestChainOrderedUnmetConditions(unittest.TestCase):
             ])
             _assert_residual(self, fx, "journal-not-launched")
 
-    def test_worktree_absent_reports_task_artifacts_missing(self):
+    def test_worktree_unrecognized_token_reports_task_artifacts_missing(self):
+        # "Yes" (wrong case) is a token that is neither exactly "yes" nor
+        # exactly "no" -- SC-2 case-sensitivity.
         with tempfile.TemporaryDirectory() as tmp:
             fx = _build_proving_fixture(tmp)
-            _assert_residual(self, fx, "task-artifacts-missing", worktree_present="no")
+            _assert_residual(self, fx, "task-artifacts-missing", worktree_present="Yes")
 
-    def test_branch_absent_reports_task_artifacts_missing(self):
+    def test_branch_unrecognized_token_reports_task_artifacts_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             fx = _build_proving_fixture(tmp)
-            _assert_residual(self, fx, "task-artifacts-missing", branch_present="no")
+            _assert_residual(self, fx, "task-artifacts-missing", branch_present="absent")
+
+    def test_worktree_observation_absent_reports_task_artifacts_missing(self):
+        # An absent observation (None, i.e. the flag was never supplied) is
+        # distinct from an unrecognized token, but yields the same residual.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proving_fixture(tmp)
+            _assert_residual(self, fx, "task-artifacts-missing", worktree_present=None)
+
+    def test_branch_observation_absent_reports_task_artifacts_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proving_fixture(tmp)
+            _assert_residual(self, fx, "task-artifacts-missing", branch_present=None)
+
+    def test_empty_string_observation_reports_task_artifacts_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proving_fixture(tmp)
+            _assert_residual(self, fx, "task-artifacts-missing", worktree_present="")
 
     # -- step 2: agent index entry + D7 binding (reused) ------------------
 
@@ -516,11 +562,14 @@ class TestChainStepOrderDirect(unittest.TestCase):
             nonexistent_agents_index = os.path.join(tmp, "does-not-exist", "agents.jsonl")
             nonexistent_journal = os.path.join(tmp, "also-does-not-exist", "journal.jsonl")
 
+            # "maybe" is an unrecognized token (not "no"): under the
+            # narrowed SC-2 meaning, "no" is now recognized evidence and
+            # would no longer short-circuit here on its own.
             outcome, exit_code = ROT.evaluate_stale_launched_chain(
                 task_id=TASK_ID,
                 journal_path=nonexistent_journal,
                 agents_index_path=nonexistent_agents_index,
-                worktree_present="no",
+                worktree_present="maybe",
                 branch_present="yes",
             )
 
@@ -552,6 +601,210 @@ class TestChainByteIdentityAndNoCreation(unittest.TestCase):
             self.assertEqual(outcome["outcome"], "residual")
             self.assertFalse(os.path.exists(os.path.dirname(missing_journal)))
             self.assertFalse(os.path.exists(missing_journal))
+
+
+# -----------------------------------------------------------------------
+# routeback-deferred-findings task0002 (SC-2, D1, D2): the artifact
+# observations become genuine evidence rather than a `yes`-only gate.
+# -----------------------------------------------------------------------
+
+MISSING_ARTIFACT_PAIRS = (("no", "yes"), ("yes", "no"), ("no", "no"))
+INSUFFICIENT_TERMINATION_TOKENS = (None, "launch-accepted", "error", "output-idle")
+
+
+class TestChainMissingArtifactRecovery(unittest.TestCase):
+    """AC-1: each of the three missing-artifact pairs still reaches
+    `recovered`, both through `decide()` and through a direct
+    `evaluate_stale_launched_chain` call, with the stub helper invoked
+    exactly once with the task id, reason `stale-launched`, the journal
+    path, and the last `launched` event's raw `at` as launch identity."""
+
+    def test_missing_artifact_pairs_reach_recovered_via_decide(self):
+        for worktree_present, branch_present in MISSING_ARTIFACT_PAIRS:
+            with self.subTest(worktree_present=worktree_present, branch_present=branch_present):
+                with tempfile.TemporaryDirectory() as tmp:
+                    fx = _build_proving_fixture(tmp)
+                    record_path = os.path.join(tmp, "calls.jsonl")
+                    helper_path = write_stub_helper(tmp, record_path, outcome="appended")
+
+                    outcome, exit_code = _decide_from_fixture(
+                        fx,
+                        journal_helper=helper_path,
+                        worktree_present=worktree_present,
+                        branch_present=branch_present,
+                    )
+
+                    self.assertEqual(exit_code, 0)
+                    self.assertEqual(
+                        outcome, {"outcome": "recovered", "task": TASK_ID, "reason": ""}
+                    )
+                    calls = read_stub_calls(record_path)
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(calls[0]["task"], TASK_ID)
+                    self.assertEqual(calls[0]["reason"], "stale-launched")
+                    self.assertEqual(calls[0]["journal"], fx["journal_path"])
+                    self.assertEqual(calls[0]["launch_at"], LAST_LAUNCHED_AT)
+
+    def test_missing_artifact_pairs_reach_recovered_via_direct_chain_call(self):
+        for worktree_present, branch_present in MISSING_ARTIFACT_PAIRS:
+            with self.subTest(worktree_present=worktree_present, branch_present=branch_present):
+                with tempfile.TemporaryDirectory() as tmp:
+                    fx = _build_proving_fixture(tmp)
+                    record_path = os.path.join(tmp, "calls.jsonl")
+                    helper_path = write_stub_helper(tmp, record_path, outcome="appended")
+                    kwargs = dict(fx)
+                    kwargs.pop("task_id")
+                    kwargs["worktree_present"] = worktree_present
+                    kwargs["branch_present"] = branch_present
+                    kwargs["journal_helper"] = helper_path
+
+                    outcome, exit_code = ROT.evaluate_stale_launched_chain(
+                        task_id=TASK_ID, **kwargs
+                    )
+
+                    self.assertEqual(exit_code, 0)
+                    self.assertEqual(
+                        outcome, {"outcome": "recovered", "task": TASK_ID, "reason": ""}
+                    )
+                    calls = read_stub_calls(record_path)
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(calls[0]["task"], TASK_ID)
+                    self.assertEqual(calls[0]["reason"], "stale-launched")
+                    self.assertEqual(calls[0]["journal"], fx["journal_path"])
+                    self.assertEqual(calls[0]["launch_at"], LAST_LAUNCHED_AT)
+
+
+class TestChainMissingArtifactLaterStepsUnaffected(unittest.TestCase):
+    """AC-3: with a missing artifact, the termination and stop-result steps
+    behave exactly as in the both-present case -- no artifact-driven
+    shortcut and no elapsed-time proxy anywhere in the chain."""
+
+    def test_insufficient_termination_tokens_report_agent_termination_unproven(self):
+        for worktree_present, branch_present in MISSING_ARTIFACT_PAIRS:
+            for token in INSUFFICIENT_TERMINATION_TOKENS:
+                with self.subTest(
+                    worktree_present=worktree_present, branch_present=branch_present, token=token
+                ):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        fx = _build_proving_fixture(tmp)
+                        _assert_residual(
+                            self, fx, "agent-termination-unproven",
+                            worktree_present=worktree_present,
+                            branch_present=branch_present,
+                            launch_termination=token,
+                        )
+
+    def test_running_termination_reports_agent_still_live(self):
+        for worktree_present, branch_present in MISSING_ARTIFACT_PAIRS:
+            with self.subTest(worktree_present=worktree_present, branch_present=branch_present):
+                with tempfile.TemporaryDirectory() as tmp:
+                    fx = _build_proving_fixture(tmp)
+                    _assert_residual(
+                        self, fx, "agent-still-live",
+                        worktree_present=worktree_present,
+                        branch_present=branch_present,
+                        launch_termination="running",
+                    )
+
+    def test_non_proving_stop_result_reports_stop_result_unproven(self):
+        for worktree_present, branch_present in MISSING_ARTIFACT_PAIRS:
+            with self.subTest(worktree_present=worktree_present, branch_present=branch_present):
+                with tempfile.TemporaryDirectory() as tmp:
+                    fx = _build_proving_fixture(tmp)
+                    _assert_residual(
+                        self, fx, "stop-result-unproven",
+                        worktree_present=worktree_present,
+                        branch_present=branch_present,
+                        stop_result="error",
+                    )
+
+
+class TestChainTaskWorktreeExistenceIrrelevant(unittest.TestCase):
+    """AC-4: `--task-worktree` is compared as a plain string; a value that
+    equals the entry's recorded worktree still binds even when that path
+    does not exist on disk. This behaviour is pre-existing and unchanged by
+    this task (Design: "no existence check may be introduced there") --
+    pinned here as a regression guard rather than proven red first."""
+
+    def test_nonexistent_task_worktree_path_still_binds_when_it_matches_the_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proving_fixture(tmp)
+            self.assertFalse(os.path.exists(fx["task_worktree"]))
+            record_path = os.path.join(tmp, "calls.jsonl")
+            helper_path = write_stub_helper(tmp, record_path, outcome="appended")
+
+            outcome, exit_code = _decide_from_fixture(fx, journal_helper=helper_path)
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(
+                outcome, {"outcome": "recovered", "task": TASK_ID, "reason": ""}
+            )
+
+
+# Verbatim excerpts captured from this task's base commit (before task0002's
+# docstring edit), used only as a negative-proof control -- proving the
+# search method used against the live docstring is actually capable of
+# finding the phrase it is supposed to detect.
+PRE_CHANGE_CALLER_PRECONDITION_EXCERPT = (
+    "step after it has already established the candidate conditions it owns: the\n"
+    "task worktree and task branch exist, and the Agent index resolves no live\n"
+    "agent."
+)
+PRE_CHANGE_STEP1_EXCERPT = (
+    "  1. both `--worktree-present` and `--branch-present` read `yes`, decided\n"
+    "     before any agent index read, any path assembly and any file open\n"
+    "     -> task-artifacts-missing;"
+)
+REMOVED_PHRASE_WORKTREE_BRANCH_EXIST = "the task worktree and task branch exist"
+REMOVED_PHRASE_BOTH_READ_YES = "both `--worktree-present` and `--branch-present` read `yes`"
+CALLER_PRECONDITION_ANCHOR = "the candidate conditions it owns"
+STEP1_ANCHOR = "before any agent index read, any path assembly and any file open"
+
+
+def _normalize_ws(text):
+    return " ".join(text.split())
+
+
+class TestModuleDocstringChain(unittest.TestCase):
+    """AC-7: the module docstring no longer states the old caller
+    precondition or the old `yes`-only step-1 gate, and instead states that
+    `yes`/`no` observations are accepted as evidence and that
+    `task-artifacts-missing` means an absent or unrecognized observation."""
+
+    def test_pre_change_excerpts_actually_contain_the_removed_phrases(self):
+        # Negative-proof control: proves the exact phrases below are really
+        # findable by substring search, against a verbatim pre-change
+        # sample -- so the absence assertions below cannot pass vacuously
+        # due to a typo in the search string.
+        self.assertIn(
+            REMOVED_PHRASE_WORKTREE_BRANCH_EXIST,
+            _normalize_ws(PRE_CHANGE_CALLER_PRECONDITION_EXCERPT),
+        )
+        self.assertIn(
+            REMOVED_PHRASE_BOTH_READ_YES,
+            _normalize_ws(PRE_CHANGE_STEP1_EXCERPT),
+        )
+
+    def test_retained_anchor_present_in_both_sample_and_live_docstring(self):
+        # Retained-anchor guard: a phrase present in both the pre-change
+        # sample and the live document, so the excerpts above are proven to
+        # be genuinely taken from the same region they claim to replace.
+        self.assertIn(CALLER_PRECONDITION_ANCHOR, PRE_CHANGE_CALLER_PRECONDITION_EXCERPT)
+        self.assertIn(CALLER_PRECONDITION_ANCHOR, _normalize_ws(ROT.__doc__))
+        self.assertIn(STEP1_ANCHOR, PRE_CHANGE_STEP1_EXCERPT)
+        self.assertIn(STEP1_ANCHOR, _normalize_ws(ROT.__doc__))
+
+    def test_live_docstring_no_longer_states_worktree_and_branch_exist_precondition(self):
+        self.assertNotIn(REMOVED_PHRASE_WORKTREE_BRANCH_EXIST, _normalize_ws(ROT.__doc__))
+
+    def test_live_docstring_no_longer_states_both_flags_must_read_yes(self):
+        self.assertNotIn(REMOVED_PHRASE_BOTH_READ_YES, _normalize_ws(ROT.__doc__))
+
+    def test_live_docstring_states_yes_no_observations_accepted_as_evidence(self):
+        self.assertIn("accepted as evidence", _normalize_ws(ROT.__doc__))
+
+    def test_live_docstring_states_narrowed_meaning_of_task_artifacts_missing(self):
+        self.assertIn("absent or unrecognized observation", _normalize_ws(ROT.__doc__))
 
 
 class TestCLIEntryPoint(unittest.TestCase):
@@ -590,6 +843,74 @@ class TestCLIEntryPoint(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             payload = json.loads(proc.stdout.strip())
             self.assertEqual(payload, {"outcome": "recovered", "task": TASK_ID, "reason": ""})
+
+    def test_cli_worktree_no_branch_no_reports_recovered(self):
+        """AC-6."""
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proving_fixture(tmp)
+            record_path = os.path.join(tmp, "calls.jsonl")
+            helper_path = write_stub_helper(tmp, record_path, outcome="appended")
+
+            proc = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT_PATH),
+                    "--journal", fx["journal_path"],
+                    "--agents-index", fx["agents_index_path"],
+                    "--task", fx["task_id"],
+                    "--transcripts-dir", fx["transcripts_dir"],
+                    "--current-session-id", fx["current_session_id"],
+                    "--current-session-start", fx["current_session_start"],
+                    "--journal-helper", helper_path,
+                    "--worktree-present", "no",
+                    "--branch-present", "no",
+                    "--task-worktree", TASK_WORKTREE,
+                    "--stop-target", AGENT_IDENTITY,
+                    "--launch-termination", "terminated",
+                    "--stop-result", "not-running",
+                    "--stop-result-target", AGENT_IDENTITY,
+                ],
+                capture_output=True, text=True,
+            )
+
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            payload = json.loads(proc.stdout.strip())
+            self.assertEqual(payload, {"outcome": "recovered", "task": TASK_ID, "reason": ""})
+
+    def test_cli_worktree_unrecognized_token_reports_task_artifacts_missing(self):
+        """AC-6: same flags as the passing no/no case above, but
+        `--worktree-present maybe` reports the residual instead."""
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proving_fixture(tmp)
+            record_path = os.path.join(tmp, "calls.jsonl")
+            helper_path = write_stub_helper(tmp, record_path, outcome="appended")
+
+            proc = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT_PATH),
+                    "--journal", fx["journal_path"],
+                    "--agents-index", fx["agents_index_path"],
+                    "--task", fx["task_id"],
+                    "--transcripts-dir", fx["transcripts_dir"],
+                    "--current-session-id", fx["current_session_id"],
+                    "--current-session-start", fx["current_session_start"],
+                    "--journal-helper", helper_path,
+                    "--worktree-present", "maybe",
+                    "--branch-present", "no",
+                    "--task-worktree", TASK_WORKTREE,
+                    "--stop-target", AGENT_IDENTITY,
+                    "--launch-termination", "terminated",
+                    "--stop-result", "not-running",
+                    "--stop-result-target", AGENT_IDENTITY,
+                ],
+                capture_output=True, text=True,
+            )
+
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            payload = json.loads(proc.stdout.strip())
+            self.assertEqual(
+                payload,
+                {"outcome": "residual", "task": TASK_ID, "reason": "task-artifacts-missing"},
+            )
 
 
 if __name__ == "__main__":
