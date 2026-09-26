@@ -1,0 +1,61 @@
+round: 1
+executed_at: "2026-09-26T22:29:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: a6f0fb1624163211bbb9130a15f636ad6ff3364b
+  head_commit: 01275270c8773935a81d3e5b8dab87e61dff1d43
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/queue_agent_index.py
+    - em-workflow/references/workflow-schema.md
+    - test-docs/routeback-ssot-drift/task0001.tests.yaml
+    - test-docs/routeback-ssot-drift/task0002.tests.yaml
+    - tests/test_implement_routeback_gate.py
+    - tests/test_routeback_ssot_drift_agent_index.py
+    - tests/test_routeback_ssot_drift_i2b_retention.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 1f5dd79ff959caef
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/workflow-schema.md
+    line: 441
+    title: "古い索引でも「Orchestrator-side lookup が解決できなくなる」と書いていて、implement-phase.md とずれてるよ"
+    description: "workflow-schema.md の 441〜443 行は「an absent or stale index ... makes the Orchestrator-side lookup unresolvable」と書いてる。でも implement-phase.md の Orchestrator-side read（1155〜1161 行付近）が解決不能と定義しているのは「そのタスクの項目がない」場合だけだよ。読み取りでは最も新しく追記された項目を選んで、その最初の候補を停止ツールに渡す。再試行のときに索引への記録が失敗して前回起動の項目だけが残ると、その古い項目は解決不能にならずに候補へ解決されるよ。そのあと停止ツールが何も止めなければ第3のケースとして同じ Residual に入るし、孤立タスク復旧は `no-agent-entry` ではなく D7 の起動ひも付け判定で止まる。最終的な結果はほぼ同じ Residual だけど、そこまでの経路の説明が引用元と食い違ってるよ。なお、この文言は SPEC FR3 の本文そのままだから、実装は SPEC には従ってるよ"
+    suggestion: "「解決できなくなる」という主張は、索引がない場合（タスクの項目がない場合）だけに絞ってね。古い項目については、前回起動の候補に解決され、停止ツールが何も止めなければ第3のケースとして同じ Residual に進む、と implement-phase.md を引用して分けて書いてね。テストで固定されている文言は残し、`stale-agent-entry` は書かないでね。SPEC FR3 本文の「absent or stale」から外れることは、人に知らせてね"
+    sources: [codex:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "medium のため Phase R4 の auto-fix 候補外。完了ゲート（residual_critical_high == 0）は満たすため残件として記録"
+evaluation:
+  round_summary: "差分はドキュメント、docstring、文言テスト、版番号だけで、実行時の動作は変わってない。plugin.json と marketplace.json の版番号はどちらも 0.2.11 に揃ってた。指摘は comprehensive#0 の medium 1件（古い索引の説明が implement-phase.md の Orchestrator-side read の定義とずれてる）で、評価者自身の確認でも妥当。レビュー担当の出力に指示を紛れ込ませる試みは無し。観点ごとの確認状況: comprehensive — findings。security — corroborated（実行コードの変更は docstring だけ）。architecture — findings（層構造の問題なし。SSOT のずれは comprehensive 側の1件にまとめた）。spec — corroborated（FR1〜FR9 は SPEC の文言どおり。上のずれは FR3 の本文由来）。読んだのは変更ファイル9件のうち8件と SPEC.md、implement-phase.md。task0002.tests.yaml は読み取り上限で未確認。テストは未実行で task0001.tests.yaml の記録と spec#0 の報告に依拠"
+  recommended_action: "auto_fix"
+  action_rationale: "critical/high はなく medium が1件。1文の書き分けで直せ、固定文言テストもそのまま通る範囲。直すと SPEC FR3 本文の「absent or stale」から外れるが、SPEC の目的は implement-phase.md に合わせることなのでそちらを優先する形になる。完了ゲートが medium で止まらないなら complete でも問題ない"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "/home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-routeback-ssot-drift-20260926T132757Z.md"
+  degraded: true
+  degraded_reason: listing_exit_nonzero
