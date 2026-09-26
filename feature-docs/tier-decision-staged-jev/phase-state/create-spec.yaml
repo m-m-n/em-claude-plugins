@@ -1,0 +1,20 @@
+schema_version: 1
+feature: tier-decision-staged-jev
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: c89257fe26d2d75b3f9ca0223d09418e7550ec76
+last_input_digest: sha256:34305bf42f79e71e6c88b747c344fab3d47c2cae081099dbdc572fe05d17e6e8
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:34305bf42f79e71e6c88b747c344fab3d47c2cae081099dbdc572fe05d17e6e8
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
