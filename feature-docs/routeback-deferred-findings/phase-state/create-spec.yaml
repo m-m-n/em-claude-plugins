@@ -1,7 +1,7 @@
 schema_version: 1
 feature: routeback-deferred-findings
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 519d157cbd6713ee3bf81fab7ea8d7dfe1333bd1
 last_input_digest: sha256:c8e04e47807ac3a2fc63bad2c146c1d5aec0378b3ab044715b073f8d9d658cf8
