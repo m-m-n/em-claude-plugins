@@ -1,0 +1,63 @@
+round: 2
+executed_at: "2026-09-27T00:13:30+09:00"
+scope:
+  review_mode: diff
+  base_commit: 23291e93d04351a8818fce33e9ecf58487e7579d
+  head_commit: 623d902652c33ea070269443e50788f642272a8b
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/journal-append-failed.py
+  - em-workflow/scripts/recover-orphaned-task.py
+  - test-docs/routeback-deferred-findings/task0001.tests.yaml
+  - test-docs/routeback-deferred-findings/task0002.tests.yaml
+  - test-docs/routeback-deferred-findings/task0003.tests.yaml
+  - test-docs/routeback-deferred-findings/task0004.tests.yaml
+  - test-docs/routeback-deferred-findings/task0005.tests.yaml
+  - test-docs/routeback-deferred-findings/task0006.tests.yaml
+  - test-docs/routeback-deferred-findings/task0007.tests.yaml
+  - tests/test_implement_routeback_gate.py
+  - tests/test_journal_append_failed.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+  - tests/test_routeback_deferred_findings_version_bump.py
+  - tests/test_stale_launched_missing_artifacts_doc_contract.py
+  - tests/test_stale_launched_recovery_chain.py
+  - tests/test_task_id_allocation_ssot_i2c.py
+  - tests/test_workflow_schema_journal_readers_doc_contract.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "performance#1", perspective: performance, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "architecture#1", perspective: architecture, role: primary, source: codex, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "ラウンド2（cross_validation=true）。performance#0 / architecture#0 は litellm の rate_limited でスキップし、codex の performance#1 / architecture#1 へ chain walk した。完了した 5 観点はすべて指摘 0 件。プロンプト注入の試みは無し。round_context: 28f95cca754df0ef は修正済みを確認、c60a60e50d293c28 は f38fc84e の再 pin でテストスイート全件成功により実質解消、ad81306f22284a5f は未解決のまま（再報告なし）。evaluator 独自点検の low 1 件（implement-phase.md:740 付近、祖先確認が exit 1 以外で失敗した未後片付けタスクの残余の列挙が helper 失敗時だけのように読める）は severity ゲートで除外。security / performance / architecture / spec は corroborated。読み取り予算 10 ファイルを使い切り、test-docs と他の tests/*.py はテスト実行結果でのみ確認。"
+  recommended_action: complete
+  action_rationale: "reviewer run からも evaluator 点検からも critical/high/medium の新規指摘は無い。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-routeback-deferred-findings-20260926T151303Z.md

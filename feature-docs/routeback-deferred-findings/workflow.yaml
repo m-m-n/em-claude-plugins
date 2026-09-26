@@ -278,7 +278,7 @@ tasks:
       review_round: null
 review:
   status: completed
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives: [comprehensive, security, performance, architecture, spec]
   residual_critical_high: 0
   needs_rework: false
