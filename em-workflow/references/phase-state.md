@@ -500,36 +500,43 @@ the same not-owned-by-one-phase exemption this document already grants
 `backfill.yaml` above (see "## File layout"). One file per feature.
 
 ```yaml
-schema_version: 1
+schema_version: 2
 feature: example-feature
 tier: reduced
 bases:
   - basis: description_only
-    probabilities: {...}
+    score: {...}
     observed_at: "2026-01-30T12:00:00+09:00"
   - basis: description_plus_code
-    probabilities: {...}
+    score: {...}
     observed_at: "2026-01-30T12:00:05+09:00"
 pre_survey_estimate: {...}
 decided_at: "2026-01-30T12:00:10+09:00"
+fallback_reason: "fallback_matrix:jev_unusable: ..."
 ```
 
 Every field:
 
 | Field | Meaning |
 |---|---|
-| `schema_version` | Format version. Currently `1`. |
+| `schema_version` | Format version. Currently `2`. See "schema_version 1 compatibility" below for a record written before this task. |
 | `feature` | Feature name, matches `feature-docs/{feature}/`. |
 | `tier` | The decided tier: `full` \| `reduced` \| `minimal`. |
-| `bases` | The two decision bases the tier-decision procedure records: one reading of the judgement skill on the task description alone (`basis: description_only`), one with the Codex pre-survey estimate merged into its state (`basis: description_plus_code`) — each carrying its own observed probability values and the time it was observed. Both identifiers are `references/tier-rules.yaml`'s `decision_basis` values (cited here, not restated); this document mints no basis identifier of its own. |
-| `pre_survey_estimate` | The Codex readonly pre-survey's output, echoed verbatim; its member definitions belong to `references/tier-rules.yaml`, cited here, not restated. |
-| `decided_at` | When the tier itself was decided, after both bases were read. |
+| `bases` | Always present, may be empty. Ordered list with one entry per judgement-skill call that was made and usable: the `description_only` entry always precedes the `description_plus_code` entry when both are present; an entry is absent when its call was not made or was unusable. Each entry: `basis` (one of `references/tier-rules.yaml`'s `decision_basis` values, cited here, not restated), `score` (the judgement skill's score object, verbatim; its member definitions belong to `references/tier-rules.yaml`, cited here, not restated), `observed_at` (when that reading was observed). |
+| `pre_survey_estimate` | Present only when the Codex pre-survey was usable; absent when it was not run or was unusable. The Codex readonly pre-survey's output, echoed verbatim; its member definitions belong to `references/tier-rules.yaml`, cited here, not restated. |
+| `decided_at` | When the tier itself was decided. |
+| `fallback_reason` | Present only when the decision was not made by a threshold row -- i.e. the evaluator's `decided_by` value does not start with `threshold_rows:`. Carries that `decided_by` value together with its reason text. |
 
 Written immediately after the decision, before anything else, and committed
 via `commit-docs.sh` (no script change needed — see "## File layout" above,
 which already grants this file the same exemption). A resume that finds
 this file present reads it and reuses the recorded decision rather than
 re-running the tier-decision procedure.
+
+**schema_version 1 compatibility**: an existing `tier.yaml` record at
+`schema_version: 1` predates `fallback_reason` and spells the bases entry's
+`score` member `probabilities` instead. Such a record remains valid on
+resume: it is reused as-is, without re-decision and without rewriting.
 
 `workflow.yaml`'s `tier` / `tier_decision` (`references/workflow-schema.md`)
 becomes the authoritative tier value once create-spec transcribes this
