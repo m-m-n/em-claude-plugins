@@ -1,7 +1,7 @@
 schema_version: 1
 feature: tier-decision-staged-jev
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: c89257fe26d2d75b3f9ca0223d09418e7550ec76
 last_input_digest: sha256:ab245d7486e1507106cefe73fe1475b306062df4e28dfc0c07a02ee0f518efb1
