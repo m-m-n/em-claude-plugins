@@ -96,7 +96,8 @@ workflow:
   base_commit: c982612e2e92e619fe94dd94ec912c607a0a5e28
   completed_at_commit: 7580f84d72efb0a843acd3abf8289624ac214e58
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: d888d1822dec7e176d6d61d29a5e68f11c2acc54
 - id: verify
   status: pending
   result: null
@@ -216,8 +217,8 @@ tasks:
     notes: null
     branch: em-workflow/tier-decision-staged-jev/task0005
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -227,7 +228,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
