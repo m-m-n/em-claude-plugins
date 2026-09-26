@@ -99,9 +99,16 @@ workflow:
   status: completed
   completed_at_commit: d888d1822dec7e176d6d61d29a5e68f11c2acc54
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  summary: |
+    Build (py_compile decide-tier.py) pass. Test suite 5973 tests OK, no skips.
+    TS-6 whole-tree scan for readings_disagree: 0 matches. TS-12: plugin.json /
+    marketplace.json em-workflow 0.2.10. TS-14: review-phase.md / review-rules.yaml
+    unchanged since implement base_commit; test_tier_spec_perspective.py unchanged and passing.
+    Manual M-1 / M-2 (staged run against real Jev / Codex) not executed in batch run.
+  completed_at_commit: 6cf7ba60136fb42e9e805efe974236fd05f23932
 - id: retrospect
   status: pending
 tasks:
