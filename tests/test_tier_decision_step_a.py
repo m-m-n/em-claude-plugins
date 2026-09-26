@@ -167,10 +167,17 @@ def _names_judgement_skill_with_json_switches(text):
 
 
 def _consults_twice_and_records_both_bases(text):
+    # Updated by task0003 (tier-decision-staged-jev): the two-reading
+    # comparison this originally checked ("1 回目はタスク記述のみを基準に" /
+    # "その state に合流させて" / "決定の根拠として記録する") no longer
+    # exists -- the final call's input now folds in the first call's full
+    # JSON result plus the Codex pre-survey JSON, and the persisted record's
+    # `bases` presence rules (not a blanket "always record both") replace
+    # the old unconditional recording claim.
     return (
-        _contains(text, "1 回目はタスク記述のみを基準に")
-        and _contains(text, "その state に合流させて")
-        and _contains(text, "決定の根拠として記録する")
+        _contains(text, "decision-basis `description_only`")
+        and _contains(text, "decision-basis `description_plus_code`")
+        and _contains(text, "2. が返した JSON 結果全体")
     )
 
 
@@ -282,7 +289,12 @@ FORBIDDEN_THRESHOLD_TOKENS = (
 
 
 def _cites_rules_file_for_availability(text):
-    return _contains(text, "tier-rules.yaml") and _contains(text, "フォールバック表")
+    # Updated by task0003 (tier-decision-staged-jev): the fallback table is
+    # no longer applied directly by this section's own prose ("フォールバック
+    # 表をそのまま適用して解決する" is gone) -- resolution is now delegated
+    # to the evaluator's input contract, with tier-rules.yaml still cited
+    # for question_set / codex_output_schema.
+    return _contains(text, "tier-rules.yaml") and _contains(text, "評価器の入力契約")
 
 
 def _find_threshold_violations(text):
@@ -297,12 +309,14 @@ class TestAC2AvailabilityAndThresholds(unittest.TestCase):
         self.assertEqual(_find_threshold_violations(TIER_SECTION), [])
 
     def test_unresolved_conditions_give_removes_nothing_tier(self):
+        # Updated by task0003 (tier-decision-staged-jev): the two-reading
+        # disagreement phrasing ("判定結果が割れた場合" /
+        # "フォールバック表が解決しないその他の条件") is gone -- there is no
+        # second reading to disagree with. The remaining unresolved
+        # conditions (either judgement-skill call unusable, pre-survey
+        # unusable) still resolve to the tier that removes nothing.
         self.assertTrue(
-            _contains(TIER_SECTION, "判定スキル使用不可")
-        )
-        self.assertTrue(_contains(TIER_SECTION, "判定結果が割れた場合"))
-        self.assertTrue(
-            _contains(TIER_SECTION, "フォールバック表が解決しないその他の条件")
+            _contains(TIER_SECTION, "いずれかが使用不可のときは")
         )
         self.assertTrue(_contains(TIER_SECTION, "何も引かない tier"))
         # Non-zero judgement-skill exit status is explicitly one of the

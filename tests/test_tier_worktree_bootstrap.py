@@ -42,15 +42,23 @@ checking for keyword presence alone, which would pass vacuously on a
 document that mentions all three concepts in the wrong order. The module
 imports standard-library modules only (NFR7).
 
-D3a region-ownership note: this task owns, inside `skills/develop/SKILL.md`,
-only Step A's worktree-securing step and its ordering relative to the
-no-work stop and the persistence step; and inside
+D3a region-ownership note: this task (task0009) owns, inside
+`skills/develop/SKILL.md`, only Step A's worktree-securing step and its
+ordering relative to the no-work stop and the persistence step; and inside
 `references/phases/create-spec-phase.md`, only section 3's bootstrap
-worktree ordering. It does not touch the tier-decision procedure's
-two-reading/evaluation steps (task0013's region) or the create-spec
-transcription section (also task0013's region) -- a region-ownership
-regression class below pins anchor text from those regions as unchanged by
-this task's diff.
+worktree ordering. It does not touch the create-spec transcription section
+-- a region-ownership regression class below pins anchor text from that
+region as unchanged by this task's diff. It originally also pinned the
+tier-decision procedure's two-reading/evaluation steps as unchanged
+(task0013's region, at the time); those anchors were removed by task0003 of
+a later, separate feature (tier-decision-staged-jev,
+feature-docs/tier-decision-staged-jev/tasks/task0003.md, D6), which
+legitimately rewrites that exact region (the staged three-call procedure
+replaces the two-reading comparison) -- see
+tests/test_develop_tier_staged_procedure.py and
+tests/test_tier_decision_record.py for that region's current coverage. The
+no-work-stop and securing/persistence step markers below were renumbered
+(no-work stop moved from step 3 to step 4) to track that same rewrite.
 """
 
 import ast
@@ -111,7 +119,12 @@ BOOTSTRAP_SECTION = _section(CREATE_SPEC_PHASE_TEXT, SECTION3_START, SECTION4_ST
 # no-work stop and the persistence step, inside the tier-decision procedure.
 # ---------------------------------------------------------------------------
 
-NO_WORK_STEP_MARKER = "3. **no-work 停止**"
+# Updated by task0003 (tier-decision-staged-jev): the no-work stop moved
+# from step 3 to step 4 when the staged three-call procedure (first Jev
+# call, Codex pre-survey, final Jev call) replaced the old step
+# 2 ("外部呼び出しは次の 2 つに限る") with two separate numbered steps. The
+# securing step (7) and the persistence step (8) keep their numbers.
+NO_WORK_STEP_MARKER = "4. **no-work 停止**"
 SECURING_STEP_MARKER = "7. **統合 branch/worktree の確保**"
 PERSISTENCE_STEP_MARKER = "8. **永続化**"
 
@@ -221,7 +234,11 @@ class TestAC2NoWorkStopCreatesNothing(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 # The tier-decision procedure's steps 3-7 exactly as they read before this
-# task's change (no securing step existed anywhere in the procedure).
+# task's change (no securing step existed anywhere in the procedure). Left
+# as a frozen historical snapshot (task0009's own pre-change state, from a
+# prior feature) -- unaffected by task0003's (tier-decision-staged-jev)
+# later renumbering, since its only purpose is proving the ordering matcher
+# fails when the securing step is entirely absent, regardless of numbering.
 PRE_CHANGE_TIER_STEPS = """3. **no-work 停止**: 2. の Codex 事前調査が「作業が残っていない」旨を
    報告した場合、判定を先へ進めず、いかなる workflow step も実行せずに
    ここで走行を終える。結果は停止状態を持ち、workflow.yaml の step が
@@ -251,20 +268,33 @@ PRE_CHANGE_TIER_STEPS = """3. **no-work 停止**: 2. の Codex 事前調査が�
    persistence 節参照。
 """
 
+# Updated by task0003 (tier-decision-staged-jev): the block that used to sit
+# between the no-work stop and the securing step was step 4 ("2 本の判定
+# 根拠"); the staged three-call procedure replaced it with steps 5
+# (final Jev call) and 6 (availability/evaluator). The split point marking
+# "everything after the no-work-stop block" is now step 5's own marker.
+_STEP5_FINAL_CALL_MARKER = (
+    "5. **2 回目（最終）の判定呼び出し（decision-basis "
+    "`description_plus_code`）**"
+)
+
 
 def _split_current_steps(text):
     """Split the CURRENT (post-change) tier-decision procedure text into its
-    step-3 (no-work stop), step-7 (securing) and step-8 (persistence, to end
-    of section) blocks, plus everything before step 3 -- used to build
-    reordered forgeries out of the real current content rather than
+    no-work-stop, securing (step 7) and persistence (step 8, to end of
+    section) blocks, plus everything before the no-work stop -- used to
+    build reordered forgeries out of the real current content rather than
     hand-written placeholder text."""
-    step4_marker = "4. **2 本の判定根拠**"
-    before_step3 = text[: text.index(NO_WORK_STEP_MARKER)]
-    step3_block = text[text.index(NO_WORK_STEP_MARKER) : text.index(step4_marker)]
-    middle_4_to_6 = text[text.index(step4_marker) : text.index(SECURING_STEP_MARKER)]
+    before_no_work = text[: text.index(NO_WORK_STEP_MARKER)]
+    no_work_block = text[
+        text.index(NO_WORK_STEP_MARKER) : text.index(_STEP5_FINAL_CALL_MARKER)
+    ]
+    middle_5_to_6 = text[
+        text.index(_STEP5_FINAL_CALL_MARKER) : text.index(SECURING_STEP_MARKER)
+    ]
     step7_block = text[text.index(SECURING_STEP_MARKER) : text.index(PERSISTENCE_STEP_MARKER)]
     step8_block = text[text.index(PERSISTENCE_STEP_MARKER) :]
-    return before_step3, step3_block, middle_4_to_6, step7_block, step8_block
+    return before_no_work, no_work_block, middle_5_to_6, step7_block, step8_block
 
 
 (
@@ -496,32 +526,22 @@ class TestAC4MatchersCanFail(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Region-ownership regression (D3a): the tier-decision procedure's
-# two-reading/evaluation steps and the create-spec transcription section
-# belong to task0013, not this task. Pinned by anchor text so an unrelated
-# future edit by task0013 to those regions does not spuriously fail this
-# module once merged, while still proving this task's own diff left them
-# untouched.
+# Region-ownership regression (D3a): from task0009's original perspective,
+# the tier-decision procedure's two-reading/evaluation steps and the
+# create-spec transcription section belonged to task0013 (a sibling task of
+# the SAME prior feature), not to task0009. Two anchors that used to pin
+# that region verbatim are removed here: task0003 of a LATER, separate
+# feature (tier-decision-staged-jev) legitimately rewrites exactly that
+# region (the staged three-call procedure and the single final-score
+# evaluator payload replace the two-reading comparison), so pinning it as
+# "unchanged" is no longer a meaningful regression guard -- that rewrite is
+# covered instead by tests/test_develop_tier_staged_procedure.py and
+# tests/test_tier_decision_record.py's
+# TestStagedProcedureAttributesToEvaluatorContract. The transcription
+# section (a different file, untouched by both tasks) still anchors
+# correctly and is kept.
 # ---------------------------------------------------------------------------
 
-TWO_READINGS_ANCHOR = (
-    "4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに\n"
-    "   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に判定する\n"
-    "   （decision-basis `description_only`）、2 回目は 2. の Codex 見積もりを\n"
-    "   その state に合流させて判定する（decision-basis\n"
-    "   `description_plus_code`）。この 2 つの識別子は `tier-rules.yaml` の\n"
-    "   `decision_basis` 値であり、ここでは新しい識別子を作らない。両方の\n"
-    "   読み取り結果を、それぞれの basis ラベルと観測値とともに決定の根拠と\n"
-    "   して記録する。"
-)
-EVALUATION_ANCHOR = (
-    "5. **評価**: 集めた 2 本の読みを 1 回の呼び出しで評価器\n"
-    "   （IMPLEMENTATION.md Shared Components `scripts/decide-tier.py` 参照）へ\n"
-    "   渡す。評価器は各読みがそれぞれ決定する tier を比較し、両者が異なる\n"
-    "   tier に評価された場合は何も引かない tier（`full`）を返す — この\n"
-    "   不一致解決規則は評価器の入力契約が持ち、ここでは繰り返さない。返された\n"
-    "   tier を採用する。"
-)
 TRANSCRIPTION_ANCHOR = (
     "**Tier transcription**: Step A of `skills/develop/SKILL.md` makes the tier\n"
     "decision immediately after the feature name is fixed (section 3) and\n"
@@ -530,12 +550,6 @@ TRANSCRIPTION_ANCHOR = (
 
 
 class TestRegionOwnershipRegression(unittest.TestCase):
-    def test_two_readings_step_unchanged(self):
-        self.assertIn(TWO_READINGS_ANCHOR, SKILL_TEXT)
-
-    def test_evaluation_step_unchanged(self):
-        self.assertIn(EVALUATION_ANCHOR, SKILL_TEXT)
-
     def test_transcription_section_unchanged(self):
         self.assertIn(TRANSCRIPTION_ANCHOR, CREATE_SPEC_PHASE_TEXT)
 
@@ -543,8 +557,6 @@ class TestRegionOwnershipRegression(unittest.TestCase):
 class TestRegionOwnershipMatchersCanFail(unittest.TestCase):
     def test_anchor_checks_fail_on_a_document_missing_them(self):
         forged = "この文書には何も含まれていない。"
-        self.assertNotIn(TWO_READINGS_ANCHOR, forged)
-        self.assertNotIn(EVALUATION_ANCHOR, forged)
         self.assertNotIn(TRANSCRIPTION_ANCHOR, forged)
 
 
