@@ -563,34 +563,44 @@ Triggered whenever a launched implementer's `Task()` call returns.
      lookup is unresolvable or ambiguous, the journal is unchanged, the
      task stays in-flight, the route-back gate blocks, and the phase
      takes the existing gate-rejected terminal, with the task named in
-     the report. A second, independent condition triggers this same
-     recovery without an Agent index lookup: a task's journal last event
-     is `launched` AND the task worktree does not exist AND the task
-     branch does not exist — neither artifact remains to correlate a
-     live agent against, so this condition is checked on its own, never
-     gated on the Agent index resolving "no live agent". A partial-artifact
-     state — the task worktree exists but the task branch does not, or the
-     task branch exists but the task worktree does not — is not this
-     condition, but a task's journal last event being `launched` together
-     with either partial-artifact state also triggers this same recovery,
-     for the same reason: at least one artifact needed to correlate a live
-     agent is already gone. Since there is no
-     candidate to pass to the harness stop tool here, no stop-tool call
-     occurs and this condition falls to the same Residual treatment as an
-     unresolvable Agent index lookup above: the journal is unchanged
-     (writing it is never this phase's role — Supporting cast's Journal
-     bullet below owns that rule, cited not restated), the task stays
-     in-flight, the route-back gate blocks, and the phase takes the
-     existing gate-rejected terminal, with the task named in the report.
-     This recovery runs during this wake-phase reconcile step, hence
-     before I.2.c's user-facing menu is offered.
+     the report. A second, independent condition also joins this same not-live
+     determination. All three conjuncts are required: the task's journal
+     last event is `launched`; at least one of the task worktree and the
+     task branch does not exist — covering the both-absent state, where
+     neither the task worktree nor the task branch exists, and each partial
+     state, where the task worktree exists but the task branch does not, or
+     the task branch exists but the task worktree does not; and the task's
+     `Task()` call is not among this reconcile step's own
+     currently-outstanding calls. Such a task joins the same not-live
+     determination as the both-present candidate set above, in this order:
+     the Agent index lookup, keyed by task id and needing no worktree,
+     performed through the Agent index writer's orchestrator-read rule —
+     cited, not restated, IMPLEMENTATION.md D6; Recovery, the harness stop
+     tool, then the stop-tool recorder's terminal `failed`; Orphan
+     recovery, the legacy chain below; the Same-session extension below.
+     Artifact absence here is observed evidence carried into that chain and
+     is never, by itself, proof that the agent terminated. Unchanged by
+     this condition, and named here as unchanged: the outstanding-call
+     exclusion above, the termination conjunct, the stop-result conjunct,
+     the agent-identity binding, and the append-time launch-identity
+     recheck. On proof, a terminal `failed` enters the journal under an
+     existing reason — `orphaned`, `stale-launched`, or the stop-tool
+     recorder's own — step 1 re-replays the journal within this same
+     reconcile step, and steps 3 and 5 and I.2.c see `failed`, with retry
+     and route back to planning both reachable. The Residual case above
+     applies to this condition too, and only when no proof is obtained.
+     Writing the journal is never this phase's own role, except through the
+     Supporting cast Journal bullet's exception below — cited, not
+     restated. This recovery runs during this wake-phase reconcile step,
+     hence before I.2.c's user-facing menu is offered.
 
      Orphan recovery: for exactly the not-live candidate set already
-     established above — journal last event `launched`, task worktree and
-     task branch both present, Agent index lookup resolving to no live
-     agent (unresolvable, ambiguous, or the third case where the stop tool
-     stops nothing) — the orchestrator makes one further attempt before the
-     Residual above is taken as final. It first emits a marker token into
+     established above — journal last event `launched`, with the task
+     worktree and the task branch either both present or with at least one
+     of them absent per the condition joined above, and the Agent index
+     lookup resolving to no live agent (unresolvable, ambiguous, or the
+     third case where the stop tool stops nothing) — the orchestrator makes
+     one further attempt before the Residual above is taken as final. It first emits a marker token into
      its own transcript via a command run immediately before the next step
      (IMPLEMENTATION.md D2), then invokes
      `em-workflow/scripts/recover-orphaned-task.py` for the candidate task,
@@ -642,8 +652,10 @@ Triggered whenever a launched implementer's `Task()` call returns.
      substitutes for either conjunct. This extended chain gathers
      evidence in this fixed order, stopping at the first unmet condition
      with the named residual reason code and invoking nothing further:
-     the task worktree and the task branch are both observed present
-     (else `task-artifacts-missing`); the stop target's identity is
+     each of the task worktree and the task branch observations is
+     supplied as exactly `yes` or `no` (else `task-artifacts-missing`),
+     with both values carried as evidence and neither one, by itself,
+     ending the chain (SC-2); the stop target's identity is
      uniquely bound to the selected Agent index entry (else
      `agent-identity-unproven`); the harness reports THIS launch's
      execution as terminated (else `agent-termination-unproven`, or
@@ -660,28 +672,27 @@ Triggered whenever a launched implementer's `Task()` call returns.
      above does.
 
      Invocation contract for this branch: the orchestrator re-invokes
-     `em-workflow/scripts/recover-orphaned-task.py` for the same
-     candidate task, with the same journal, Agent-index and identity
-     inputs the call above already passes, plus at least one of seven
-     evidence inputs — `--worktree-present yes|no`,
-     `--branch-present yes|no`, `--task-worktree <observed task
-     worktree path>`, `--stop-target <the agent identity the stop call
-     was made against>`,
-     `--launch-termination terminated|running|launch-accepted|error|output-idle`
-     (only `terminated` proves the step; `running` yields
-     agent-still-live; `launch-accepted`, `error`, `output-idle`, any
-     unrecognized token and an absent input all yield
-     agent-termination-unproven — never round one of them up to
-     `terminated`),
-     `--stop-result not-running|error`, and `--stop-result-target <the
-     identity the stop result is about>`. Supplying one or more of
-     them is what opts into this extended chain; supplying none
-     reproduces the terminal `same-session` outcome of the branch
-     above unchanged. On full proof that script — never the
-     orchestrator — invokes
-     `em-workflow/scripts/journal-append-failed.py` itself, passing
-     `--launch-at` set to the launch identity observed when this
-     chain started, which is what lets the helper compare launch
+     `em-workflow/scripts/recover-orphaned-task.py` for the same candidate
+     task, with the same journal, Agent-index and identity inputs the call
+     above already passes, plus at least one of seven evidence inputs —
+     `--worktree-present yes|no`, `--branch-present yes|no`,
+     `--task-worktree` set to the task's expected worktree path
+     (`$WT_ROOT/{T}`), supplied whether or not that path exists and
+     compared by the identity-binding step as a plain string against the
+     Agent index entry's recorded worktree (SC-2), `--stop-target <the
+     agent identity the stop call was made against>`, `--launch-termination
+     terminated|running|launch-accepted|error|output-idle` (only
+     `terminated` proves the step; `running` yields agent-still-live;
+     `launch-accepted`, `error`, `output-idle`, any unrecognized token and
+     an absent input all yield agent-termination-unproven — never round one
+     of them up to `terminated`), `--stop-result not-running|error`, and
+     `--stop-result-target <the identity the stop result is about>`.
+     Supplying one or more of them is what opts into this extended chain;
+     supplying none reproduces the terminal `same-session` outcome of the
+     branch above unchanged. On full proof that script — never the
+     orchestrator — invokes `em-workflow/scripts/journal-append-failed.py`
+     itself, passing `--launch-at` set to the launch identity observed when
+     this chain started, which is what lets the helper compare launch
      identity rather than merely the event name inside its own lock.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
