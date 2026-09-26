@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-grouping-spec-drift
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 290fb5170e89401cb699ede3f8926ddcb3278c1b
 last_input_digest: sha256:231d0744a46023de381ba35af94a5c059ab5b6320a72198d822b2d14c9982c44
