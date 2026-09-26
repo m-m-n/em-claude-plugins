@@ -19,34 +19,40 @@ YAML comment still fails (task plan Test Notes). Each such matcher is
 paired with a negative proof against a forged sample plus a non-vacuity
 guard (IMPLEMENTATION.md "Test module convention").
 
-Covers task0001 Acceptance Criteria:
+Covers task0001 Acceptance Criteria (feature-docs/task-tier-reduction,
+the predecessor feature this module was originally written for):
 - AC-1: tier-rules.yaml parses as YAML and carries all four named
   top-level groups.
 - AC-2: the rules file names the external judgement skill and the
   external model-guidance skill by path, reproduces no sentence from
   either, names the readonly Codex wrapper, and never names the raw
   `codex exec` subcommand as an invocation route.
-- AC-3: TS-10's three threshold cases, plus the "at or above" edge cases.
 - AC-4: no threshold expressed against the confidence member alone,
   anywhere in the rules file or the evaluator.
-- AC-5: every fallback-matrix-unusable combination (TS-9), including each
-  documented non-zero Jev exit status, resolves to the removes-nothing
-  tier with a named reason.
-- AC-6: missing/malformed/incomplete input yields the removes-nothing
-  tier with a reason naming what was missing, exit status 0, no prompt.
 - AC-7: this module is discovered by `python3 -m unittest discover -s
   tests`, imports only the standard library directly, and each of its
   raw-text matchers is paired with a negative proof and a non-vacuity
   guard.
+
+D6 rewrite (feature-docs/tier-decision-staged-jev, task0001 of THAT
+feature): the predecessor feature's AC-3 (`TestThresholdRowEvaluation`,
+threshold rows over `probabilities["0"|"1"]` + `expectation_clear`) and
+AC-5/AC-6 behavior tests (`TestDegradedInputUnitLevel`,
+`TestDegradedInputCliLevel`, and the `decide()`-driven half of
+`TestFallbackMatrixUnusableCombinations`) asserted the single-reading
+`basis`/`score` input shape and the old threshold-row scheme this feature
+replaces. That coverage is retired here and superseded by the new
+dedicated file `tests/test_decide_tier_final_score.py` (this feature's own
+task0001), which asserts the equivalent behavior against the new
+`final_score.probabilities` (buckets `"0"`-`"3"`) contract. The
+`jev_exit_codes` structural checks below are kept unchanged: that table is
+read-only for this task and its content did not change.
 """
 
 import ast
 import importlib.util
-import json
 import re
-import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -83,37 +89,6 @@ def find_typesafe_skill_doc():
         return None
     matches = sorted(TYPESAFE_CACHE_ROOT.glob("typesafe/*/skills/typesafe-ai/SKILL.md"))
     return matches[0] if matches else None
-
-
-def run_cli(stdin_text, rules_path=None):
-    args = [sys.executable, str(DECIDE_TIER_SCRIPT)]
-    if rules_path is not None:
-        args.append(str(rules_path))
-    return subprocess.run(
-        args,
-        input=stdin_text,
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-
-
-def build_payload(p0=None, p1=None, expectation_clear=None, jev_available=True,
-                   codex_available=True, basis="description_plus_code"):
-    probabilities = {}
-    if p0 is not None:
-        probabilities["0"] = p0
-    if p1 is not None:
-        probabilities["1"] = p1
-    score = {"probabilities": probabilities}
-    if expectation_clear is not None:
-        score["expectation_clear"] = expectation_clear
-    return {
-        "jev_available": jev_available,
-        "codex_available": codex_available,
-        "basis": basis,
-        "score": score,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -288,81 +263,20 @@ class TestConfidenceNeverThresholdedAlone(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# AC-3 (TS-10): threshold row evaluation, direct calls into the evaluator
+# jev_exit_codes: read-only, unchanged content -- kept as a structural
+# check. The decide()-driven fallback/threshold behavior tests that used to
+# live in this class (AC-5/AC-6 of the predecessor feature) were removed
+# per the D6 rewrite note above.
 # ---------------------------------------------------------------------------
 
 
-class TestThresholdRowEvaluation(unittest.TestCase):
+class TestJevExitCodesDocumented(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rules = dt._load_rules(TIER_RULES_PATH)
-
-    def _decide(self, **kwargs):
-        payload = build_payload(**kwargs)
-        return dt.decide(payload, self.rules)
-
-    def test_ts10_high_probability_and_clear_expectation_is_minimal(self):
-        result = self._decide(p0=0.81, expectation_clear=0.6)
-        self.assertEqual(result["tier"], "minimal")
-        self.assertEqual(result["decided_by"], "threshold_rows:minimal")
-
-    def test_ts10_low_first_bucket_carried_by_second_is_full(self):
-        # The whole point of the first-bucket floor: P(0)+P(1) = 0.96 >=
-        # 0.85, but P(0) alone (0.37) is below the 0.40 floor, so this must
-        # NOT reach `reduced`.
-        result = self._decide(p0=0.37, p1=0.59)
-        self.assertEqual(result["tier"], "full")
-        self.assertEqual(result["decided_by"], "threshold_rows:full")
-
-    def test_ts10_moderate_first_bucket_with_high_sum_is_reduced(self):
-        result = self._decide(p0=0.50, p1=0.40)
-        self.assertEqual(result["tier"], "reduced")
-        self.assertEqual(result["decided_by"], "threshold_rows:reduced")
-
-    def test_edge_case_p0_and_clarity_exactly_at_the_minimal_floor(self):
-        result = self._decide(p0=0.80, expectation_clear=0.5)
-        self.assertEqual(result["tier"], "minimal")
-
-    def test_edge_case_p0_and_sum_exactly_at_the_reduced_floor(self):
-        result = self._decide(p0=0.40, p1=0.45)  # sum == 0.85 exactly
-        self.assertEqual(result["tier"], "reduced")
-
-    def test_row_order_first_match_wins(self):
-        # A score that would also satisfy `reduced`'s condition still
-        # resolves to `minimal` because that row is evaluated first.
-        result = self._decide(p0=0.90, p1=0.05, expectation_clear=0.9)
-        self.assertEqual(result["tier"], "minimal")
-
-    def test_a_score_meeting_neither_row_is_full_not_an_error(self):
-        result = self._decide(p0=0.10, p1=0.10, expectation_clear=0.1)
-        self.assertEqual(result["tier"], "full")
-        self.assertEqual(result["decided_by"], "threshold_rows:full")
-
-    def test_reversing_the_ts10_reduced_and_full_inputs_would_fail(self):
-        # Non-vacuity guard on the two discriminating cases above: swapping
-        # their expected tiers must make the assertions fail, proving they
-        # are not vacuously true regardless of input.
-        full_case = self._decide(p0=0.37, p1=0.59)
-        reduced_case = self._decide(p0=0.50, p1=0.40)
-        with self.assertRaises(AssertionError):
-            self.assertEqual(full_case["tier"], "reduced")
-        with self.assertRaises(AssertionError):
-            self.assertEqual(reduced_case["tier"], "full")
-
-
-# ---------------------------------------------------------------------------
-# AC-5 (TS-9): every fallback-matrix-unusable combination
-# ---------------------------------------------------------------------------
-
-
-class TestFallbackMatrixUnusableCombinations(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.rules = dt._load_rules(TIER_RULES_PATH)
-        cls.rules_text = TIER_RULES_PATH.read_text(encoding="utf-8")
 
     def test_jev_exit_codes_documented_as_specified(self):
-        # FR13: 0 succeeds; 1, 2 (HTTP 401), 75 (HTTP 429/529) are the
+        # FR9: 0 succeeds; 1, 2 (HTTP 401), 75 (HTTP 429/529) are the
         # documented non-zero codes, all "unusable".
         exit_codes = self.rules.get("jev_exit_codes")
         self.assertIsInstance(exit_codes, dict)
@@ -377,177 +291,6 @@ class TestFallbackMatrixUnusableCombinations(unittest.TestCase):
         self.assertNotEqual(forged.get(1), "unusable")
         # Non-vacuity: the real table does have it unusable.
         self.assertEqual(self.rules.get("jev_exit_codes", {}).get(1), "unusable")
-
-    def test_jev_unusable_with_codex_available_yields_full(self):
-        payload = build_payload(p0=0.90, expectation_clear=0.9, jev_available=False,
-                                 codex_available=True)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertEqual(result["decided_by"], "fallback_matrix:jev_unusable")
-        self.assertTrue(result["reason"])
-
-    def test_jev_unusable_with_codex_unavailable_yields_full(self):
-        payload = build_payload(p0=0.90, expectation_clear=0.9, jev_available=False,
-                                 codex_available=False)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertEqual(result["decided_by"], "fallback_matrix:jev_unusable")
-
-    def test_jev_unusable_overrides_an_otherwise_minimal_score(self):
-        # Non-vacuity guard: the SAME score, with jev_available flipped to
-        # True, would have produced `minimal` -- proving the fallback
-        # branch, not the score, is what forced `full` above.
-        usable_payload = build_payload(p0=0.90, expectation_clear=0.9, jev_available=True,
-                                        codex_available=True)
-        usable_result = dt.decide(usable_payload, self.rules)
-        self.assertEqual(usable_result["tier"], "minimal")
-
-    def test_jev_usable_codex_unavailable_still_evaluates_thresholds(self):
-        # The "only the judgement skill usable" row: codex_available=False
-        # does not by itself force `full` -- the score is still evaluated.
-        payload = build_payload(p0=0.90, expectation_clear=0.9, jev_available=True,
-                                 codex_available=False)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "minimal")
-        self.assertEqual(result["decided_by"], "threshold_rows:minimal")
-
-    def test_both_usable_evaluates_thresholds(self):
-        payload = build_payload(p0=0.90, expectation_clear=0.9, jev_available=True,
-                                 codex_available=True)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "minimal")
-
-
-# ---------------------------------------------------------------------------
-# AC-6: missing / malformed / incomplete input
-# ---------------------------------------------------------------------------
-
-
-class TestDegradedInputUnitLevel(unittest.TestCase):
-    """Direct decide() calls for input shapes that never need the CLI
-    layer (missing/incomplete fields inside an otherwise-JSON payload)."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.rules = dt._load_rules(TIER_RULES_PATH)
-
-    def test_missing_jev_available_names_the_missing_field(self):
-        payload = {"codex_available": True, "score": {"probabilities": {"0": 0.9}}}
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertIn("jev_available", result["reason"])
-
-    def test_non_boolean_jev_available_is_treated_as_malformed(self):
-        payload = {"jev_available": "yes", "codex_available": True, "score": {}}
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertIn("jev_available", result["reason"])
-
-    def test_missing_codex_available_names_the_missing_field(self):
-        payload = {"jev_available": True, "score": {"probabilities": {"0": 0.9}}}
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertIn("codex_available", result["reason"])
-
-    def test_missing_score_when_jev_available_names_the_missing_field(self):
-        payload = {"jev_available": True, "codex_available": True}
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertIn("score", result["reason"])
-
-    def test_score_with_missing_members_falls_through_to_full(self):
-        # A different code path from "score absent entirely": here the row
-        # simply does not match and evaluation falls through (Design
-        # section), still ending at `full`.
-        payload = {
-            "jev_available": True,
-            "codex_available": True,
-            "score": {"probabilities": {}},
-        }
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertEqual(result["decided_by"], "threshold_rows:full")
-
-    def test_payload_not_an_object_yields_full(self):
-        result = dt.decide(["not", "a", "mapping"], self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertTrue(result["reason"])
-
-    def test_missing_field_matcher_would_fail_on_a_complete_payload(self):
-        # Non-vacuity guard: a complete, well-formed payload must NOT
-        # report a missing field.
-        complete = build_payload(p0=0.1, p1=0.1, expectation_clear=0.1)
-        result = dt.decide(complete, self.rules)
-        self.assertNotIn("jev_available", result["reason"])
-        self.assertNotIn("codex_available", result["reason"])
-
-
-class TestDegradedInputCliLevel(unittest.TestCase):
-    """AC-6's CLI-facing half: zero exit status and no prompt, driven as a
-    subprocess exactly the way Claude Code / the orchestrator would."""
-
-    def test_empty_stdin_yields_full_with_zero_exit(self):
-        result = run_cli("")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = json.loads(result.stdout)
-        self.assertEqual(data["tier"], "full")
-        self.assertIn("empty", data["reason"].lower())
-
-    def test_malformed_json_yields_full_with_zero_exit(self):
-        result = run_cli("{not valid json")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = json.loads(result.stdout)
-        self.assertEqual(data["tier"], "full")
-        self.assertIn("json", data["reason"].lower())
-
-    def test_non_object_json_yields_full_with_zero_exit(self):
-        result = run_cli("[1, 2, 3]")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = json.loads(result.stdout)
-        self.assertEqual(data["tier"], "full")
-
-    def test_well_formed_input_round_trips_through_the_cli(self):
-        payload = build_payload(p0=0.81, expectation_clear=0.6)
-        result = run_cli(json.dumps(payload))
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = json.loads(result.stdout)
-        self.assertEqual(data["tier"], "minimal")
-        self.assertEqual(data["observed"]["score"], payload["score"])
-
-    def test_cli_never_blocks_waiting_for_more_input(self):
-        # A 15s subprocess timeout with no matching completion would raise
-        # TimeoutExpired; not raising proves no interactive read occurred.
-        result = run_cli("")
-        self.assertIsNotNone(result.returncode)
-
-    def test_custom_rule_table_path_argument_is_honoured(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            custom_path = Path(tmp) / "custom-tier-rules.yaml"
-            custom_path.write_text(
-                "threshold_rows:\n"
-                "  - id: minimal\n"
-                "    tier: minimal\n"
-                "    p0_floor: 0.01\n"
-                "    expectation_clear_floor: 0.01\n",
-                encoding="utf-8",
-            )
-            # A score that would be `full` against the real rule table
-            # easily clears this forged table's near-zero floors.
-            payload = build_payload(p0=0.05, expectation_clear=0.05)
-            result = run_cli(json.dumps(payload), rules_path=custom_path)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            data = json.loads(result.stdout)
-            self.assertEqual(data["tier"], "minimal")
-
-    def test_default_path_argument_matcher_would_fail_without_the_override(self):
-        # Non-vacuity guard: the same score against the REAL default table
-        # (no override) must NOT be `minimal`, proving the override above
-        # is what changed the outcome.
-        payload = build_payload(p0=0.05, expectation_clear=0.05)
-        result = run_cli(json.dumps(payload))
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = json.loads(result.stdout)
-        self.assertEqual(data["tier"], "full")
 
 
 # ---------------------------------------------------------------------------
