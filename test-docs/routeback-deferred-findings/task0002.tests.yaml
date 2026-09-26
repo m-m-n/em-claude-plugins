@@ -1,0 +1,126 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainMissingArtifactRecovery.test_missing_artifact_pairs_reach_recovered_via_decide
+      - tests.test_stale_launched_recovery_chain.TestChainMissingArtifactRecovery.test_missing_artifact_pairs_reach_recovered_via_direct_chain_call
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified script (step 1 still `worktree_present !=
+      "yes" or branch_present != "yes"`): both tests failed for all three
+      subTest pairs (no,yes)/(yes,no)/(no,no) via decide() and via a direct
+      evaluate_stale_launched_chain call, each with
+      "AssertionError: {'outcome': 'residual', 'task': 'task0077', 'reason':
+      'task-artifacts-missing'} != {'outcome': 'recovered', ...}". Confirmed
+      green after narrowing the condition to
+      `not in ("yes", "no")`.
+  AC-2:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_worktree_unrecognized_token_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_branch_unrecognized_token_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_worktree_observation_absent_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_branch_observation_absent_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_empty_string_observation_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainStepOrderDirect.test_artifact_check_precedes_any_agent_index_read_or_file_open
+    red_confirmed: false
+    red_reason: >-
+      These tests exercise only the absent/unrecognized side of step 1
+      (tokens "Yes", "absent", "", None, "maybe" -- deliberately never "no",
+      which moved to AC-1). The pre-change condition
+      (`!= "yes"`) already rejected every one of these tokens exactly like
+      the post-change condition (`not in ("yes", "no")`) does, so all six
+      tests passed unmodified both before and after the production-code
+      edit -- run and observed green against the unmodified script, not
+      red. The behavioural change this task makes (accepting a recognized
+      "no") is genuinely outside what these specific inputs can detect; AC-1
+      is where that change is proven red-to-green. Two of the six
+      (worktree/branch-unrecognized-token cases) are renamed conversions of
+      pre-existing tests per the Test Notes, replacing their "no" argument
+      with an unrecognized token; the other four and the step-order
+      conversion are new.
+  AC-3:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainMissingArtifactLaterStepsUnaffected.test_insufficient_termination_tokens_report_agent_termination_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainMissingArtifactLaterStepsUnaffected.test_running_termination_reports_agent_still_live
+      - tests.test_stale_launched_recovery_chain.TestChainMissingArtifactLaterStepsUnaffected.test_non_proving_stop_result_reports_stop_result_unproven
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified script: every subTest combination (each of
+      the three missing-artifact pairs crossed with the four
+      termination-unproven tokens, with "running", and with a non-proving
+      stop result) failed, because the unmodified step 1 already returned
+      `task-artifacts-missing` for a "no" observation before the
+      termination/stop-result steps could even run -- the assertions expect
+      `agent-termination-unproven` / `agent-still-live` /
+      `stop-result-unproven` instead. All pass after the step 1 change.
+  AC-4:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainTaskWorktreeExistenceIrrelevant.test_nonexistent_task_worktree_path_still_binds_when_it_matches_the_entry
+    red_confirmed: false
+    red_reason: >-
+      `resolve_bound_stop_target` compares `--task-worktree` as a plain
+      string and has never performed an on-disk existence check, before or
+      after this task (this task's diff does not touch that function --
+      confirmed via `git diff em-workflow/scripts/recover-orphaned-task.py`,
+      which shows no changes near `resolve_bound_stop_target`). This test
+      passes unmodified against both the pre-change and post-change script;
+      it pins the Design section's "no existence check may be introduced
+      there" as a regression guard rather than proving a fixed defect.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/test_recover_orphaned_task.py and
+      tests/test_stale_launched_recovery_chain.py, by path and by filename,
+      for a test enumerating the sixteen residual reason codes (grep for
+      `REASON_` and `sixteen`); none exists -- no dedicated test asserts the
+      exact sixteen-value set. This task made no edits to any `REASON_*`
+      constant (`git diff` touches only the step 1 condition, three
+      docstring passages and three argparse help strings) and
+      tests/test_recover_orphaned_task.py is left byte-identical (`git diff
+      --stat` reports no changes) with all 77 of its pre-existing tests
+      passing (`python3 -m unittest tests.test_recover_orphaned_task`: Ran
+      77 tests, OK). No red state is possible for a criterion whose
+      substance is "nothing here changed".
+  AC-6:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestCLIEntryPoint.test_cli_worktree_no_branch_no_reports_recovered
+      - tests.test_stale_launched_recovery_chain.TestCLIEntryPoint.test_cli_worktree_unrecognized_token_reports_task_artifacts_missing
+    red_confirmed: true
+    red_reason: >-
+      test_cli_worktree_no_branch_no_reports_recovered was run against the
+      unmodified script and failed (`--worktree-present no --branch-present
+      no` printed `{"outcome": "residual", ..., "reason":
+      "task-artifacts-missing"}` instead of `recovered`), then passed after
+      the step 1 change -- this is the criterion's new behaviour.
+      test_cli_worktree_unrecognized_token_reports_task_artifacts_missing
+      ("--worktree-present maybe") was already green against the unmodified
+      script for the same reason as AC-2 (an unrecognized token was
+      already rejected pre-change); it is retained here because the
+      criterion names both cases together, but only the first half was
+      observed red.
+  AC-7:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestModuleDocstringChain.test_live_docstring_no_longer_states_worktree_and_branch_exist_precondition
+      - tests.test_stale_launched_recovery_chain.TestModuleDocstringChain.test_live_docstring_no_longer_states_both_flags_must_read_yes
+      - tests.test_stale_launched_recovery_chain.TestModuleDocstringChain.test_live_docstring_states_yes_no_observations_accepted_as_evidence
+      - tests.test_stale_launched_recovery_chain.TestModuleDocstringChain.test_live_docstring_states_narrowed_meaning_of_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestModuleDocstringChain.test_pre_change_excerpts_actually_contain_the_removed_phrases
+      - tests.test_stale_launched_recovery_chain.TestModuleDocstringChain.test_retained_anchor_present_in_both_sample_and_live_docstring
+    red_confirmed: true
+    red_reason: >-
+      The first four tests were run against the unmodified script's live
+      docstring and failed: the two "no_longer_states" tests failed because
+      the old phrases were still present (assertNotIn found them), and the
+      two "states" tests failed because the new phrases ("accepted as
+      evidence", "absent or unrecognized observation") were absent. All
+      four passed after the docstring edits. The remaining two tests
+      (test_pre_change_excerpts_actually_contain_the_removed_phrases and
+      test_retained_anchor_present_in_both_sample_and_live_docstring) are
+      the Convention 6 negative-proof-control and retained-anchor-guard
+      checks required alongside the absence assertions; by construction
+      they hold against both the pre-change sample and the live docstring
+      in either state and were never expected to be red themselves -- they
+      validate that the absence assertions above cannot pass vacuously.
