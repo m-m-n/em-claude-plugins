@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-grouping-spec-drift
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: ca914194a27a50ca36a26b5a8f026ce532c6cefe
+last_input_digest: sha256:c1f1b7191457ffd77511993123491334ccf647aa377270703d719e18b17d9881
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:c1f1b7191457ffd77511993123491334ccf647aa377270703d719e18b17d9881
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
