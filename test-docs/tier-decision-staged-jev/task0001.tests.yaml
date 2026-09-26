@@ -1,0 +1,148 @@
+task_id: task0001
+baseline_failures: []          # `python3 -m unittest discover -s tests` before any edit: 5816 tests, 0 failures
+final_failures: []             # same command after implementation: 5830 tests, 0 failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_ts1_low_first_bucket_high_second_bucket_is_reduced
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_ts2_moderate_first_bucket_with_high_sum_is_reduced
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_ts3_high_first_bucket_is_minimal_with_expectation_clear
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_ts3_high_first_bucket_is_minimal_without_expectation_clear
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_ts4_low_probabilities_is_full
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_boundary_bucket0_exactly_at_minimal_floor_is_minimal
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_boundary_bucket_sum_exactly_at_reduced_floor_is_reduced
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_row_order_first_match_wins_minimal_over_reduced
+      - tests.test_decide_tier_final_score.TestAC1ThresholdRowsOverFinalBucketProbabilities.test_non_vacuity_reversing_the_reduced_and_full_expectations_would_fail
+    red_confirmed: true
+    red_reason: >-
+      Before the rewrite, decide-tier.py only recognized a top-level
+      'basis'/'score' pair (buckets "0"/"1" only); every payload built via
+      this file's new build_payload() (which places probabilities under
+      'final_score') was read as a missing score, so every case resolved
+      to decided_by "fallback_matrix:malformed_input" with reason "missing
+      or non-object 'score'" regardless of the buckets given, e.g.
+      AssertionError: 'full' != 'reduced' for TS-1's 0.09/0.90/0.01/0.00
+      case, and the non-vacuity reversal test itself raised because both
+      sides of the comparison were 'full'.
+  AC-2:
+    tests:
+      - tests.test_decide_tier_final_score.TestAC2ProbabilityValidation.test_missing_bucket_three_gives_full_naming_bucket
+      - tests.test_decide_tier_final_score.TestAC2ProbabilityValidation.test_nan_bucket_two_gives_full_naming_bucket
+      - tests.test_decide_tier_final_score.TestAC2ProbabilityValidation.test_out_of_range_bucket_one_gives_full_naming_bucket
+      - tests.test_decide_tier_final_score.TestAC2ProbabilityValidation.test_sum_out_of_tolerance_gives_full_naming_sum
+      - tests.test_decide_tier_final_score.TestAC2ProbabilityValidation.test_extra_bucket_key_gives_full_naming_bucket
+      - tests.test_decide_tier_final_score.TestAC2ProbabilityValidation.test_all_four_malformed_cases_exit_zero_with_strict_json_stdout
+      - tests.test_decide_tier_final_score.TestAC2ProbabilityValidation.test_non_vacuity_a_valid_four_bucket_score_is_not_full
+    red_confirmed: true
+    red_reason: >-
+      Same "missing score" cause as AC-1: the pre-rewrite evaluator's
+      reason text was always the generic "missing or non-object 'score'",
+      never naming the offending bucket or the sum, e.g. AssertionError:
+      "'3'" not found in "missing or non-object 'score'" for the
+      missing-bucket case, and the CLI subTest cases failed the same way
+      once the reason-content assertion was added.
+  AC-3:
+    tests:
+      - tests.test_decide_tier_final_score.TestAC3LegacyReadingsRejected.test_legacy_readings_payload_gives_full_as_invalid_input
+      - tests.test_decide_tier_final_score.TestAC3LegacyReadingsRejected.test_legacy_readings_present_alongside_a_valid_final_score_still_rejected
+      - tests.test_decide_tier_final_score.TestAC3LegacyReadingsRejected.test_non_vacuity_the_same_final_score_without_readings_reaches_minimal
+      - tests.test_decide_tier_final_score.TestAC3LegacyReadingsRejected.test_readings_disagree_absent_from_evaluator_source
+      - tests.test_decide_tier_final_score.TestAC3LegacyReadingsRejected.test_readings_disagree_matcher_fires_on_a_forged_evaluator_copy
+      - tests.test_decide_tier_final_score.TestAC3LegacyReadingsRejected.test_fallback_matrix_has_no_row_keyed_on_disagreement
+    red_confirmed: true
+    red_reason: >-
+      The pre-rewrite decide-tier.py still accepted 'readings' and
+      evaluated two-reading disagreement logic: the two rejection tests
+      failed because decided_by came back as the old disagreement-fallback
+      value (or "threshold_rows:full") instead of the expected
+      malformed-input value; test_readings_disagree_absent_from_evaluator_source
+      failed because that old decided_by literal was still present verbatim
+      in the evaluator's source; and
+      test_fallback_matrix_has_no_row_keyed_on_disagreement failed because
+      the real tier-rules.yaml's jev_only_usable row still carried the
+      disagreement-resolution note.
+  AC-4:
+    tests:
+      - tests.test_decide_tier_final_score.TestAC4CodexUnavailableForcesFull.test_codex_unavailable_with_would_be_minimal_score_gives_full
+      - tests.test_decide_tier_final_score.TestAC4CodexUnavailableForcesFull.test_non_vacuity_same_score_with_codex_available_reaches_minimal
+      - tests.test_decide_tier_final_score.TestAC4CodexUnavailableForcesFull.test_rules_jev_only_usable_row_action_is_full
+    red_confirmed: true
+    red_reason: >-
+      The pre-rewrite evaluator never branched on codex_available at all
+      (it was recorded but not used to gate the decision), and treated the
+      final_score-keyed payload as missing; assertEqual(decided_by,
+      "fallback_matrix:jev_only_usable") failed (actual value was
+      "fallback_matrix:malformed_input"), and
+      test_rules_jev_only_usable_row_action_is_full failed because the
+      real tier-rules.yaml's jev_only_usable row still had
+      action: evaluate_threshold_rows, not full.
+  AC-5:
+    tests:
+      - tests.test_decide_tier_final_score.TestAC5JevUnavailableForcesFull.test_jev_unavailable_with_codex_available_gives_full
+      - tests.test_decide_tier_final_score.TestAC5JevUnavailableForcesFull.test_jev_unavailable_with_codex_unavailable_gives_full
+      - tests.test_decide_tier_final_score.TestAC5JevUnavailableForcesFull.test_non_vacuity_jev_available_true_with_same_score_reaches_minimal
+      - tests.test_decide_tier_final_score.TestAC5JevUnavailableForcesFull.test_jev_exit_codes_classifies_1_2_75_as_unusable
+    red_confirmed: true
+    red_reason: >-
+      test_non_vacuity_jev_available_true_with_same_score_reaches_minimal
+      failed with AssertionError: 'full' != 'minimal', because the
+      pre-rewrite evaluator did not recognize the final_score-keyed
+      payload and returned full/malformed_input regardless of the score
+      when jev_available was true. The other three tests in this group
+      describe fallback behavior the task plan explicitly leaves
+      unchanged (the jev_unusable row and jev_exit_codes table are
+      read-only for this task) and were already true before any edit;
+      they are kept for coverage parity but did not themselves transition
+      from red to green.
+  AC-6:
+    tests:
+      - tests.test_decide_tier_final_score.TestAC6RuleTableShapeAndDefects.test_exactly_three_threshold_rows_minimal_reduced_full_in_order
+      - tests.test_decide_tier_final_score.TestAC6RuleTableShapeAndDefects.test_probability_sum_tolerance_declared_as_0_02
+      - tests.test_decide_tier_final_score.TestAC6RuleTableShapeAndDefects.test_no_threshold_row_declares_confidence_or_expectation_clear
+      - tests.test_decide_tier_final_score.TestAC6RuleTableShapeAndDefects.test_missing_tolerance_in_rule_table_gives_full_naming_it
+      - tests.test_decide_tier_final_score.TestAC6RuleTableShapeAndDefects.test_missing_threshold_row_lower_bound_gives_full_naming_it
+      - tests.test_decide_tier_final_score.TestAC6RuleTableShapeAndDefects.test_non_vacuity_same_score_against_the_real_rules_reaches_minimal
+      - tests.test_decide_tier_final_score.TestAC6RuleTableShapeAndDefects.test_non_vacuity_the_unmodified_row_still_matches_minimal
+      - tests.test_decide_tier_final_score.TestEvaluatorHasNoProcessNetworkOrModelFacility.test_no_forbidden_facility_token_present
+    red_confirmed: true
+    red_reason: >-
+      test_exactly_three_threshold_rows_minimal_reduced_full_in_order and
+      test_probability_sum_tolerance_declared_as_0_02 failed because the
+      pre-rewrite tier-rules.yaml's rows still declared p0_floor /
+      expectation_clear_floor / bucket_sum_floor and had no
+      probability_sum_tolerance member (AssertionError: None != 0.02);
+      test_missing_tolerance_in_rule_table_gives_full_naming_it and
+      test_missing_threshold_row_lower_bound_gives_full_naming_it failed
+      because the pre-rewrite decide() still keyed off 'score', giving
+      reason "missing or non-object 'score'" which never named
+      'probability_sum_tolerance' or the row's floor member. The
+      no-forbidden-facility check was already true before this task (the
+      evaluator never had a process/network facility) and is kept for
+      coverage, not as evidence of a red transition.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-7's verifiable outcome is the full-suite run itself
+      (`python3 -m unittest discover -s tests`) plus this task's own
+      compliance with the raw-text-matcher convention -- neither is a
+      single test that can be watched go red. I confirmed genuine
+      red-to-green transitions at the module level for every rewritten or
+      new file (tests/test_decide_tier_final_score.py: 39 of 59 failures
+      before the implementation existed, 0 after;
+      tests/test_tier_evaluator_contract.py: 8 of 12 failures before, 0
+      after) but did not execute the literal `discover` invocation itself
+      while any of those failures were present -- the baseline discover
+      run (step 4a, before any edit) and the final discover run (after
+      every edit) were both green by construction, so the command itself
+      was never observed to fail.
+notes: >-
+  tests/test_tier_rules.py was pruned (TestThresholdRowEvaluation,
+  TestDegradedInputUnitLevel, TestDegradedInputCliLevel, and the
+  decide()-driven half of TestFallbackMatrixUnusableCombinations removed)
+  rather than rewritten test-by-test, because every behavior they exercised
+  is now covered by the new dedicated file's own tests under the new
+  final_score contract; running it alone before and after the rewrite
+  showed 17/17 passing throughout (no red transition expected or claimed
+  for that file -- it only kept assertions about content this task does
+  not change, e.g. jev_exit_codes and the external-skill citations).
