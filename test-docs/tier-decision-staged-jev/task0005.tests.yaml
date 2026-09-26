@@ -1,0 +1,66 @@
+task_id: task0005
+baseline_failures: []          # python3 -m unittest discover -s tests, before touching any file: 5816 tests, all green.
+final_failures: []             # same command re-run after implementation: 5831 tests, all green (15 new tests added, no other test's outcome changed).
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_em_workflow_version.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_em_workflow_version.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+    red_confirmed: false
+    red_reason: >-
+      The equality this criterion states already held before any file was
+      touched: both em-workflow/.claude-plugin/plugin.json and the
+      em-workflow entry of .claude-plugin/marketplace.json read "0.2.9"
+      before the version bump, so test_em_workflow_entry_version_matches_plugin_manifest
+      passed the moment the new test module was created, before either
+      manifest was edited. The matcher's ability to actually detect a
+      mismatch is proven by the negative proof
+      tests.test_em_workflow_version.TestValidationDetectsRegressions.test_fails_when_versions_differ,
+      but that proof runs against forged input, not against this task's
+      real artifacts before implementation, so it does not establish
+      red_confirmed: true for this criterion.
+  AC-2:
+    tests:
+      - tests.test_em_workflow_version.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_em_workflow_version.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_em_workflow_version.TestVersionComparisonIsPerComponentNumeric.test_naive_string_comparison_gets_it_backwards
+      - tests.test_em_workflow_version.TestVersionComparisonIsPerComponentNumeric.test_parsed_tuple_ranks_0_2_10_above_0_2_9
+      - tests.test_em_workflow_version.TestVersionComparisonIsPerComponentNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_em_workflow_version -v` with the
+      new test module in place but before editing either manifest (both
+      still at 0.2.9): test_version_is_past_baseline and
+      test_em_workflow_entry_version_is_past_baseline both failed with
+      "AssertionError: (0, 2, 9) not greater than (0, 2, 9)". After bumping
+      both manifests to 0.2.10, the same run was all green (15/15).
+  AC-3:
+    tests:
+      - tests.test_em_workflow_version.TestPluginManifestVersion.test_manifest_has_a_version_key
+      - tests.test_em_workflow_version.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      Both manifests were already valid JSON before this task's edit, and
+      the change is a single string-value replacement that cannot alter
+      JSON syntax, so the JSON-parses check (via _load_json, exercised by
+      test_manifest_has_a_version_key) was never observed to fail.
+      test_only_standard_library_imports inspects only the new module's
+      own import statements and was green from the moment the module was
+      written (it only ever used json/re/sys/ast/unittest/pathlib). The
+      "python3 -m unittest discover -s tests passes" half of AC-3 is a
+      whole-suite property; it was verified by actually running
+      `python3 -m unittest discover -s tests` from the repository root
+      after implementation (5831 tests, OK) rather than by observing that
+      exact full-suite command fail beforehand -- the only failures
+      observed pre-implementation were the two AC-2 assertions above, from
+      a scoped run of the new module, not from a full discover run.
+notes: >-
+  A search of tests/ for existing coverage of em-workflow/.claude-plugin/plugin.json
+  and .claude-plugin/marketplace.json (by both relative path and basename)
+  found tests/test_plugin_version_parity.py and a family of sibling
+  tests/*_version_bump.py modules, each following the pattern established by
+  a prior task and pinning its own baseline. The task plan explicitly names
+  tests/test_em_workflow_version.py as a new file to create, so this task
+  adds its own dedicated module (baseline 0.2.9, per task0005.md Design/AC-2)
+  rather than reusing an existing one, following the same established
+  per-task pattern.
