@@ -1,0 +1,137 @@
+task_id: task0007
+baseline_failures:  # `python3 -m unittest discover -s tests` before any edit: 6129 tests
+  - "test_all_new_phrases_present (tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present) (phrase=\"This exit is reached once three preconditions all hold: the ancestor check just failed; the task's journal last event is `merged`; and the task's `Task()` call is not among this reconcile step's own currently-outstanding calls\")"
+final_failures: []  # re-run after implementation: `python3 -m unittest discover -s
+                    # tests` -> 6142 tests, 0 failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present
+    red_confirmed: true
+    red_reason: >-
+      This is the task's own baseline failure (4a), observed by running
+      `python3 -m unittest discover -s tests` before touching any file:
+      AssertionError, the old R2_PRECONDITIONS_PHRASE (containing "the
+      ancestor check just failed") was not found in the live I.2.b section
+      -- the live document reads the round-1-auto-fix exit-1 wording
+      instead. After replacing the constant with the reviewed preconditions
+      sentence (verbatim from the live document, containing the exit-1
+      wording), the same subTest passes.
+  AC-2:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckJustFailedPhraseAbsent.test_old_phrase_absent_from_live_bullet
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckJustFailedPhraseAbsent.test_old_phrase_matcher_flags_presence_in_pre_change_sample
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckJustFailedPhraseAbsent.test_pre_change_sample_retains_anchor
+    red_confirmed: true
+    red_reason: >-
+      test_old_phrase_absent_from_live_bullet has no possible red under this
+      task's scope: the live document is never edited by this task, and the
+      phrase "the ancestor check just failed" was already absent from it
+      before this task started (round 1 auto-fix commit 4ad3d3b3 removed it
+      in the same feature, prior to this task). The discriminating part of
+      this criterion -- the negative proof that the matcher genuinely finds
+      the phrase in the pre-change sample -- was driven red for real:
+      PRE_CHANGE_ANCESTOR_JUST_FAILED_SAMPLE was temporarily set to the
+      post-4ad3d3b3 (live) wording instead of the verbatim parent-of-4ad3d3b3
+      text, and test_old_phrase_matcher_flags_presence_in_pre_change_sample
+      failed with "AssertionError: 'the ancestor check just failed' not
+      found in ...". Restoring the verbatim parent-of-4ad3d3b3 sample made
+      it pass again; the retained-anchor test was unaffected by this probe
+      and passed throughout (it does not depend on the substituted text
+      containing the anchor phrase, which both versions happen to share).
+  AC-3:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestExitOneRestrictionClausePinned.test_clause_present_in_live_bullet
+      - tests.test_merge_unverified_exit_doc_contract.TestExitOneRestrictionClausePinned.test_live_sample_is_verbatim_substring_of_live_bullet
+      - tests.test_merge_unverified_exit_doc_contract.TestExitOneRestrictionClausePinned.test_negative_proof_derived_bullet_lacks_clause
+      - tests.test_merge_unverified_exit_doc_contract.TestExitOneRestrictionClausePinned.test_retained_anchor_present_in_derived_bullet
+    red_confirmed: true
+    red_reason: >-
+      test_clause_present_in_live_bullet has no possible red under this
+      task's scope: the clause already exists verbatim in the live,
+      unedited document. test_negative_proof_derived_bullet_lacks_clause
+      was driven red for real: temporarily changed the derivation to
+      `derived = self.live_sample` (skipping the `.replace()` clause
+      removal) and re-ran the test, observing "AssertionError: '...exits 1
+      (not an ancestor)...' unexpectedly found in ..." -- proving the
+      negative proof genuinely discriminates. Restoring the `.replace()`
+      call made it pass again. test_retained_anchor_present_in_derived_bullet
+      passed throughout (not exercised by this probe).
+  AC-4:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestExit128NonInvocationSentencePinned.test_sentence_present_in_live_bullet
+      - tests.test_merge_unverified_exit_doc_contract.TestExit128NonInvocationSentencePinned.test_negative_proof_derived_bullet_lacks_sentence
+      - tests.test_merge_unverified_exit_doc_contract.TestExit128NonInvocationSentencePinned.test_retained_anchor_present_in_derived_bullet
+    red_confirmed: true
+    red_reason: >-
+      Same pattern as AC-3: test_sentence_present_in_live_bullet has no
+      possible red (the sentence already exists verbatim in the live,
+      unedited document). test_negative_proof_derived_bullet_lacks_sentence
+      was driven red for real by temporarily skipping the `.replace()`
+      removal, observing "AssertionError: 'A task branch ref that fails to
+      resolve...' unexpectedly found in ..."; restoring the removal made it
+      pass again.
+  AC-5:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestAlreadyMergedExclusionSentencePinned.test_sentence_present_in_live_bullet
+      - tests.test_merge_unverified_exit_doc_contract.TestAlreadyMergedExclusionSentencePinned.test_negative_proof_derived_bullet_lacks_sentence
+      - tests.test_merge_unverified_exit_doc_contract.TestAlreadyMergedExclusionSentencePinned.test_retained_anchor_present_in_derived_bullet
+    red_confirmed: true
+    red_reason: >-
+      Same pattern as AC-3/AC-4: test_sentence_present_in_live_bullet has
+      no possible red (the sentence already exists verbatim in the live,
+      unedited document). test_negative_proof_derived_bullet_lacks_sentence
+      was driven red for real by temporarily skipping the `.replace()`
+      removal, observing "AssertionError: 'Tasks whose `workflow.yaml`
+      status already reads `merged`...' unexpectedly found in ...";
+      restoring the removal made it pass again.
+  AC-6:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      test_module_uses_only_standard_library_imports is a pre-existing test
+      (not added by this task) that already covered the stdlib-only-import
+      half of this criterion before this task started, and this task adds
+      no new imports, so no red was observed or expected for it. The
+      test-method-count and no-skip halves have no dedicated executable
+      check: verified by direct count instead. `git show cdbb386b:tests/
+      test_merge_unverified_exit_doc_contract.py | grep -c "    def test_"`
+      is 47 at this task's base commit; `grep -c "    def test_"` against
+      the current file is 60 (13 new test methods across
+      TestAncestorCheckJustFailedPhraseAbsent,
+      TestExitOneRestrictionClausePinned, TestExit128NonInvocationSentencePinned
+      and TestAlreadyMergedExclusionSentencePinned: 3+4+3+3). Both counts
+      match `python3 -m unittest tests.test_merge_unverified_exit_doc_contract`'s
+      own "Ran N tests" line (47 before, 60 now), with no "skipped" outcome
+      anywhere in either run.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No dedicated unittest test exists (in this module or elsewhere) that
+      asserts these four specific files have no diff against this task's
+      own base commit; this task's scope never touches any of them, so
+      there is no red state to observe for that half. Verified instead by
+      `git diff --stat cdbb386b -- em-workflow/references/implement-phase.md
+      em-workflow/hooks/queue_launch_guard.py em-workflow/scripts/merge-task.sh
+      feature-docs/routeback-admissibility-exits/reviews/round3.yaml`
+      (empty output, confirming no diff) and by `git status --porcelain`
+      (only tests/test_merge_unverified_exit_doc_contract.py modified). The
+      full-suite half is directly executable and was run:
+      `python3 -m unittest discover -s tests` exits 0 (6142 tests, 0
+      failures) after implementation.
+notes: >-
+  Baseline run performed before any edit (Step 4a):
+  `python3 -m unittest discover -s tests` -> 6129 tests, 1 failure
+  (test_all_new_phrases_present, the verify-sourced defect this task
+  fixes). Final run after implementation: same command -> 6142 tests, 0
+  failures (13 new tests added, the one baseline failure resolved, no
+  regressions). For AC-2 through AC-5, each negative-proof test's
+  discriminating power was verified by temporarily introducing the
+  corresponding bug (wrong pre-change sample text for AC-2; skipping the
+  `.replace()` clause/sentence removal for AC-3/AC-4/AC-5), running that
+  single test class, observing the genuine AssertionError, then restoring
+  the correct code (confirmed byte-identical to the pre-probe file via
+  `diff`) and re-running the full suite to green. No file outside
+  `tests/test_merge_unverified_exit_doc_contract.py` was touched.
