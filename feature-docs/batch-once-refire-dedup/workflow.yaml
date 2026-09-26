@@ -187,9 +187,11 @@ workflow:
   status: completed
   completed_at_commit: f3e17d8f500293fe04147906463eeb7118ed8f58
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  completed_at_commit: 8a68743e80e4d9bd64286cd11884a024dbfa4778
+  summary: 'TS1-TS7 pass: unittest discover 6217 tests OK; SKILL.md no diff since base_commit; em-workflow version 0.2.12 -> 0.2.13 in both manifests (em-review unchanged); manual reading of both edited passages OK. No excluded requirements.'
 - id: retrospect
   status: pending
 tasks:
