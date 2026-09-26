@@ -173,7 +173,7 @@ workflow:
   base_commit: 4cfd5c4c7b4f536eaeb44caf591022d6f68dd0ba
   completed_at_commit: 3dc195ab9f48ec64e5c8bb91e98aac4fad49e837
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -259,9 +259,18 @@ tasks:
     notes: null
     branch: em-workflow/destructive-guard-grouping-spec-drift/task0003
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: destructive-guard.py runs as a PreToolUse hook on every Bash call and the diff adds recursive parsing of grouping/compound constructs, so per-call latency and worst-case expansion need checking
+    cross_validation: true
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
