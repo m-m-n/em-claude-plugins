@@ -1,0 +1,71 @@
+schema_version: 2
+feature: batch-once-refire-dedup
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.67
+    confidence: 0.66
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.33
+      '2': 0.67
+      '3': 0.0
+  observed_at: '2026-09-27T01:00:34+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.73
+    confidence: 0.72
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.73
+      '3': 0.0
+  observed_at: '2026-09-27T01:03:46+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/batch-mode.md
+  - em-workflow/references/batch-terminal-line.md
+  - tests/test_develop_once_option.py
+  - tests/test_review_implement_develop_lock_contracts.py
+  - /home/sakura/.claude/skills/notion-batch-develop/SKILL.md
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: develop/SKILL.md:120-121、163-166 と batch-mode.md:65 に、パス引数なしでは常に新規 feature
+    とし、既存ブランチを列挙・推測しない規定が残っているよ。develop/SKILL.md:995-1000 は --once のフェーズ境界で終了すると定めているよ。batch-terminal-line.md:68-73、119-128
+    は feature・branch の出力と同じ feature の再起動を定めているけど、batch-mode.md:123-146 の報告必須項目に同一 goal の重複検出・通知はないよ。リポジトリ外の
+    /home/sakura/.claude/skills/notion-batch-develop/SKILL.md:15-25 はタイトルと本文をタスク記述にするだけで、feature 名の持ち回りを定めていないよ。既存テストは
+    tests/test_review_implement_develop_lock_contracts.py:190-208 が列挙・推測禁止を、tests/test_develop_once_option.py:281-309
+    が --once の挙動を検査しているけど、同じ外部タスクで2回起動する再発検出テストは見つからなかったよ。読み取りだけの関連54テストは python3 -B で通ったよ。全体の unittest
+    discover は一時ファイルを作るテスト（tests/test_commit_docs.py:42-50、80-86）を含むため実行していないよ。方式 (a)/(b)/(c) は未選択なので、files_expected
+    は確認対象の候補であり、変更行数・追加関数・追加ファイル・依存・影響範囲は確定していないよ。数値の0と空配列は必要数を確定した意味ではなく、この調査では変更を行っていないことを示しているよ
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-09-27T01:03:56+09:00'
