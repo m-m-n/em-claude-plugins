@@ -265,8 +265,9 @@ tasks:
     - FR10
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/routeback-deferred-findings/task0007
     provenance:
       source: verify
       source_ids:
