@@ -1,0 +1,147 @@
+task_id: task0004
+baseline_failures: []  # confirmed by reverting the worktree to base commit eabf7278
+                        # (all task0004-touched files) and running
+                        # `python3 -m unittest discover -s tests`: 5973 tests, 0 failures
+final_failures: []      # re-run after implementation: `python3 -m unittest discover -s
+                        # tests` -> 6020 tests, 0 failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_forged_sanity_each_phrase_detected_if_removed
+    red_confirmed: true
+    red_reason: >-
+      Observed by temporarily swapping em-workflow/references/implement-phase.md
+      back to its base-commit (eabf7278) content and re-running this module:
+      test_all_new_phrases_present failed once per new phrase (subTest) with
+      "AssertionError: ... not found in ..." for the preconditions sentence,
+      the termination-not-proven sentence, and the single
+      journal-append-failed.py invocation sentence (--reason merge-unverified,
+      no launch identity) -- none of them existed in the pre-change document.
+      Restored the post-change document afterward; the same run then passed.
+  AC-2:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_retained_literals_survive
+      - tests.test_merge_unverified_exit_doc_contract.TestR2ClosingSentenceNoLongerUnconditional.test_new_closing_wording_present
+    red_confirmed: true
+    red_reason: >-
+      Same base-commit swap as AC-1: test_all_new_phrases_present also failed
+      (subTest) for the helper-failure-residue sentence and the retry-path /
+      merge-task.sh-records-merged-again sentence, neither present pre-change.
+      test_new_closing_wording_present failed too -- the old bullet's closing
+      sentence read the unconditional "I.2.c narrows this case further,
+      because ..." wording, not the new helper-failure-scoped wording.
+      test_retained_literals_survive passed both before and after (it checks
+      wording this task does not touch), confirming it is not vacuously
+      dependent on the edit.
+  AC-3:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestI2cAncestorFailureParagraphNoLongerADeadEnd.test_all_six_old_phrases_absent
+      - tests.test_merge_unverified_exit_doc_contract.TestI2cAncestorFailureParagraphNoLongerADeadEnd.test_new_exit_statement_present
+      - tests.test_merge_unverified_exit_doc_contract.TestI2cAncestorFailureParagraphNoLongerADeadEnd.test_i2c_contains_neither_append_nor_rework
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_exit_no_longer_cites_i2b_step1_reconciled_state_directly
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_retry_no_longer_reaches_harness_level_failure_diagnostic_path
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_outcome_no_longer_reached_without_selecting_abort
+    red_confirmed: true
+    red_reason: >-
+      Same base-commit swap: test_all_six_old_phrases_absent failed once per
+      phrase (subTest) -- all six dead-end/human-only/status-semantics
+      phrases were present pre-change; test_new_exit_statement_present
+      failed (the new ordinary-menu/citation sentence did not exist yet).
+      The three converted tests in test_implement_routeback_gate.py failed
+      the same way against the same swapped document (their assertNotIn
+      calls found the old phrases still present, and their assertIn calls
+      for the replacement wording found it absent). test_i2c_contains_neither_
+      append_nor_rework passed both before and after (I.2.c already avoided
+      those substrings; this task's own edit keeps that true, so this
+      criterion's build-shaped half has no possible red state of its own --
+      it is a regression guard on the edit, not proof of a change).
+  AC-4:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestI2aStatesNewPathAndRemainingCase.test_old_deny_sentence_absent
+      - tests.test_merge_unverified_exit_doc_contract.TestI2aStatesNewPathAndRemainingCase.test_new_admits_retry_phrase_present
+      - tests.test_merge_unverified_exit_doc_contract.TestI2aStatesNewPathAndRemainingCase.test_new_remaining_case_phrase_present
+    red_confirmed: true
+    red_reason: >-
+      Same base-commit swap: test_old_deny_sentence_absent failed (the old
+      "the launch guard denies the retry instead -- I.2.c owns that narrower
+      outcome" sentence was present); test_new_admits_retry_phrase_present
+      and test_new_remaining_case_phrase_present both failed (neither new
+      sentence existed pre-change).
+  AC-5:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestOrphanRecoveryNoLongerClaimsOnlyCase.test_old_only_case_phrase_absent
+      - tests.test_merge_unverified_exit_doc_contract.TestOrphanRecoveryNoLongerClaimsOnlyCase.test_new_invocation_site_phrase_present
+      - tests.test_merge_unverified_exit_doc_contract.TestJournalBulletNamesBothInvocationSites.test_new_phrases_present
+      - tests.test_merge_unverified_exit_doc_contract.TestCaveatNoLongerMakesOrphanAttemptTheSoleExceptionAlone.test_old_direct_link_absent
+      - tests.test_merge_unverified_exit_doc_contract.TestCaveatNoLongerMakesOrphanAttemptTheSoleExceptionAlone.test_new_together_phrasing_present
+      - tests.test_merge_unverified_exit_doc_contract.TestReadmeAlignedWithSingleHelperException.test_old_only_orphaned_phrase_absent
+      - tests.test_merge_unverified_exit_doc_contract.TestReadmeAlignedWithSingleHelperException.test_new_merge_unverified_mention_present
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_no_longer_states_only_case_orchestrator_appends_journal
+    red_confirmed: true
+    red_reason: >-
+      Same base-commit swap (implement-phase.md and README.md both restored
+      to eabf7278 content): every "_absent"/"old_*" assertion above failed
+      because the old phrase ("This is the ONLY case ...", "... is the sole
+      exception" linked directly to the orphan-recovery attempt, README's
+      "だけは例外的に" wording) was still present; every "_present"/"new_*"
+      assertion failed because the replacement wording (the two-invocation-
+      site framing, the merge-unverified mentions in the Journal bullet, the
+      caveat, and the README) did not exist yet. The converted
+      test_implement_routeback_gate.py test failed the same way. Restored
+      the post-change documents afterward; the same run then passed (46/46
+      in the new module, 199/199 in the pin-conversion module).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not an executable test-pass/fail check: verified by direct inspection
+      of tests/test_implement_routeback_gate.py's test-method counts before
+      and after this task's edit. TestThirdConjunctNeverNarrowedHasStatedExit
+      held 5 test methods before (test_third_conjunct_never_narrowed,
+      test_no_recycled_id_can_inherit_merged_via_write_set,
+      test_exit_cites_i2b_step1_reconciled_state,
+      test_retry_reaches_harness_level_failure_diagnostic_path,
+      test_outcome_reached_without_selecting_abort) and 5 after (the last
+      three renamed to their "_no_longer_..." absence-plus-replacement
+      form); TestI2bOrphanRecoveryOwningSection held 7 before and 7 after
+      (test_states_only_case_orchestrator_appends_journal renamed to
+      test_no_longer_states_only_case_orchestrator_appends_journal). No
+      `@unittest.skip` was added to either module. The full module run
+      (199 tests, tests.test_implement_routeback_gate) is green, which is
+      the closest executable proxy but does not itself assert a specific
+      method count.
+  AC-7:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestNoSC6CodeLeaksFromThisTasksEditedRegions.test_i2a_contains_no_sc6_code
+      - tests.test_merge_unverified_exit_doc_contract.TestNoSC6CodeLeaksFromThisTasksEditedRegions.test_i2c_contains_no_sc6_code
+      - tests.test_merge_unverified_exit_doc_contract.TestNoSC6CodeLeaksFromThisTasksEditedRegions.test_supporting_cast_contains_no_sc6_code
+      - tests.test_merge_unverified_exit_doc_contract.TestNoSC6CodeLeaksFromThisTasksEditedRegions.test_readme_contains_no_sc6_code
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_launch_guard_untouched
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_untouched
+      - tests.test_merge_unverified_exit_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      These are structural regression guards with no possible pre-existing
+      red state: this task never added an SC6 code outside I.2.b/README and
+      never touched queue_launch_guard.py or merge-task.sh at any point
+      during implementation, so the checks were true from the moment each
+      was written -- there was no prior "with no implementation present"
+      state in which they could have been observed failing (a real red
+      would require deliberately sabotaging the change first). All are
+      green now, and the full-suite half of this criterion
+      (`python3 -m unittest discover -s tests`) was independently re-run
+      against the true base commit (eabf7278, all task0004-touched files
+      reverted, the new test module untracked) and produced 5973 passing
+      tests / 0 failures, then re-run against the final implementation and
+      produced 6020 passing tests / 0 failures.
+notes: >-
+  Full re-run performed after implementation (`python3 -m unittest discover
+  -s tests`): 6020 tests, 0 failures. The baseline re-run was performed
+  properly (see baseline_failures comment above), though out of the normal
+  step-4a order -- the implementer edited the target documents before
+  recording the baseline, then reconstructed and verified the true baseline
+  by reverting every touched file to base commit eabf7278 and re-running the
+  full suite, which is why baseline_failures reflects a genuine observation
+  rather than an assumption.

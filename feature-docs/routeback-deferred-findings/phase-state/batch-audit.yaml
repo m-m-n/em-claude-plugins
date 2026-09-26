@@ -10,3 +10,84 @@ records:
     freeform: "Q1 usage error; Q2 edit README; Q3 verbatim from 0d9d0dc4; fix task0001 red-first"
     normalized_answer: "Q1 usage error; Q2 edit README; Q3 verbatim from 0d9d0dc4; fix task0001 red-first"
     resolution_note: "gate: create-plan planner open points (no gate_id; orchestrator consulted Codex per launch instruction); codex_consulted: true; opus_escalation: false. Q1 (IMPLEMENTATION.md D4, merge-unverified with --launch-at): options usage-error-before-journal-open / silently-ignore / other; chosen usage error (keeps the existing no-write usage-error contract; ignoring would allow a write without the launch identity the caller expected). Q2 (em-workflow/README.md line 104 says the orphaned launched residue is the only orchestrator-caused helper write): options edit-unconditionally / leave-untouched; chosen edit (the claim exists, verified by reading line 104; task0004 made unconditional). Q3 (FR3 negative proof needs the loop-2 wording): options deviation-skip / paraphrase-regex / other; chosen take verbatim from commit 0d9d0dc4 implement-phase.md 388-396 (Codex located it; skipping fails FR3/AC-5, a previous/prior-session regex misses 'before the current session began'). Defect: task0001 red-first rule contradicted AC-5 (the unmodified helper already rejects the unknown reason with no write); task0001 amended to exempt that case and assert the combination-specific diagnostic. Plan docs amended by the orchestrator: IMPLEMENTATION.md, tasks/task0001.md, tasks/task0003.md, tasks/task0004.md."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:39:30+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    normalized_answer: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    resolution_note: "task_id: task0001; deviation path: em-workflow/.claude-plugin/plugin.json; declined: path falls under the workflow control path em-workflow/** (never auto-added); also no acceptance-criterion / requirement identifier was named and the stated reason (local plugin-version-guard hook requires a version change in the same commit) is not an observable AC failure. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:39:30+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation .claude-plugin/marketplace.json"
+    normalized_answer: "declined files deviation .claude-plugin/marketplace.json"
+    resolution_note: "task_id: task0001; deviation path: .claude-plugin/marketplace.json; declined: no acceptance-criterion / requirement identifier was named (identifier part missing) and the failure is not stated as a test that cannot be written or pass (rationale part unresolved); reason given was the local plugin-version-guard hook. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:41:47+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    normalized_answer: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    resolution_note: "task_id: task0002; deviation path: em-workflow/.claude-plugin/plugin.json; declined: path falls under the workflow control path em-workflow/** (never auto-added); also no acceptance-criterion / requirement identifier was named and the stated reason (local plugin-version-guard hook requires a version change in the same commit) is not an observable AC failure. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:41:47+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation .claude-plugin/marketplace.json"
+    normalized_answer: "declined files deviation .claude-plugin/marketplace.json"
+    resolution_note: "task_id: task0002; deviation path: .claude-plugin/marketplace.json; declined: no acceptance-criterion / requirement identifier was named (identifier part missing) and the failure is not stated as a test that cannot be written or pass (rationale part unresolved); reason given was the local plugin-version-guard hook. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:53:13+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    normalized_answer: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    resolution_note: "task_id: task0005; deviation path: em-workflow/.claude-plugin/plugin.json; declined: path falls under the workflow control path em-workflow/** (never auto-added); also no acceptance-criterion / requirement identifier was named and the stated reason (local plugin-version-guard hook requires a version change in the same commit) is not an observable AC failure. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:53:13+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation .claude-plugin/marketplace.json"
+    normalized_answer: "declined files deviation .claude-plugin/marketplace.json"
+    resolution_note: "task_id: task0005; deviation path: .claude-plugin/marketplace.json; declined: no acceptance-criterion / requirement identifier was named (identifier part missing) and the failure is not stated as a test that cannot be written or pass (rationale part unresolved); reason given was the local plugin-version-guard hook. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T23:01:53+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    normalized_answer: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    resolution_note: "task_id: task0004; deviation path: em-workflow/.claude-plugin/plugin.json; declined: path falls under the workflow control path em-workflow/** (never auto-added); also no acceptance-criterion / requirement identifier was named and the stated reason (local plugin-version-guard hook requires a version change in the same commit) is not an observable AC failure. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T23:01:53+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation .claude-plugin/marketplace.json"
+    normalized_answer: "declined files deviation .claude-plugin/marketplace.json"
+    resolution_note: "task_id: task0004; deviation path: .claude-plugin/marketplace.json; declined: no acceptance-criterion / requirement identifier was named (identifier part missing) and the failure is not stated as a test that cannot be written or pass (rationale part unresolved); reason given was the local plugin-version-guard hook. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T23:01:53+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation tests/test_task_id_allocation_ssot_i2c.py"
+    normalized_answer: "declined files deviation tests/test_task_id_allocation_ssot_i2c.py"
+    resolution_note: "task_id: task0004; deviation path: tests/test_task_id_allocation_ssot_i2c.py; declined: identifier part missing -- the report names no AC-n of task0004's plan and no registered requirement id; the path shape check and control-path check pass, and the rationale (two existing tests slicing on a sentence this task removed would fail) is observable. The 2-line end-marker change is already merged; review should confirm it does not weaken those tests."
