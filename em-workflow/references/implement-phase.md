@@ -324,12 +324,12 @@ Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
 its kept worktree via the resume guard below); the launch guard then admits
-it because a post-`failed` launch is the legitimate retry path. This holds
-only when the task's journal last event is actually `failed`: for the
-ancestor-check-failed case in I.2.b step 1, where the reconciled state is
-`failed` but the raw journal last event is still `merged`, the launch guard
-denies the retry instead — I.2.c owns that narrower outcome, not restated
-here.
+it because a post-`failed` launch is the legitimate retry path. For the
+ancestor-check-failed case, I.2.b step 1's ancestor-check branch (cited
+here, not restated) records a journal `failed` event, so the launch guard
+admits the retry; only when that invocation records nothing does the
+journal last event stay `merged`, and in that remaining case the launch
+guard denies the retry.
 
 For each selected task T (every task selected in this single entry into
 Step I.2.a), create its worktree:
@@ -620,11 +620,12 @@ Triggered whenever a launched implementer's `Task()` call returns.
      task id and reason `orphaned`; that helper takes the journal's
      exclusive advisory lock, replays it, and appends `failed` only when
      the task's final event is still `launched` (a no-op when it is
-     already `merged` or `failed`). This is the ONLY case in which the
-     orchestrator's own action results in an append to `journal.jsonl` —
-     the exception `em-workflow/references/implement-phase.md`'s own
-     Supporting cast Journal bullet below states, cited not restated. Any
-     residual outcome from either script leaves the journal byte-identical
+     already `merged` or `failed`). This invocation is one of the
+     invocation sites of the single helper exception the Supporting cast
+     Journal bullet below states — the other orchestrator-caused site
+     being this step's own ancestor-check branch — cited here, not
+     restated. Any residual outcome from either script leaves the journal
+     byte-identical
      to its pre-call content: the Residual above stands unchanged as this
      candidate's outcome. Full contract: IMPLEMENTATION.md's SC2
      (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`), SC6
@@ -690,11 +691,38 @@ Triggered whenever a launched implementer's `Task()` call returns.
      reconciled state instead becomes `failed` — the same treatment as
      any other implementer failure — so it reaches the normal failed
      handling in I.2.c (retry, route back to planning subject to that
-     section's own gate, or abort). Which of those three is actually
-     admissible for this specific state is owned entirely by I.2.c's own
-     gates, not by this bullet: I.2.c narrows this case further, because
-     the task's raw journal last event is still `merged` here even though
-     the reconciled state is `failed`.
+     section's own gate, or abort). This exit is reached once three
+     preconditions all hold: the ancestor check just failed; the task's
+     journal last event is `merged`; and the task's `Task()` call is not
+     among this reconcile step's own currently-outstanding calls. A
+     `merged` event is not by itself proof that the launching agent
+     terminated: termination is confirmed first, under the drain step
+     above and this reconcile step's own outstanding-call bookkeeping,
+     cited here rather than restated. Once termination is confirmed, the
+     orchestrator invokes `em-workflow/scripts/journal-append-failed.py`
+     exactly once, with the task id and `--reason merge-unverified`,
+     supplying no launch identity (IMPLEMENTATION.md's SC-1, D4). Step 1
+     re-replays the journal within this same reconcile step, so by the
+     time step 3 and step 5 consume it, the task's journal last event —
+     not only its reconciled state — reads `failed`; I.2.c's third
+     route-back conjunct no longer applies to this task, so both retry
+     (the launch guard admits a launch after `failed`) and route back to
+     planning (subject to I.2.c's own gate) become reachable for it.
+     Helper-failure residue: when that invocation exits non-zero, or
+     reports any outcome other than `appended`, the journal is left
+     unchanged, and this task is governed by the existing text for a task
+     that is journal `merged` with reconciled state `failed` — I.2.c's
+     third conjunct still blocks route-back for it, the gate-rejected
+     cause enumeration names it, and the phase report names it. Either
+     way, retry follows the existing I.2.c drain and the I.2.a resume
+     guard, on the task's kept worktree; when the integration branch
+     already contains the task branch, `merge-task.sh` records `merged`
+     again (its "Parent already contains us" case, lines 116-118), so a
+     later reconcile verifies the merge. I.2.c narrows this case further
+     only in the helper-failure case just above, because there the
+     task's raw journal last event is still `merged` even though the
+     reconciled state is `failed` — this is no longer the unconditional
+     outcome of a failed ancestor check.
 2. Capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse
    em-workflow/{feature}/integration)`. **Refresh the integration worktree FIRST**
    (Branch & Worktree Model):
@@ -905,29 +933,13 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   'Re-planning task-id allocation' section), so the carve-out is what lets
   that same task relaunch.
 
-  The state it protects still has a way out that
-  is not this section's own gate-rejected or abort terminal — a way into
-  this failed-handling branch, not a way out of it once reached: when the
-  ancestor verification fails for a task the journal (or its own report)
-  claims `merged`, Step I.2.b step 1's reconciled state for that task is
-  `failed` — cited there, not restated here — so the ordinary retry /
-  route back to planning / abort menu opens for it like any other
-  failure, except that route back to planning stays inadmissible here:
-  the task's raw journal last event is still `merged`, so the third
-  conjunct above blocks it regardless of the reconciled `failed` state;
-  choosing retry there reaches the launch guard's permission
-  denial, which the harness-level-failure path under 'Failure
-  containment' below diagnoses, an outcome reached without selecting
-  abort — in effect the same dead end as this section's own
-  gate-rejected terminal, since neither retry nor route back to
-  planning actually resolves the task from here; the only way out is a
-  human (or a follow-up task) correcting the branch ancestry so a
-  later reconcile pass verifies the merge, or otherwise resolving the
-  task's state by hand outside this protocol. This is the one state
-  where workflow-schema.md's status semantics ("a `failed` task
-  resolves ONLY by retry or by routing back to planning") are not met
-  by an automated path; the gap is confined to this single case and is
-  not a precedent for any other `failed` task. A task the journal
+  When the ancestor verification fails for a task the journal (or its own
+  report) claims `merged`, the task reaches the ordinary retry / route
+  back to planning / abort menu here exactly like any other failed task,
+  carrying the journal `failed` event that Step I.2.b step 1's
+  ancestor-check branch records for it (cited there, not restated).
+
+  A task the journal
   reports in-flight whose worktree and branch are both gone is decided
   elsewhere — Step I.2.b step 1's recovery, cited there, not here. Capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse
@@ -1080,12 +1092,15 @@ under `.claude/worktrees/em-workflow/{feature}/`): a machine-written,
 append-only event log — `launched` / `merged` / `failed`, one JSON object
 per line, each carrying `task` and an RFC 3339 `at`. The orchestrator never
 writes it directly — every append is `merge-task.sh` or one of the
-journal-writing hooks below — with one narrowly-scoped exception: I.2.b
+journal-writing hooks below — with one narrowly-scoped exception: the
+`em-workflow/scripts/journal-append-failed.py` helper, invoked by I.2.b
 step 1's orphan-recovery attempt, defined in
 `em-workflow/references/implement-phase.md`'s own I.2.b Recovery / Residual
-block above (cited here, not restated), which invokes
-`em-workflow/scripts/journal-append-failed.py` on proof that a `launched`
-task's launching session is provably gone. The raw log is never rewritten
+block above (cited here, not restated), on proof that a `launched`
+task's launching session is provably gone, and by I.2.b step 1's
+ancestor-check branch (cited there, not restated), with reason
+`merge-unverified`, on proof that a task the journal claims `merged` fails
+the ancestor check. The raw log is never rewritten
 or deleted — it is the primary source for post-mortem diagnosis, distinct
 from workflow.yaml's LLM-managed summary (full schema: IMPLEMENTATION.md's
 Journal contract).
@@ -1225,8 +1240,11 @@ recorder appends `failed` as soon as the `TaskStop` call completes,
 closing the gap before a reconcile pass is even needed. A fourth mechanism
 closes the gap for exactly the case where the launching session itself is
 gone: I.2.b step 1's orphan-recovery attempt (cited there, not restated
-here) is the sole exception to the Journal bullet's rule that the
-orchestrator never writes the journal directly. A fifth mechanism closes
+here) invokes `em-workflow/scripts/journal-append-failed.py`, which —
+together with I.2.b step 1's ancestor-check branch's `merge-unverified`
+invocation (cited there, not restated here) — is the sole exception to
+the Journal bullet's rule that the orchestrator never writes the journal
+directly. A fifth mechanism closes
 the gap for exactly a stop that delivers neither a subagent-stop nor a
 stop-tool event: the same I.2.b step 1 orphan-recovery attempt's extended
 same-session branch (cited there, not restated here) closes it too,
