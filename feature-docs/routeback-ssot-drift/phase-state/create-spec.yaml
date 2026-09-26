@@ -1,11 +1,11 @@
 schema_version: 1
 feature: routeback-ssot-drift
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: a0c22628dd9db763f5eb6b814597bf4acbeac206
 last_input_digest: sha256:34bc0a767be910eaa51b0a67698c31dbf89f09964086387731575666380d3d8d
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -81,7 +81,13 @@ worker_runs:
 - request_id: create-spec-run-0002
   status: completed
   input_digest: sha256:34bc0a767be910eaa51b0a67698c31dbf89f09964086387731575666380d3d8d
-artifacts: {}
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:211324d8285e004467702e525833baf892f0e9b8aefd445c3b134e3a5c14349d
+artifacts:
+  SPEC.md:
+    digest: sha256:5c592122fe454bddf0e83c6f9ee8bc32f663fa7f2d08547142a993469d5f4e55
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
