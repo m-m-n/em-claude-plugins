@@ -92,21 +92,10 @@ workflow:
   status: completed
   completed_at_commit: c5a965d3b80fc8e83632da7ad59504876655e0db
 - id: verify
-  status: in_progress
-  result: fail
-  failed_items:
-  - id: TS-8
-    note: "test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present fails: the pinned phrase 'This exit is reached once three preconditions all hold: the ancestor check just failed; ...' is absent from implement-phase.md I.2.b because review round 1 auto-fix (4ad3d3b3) reworded that precondition sentence (ref-resolves + exit 1, exit 128 exclusion); the doc and its pin now disagree"
-    category: comprehensive
-  - id: TS-9
-    note: "python3 -m unittest discover -s tests: Ran 6129 tests, FAILED (failures=1) — the TS-8 failure above; round3.yaml unchanged"
-    category: comprehensive
-  - id: SC-2
-    note: "Not all test scenarios pass (TS-8 fails)"
-    category: comprehensive
-  - id: SC-4
-    note: "python3 -m unittest discover -s tests exits 1 (failures=1, the TS-8 pin)"
-    category: comprehensive
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: b7b8fb3f9a5b763efd2daec6c615b83be241b3ab
 - id: retrospect
   status: pending
 tasks:
