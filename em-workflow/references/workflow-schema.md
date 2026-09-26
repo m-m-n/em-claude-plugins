@@ -484,11 +484,11 @@ above is unchanged and is not restated here.
 more and no fewer:
 
 - `by` -- the agent that decided.
-- `confidence` -- the observed probability values the decision was based
-  on, not a single confidence scalar. This shape exists so that nothing in
-  this schema invites a confidence-only threshold; the threshold rows and
-  the availability fallback matrix that decide the tier are owned by
-  `references/tier-rules.yaml` and are not restated here.
+- `confidence` -- the observed bucket `"0"` to `"3"` probability values of
+  each recorded basis, not a single confidence scalar. This shape exists so
+  that nothing in this schema invites a confidence-only threshold; the
+  threshold rows and the availability fallback matrix that decide the tier
+  are owned by `references/tier-rules.yaml` and are not restated here.
 - `at` -- the decision timestamp.
 - `reductions` -- the list of subtractions the decision applied.
 

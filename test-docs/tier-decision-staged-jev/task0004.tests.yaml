@@ -1,0 +1,175 @@
+task_id: task0004
+baseline_failures: []          # `python3 -m unittest discover -s tests` before any edit: 5816 tests, all passing
+final_failures: []             # same command after implementation: 5867 tests, all passing (51 new tests added)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tier_record_schema_v2.TestPersistenceSectionExists.test_section_is_locatable_and_nonempty
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_declares_schema_version_2
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_every_top_level_member_documented
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_every_bases_entry_member_documented
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_bases_entry_order_and_absence_rule_stated
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_pre_survey_estimate_absence_rule_stated
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_fallback_reason_presence_rule_stated
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_negative_proof_forged_sample_missing_fallback_reason_row
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_negative_proof_forged_sample_missing_pre_survey_row
+      - tests.test_tier_record_schema_v2.TestSchemaVersion2Defined.test_non_vacuity_matcher_finds_the_real_field
+    red_confirmed: true
+    red_reason: >-
+      With em-workflow/references/phase-state.md reverted to its
+      pre-implementation content (schema_version 1, no `fallback_reason`,
+      `probabilities` instead of `score`), test_declares_schema_version_2,
+      test_every_top_level_member_documented,
+      test_every_bases_entry_member_documented,
+      test_bases_entry_order_and_absence_rule_stated and
+      test_pre_survey_estimate_absence_rule_stated failed with AssertionError
+      (missing "schema_version: 2", missing the `score`/`fallback_reason`
+      rows and the ordering/absence-rule sentences). Verified by reverting
+      the four documentation files via a saved git patch, re-running
+      `python3 -m unittest tests.test_tier_record_schema_v2`, observing the
+      failures, then reapplying the patch and confirming green again.
+  AC-2:
+    tests:
+      - tests.test_tier_record_schema_v2.TestSchemaVersion1ResumeCompatibility.test_states_v1_record_remains_valid_reused_as_is
+      - tests.test_tier_record_schema_v2.TestSchemaVersion1ResumeCompatibility.test_states_no_re_decision_and_no_rewriting
+      - tests.test_tier_record_schema_v2.TestSchemaVersion1ResumeCompatibility.test_non_vacuity_real_section_carries_the_statement
+      - tests.test_tier_record_schema_v2.TestSchemaVersion1ResumeCompatibility.test_negative_proof_forged_sample_without_compatibility_statement
+    red_confirmed: true
+    red_reason: >-
+      Same revert as AC-1: the pre-implementation phase-state.md section had
+      no "schema_version 1 compatibility" paragraph, so
+      test_states_v1_record_remains_valid_reused_as_is,
+      test_states_no_re_decision_and_no_rewriting and
+      test_non_vacuity_real_section_carries_the_statement all failed with
+      AssertionError ("remains valid on resume" / "without re-decision" /
+      "without rewriting" not found). Observed directly, then confirmed
+      green again after reapplying the patch.
+  AC-3:
+    tests:
+      - tests.test_tier_record_schema_v2.TestMappingTableRowPerMember.test_mapping_section_is_locatable_and_nonempty
+      - tests.test_tier_record_schema_v2.TestMappingTableRowPerMember.test_row_for_every_top_level_member
+      - tests.test_tier_record_schema_v2.TestMappingTableRowPerMember.test_row_for_every_bases_entry_member
+      - tests.test_tier_record_schema_v2.TestMappingTableRowPerMember.test_confidence_receives_basis_and_four_bucket_probabilities
+      - tests.test_tier_record_schema_v2.TestMappingTableRowPerMember.test_negative_proof_missing_member_row_is_detected
+      - tests.test_tier_record_schema_v2.TestMappingTableRowPerMember.test_non_vacuity_row_pattern_would_match_a_forged_row
+      - tests.test_tier_record_schema_v2.TestNoAgreementWording.test_transcription_section_is_locatable_and_nonempty
+      - tests.test_tier_record_schema_v2.TestNoAgreementWording.test_no_readings_disagree_literal_in_transcription_section
+      - tests.test_tier_record_schema_v2.TestNoAgreementWording.test_no_agreement_or_disagreement_wording_in_transcription_section
+      - tests.test_tier_record_schema_v2.TestNoAgreementWording.test_no_agreement_or_disagreement_wording_in_mapping_table
+      - tests.test_tier_record_schema_v2.TestNoAgreementWording.test_negative_proof_forged_sample_with_agreement_wording_is_detected
+      - tests.test_tier_record_schema_v2.TestNoAgreementWording.test_negative_proof_forged_sample_with_japanese_agreement_word
+      - tests.test_tier_record_schema_v2.TestNoAgreementWording.test_negative_proof_forged_sample_with_readings_disagree_literal
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_mapping_table_covers_every_persisted_record_field
+    red_confirmed: true
+    red_reason: >-
+      With em-workflow/references/phases/create-spec-phase.md reverted,
+      test_row_for_every_top_level_member,
+      test_row_for_every_bases_entry_member,
+      test_confidence_receives_basis_and_four_bucket_probabilities,
+      test_no_agreement_or_disagreement_wording_in_mapping_table and
+      test_no_agreement_or_disagreement_wording_in_transcription_section
+      failed (missing `bases[].*` rows, missing the confidence/bases wording,
+      and the pre-change table still contained "the two readings agreed, or
+      how a disagreement resolved"). test_no_readings_disagree_literal_in_transcription_section
+      did not go red on its own (the literal `readings_disagree` was never
+      present in this document even before the change) but is kept as a
+      standing regression guard. Separately, with the same file reverted via
+      a scoped `git stash`, tests.test_tier_decision_record's
+      test_mapping_table_covers_every_persisted_record_field (extended in
+      this task to also require `` `fallback_reason` ``) failed with
+      AssertionError before the doc edit and passed after -- observed via
+      `git stash push -u` / `git stash apply` on that single file, verified,
+      then the stash entry was left in place after the destructive-guard
+      hook declined `git stash drop` (harmless: the change was already
+      re-applied).
+  AC-4:
+    tests:
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_section_is_locatable_and_nonempty
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_exactly_four_subfields_in_order
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_confidence_described_as_bucket_probabilities_per_basis
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_no_decimal_fraction_literal
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_no_p0_or_expectation_clear
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_negative_proof_extra_subfield_is_detected
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_negative_proof_decimal_literal_is_detected
+      - tests.test_tier_record_schema_v2.TestWorkflowSchemaTierSection.test_non_vacuity_real_section_states_bucket_wording
+    red_confirmed: true
+    red_reason: >-
+      With em-workflow/references/workflow-schema.md reverted,
+      test_confidence_described_as_bucket_probabilities_per_basis and
+      test_non_vacuity_real_section_states_bucket_wording failed with
+      AssertionError (the pre-change `confidence` bullet read "the observed
+      probability values", not the bucket `"0"`-`"3"`-per-basis wording).
+      test_exactly_four_subfields_in_order / test_no_decimal_fraction_literal
+      / test_no_p0_or_expectation_clear did not go red on their own -- those
+      invariants (exactly four sub-fields, no decimal literal, no `P(0)` /
+      `expectation_clear`) already held before this task's edit and are
+      kept here as standing regression guards for the same section.
+  AC-5:
+    tests:
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_block_is_locatable_and_nonempty
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_rationale_described_as_final_reading_or_fallback
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_members_match_the_mapping_table
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_no_agreement_or_disagreement_wording
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_no_readings_disagree_literal
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_negative_proof_forged_sample_with_agreement_wording
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_negative_proof_forged_sample_missing_rationale_description
+      - tests.test_tier_record_schema_v2.TestRetrospectTierDecisionBlock.test_non_vacuity_real_block_carries_pre_existing_signal
+    red_confirmed: true
+    red_reason: >-
+      With em-workflow/skills/develop/SKILL.md reverted,
+      test_rationale_described_as_final_reading_or_fallback and
+      test_members_match_the_mapping_table failed with AssertionError (the
+      pre-change block had no inline description of `rationale` and used
+      `probabilities` instead of `score` / had no `observed_at` per bases
+      entry). test_no_agreement_or_disagreement_wording and
+      test_no_readings_disagree_literal did not go red on their own (the
+      pre-change block already carried neither) and are kept as standing
+      regression guards.
+  AC-6:
+    tests:
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_rules_yaml_unchanged
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_negative_proof_a_changed_file_would_fail_the_pin
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_non_vacuity_files_are_non_trivial
+      - tests.test_tier_record_schema_v2.TestSpecPerspectiveSuitePasses.test_tier_spec_perspective_suite_passes_unmodified
+    red_confirmed: false
+    red_reason: >-
+      This criterion asserts that em-workflow/references/review-phase.md and
+      em-workflow/references/review-rules.yaml stay untouched by this task
+      and that tests/test_tier_spec_perspective.py keeps passing unmodified.
+      Neither file was ever edited by this task's diff (they are outside
+      task0004's expected_files, per NFR6), so there is no before/after
+      transition to observe: the sha256 pin recorded in
+      TestReviewDocumentsUntouched was taken from the files' current
+      (already-correct) content, and test_tier_spec_perspective_suite_passes_unmodified
+      was green before this task started and remains green now. The
+      matchers' sensitivity is demonstrated instead by
+      test_negative_proof_a_changed_file_would_fail_the_pin (a mutated copy
+      fails the pin).
+  AC-7:
+    tests:
+      - tests.test_tier_record_schema_v2.TestModuleIsStdlibOnlyAndDiscoverable.test_only_standard_library_imports
+      - tests.test_tier_record_schema_v2.TestModuleIsStdlibOnlyAndDiscoverable.test_module_file_name_matches_discovery_convention
+    red_confirmed: false
+    red_reason: >-
+      This criterion is a structural property of this task's own test
+      module (every raw-text matcher above is paired with a negative proof
+      and a non-vacuity guard, stdlib-only imports, discovery by
+      `python3 -m unittest discover -s tests`) rather than an independently
+      red/green application behavior, so no dedicated red state was
+      observed for it as such. It is verified by inspection (each AC-1
+      through AC-6 test class above pairs a negative-proof test and a
+      non-vacuity test with its positive assertions) and by the full-suite
+      run: `python3 -m unittest discover -s tests` -> 5816 tests before this
+      task's changes, 5867 after, both fully green.
+notes: >-
+  baseline_failures / final_failures both empty (5816 -> 5867 tests, all
+  passing; the 51 added tests are tests/test_tier_record_schema_v2.py's
+  full suite). Every red_confirmed:true entry above was verified by
+  reverting the specific documentation file(s) via a saved `git diff`
+  patch (or, for the single tests/test_tier_decision_record.py assertion
+  under AC-3, via a uniquely-tagged `git stash push -u` / `git stash
+  apply` on em-workflow/references/phases/create-spec-phase.md alone),
+  re-running the affected test module, observing the listed failures,
+  then restoring the implementation and confirming green again before
+  proceeding.
