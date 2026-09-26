@@ -110,7 +110,7 @@ workflow:
     Manual M-1 / M-2 (staged run against real Jev / Codex) not executed in batch run.
   completed_at_commit: 6cf7ba60136fb42e9e805efe974236fd05f23932
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Final-score evaluator and threshold/fallback rules
