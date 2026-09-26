@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 290fb5170e89401cb699ede3f8926ddcb3278c1b
 last_input_digest: sha256:231d0744a46023de381ba35af94a5c059ab5b6320a72198d822b2d14c9982c44
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -77,10 +77,16 @@ worker_runs:
   input_digest: sha256:5ecf29fe3b281fee525ea2d487e190a64c58e4a7e3197cdbe4a44181a3e9abdc
   output_digest: sha256:90c0ae4d6726d7f16cc94c1b8b1414d1840142e4822d17b6274c26116a96d4ea
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:231d0744a46023de381ba35af94a5c059ab5b6320a72198d822b2d14c9982c44
-  output_digest: null
-artifacts: []
+  output_digest: sha256:fa3889e2e4cff340262d6d30b352403d4e4290bdc5d6d69b6128436c44a9c496
+artifacts:
+- path: feature-docs/destructive-guard-grouping-spec-drift/REQUIREMENTS.md
+  sha256: sha256:3e0abd01528dcff3ace4a00ef24e0a56525fbf6af4a77232705bfdac30bea521
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-grouping-spec-drift/SPEC.md
+  sha256: sha256:4778497f03345ec0a96a598272c27828c841578a9d8285642d45a7836b140bbb
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:26fa24ecc54e218cdb0f16c1a99e8fa583b9a56514813e233fb2573ee0c45789
 stale_redispatch_count: 0
