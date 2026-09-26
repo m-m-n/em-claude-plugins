@@ -28,3 +28,21 @@ records:
     freeform: "declined files deviation .claude-plugin/marketplace.json"
     normalized_answer: "declined files deviation .claude-plugin/marketplace.json"
     resolution_note: "task_id: task0001; deviation path: .claude-plugin/marketplace.json; declined: no acceptance-criterion / requirement identifier was named (identifier part missing) and the failure is not stated as a test that cannot be written or pass (rationale part unresolved); reason given was the local plugin-version-guard hook. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:41:47+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    normalized_answer: "declined files deviation em-workflow/.claude-plugin/plugin.json"
+    resolution_note: "task_id: task0002; deviation path: em-workflow/.claude-plugin/plugin.json; declined: path falls under the workflow control path em-workflow/** (never auto-added); also no acceptance-criterion / requirement identifier was named and the stated reason (local plugin-version-guard hook requires a version change in the same commit) is not an observable AC failure. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T22:41:47+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined files deviation .claude-plugin/marketplace.json"
+    normalized_answer: "declined files deviation .claude-plugin/marketplace.json"
+    resolution_note: "task_id: task0002; deviation path: .claude-plugin/marketplace.json; declined: no acceptance-criterion / requirement identifier was named (identifier part missing) and the failure is not stated as a test that cannot be written or pass (rationale part unresolved); reason given was the local plugin-version-guard hook. Net effect on the integration branch is nil: the bump value equals task0006's already-merged 0.2.10 -> 0.2.11."
