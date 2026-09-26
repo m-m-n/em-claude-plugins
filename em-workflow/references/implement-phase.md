@@ -703,9 +703,17 @@ Triggered whenever a launched implementer's `Task()` call returns.
      any other implementer failure — so it reaches the normal failed
      handling in I.2.c (retry, route back to planning subject to that
      section's own gate, or abort). This exit is reached once three
-     preconditions all hold: the ancestor check just failed; the task's
-     journal last event is `merged`; and the task's `Task()` call is not
-     among this reconcile step's own currently-outstanding calls. A
+     preconditions all hold: the task branch ref resolves and the
+     ancestor check on it exits 1 (not an ancestor) rather than any
+     other exit code; the task's journal last event is `merged`; and the
+     task's `Task()` call is not among this reconcile step's own
+     currently-outstanding calls. A task branch ref that fails to
+     resolve — exit 128, e.g. because step 4 already deleted it after
+     verifying that same task's merge — never reaches this exit;
+     `merge-unverified` is not invoked for it. Tasks whose `workflow.yaml`
+     status already reads `merged` are step 4's cleaned-up tasks and are
+     excluded from this re-check rather than replayed against a ref step
+     4 may have already removed. A
      `merged` event is not by itself proof that the launching agent
      terminated: termination is confirmed first, under the drain step
      above and this reconcile step's own outstanding-call bookkeeping,
