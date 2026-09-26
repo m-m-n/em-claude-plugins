@@ -125,9 +125,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/tier-decision-staged-jev/task0001
   task0002:
     title: Bucket descriptions and Codex fact fields in tier-rules.yaml
     plan: tasks/task0002.md
@@ -142,9 +142,9 @@ tasks:
     - FR6
     - FR7
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/tier-decision-staged-jev/task0002
   task0003:
     title: Staged tier-decision procedure in develop SKILL.md Step A
     plan: tasks/task0003.md
@@ -168,9 +168,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/tier-decision-staged-jev/task0003
   task0004:
     title: tier.yaml schema_version 2 and its projections
     plan: tasks/task0004.md
@@ -193,9 +193,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/tier-decision-staged-jev/task0004
   task0005:
     title: em-workflow plugin version bump to 0.2.10
     plan: tasks/task0005.md
@@ -211,9 +211,9 @@ tasks:
     requirements:
     - NFR3
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/tier-decision-staged-jev/task0005
 review:
   status: pending
   rounds_completed: 0
