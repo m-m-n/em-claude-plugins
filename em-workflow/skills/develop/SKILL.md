@@ -230,51 +230,61 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
 する条件はどこにもない。
 
 1. **永続化済み判定の再利用**: worktree の
-   `feature-docs/{feature}/phase-state/tier.yaml` が既に存在するなら判定を
-   やり直さず、その内容をそのまま採用する（中断・再開の経路。フィールドの
-   定義は `references/phase-state.md` の tier decision persistence 節参照）。
-   存在しなければ次へ進む。
-2. **外部呼び出しは次の 2 つに限る**（他のいかなる呼び出しも tier 決定の
-   経路には現れない）:
-   - `${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh readonly` による
-     読み取り専用の Codex 事前調査。出力メンバーの定義は
-     `${CLAUDE_PLUGIN_ROOT}/references/tier-rules.yaml` を参照する（ここでは
-     個々のメンバー名を書き写さない）。
-   - `~/.claude/skills/jev` の判定スキルを `--json-input` / `--json-output`
-     で呼ぶ。送る質問セットの定義も同じく `tier-rules.yaml` を参照する。
-3. **no-work 停止**: 2. の Codex 事前調査が「作業が残っていない」旨を
-   報告した場合、判定を先へ進めず、いかなる workflow step も実行せずに
-   ここで走行を終える。結果は停止状態を持ち、workflow.yaml の step が
-   1 つも有効になっていないことを示す `references/batch-terminal-line.md`
-   定義のセンチネル値を持ち、再開ガイダンスは空にせず「再開は不要」で
-   ある旨を明文で述べる。Codex 事前調査の根拠は同ガイダンスに含める。
-   この停止点の名は `no-work-required`（ハイフン区切り）とする。対応する
-   reason code の文字列は `references/batch-terminal-line.md` の所有物で
-   あり、このファイルには一切書かない。統合ブランチ・worktree の確保は
-   下記 7. でこの停止より後にしか行われないため、no-work 停止はブランチも
+   `feature-docs/{feature}/phase-state/tier.yaml` が既に存在するなら
+   （記録の schema_version が 1 でも 2 でも）判定をやり直さず、その内容を
+   そのまま採用する — 呼び出しは一切行わず、ファイルも書き直さない
+   （中断・再開の経路。フィールドの定義は `references/phase-state.md` の
+   tier decision persistence 節参照）。存在しなければ次へ進む。
+2. **1 回目の判定呼び出し（decision-basis `description_only`）**:
+   `~/.claude/skills/jev` の判定スキルを `--json-input` / `--json-output`
+   で、タスク記述のみを入力として 1 回呼ぶ。送る質問セットの定義
+   （バケット 0-3 の記述を含む）は `tier-rules.yaml` の `question_set` を
+   参照する（ここでは書き写さない）。`description_only` /
+   `description_plus_code` の 2 つの decision-basis 識別子は同ファイルの
+   `decision_basis` 値であり、ここで新しい識別子を作らない。この呼び出し
+   が使用可能かどうかの判定は下記 6. の定義に従う。
+3. **Codex 事前調査**: `${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh
+   readonly` による読み取り専用の事前調査を 1 回行う。2. の判定呼び出し
+   が使用可能かどうかにかかわらず必ず実行する — 使用不可であっても次の
+   no-work 停止に到達できるようにするため。求める事実の定義は
+   `tier-rules.yaml` の `codex_output_schema` を参照する（ここでは書き
+   写さない）。
+4. **no-work 停止**: 3. の Codex 事前調査が使用可能で、かつ「作業が残って
+   いない」旨を報告した場合、判定を先へ進めず、5. の判定呼び出しも
+   いかなる workflow step も実行せずにここで走行を終える。結果は停止状態を
+   持ち、workflow.yaml の step が 1 つも有効になっていないことを示す
+   `references/batch-terminal-line.md` 定義のセンチネル値を持ち、再開
+   ガイダンスは空にせず「再開は不要」である旨を明文で述べる。Codex 事前
+   調査の根拠は同ガイダンスに含める。この停止点の名は
+   `no-work-required`（ハイフン区切り）とする。対応する reason code の
+   文字列は `references/batch-terminal-line.md` の所有物であり、この
+   ファイルには一切書かない。統合ブランチ・worktree の確保は下記 7. で
+   この停止より後にしか行われないため、no-work 停止はブランチも
    worktree も作らずに走行を終える。
-4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに
-   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に判定する
-   （decision-basis `description_only`）、2 回目は 2. の Codex 見積もりを
-   その state に合流させて判定する（decision-basis
-   `description_plus_code`）。この 2 つの識別子は `tier-rules.yaml` の
-   `decision_basis` 値であり、ここでは新しい識別子を作らない。両方の
-   読み取り結果を、それぞれの basis ラベルと観測値とともに決定の根拠と
-   して記録する。
-5. **評価**: 集めた 2 本の読みを 1 回の呼び出しで評価器
-   （IMPLEMENTATION.md Shared Components `scripts/decide-tier.py` 参照）へ
-   渡す。評価器は各読みがそれぞれ決定する tier を比較し、両者が異なる
-   tier に評価された場合は何も引かない tier（`full`）を返す — この
-   不一致解決規則は評価器の入力契約が持ち、ここでは繰り返さない。返された
-   tier を採用する。
-6. **可用性フォールバック**: 可用性は `tier-rules.yaml` のフォールバック表を
-   そのまま適用して解決する（閾値の値・表の行はここに書き写さない）。判定
-   スキルの終了ステータスが非 0 の場合はすべて「判定スキル使用不可」として
-   扱う。判定スキルが使用不可、または Codex 事前調査が使用不可な場合は、
-   すべて何も引かない tier（`full`）を採用する。2 本の判定結果が割れた
-   場合の解決は手順 5 の評価器の入力契約に従う（ここでは繰り返さない）。
-   フォールバック表が解決しないその他の条件も、同様に何も引かない
-   tier（`full`）を採用する。
+5. **2 回目（最終）の判定呼び出し（decision-basis `description_plus_code`）**:
+   2. の判定呼び出しと 3. の Codex 事前調査の双方が使用可能だった場合に
+   限り、`~/.claude/skills/jev` を再度 `--json-input` / `--json-output`
+   で呼ぶ。入力はタスク記述、2. が返した JSON 結果全体（`confidence` を
+   含む）、3. が返した Codex の JSON、および 2. と同じ `question_set` の
+   バケット記述。2. または 3. のいずれかが使用不可なら、この呼び出し自体
+   を行わない。
+6. **可用性の解決と評価器への委譲**: 判定スキルの呼び出し（2. と 5. の
+   どちらも）は、終了ステータスが非 0 の場合、または零終了でも出力が
+   JSON オブジェクトとして解釈できない場合、「使用不可」として扱う。2.
+   が使用不可であっても、3. の Codex 事前調査はそのまま実行する。Codex
+   事前調査は、終了ステータスが非 0、出力が JSON として解釈できない、
+   または `codex_output_schema` の必須フィールドが欠けている場合に
+   「使用不可」として扱う。そのときは 5. の最終判定呼び出しを行わず、
+   `codex_available` を false として、何も引かない tier（`full`）を
+   採用する。2. または 5. のいずれかが使用不可のときは `jev_available`
+   を false として、何も引かない tier（`full`）を採用する。評価器
+   （IMPLEMENTATION.md Shared Components `scripts/decide-tier.py` 参照）
+   には、5. が得られていればその最終スコア（`final_score`）、
+   `codex_available`、`jev_available` をまとめて渡す — 呼び出しが行われ
+   なかった経路、使用不可だった経路を含むすべての経路で、この評価器の
+   起動を 1 回だけ必ず行い、返された tier を採用する。上記のフォール
+   バック以外の解決ロジックの詳細は評価器の入力契約が持ち、ここでは
+   繰り返さない。
 7. **統合 branch/worktree の確保**: `em-workflow/{feature}/integration`
    ブランチと対応する worktree がまだ存在しなければ、ここで確保する
    （新規 feature 分岐、および「ブートストラップ状態の判定」の
@@ -295,10 +305,21 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    `feature-docs/{feature}/phase-state/tier.yaml`
    （すなわち
    `$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration/feature-docs/{feature}/phase-state/tier.yaml`）
-   へ記録し、同じ worktree の絶対パスを対象にした既存の `commit-docs.sh`
-   でコミットする（スクリプト変更は不要 —
-   `commit-docs.sh` は既に feature-docs ツリー全体をステージする）。
-   フィールドの定義は `references/phase-state.md` の tier decision
+   へ次の規則で記録し、同じ worktree の絶対パスを対象にした既存の
+   `commit-docs.sh` でコミットする（スクリプト変更は不要 —
+   `commit-docs.sh` は既に feature-docs ツリー全体をステージする）:
+   - `schema_version` は常に `2`。
+   - `bases` には、実際に行われて使用可能だった判定呼び出しの分だけ
+     エントリを積む（`description_only` が先、次に
+     `description_plus_code`）。1 件も無ければ空リストのまま
+     `bases` キー自体は残す。
+   - `pre_survey_estimate` は 3. の Codex 事前調査が使用可能だったときのみ
+     書く。
+   - `decided_at` は常に書く。
+   - `fallback_reason` は、評価器が返した `decided_by` が
+     `threshold_rows:` から始まらないときのみ書く。値は
+     その `decided_by` と理由テキストをまとめたものである。
+   フィールドの詳細な定義は `references/phase-state.md` の tier decision
    persistence 節参照。
 
 この記録の各フィールドから、後で `workflow.yaml` の `tier_decision` と

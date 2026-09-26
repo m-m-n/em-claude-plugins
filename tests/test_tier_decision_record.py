@@ -20,10 +20,16 @@ Covers task0013 Acceptance Criteria
 - AC-4: the workflow schema (and every other document) names the persisted
   record at `feature-docs/{feature}/phase-state/tier.yaml`; the wrongly
   ordered segments never appear anywhere in the plugin.
-- AC-5: the tier-decision procedure states the number of judgement-skill
-  invocations, the basis each corresponds to, what is compared between the
-  two readings, and that a disagreement resolves to the tier that removes
-  nothing, attributing that resolution to the evaluator's input contract.
+- AC-5: the tier-decision procedure states the two judgement-skill
+  invocations and the decision-basis each corresponds to, that the final
+  invocation's input folds in the first invocation's result, and that
+  remaining decision-logic detail is attributed to the evaluator's input
+  contract. Updated by task0003 (feature tier-decision-staged-jev,
+  feature-docs/tier-decision-staged-jev/tasks/task0003.md, D6): the
+  original two-reading disagreement-comparison rule this AC covered no
+  longer exists -- the procedure is now three calls (first Jev call, Codex
+  pre-survey, final Jev call) with a single final score, not two readings
+  compared against each other.
 - AC-6: this module asserts AC-1 through AC-5, pairs every matcher with a
   negative proof against a forged sample carrying the pre-change text, plus
   a non-vacuity guard, and imports standard-library modules only.
@@ -370,11 +376,16 @@ class TestPersistedRecordPathConsistent(unittest.TestCase):
         self.assertNotIn(WRONG_TIER_PATH, CORRECT_TIER_PATH)
 
 
-# --- AC-5: two-reading procedure fully specified, attributed to the ------
-# evaluator's input contract ------------------------------------------------
+# --- AC-5 (updated by task0003, tier-decision-staged-jev): the procedure --
+# is now three calls (first Jev call, Codex pre-survey, final Jev call), --
+# not two Jev readings compared against each other. The disagreement- ------
+# comparison rule this class originally pinned is gone; what remains true --
+# is two Jev invocations with distinct decision-basis labels, the final ----
+# call's input folding in the first call's result, and further decision- ---
+# logic detail still delegated to the evaluator's input contract. ----------
 
 
-class TestTwoReadingProcedureAttributesToEvaluatorContract(unittest.TestCase):
+class TestStagedProcedureAttributesToEvaluatorContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         text = _read(SKILL_PATH)
@@ -382,22 +393,22 @@ class TestTwoReadingProcedureAttributesToEvaluatorContract(unittest.TestCase):
         end = _heading_index(text, "### design ステップ分岐", start)
         cls.section = text[start:end]
 
-    def test_states_two_invocations(self):
-        self.assertIn("2 回呼ぶ", self.section)
+    def test_states_two_jev_invocations_with_distinct_bases(self):
+        self.assertIn("decision-basis `description_only`", self.section)
+        self.assertIn("decision-basis `description_plus_code`", self.section)
 
-    def test_states_the_basis_each_invocation_corresponds_to(self):
-        self.assertIn("description_only", self.section)
-        self.assertIn("description_plus_code", self.section)
+    def test_final_call_input_includes_first_calls_result(self):
+        self.assertIn("2. が返した JSON 結果全体", self.section)
 
-    def test_states_what_is_compared_between_the_two_readings(self):
-        self.assertIn(
+    def test_no_rule_comparing_two_readings(self):
+        self.assertNotIn(
             "評価器は各読みがそれぞれ決定する tier を比較し", self.section
         )
 
-    def test_states_disagreement_resolves_to_full(self):
-        self.assertIn("何も引かない tier（`full`）を返す", self.section)
+    def test_no_disagreement_resolution_phrase(self):
+        self.assertNotIn("何も引かない tier（`full`）を返す", self.section)
 
-    def test_attributes_the_resolution_to_the_evaluators_input_contract(self):
+    def test_attributes_remaining_decision_logic_to_the_evaluators_input_contract(self):
         self.assertIn(EVALUATOR_CONTRACT_PHRASE, self.section)
 
     def test_old_mixed_into_availability_fallback_phrasing_is_gone(self):
@@ -406,6 +417,14 @@ class TestTwoReadingProcedureAttributesToEvaluatorContract(unittest.TestCase):
     def test_non_vacuity_old_phrase_would_be_found_in_a_forged_pre_change_copy(self):
         forged = self.section + "\n" + OLD_MIXED_DISAGREEMENT_PHRASE
         self.assertIn(OLD_MIXED_DISAGREEMENT_PHRASE, forged)
+
+    def test_non_vacuity_comparison_phrase_would_be_found_if_reintroduced(self):
+        forged = (
+            self.section + "\n評価器は各読みがそれぞれ決定する tier を比較し\n"
+        )
+        self.assertIn(
+            "評価器は各読みがそれぞれ決定する tier を比較し", forged
+        )
 
     def test_negative_proof_synthetic_procedure_missing_attribution_is_detected(self):
         synthetic = "集めた値を評価器へ渡し、返された tier を採用する。"

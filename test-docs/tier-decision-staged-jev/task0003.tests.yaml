@@ -1,0 +1,172 @@
+task_id: task0003
+baseline_failures: []          # full suite (python3 -m unittest discover -s tests)
+                                # before touching any file: 5816 tests, 0 failures.
+final_failures: []             # full suite after implementation: 5865 tests, 0 failures
+                                # (5816 baseline + 50 new tests in
+                                # tests/test_develop_tier_staged_procedure.py + net +1/-2
+                                # from the D6 updates to test_tier_decision_record.py /
+                                # test_tier_worktree_bootstrap.py described in notes below).
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestAC1CallOrder.test_all_three_call_markers_present
+      - tests.test_develop_tier_staged_procedure.TestAC1CallOrder.test_calls_described_in_order
+      - tests.test_develop_tier_staged_procedure.TestAC1MatchersCanFail.test_fails_when_reordered
+      - tests.test_develop_tier_staged_procedure.TestAC1MatchersCanFail.test_fails_when_final_call_missing
+      - tests.test_develop_tier_staged_procedure.TestAC1MatchersCanFail.test_fails_when_codex_call_missing
+      - tests.test_develop_tier_staged_procedure.TestAC1MatchersCanFail.test_fails_when_first_call_missing
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-implementation SKILL.md, _call_marker_offsets(TIER_SECTION)
+      returned None (the new step markers "2. **1 回目の判定呼び出し...**" /
+      "3. **Codex 事前調査**" / "5. **2 回目（最終）の判定呼び出し...**" did not
+      exist yet): test_all_three_call_markers_present and
+      test_calls_described_in_order failed with "AssertionError: False is not
+      true" / "AssertionError: unexpectedly None", and test_fails_when_reordered
+      errored with "ValueError: substring not found" building the forged
+      reordering from TIER_SECTION.index(FIRST_JEV_CALL_MARKER).
+  AC-2:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestAC2FinalCallInput.test_states_final_call_input_components
+      - tests.test_develop_tier_staged_procedure.TestAC2FinalCallInput.test_both_jev_calls_cite_question_set
+      - tests.test_develop_tier_staged_procedure.TestAC2MatchersCanFail.test_non_vacuity_real_section_cites_question_set_at_least_twice
+      - tests.test_develop_tier_staged_procedure.TestAC2MatchersCanFail.test_question_set_matcher_fails_when_cited_only_once
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-implementation SKILL.md, `question_set` was cited only
+      once (the old step 2's single shared citation, not once per Jev call)
+      and the final-call input description ("入力はタスク記述、... `confidence`
+      を含む、... Codex の JSON") did not exist: test_states_final_call_input_components
+      and test_both_jev_calls_cite_question_set failed with "AssertionError:
+      False is not true"; test_non_vacuity_real_section_cites_question_set_at_least_twice
+      failed with "AssertionError: 0 not greater than or equal to 2"; and
+      test_question_set_matcher_fails_when_cited_only_once errored with
+      "ValueError: substring not found" (only one `question_set` citation to
+      split on).
+  AC-3:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestAC3UsabilityConsequences.test_step6_exists_and_nonempty
+      - tests.test_develop_tier_staged_procedure.TestAC3UsabilityConsequences.test_presurvey_unusable_skips_final_call_and_yields_full
+      - tests.test_develop_tier_staged_procedure.TestAC3UsabilityConsequences.test_either_jev_call_nonzero_exit_yields_full
+      - tests.test_develop_tier_staged_procedure.TestAC3UsabilityConsequences.test_unusable_first_call_still_lets_presurvey_run
+      - tests.test_develop_tier_staged_procedure.TestAC3UsabilityConsequences.test_codex_usability_criteria_named
+      - tests.test_develop_tier_staged_procedure.TestAC3MatchersCanFail.test_non_vacuity_real_step6_passes_every_matcher
+      - tests.test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_unresolved_conditions_give_removes_nothing_tier
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-implementation SKILL.md, step 6 ("6. **可用性の解決と
+      評価器への委譲**") did not exist (the old section had a differently
+      worded step 6, "可用性フォールバック", without the new
+      presurvey-unusable-skips-final-call / jev-call-nonzero-exit-yields-full
+      statements) and step 2's unconditional-first-call/pre-survey ordering
+      did not state "2. が使用不可であっても、3. の Codex 事前調査はそのまま
+      実行する": every TestAC3UsabilityConsequences test errored with
+      "ValueError: substring not found" locating STEP6_MARKER, or failed with
+      "AssertionError: False is not true" for the still-absent first-call
+      statement. test_unresolved_conditions_give_removes_nothing_tier (existing
+      test, updated per D6) failed with "AssertionError: False is not true"
+      against the old text's "判定スキル使用不可" phrasing, which this task's
+      rewrite replaced.
+  AC-4:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestAC4NoWorkStop.test_no_work_stop_precedes_final_call_and_any_workflow_step
+      - tests.test_develop_tier_staged_procedure.TestAC4MatchersCanFail.test_fails_when_final_call_precedes_no_work_stop
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-implementation SKILL.md, the final-call marker
+      "5. **2 回目（最終）の判定呼び出し（decision-basis
+      `description_plus_code`）**" did not exist (the old no-work stop was
+      step 3, and there was no separate final-call step to order against):
+      test_no_work_stop_precedes_final_call_and_any_workflow_step failed with
+      "AssertionError: False is not true", and
+      test_fails_when_final_call_precedes_no_work_stop errored with
+      "ValueError: substring not found" building the forged sample.
+  AC-5:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestAC5EvaluatorPayloadAndRecord.test_evaluator_payload_is_single_final_score_plus_flags
+      - tests.test_develop_tier_staged_procedure.TestAC5EvaluatorPayloadAndRecord.test_records_schema_version_2_with_presence_rules
+      - tests.test_develop_tier_staged_procedure.TestAC5EvaluatorPayloadAndRecord.test_states_resume_reuse
+      - tests.test_develop_tier_staged_procedure.TestAC5EvaluatorPayloadAndRecord.test_no_rule_comparing_two_readings
+      - tests.test_tier_decision_record.TestStagedProcedureAttributesToEvaluatorContract.test_no_rule_comparing_two_readings
+      - tests.test_tier_decision_record.TestStagedProcedureAttributesToEvaluatorContract.test_no_disagreement_resolution_phrase
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-implementation SKILL.md, the old text passed a two-reading
+      payload to the evaluator and contained "評価器は各読みがそれぞれ決定する
+      tier を比較し" (the disagreement-comparison rule this task removes) and
+      "何も引かない tier（`full`）を返す" tied to that comparison, and the
+      persisted-record step had no `schema_version` / presence-rule wording:
+      test_evaluator_payload_is_single_final_score_plus_flags and
+      test_records_schema_version_2_with_presence_rules failed with
+      "AssertionError: False is not true"; test_no_rule_comparing_two_readings
+      (both the new module's and the updated existing
+      test_tier_decision_record.py's) failed with "AssertionError:
+      '評価器は各読みがそれぞれ決定する tier を比較し' unexpectedly found in
+      '...'" against the real old text.
+  AC-6:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestAC6ForbiddenTokens.test_no_violations_in_real_section
+      - tests.test_develop_tier_staged_procedure.TestAC6ForbiddenTokens.test_gate_id_word_in_disclaimer_is_not_a_value_definition
+    red_confirmed: false
+    red_reason: >-
+      No red was observed for this criterion: the pre-implementation SKILL.md
+      section already avoided every forbidden token (no decimal fraction
+      literal, no `P(0)`, no `expectation_clear`, no `gate_id: value`
+      definition, no `AskUserQuestion`) -- NFR2/NFR4 were already honored by
+      the prior feature's design, and this task's rewrite does not change that
+      property, only the surrounding procedure. test_no_violations_in_real_section
+      passed ("... ok") in the very first run against the unmodified SKILL.md,
+      before any implementation existed for this task. The matcher's ability to
+      detect a real violation is proven instead by
+      TestAC6MatchersCanFail (test_decimal_literal_detected,
+      test_p0_detected, test_expectation_clear_detected,
+      test_gate_id_value_detected, test_ask_user_question_detected), each of
+      which constructs a forged sample and passed from the first run (these
+      are unit tests of the detector function itself, not of a document
+      transition, so they do not establish a red-to-green transition for
+      AC-6's own criterion).
+  AC-7:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestSectionLocator.test_locator_raises_on_empty_section
+      - tests.test_develop_tier_staged_procedure.TestSectionLocator.test_locates_a_nonempty_section
+      - tests.test_develop_tier_staged_procedure.TestSectionLocator.test_section_stops_before_the_next_heading_of_same_or_higher_level
+    red_confirmed: false
+    red_reason: >-
+      The generic section-locator property itself (own heading to the next
+      heading of the same or higher level; non-empty) was already true of the
+      pre-implementation SKILL.md -- the "### tier 決定" / "## Step A.5"
+      heading structure is unchanged by this task's diff, only the content
+      between them changed. test_locates_a_nonempty_section and
+      test_section_stops_before_the_next_heading_of_same_or_higher_level
+      passed ("... ok") against the unmodified document from the first run.
+      test_locator_raises_on_empty_section did fail on first run, but for an
+      unrelated reason -- a bug in this test module's own helper (a
+      hand-crafted empty-body fixture, not the real document) that was fixed
+      before the SKILL.md implementation; it is not evidence of a
+      document-dependent red for this criterion. The "each matcher passes on
+      the real section and fails on a forged sample" half of AC-7 IS covered
+      with an observed red-to-green transition, via the AC-1 through AC-5
+      MatchersCanFail tests listed above (most errored with "ValueError:
+      substring not found" against the pre-implementation text). The whole-
+      suite-passes half of AC-7 is a build-style check verified by running
+      `python3 -m unittest discover -s tests` (5865 tests, 0 failures) after
+      implementation; the project's full suite was already green in the 4a
+      baseline (5816 tests, 0 failures), so there is no failing-suite red
+      state to have observed for that half either.
+notes: >-
+  D6 (IMPLEMENTATION.md): this task's SKILL.md rewrite intentionally replaces
+  the two-reading-comparison procedure and the pre-persistence step
+  numbering, which broke three pre-existing tests outside expected_files --
+  tests/test_tier_decision_step_a.py (3 assertions, AC-1/AC-2 helper
+  functions), tests/test_tier_decision_record.py (the
+  TestTwoReadingProcedureAttributesToEvaluatorContract class, renamed
+  TestStagedProcedureAttributesToEvaluatorContract), and
+  tests/test_tier_worktree_bootstrap.py (step-number markers 3->4 for the
+  no-work stop, and the TestRegionOwnershipRegression class's two anchors
+  pinning the now-superseded two-reading/evaluation steps as "unchanged",
+  which no longer apply since this task IS the legitimate owner of that
+  rewrite). All three were updated in this task per D6 and are reported as
+  deviations. No existing test was deleted, skipped, or weakened -- each
+  updated assertion now checks the equivalent NEW behavior the task plan
+  specifies, and every one was re-run green after the update. The full suite
+  was re-run after every edit in this task (see final_failures).
