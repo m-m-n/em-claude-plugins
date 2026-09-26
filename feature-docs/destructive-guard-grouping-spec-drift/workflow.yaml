@@ -2,226 +2,117 @@ schema_version: 1
 feature: destructive-guard-grouping-spec-drift
 created: '2026-09-27'
 base_branch: main
-goal: '# destructive-guard: レビュー deferred の high 4 件（グルーピング迂回・SPEC ドリフト 3 件）
-
+goal: |
+  # destructive-guard: レビュー deferred の high 4 件（グルーピング迂回・SPEC ドリフト 3 件）
 
   Here is the result of "fetch" for the Page with URL https://app.notion.com/p/3cc3509ec8ee81a596edfdbc0c0d3311 as of 2026-09-26T15:59:49.454Z:
-
   <page url="https://app.notion.com/p/3cc3509ec8ee81a596edfdbc0c0d3311">
-
   <ancestor-path>
-
   <parent-data-source url="collection://d99e01fa-3723-4adc-8925-9c77f674fab2" name="タスク"/>
-
   <ancestor-2-database url="https://app.notion.com/p/b6033aa540fa4313a40f0636855c8fab" title="タスク"/>
-
   <ancestor-3-page url="https://app.notion.com/p/3a23509ec8ee817099bef36aba63ab06" title="プロジェクト管理"/>
-
   </ancestor-path>
-
   <properties>
-
   {"date:期限:is_datetime":0,"date:着手日時:is_datetime":1,"date:着手日時:start":"2026-09-26T15:59:00.000Z","url":"https://app.notion.com/p/3cc3509ec8ee81a596edfdbc0c0d3311","ステータス":"進行中","プロジェクト":["https://app.notion.com/p/3ab3509ec8ee81d7b492e42a8d86cb70"],"作成日時":"2026-08-30T14:10:21.498Z","名前":"destructive-guard: レビュー deferred の high 4 件（グルーピング迂回・SPEC ドリフト 3 件）","指示メモ":"feature destructive-guard-write-target-scoping の残件。ブランチ em-workflow/destructive-guard-write-target-scoping/integration が未マージで残っているので、まずそれを取り込むか捨てるかを決めてから着手する。","最終更新日時":"2026-09-26T15:59:49.454Z","種別":"バグ"}
-
   </properties>
-
   <iconMetadata>null</iconMetadata>
-
   <content>
-
   ## 現象（必須）
-
   feature `destructive-guard-write-target-scoping` のレビュー round 2 で high 判定となった
-
   4 件が、batch モードの rework 上限（`batch.review_rework_count == 1`）到達により
-
   `deferred` のまま未修正で残っている。ブランチ
-
   `em-workflow/destructive-guard-write-target-scoping/integration` は未マージのまま保持中。
-
   内訳は、既存のガード迂回（セキュリティ）1 件と、SPEC と実装のドリフト 3 件。
-
   ### 1. `d60553d13cb54e0c` — `( ... )` / `{ ...; }` グルーピングでガード全体を迂回できる
-
   `(` `)` は `PUNCTUATION` に含まれるがセグメント区切りではないため独立トークンとして残り、
-
   `head()` がそれをコマンド語として読む。結果、続く実コマンドが一度も判定されない。
-
   実測（すべて allow。base も allow なので本 feature 由来の退行ではなく既存の穴）:
-
   ```plain text
-
   ( rm -rf $HOME/important )
-
   { rm -rf $HOME/important; }
-
   if true; then rm -rf $HOME/x; fi
-
   for f in a; do rm -rf $HOME/x; done
-
   ! rm -rf $HOME/x
-
   ```
-
   `ALLOW_NON_DESTRUCTIVE=True` で auto モードの分類器を切っている構成では、これらは最終的に
-
   無条件 allow になる。括弧 2 文字でこのフック全体（rm 再帰削除の deny、git 系 deny、
-
   self-modification、transcript-write）が無効化される。
-
   ### 2. `bb74a3458679e1b4` — mv の全非フラグ引数を write target 扱いする実装が FR2 と矛盾
-
   SPEC FR2 は「(c) the target arguments of rm / mv / cp / ln / chmod / chown
-
   (for cp / mv / ln the destination is the last argument)」、Edge Cases は
-
   「`mv a b c dir/` with multiple sources: only the last one is the destination」と明記。
-
   実装は mv の全非フラグ引数（ソース側も）を write target にしている。round 1 の findings が
-
   この拡張を要求した結果で、実装側の判断は技術的に正しい（mv はソースを unlink する）。
-
   SPEC が更新されておらず、どちらが正なのかが未確定。
-
   ### 3. `bafd6e8260de4337` — FR2 の 3 ソースを超えて rsync / git clone / tar / unzip / curl / wget が write target 源に追加され、ケースが 1 件も無い
-
   SPEC FR2 は write-target set の出所を「three sources」と限定列挙し、(c) に挙がるのは
-
   rm / mv / cp / ln / chmod / chown だけ。実装は `FLAG_DEST_FLAGS`（`tar -C`、`unzip -d`、
-
   `curl -o`、`wget -O`）と `write_targets()` の rsync / git clone 分岐で、SPEC が一度も言及
-
   しない 6 コマンド族を判定対象にしている。base では全て allow だったものが現在 ask。
-
   `destructive-guard-cases.json` にこれら 6 族のケースは 1 件も無く、
-
   `.claude/rules/hook-tests.md` と NFR3 が要求する「検知力の変更にはケースを添える」を
-
   満たしていない。
-
   ### 4. `7f7144aea35f534f` — FR6「rm 判定は不変」に反し head() / statements() の処理が変化
-
   SPEC FR6 は「check_rm and SAFE_DELETE are out of scope for this change.」と明記。実装は
-
   `check_rm` 本体こそ触っていないが、その入力を作る 2 箇所を変更しており rm の判定が動いている。
-
   実測（base 比）:
-
   \| コマンド \| base \| 現在 \|
-
   \| --- \| --- \| --- \|
-
   \| `sudo -u root rm -rf $HOME/x` \| allow \| deny \|
-
-  \| `bash -c ''rm -rf $HOME/x''` \| allow \| deny \|
-
-  \| `eval ''rm -rf $HOME/x''` \| allow \| deny \|
-
+  \| `bash -c 'rm -rf $HOME/x'` \| allow \| deny \|
+  \| `eval 'rm -rf $HOME/x'` \| allow \| deny \|
   方向としては安全側だが SPEC が宣言した scope の外で、かつケース表に該当ケースが 1 件も無い。
-
   ## 再現手順（必須）
-
   1. `git switch em-workflow/destructive-guard-write-target-scoping/integration`
-
   2. 上記 1. の各コマンドを `destructive-guard.py` に食わせ、allow が返ることを確認する
-
   3. `em-workflow/hooks/tests/destructive-guard-cases.json` を検索し、rsync / git clone /
-
   tar / unzip / curl / wget のケースと、`sudo -u` / `bash -c` / `eval` 経由の rm ケースが
-
   1 件も無いことを確認する
-
   1. `feature-docs/destructive-guard-write-target-scoping/SPEC.md` の FR2 / FR6 / Edge Cases と
-
   実装の挙動を突き合わせ、2. 3. 4. の各ドリフトを確認する
-
   ## 期待する挙動（必須）
-
   - グルーピング・複合コマンド構文（`( )` / `{ }` / `if` / `for` / `!`）の内側にある
-
   コマンドが、単体で書いたときと同じ判定を受ける
-
   - SPEC と実装が一致している。すなわち各項目について、実装を SPEC に合わせるか、
-
   SPEC を実装に合わせて改訂するかが決着している
-
   - 検知力を変えた箇所には、`.claude/rules/hook-tests.md` と NFR3 の要求どおり
-
   ケース表に対応する ask / allow ケースが添えられている
-
   ## 完了の定義（必須）
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
   - [ ] `( ... )` / `{ ...; }` / `if` / `for` / `!` 経由でも rm 再帰削除・git 系・
-
   self-modification・transcript-write の判定が単体時と一致する
-
   - [ ] mv の write target 範囲について SPEC FR2(c) と Edge Cases の記述が実装と一致している
-
   - [ ] rsync / git clone / tar / unzip / curl / wget の宛先判定について、SPEC に根拠がある
-
   か、本 feature から切り出されているかが決着し、残す分にはケースが添えられている
-
   - [ ] FR6 の scope 宣言と `head()` / `statements()` の実際の挙動が一致している
-
   - [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` が緑
-
   ## 該当箇所（任意）
-
   - `em-workflow/hooks/destructive-guard.py:478`（`head()` のスキップ規則）
-
   - `em-workflow/hooks/destructive-guard.py:975`（mv の write target 抽出）
-
   - `em-workflow/hooks/destructive-guard.py:173`（`FLAG_DEST_FLAGS`）
-
   - `em-workflow/hooks/destructive-guard.py:464`（`statements()` のペイロード再走査）
-
   - `em-workflow/hooks/tests/destructive-guard-cases.json`
-
   - `feature-docs/destructive-guard-write-target-scoping/SPEC.md`（FR2 / FR6 / Edge Cases）
-
   - レビュー記録: `feature-docs/destructive-guard-write-target-scoping/reviews/round2.yaml`
-
   - ブランチ: `em-workflow/destructive-guard-write-target-scoping/integration`（未マージ）
-
   ## 実害・発生条件（任意）
-
   1. のグルーピング迂回が最も重い。`ALLOW_NON_DESTRUCTIVE=True` の構成では、括弧で囲むだけで
-
   destructive-guard の全判定が無効化されるため、ガードが存在しないのと同じ状態になる。既存の
-
   穴であり本 feature が作ったものではないが、write-target scoping を入れた今のタイミングで
-
   まとめて塞ぐのが自然。
-
   1. 3. 4. は SPEC と実装のドリフト。実害は「レビューのたびに同じ指摘が再燃する」ことと、
-
   検知力を変えた箇所にケースが無いため退行を検出できないこと。3. と 4. は、レビュアーの推奨が
-
   「本 feature から切り出して別 feature にする」なので、スコープ判断も含めて決着が要る。
-
   ### 参考: 同ラウンドで deferred になった medium
-
   上記 4 件と同じ rework 上限で medium も多数 deferred のまま残っている（`tar -C` の誤爆、
-
   末尾スラッシュ無し保護ディレクトリの deny→ask 後退、`~/.claude/plugins/` が SELF_CONFIG に
-
   無い、`bash -lc` / `bash -cx` の迂回、`wget -P` / `curl --output-dir` の漏れ、
-
   SELF_CONFIG(ask) を TRANSCRIPT(deny) より先に評価して deny が ask に格下げされる、
-
   `MAX_SHELL_PAYLOAD_EXPANSIONS` が総数上限、`TARGET_DIR_FLAGS` 未使用、`_TrackingLexer` の
-
   shlex 非公開状態依存 ほか）。詳細は round2.yaml を参照。
-
   </content>
-
   </page>
-
-  '
 parent_branch: em-workflow/destructive-guard-grouping-spec-drift/integration
 tier: full
 tier_decision:
