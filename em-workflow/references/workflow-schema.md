@@ -404,7 +404,7 @@ of `merged`) and exactly the journal-writing hooks — `queue_launch_guard.py`
 (the sole writer of `launched`), `queue_failure_net.py`, and
 `queue_taskstop_net.py` (both write `failed`, independently, each idempotent
 against an already-terminal last event) — plus one narrowly-scoped
-exception, `em-workflow/scripts/journal-append-failed.py`: invoked only by
+exception, `em-workflow/scripts/journal-append-failed.py`: invoked by
 the orchestrator's I.2.b orphan-recovery attempt
 (`em-workflow/references/implement-phase.md`'s I.2.b Recovery / Residual
 block — cited here as the owning section, not restated), it appends
@@ -412,7 +412,12 @@ block — cited here as the owning section, not restated), it appends
 reason field (no existing event name or reason is renamed or removed). The
 same helper, invoked only by that same block's extended same-session
 branch, also appends `failed` with reason `stale-launched`, a second
-additive value of the existing `failed` reason field, adding no writer.
+additive value of the existing `failed` reason field, adding no writer. The
+same helper, invoked only from
+`em-workflow/references/implement-phase.md`'s I.2.b step 1 ancestor-check
+branch (cited here, not restated), also writes `failed` with reason
+`merge-unverified`, a third additive value of the existing `failed` reason
+field, adding no writer.
 No other hook, and never the orchestrator directly, appends to `journal.jsonl`
 outside this one exception; in particular the Stop hook
 (`queue_stop_guard.py`) only reads it and the agent index writer
@@ -427,21 +432,29 @@ harness agent-identifier strings (the exact identifier field the harness's
 launch response carries is unverified, so `queue_agent_index.py` records
 every candidate it can recover rather than a single one) to the
 em-workflow task identity that launched it, written by
-`queue_agent_index.py` at launch and read by `queue_taskstop_net.py` at
-stop. It is NOT part of the journal contract above and must never be
-treated as a second authoritative state file: it carries no status
-semantics of its own, may be absent or stale, and its absence only
-degrades the stop-tool recorder to a no-op. The sole exception to "no
-status semantics of its own" is the session identity (`session_id`) it
-also carries per launch:
+`queue_agent_index.py` at launch. Readers: `queue_taskstop_net.py` at
+stop; `queue_failure_net.py`'s agent-index fallback; the orchestrator's
+I.2.b step 1 Agent index lookup and Recovery, through the "Orchestrator-side
+read" rule in `em-workflow/references/implement-phase.md`'s Supporting cast
+(cited here, not restated); and
+`em-workflow/scripts/recover-orphaned-task.py`. It is NOT part of the
+journal contract above and must never be treated as a second authoritative
+state file: it carries no status semantics of its own, may be absent or
+stale, and an absent or stale index degrades the stop-tool recorder to a
+no-op, leaves the failure net's fallback unresolved, and leaves I.2.b step
+1's not-live determination unresolved for a stale `launched` task — a
+consequence owned by `em-workflow/references/implement-phase.md`'s I.2.b,
+cited here, not restated. The sole exception to "no status semantics of
+its own" is the session identity (`session_id`) it also carries per
+launch:
 `em-workflow/references/implement-phase.md`'s I.2.b Recovery / Residual
 block (cited here, not restated) reads it — a comparison value only, never
 a status value and never a match candidate on the stop side — to judge
 whether the launching session is provably gone. `journal.jsonl` alone is
-the authoritative raw-event record; `agents.jsonl` exists solely to make a
-stop resolvable back to a task. Full contract (candidate-list format,
-matching rule, staleness/supersede rule): IMPLEMENTATION.md's Agent index
-contract.
+the authoritative raw-event record; `agents.jsonl` exists to make a stop
+and a recovery check resolvable back to a task. Full contract
+(candidate-list format, matching rule, staleness/supersede rule):
+IMPLEMENTATION.md's Agent index contract.
 
 ## Status semantics
 
