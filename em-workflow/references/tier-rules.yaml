@@ -42,39 +42,42 @@ question_set:
 
 # -----------------------------------------------------------------------
 # 2. threshold_rows - evaluated in this fixed order; the first match wins.
-#    Inputs come ONLY from the Jev score object's `probabilities` map
-#    (bucket index -> probability) and its `expectation_clear` member. The
-#    `confidence` member alone is never expressed as a threshold anywhere
-#    in this file or in scripts/decide-tier.py (AC-4).
+#    Inputs come ONLY from the final Jev call's score object's
+#    `probabilities` map, over buckets `"0"` to `"3"`. The first
+#    (description-only) reading, `expectation_clear` and `confidence` are
+#    never expressed as a threshold anywhere in this file or in
+#    scripts/decide-tier.py (AC-4).
 #
 #    scripts/decide-tier.py reads each row by the threshold members it
-#    declares (p0_floor, expectation_clear_floor, bucket_sum_floor), never
-#    by its `id`. A row declaring no threshold member at all is the only
-#    unconditional fallthrough; a row declaring at least one member always
-#    has its comparisons evaluated, including a row whose `id` the
-#    evaluator does not otherwise recognize. Every floor compared against
-#    is read from the row itself -- the evaluator carries no numeric
-#    default for any of them, so a renamed or removed member makes the row
-#    not match rather than reverting to a stale literal.
+#    declares (bucket0_floor, bucket0_1_sum_floor), never by its `id`. A
+#    row declaring no threshold member at all is the only unconditional
+#    fallthrough; a row declaring at least one member always has its
+#    comparisons evaluated, including a row whose `id` the evaluator does
+#    not otherwise recognize. Every floor compared against is read from
+#    the row itself -- the evaluator carries no numeric default for any of
+#    them, so a renamed or removed member makes the row not match rather
+#    than reverting to a stale literal.
+#
+#    scripts/decide-tier.py validates the four-bucket probabilities (all of
+#    "0"-"3" present, each finite and in [0, 1], sum within
+#    probability_sum_tolerance of 1) BEFORE evaluating any row below; a
+#    validation failure gives full with the offending bucket or the sum
+#    named in the reason, and never reaches these rows.
 # -----------------------------------------------------------------------
 threshold_rows:
   - id: minimal
     order: 1
     tier: minimal
-    p0_floor: 0.80
-    expectation_clear_floor: 0.5
+    bucket0_floor: 0.80
     description: >-
-      P(0) at or above 0.80 AND expectation_clear at or above 0.5 -> the
-      tier that removes the most.
+      P(0) at or above 0.80 -> the tier that removes the most.
   - id: reduced
     order: 2
     tier: reduced
-    p0_floor: 0.40
-    bucket_sum_floor: 0.85
+    bucket0_1_sum_floor: 0.85
     description: >-
-      P(0) at or above 0.40 AND P(0)+P(1) at or above 0.85 -> the middle
-      tier. The P(0) floor keeps a low first bucket carried by a high
-      second bucket out of this tier.
+      P(0)+P(1) at or above 0.85 -> the middle tier. No floor on P(0)
+      alone.
   - id: full
     order: 3
     tier: full
@@ -83,6 +86,13 @@ threshold_rows:
       above needed a member that was absent from the input: the row does
       not match and evaluation falls through here (fail-safe, never
       fail-open).
+
+# The maximum absolute difference between the four-bucket probability sum
+# and 1 that scripts/decide-tier.py still accepts; the boundary value
+# itself passes. A missing or non-numeric value here is a rule-table
+# defect: the evaluator gives full with a reason naming this member,
+# holding no numeric default of its own (NFR1).
+probability_sum_tolerance: 0.02
 
 # -----------------------------------------------------------------------
 # 3. codex_output_schema - the Codex pre-survey's invocation route and
@@ -154,12 +164,11 @@ fallback_matrix:
     jev_usable: true
     codex_usable: false
     decision_basis: description_only
-    action: evaluate_threshold_rows
-    note: >-
-      if the description-only reading and the description-plus-code
-      reading disagree, scripts/decide-tier.py resolves to the tier that
-      removes nothing (full) -- enforced by the evaluator's two-reading
-      input contract, not merely documented here
+    action: full
+    reason: >-
+      Codex pre-survey unusable, so the final Jev call is skipped and the
+      tier that removes nothing is used regardless of what the first
+      reading would have decided
   - id: jev_unusable
     jev_usable: false
     codex_usable: any
