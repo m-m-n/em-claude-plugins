@@ -1,0 +1,288 @@
+schema_version: 1
+feature: routeback-ssot-drift
+created: '2026-09-26'
+base_branch: main
+goal: |
+  # em-workflow: routeback-admissibility-exits で deferred にした SSOT ドリフト 4 件
+
+  Notion: https://www.notion.so/3cc3509ec8ee81968f61d79a92d4cd96
+
+
+  ## 現象（必須）
+  feature `routeback-admissibility-exits`（PR [https://github.com/m-m-n/em-claude-plugins/pull/20](https://github.com/m-m-n/em-claude-plugins/pull/20)）の review round 2 で、batch の rework cap に達したため `deferred` として完了させた medium 以下の指摘が残っている。いずれも本体タスクの受け入れ条件には直接ぶら下がらないが、放置すると SSOT のドリフトとして残る。
+  1. **\`workflow-schema.md\` の agent index 記述が未追随**（`6359ce983afc7d8c` / `58d72b5e89366b82`）— `implement-phase.md` が agents.jsonl の読み手にオーケストレーター自身を追加し Orchestrator-side read 規則を新設したが、SSOT である `em-workflow/references/workflow-schema.md` の agent index 段落は「written by `queue_agent_index.py` at launch and read by `queue_taskstop_net.py` at stop」「exists solely to make a stop resolvable back to a task」「its absence only degrades the stop-tool recorder to a no-op」のまま。3 つとも変更後は事実に反する。また index の読み取り規則が 2 文書に分裂し、"ambiguous" の定義がフック側とオーケストレーター側で別物になっている。
+  2. **worktree と branch の片方だけが存在する状態が未定義**（`cca1231fed96bcf2` / `997c11bc7c5f6a3d`）— I.2.b step 1 の存在チェックは「両方存在」と「両方不在」しか定義しておらず、中間状態はどちらの条件にも当たらない。I.2.c の route-back クリーンアップが `git worktree remove --force` と `git branch -D` の間で中断すればこの状態になる。
+  3. **stop-tool recorder の fail-open な no-op が Residual に含まれていない**（`071508a7676754ca`）— Recovery は recorder が必ず `failed` を append する前提だが、`queue_taskstop_net.py` は曖昧一致・containment 検査失敗などで silent no-op になる。その経路が Residual の条件に入っていない。
+  4. **version lockstep ガードの baseline が古い**（`dd130cdd2fc83a12`）— `tests/test_implement_routeback_gate.py` の `assertGreater(patch, 48)` は、main 取り込み後のベースが 0.1.54 なので bump 忘れを検知できない。
+  ## 再現手順（必須）
+  1. PR #20 のブランチ `em-workflow/routeback-admissibility-exits/integration` を checkout する
+  2. `em-workflow/references/implement-phase.md` の I.2.b step 1 / Supporting cast と `em-workflow/references/workflow-schema.md` の agent index 段落を突き合わせる
+  3. `feature-docs/routeback-admissibility-exits/reviews/round2.yaml` の `resolution: deferred` の項目を読む
+  ## 期待する挙動（必須）
+  `implement-phase.md` と `workflow-schema.md` の agent index に関する記述が一致し、存在チェックが worktree/branch の 4 状態すべてに定義された結果を持ち、Residual の条件が fail-open な no-op 経路も含み、version lockstep ガードが実ベースに対して有効であること。
+  ## 完了の定義（必須）
+  - [ ] `workflow-schema.md` の agent index 段落が読み手・用途・欠落時の挙動の 3 点で `implement-phase.md` と一致している
+  - [ ] worktree と branch の片方だけが存在する状態について、存在チェックの結果が protocol 上に定義されている
+  - [ ] stop-tool recorder が no-op になった場合の終端が Residual または別経路として定義されている
+  - [ ] `tests/test_implement_routeback_gate.py` の version baseline が実ベースに追随している
+  - [ ] `python3 -m unittest discover -s tests` が通る
+  ## 該当箇所（任意）
+  - `em-workflow/references/implement-phase.md`（I.2.b step 1、Supporting cast の Agent index writer / Journal）
+  - `em-workflow/references/workflow-schema.md`（agent index 段落）
+  - `tests/test_implement_routeback_gate.py`
+  - 記録: `feature-docs/routeback-admissibility-exits/reviews/round2.yaml`
+  ## 実害・発生条件（任意）
+  `workflow-schema.md` を根拠に「index は stop 解決専用」と読んだ実装者・レビュアーが、index の欠落・陳腐化で implement フェーズが gate-rejected terminal に落ちる新しい失敗経路を見落とす。存在チェックの中間状態はタスクが in-flight のまま固定され、route-back が塞がる。
+parent_branch: em-workflow/routeback-ssot-drift/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.11
+      '1': 0.87
+      '2': 0.02
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.11
+      '1': 0.87
+      '2': 0.02
+      '3': 0.0
+  at: '2026-09-26T21:35:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 9c6db83ffc1dfc935c09f7ff3b7f3709d3eb2913
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無い変更（プロトコル Markdown・docstring・テストの基準値・バージョン番号のみ）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 1af6876a5e6c6a2d4bbe7eda83d151c888911e54
+- id: implement
+  status: completed
+  completed_at_commit: b7f745aba9f149524af8dc41f6f55a5cee8048ed
+  base_commit: a6f0fb1624163211bbb9130a15f636ad6ff3364b
+- id: review
+  status: completed
+  completed_at_commit: 01275270c8773935a81d3e5b8dab87e61dff1d43
+- id: verify
+  status: completed
+  completed_at_commit: 23eb59e30d61db692476951de60353dc33377236
+  result: pass
+  failed_items: []
+  excluded_scenarios: []
+  summary: 'TS-1..TS-6 pass; full suite 6023 tests OK; manual reading of workflow-schema.md agents.jsonl paragraph and queue_agent_index.py docstring agree with implement-phase.md'
+- id: retrospect
+  status: completed
+  completed_at_commit: 7c028dc021f3a07c2f0d01c726ec73fcd8c21af7
+tasks:
+  task0001:
+    title: Align agent index description, docstring and version baseline
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/hooks/queue_agent_index.py
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_implement_routeback_gate.py
+    - tests/test_routeback_ssot_drift_agent_index.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/routeback-ssot-drift/task0001
+  task0002:
+    title: Pin I.2.b step 1 partial-artifact and third-case Residual outcomes
+    plan: tasks/task0002.md
+    files:
+    - tests/test_routeback_ssot_drift_i2b_retention.py
+    skills: []
+    domains: []
+    complexity: low
+    requirements:
+    - FR6
+    - FR7
+    - NFR1
+    status: merged
+    notes: null
+    branch: em-workflow/routeback-ssot-drift/task0002
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
+requirements:
+  FR1:
+    title: Schema names every agents.jsonl reader
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR2:
+    title: Schema states the index's purpose
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR3:
+    title: Schema states behavior when the index is absent
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR4:
+    title: The two 'ambiguous' conditions are told apart
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-6
+  FR5:
+    title: queue_agent_index.py docstring matches the schema
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-6
+  FR6:
+    title: Partial-artifact outcome stays defined
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-3
+  FR7:
+    title: Recorder no-op outcome stays defined
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-3
+  FR8:
+    title: Version baseline follows the real base
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-6
+  FR9:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  NFR1:
+    title: Test suite
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-5
+  NFR2:
+    title: Pinned phrases
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR3:
+    title: Runtime behavior
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

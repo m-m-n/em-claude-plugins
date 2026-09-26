@@ -1939,10 +1939,11 @@ class TestPluginVersionBumpedInLockstep(unittest.TestCase):
     """AC-6 (task0001, exit4-recovery-scope); baseline raised to 47 by
     task0001 (routeback-admissibility-exits) AC-7 / Site F, then to 48 by
     task0002 (routeback-admissibility-exits, rework round 1) AC-10 / Site
-    F: the plugin manifest and the marketplace entry for em-workflow agree
-    on the same version, bumped to 0.1.49 in this task. Test Notes: assert
-    the two manifests agree on the same value rather than checking each
-    file in isolation."""
+    F, then to (0, 2, 10) by task0001 (routeback-ssot-drift) AC-6: the
+    plugin manifest and the marketplace entry for em-workflow agree on the
+    same version, bumped to 0.2.11 in this task. Test Notes: assert the
+    two manifests agree on the same value rather than checking each file
+    in isolation."""
 
     @classmethod
     def setUpClass(cls):
@@ -1964,20 +1965,22 @@ class TestPluginVersionBumpedInLockstep(unittest.TestCase):
     def test_shared_version_is_past_the_pre_task_baseline(self):
         # Durable form (repo convention, see
         # tests/test_recycled_task_id_version_bump.py): strictly greater than
-        # the pre-task baseline (0, 1, 48) under per-component numeric
+        # the pre-task baseline (0, 2, 10) under per-component numeric
         # comparison, raised from 42 to 47 by task0001
-        # (routeback-admissibility-exits) Site F and from 47 to 48 by
-        # task0002 (routeback-admissibility-exits, rework round 1) Site F.
-        # Pinning a literal version -- or a fixed major/minor pair -- would
-        # go red on the next unrelated bump; task-tier-reduction task0008
-        # (NFR4) is exactly that next bump, and it advances the minor
-        # component.
+        # (routeback-admissibility-exits) Site F, from 47 to 48 by
+        # task0002 (routeback-admissibility-exits, rework round 1) Site F,
+        # and from (0, 1, 48) to (0, 2, 10) by task0001
+        # (routeback-ssot-drift) AC-6, which also bumps the manifests to
+        # 0.2.11. Pinning a literal version -- or a fixed major/minor pair
+        # -- would go red on the next unrelated bump; task-tier-reduction
+        # task0008 (NFR4) is exactly that next bump, and it advances the
+        # minor component.
         for version in (
             self.plugin_manifest["version"],
             self.marketplace_entry["version"],
         ):
             parts = tuple(int(part) for part in version.split("."))
-            self.assertGreater(parts, (0, 1, 48))
+            self.assertGreater(parts, (0, 2, 10))
 
 
 class TestExit4CarveOutStatedInAllThreeSSOTs(unittest.TestCase):

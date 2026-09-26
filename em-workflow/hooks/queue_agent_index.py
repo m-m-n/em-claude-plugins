@@ -8,13 +8,18 @@ ones -- both names are matched (hooks.json registers `Task|Agent`), exactly
 as `queue_launch_guard.py` documents: matching only one silently disables
 this writer on the other.
 
-Its only job is to record, in the feature's agent index (`agents.jsonl`,
-sibling of `journal.jsonl`), the mapping from the harness's own agent
-identifier to the em-workflow task it just launched, so that a later
-`TaskStop` can be resolved back to a task and its journal (Agent index
-contract, IMPLEMENTATION.md). It never writes `journal.jsonl`, never decides
-anything about task state, and never blocks the tool call -- it is
-diagnostic plumbing only (IMPLEMENTATION.md, Layer Structure).
+It records, in the feature's agent index (`agents.jsonl`, sibling of
+`journal.jsonl`), the mapping from the harness's own agent identifier to
+the em-workflow task it just launched. The index resolves a stop or a
+recovery check back to a task and its worktree; the stop-tool recorder
+(`queue_taskstop_net.py`), the SubagentStop failure net
+(`queue_failure_net.py`, through its agent-index fallback) and the
+orchestrator itself (Orchestrator-side read) each read it for that
+purpose -- full contract: `em-workflow/references/implement-phase.md` and
+`em-workflow/references/workflow-schema.md`, cited here rather than
+restated. It never writes `journal.jsonl`, never decides anything about
+task state, and never blocks the tool call -- it is diagnostic plumbing
+only (IMPLEMENTATION.md, Layer Structure).
 
 Behavior on each PostToolUse event (stdin = PostToolUse JSON) for the `Task`
 or `Agent` tool:
