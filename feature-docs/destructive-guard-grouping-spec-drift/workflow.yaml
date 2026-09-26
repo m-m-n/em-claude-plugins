@@ -254,7 +254,7 @@ tasks:
     requirements:
     - FR10
     - FR11
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/destructive-guard-grouping-spec-drift/task0003
 review:
