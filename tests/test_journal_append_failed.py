@@ -18,6 +18,13 @@ feature-docs/stale-launched-retry-recovery/tasks/task0001.md): the widened
 reason set, the in-lock launch-identity comparison, the `launch_changed`
 outcome and its concurrency property. Their AC numbers are task0001's own
 and are unrelated to the `TestAC*` numbering above, which stays task0002's.
+
+`TestMergeUnverified*` classes cover a LATER, DIFFERENT task0001 (see
+feature-docs/routeback-deferred-findings/tasks/task0001.md): the third
+reason, `merge-unverified`, which appends only over a task's own final
+event `merged` (never `launched`) and never accepts `--launch-at`. Their AC
+numbers are this task's own and are unrelated to the `TestAC*` /
+`TestTask0001*` numbering above, which belongs to earlier features.
 """
 
 import ast
@@ -711,6 +718,7 @@ class TestFunctionLevelDecisionLogic(JournalAppendFailedTestCase):
     def test_valid_reason_accepts_only_the_closed_set(self):
         self.assertTrue(self.module.valid_reason("orphaned"))
         self.assertTrue(self.module.valid_reason("stale-launched"))
+        self.assertTrue(self.module.valid_reason("merge-unverified"))
         self.assertFalse(self.module.valid_reason("manual"))
         self.assertFalse(self.module.valid_reason(""))
         self.assertFalse(self.module.valid_reason(None))
@@ -767,6 +775,296 @@ class TestFunctionLevelDecisionLogic(JournalAppendFailedTestCase):
         write_journal(self.journal_path, [{"event": "launched", "task": "task0025", "at": "t1"}])
         outcome = self.module.decide_and_append(self.journal_path, "task0025", "orphaned")
         self.assertEqual(outcome, "appended")
+
+
+class TestMergeUnverifiedAC1AppendsOverMerged(JournalAppendFailedTestCase):
+    """AC-1: with a journal whose final event for the task is `merged`
+    (preceded by other tasks' lines), `--reason merge-unverified` exits 0
+    and appends exactly one well-formed `failed` line with reason
+    `merge-unverified`, fields in order event/task/at/reason, an
+    RFC3339-with-offset `at`, and the prior bytes are otherwise untouched."""
+
+    def test_appends_exactly_one_failed_line_with_reason_merge_unverified(self):
+        task_id = "task0109"
+        write_journal(
+            self.journal_path,
+            [
+                {"event": "launched", "task": "task0900", "at": "2026-01-01T00:00:00+00:00"},
+                {"event": "launched", "task": task_id, "at": "2026-01-01T00:05:00+00:00"},
+                {"event": "merged", "task": task_id, "at": "2026-01-01T00:10:00+00:00", "commit": "abc123"},
+            ],
+        )
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(["--journal", self.journal_path, "--task", task_id, "--reason", "merge-unverified"])
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        stdout_lines = [l for l in result.stdout.splitlines() if l.strip()]
+        self.assertEqual(len(stdout_lines), 1)
+        payload = json.loads(stdout_lines[0])
+        self.assertEqual(payload, {"outcome": "appended", "task": task_id, "reason": "merge-unverified"})
+
+        after_bytes = read_journal_bytes(self.journal_path)
+        self.assertTrue(after_bytes.startswith(before_bytes))
+        new_text = after_bytes[len(before_bytes):].decode("utf-8")
+        new_lines = [l for l in new_text.splitlines() if l.strip()]
+        self.assertEqual(len(new_lines), 1)
+        appended = json.loads(new_lines[0])
+        self.assertEqual(list(appended.keys()), ["event", "task", "at", "reason"])
+        self.assertEqual(appended["event"], "failed")
+        self.assertEqual(appended["task"], task_id)
+        self.assertEqual(appended["reason"], "merge-unverified")
+        self.assertTrue(
+            RFC3339_RE.match(appended.get("at", "")),
+            f"'at' not RFC3339-with-offset: {appended.get('at')!r}",
+        )
+
+
+class TestMergeUnverifiedAC2NoopOverNonMergedFinalEvents(JournalAppendFailedTestCase):
+    """AC-2: for each of the final-event states `launched`, `failed`, no
+    event for the task, and an unrecognized event name, `--reason
+    merge-unverified` exits 0 with outcome `noop_terminal` and the journal
+    is byte-identical to its prior content."""
+
+    def _assert_noop(self, task_id):
+        before_bytes = read_journal_bytes(self.journal_path)
+        result = run_cli(["--journal", self.journal_path, "--task", task_id, "--reason", "merge-unverified"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "noop_terminal")
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+    def test_noop_over_launched(self):
+        task_id = "task0110"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": "2026-01-02T00:00:00+00:00"}])
+        self._assert_noop(task_id)
+
+    def test_noop_over_failed(self):
+        task_id = "task0111"
+        write_journal(
+            self.journal_path,
+            [
+                {"event": "launched", "task": task_id, "at": "2026-01-02T00:00:00+00:00"},
+                {"event": "failed", "task": task_id, "at": "2026-01-02T00:05:00+00:00", "reason": "orphaned"},
+            ],
+        )
+        self._assert_noop(task_id)
+
+    def test_noop_over_no_event_for_task(self):
+        task_id = "task0112"
+        write_journal(
+            self.journal_path,
+            [{"event": "launched", "task": "task0998", "at": "2026-01-02T00:00:00+00:00"}],
+        )
+        self._assert_noop(task_id)
+
+    def test_noop_over_unrecognized_event_name(self):
+        task_id = "task0113"
+        write_journal(self.journal_path, [{"event": "reconciled", "task": task_id, "at": "2026-01-02T00:00:00+00:00"}])
+        self._assert_noop(task_id)
+
+
+class TestMergeUnverifiedAC3ExistingReasonsStillNoopOverMerged(JournalAppendFailedTestCase):
+    """AC-3: `orphaned` and `stale-launched` over a final `merged` event
+    each report `noop_terminal` with a byte-identical journal (unchanged
+    behaviour). `test_final_event_merged_is_noop` (TestAC2TerminalIsNoop)
+    already covers `orphaned`; this adds `stale-launched`."""
+
+    def test_stale_launched_over_merged_is_noop(self):
+        task_id = "task0114"
+        write_journal(
+            self.journal_path,
+            [
+                {"event": "launched", "task": task_id, "at": "2026-01-03T00:00:00+00:00"},
+                {"event": "merged", "task": task_id, "at": "2026-01-03T00:10:00+00:00", "commit": "def456"},
+            ],
+        )
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(["--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched"])
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "noop_terminal")
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+
+class TestMergeUnverifiedAC4ReasonSetAndDocs(JournalAppendFailedTestCase):
+    """AC-4: the function-level reason check accepts exactly `orphaned`,
+    `stale-launched` and `merge-unverified` (see the updated
+    test_valid_reason_accepts_only_the_closed_set) and rejects `manual`,
+    the empty string and a non-string; the command-line help output names
+    all three values; the module docstring names `merge-unverified`
+    together with its merged-only precondition."""
+
+    def test_help_output_names_all_three_reason_values(self):
+        result = run_cli(["--help"])
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for value in ("orphaned", "stale-launched", "merge-unverified"):
+            self.assertIn(value, result.stdout)
+
+    def test_module_docstring_names_merge_unverified_precondition(self):
+        module = load_module()
+        doc = module.__doc__ or ""
+        self.assertIn("merge-unverified", doc)
+        self.assertIn("never over `launched`", doc)
+
+
+class TestMergeUnverifiedAC5LaunchAtUsageError(JournalAppendFailedTestCase):
+    """AC-5: `--reason merge-unverified` supplied together with
+    `--launch-at` exits non-zero, prints nothing on stdout, writes a
+    diagnostic to stderr, and leaves the journal byte-identical --
+    including when the final event is `merged`. The diagnostic identifies
+    the merge-unverified/--launch-at combination, distinct from the
+    unknown-reason diagnostic (`must be one of`), so this rejection is
+    distinguishable from today's unknown-reason rejection."""
+
+    def test_rejected_over_merged_final_event_with_distinct_diagnostic(self):
+        task_id = "task0115"
+        write_journal(
+            self.journal_path,
+            [
+                {"event": "launched", "task": task_id, "at": "2026-01-04T00:00:00+00:00"},
+                {"event": "merged", "task": task_id, "at": "2026-01-04T00:10:00+00:00", "commit": "abc789"},
+            ],
+        )
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(
+            [
+                "--journal", self.journal_path, "--task", task_id, "--reason", "merge-unverified",
+                "--launch-at", "2026-01-04T00:10:00+00:00",
+            ]
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertTrue(result.stderr.strip())
+        self.assertNotIn("must be one of", result.stderr)
+        self.assertIn("launch-at", result.stderr)
+        self.assertIn("merge-unverified", result.stderr)
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+    def test_rejected_before_journal_is_opened(self):
+        task_id = "task0116"
+        # The journal file and its parent directory are never created; if
+        # the usage error is decided BEFORE the journal is opened, this
+        # exits non-zero via the D4 diagnostic rather than the "journal
+        # directory does not exist" diagnostic.
+        self.assertFalse(os.path.isdir(self.feature_dir))
+
+        result = run_cli(
+            [
+                "--journal", self.journal_path, "--task", task_id, "--reason", "merge-unverified",
+                "--launch-at", "2026-01-04T00:10:00+00:00",
+            ]
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("launch-at", result.stderr)
+        self.assertFalse(os.path.isdir(self.feature_dir))
+        self.assertFalse(os.path.exists(self.journal_path))
+
+
+class TestMergeUnverifiedAC6Concurrency(JournalAppendFailedTestCase):
+    """AC-6: several concurrent `--reason merge-unverified` invocations for
+    one task whose final event is `merged` add exactly one `failed` line in
+    total; exactly one invocation reports `appended` and every other
+    reports `noop_terminal`."""
+
+    def test_concurrent_invocations_over_merged_append_exactly_one(self):
+        task_id = "task0117"
+        write_journal(
+            self.journal_path,
+            [
+                {"event": "launched", "task": task_id, "at": "2026-01-05T00:00:00+00:00"},
+                {"event": "merged", "task": task_id, "at": "2026-01-05T00:10:00+00:00", "commit": "ghi012"},
+            ],
+        )
+
+        n = 5
+        results = [None] * n
+
+        def invoke(index):
+            results[index] = run_cli(
+                ["--journal", self.journal_path, "--task", task_id, "--reason", "merge-unverified"]
+            )
+
+        threads = [threading.Thread(target=invoke, args=(i,)) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+
+        for result in results:
+            self.assertIsNotNone(result)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+        lines = read_journal_lines(self.journal_path)
+        for line in lines:
+            json.loads(line)  # every line must parse -- no torn/partial writes
+        failed_lines = [
+            l for l in lines if json.loads(l).get("event") == "failed" and json.loads(l).get("task") == task_id
+        ]
+        self.assertEqual(len(failed_lines), 1)
+
+        outcomes = sorted(json.loads(r.stdout.strip())["outcome"] for r in results)
+        self.assertEqual(outcomes, ["appended"] + ["noop_terminal"] * (n - 1))
+
+
+class TestMergeUnverifiedAC7LaunchGuardConvergence(JournalAppendFailedTestCase):
+    """AC-7: after a `merge-unverified` `failed` line has been written for a
+    task, invoking the unmodified queue_launch_guard.py through its hook
+    interface for that task exits 0 with no deny decision, and the task's
+    journal last event becomes `launched`. Drives the guard through its
+    documented hook interface (subprocess, stdin JSON); does not re-test
+    the guard's own rules."""
+
+    def test_launch_after_merge_unverified_failed_is_permitted_and_appends_launched(self):
+        task_id = "task0118"
+        worktree_path = os.path.join(self.feature_dir, task_id)
+        os.makedirs(worktree_path, exist_ok=True)
+        write_journal(
+            self.journal_path,
+            [
+                {"event": "launched", "task": task_id, "at": "2026-01-06T00:00:00+00:00"},
+                {"event": "merged", "task": task_id, "at": "2026-01-06T00:10:00+00:00", "commit": "jkl345"},
+            ],
+        )
+
+        recovery = run_cli(["--journal", self.journal_path, "--task", task_id, "--reason", "merge-unverified"])
+        self.assertEqual(recovery.returncode, 0, recovery.stderr)
+        self.assertEqual(json.loads(recovery.stdout.strip())["outcome"], "appended")
+
+        prompt = (
+            "# Task assignment\n"
+            f"task_id: {task_id}\n"
+            f"worktree_path: {worktree_path}\n"
+        )
+        guard_payload = {
+            "tool_name": "Task",
+            "tool_input": {
+                "subagent_type": "em-workflow:implementer",
+                "prompt": prompt,
+            },
+        }
+        guard_result = subprocess.run(
+            [sys.executable, str(LAUNCH_GUARD_PATH)],
+            input=json.dumps(guard_payload),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        self.assertEqual(guard_result.returncode, 0, guard_result.stderr)
+        self.assertNotIn("deny", guard_result.stdout)
+        lines = read_journal_lines(self.journal_path)
+        last_event_for_task = None
+        for line in lines:
+            entry = json.loads(line)
+            if entry.get("task") == task_id:
+                last_event_for_task = entry.get("event")
+        self.assertEqual(last_event_for_task, "launched")
 
 
 if __name__ == "__main__":
