@@ -28,3 +28,12 @@ records:
     freeform: "decline files auto-addition"
     normalized_answer: "decline files auto-addition"
     resolution_note: "task_id: task0004; declined paths: em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json (version bump 0.2.9 -> 0.2.10 forced by the plugin-version-guard hook, SC-7 fallback); missing evidence part: no acceptance-criterion / requirement identifier that would otherwise be dropped, and no observable failure outcome; em-workflow/.claude-plugin/plugin.json additionally falls under the em-workflow/** workflow control path"
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-26T17:36:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline files auto-addition"
+    normalized_answer: "decline files auto-addition"
+    resolution_note: "task_id: task0001; declined paths: tests/test_tier_evaluator_contract.py, tests/test_tier_rules.py (existing tests pinning the old two-reading evaluator contract, rewritten per IMPLEMENTATION.md D6), em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json (version bump 0.2.9 -> 0.2.10 forced by the plugin-version-guard hook, SC-7 fallback); missing evidence part: no acceptance-criterion / requirement identifier that would otherwise be dropped, and no observable failure outcome stated; em-workflow/.claude-plugin/plugin.json additionally falls under the em-workflow/** workflow control path"
