@@ -1,0 +1,49 @@
+schema_version: 1
+feature: tier-decision-staged-jev
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.0
+    '1': 0.28
+    '2': 0.72
+  expectation_clear: 0.24
+  confidence: 0.58
+  observed_at: '2026-09-26T15:58:15+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.0
+    '1': 0.39
+    '2': 0.61
+  expectation_clear: 0.25
+  confidence: 0.42
+  observed_at: '2026-09-26T16:00:54+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/tier-rules.yaml
+  - em-workflow/scripts/decide-tier.py
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/references/workflow-schema.md
+  - tests/test_tier_rules.py
+  - tests/test_tier_evaluator_contract.py
+  - tests/test_tier_decision_step_a.py
+  - tests/test_tier_decision_record.py
+  - tests/test_tier_worktree_bootstrap.py
+  changed_lines_approx: 550
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - create-spec の workflow.yaml 転記
+  - workflow.yaml の tier_decision 記録
+  - retrospect の signals.tier_decision
+  - Step A の再開・no-work 停止・worktree 作成順序の検証
+  work_still_required: true
+  rationale: HEAD は未対応だよ。現行手順は Codex 調査後に Jev を2回呼び、不一致なら full にする（em-workflow/skills/develop/SKILL.md:245、em-workflow/scripts/decide-tier.py:397）。確率だけで決めるには
+    expectation_clear 条件も外す必要がある（em-workflow/references/tier-rules.yaml:51）。Codex
+    の追加事実項目と初回 Jev の確信度保存は未定義で、転記・ふりかえりも調整が必要だよ（同 tier-rules.yaml:83、em-workflow/references/phase-state.md:506、em-workflow/references/phases/create-spec-phase.md:332）。既存テストは旧動作を要求しているため、変更に加えて新しい順序・JSON受け渡しの検証を足す見込みだよ（tests/test_tier_evaluator_contract.py:434、tests/test_tier_decision_record.py:392、tests/test_tier_worktree_bootstrap.py:507）。約550行はテスト込みで、新規関数0は本体関数の見積もりだよ。閾値・段階定義・Codex
+    不使用時の方針で増減する。特に Codex 不使用時は設定が確率評価、手順書が full と食い違っている（em-workflow/references/tier-rules.yaml:104、em-workflow/skills/develop/SKILL.md:273）。ファイル変更・テスト実行はしていないよ
+decided_at: '2026-09-26T16:01:00+09:00'
