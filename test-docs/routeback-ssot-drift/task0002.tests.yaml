@@ -1,0 +1,82 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_definition_present]
+    red_confirmed: true
+    red_reason: "Temporarily corrupted the PARTIAL_ARTIFACT_DEFINITION constant
+      ('A partial-artifact state' -> 'A ZZZ-nonexistent state') in an in-memory
+      copy of the module and re-ran the test: AssertionError: \"A
+      ZZZ-nonexistent state ... already gone.\" not found in '<normalized I.2.b
+      section>'. Reverted before writing the delivered file."
+  AC-2:
+    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_residual_treatment_present]
+    red_confirmed: true
+    red_reason: "Temporarily corrupted PARTIAL_ARTIFACT_RESIDUAL_TREATMENT
+      ('Since there is no candidate' -> 'Since there is ZZZ-nonexistent
+      candidate') in an in-memory copy and re-ran: AssertionError, literal not
+      found in the normalized section. Reverted before writing the delivered
+      file."
+  AC-3:
+    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_definition_present]
+    red_confirmed: true
+    red_reason: "Temporarily corrupted THIRD_CASE_DEFINITION ('A third case
+      exists alongside' -> 'A ZZZ-nonexistent case exists alongside') in an
+      in-memory copy and re-ran: AssertionError, literal not found in the
+      normalized section. Reverted before writing the delivered file."
+  AC-4:
+    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_residual_treatment_present]
+    red_confirmed: true
+    red_reason: "Temporarily corrupted THIRD_CASE_RESIDUAL_TREATMENT ('In that
+      case the journal is unchanged exactly' -> 'In that ZZZ-nonexistent case
+      the journal is unchanged exactly') in an in-memory copy and re-ran:
+      AssertionError, literal not found in the normalized section. Reverted
+      before writing the delivered file."
+  AC-5:
+    tests:
+      - tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_definition_non_vacuity
+      - tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_residual_treatment_non_vacuity
+      - tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_definition_non_vacuity
+      - tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_residual_treatment_non_vacuity
+      - tests.test_routeback_ssot_drift_i2b_retention.TestI2bSectionSlicing.test_missing_start_heading_raises_naming_it
+      - tests.test_routeback_ssot_drift_i2b_retention.TestI2bSectionSlicing.test_missing_end_heading_raises_naming_it
+    red_confirmed: true
+    red_reason: "Non-vacuity discrimination observed by breaking one
+      representative removal (PARTIAL_ARTIFACT_DEFINITION's
+      self.section.replace(...) target swapped for a token never present in
+      the section, in an in-memory copy) and re-running
+      test_definition_non_vacuity: AssertionError, the literal was
+      unexpectedly still found (removal was a no-op) -- proving the matcher
+      correctly detects a broken removal; the other three non-vacuity tests
+      share the identical shape against their own constants. Slicer failure
+      observed by replacing _slice_section's explicit heading-naming checks
+      with a naive text.index()-only version, in an in-memory copy, and
+      re-running both TestI2bSectionSlicing tests: both errored with a bare
+      ValueError('substring not found') instead of the required
+      AssertionError naming the missing heading, so assertRaises(AssertionError)
+      failed -- proving the explicit check is load-bearing. Reverted before
+      writing the delivered file."
+  AC-6:
+    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestModuleUsesOnlyStandardLibrary.test_only_stdlib_imports]
+    red_confirmed: true
+    red_reason: "This test covers only the 'the new module uses only the
+      standard library' sub-clause; the other two sub-clauses of AC-6 --
+      'python3 -m unittest discover -s tests exits 0 from the worktree root'
+      and 'the task's diff contains only the new module' -- are outcome-level
+      facts with no dedicated assertion possible from inside the very suite
+      being asserted about; they are verified operationally: the full suite
+      run recorded in final_failures below (5984 tests, OK, no regressions
+      against the empty baseline) and this task's git diff, which adds only
+      tests/test_routeback_ssot_drift_i2b_retention.py (git status --short
+      showed a single untracked file throughout). For the tested sub-clause:
+      temporarily added a bogus 'import nonstdlibpkg' line to an in-memory
+      copy of the module and re-ran test_only_stdlib_imports: AssertionError,
+      'nonstdlibpkg' not in sys.stdlib_module_names. Reverted before writing
+      the delivered file."
+notes: "AC-6's 'diff contains only the new module' and 'suite exits 0' clauses
+  are listed above as red_confirmed: true because the module-scope
+  (stdlib-only) sub-clause they share the AC-6 entry with was genuinely
+  red-confirmed; those two specific sub-clauses have no test of their own and
+  were verified operationally rather than by an executed-and-observed-red
+  check, per the note in AC-6's red_reason."
