@@ -1,0 +1,53 @@
+feature: routeback-ssot-drift
+collected_at: "2026-09-26T22:35:00+09:00"
+session_ids: [01a0ddeb-bccd-7349-b85d-57c9e7133ed8]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みで P(1)=0.87 が最大となり reduced"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 0.91
+          confidence: 0.87
+          probabilities: {'0': 0.11, '1': 0.87, '2': 0.02, '3': 0.0}
+          expectation_clear: 0.72
+        observed_at: "2026-09-26T21:32:30+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 0.92
+          confidence: 0.86
+          probabilities: {'0': 0.11, '1': 0.87, '2': 0.02, '3': 0.0}
+          expectation_clear: 0.69
+        observed_at: "2026-09-26T21:35:35+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/workflow-schema.md
+        - em-workflow/references/implement-phase.md
+        - tests/test_implement_routeback_gate.py
+      changed_lines_approx: 0
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 0
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 0
+      changes_external_contract: false
+      changes_behavior: false
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査では 4 件中 2 件（中間状態・recorder no-op）が main で解消済みと判定され、該当タスクは文言固定テストの追加だけになった"
+  - "review round1 の medium 1 件（1f5dd79ff959caef: workflow-schema.md の「absent or stale」が implement-phase.md の解決不能条件より広い）は unresolved のまま残った。SPEC FR3 本文由来のずれ"
