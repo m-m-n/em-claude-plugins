@@ -1,0 +1,66 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_states_merge_unverified_sentence
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_citation_phrase_present
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_additive_phrase_present
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_negative_proof_sentence_absent_when_removed
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_writer_set_enumeration_still_exactly_five
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_negative_proof_added_writer_name_is_detected
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_negative_proof_removed_writer_name_is_detected
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_negative_proof_recover_orphaned_task_forged_is_detected
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestWriterSetNamesMergeUnverifiedReason.test_no_extraneous_script_name_in_live_span
+    red_confirmed: true
+    red_reason: "AssertionError: 'a third additive value of the existing `failed` reason field' / the citation phrase / the full merge-unverified sentence were each 'not found' when run against the unedited workflow-schema.md, before the writer-set paragraph was edited."
+  AC-2:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestOrphanInvocationNoLongerExclusive.test_old_orphan_only_phrase_absent_from_live_document
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestOrphanInvocationNoLongerExclusive.test_old_orphan_only_phrase_matcher_flags_pre_change_sample
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestOrphanInvocationNoLongerExclusive.test_retained_phrases_still_match
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestFailedKindSectionByteIdentical.test_failed_kind_section_unchanged
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestFailedKindSectionByteIdentical.test_negative_proof_mismatch_is_detected
+    red_confirmed: true
+    red_reason: "AssertionError: \"invoked only by the orchestrator's I.2.b orphan-recovery attempt\" unexpectedly found in the live document -- observed present before the sentence was edited to drop 'only'."
+  AC-3:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestStatusSemanticsBulletUnconditional.test_core_resolution_phrase_present
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestStatusSemanticsBulletUnconditional.test_no_carveout_markers_present
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestStatusSemanticsBulletUnconditional.test_negative_proof_forged_exception_clause_is_detected
+    red_confirmed: false
+    red_reason: "The Status semantics bullet is pinned, not edited, by this task (D5/R3: task0005 never touches it). It already carried the unconditional resolution phrase and no carve-out marker before this task started, so there is no implementation step whose absence this check could have observed failing -- the criterion is proven by the negative proof against a forged copy with an exception clause added, not by a red-to-green transition."
+  AC-4:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNamesFourReadersAndRecoveryCost.test_all_four_readers_named
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNamesFourReadersAndRecoveryCost.test_not_live_determination_unresolved_stated_and_cited
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNamesFourReadersAndRecoveryCost.test_does_not_restate_orchestrator_read_rule_wording
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNamesFourReadersAndRecoveryCost.test_negative_proof_orchestrator_read_wording_forged_is_detected
+    red_confirmed: true
+    red_reason: "AssertionError: the four-reader phrases (queue_failure_net.py's agent-index fallback; the orchestrator's I.2.b step 1 Agent index lookup and Recovery; recover-orphaned-task.py) and the not-live-determination-unresolved phrase were each 'not found' when run against the unedited agents.jsonl paragraph, which named only queue_taskstop_net.py and the stop-tool-recorder-no-op cost."
+  AC-5:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_old_reader_narrow_phrase_absent_from_live_document
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_old_reader_narrow_phrase_matcher_flags_pre_change_sample
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_old_absence_narrow_phrase_absent_from_live_document
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_old_absence_narrow_phrase_matcher_flags_pre_change_sample
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_old_purpose_narrow_phrase_absent_from_live_document
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_old_purpose_narrow_phrase_matcher_flags_pre_change_sample
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_retained_anchor_present_in_both_sample_and_live
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestAgentsJsonlNarrowPhrasesReplaced.test_kept_phrases_of_r2_item4_still_match
+    red_confirmed: true
+    red_reason: "AssertionError: each of the three narrow pre-change phrases ('read by `queue_taskstop_net.py` at stop', 'its absence only degrades the stop-tool recorder to a no-op', '`agents.jsonl` exists solely to make a stop resolvable back to a task') was 'unexpectedly found' in the live document when the absence assertion was run before the paragraph was edited."
+  AC-6:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestNoSC6ResidualCodeInWorkflowSchema.test_exactly_sixteen_codes_in_closed_set
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestNoSC6ResidualCodeInWorkflowSchema.test_no_sc6_code_present_in_live_document
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestNoSC6ResidualCodeInWorkflowSchema.test_negative_proof_forged_code_is_detected
+    red_confirmed: false
+    red_reason: "workflow-schema.md already contained none of the sixteen backtick-quoted SC6 residual reason codes before this task touched anything, and this task's edits introduce none either -- a pre-existing, unaffected invariant with no implementation step to observe failing. Proven instead by the negative proof against a forged copy with one code appended."
+  AC-7:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestModuleImportsOnlyStandardLibrary.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "Stdlib-only-imports is a static property of the new module's own source as written; there is no prior state in which this module existed with a non-stdlib import to observe failing. The remaining clauses of this criterion (the existing schema pins in test_implement_routeback_gate.py and test_stale_launched_doc_contract.py pass unmodified; python3 -m unittest discover -s tests passes) were verified by actually running the full suite before and after the change (5973 tests baseline, OK; 6006 tests after the change -- 33 new -- OK), not by a red/green cycle on a single test."
+notes: "Full suite (python3 -m unittest discover -s tests) baseline before any edit: 5973 tests, OK, no failures. The two sibling doc-contract modules (test_stale_launched_doc_contract.py, test_implement_routeback_gate.py) were re-run in isolation after the edit: 227 tests, OK. Full suite after implementation: 6006 tests (33 new from this task's module), OK, no failures. final_failures re-run was performed (not skipped)."
