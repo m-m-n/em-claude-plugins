@@ -89,7 +89,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 3fdd3058adcf82b74086bae8790839bcdd8ad5d4
 - id: implement
   status: pending
   base_commit: null
@@ -101,7 +102,118 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Final-score evaluator and threshold/fallback rules
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/decide-tier.py
+    - em-workflow/references/tier-rules.yaml
+    - tests/test_decide_tier_final_score.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR5
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: Bucket descriptions and Codex fact fields in tier-rules.yaml
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/tier-rules.yaml
+    - tests/test_tier_rules_buckets_codex_facts.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR6
+    - FR7
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: Staged tier-decision procedure in develop SKILL.md Step A
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_develop_tier_staged_procedure.py
+    skills: []
+    domains:
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR5
+    - FR6
+    - FR8
+    - FR9
+    - FR10
+    - FR12
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: tier.yaml schema_version 2 and its projections
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_tier_decision_record.py
+    - tests/test_tier_record_schema_v2.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: high
+    requirements:
+    - FR5
+    - FR10
+    - FR11
+    - NFR2
+    - NFR3
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: em-workflow plugin version bump to 0.2.10
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_em_workflow_version.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - NFR3
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -115,127 +227,187 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-9
   FR2:
     title: Final Jev input
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-9
   FR3:
     title: Final Jev returns four buckets and is validated
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   FR4:
     title: Tier from final probabilities only
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
   FR5:
     title: Disagreement rule removed
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-6
+    - TS-9
+    - TS-11
   FR6:
     title: Bucket descriptions in tier-rules.yaml
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS-10
+    - TS-9
   FR7:
     title: Codex fact fields
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-10
   FR8:
     title: Codex unavailable -> full
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-7
+    - TS-9
   FR9:
     title: Jev unavailable -> full
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-8
+    - TS-9
   FR10:
     title: Decision record
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    - task0004
+    tests:
+    - TS-11
+    - TS-9
   FR11:
     title: Projections updated
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS-11
   FR12:
     title: No-work stop preserved
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-9
   NFR1:
     title: Deterministic fail-safe evaluator
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-13
   NFR2:
     title: Thresholds owned by tier-rules.yaml
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-9
+    - TS-11
+    - TS-13
   NFR3:
     title: Test conventions
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-15
   NFR4:
     title: No gate or question
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-9
   NFR5:
     title: Plugin version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-12
   NFR6:
     title: Review documents untouched
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS-14
 batch:
   review_rework_count: 0
   verify_rework:
