@@ -1,0 +1,95 @@
+schema_version: 1
+feature: routeback-ssot-drift
+phase: create-spec
+status: completed
+generation: 1
+base_revision: a0c22628dd9db763f5eb6b814597bf4acbeac206
+last_input_digest: sha256:34bc0a767be910eaa51b0a67698c31dbf89f09964086387731575666380d3d8d
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-26T21:52:00+09:00'
+    questions:
+    - question_id: requirement.ambiguous-term
+      status: answered
+    - question_id: requirement.agent-index-docstring-scope
+      status: answered
+    - question_id: requirement.version-baseline-form
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.ambiguous-term:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - distinguish_in_schema
+    freeform: null
+    normalized_answer: implement-phase.md の orchestrator 側 'ambiguous' 文言は変えず、workflow-schema.md で停止側と
+      orchestrator 側の 2 つの読み取り規則を参照先付きで挙げ、ambiguous の意味が異なることを明記する
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation, record_as_assumption);
+      codex_consulted: true (1 turn, harness codex); opus_escalation: false; Codex suggestion mapped onto
+      option distinguish_in_schema (matches worker tentative); codex reason: 停止側の ambiguous は複数タスクへの一致（em-workflow/hooks/queue_taskstop_net.py:290）、制御側は利用可能な候補なし（em-workflow/references/implement-phase.md:1160）を指すよ。後者は
+      tests/test_implement_routeback_gate.py:411 で文言が固定されているため、workflow-schema.md に両規則の参照先と意味の違いを明記すれば、既存テストを変えずに混同を解消できるよ'
+  requirement.agent-index-docstring-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include
+    freeform: null
+    normalized_answer: queue_agent_index.py のモジュール docstring も読み手・用途を実態に合わせて直す（docstring のみ、挙動変更なし）
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation, record_as_assumption);
+      codex_consulted: true (1 turn, harness codex); opus_escalation: false; Codex suggestion mapped onto
+      option include (matches worker tentative); codex reason: em-workflow/hooks/queue_agent_index.py:11
+      の説明は用途を TaskStop に限定しているけれど、em-workflow/references/implement-phase.md:1150 は復旧確認も含め、同ファイル:1174 は
+      queue_failure_net.py の参照も定義しているよ。説明文だけを合わせれば、同じ説明のずれを残さずに済むよ'
+  requirement.version-baseline-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - raise_named_only
+    freeform: null
+    normalized_answer: tests/test_implement_routeback_gate.py の下限のみ (0, 1, 48) → (0, 2, 10) に上げ docstring/コメントも合わせる。兄弟テストの
+      (0, 2, 0) は据え置く
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation, record_as_assumption);
+      codex_consulted: true (1 turn, harness codex); opus_escalation: false; Codex suggestion mapped onto
+      option raise_named_only (matches worker tentative); codex reason: main の HEAD は 0.2.10（HEAD版の em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27）なので、tests/test_implement_routeback_gate.py:1922
+      の下限を (0, 2, 10) に上げ、説明も合わせるのが適切だよ。兄弟テストは自身の機能の下限を明示している（tests/test_routeback_residual_connections_version_bump.py:8、同ファイル:55）ため維持し、指定テスト:1907
+      に記された固定下限の慣例も保つよ'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:52:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design ステップは推奨どおりスキップ（UI なし）
+    resolution_note: 'batch-policies.yaml create-spec.design-step -> decide_autonomously (worker recommendation:
+      skip)'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:ca9fe88f7f58d19bfa31dc11bdc79055e36ccc1536b334cfcf7379dd1e0f1fa5
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:34bc0a767be910eaa51b0a67698c31dbf89f09964086387731575666380d3d8d
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:211324d8285e004467702e525833baf892f0e9b8aefd445c3b134e3a5c14349d
+artifacts:
+  SPEC.md:
+    digest: sha256:5c592122fe454bddf0e83c6f9ee8bc32f663fa7f2d08547142a993469d5f4e55
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
