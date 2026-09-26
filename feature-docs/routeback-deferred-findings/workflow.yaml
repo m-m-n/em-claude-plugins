@@ -85,14 +85,14 @@ workflow:
   status: completed
   completed_at_commit: 163a2160f3f4332be9d9b26daea5ec631bf0c07d
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 114bd9eab8a6707660b9235b601bc4d89407993c
   base_commit: 23291e93d04351a8818fce33e9ecf58487e7579d
 - id: review
-  status: completed
+  status: pending
   completed_at_commit: 4ad3d3b3ac7aa4c12b910dca9bff4606e04ae1c1
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: TS-8
@@ -250,6 +250,31 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/routeback-deferred-findings/task0006
+  task0007:
+    title: re-pin the reworded ancestor-check preconditions in the merge-unverified doc contract
+    plan: tasks/task0007.md
+    files:
+    - tests/test_merge_unverified_exit_doc_contract.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR4
+    - FR10
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - TS-8
+      - TS-9
+      - SC-2
+      - SC-4
+      review_round: null
 review:
   status: completed
   rounds_completed: 1
@@ -302,6 +327,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0004
+    - task0007
     tests:
     - TS-4
     - TS-8
@@ -365,6 +391,7 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
     tests:
     - TS-9
   NFR1:
@@ -416,6 +443,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0007
     tests:
     - TS-1
     - TS-2
@@ -452,6 +480,7 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
     tests:
     - TS-12
 batch:
