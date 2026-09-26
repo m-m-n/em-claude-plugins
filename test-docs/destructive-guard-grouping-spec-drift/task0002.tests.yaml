@@ -1,0 +1,110 @@
+task_id: task0002
+baseline_failures: []          # em-workflow/hooks/tests/run-destructive-guard.py: 284/284 passed;
+                                # python3 -m unittest discover -s tests: 6188/6188 passed (OK)
+final_failures: []             # same two commands re-run after implementation: 313/313 passed
+                                # (284 pre-task + 29 rows added this task); unittest discover
+                                # 6188/6188 passed (OK) -- identical count to baseline, no regressions
+acceptance_tests:
+  AC-1:
+    tests:
+      - em-workflow/hooks/tests/destructive-guard-cases.json (destination-family + rm-pinning block, tar create/list rows)
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    red_confirmed: true
+    red_reason: >-
+      After adding the FR7/FR8 case rows but before changing destructive-guard.py,
+      the runner reported 308/313 passed with exactly 5 FAIL lines, all "got=ask"
+      where "want=allow" for the five tar create/list rows ("tar -cf ... -C
+      ~/.claude/skills .", "tar -tzf ... -C ~/.claude/skills", "tar --directory=...
+      -cf ... .", "tar --create -f ... -C ~/.claude/skills .", and the
+      create-into-extract pipeline row). Every other newly added row (rsync,
+      git clone, tar-extract, unzip, curl, wget, and all seven rm rows) already
+      passed on that same run, matching the plan's Test Notes.
+  AC-2:
+    tests:
+      - em-workflow/hooks/tests/destructive-guard-cases.json (tar extract rows)
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    red_confirmed: false
+    red_reason: >-
+      These four tar-extract rows already passed on the baseline hook (pre-fix,
+      -C was always a destination regardless of mode, and extract mode is the
+      one mode where the old and new behaviour agree), so no red state was
+      observed for them; the red run for this task's actual code change is the
+      one recorded under AC-1/AC-3.
+  AC-3:
+    tests:
+      - em-workflow/hooks/tests/destructive-guard-cases.json (tar create/list rows)
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    red_confirmed: true
+    red_reason: "Same red run as AC-1 -- see AC-1's red_reason; these are the five rows that failed."
+  AC-4:
+    tests:
+      - em-workflow/hooks/tests/destructive-guard-cases.json (rsync/git clone/unzip/curl/wget rows)
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's Test Notes, every FR7 row outside the tar create/list
+      block was expected to already pass on the baseline (this task changes only
+      the tar branch of destination extraction), and the AC-1 red run confirmed
+      that: none of the rsync, git clone, unzip, curl or wget rows failed. No red
+      state was observed for these rows because none was expected.
+  AC-5:
+    tests:
+      - em-workflow/hooks/tests/destructive-guard-cases.json (rm input-shaping block)
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's Test Notes, all seven FR8 rows pin rm verdicts that
+      already hold on the baseline (this task does not change rm handling), and
+      the AC-1 red run confirmed all seven passed immediately. No red state was
+      observed because none was expected.
+  AC-6:
+    tests:
+      - tests/test_destructive_guard_command_substitution.py::TestCaseTableDiscipline::test_every_pre_task_command_preserved_with_only_named_changes
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/ and em-workflow/hooks/tests/ by path and by filename before
+      concluding this. test_every_pre_task_command_preserved_with_only_named_changes
+      reads the case table and detects a verdict/command change on any
+      pre-existing row, but it compares rows keyed by command text only and never
+      reads label text, so it cannot detect a label-only edit; no test anywhere
+      in the repository asserts a case row's label content. The runner
+      (run-destructive-guard.py) likewise only checks the verdict this row
+      produces, not its label. Both were green before and after the label edit
+      (the change touches no behavior, only the label string), so no red state
+      was ever observed for the label-text portion of this criterion; verified
+      instead by reading the case-table diff, as the task plan's Test Notes
+      directs ("AC-6 is checked by reading the case-table diff").
+  AC-7:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests/ (python3 -m unittest discover -s tests)
+    red_confirmed: true
+    red_reason: >-
+      Same red run as AC-1: with the FR7/FR8 rows added but before the
+      tar_extract_mode() fix, `python3 em-workflow/hooks/tests/run-destructive-guard.py`
+      reported 308/313 passed (5 FAIL lines), so main() returned 1 and the
+      process did not exit clean -- a direct observation of this criterion's own
+      "exits 0" claim being false. After the fix it reported 313/313 (exit 0).
+      `python3 -m unittest discover -s tests` was OK both before and after
+      (6188/6188 both times), since it does not read the case table's
+      destination-family rows itself -- only run-destructive-guard.py does.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by reading both JSON files after the edit: em-workflow/.claude-plugin/plugin.json
+      "version" and the em-workflow entry's "version" in .claude-plugin/marketplace.json are
+      both "0.2.13"; the em-review entry's version (0.5.13) is unchanged. No test in the
+      repository's test directories asserts either plugin.json's or marketplace.json's version
+      field (searched tests/ and em-workflow/hooks/tests/ by path and by filename before
+      concluding this), so there is no executable red/green for this criterion; it is a direct
+      file-content check.
+notes: >-
+  Baseline (4a) was recorded with both project_commands.test commands before any file was
+  touched: 284/284 (destructive-guard) and 6188/6188 OK (unittest). AC-1's red run was captured
+  after adding the FR7/FR8 case rows (Step 4b, before editing destructive-guard.py): 308/313
+  passed, with the 5 FAIL lines being exactly the tar create/list allow rows. After implementing
+  tar_extract_mode() and gating tar's flag_value_destinations() call on it, the same runner
+  reported 313/313 and the unittest suite reported 6188/6188 OK -- identical unittest count to
+  the baseline, confirming no regression. final_failures reflects an actual re-run, not a skip.
