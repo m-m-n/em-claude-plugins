@@ -1,0 +1,101 @@
+round: 1
+executed_at: "2026-09-26T23:33:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 23291e93d04351a8818fce33e9ecf58487e7579d
+  head_commit: ce60749eddfd69a7d29a72a42b150f1e96d5743e
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/journal-append-failed.py
+  - em-workflow/scripts/recover-orphaned-task.py
+  - test-docs/routeback-deferred-findings/task0001.tests.yaml
+  - test-docs/routeback-deferred-findings/task0002.tests.yaml
+  - test-docs/routeback-deferred-findings/task0003.tests.yaml
+  - test-docs/routeback-deferred-findings/task0004.tests.yaml
+  - test-docs/routeback-deferred-findings/task0005.tests.yaml
+  - test-docs/routeback-deferred-findings/task0006.tests.yaml
+  - tests/test_implement_routeback_gate.py
+  - tests/test_journal_append_failed.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+  - tests/test_routeback_deferred_findings_version_bump.py
+  - tests/test_stale_launched_missing_artifacts_doc_contract.py
+  - tests/test_stale_launched_recovery_chain.py
+  - tests/test_task_id_allocation_ssot_i2c.py
+  - tests/test_workflow_schema_journal_readers_doc_contract.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+  - {run_id: "comprehensive#loop1", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#loop1", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "performance#loop1", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed, note: "reviewer self-reported that it inspected the diff directly without invoking the litellm harness"}
+  - {run_id: "architecture#loop1", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#loop1", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+findings:
+  - stable_id: 28f95cca754df0ef
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 705
+    title: "後片付けで消したブランチの祖先確認失敗を merge-unverified として journal に書いてしまう"
+    description: "I.2.b step 1 の祖先確認の出口が、merge-base --is-ancestor の終了コード 1（祖先でない）と 128（step 4 で削除済みの参照）を区別せずに journal-append-failed.py --reason merge-unverified を呼ぶため、統合済みタスクに追記専用の failed が永続的に書かれ得る。"
+    suggestion: "出口条件を『参照が解決でき、かつ終了コード 1』に限定し、参照欠落は merge-unverified を呼ばないと明記する。step 4 で後片付け済みのタスクは再照合から外す。回帰の doc-contract テストを追加する。"
+    sources: [codex:comprehensive]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 (commit 4ad3d3b3). 旧文言を固定した doc-contract テストの更新は review-editor の単一ファイル範囲外のため c60a60e50d293c28 として残る"
+  - stable_id: ad81306f22284a5f
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 586
+    title: "成果物が一部欠けた状態から failed になったタスクの再試行手順が無い"
+    description: "FR1 で候補に加えた部分欠損（worktree 無し・ブランチ有り等）のタスクは証明後 failed となり I.2.c の retry に進むが、I.2.a の Resume guard（400-410 行）は既存 worktree の再利用しか定めず、残ったブランチから worktree を作り直す経路が無い。loop 1 の再レビュー（f55360c12a3c9a6c、同一サイト）でも未解決として再報告された。"
+    suggestion: "Resume guard に部分欠損ケースを追加し、ブランチだけ残る場合は git worktree add（-b なし）で作り直してから再起動すると明記する。欠損状態から再起動までの doc-contract テストを追加する。"
+    sources: [codex:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 対象外"
+  - stable_id: c60a60e50d293c28
+    severity: medium
+    category: comprehensive
+    file: tests/test_merge_unverified_exit_doc_contract.py
+    line: 139
+    title: "修正した祖先検証条件にテストの期待値を合わせる"
+    description: "loop 1 の自動修正で implement-phase.md の条件文を変えたが、R2_PRECONDITIONS_PHRASE は旧文言のままで test_all_new_phrases_present が失敗する（python3 -m unittest discover -s tests で failures=1）。"
+    suggestion: "期待値を修正後の条件に更新し、終了コード 1 と参照欠落の区別、検証済みタスクの再検証除外を確認するテストを追加する。"
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "in-loop 再レビューで検出した medium。verify のテスト失敗として rework で扱う（Codex 相談の結論）"
+evaluation:
+  round_summary: "ラウンド1（cross_validation=true）。5観点すべて完了し、指摘は comprehensive#0 のみ（high 1、medium 1）。high は削除済みブランチへの祖先確認が終了コード128を返すことを統合ワークツリーで確認。medium は Resume guard に部分欠損時の手順が無いことを確認。evaluator 独自点検の README low 1件は severity ゲートで除外。プロンプト注入の試みは無し。security / performance / architecture / spec は corroborated。"
+  recommended_action: auto_fix
+  action_rationale: "high と medium はいずれも implement-phase.md の局所的な文言修正と doc-contract テスト追加で済む範囲。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 1
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-routeback-deferred-findings-20260926T143249Z.md
