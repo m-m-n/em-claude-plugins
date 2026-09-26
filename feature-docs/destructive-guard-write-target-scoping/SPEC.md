@@ -40,11 +40,11 @@ As an unattended run operator, I want writes to `~/.claude` to keep their curren
 ### Functional Requirements
 
 - **FR1 - Add the false-positive cases to the test suite first:** Add the following five cases to `em-workflow/hooks/tests/destructive-guard-cases.json` with an expected judgement of `allow`: `grep -rn "x" ~/.claude/skills/ 2>/dev/null`, `ls ~/.claude/skills/ 2>/dev/null | head -40`, `cat ~/.claude/settings.json > /tmp/copy.json`, `cat ~/.claude/projects/foo/bar.jsonl 2>/dev/null`, `grep -l needle ~/.claude/projects/foo/*.jsonl 2>/dev/null`. Delete none of the existing `deny` / `ask` cases. This addition comes before the FR2 implementation, and the suite must be confirmed red at that point.
-- **FR2 - Build a write-target path set and apply SELF_CONFIG / TRANSCRIPT only to its members:** Rewrite `check_self_modification` from a regex search over the whole segment into a match against a set of write-target paths. The set is drawn from three sources: (a) output-redirect targets (`split_redirects()` puts both the operator and the target into `redirects`, so take the side that is not the operator; input redirects `<` and friends are not included); (b) the target arguments of `INPLACE_WRITERS` (tee / truncate / shred / install / patch) and of `sed -i`; (c) the target arguments of rm / mv / cp / ln / chmod / chown (for cp / mv / ln the destination is the last argument). `SELF_CONFIG` and `TRANSCRIPT` apply only to the members of this set.
+- **FR2 - Build a write-target path set and apply SELF_CONFIG / TRANSCRIPT only to its members:** Rewrite `check_self_modification` from a regex search over the whole segment into a match against a set of write-target paths. The set is drawn from four sources: (a) output-redirect targets (`split_redirects()` puts both the operator and the target into `redirects`, so take the side that is not the operator; input redirects `<` and friends are not included); (b) the target arguments of `INPLACE_WRITERS` (tee / truncate / shred / install / patch) and of `sed -i`; (c) rm / chmod / chown: every non-flag argument. mv: every non-flag argument (mv unlinks each source) plus the `-t` / `--target-directory` value. cp / ln: the last positional argument after value-flag stripping, or only the `-t` / `--target-directory` value when that flag is given; (d) command-specific destinations: rsync last positional argument (after value-flag stripping); git clone last positional argument when there are at least two positionals; tar `-C` / `--directory` in extract mode only; unzip `-d`; curl `-o` / `--output`; wget `-O` / `--output-document`. `SELF_CONFIG` and `TRANSCRIPT` apply only to the members of this set.
 - **FR3 - Do not judge when there is no write target:** A segment whose assembled write-target set is empty returns without performing either the self-modification or the transcript-write judgement. Commands whose only redirect target is `/dev/null` (`ls ... 2>/dev/null`, `rm -rf /tmp/x > /dev/null`) end up with a set containing only `/dev/null` and, for `2>&1`, a file-descriptor number, matching neither `SELF_CONFIG` nor `TRANSCRIPT`.
 - **FR4 - Allow commands whose only `~/.claude` path is a read source:** Even for commands where writes are derived from arguments, do not fire when the `~/.claude` path is only on the source side. Both `cat ~/.claude/settings.json > /tmp/copy.json` and `cp ~/.claude/settings.json /tmp/` become `allow`.
 - **FR5 - Preserve existing detection:** Keep the current judgements: `cat foo > ~/.claude/settings.json` → `ask` (self-modification); `sed -i s/a/b/ ~/.claude/rules/x.md` → `ask`; `rm ~/.claude/hooks/foo.py` → `ask`; `rm -rf ~/.claude/skills/foo` → `ask`; `echo x > ~/.claude/projects/a/b.jsonl` → `deny` (transcript-write); under unattended execution `echo x > ~/.claude/settings.json` → `deny` (demoted from `ask`). Every existing `deny` / `ask` case in `destructive-guard-cases.json` and the demotion case at the end of `run-destructive-guard.py` must pass.
-- **FR6 - Leave the rm judgement untouched:** Thanks to `SAFE_DELETE` and the existing false-positive fixes, rm has no false positives (`rm /tmp/foo`, `rm -rf node_modules`, `rm -rf /tmp/x 2>/dev/null`, `grep -rn "rm -rf /" ~/.claude/hooks/` are all `allow`). `check_rm` and `SAFE_DELETE` are out of scope for this change.
+- **FR6 - The bodies of `check_rm` and `SAFE_DELETE` are unchanged:** `check_rm` and `SAFE_DELETE` are out of scope for this change; thanks to `SAFE_DELETE` and the existing false-positive fixes, `rm /tmp/foo`, `rm -rf node_modules`, `rm -rf /tmp/x 2>/dev/null` and `grep -rn "rm -rf /" ~/.claude/hooks/` are all still `allow`. `head()`'s wrapper value-flag consumption (`WRAPPER_VALUE_FLAGS`) and `statements()`'s `-c` / eval / here-string payload re-scan changed the input `check_rm` receives: `sudo -u root rm -rf $HOME/x`, `bash -c 'rm -rf $HOME/x'` and `eval 'rm -rf $HOME/x'` went from `allow` to `ask` (demoted to `deny` under `CLAUDE_BATCH`).
 - **FR7 - Bump the plugin version in two places to the same value (patch):** Following `.claude/rules/core-plugin-version-bump.md`, raise the `version` in `em-workflow/.claude-plugin/plugin.json` and the `version` of the em-workflow entry in `.claude-plugin/marketplace.json` to the same value. This is a behaviour fix, so the bump is a patch. Both currently read 0.1.55; the target is 0.1.56.
 
 ### Non-Functional Requirements
@@ -60,24 +60,29 @@ As an unattended run operator, I want writes to `~/.claude` to keep their curren
 
 **System Architecture:**
 
-Not applicable as a layered system diagram. The change is contained in one function of a single PreToolUse(Bash) hook script:
+Not applicable as a layered system diagram. The change is contained in a single PreToolUse(Bash) hook script: `check_self_modification` is rewritten, and the `statements()` / `head()` input shaping every check receives also changed.
 
 ```
 PreToolUse(Bash) → destructive-guard.py
-                     ├── statements()            # split the command into segments
+                     ├── statements()            # split the command into segments; also reshapes the
+                     │                           # input check_rm() receives (FR6)
                      ├── split_redirects()       # separate redirect operators and targets
-                     ├── check_rm()              # unchanged (FR6)
+                     ├── check_rm()              # body unchanged; input reshaped upstream (FR6)
                      └── check_self_modification()  # rewritten (FR2/FR3/FR4)
                            ├── build write-target set  (a) redirect targets
                            │                           (b) INPLACE_WRITERS / sed -i args
-                           │                           (c) rm / mv / cp / ln / chmod / chown args
+                           │                           (c) rm / chmod / chown args; mv args + -t value
+                           │                           (d) cp / ln last positional or -t value; rsync;
+                           │                               git clone; tar -C (extract mode only);
+                           │                               unzip -d; curl -o; wget -O
                            └── match SELF_CONFIG / TRANSCRIPT against set members only
 ```
 
 **Component Diagram:**
 
 ```
-destructive-guard.py            — hook body; check_self_modification is the only function changed
+destructive-guard.py            — hook body; check_self_modification rewritten (FR2/FR3/FR4); statements() /
+                                   head() input shaping also changed, altering what check_rm receives (FR6)
 destructive-guard-cases.json    — [expected judgement, label, command] case table
 run-destructive-guard.py        — runner; also holds the trailing unattended-demotion case
 plugin.json / marketplace.json  — version fields (FR7)
@@ -93,7 +98,7 @@ command string → statements() → per-segment: split_redirects()
               → no match          ⇒ allow (ALLOW_NON_DESTRUCTIVE)
 ```
 
-Pipe stages become separate segments in `statements()` (`ls ~/.claude/skills/ 2>/dev/null | head -40` is two segments), and the judgement runs per segment.
+Pipe stages become separate segments in `statements()` (`ls ~/.claude/skills/ 2>/dev/null | head -40` is two segments), and the judgement runs per segment. `statements()`'s `-c` / eval / here-string payload re-scan widens the segments this flow receives, and widens the segments `check_rm` receives as well (FR6).
 
 ### API Design
 
@@ -110,7 +115,7 @@ Not applicable.
 ### Dependencies
 
 **Internal Dependencies:**
-- `em-workflow/hooks/destructive-guard.py`: the hook whose `check_self_modification` is rewritten; its only caller is `main()`, so the function signature may change.
+- `em-workflow/hooks/destructive-guard.py`: the hook whose `check_self_modification` is rewritten (FR2/FR3/FR4); `check_self_modification`'s only caller is `main()`, so its function signature may change. `statements()` / `head()` input shaping also changed, altering the input `check_rm` receives (FR6).
 - `em-workflow/hooks/tests/destructive-guard-cases.json`: the case table FR1 extends.
 - `em-workflow/hooks/tests/run-destructive-guard.py`: the runner that executes the case table and the trailing unattended-demotion case.
 - `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`: the two version fields FR7 raises to the same value.
@@ -188,7 +193,7 @@ path that never materializes is not a violation.
 - [ ] Input redirects `<` / `<<` / `<<<`: these are reads and are not put into the set (this keeps the existing here-string `allow` case intact).
 - [ ] `tee -a ~/.claude/settings.json`: the flag must not be mistaken for the target argument. `ask` is kept.
 - [ ] `cp ~/.claude/settings.json /tmp/` (destination `/tmp`) → `allow`; `cp /tmp/x ~/.claude/settings.json` (destination `~/.claude`) → `ask`. The destination is the last argument.
-- [ ] `mv a b c dir/` with multiple sources: only the last one is the destination.
+- [ ] `mv a b c dir/` with multiple sources: `a`, `b`, `c` and `dir/` are all write targets (`mv` unlinks each source it names).
 - [ ] `ln -sf x ~/.claude/hooks/y`: what gets created is the last argument.
 - [ ] `sed -i.bak` / `sed -i ''` variants of `-i`: the current judgement is `a.startswith("-i")`. Even if the script argument (`s/a/b/`) ends up in the extracted target arguments, it does not match `SELF_CONFIG`, so the judgement is unchanged.
 - [ ] Write targets that cannot be statically resolved because of variables or globs (`rm -rf ~/.claude/skills/*` etc.): for rm, the existing rm-unresolvable / rm-recursive rules produce `ask`/`deny` first. The set match on the self-modification side must not open a new hole.
