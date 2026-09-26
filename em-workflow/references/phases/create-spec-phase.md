@@ -324,23 +324,35 @@ correspondence between the persisted tier record's fields
 retrospect tier signal's members (`skills/develop/SKILL.md`'s retrospect
 フェーズ, `signals.tier_decision`). `references/workflow-schema.md` and
 `skills/develop/SKILL.md` cite this table by path; neither restates a row
-of it.
+of it. One row per persisted-record member, including each `bases` entry
+member on its own row.
 
 | `phase-state/tier.yaml` field | `workflow.yaml` `tier_decision` sub-field | `signals.tier_decision` member |
 |---|---|---|
+| `schema_version` | not carried -- bookkeeping only | not carried |
+| `feature` | not carried -- bookkeeping only | not carried |
 | `tier` | not carried directly -- it is the sibling top-level `tier` field, not `tier_decision` itself | `tier` |
-| `bases` | `confidence` (verbatim: both basis readings' observed probability values) | `bases` (verbatim) |
-| `decided_at` | `at` | not carried separately -- retrospect's own `collected_at` records when retrospect itself ran, not when the tier was decided |
+| `bases` | not carried as a single value -- folded into `confidence` via its two entry-member rows below | `bases` (verbatim) |
+| `bases[].basis` | part of `confidence`: each `bases` entry contributes one `confidence` entry keyed by this `basis` | `bases[].basis` (verbatim) |
+| `bases[].score` | part of `confidence`: that entry's four bucket probabilities (`score.probabilities`, buckets `"0"`-`"3"`) | `bases[].score` (verbatim) |
+| `bases[].observed_at` | not carried -- `tier_decision` has no per-basis timestamp slot | `bases[].observed_at` (verbatim) |
 | `pre_survey_estimate` | not carried -- `tier_decision` has no slot for it | `pre_survey_estimate` (verbatim) |
-| `schema_version`, `feature` | not carried -- bookkeeping only | not carried |
+| `decided_at` | `at` | not carried separately -- retrospect's own `collected_at` records when retrospect itself ran, not when the tier was decided |
+| `fallback_reason` | not carried -- `tier_decision` has no slot for it | folded into `rationale`'s fallback summary, not carried as its own member |
 | n/a -- fixed, never read from a persisted field | `by`: the orchestrator, the only agent Step A's tier-decision procedure ever dispatches as decider | not carried |
-| n/a -- derived from `tier` (row 1) | `reductions`: a projection of `tier` through `skills/develop/SKILL.md`'s Tier 削減表 (cited there, not restated) -- never a second enumeration of what a tier subtracts | not carried |
-| n/a -- the orchestrator's own summary of the decision, not a persisted field | not carried | `rationale`: a one-line summary of why the two readings agreed, or how a disagreement resolved |
+| n/a -- derived from `tier` above | `reductions`: a projection of `tier` through `skills/develop/SKILL.md`'s Tier 削減表 (cited there, not restated) -- never a second enumeration of what a tier subtracts | not carried |
+| n/a -- the orchestrator's own summary of the decision, not a persisted field | not carried | `rationale`: a one-line summary of the final reading that decided the tier, or the fallback taken (from `fallback_reason`) |
 
 Every basis identifier this table's source and targets carry (`bases[].basis`
 in the persisted record, and wherever `signals.tier_decision.bases` echoes
 it) is one of `references/tier-rules.yaml`'s `decision_basis` values --
 cited there, not restated.
+
+A `schema_version: 1` persisted record transcribes through this same table
+unchanged on resume: its `bases` entries carry `probabilities` where a
+`schema_version: 2` entry carries `score`, feeding `confidence` the same
+way, and it never carries `fallback_reason` -- that row's target is simply
+never populated for such a record.
 
 After this point `workflow.yaml`'s `tier` is the value read. A later
 re-transcription — on resume, or on a subsequent partial re-entry of this
