@@ -432,27 +432,40 @@ harness agent-identifier strings (the exact identifier field the harness's
 launch response carries is unverified, so `queue_agent_index.py` records
 every candidate it can recover rather than a single one) to the
 em-workflow task identity that launched it, written by
-`queue_agent_index.py` at launch. Readers: `queue_taskstop_net.py` at
-stop; `queue_failure_net.py`'s agent-index fallback; the orchestrator's
-I.2.b step 1 Agent index lookup and Recovery, through the "Orchestrator-side
-read" rule in `em-workflow/references/implement-phase.md`'s Supporting cast
-(cited here, not restated); and
+`queue_agent_index.py` at launch. The index resolves a stop or a recovery
+check back to a task and its worktree; four readers do so, cited from
+`em-workflow/references/implement-phase.md` rather than restated here: the
+stop-tool recorder, `queue_taskstop_net.py` at stop; the SubagentStop
+failure net, through `queue_failure_net.py`'s agent-index fallback, used
+only when no assignment block is found; the orchestrator's I.2.b step 1
+Agent index lookup and Recovery, through `implement-phase.md`'s
+Orchestrator-side read, including the orphan-recovery evidence chain; and
 `em-workflow/scripts/recover-orphaned-task.py`. It is NOT part of the
 journal contract above and must never be treated as a second authoritative
 state file: it carries no status semantics of its own, may be absent or
 stale, and an absent or stale index degrades the stop-tool recorder to a
-no-op, leaves the failure net's fallback unresolved, and leaves I.2.b step
-1's not-live determination unresolved for a stale `launched` task — a
-consequence owned by `em-workflow/references/implement-phase.md`'s I.2.b,
-cited here, not restated. The sole exception to "no status semantics of
-its own" is the session identity (`session_id`) it also carries per
-launch:
+no-op, leaves the failure net's fallback unresolved, leaves I.2.b step 1's
+not-live determination unresolved for a stale `launched` task, and makes
+the Orchestrator-side lookup unresolvable, which leads to Residual (journal
+unchanged, task stays in-flight, route-back gate blocks, gate-rejected
+terminal); when the index has no entry for the task, orphan recovery stops
+without recovering it. These consequences are owned by
 `em-workflow/references/implement-phase.md`'s I.2.b Recovery / Residual
-block (cited here, not restated) reads it — a comparison value only, never
-a status value and never a match candidate on the stop side — to judge
-whether the launching session is provably gone. `journal.jsonl` alone is
-the authoritative raw-event record; `agents.jsonl` exists to make a stop
-and a recovery check resolvable back to a task. Full contract
+block (cited here, not restated). The sole exception to "no status
+semantics of its own" is the session identity (`session_id`) it also
+carries per launch: that same I.2.b Recovery / Residual block reads it — a
+comparison value only, never a status value and never a match candidate on
+the stop side — to judge whether the launching session is provably gone.
+Two read rules resolve the index, and their "ambiguous" conditions are
+different conditions: the stop-side resolution, owned by
+`queue_taskstop_net.py` and IMPLEMENTATION.md's Agent index contract (the
+failure net's fallback resolves with the same rule), where "ambiguous"
+means the identifier matches entries of two or more distinct
+(agents.jsonl, task) pairs; and the orchestrator-side read, owned by
+`implement-phase.md`'s Orchestrator-side read, where "ambiguous" means the
+selected entry names no usable candidate. `journal.jsonl` alone is the
+authoritative raw-event record; `agents.jsonl` is diagnostic plumbing
+only, never a second authoritative state file. Full contract
 (candidate-list format, matching rule, staleness/supersede rule):
 IMPLEMENTATION.md's Agent index contract.
 

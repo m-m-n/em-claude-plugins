@@ -1,0 +1,66 @@
+schema_version: 2
+feature: routeback-ssot-drift
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.91
+    confidence: 0.87
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.11
+      '1': 0.87
+      '2': 0.02
+      '3': 0.0
+    expectation_clear: 0.72
+  observed_at: '2026-09-26T21:32:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 0.92
+    confidence: 0.86
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.11
+      '1': 0.87
+      '2': 0.02
+      '3': 0.0
+    expectation_clear: 0.69
+  observed_at: '2026-09-26T21:35:35+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/references/implement-phase.md
+  - tests/test_implement_routeback_gate.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 0
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: false
+  changes_behavior: false
+  rationale: main の HEAD bc0dacb を確認したよ。①未解消：session_id の読み取りは追記済みだが、停止解決専用・欠落時の影響は no-op のみという記述が残り（em-workflow/references/workflow-schema.md:430）、オーケストレーターの読み取りと停止条件に一致していない（em-workflow/references/implement-phase.md:1151、em-workflow/references/implement-phase.md:562）。曖昧判定も候補なし（em-workflow/references/implement-phase.md:1160）と複数タスク一致（em-workflow/hooks/queue_taskstop_net.py:290）に分かれているよ。②解消済み：片方だけ存在する両ケースから
+    Residual／gate-rejected への終端が定義されているよ（em-workflow/references/implement-phase.md:571）。③解消済み：recorder
+    が終端イベントを追加しない場合も Residual に進むと明記されているよ（em-workflow/references/implement-phase.md:555）。④未解消：版番号全体の比較に変わったが、基準は
+    (0,1,48) のままだよ（tests/test_implement_routeback_gate.py:1922）。HEAD の版は 0.2.10 だよ（em-workflow/.claude-plugin/plugin.json:7）。関連テストは存在するけれど（tests/test_implement_routeback_gate.py:1685）、指示どおり実行していないため、全テスト成功の完了条件は未確認だよ。ファイル変更はしていないよ
+decided_at: '2026-09-26T21:35:40+09:00'

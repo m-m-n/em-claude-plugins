@@ -1,0 +1,137 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphReaders.test_names_stop_tool_recorder
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphReaders.test_names_failure_net_fallback_condition
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphReaders.test_names_orchestrator_side_read_and_orphan_recovery_reference
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphReaders.test_cites_implement_phase_md_for_readers
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphReaders.test_old_sole_reader_form_absent
+    red_confirmed: true
+    red_reason: >
+      Reverted workflow-schema.md to base commit c7dadf91 and ran this
+      module: test_names_failure_net_fallback_condition,
+      test_names_orchestrator_side_read_and_orphan_recovery_reference and
+      test_old_sole_reader_form_absent failed (AssertionError: phrase not
+      found / phrase unexpectedly found). test_names_stop_tool_recorder and
+      test_cites_implement_phase_md_for_readers stayed green against the
+      base text because `queue_taskstop_net.py` and the implement-phase.md
+      citation already existed pre-change; they are retained-wording
+      assertions, backed by TestNegativeProofs.test_new_reader_wording_absent_from_pre_change_paragraph's
+      non-vacuity coverage of the sibling new-wording matchers in the same
+      sentence.
+  AC-2:
+    tests:
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphPurpose.test_new_purpose_phrase_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphPurpose.test_old_purpose_phrase_absent_from_file
+    red_confirmed: true
+    red_reason: >
+      Reverted workflow-schema.md to base commit c7dadf91 and ran this
+      module: both tests failed (new purpose phrase not found; old purpose
+      phrase unexpectedly found in the file).
+  AC-3:
+    tests:
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_old_absence_degrades_phrase_absent_from_file
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_new_absence_orchestrator_unresolvable_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_new_absence_residual_outcome_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_no_agent_entry_token_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_cites_i2b_recovery_residual_block_for_absence_behavior
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_stale_agent_entry_token_absent_from_file
+    red_confirmed: true
+    red_reason: >
+      Reverted workflow-schema.md to base commit c7dadf91 and ran this
+      module: test_old_absence_degrades_phrase_absent_from_file,
+      test_new_absence_orchestrator_unresolvable_present,
+      test_new_absence_residual_outcome_present and
+      test_no_agent_entry_token_present failed. test_cites_i2b_recovery_residual_block_for_absence_behavior
+      and test_stale_agent_entry_token_absent_from_file stayed green against
+      the base text: the I.2.b Recovery / Residual citation form already
+      existed pre-change (retained wording, NFR2), and `stale-agent-entry`
+      was already absent from workflow-schema.md pre-change (a dedicated
+      new-wording assertion cannot go red on an already-satisfied absence);
+      that absence is additionally guarded by
+      tests/test_implement_routeback_gate.py's existing
+      TestI2bOrphanRecoveryD7Binding, per Test Notes.
+  AC-4:
+    tests:
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphTwoReadRules.test_stop_side_owners_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphTwoReadRules.test_stop_side_ambiguous_definition_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphTwoReadRules.test_orchestrator_side_owner_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphTwoReadRules.test_orchestrator_side_ambiguous_definition_present
+      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphTwoReadRules.test_two_ambiguous_conditions_stated_as_different
+    red_confirmed: true
+    red_reason: >
+      Reverted workflow-schema.md to base commit c7dadf91 and ran this
+      module: all five tests failed (none of this new "two read rules"
+      wording existed in the pre-change paragraph).
+  AC-5:
+    tests:
+      - tests.test_routeback_ssot_drift_agent_index.TestModuleDocstringContent.test_module_docstring_old_only_job_phrase_absent
+      - tests.test_routeback_ssot_drift_agent_index.TestModuleDocstringContent.test_module_docstring_names_readers
+      - tests.test_routeback_ssot_drift_agent_index.TestModuleDocstringContent.test_module_docstring_states_purpose
+      - tests.test_routeback_ssot_drift_agent_index.TestModuleDocstringContent.test_module_docstring_retains_mapping_description
+    red_confirmed: true
+    red_reason: >
+      Reverted queue_agent_index.py to base commit c7dadf91 and ran this
+      module: test_module_docstring_old_only_job_phrase_absent,
+      test_module_docstring_names_readers and
+      test_module_docstring_states_purpose failed.
+      test_module_docstring_retains_mapping_description stayed green (the
+      mapping description is retained wording, unchanged by design). The
+      "diff confined to the module docstring" half of this criterion is not
+      a unit test (Test Notes): verified by `git diff em-workflow/hooks/queue_agent_index.py`,
+      whose only hunk lies inside the module docstring (the paragraph that
+      used to open "Its only job is to record"), touching no code/comment/
+      constant outside it.
+  AC-6:
+    tests:
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_past_the_pre_task_baseline
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_plugin_manifest_and_marketplace_agree_on_version
+    red_confirmed: true
+    red_reason: >
+      Raised the baseline assertion to `assertGreater(parts, (0, 2, 10))`
+      while both manifests still read 0.2.10 and ran
+      TestPluginVersionBumpedInLockstep: test_shared_version_is_past_the_pre_task_baseline
+      failed with "AssertionError: (0, 2, 10) not greater than (0, 2, 10)".
+      Then bumped em-workflow/.claude-plugin/plugin.json and the
+      em-workflow entry of .claude-plugin/marketplace.json to 0.2.11 and
+      re-ran: both tests passed.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      This criterion has three parts, none of which is a single test that
+      could be observed red specifically by this task's implementation:
+      (1) "python3 -m unittest discover -s tests exits 0" is a full-suite
+      outcome verified by the actual run recorded in this file's
+      final_failures (empty), not a per-criterion red/green transition;
+      (2) "every phrase listed in A.5 is still present" is exercised by
+      TestAgentsJsonlParagraphRetainedWording, whose pinned phrases already
+      existed, unchanged, in the pre-change paragraph -- these tests passed
+      against both the base text and the rewritten text (confirmed during
+      the AC-1/AC-3 revert-and-rerun above, where none of the retention
+      tests appeared among the failures), so no red was ever observed for
+      them, backed instead by TestNegativeProofs's
+      test_*_retention_matcher_is_not_vacuous non-vacuity checks; (3) "the
+      task's diff touches only the six files listed in Scope" is checked by
+      inspecting `git status --short` / `git diff --stat`, which shows
+      exactly em-workflow/references/workflow-schema.md,
+      em-workflow/hooks/queue_agent_index.py,
+      em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json,
+      tests/test_implement_routeback_gate.py and the new
+      tests/test_routeback_ssot_drift_agent_index.py -- not a unit test.
+notes: >
+  Full suite re-run after all edits: 6012 tests, 0 failures (baseline was
+  5973 tests, 0 failures; the +39 delta is exactly this task's new module).
+  No regressions. AC-1 through AC-5's red states were observed by
+  temporarily reverting em-workflow/references/workflow-schema.md and
+  em-workflow/hooks/queue_agent_index.py to their base-commit (c7dadf91)
+  content via `git show HEAD:<path>`, running
+  tests/test_routeback_ssot_drift_agent_index.py, recording the failures,
+  then restoring the implemented content and re-running to green. AC-6's
+  red state was observed by temporarily reverting both version manifests to
+  0.2.10 while the raised baseline assertion was already in place, then
+  restoring the 0.2.11 bump. No file outside expected_files was touched;
+  no deviations.
