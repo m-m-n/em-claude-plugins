@@ -4,14 +4,88 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 519d157cbd6713ee3bf81fab7ea8d7dfe1333bd1
-last_input_digest: sha256:0ab94f67aad5e5282483629db8ed6cdd94f71eff3f405ddbebe9004d33c8172a
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:bb1e1bb69032bfbc45c3ae96b9b3ba788bca060bca86409b8139fc03adfe93d1
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-26T21:50:00+09:00'
+    questions:
+    - question_id: requirement.stale-launched-missing-artifacts.recovery
+      status: answered
+    - question_id: requirement.ancestor-unverified-merged.exit
+      status: answered
+    - question_id: requirement.round3-record.annotation
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.stale-launched-missing-artifacts.recovery:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - widen-proof-chain
+    freeform: null
+    normalized_answer: 成果物欠損の stale launched も Agent index 照会→stop→既存の orphan/same-session 証明チェーンに通し、証明できたら既存ヘルパーが既存
+      reason で journal に failed を追記。task-artifacts-missing は打ち切り理由でなく証拠の一つ。証明不能なら Residual
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation, record_as_assumption);
+      codex_consulted: true (1 turn, harness codex); opus_escalation: false; chosen: widen-proof-chain;
+      not chosen: reconciled-state-only, dedicated-missing-artifacts-proof; Codex suggestion mapped onto
+      option widen-proof-chain (matches worker tentative); codex reason: Agent index は task ID で引けるため
+      worktree 不要（recover-orphaned-task.py:372）。reconciled-state-only は journal が launched のまま launch
+      guard に拒否される（queue_launch_guard.py:224）。dedicated は終了証拠要件を弱める（implement-phase.md:637）。欠損自体を停止証明に使わず、未完了呼び出し除外・終了証拠・停止対象一致・追記時の識別情報再確認は維持。recover-orphaned-task.py:650
+      の即時終了とテスト（test_stale_launched_recovery_chain.py:306,514）の更新が必要'
+  requirement.ancestor-unverified-merged.exit:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - helper-merge-unverified
+    freeform: null
+    normalized_answer: ancestor 検証失敗時に orchestrator が journal-append-failed.py を追加 reason merge-unverified
+      で呼び、ヘルパーはロック内で最終イベントが merged のときだけ failed を追記。第3 conjunct と launch guard は不変。I.2.c の行き止まり段落と例外文を削除し、Status
+      semantics は無条件のまま、writer-set 段落に reason 値を追記
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation, record_as_assumption);
+      codex_consulted: true (1 turn, harness codex); opus_escalation: false; chosen: helper-merge-unverified;
+      not chosen: ssot-carve-out; Codex suggestion mapped onto option helper-merge-unverified (matches
+      worker tentative); codex reason: ssot-carve-out は行き止まりが残り完了条件を満たさない（implement-phase.md:918）。排他区間で
+      merge-unverified と最終イベント merged の組合せだけ許可し launched には追記しない。merged はエージェント終了証明ではないので元実行の終了確認と待機規則を維持（merge-task.sh:156,
+      implement-phase.md:841）。既存 reason で merged を変えないテスト（test_journal_append_failed.py:185）は残し、行き止まり文言のテスト（test_implement_routeback_gate.py:1749）を更新。abort
+      時 failed_kind は decision'
+  requirement.round3-record.annotation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - leave-record
+    freeform: null
+    normalized_answer: 前 feature の round3.yaml は触らず、この feature の REQUIREMENTS/SPEC で stable_id を引用して追跡
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation, record_as_assumption);
+      codex_consulted: true (1 turn, harness codex); opus_escalation: false; chosen: leave-record; not
+      chosen: annotate-record; Codex suggestion mapped onto option leave-record (matches worker tentative);
+      codex reason: round3.yaml は実行時点のレビュー記録（round3.yaml:1, review-phase.md:975）。annotate は指摘を解消せず前機能のファイルも変更対象になる。再確認されていない指摘もあり一律に解消済み追記は避ける'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-26T21:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design ステップは推奨どおりスキップ（UI なし）
+    resolution_note: 'batch-policies.yaml create-spec.design-step -> decide_autonomously (accept analyst
+      recommendation: skip)'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:0ab94f67aad5e5282483629db8ed6cdd94f71eff3f405ddbebe9004d33c8172a
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:bb1e1bb69032bfbc45c3ae96b9b3ba788bca060bca86409b8139fc03adfe93d1
 artifacts: []
 patches: []
 progress_fingerprint: null
