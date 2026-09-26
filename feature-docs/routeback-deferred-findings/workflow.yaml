@@ -231,7 +231,7 @@ tasks:
     - FR9
     - FR10
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/routeback-deferred-findings/task0006
 review:
