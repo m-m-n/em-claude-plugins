@@ -90,7 +90,8 @@ workflow:
   completed_at_commit: b7f745aba9f149524af8dc41f6f55a5cee8048ed
   base_commit: a6f0fb1624163211bbb9130a15f636ad6ff3364b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 01275270c8773935a81d3e5b8dab87e61dff1d43
 - id: verify
   status: pending
 - id: retrospect
@@ -141,8 +142,15 @@ tasks:
     notes: null
     branch: em-workflow/routeback-ssot-drift/task0002
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
