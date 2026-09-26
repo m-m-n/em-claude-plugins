@@ -1,0 +1,17 @@
+schema_version: 1
+feature: routeback-deferred-findings
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 519d157cbd6713ee3bf81fab7ea8d7dfe1333bd1
+last_input_digest: sha256:0ab94f67aad5e5282483629db8ed6cdd94f71eff3f405ddbebe9004d33c8172a
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:0ab94f67aad5e5282483629db8ed6cdd94f71eff3f405ddbebe9004d33c8172a
+artifacts: []
+patches: []
+progress_fingerprint: null
