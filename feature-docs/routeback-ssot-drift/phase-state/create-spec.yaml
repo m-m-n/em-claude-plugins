@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: a0c22628dd9db763f5eb6b814597bf4acbeac206
-last_input_digest: sha256:ca9fe88f7f58d19bfa31dc11bdc79055e36ccc1536b334cfcf7379dd1e0f1fa5
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:34bc0a767be910eaa51b0a67698c31dbf89f09964086387731575666380d3d8d
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -78,10 +78,12 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:ca9fe88f7f58d19bfa31dc11bdc79055e36ccc1536b334cfcf7379dd1e0f1fa5
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:34bc0a767be910eaa51b0a67698c31dbf89f09964086387731575666380d3d8d
 artifacts: {}
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-spec-run-0001 validation: questions[3].gate_id ''create-spec.design-step'' requires
-  option_id ''decide_autonomously'' to be offered among options'
+last_error: null
