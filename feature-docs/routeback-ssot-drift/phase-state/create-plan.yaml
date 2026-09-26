@@ -1,11 +1,11 @@
 schema_version: 1
 feature: routeback-ssot-drift
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 337642e3c34e1c6a49f75c2d4f41e3574d94a5de
 last_input_digest: sha256:63c3b73dbe23b6318bf8d177432648040e45b28cd0633a47b18d2f1e34cced20
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -28,7 +28,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: routeback-ssot-drift-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:63c3b73dbe23b6318bf8d177432648040e45b28cd0633a47b18d2f1e34cced20
   base_workflow_blob: efa2cec3f25b928a985e1f44bcdb7daff1ec3983
 progress_fingerprint: null
