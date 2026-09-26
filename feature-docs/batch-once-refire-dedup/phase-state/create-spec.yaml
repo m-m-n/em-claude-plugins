@@ -1,0 +1,77 @@
+schema_version: 1
+feature: batch-once-refire-dedup
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 396b00884a4ca102f4cdf4c7477da8c669a3867e
+last_input_digest: sha256:8eed7d4ce2c9c86f23c03591c453e67944e73c8c7abb520f751c918d8d52a213
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-27T01:09:17+09:00'
+    questions:
+    - question_id: requirement.refire-approach
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-09-27T01:05:07+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: batch-once-refire-dedup
+    resolution_note: 'gate: create-spec.feature-identity -> derive_from_task_description (batch-policies.yaml);
+      feature name derived from the Notion task title (--batch --once re-fire creates duplicate features)'
+  requirement.refire-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T01:09:17+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - a_dispatcher_carries_feature
+    freeform: null
+    normalized_answer: (a) 外部ディスパッチャが feature 名を持ち回る。develop の解決規則は変えず、batch-mode.md の Step A 行と batch-terminal-line.md
+      のフェーズ境界の記述に「フェーズ境界後の再起動は結果の feature 値をパス引数に渡し、タスク記述を渡し直さない」を明記してテストで固定する。notion-batch-develop 側の修正はリポジトリ外の別対応
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation, record_as_assumption);
+      codex_consulted: true (1 turn, harness codex); opus_escalation: false; options not chosen: b_external_id_match,
+      c_report_duplicate; Codex suggestion mapped onto a_dispatcher_carries_feature (matches worker tentative);
+      codex reason: batch-terminal-line.md:68/119 は phase_done 後の同一 feature 再起動と feature への確定名の返却を既に定め、SKILL.md:155
+      の明示名による再開・引数なし新規・列挙禁止を維持できる。(b) は決定的名前生成なら列挙を避けられるが解決経路の追加が要り、(c) は列挙禁止の例外が要る'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T01:09:17+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design ステップは推奨どおりスキップ（UI なし）
+    resolution_note: 'batch-policies.yaml create-spec.design-step -> decide_autonomously (worker recommendation:
+      skip)'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:14c2ac443fbd36f18f6165dc0f1e3c7a7e4f314d75969c79512507107b6ab315
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:b4288aecd3bcc0ff6471060d0036298ef580af2b6f0b9f922f1f33bbef9cf4d9
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:8eed7d4ce2c9c86f23c03591c453e67944e73c8c7abb520f751c918d8d52a213
+artifacts:
+  REQUIREMENTS.md:
+    digest: sha256:7879ebc7cf7ad33f93248169c2dcad5a01908fd1ee52f0eecf81070cd1e9bf9d
+    produced_by: create-spec-run-0003
+  SPEC.md:
+    digest: sha256:5d5580eef94b6a21f8e3e0a3c2de4e04fee41bb84954bf882af469a87b39d16c
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

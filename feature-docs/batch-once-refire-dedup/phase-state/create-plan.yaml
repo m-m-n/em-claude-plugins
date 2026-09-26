@@ -1,0 +1,34 @@
+schema_version: 1
+feature: batch-once-refire-dedup
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 2d7d07a2a79f3ad3d4df27fd32a818ea7583db92
+last_input_digest: sha256:771bc8e3ae6a53911a406995d792c5c10100194c4dd67b32543110dc86c8dede
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:771bc8e3ae6a53911a406995d792c5c10100194c4dd67b32543110dc86c8dede
+  output_digest: sha256:3b157997be366c4bf6b6b06ac8f733014f4680aaf9a1d088cc564c63c66193cf
+artifacts:
+- path: feature-docs/batch-once-refire-dedup/IMPLEMENTATION.md
+  sha256: sha256:da5da3e68855a284e634406692504cade9e6418f8d830128563de497e9b2514e
+  produced_by: create-plan-run-0001
+- path: feature-docs/batch-once-refire-dedup/VERIFICATION.md
+  sha256: sha256:54456c480c37a366541012c0945078bd30f269e7e1de9f38b39635413e81289b
+  produced_by: create-plan-run-0001
+- path: feature-docs/batch-once-refire-dedup/tasks/task0001.md
+  sha256: sha256:d632c8f2628b1b2fd4e36e4f1fd76eceff4732c2de0a52a8a94b8ffa3b95310d
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: batch-once-refire-dedup-plan-p0001
+  status: applied
+  base_input_digest: sha256:771bc8e3ae6a53911a406995d792c5c10100194c4dd67b32543110dc86c8dede
+  base_workflow_blob: 9de733098c770c27cfd362dc81db2201068243e4
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

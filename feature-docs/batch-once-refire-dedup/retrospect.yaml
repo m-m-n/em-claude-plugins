@@ -1,0 +1,31 @@
+feature: batch-once-refire-dedup
+collected_at: "2026-09-27T01:56:51+09:00"
+session_ids: [01a0dea4-e415-7149-a69f-1f723553f93d]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読みがバケット 2（外部契約・複数モジュールにまたがる変更）に 0.73 を置き、threshold_rows により full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.67, confidence: 0.66, probabilities: {'0': 0.0, '1': 0.33, '2': 0.67, '3': 0.0}}
+        observed_at: "2026-09-27T01:00:34+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.73, confidence: 0.72, probabilities: {'0': 0.0, '1': 0.27, '2': 0.73, '3': 0.0}}
+        observed_at: "2026-09-27T01:03:46+09:00"
+    pre_survey_estimate:
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "architecture#0 / spec#0 の litellm (muse-spark-contributor) が rate_limited でスキップされ、codex へ chain walk した"
+  - "方式 (a) を採用したため、notion-batch-develop（リポジトリ外）で feature 名を持ち回る修正が別途必要"
