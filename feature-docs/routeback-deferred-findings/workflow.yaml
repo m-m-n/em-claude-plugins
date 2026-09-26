@@ -116,9 +116,9 @@ tasks:
     - NFR6
     - NFR7
     - NFR8
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/routeback-deferred-findings/task0001
   task0002:
     title: evidence chain accepts observed artifact absence
     plan: tasks/task0002.md
@@ -137,9 +137,9 @@ tasks:
     - FR10
     - NFR5
     - NFR8
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/routeback-deferred-findings/task0002
   task0003:
     title: I.2.b step 1 routes missing-artifact stale launched tasks through the proof
       chain; pin bc57aa350bb027c7
@@ -161,9 +161,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/routeback-deferred-findings/task0003
   task0004:
     title: automated exit for a journal-merged task failing the ancestor check; no
       status-semantics exception
@@ -189,9 +189,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/routeback-deferred-findings/task0004
   task0005:
     title: workflow-schema.md records merge-unverified and the full agents.jsonl reader
       set
@@ -212,9 +212,9 @@ tasks:
     - NFR1
     - NFR4
     - NFR8
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/routeback-deferred-findings/task0005
   task0006:
     title: em-workflow version bump 0.2.10 to 0.2.11
     plan: tasks/task0006.md
@@ -231,9 +231,9 @@ tasks:
     - FR9
     - FR10
     - NFR8
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/routeback-deferred-findings/task0006
 review:
   status: pending
   rounds_completed: 0

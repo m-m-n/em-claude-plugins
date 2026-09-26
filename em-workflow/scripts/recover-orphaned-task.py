@@ -15,10 +15,11 @@ feature-docs/stale-launched-retry-recovery/tasks/task0002.md.
 Decides, for ONE candidate task, whether the session that launched its
 implementer is provably gone. Called by the orchestrator's I.2.b reconcile
 step after it has already established the candidate conditions it owns: the
-task worktree and task branch exist, and the Agent index resolves no live
-agent. This script never re-derives those two conditions itself -- the new
-chain below instead accepts the caller's own observations of them as
-evidence inputs (D-B).
+task's journal last event is `launched`, the task's `Task()` call is not
+among this reconcile step's own currently-outstanding calls, and the Agent
+index lookup resolves no live agent. Artifact state (task worktree / task
+branch presence) is evidence, never a precondition -- the new chain below
+accepts the caller's own observations of them as evidence inputs (D-B).
 
 Two chains, selected by whether the caller supplies at least one of seven
 new, optional evidence inputs (D-A):
@@ -56,9 +57,14 @@ the current one), so it structurally never runs for a different session's
 launch (D-A). Its own fixed order (`evaluate_stale_launched_chain`,
 self-contained and independently callable):
 
-  1. both `--worktree-present` and `--branch-present` read `yes`, decided
-     before any agent index read, any path assembly and any file open
-     -> task-artifacts-missing; then the task's last journal event: a
+  1. each of `--worktree-present` and `--branch-present` is an observation,
+     exactly `yes` or exactly `no` (case-sensitive), accepted as evidence;
+     decided before any agent index read, any path assembly and any file
+     open. An absent or unrecognized observation on either flag ->
+     task-artifacts-missing (its narrowed meaning: absent or unrecognized,
+     never a recognized `no`); a recognized pair (any of the four yes/no
+     combinations) is kept as evidence and the chain proceeds -- `no` never
+     ends the chain by itself. Then the task's last journal event: a
      terminal event is `noop_terminal`, any event other than `launched` is
      -> journal-not-launched
   2. an `agents.jsonl` entry for the task exists and is D7-bound (reusing
@@ -646,8 +652,13 @@ def evaluate_stale_launched_chain(
     )
 
     # 1. Artifacts, then journal state -- decided before any agent index
-    # read, any path assembly and any file open (AC-6).
-    if worktree_present != "yes" or branch_present != "yes":
+    # read, any path assembly and any file open (AC-6). Each observation
+    # must be exactly "yes" or exactly "no" (case-sensitive); an absent or
+    # unrecognized observation on either flag ends the chain here with the
+    # narrowed `task-artifacts-missing` meaning. A recognized pair (any of
+    # the four yes/no combinations) is kept as evidence and the chain
+    # proceeds regardless of value -- "no" never ends the chain by itself.
+    if worktree_present not in ("yes", "no") or branch_present not in ("yes", "no"):
         return _residual(task_id, REASON_TASK_ARTIFACTS_MISSING)
     final_event = replay_final_event(journal_path, task_id)
     if final_event in TERMINAL_JOURNAL_EVENTS:
@@ -881,20 +892,20 @@ def build_arg_parser():
     parser.add_argument(
         "--worktree-present",
         default=None,
-        help="Opt-in evidence chain (step 1): yes|no -- caller's observation "
-        "of the task worktree",
+        help="Opt-in evidence chain (step 1): an observation, exactly yes "
+        "or no, of the task worktree",
     )
     parser.add_argument(
         "--branch-present",
         default=None,
-        help="Opt-in evidence chain (step 1): yes|no -- caller's observation "
-        "of the task branch",
+        help="Opt-in evidence chain (step 1): an observation, exactly yes "
+        "or no, of the task branch",
     )
     parser.add_argument(
         "--task-worktree",
         default=None,
-        help="Opt-in evidence chain (step 4): the task worktree path the "
-        "bound agent index entry must name",
+        help="Opt-in evidence chain (step 4): the task's expected worktree "
+        "path, supplied whether or not it exists",
     )
     parser.add_argument(
         "--stop-target",

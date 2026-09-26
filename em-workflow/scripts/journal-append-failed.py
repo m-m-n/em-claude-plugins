@@ -1,19 +1,32 @@
 #!/usr/bin/env python3
 """journal-append-failed.py -- the sole new journal writer authorized to
-record a terminal `failed` event with reason `orphaned` or `stale-launched`
-(SC2', feature-docs/stale-launched-retry-recovery/IMPLEMENTATION.md; formerly
-SC2, feature-docs/orphaned-implementer-recovery/IMPLEMENTATION.md).
+record a terminal `failed` event with reason `orphaned`, `stale-launched`,
+or `merge-unverified` (SC2', feature-docs/stale-launched-retry-recovery/
+IMPLEMENTATION.md; formerly SC2, feature-docs/orphaned-implementer-recovery/
+IMPLEMENTATION.md; SC-1, feature-docs/routeback-deferred-findings/
+IMPLEMENTATION.md).
 
 This is a narrow write authority, not a general-purpose journal tool: the
-`--reason` value is checked against a closed set -- `orphaned` and
-`stale-launched` (D5, widened) -- before the journal is even opened.
-Widening the set is a deliberate, reviewable change to that constant, never
-a side effect of adding a generic writer.
+`--reason` value is checked against a closed set -- `orphaned`,
+`stale-launched` and `merge-unverified` (D5, widened; SC-1, widened again)
+-- before the journal is even opened. Widening the set is a deliberate,
+reviewable change to that constant, never a side effect of adding a generic
+writer.
+
+`merge-unverified` has a DIFFERENT precondition from the other two reasons:
+it appends only over a task whose OWN final journal event is `merged` --
+never over `launched` -- and it never accepts a launch identity
+(`--launch-at` supplied together with it is a usage error, D4). Its sole
+caller is the orchestrator's I.2.b step 1 ancestor-check branch in
+`em-workflow/references/implement-phase.md` (IMPLEMENTATION.md SC-4 label,
+feature-docs/routeback-deferred-findings/IMPLEMENTATION.md); this module
+neither restates nor depends on that document's prose.
 
 Usage:
   journal-append-failed.py --journal PATH --task TASKID --reason orphaned
   journal-append-failed.py --journal PATH --task TASKID --reason stale-launched \\
       --launch-at RAW_AT_VALUE
+  journal-append-failed.py --journal PATH --task TASKID --reason merge-unverified
 
 Preconditions (never relaxed, never silently repaired):
   - The journal file must already exist. This helper never creates it and
@@ -31,6 +44,7 @@ with this one (NFR2).
 
 Decision (re-checked independently of the caller, never trusted blindly),
 made INSIDE the same lock as the replay:
+  For `orphaned` and `stale-launched`:
   - the task's OWN final event is `launched` and no `--launch-at` was
     supplied -> append (today's behaviour, unchanged);
   - the task's OWN final event is `launched`, `--launch-at` was supplied,
@@ -41,13 +55,25 @@ made INSIDE the same lock as the replay:
     append; the caller's launch identity no longer matches the journal's;
   - anything else (`merged`, `failed`, no event at all for this task, any
     other event name) -> no append.
+  For `merge-unverified` (never accepts `--launch-at`; rejected earlier,
+  before the journal is opened -- see below):
+  - the task's OWN final event is `merged` -> append exactly one `failed`
+    line through the same line builder the other reasons use (only the
+    `reason` value differs);
+  - anything else (`launched`, `failed`, no event at all for this task, any
+    other event name) -> no append; never over `launched`.
 This is the fail-safe direction (NFR1): doubt about the task's real state,
 or about which launch is being terminated, never produces a write.
+
+`--launch-at` supplied together with `--reason merge-unverified` is a usage
+error, decided BEFORE the journal is opened (D4): the new reason has no
+launch-identity semantics.
 
 Outcome: one line of JSON on stdout with keys `outcome`
 (`appended` | `noop_terminal` | `launch_changed`), `task`, `reason`. Exit 0
 for all three decided outcomes. Exit non-zero (and no write) for a usage
-error (argparse) or an internal error (this module's own diagnostics);
+error (argparse, the reason check, or the merge-unverified/--launch-at
+combination) or an internal error (this module's own diagnostics);
 diagnostics go to stderr, never stdout, in either case.
 """
 
@@ -59,10 +85,11 @@ import os
 import sys
 from datetime import datetime
 
-# D5: the closed set of `--reason` values this helper accepts. Widening this
-# is a deliberate, reviewable change (IMPLEMENTATION.md D5) -- never a
+# D5 / SC-1: the closed set of `--reason` values this helper accepts.
+# Widening this is a deliberate, reviewable change (IMPLEMENTATION.md D5;
+# feature-docs/routeback-deferred-findings/IMPLEMENTATION.md SC-1) -- never a
 # consequence of the helper being made more generic.
-VALID_REASONS = {"orphaned", "stale-launched"}
+VALID_REASONS = {"orphaned", "stale-launched", "merge-unverified"}
 
 
 class JournalAccessError(Exception):
@@ -179,17 +206,27 @@ def append_failed_fd(fd, task_id, reason):
 def decide_and_append(journal_path, task_id, reason, launch_at=None):
     """The full critical section (NFR2): open (no create, no symlink
     follow), take an exclusive lock, replay the task's OWN final event
-    under that lock, and append the `failed` line ONLY when that final
-    event is `launched` AND (no `launch_at` was supplied, OR that event's
-    own `at` equals `launch_at` as an exact string). `launch_at` is never
+    under that lock, and decide whether to append the `failed` line.
+
+    For `orphaned` and `stale-launched`: append ONLY when that final event
+    is `launched` AND (no `launch_at` was supplied, OR that event's own
+    `at` equals `launch_at` as an exact string). `launch_at` is never
     parsed or normalised (D-C) -- an absent, differing, or non-string `at`
     on the last `launched` event yields `launch_changed` instead of an
     append. Every other observed state -- `merged`, `failed`, or no event
     at all -- is a no-op (NFR1 fail-safe direction: doubt never produces a
-    write). Returns the outcome string
-    (`appended` | `noop_terminal` | `launch_changed`). Raises
-    JournalAccessError for a precondition failure on the journal path
-    itself -- the journal is left untouched in that case."""
+    write).
+
+    For `merge-unverified` (SC-1, feature-docs/routeback-deferred-findings/
+    IMPLEMENTATION.md): append ONLY when that final event is `merged`;
+    every other observed state -- `launched`, `failed`, or no event at all
+    -- is a no-op. `launch_at` is never supplied with this reason (rejected
+    earlier, in `main`, before the journal is opened -- D4).
+
+    Returns the outcome string (`appended` | `noop_terminal` |
+    `launch_changed`). Raises JournalAccessError for a precondition
+    failure on the journal path itself -- the journal is left untouched in
+    that case."""
     fd = open_journal_for_append(journal_path)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
@@ -197,6 +234,13 @@ def decide_and_append(journal_path, task_id, reason, launch_at=None):
             content = read_all_fd(fd)
             entry = last_entry_for_task(content, task_id)
             last_event = entry.get("event") if entry is not None else None
+
+            if reason == "merge-unverified":
+                if last_event != "merged":
+                    return "noop_terminal"
+                append_failed_fd(fd, task_id, reason)
+                return "appended"
+
             if last_event != "launched":
                 return "noop_terminal"
             if launch_at is None:
@@ -216,7 +260,12 @@ def decide_and_append(journal_path, task_id, reason, launch_at=None):
 def build_arg_parser():
     parser = argparse.ArgumentParser(
         prog="journal-append-failed.py",
-        description="Append one terminal `failed` journal event for an orphaned or stale-launched implementer task (SC2').",
+        description=(
+            "Append one terminal `failed` journal event for an orphaned, "
+            "stale-launched, or ancestor-check-failed (merge-unverified) "
+            "implementer task (SC2'; SC-1, "
+            "feature-docs/routeback-deferred-findings/IMPLEMENTATION.md)."
+        ),
     )
     parser.add_argument("--journal", required=True, metavar="PATH", help="path to the feature's journal.jsonl")
     parser.add_argument("--task", required=True, metavar="TASKID", help="task id, e.g. task0007")
@@ -234,7 +283,8 @@ def build_arg_parser():
         help=(
             "raw `at` value of the `launched` event this decision was made "
             "against; compared as an exact string against the task's last "
-            "event inside the lock, never parsed or normalised (D-C)"
+            "event inside the lock, never parsed or normalised (D-C); not "
+            "accepted together with --reason merge-unverified"
         ),
     )
     return parser
@@ -247,6 +297,16 @@ def main(argv=None):
     if not valid_reason(args.reason):
         print(
             f"journal-append-failed: --reason must be one of {sorted(VALID_REASONS)}, got {args.reason!r}",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.reason == "merge-unverified" and args.launch_at is not None:
+        # D4: decided BEFORE the journal is opened -- the new reason has no
+        # launch-identity semantics. Distinct diagnostic from the
+        # unknown-reason rejection above.
+        print(
+            "journal-append-failed: --launch-at is not accepted together with --reason merge-unverified",
             file=sys.stderr,
         )
         return 2
