@@ -193,7 +193,7 @@ workflow:
   completed_at_commit: 8a68743e80e4d9bd64286cd11884a024dbfa4778
   summary: 'TS1-TS7 pass: unittest discover 6217 tests OK; SKILL.md no diff since base_commit; em-workflow version 0.2.12 -> 0.2.13 in both manifests (em-review unchanged); manual reading of both edited passages OK. No excluded requirements.'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: State --once re-launch contract in batch docs, pin with tests, bump version
