@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-once-refire-dedup
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 396b00884a4ca102f4cdf4c7477da8c669a3867e
-last_input_digest: sha256:14c2ac443fbd36f18f6165dc0f1e3c7a7e4f314d75969c79512507107b6ab315
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:b4288aecd3bcc0ff6471060d0036298ef580af2b6f0b9f922f1f33bbef9cf4d9
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -57,6 +57,9 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:14c2ac443fbd36f18f6165dc0f1e3c7a7e4f314d75969c79512507107b6ab315
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:b4288aecd3bcc0ff6471060d0036298ef580af2b6f0b9f922f1f33bbef9cf4d9
 artifacts: {}
 patches: []
 progress_fingerprint: null
