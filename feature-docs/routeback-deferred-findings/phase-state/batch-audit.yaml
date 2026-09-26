@@ -1,0 +1,12 @@
+schema_version: 1
+feature: routeback-deferred-findings
+records:
+  - question_id: create-plan.open-points-codex
+    packet_id: null
+    answered_at: "2026-09-26T22:23:49+09:00"
+    source: codex
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "Q1 usage error; Q2 edit README; Q3 verbatim from 0d9d0dc4; fix task0001 red-first"
+    normalized_answer: "Q1 usage error; Q2 edit README; Q3 verbatim from 0d9d0dc4; fix task0001 red-first"
+    resolution_note: "gate: create-plan planner open points (no gate_id; orchestrator consulted Codex per launch instruction); codex_consulted: true; opus_escalation: false. Q1 (IMPLEMENTATION.md D4, merge-unverified with --launch-at): options usage-error-before-journal-open / silently-ignore / other; chosen usage error (keeps the existing no-write usage-error contract; ignoring would allow a write without the launch identity the caller expected). Q2 (em-workflow/README.md line 104 says the orphaned launched residue is the only orchestrator-caused helper write): options edit-unconditionally / leave-untouched; chosen edit (the claim exists, verified by reading line 104; task0004 made unconditional). Q3 (FR3 negative proof needs the loop-2 wording): options deviation-skip / paraphrase-regex / other; chosen take verbatim from commit 0d9d0dc4 implement-phase.md 388-396 (Codex located it; skipping fails FR3/AC-5, a previous/prior-session regex misses 'before the current session began'). Defect: task0001 red-first rule contradicted AC-5 (the unmodified helper already rejects the unknown reason with no write); task0001 amended to exempt that case and assert the combination-specific diagnostic. Plan docs amended by the orchestrator: IMPLEMENTATION.md, tasks/task0001.md, tasks/task0003.md, tasks/task0004.md."
