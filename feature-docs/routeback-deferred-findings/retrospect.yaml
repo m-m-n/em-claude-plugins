@@ -1,0 +1,61 @@
+feature: routeback-deferred-findings
+collected_at: "2026-09-27T00:19:00+09:00"
+session_ids: [01a0de4b-2003-75d6-88c0-84f0510ce307]
+signals:
+  review_critical_high:
+    - stable_id: 28f95cca754df0ef
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "後片付けで消したブランチの祖先確認失敗を merge-unverified として journal に書いてしまう"
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0001
+      files: [em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]
+    - task: task0002
+      files: [em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]
+    - task: task0004
+      files: [em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json, tests/test_task_id_allocation_ssot_i2c.py]
+    - task: task0005
+      files: [em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]
+  verification_failures:   # verify round 1（d90e9b68）の failed_items。rework（task0007）後の最終 verify は pass
+    - id: TS-8
+      note: "test_merge_unverified_exit_doc_contract の pin した文言が、review round 1 auto-fix（4ad3d3b3）で書き換わった implement-phase.md I.2.b の前提条件文と不一致"
+      category: comprehensive
+    - id: TS-9
+      note: "python3 -m unittest discover -s tests: Ran 6129 tests, FAILED (failures=1) — TS-8 の失敗"
+      category: comprehensive
+    - id: SC-2
+      note: "Not all test scenarios pass (TS-8 fails)"
+      category: comprehensive
+    - id: SC-4
+      note: "python3 -m unittest discover -s tests exits 1 (failures=1, the TS-8 pin)"
+      category: comprehensive
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みでバケット 2（確率 0.94）。6 件中 5 件が未解消で、implement-phase.md と workflow-schema.md の複数モジュールにまたがる外部契約・挙動の変更"
+    bases:
+      - basis: description_only
+        score: {score: 1.93, confidence: 0.76, probabilities: {'0': 0.05, '1': 0.05, '2': 0.81, '3': 0.09}}
+        observed_at: "2026-09-26T21:32:07+09:00"
+      - basis: description_plus_code
+        score: {score: 2.04, confidence: 0.94, probabilities: {'0': 0.0, '1': 0.01, '2': 0.94, '3': 0.05}}
+        observed_at: "2026-09-26T21:36:03+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/implement-phase.md
+        - em-workflow/references/workflow-schema.md
+        - tests/test_implement_routeback_gate.py
+        - em-workflow/.claude-plugin/plugin.json
+        - .claude-plugin/marketplace.json
+      work_still_required: true
+      change_containment: multiple_modules
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "version bump を担当しないタスク（task0001/0002/0004/0005）の implementer が、ローカルの plugin-version-guard hook に弾かれて plugin.json / marketplace.json を files 外で変更し、wake で 8 件 DECLINE になった。bump 担当タスク以外のコミットでも hook が発火する構成と、計画の files 予測がかみ合っていない"
+  - "review round 1 の auto-fix（single-file）が doc の文言を変え、その文言を pin したテストが verify で落ちて rework 1 ラウンドを消費した。auto-fix 対象の文言を pin するテストの存在を editor に渡せていない"
+  - "ad81306f22284a5f（medium、成果物が一部欠けた状態から failed になったタスクの再試行手順が無い）は unresolved のまま完了している"
