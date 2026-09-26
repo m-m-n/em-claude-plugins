@@ -1,0 +1,421 @@
+round: 1
+executed_at: '2026-09-27T04:20:42+09:00'
+scope:
+  review_mode: diff
+  base_commit: 4cfd5c4c7b4f536eaeb44caf591022d6f68dd0ba
+  head_commit: e9e592f5841bb7867c0287919712d34807e17f4a
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md
+  - feature-docs/destructive-guard-write-target-scoping/SPEC.md
+  - test-docs/destructive-guard-grouping-spec-drift/task0001.tests.yaml
+  - test-docs/destructive-guard-grouping-spec-drift/task0002.tests.yaml
+  - test-docs/destructive-guard-grouping-spec-drift/task0003.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: destructive-guard.py runs as a PreToolUse hook on every Bash call and the diff adds recursive
+      parsing of grouping/compound constructs, so per-call latency and worst-case expansion need checking
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: failed
+- run_id: spec#fallback
+  perspective: spec
+  role: fallback
+  source: claude
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: performance#1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#loop1-1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#loop1-1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: performance#loop1-1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+findings:
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1064
+  title: グルーピング内の bash -c / eval / <<< の本文が再走査されない
+  description: 'statements() は判定用に shaped_toks を作るが、1064 行の extract_shell_payload() には整形前の marked を渡している。そのため先頭の
+    `(` / `then` / `do` / `{` がコマンド語として扱われ、本文が再走査の対象に積まれない。評価者の再現: `bash -c ''rm -rf /home/sakura/x''`
+    は deny だが、`(bash -c ''rm -rf /home/sakura/x'')`、`if true; then eval "rm -rf /home/sakura/x"; fi`、`{
+    sh <<< "rm -rf /home/sakura/x"; }`、`for f in a; do sudo bash -c "rm -rf /home/sakura/x"; done` はいずれも
+    allow。FR2（囲み構文の中のコマンドは裸形と同じ判定）に反し、本機能が塞ぐはずのグルーピングによる回避が本文経由で残る。head() の docstring にある「callers already
+    receive tokens with that vocabulary already stripped」も、extract_shell_payload() 経由の呼び出しでは成り立たない。architecture#1
+    と spec#1 も同じ箇所を high で報告している。'
+  suggestion: 整形で飛ばした先頭トークン数（または整形前の case_stack の複製）を extract_shell_payload() に渡し、並行する words / marked_words
+    / quoted_words を同じ位置で切り詰めてから head() を呼ぶ。_split_fused_closer_redirects() はトークン数を変えるので、statements()
+    側の lead を marked にそのまま当てない。上の 4 形を deny 期待のケース行として先に追加し、red を確認してから直す。
+  sources:
+  - claude:comprehensive
+  - codex:comprehensive
+  confidence: 100
+  stable_id: df32e3552c3ee176
+  resolution: unresolved
+  resolution_reason: 'auto-applied in loop 1 (2c32a36f), then reverted (9ceb89ad): the loop-1 re-review
+    found the fixes introduced new regressions vs base; loop terminated no-progress per Codex consultation
+    (option C). Routed to batch auto-rework.'
+- severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1052
+  title: 単独行の `;;` と `;&` / `;|` で case 項目の終端を認識しない
+  description: 'SPEC FR2 と Edge Cases は改行をまたぐ case を対象にしている。`;;` を字下げした単独行に置く一般的な書式では、lex_segments() が空の文（toks
+    が空、sep に `;;` を含む）を返す。ところが body から pattern への切替（1052 行）は 1040 行の `if toks:` の内側にあるため実行されず、次の項目のパターン語がコマンド語として読まれて本文が検査されない。評価者の再現:
+    `case $x in` / `  a) echo hi` / `     ;;` / `  b) rm -rf /home/sakura/x` / `     ;;` / `esac` を改行でつないだ形は
+    allow（`;;` を本文と同じ行に置くと deny）。`start)` / `echo start` / `;;` / `stop) git push --force origin main
+    ;;` の形も allow。さらに終端判定が `";;" in sep` だけなので、bash の `;&`（`case x in a) :;& b) rm -rf /home/sakura/x;;
+    esac` は allow）と zsh の `;|` でも同じ漏れが起きる（`;;&` は deny）。既存の複数行ケースは `;;` が本文と同じ行にあるため、この穴を検出できない。
+
+
+    [同一サイトで統合] shlex の解析に失敗したチャンクではグルーピングが剥がされない: 後続の行に閉じていない引用符があると、チャンク全体が正規表現による分割にフォールバックする（lexed=False）。このとき
+    statements() は shaped_toks = toks をそのまま返す。評価者の再現: `if [ -d /home/sakura/x ]; then rm -rf /home/sakura/x;
+    fi` 改行 `echo it''s done` は allow（`rm -rf /home/sakura/x` 改行 `echo it''s done` は deny）。`(rm -rf /home/sakura/x)`
+    改行 `echo "oops` も allow。bash は 1 行目を実行してから 2 行目で構文エラーになる。SPEC FR2 はフォールバック経路を例外にしていない。変更前から同じ挙動で、引用符の閉じ忘れがないと起きないため
+    medium。'
+  suggestion: '切替を `if toks:` の外へ出し、lexed なセグメントでは空の文でも sep を評価する。終端判定を `;;` に加えて `;&` / `;|` に広げる。`;;`
+    を単独行に置いた複数項目の case と、`;&` で区切った case を deny 期待のケース行として先に追加する。
+
+
+    [同一サイトで統合] フォールバックでも改行ごとに _TrackingLexer を再試行し、解析できた行は lexed=True で返す。あるいは先頭の `(` / `{` / 予約語 / `!`
+    を文字列として剥がしてから head() に渡す。上の 2 形をケース行に追加する。'
+  sources:
+  - claude:spec
+  - codex:spec
+  confidence: 100
+  stable_id: 25f07de01edba472
+  resolution: unresolved
+  resolution_reason: category spec is not auto-fix eligible; routed to batch auto-rework.
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1241
+  title: 連続した閉じ括弧 `))` / `)(` / `))>` が分割されず、検知漏れと誤爆の両方が起きる
+  description: '_split_fused_closer_redirects() は先頭の `)` 1 文字とリダイレクトの組しか分割せず、statements() のフィルタも `a ==
+    ")"` の完全一致しか除かない。基準コミットと変更後で評価者が比べた結果: (1) 検知の後退（deny から allow）: `case x in x)(:` 改行 `rm -rf /home/sakura/x`
+    改行 `);; esac`。`)(` が閉じ括弧と認識されず pattern 状態が残り、本文を読み飛ばす。(2) 誤爆の後退（allow から deny）: `(cd /tmp && (rm -rf
+    build))>/dev/null 2>&1` と `( (rm -rf /tmp/x))>/dev/null`。`))>` がリダイレクトと認識されず、`/dev/null` が rm の対象になる。無人実行ではその場で止まる（NFR5）。(3)
+    FR3 違反（allow のまま）: `( (cp /tmp/x ~/.claude/settings.json))` と `(cd /tmp && (cp /tmp/x ~/.claude/settings.json))`
+    は cp の宛先が `))` になり ask にならない（空白を入れた `( (cp … ) )` は ask）。`case x in x)(rm -rf /home/sakura/x);; esac`
+    も allow。spec#1（high）と spec#fallback（medium）も同じ箇所を報告している。'
+  suggestion: 引用されていない operator トークンが `)` の連続で始まる場合は、各 `)` を Tok(")", True) として切り出す。残りが REDIRECT に fullmatch
+    すればリダイレクト、`(` ならサブシェルの開始として出す。`(cd /tmp && (rm -rf build))>/dev/null 2>&1` を allow、`( (cp /tmp/x ~/.claude/settings.json))`
+    を ask、`)(` 形の case を deny とするケース行を先に追加する。
+  sources:
+  - claude:comprehensive
+  - codex:comprehensive
+  confidence: 100
+  stable_id: b6b2b64d62e8983b
+  resolution: unresolved
+  resolution_reason: 'auto-applied in loop 1 (2c32a36f), then reverted (9ceb89ad): the loop-1 re-review
+    found the fixes introduced new regressions vs base; loop terminated no-progress per Codex consultation
+    (option C). Routed to batch auto-rework.'
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1334
+  title: リダイレクトを分離する前にラッパーを飛ばすため、`sudo 2>/dev/null -u root rm` が素通りする
+  description: '変更前は split_redirects() でリダイレクトを除いた words に head() を当てていた。変更後は _shape_leading() がリダイレクトを含む
+    toks のままラッパーと値付きオプションを飛ばす（1334 行）。ラッパーの直後にリダイレクトがあると走査がそこで止まり、リダイレクトを除いた後の先頭が `-u` になって、head() がそれをコマンド語とする。基準コミットと変更後の比較:
+    `sudo 2>/dev/null -u root rm -rf /home/sakura/x` は deny から allow、`sudo 2>/dev/null -u root git push
+    --force origin main` は deny から allow、`sudo 2>/dev/null -u root cp /tmp/x ~/.claude/settings.json`
+    は ask から allow。`( sudo 2>/dev/null -u root rm -rf /home/sakura/x )` も allow。既存の検知を弱める後退で、SPEC NFR5
+    と AC-7 の趣旨に反する。'
+  suggestion: 整形を split_redirects() 後の words に対して行い、リダイレクトは別に保持して check_self_modification() に渡す。あるいは _shape_leading()
+    と _skip_assignments_and_wrappers() でリダイレクト演算子とその対象を読み飛ばす。上の 3 形を基準コミットの判定どおりに期待するケース行として先に追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  stable_id: b4d16b6b22951280
+  resolution: unresolved
+  resolution_reason: 'auto-applied in loop 1 (2c32a36f), then reverted (9ceb89ad): the loop-1 re-review
+    found the fixes introduced new regressions vs base; loop terminated no-progress per Codex consultation
+    (option C). Routed to batch auto-rework.'
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1343
+  title: コマンド位置の `case` を無条件に予約語として扱い、pattern 状態が後続の文まで読み飛ばす
+  description: '_shape_leading() は、引用されていても（`"case"`）、ラッパーの後でも（`command case`）、コマンド位置の `case` を予約語として
+    case_stack に積む。pattern 状態は `)` か `esac` が来るまで全トークンを不透明に扱い、`||` / `;` / 改行で区切られた後続の文にも持ち越される。基準コミットと変更後の比較:
+    `"case" x in || rm -rf /home/sakura/important` は deny から allow、`command case x in || rm -rf /home/sakura/important`
+    も deny から allow。bash では引用した `case` やラッパーの後の `case` は予約語ではない。コマンド `case` が失敗した後に rm が実行される。状態機械が一度ずれるとチャンクの残り全体が検査から外れる、失敗時に開く構造になっている。`)(`
+    による後退（別の finding）も同じ構造に起因する。'
+  suggestion: '`case` を予約語として扱うのは、ラッパーも VAR=value も飛ばしていないコマンド位置で、`case WORD in` の形がそろうときに限る。pattern 状態のまま
+    `|` と改行以外の区切り（`;` / `&&` / `||` / `&`）に達したら構文として不正なので case_stack を捨て、以降を通常のコマンド位置として検査する。`"case" x
+    in || rm …` と `command case x in || rm …` を deny 期待のケース行として先に追加する。'
+  sources:
+  - codex:security
+  confidence: 90
+  stable_id: c757b2e569edf076
+  resolution: unresolved
+  resolution_reason: 'auto-applied in loop 1 (2c32a36f), then reverted (9ceb89ad): the loop-1 re-review
+    found the fixes introduced new regressions vs base; loop terminated no-progress per Codex consultation
+    (option C). Routed to batch auto-rework.'
+- severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2148
+  title: tar の長いオプションの省略形（`--extr` / `--ge`）を展開モードとして認識しない
+  description: tar_extract_mode() は `--extract` / `--get` を完全一致でしか見ない。GNU tar は一意な省略形を受け付けるため、`tar --extr
+    -f /tmp/payload.tar -C ~/.claude/hooks` と `tar --ge -f /tmp/payload.tar -C ~/.claude/hooks` は基準コミットの
+    ask から allow に変わる（評価者が再現）。FR6 が挙げた綴りどおりの実装ではあるが、保護対象への展開を確認なしに通す。意図して省略形を書いたときにしか起きないため、評価者は high
+    から medium に下げた。
+  suggestion: '`--` で始まる語が、ほかの長いオプションと衝突しない範囲で `--extract` / `--get` の接頭辞になっていれば展開指定として扱う。あるいは、作成・一覧のモードと確定できないときは
+    -C を書き込み先に残す（失敗時に閉じる側）。省略形のケース行を追加する。'
+  sources:
+  - codex:security
+  confidence: 95
+  stable_id: a97fdbdb263eacf1
+  resolution: unresolved
+  resolution_reason: medium; not auto-fix eligible; carried as context for rework.
+- severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2312
+  title: '`tar --remove-files` の作成モードで -C 配下の保護対象の削除が allow になる'
+  description: FR6 により作成モードの -C は書き込み先から外れた。そのため `tar --remove-files -cf /tmp/backup.tar -C ~/.claude/hooks
+    .` は基準コミットの ask から allow に変わった（評価者が再現）。`--remove-files` は格納後に元ファイルを消すので、-C 配下は変更対象になる。ただし -C を使わない
+    `tar -c --remove-files -f /tmp/b.tar ~/.claude/hooks/x.py` は基準でも allow で、`--remove-files` 自体は元から判定の対象外だった。-C
+    による偶発的な検知が FR6 どおりの変更で外れたものなので、評価者は high から medium に下げた。
+  suggestion: '`--remove-files` を含む tar 文では、-C の値と位置引数のオペランド（-C を基準に解決したもの）を書き込み先に加える。-C あり・なしの両方の形を ask
+    期待のケース行として追加する。'
+  sources:
+  - codex:security
+  confidence: 80
+  stable_id: 956078db4986642b
+  resolution: unresolved
+  resolution_reason: medium; not auto-fix eligible; carried as context for rework.
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2148
+  title: tar のモード判定がオプションの値や `--` 以降の語に含まれる `x` を展開指定と誤認する
+  description: 'tar_extract_mode() は短いオプション列の走査を `C` でしか止めず、`f` に直結した値や `--` 以降のオペランドまで調べる。評価者の再現: `tar
+    -czf/tmp/index.tar -C ~/.claude/skills .`、`tar -cfx.tar -C ~/.claude/skills .`、`tar -tf/tmp/x.tar
+    -C ~/.claude/skills`、`tar -cf /tmp/b.tar -C ~/.claude/skills -- -x` はいずれも ask で、無人実行では deny になる。FR6
+    は作成・一覧モードの -C を書き込み先にしないと定めており、仕様と実装の食い違いが残る。comprehensive#0 と spec#1 も同じ箇所を medium で報告している。'
+  suggestion: '`f` など値を取る短いオプションに達したら、その文字で走査を止める（残りは値）。`--` 以降の語はモード判定から外す。値を -f に直結した作成・一覧の形を allow
+    期待のケース行として追加する。'
+  sources:
+  - codex:architecture
+  confidence: 100
+  stable_id: c05d2dca308c40e8
+  resolution: unresolved
+  resolution_reason: medium; not auto-fix eligible; carried as context for rework.
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 486
+  title: 閉じ括弧に直結した `>|` / `>&` のリダイレクト先を見失う
+  description: 'FR3 は、閉じ括弧に直結したリダイレクト（`)>`、`)>>`、`)2>` など）を分離してリダイレクト先として判定するよう求めている。`)>|` は lex_segments()
+    の区切り分割で `)>` と `|` に分かれ、`)>&` も一つの演算子として復元されない。評価者の再現: `(echo hi)>|~/.claude/projects/a/b.jsonl` は
+    allow（空白を入れた `(echo hi) >| …` と裸形は deny）。`(echo hi)>&~/.claude/settings.json` は allow（裸形 `echo hi
+    >&~/.claude/settings.json` は ask）。まれな綴りなので、評価者は spec#1 の high から medium に下げた。'
+  suggestion: 区切り文字で文を分ける前に、`)` に続く `>|` / `>&` を一つのリダイレクト演算子として保持する。両方の形のケース行を追加する。
+  sources:
+  - codex:spec
+  confidence: 85
+  stable_id: f497d9881481fa9c
+  resolution: unresolved
+  resolution_reason: medium; not auto-fix eligible; carried as context for rework.
+- severity: medium
+  category: spec
+  file: feature-docs/destructive-guard-write-target-scoping/SPEC.md
+  line: 74
+  title: 旧 feature 文書で cp / ln の区分 (c) / (d) が FR2 と図・用語集とで食い違う
+  description: 改訂後の旧 SPEC FR2 と旧 REQUIREMENTS FR2 は cp / ln を (c) に入れ、(d) をコマンド固有の宛先だけとしている。一方、同じ SPEC
+    のアーキテクチャ図（74 行）は cp / ln を (d) に置いている。REQUIREMENTS の 10.1 リスク行と 13 用語集も「(d) cp / ln の宛先とコマンド固有の宛先」としている。集合の中身は同じだが、SPEC
+    FR10(a) と AC-10 が参照する FR2(c)/(d) の区分が文書の中で矛盾し、US3（旧文書を実装に合わせる）に対して新しい食い違いを残す。
+  suggestion: 旧 SPEC 74-75 行の図で cp / ln を (c) の行に移し、(d) を rsync / git clone / tar -C（extract モードのみ）/ unzip
+    -d / curl -o / wget -O だけにする。旧 REQUIREMENTS の 10.1 リスク行と 13 用語集も同じ区分にそろえる。
+  sources:
+  - claude:spec
+  confidence: 90
+  stable_id: 8b3d2874bd08ba47
+  resolution: unresolved
+  resolution_reason: medium; not auto-fix eligible; carried as context for rework.
+- severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1321
+  title: パターン内の esac を case の終端として扱わないで
+  description: SPEC FR2 は `|` で分割されたパターン選択肢を扱い、FR4 は予約語がデータとして使われる場合に構文扱いしないと規定している。`case x in a|'esac'|x)
+    rm -rf /home/sakura/x;; esac` は有効な構文だが allow になる（裸の rm は deny）。引用されたパターン `esac` で case_stack を取り除くため、次の選択肢
+    `x` をコマンド名と誤認し、本文の rm を検査しない。loop 1 再レビュー (spec#loop1-1) で報告され、差し戻し後のツリーでもオーケストレーターが allow を再現した。
+  suggestion: パターン選択肢と構文上の esac を区別して、引用された予約語や選択肢の途中では case の状態を終了させない。この形を deny 期待のケース行として先に追加する。
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: reported by in-loop re-review; reproduced on reverted tree; routed to batch auto-rework.
+  stable_id: 751c5ab440d50b42
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1368
+  title: 引用された引数を関数定義と誤認する
+  description: 文字列を表示するだけの `echo '()' '{' rm -rf /home/sakura/x` が、基準コミットの allow から deny になる（差し戻し後のツリーでオーケストレーターが再現）。関数定義の判定が
+    `()` の文字列だけを比較するため、echo と通常の引数を取り除いて rm を実行コマンドと誤認している。loop 1 再レビュー (comprehensive#loop1) で報告。
+  suggestion: 関数定義の括弧が引用されていない構文要素であることを確認して、引用された引数は通常のデータとして保持する。allow 期待のケース行を追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: reported by in-loop re-review; reproduced on reverted tree; carried as context for
+    rework.
+  stable_id: 45e4639175c16290
+evaluation:
+  round_summary: 'ラウンド 1（diff、cross_validation=true）。完了した reviewer は security#0 / comprehensive#fallback
+    / architecture#1 / spec#fallback / performance#1。rate_limited で飛んだ architecture#0 / spec#0 / performance#0
+    は同じ観点の別 run で埋まっている。comprehensive#0 と spec#1 はスキーマ違反（finding ごとに余分な source キー）で failed だが、参照用の出力に含まれる
+    high の指摘はすべて評価者が基準コミットとの比較で再現し、finding に取り込むか dismissed_sites に重複として記録した。評価者の確認: 9 件の変更ファイルと SPEC.md
+    を読み（読み取り上限 10 件をちょうど使用）、変更前後の hook に同じコマンドを与えて判定を比べた。ケース表は 364/364 通過、em-workflow の version は plugin.json
+    と marketplace.json の両方で 0.2.13、FR9 のラベル変更以外に既存行の変更なし。グルーピング対応の主な形は SPEC どおり動く。一方、高 5 件（グルーピング内の -c
+    / eval / <<< 本文、単独行の `;;` と `;&` / `;|`、連続した閉じ括弧、リダイレクトを挟んだラッパー、`case` 状態機械が失敗時に開く問題）のうち 3 件は基準コミットからの後退（deny
+    / ask から allow、および allow から deny の誤爆）である。reviewer 出力にプロンプトインジェクションの試みはなかった。観点ごとの確認状況: security — corroborated
+    / comprehensive — corroborated / architecture — corroborated / spec — corroborated / performance —
+    corroborated（指摘なしの結果を確認。追加された整形は文ごとの線形走査で、hook として問題になる量ではない）。'
+  recommended_action: rework
+  action_rationale: 高 5 件のうち 3 件は基準コミットからの検知の後退で、うち 1 件は無人実行を止める allow から deny の誤爆を含む。残る 2 件（単独行の `;;`、グルーピング内の
+    -c / eval 本文）は、本機能の中心目標である「囲み構文の中でも裸形と同じ判定」が一般的な書き方で満たされていないことを示す。どれも destructive-guard.py の整形処理（_shape_leading
+    / case_stack / 閉じ括弧の分割 / 本文抽出 / リダイレクト分離の順序）の中で互いに絡んでいる。hook-tests.md に従って先にケース行を足し、red を確認してから直す必要もあるため、個別の自動修正より再作業タスクとしてまとめて直すのが妥当。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1057
+  run_id: architecture#1
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1064
+  run_id: spec#1
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1040
+  run_id: comprehensive#fallback
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1243
+  run_id: spec#1
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 4
+  termination: no-progress
+  note: loop 1 applied 4 fixes (2c32a36f); in-loop re-review found new regressions vs base (time-prefixed
+    groups, redirect targets dropped after wrappers) and an incomplete fd-redirect fix. Loop terminated
+    no-progress and loop 1 reverted (9ceb89ad) per Codex consultation option C; see phase-state/batch-audit.yaml.
+  reverted_commit: 2c32a36f
+  revert_commit: 9ceb89adff844b1d61c89c87f41e69c4d72fdb3a
+residual_critical_high: 6
+rework_required: true
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null

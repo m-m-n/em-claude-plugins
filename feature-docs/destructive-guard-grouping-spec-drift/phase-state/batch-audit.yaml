@@ -1,0 +1,13 @@
+schema_version: 1
+feature: destructive-guard-grouping-spec-drift
+records:
+  - question_id: review.auto-fix-loop-termination
+    packet_id: null
+    answered_at: "2026-09-27T04:18:08+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - C
+    freeform: null
+    normalized_answer: "C: stop the auto-fix loop as no-progress, revert the loop-1 commit 2c32a36f (revert commit 9ceb89ad), restore the 4 loop-1 findings to unresolved, and proceed to the round record and batch auto-rework with the loop-1 re-review observations as context"
+    resolution_note: "gate: review Phase R4 loop termination (no gate_id; protocol leaves 'progress' undefined). options: A continue auto-fix loops 2-3 / B stop as no-progress and keep loop-1 commit / C stop as no-progress and revert loop-1 commit. choice: C. options not chosen: A (the single-file editor cannot add case rows, so continuing violates the test-first rule and loop 1 already regressed base verdicts), B (keeps half-applied fixes with known regressions in the tree the rework would start from). discussion key points: loop 1 applied 4 fixes; in-loop re-review found new regressions vs base (`time ( rm -rf ... )` deny->allow, redirect target after a wrapper dropped so a settings write went ask->allow and a transcript write deny->allow) and the fd-redirect fix was incomplete (`env 2>/dev/null -u X rm -rf ...` still allow); residual high rose from 5 to 8+. Codex judged no-progress reasonable and a revert lets the intertwined fixes be re-implemented test-first from the reviewed state; risk noted: the revert also drops the partially valid fixes, so the record must separate regressions removed by the revert from problems that remain. Orchestrator verified on the reverted tree that the loop-1 regressions are gone and the original findings plus two newly reported ones (quoted `esac` alternative, `echo '()' '{' rm` false positive) reproduce. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
