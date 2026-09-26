@@ -853,12 +853,14 @@ signals:
     - {stable_id, category, resolution_reason}
   tier_decision:              # Step A「tier 決定」が記録した内容
     tier: reduced
-    rationale: "..."
+    rationale: "..."          # 決定を下した最終読みの一文要約、またはフォールバックの理由（fallback_reason 由来）
     bases:
       - basis: description_only
-        probabilities: {...}
+        score: {...}
+        observed_at: "..."
       - basis: description_plus_code
-        probabilities: {...}
+        score: {...}
+        observed_at: "..."
     pre_survey_estimate: {...}
 follow_up_drafts:           # cap 到達時点で未解決の failed_items 全件（下記参照）
   - origin_kind: verify
