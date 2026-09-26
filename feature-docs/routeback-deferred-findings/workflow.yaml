@@ -33,7 +33,6 @@ goal: |
   - 記録: `feature-docs/routeback-admissibility-exits/reviews/round3.yaml`
   ## 実害・発生条件（任意）
   stale `launched` を持つプランで route-back を選べず abort しか残らない経路と、ancestor 検証に落ちた `merged` タスクが行き止まりになる経路が protocol 上に残る。無人実行が中断したあとの再開でだけ露出するため、対話実行では気づきにくい。
-
 parent_branch: em-workflow/routeback-deferred-findings/integration
 tier: full
 tier_decision:
@@ -83,7 +82,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 163a2160f3f4332be9d9b26daea5ec631bf0c07d
 - id: implement
   status: pending
 - id: review
@@ -92,7 +92,147 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: journal helper accepts merge-unverified over a locked merged event
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/journal-append-failed.py
+    - tests/test_journal_append_failed.py
+    skills:
+    - backend-impl
+    domains:
+    - data-persistence
+    - concurrency
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR5
+    - FR10
+    - NFR1
+    - NFR5
+    - NFR6
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: evidence chain accepts observed artifact absence
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/recover-orphaned-task.py
+    - tests/test_stale_launched_recovery_chain.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR2
+    - FR10
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: I.2.b step 1 routes missing-artifact stale launched tasks through the proof
+      chain; pin bc57aa350bb027c7
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_stale_launched_missing_artifacts_doc_contract.py
+    skills: []
+    domains:
+    - api-contract
+    - concurrency
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR10
+    - NFR4
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: automated exit for a journal-merged task failing the ancestor check; no
+      status-semantics exception
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_implement_routeback_gate.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    - em-workflow/README.md
+    skills: []
+    domains:
+    - api-contract
+    - concurrency
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR4
+    - FR6
+    - FR10
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: workflow-schema.md records merge-unverified and the full agents.jsonl reader
+      set
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - tests/test_workflow_schema_journal_readers_doc_contract.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR6
+    - FR7
+    - FR8
+    - FR10
+    - NFR1
+    - NFR4
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0006:
+    title: em-workflow version bump 0.2.10 to 0.2.11
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_routeback_deferred_findings_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR9
+    - FR10
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -102,7 +242,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-1
   FR2:
@@ -110,15 +251,19 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
+    - task0003
     tests:
     - TS-2
+    - TS-1
   FR3:
     title: bc57aa350bb027c7 recorded as resolved and pinned
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-3
   FR4:
@@ -126,15 +271,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
     tests:
     - TS-4
+    - TS-8
   FR5:
     title: Helper accepts merge-unverified only over locked merged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   FR6:
@@ -142,16 +290,20 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
+    - task0005
     tests:
     - TS-5
     - TS-6
+    - TS-8
   FR7:
     title: Writer-set paragraph records merge-unverified
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0005
     tests:
     - TS-6
   FR8:
@@ -159,7 +311,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0005
     tests:
     - TS-6
   FR9:
@@ -167,7 +320,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0006
     tests:
     - TS-7
   FR10:
@@ -175,14 +329,23 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-9
   NFR1:
     title: No new journal writer
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0005
     tests:
     - TS-6
   NFR2:
@@ -190,7 +353,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
     tests:
     - TS-5
   NFR3:
@@ -198,7 +362,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
     tests:
     - TS-5
   NFR4:
@@ -206,36 +371,60 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-10
   NFR5:
     title: Doubt never produces a journal write
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-4
+    - TS-8
   NFR6:
     title: journal append-only under flock
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   NFR7:
     title: launch guard and merge-task.sh unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0004
+    tests:
+    - TS-11
   NFR8:
     title: stdlib-only tests
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-12
 batch:
   review_rework_count: 0
   verify_rework:
