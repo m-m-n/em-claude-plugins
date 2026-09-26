@@ -1,0 +1,96 @@
+task_id: task0002
+baseline_failures: []          # `python3 -m unittest discover -s tests` before any edit: 5816 tests, all green
+final_failures: []             # same command after implementation: 5844 tests (+28 new), all green
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tier_rules_buckets_codex_facts.TestBucketDescriptionsStructure.test_exactly_four_keys_0_to_3
+      - tests.test_tier_rules_buckets_codex_facts.TestBucketDescriptionsStructure.test_bucket_1_names_rule_addition_and_test_addition
+      - tests.test_tier_rules_buckets_codex_facts.TestBucketDescriptionsStructure.test_bucket_0_excludes_test_changes_and_new_logic
+    red_confirmed: true
+    red_reason: >-
+      Before tier-rules.yaml gained the bucket_descriptions mapping,
+      TestBucketDescriptionsStructure.setUpClass raised
+      "KeyError: 'bucket_descriptions'", so every test in the class
+      (including these three) failed for that reason.
+  AC-2:
+    tests:
+      - tests.test_tier_rules_buckets_codex_facts.TestQuestionSetCommentContract.test_states_descriptions_passed_to_both_jev_calls
+      - tests.test_tier_rules_buckets_codex_facts.TestQuestionSetCommentContract.test_no_longer_assigns_bucket_wording_to_an_external_skill
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit question_set section: test_states_descriptions_passed_to_both_jev_calls
+      failed with "AssertionError: Regex didn't match: 'passed to both
+      Jev calls' not found in ..." (the phrase was absent), and
+      test_no_longer_assigns_bucket_wording_to_an_external_skill failed
+      with "AssertionError: <re.Match object; span=(461, 483), match='owned
+      by the two skill'> is not None" (the old comment still assigned
+      bucket wording to the external skills).
+  AC-3:
+    tests:
+      - tests.test_tier_rules_buckets_codex_facts.TestQuestionSetNotDuplicatedFromExternalDocs.test_no_long_line_duplicated_from_jev_skill_doc
+      - tests.test_tier_rules_buckets_codex_facts.TestQuestionSetNotDuplicatedFromExternalDocs.test_no_long_line_duplicated_from_typesafe_skill_doc
+    red_confirmed: false
+    red_reason: >-
+      The non-duplication property is trivially satisfied by any content
+      that does not copy the fixture documents, including the pre-edit
+      question_set section text -- it already passed before this task's
+      implementation existed, so no red state was observed for it. The
+      section was searched for pre-existing coverage of this file (none
+      found beyond tests/test_tier_rules.py, which runs the equivalent
+      check over the whole file and also already passes both before and
+      after). The matcher's discriminating power is instead demonstrated
+      by test_duplication_matcher_fires_on_a_line_copied_from_the_jev_doc,
+      a negative proof against a line actually copied from the jev skill
+      doc fixture.
+  AC-4:
+    tests:
+      - tests.test_tier_rules_buckets_codex_facts.TestCodexFactFieldsVocabulary.test_all_seven_new_fields_present
+      - tests.test_tier_rules_buckets_codex_facts.TestCodexFactFieldsVocabulary.test_enum_fields_have_exactly_the_listed_values
+      - tests.test_tier_rules_buckets_codex_facts.TestCodexFactFieldsVocabulary.test_typed_fields_declare_the_correct_type
+    red_confirmed: true
+    red_reason: >-
+      Before tier-rules.yaml gained the fact_fields mapping,
+      TestCodexFactFieldsVocabulary.setUpClass raised
+      "KeyError: 'fact_fields'", so every test in the class (including
+      these three) failed for that reason.
+  AC-5:
+    tests:
+      - tests.test_tier_rules_buckets_codex_facts.TestCodexOutputSchemaBackwardCompatible.test_every_pre_existing_field_name_still_present
+      - tests.test_tier_rules_buckets_codex_facts.TestCodexOutputSchemaBackwardCompatible.test_section_states_codex_reports_facts_only
+    red_confirmed: true
+    red_reason: >-
+      test_section_states_codex_reports_facts_only failed against the
+      pre-edit file with "AssertionError: Regex didn't match: 'facts' not
+      found in ''" (no role field existed yet). The other listed test,
+      test_every_pre_existing_field_name_still_present, was already true
+      before this task touched the file (the pre-existing field names
+      were never removed) -- it is listed here as the criterion's
+      non-regression half, not as a second observed red; the criterion's
+      red state is the role-field failure above.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verifiable outcome is a build/lint-style check, not an isolated
+      unit test: (a) `em-workflow/references/tier-rules.yaml` parsing as
+      YAML held throughout -- it was never observed broken by this task's
+      edits, confirmed by every _load_rules() call above succeeding; (b)
+      `python3 -m unittest discover -s tests` passing is the final
+      integration state, confirmed by the full-suite run reported in
+      final_failures (5844 tests, 0 failures), not a criterion with its
+      own separate red/green cycle; (c) "every raw-text matcher in this
+      task's tests has a negative proof and a non-vacuity guard" is a
+      property of this task's own test module design, verified by
+      inspection rather than by a further test -- AC-2's matchers pair
+      with test_passed_to_both_matcher_would_fail_on_a_forged_section_missing_it
+      / test_external_assignment_matcher_fires_on_the_old_pre_task_comment
+      (negative proofs) and test_section_was_located_and_is_non_empty
+      (non-vacuity guard); AC-3's matcher pairs with
+      test_duplication_matcher_fires_on_a_line_copied_from_the_jev_doc
+      (negative proof) and test_non_vacuity_section_has_at_least_one_long_line
+      (non-vacuity guard).
+notes: >-
+  Full test suite re-run after implementation (not skipped): tests/ was
+  changed (new module added) and em-workflow/references/tier-rules.yaml
+  was changed, so a re-run was required and was performed.
