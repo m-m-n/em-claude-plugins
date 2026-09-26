@@ -169,9 +169,8 @@ workflow:
   status: completed
   completed_at_commit: 22c9828dceffdc025740e263968266fdf6a46133
 - id: implement
-  status: completed
+  status: pending
   base_commit: 4cfd5c4c7b4f536eaeb44caf591022d6f68dd0ba
-  completed_at_commit: 3dc195ab9f48ec64e5c8bb91e98aac4fad49e837
 - id: review
   status: pending
 - id: verify
@@ -258,6 +257,42 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/destructive-guard-grouping-spec-drift/task0003
+  task0004:
+    title: "Make statement shaping hold for payloads, case terminators, closer runs, redirected wrappers and the parse-failure fallback"
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - auth
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR12
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - df32e3552c3ee176
+      - 25f07de01edba472
+      - b6b2b64d62e8983b
+      - b4d16b6b22951280
+      - c757b2e569edf076
+      - 751c5ab440d50b42
 review:
   status: pending
   rounds_completed: 1
@@ -296,6 +331,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0004
     tests:
     - TS-1
   FR3:
@@ -305,6 +341,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0004
     tests:
     - TS-1
   FR4:
@@ -314,6 +351,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0004
     tests:
     - TS-1
   FR5:
@@ -323,6 +361,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0004
     tests:
     - TS-1
     - TS-2
@@ -389,6 +428,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0004
     tests:
     - TS-3
     - TS-5
@@ -400,6 +440,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0004
     tests:
     - TS-2
   NFR2:
@@ -410,6 +451,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0004
     tests:
     - TS-2
   NFR3:
@@ -420,6 +462,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0004
     tests:
     - TS-1
     - TS-2
@@ -431,6 +474,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0004
     tests:
     - TS-2
   NFR5:
@@ -441,6 +485,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0004
     tests:
     - TS-1
   NFR6:
@@ -451,10 +496,11 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0004
     tests:
     - TS-1
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
