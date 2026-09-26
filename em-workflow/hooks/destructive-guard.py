@@ -325,6 +325,16 @@ KILL_WORDS = ("kill", "pkill", "killall")
 # target is the branch the worktree already tracks, so nothing is lost.
 EM_WORKFLOW_REF = re.compile(r"^em-workflow/[a-z0-9][a-z0-9-]*/integration$")
 
+# A statement separator across which an OPEN case pattern (case_stack[-1] ==
+# "pattern", no closing `)` seen yet) may still legitimately continue: a bare
+# `|` (pattern alternation split at the segment boundary lex_segments()
+# already draws there) and/or one or more literal newlines. `;`, `&&`, `||`,
+# and `&` are never valid inside an unclosed pattern in real bash; a
+# statement ending with one of those must not carry "pattern" state into the
+# next, unrelated statement. See statements()'s use of this and
+# _shape_leading()'s docstring.
+_VALID_PATTERN_CONTINUATION = re.compile(r"^\|?\n*$")
+
 
 def unattended():
     """True when this session runs under claude-batch with nobody watching."""
@@ -1038,6 +1048,7 @@ def statements(command):
         ):
             toks = _strip_unresolved_marks(marked, all_subs)
             if toks:
+                lead = 0
                 if lexed:
                     fused_split = _split_fused_closer_redirects(toks)
                     lead = _shape_leading(fused_split, case_stack)
@@ -1052,6 +1063,24 @@ def statements(command):
                     ends_case_item = bool(sep and ";;" in sep)
                     if ends_case_item and case_stack and case_stack[-1] == "body":
                         case_stack[-1] = "pattern"
+                    # An open pattern (case_stack[-1] == "pattern", i.e. no
+                    # closing `)` seen yet) may legitimately continue into
+                    # the next statement only across a bare `|` (pattern
+                    # alternation split at segment boundary) or a literal
+                    # newline — see _shape_leading()'s docstring. Any other
+                    # separator (`;`, `&&`, `||`, `&`) is not valid inside an
+                    # unclosed pattern in real bash, so carrying "pattern"
+                    # across it would read the next, syntactically unrelated
+                    # statement as opaque pattern content and skip every
+                    # check on it. Drop the whole case_stack instead, so the
+                    # next statement is scanned as ordinary command position.
+                    elif (
+                        sep is not None
+                        and case_stack
+                        and case_stack[-1] == "pattern"
+                        and not _VALID_PATTERN_CONTINUATION.match(sep)
+                    ):
+                        case_stack.clear()
                 else:
                     shaped_toks = toks
                 yield " ".join(toks), toks, lexed, shaped_toks
@@ -1061,7 +1090,32 @@ def statements(command):
                         if seg_index < len(quoted_segments)
                         else None
                     )
-                    payload = extract_shell_payload(marked, lexed, quoted_marked)
+                    # The grouping/case-aware lead computed above (LEAD) was
+                    # taken off TOKS via _shape_leading(), not off MARKED —
+                    # extract_shell_payload() must see the same leading
+                    # subshell/reserved-word/case-pattern tokens already
+                    # stripped, or head() inside it reads `(`/`then`/`do`/`{`
+                    # itself as the command word and never finds the real
+                    # `bash -c`/`eval`/here-string invocation wrapped inside
+                    # (destructive-guard-grouping-spec-drift). Apply the same
+                    # closer-redirect split used to compute LEAD to MARKED and
+                    # QUOTED_MARKED before slicing them by LEAD, so all three
+                    # sequences head() and split_redirects() walk stay aligned
+                    # position-for-position.
+                    if lexed:
+                        marked_fused = _split_fused_closer_redirects(marked)
+                        marked_payload = marked_fused[lead:]
+                        if quoted_marked is not None:
+                            quoted_fused = _split_fused_closer_redirects(quoted_marked)
+                            quoted_marked_payload = quoted_fused[lead:]
+                        else:
+                            quoted_marked_payload = None
+                    else:
+                        marked_payload = marked
+                        quoted_marked_payload = quoted_marked
+                    payload = extract_shell_payload(
+                        marked_payload, lexed, quoted_marked_payload
+                    )
                     if payload and payload.strip():
                         budget[0] -= 1
                         pending.append(payload)
@@ -1108,6 +1162,20 @@ def _skip_assignments_and_wrappers(toks):
             value_flags = WRAPPER_VALUE_FLAGS.get(t, set())
             while i < n:
                 a = toks[i]
+                if REDIRECT.fullmatch(a):
+                    # A redirect interleaved between the wrapper and its own
+                    # flags/value (`sudo 2>/dev/null -u root ...`) is not part
+                    # of the wrapper's own option syntax — skip the operator
+                    # and, if present, the one token right after it (its
+                    # target), without ending this flags scan (destructive-
+                    # guard-grouping-spec-drift: without this, the scan
+                    # stopped here, leaving `-u`/`root` in front of the real
+                    # command word for split_redirects()/head() to misread
+                    # as the command itself).
+                    i += 1
+                    if i < n:
+                        i += 1
+                    continue
                 if a == "--":
                     i += 1
                     break
@@ -1240,16 +1308,18 @@ def _split_fused_closer_redirects(toks):
     """
     out = []
     for t in toks:
-        if (
-            getattr(t, "is_operator", False)
-            and len(t) > 1
-            and t[0] == ")"
-            and REDIRECT.fullmatch(t[1:])
-        ):
-            out.append(Tok(")", True))
-            out.append(Tok(t[1:], True))
-        else:
-            out.append(t)
+        if getattr(t, "is_operator", False) and len(t) > 1 and t[0] == ")":
+            i = 0
+            while i < len(t) and t[i] == ")":
+                i += 1
+            rest = t[i:]
+            if rest == "" or REDIRECT.fullmatch(rest) or rest == "(":
+                for _ in range(i):
+                    out.append(Tok(")", True))
+                if rest:
+                    out.append(Tok(rest, True))
+                continue
+        out.append(t)
     return out
 
 
@@ -1331,10 +1401,29 @@ def _shape_leading(toks, case_stack):
 
         # top is "body" or CASE_STACK is empty: ordinary command-position
         # scanning, interleaved with the existing assignment/wrapper skip.
-        advance = _skip_assignments_and_wrappers(toks[i:])
-        if advance:
-            i += advance
+        #
+        # A VAR=value prefix alone does not change what follows it, so the
+        # scan keeps looping after consuming one (real bash still recognises
+        # a reserved word there). A WRAPPER (`sudo`, `command`, `env`, …) or
+        # mise/asdf `exec` is different: it hands off to an external program
+        # or, in `command`'s own case, explicitly suppresses reserved-word
+        # lookup for what follows. Either way the token right after it is a
+        # plain command word, never a keyword — `command case x in` runs a
+        # program named `case`, not a case statement. Recognising `case`
+        # there anyway pushed a pattern frame with nothing to close it,
+        # which then swallowed the rest of the chunk as opaque pattern text.
+        # So: keep looping (without stopping) only for a bare VAR=value
+        # prefix; once a WRAPPER/mise/asdf skip actually advances past one,
+        # stop the scan here — the token it lands on is the real command
+        # word and gets no further keyword treatment.
+        if re.match(r"^[A-Za-z_]\w*=", t):
+            i += 1
             continue
+        if t in WRAPPERS or (
+            t in ("mise", "asdf") and i + 1 < n and toks[i + 1] == "exec"
+        ):
+            i += _skip_assignments_and_wrappers(toks[i:])
+            break
 
         if t == "esac" and case_stack:
             case_stack.pop()
