@@ -16,15 +16,29 @@
 # The persisted decision record's shape belongs to task0003, not this file.
 
 # -----------------------------------------------------------------------
-# 1. question_set - what is sent to the external judgement skill
+# 1. question_set - what is sent to the external judgement skill, plus
+#    the four bucket descriptions (keys "0" to "3") passed to both Jev
+#    calls: the description-only call and the final call. The bucket
+#    descriptions are defined here, in this file; no external skill is
+#    assigned ownership of that wording.
 # -----------------------------------------------------------------------
 question_set:
   skill: "~/.claude/skills/jev"
   invocation_flags: ["--json-input", "--json-output"]
   question_design_reference: "typesafe:typesafe-ai"
-  # Question wording, the System One/Two model choice, and any
-  # model-behaviour guidance are owned by the two skills named above.
-  # Neither is reproduced here.
+  bucket_descriptions:
+    "0": >-
+      Only a wording or rule-text change: no new logic, and no test
+      change.
+    "1": >-
+      A rule addition combined with a test addition, or a small change
+      spread across a few files together with a small test change.
+    "2": >-
+      New logic, a change reaching across several modules, or a change
+      to an external contract.
+    "3": >-
+      A broad cross-cutting change: new files, new modules, a new
+      dependency, or a change to the architecture.
 
 # -----------------------------------------------------------------------
 # 2. threshold_rows - evaluated in this fixed order; the first match wins.
@@ -72,9 +86,13 @@ threshold_rows:
 
 # -----------------------------------------------------------------------
 # 3. codex_output_schema - the Codex pre-survey's invocation route and
-#    output contract
+#    output contract. Codex reports observed facts only; it makes no
+#    size judgment and no tier judgment of its own.
 # -----------------------------------------------------------------------
 codex_output_schema:
+  role: >-
+    Codex reports facts about the change under review; it makes no size
+    judgment and no tier judgment.
   invocation:
     route: "em-workflow/scripts/run_codex_exec.sh readonly"
     forbidden: >-
@@ -89,6 +107,37 @@ codex_output_schema:
     - covering_tests_exist
     - spillover_modules
     - work_still_required
+  fact_fields:
+    test_change_kind:
+      description: >-
+        Whether the test change only extends existing checks with more
+        cases one-to-one, or writes tests for new behavior.
+      values: ["none", "extend_existing_one_to_one", "new_behavior_tests"]
+    added_test_cases_approx:
+      description: Approximate count of test cases the change adds.
+      type: integer
+      minimum: 0
+    body_change_kind:
+      description: >-
+        Whether the body change is wording or a rule addition, or new
+        logic.
+      values: ["wording_or_rule_addition", "new_logic"]
+    change_containment:
+      description: How far the change reaches across the codebase.
+      values: ["single_function", "single_module", "multiple_modules"]
+    caller_and_dependency_count:
+      description: >-
+        Count of callers of, and dependencies of, the changed places.
+      type: integer
+      minimum: 0
+    changes_external_contract:
+      description: >-
+        Whether an external contract -- arguments, return values, file
+        formats, configuration keys and similar -- changes.
+      type: boolean
+    changes_behavior:
+      description: Whether observable behavior changes.
+      type: boolean
 
 # -----------------------------------------------------------------------
 # 4. fallback_matrix - tool availability degrades the decision, it never
