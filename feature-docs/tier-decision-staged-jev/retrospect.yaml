@@ -1,0 +1,34 @@
+feature: tier-decision-staged-jev
+collected_at: "2026-09-26T18:10:00+09:00"
+session_ids: [01a0dced-abfa-758d-a518-fec29cf9f3c2]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - {task: task0001, files: [tests/test_tier_evaluator_contract.py, tests/test_tier_rules.py, em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]}
+    - {task: task0002, files: [em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]}
+    - {task: task0003, files: [tests/test_tier_decision_step_a.py, tests/test_tier_decision_record.py, tests/test_tier_worktree_bootstrap.py, em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]}
+    - {task: task0004, files: [em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]}
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_only / description_plus_code の両読みとも P(2) が最大（0.72 / 0.61）で full"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.0, '1': 0.28, '2': 0.72}
+      - basis: description_plus_code
+        probabilities: {'0': 0.0, '1': 0.39, '2': 0.61}
+    pre_survey_estimate:
+      files_expected_count: 11
+      changed_lines_approx: 550
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "plugin.json / marketplace.json の version 上げが 4 タスクで予測外ファイルとして毎回 decline 対象になった。version bump を計画時の files に含めるか、専用タスクに寄せる余地がある"
+  - "review round1 の medium 3 件（decide-tier.py の非有限値・丸め境界）は未解決のまま残った"
