@@ -1,0 +1,134 @@
+task_id: task0003
+baseline_failures: []          # full suite (5973 tests) was green before any change
+final_failures: []             # full suite (6003 tests) is green after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1ThreeConjunctConditionPresent.test_all_three_conjuncts_present
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1JoiningOrderInFixedRelativeOrder.test_all_four_stages_present
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1JoiningOrderInFixedRelativeOrder.test_stages_appear_in_fixed_relative_order
+    red_confirmed: true
+    red_reason: >
+      Checked directly against implement-phase.md at the base commit
+      (eabf72783f7415e0b7c9103a0de01bd903ea832a): none of the four
+      three-conjunct-condition phrases, and none of the four joining-order
+      stage phrases (including the combined "Agent index lookup, keyed by
+      task id and needing no worktree, performed through the Agent index
+      writer's orchestrator-read rule" phrase, which pins R1's own text
+      rather than the pre-existing Recovery-paragraph citation) were
+      present in I.2.b at that commit -- each assertIn would have failed.
+      Confirmed present and in fixed relative order after the edit.
+  AC-2:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1EvidenceUnchangedOutcomeAndResidual.test_all_phrases_present
+    red_confirmed: true
+    red_reason: >
+      Checked directly against implement-phase.md at the base commit: none
+      of the five AC-2 phrases (evidence-only statement, five
+      unchanged-elements enumeration, on-proof journal entry, re-replay and
+      I.2.c reachability statement, Residual-only-when-no-proof statement)
+      were present in I.2.b at that commit -- each assertIn would have
+      failed. Confirmed present after the edit.
+  AC-3:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1OldWordingRemovedAndRetainedLiteralsKept.test_forbidden_phrases_absent_from_live_doc
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1OldWordingRemovedAndRetainedLiteralsKept.test_negative_proof_forbidden_phrases_present_in_pre_change_sample
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1OldWordingRemovedAndRetainedLiteralsKept.test_design_retained_literals_still_match
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR1OldWordingRemovedAndRetainedLiteralsKept.test_supporting_cast_own_wording_not_duplicated_into_i2b
+    red_confirmed: true
+    red_reason: >
+      test_forbidden_phrases_absent_from_live_doc is the absence assertion
+      this AC turns on: checked directly against the base-commit document,
+      both forbidden phrases ("A second, independent condition triggers
+      this same recovery without an Agent index lookup" and "no stop-tool
+      call occurs and this condition falls to the same Residual treatment")
+      WERE present in I.2.b, so assertNotIn would have failed (red) before
+      the edit; the negative-proof test against PRE_CHANGE_R1_SAMPLE
+      confirms the same two phrases are captured verbatim in that sample
+      together with the retained anchor, so the absence check is not
+      vacuous. test_design_retained_literals_still_match and
+      test_supporting_cast_own_wording_not_duplicated_into_i2b assert
+      UNCHANGED, pre-existing text (the Design section's retained-literals
+      list, and the pre-existing citation-not-restatement discipline) --
+      both were already true before this task's edit and stay true after;
+      no red state exists for them since the criterion does not change
+      that text, only requires it survive the edit (see unconfirmed_reds).
+  AC-4:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_forbidden_phrases_absent_from_live_doc
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_negative_proof_forbidden_phrases_present_in_their_samples
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_new_statements_present
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_extended_chain_codes_still_in_fixed_first_occurrence_order
+    red_confirmed: true
+    red_reason: >
+      Checked directly against the base-commit document: all three
+      forbidden phrases ("journal last event `launched`, task worktree and
+      task branch both present", "the task worktree and the task branch
+      are both observed present (else `task-artifacts-missing`)", and
+      "<observed task worktree path>") WERE present in I.2.b, so
+      assertNotIn would have failed (red); the R2/R3/R4 new-statement
+      phrases were absent, so assertIn on test_new_statements_present would
+      also have failed (red). The negative-proof test confirms each
+      forbidden phrase (plus its retained anchor) is captured verbatim in
+      its own pre-change sample. The fixed-order check for the six
+      extended-chain codes was already true before the edit (their order
+      and position are unchanged by this task, only R3's wording around the
+      first code changed) and stays true after -- no red state exists for
+      that sub-clause alone (see unconfirmed_reds).
+  AC-5:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestFR3PinAndLoop2RestrictionAbsent.test_candidate_set_predicate_pinned
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestFR3PinAndLoop2RestrictionAbsent.test_stale_launched_invocation_pinned
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestFR3PinAndLoop2RestrictionAbsent.test_loop2_restriction_present_in_its_own_verbatim_sample
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestFR3PinAndLoop2RestrictionAbsent.test_loop2_restriction_absent_from_current_i2b
+    red_confirmed: false
+    red_reason: >
+      This AC pins existing, UNCHANGED text by design (IMPLEMENTATION.md
+      D8: the candidate-set predicate and the stale-launched invocation
+      sentence are deliberately left byte-identical, not rewritten). Both
+      pinned phrases were already present in I.2.b before this task's edit
+      and remain present after -- there is no behavior change to force red
+      for the two presence assertions. The loop-2-restriction-absent
+      assertion is likewise true both before and after this task's edit
+      (that session-keyed wording was already removed by an earlier
+      feature, routeback-admissibility-exits, well before this task's base
+      commit); this task only adds the negative-proof pairing (a verbatim
+      capture from commit 0d9d0dc4) that documents WHY the finding is
+      considered resolved, without changing any document text the
+      assertion reads. Searched tests/ (by path and by filename) for an
+      existing test asserting either pinned phrase or the loop-2 wording:
+      none found; test_stale_launched_doc_contract.py and
+      test_implement_routeback_gate.py cover adjacent I.2.b text but not
+      these specific phrases.
+  AC-6:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestSC6ReasonCodePlacementConfinedToI2b.test_each_code_count_matches_between_whole_doc_and_i2b
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestSC6ReasonCodePlacementConfinedToI2b.test_negative_proof_code_placed_outside_i2b_is_flagged
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestSC6ReasonCodePlacementConfinedToI2b.test_code_absent_from_whole_document_counts_as_passing
+    red_confirmed: false
+    red_reason: >
+      NFR4 (SC6 codes confined to I.2.b) was already satisfied by the
+      base-commit document -- this task's edit does not move any SC6 code
+      in or out of I.2.b, it only rewords the sentences around them. The
+      count-matches-between-whole-doc-and-I.2.b assertion was already true
+      before this task's edit (all sixteen codes already occurred only
+      inside I.2.b, verified directly against the base commit) and remains
+      true after. The negative-proof test (forging a copy with
+      `same-session` injected into I.2.c) demonstrates the check is not
+      vacuous: run against the forged copy it correctly flags the
+      mismatch, both before and after this task's edit -- there is no
+      version of the underlying document text where this criterion would
+      have been red, since the property it verifies is invariant across
+      this task's change.
+  AC-7:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >
+      Build/lint-shaped criterion (stdlib-only import + full suite green),
+      not a behavior change: the AST-import check has no prior state to be
+      red against since the module itself is new (created by this task).
+      The full-suite pass ("python3 -m unittest discover -s tests passes")
+      is the actual outcome verified: 6003 tests, 0 failures, after this
+      task's edit and new module (5973 before). No existing test module was
+      modified by this task.
