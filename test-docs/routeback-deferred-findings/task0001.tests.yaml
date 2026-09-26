@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> 5973 tests, all passing
+final_failures: []             # re-run after implementation: 5985 tests (5973 + 12 new methods), all passing
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC1AppendsOverMerged.test_appends_exactly_one_failed_line_with_reason_merge_unverified
+    red_confirmed: true
+    red_reason: "exit 2 on unmodified helper: \"journal-append-failed: --reason must be one of ['orphaned', 'stale-launched'], got 'merge-unverified'\" (merge-unverified was not yet in the closed set)"
+  AC-2:
+    tests:
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC2NoopOverNonMergedFinalEvents.test_noop_over_launched
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC2NoopOverNonMergedFinalEvents.test_noop_over_failed
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC2NoopOverNonMergedFinalEvents.test_noop_over_no_event_for_task
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC2NoopOverNonMergedFinalEvents.test_noop_over_unrecognized_event_name
+    red_confirmed: true
+    red_reason: "all four exit 2 on unmodified helper with the same unknown-reason diagnostic as AC-1 (merge-unverified rejected before any decision logic ran)"
+  AC-3:
+    tests:
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC3ExistingReasonsStillNoopOverMerged.test_stale_launched_over_merged_is_noop
+      - tests.test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_merged_is_noop
+    red_confirmed: false
+    red_reason: "this criterion asserts UNCHANGED behavior (orphaned/stale-launched over a merged final event were already noop_terminal before this task); test_stale_launched_over_merged_is_noop passed against the unmodified helper in the same pre-implementation run that showed the other 12 new/updated tests red (12 failures out of 13 run), and test_final_event_merged_is_noop is a pre-existing, untouched test. No observable change exists for this codepath to go red against."
+  AC-4:
+    tests:
+      - tests.test_journal_append_failed.TestFunctionLevelDecisionLogic.test_valid_reason_accepts_only_the_closed_set
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC4ReasonSetAndDocs.test_help_output_names_all_three_reason_values
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC4ReasonSetAndDocs.test_module_docstring_names_merge_unverified_precondition
+    red_confirmed: true
+    red_reason: "valid_reason('merge-unverified') returned False; --help output and the module docstring named only 'orphaned' and 'stale-launched' -- all three assertions failed against the unmodified helper"
+  AC-5:
+    tests:
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC5LaunchAtUsageError.test_rejected_over_merged_final_event_with_distinct_diagnostic
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC5LaunchAtUsageError.test_rejected_before_journal_is_opened
+    red_confirmed: true
+    red_reason: "the task plan exempts the base non-zero-exit/empty-stdout/no-write behavior of this case from red-first (already true today via the unknown-reason path), but both tests additionally assert the NEW distinguishing diagnostic (mentions 'launch-at', omits 'must be one of'); against the unmodified helper both assertions failed because the actual stderr was the unknown-reason message ('must be one of ... got merge-unverified'), which contains 'must be one of' and omits 'launch-at' -- so both tests were observed red before implementation"
+  AC-6:
+    tests:
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC6Concurrency.test_concurrent_invocations_over_merged_append_exactly_one
+    red_confirmed: true
+    red_reason: "exit 2 on unmodified helper with the unknown-reason diagnostic for every concurrent invocation"
+  AC-7:
+    tests:
+      - tests.test_journal_append_failed.TestMergeUnverifiedAC7LaunchGuardConvergence.test_launch_after_merge_unverified_failed_is_permitted_and_appends_launched
+    red_confirmed: true
+    red_reason: "the recovery invocation (--reason merge-unverified) exited 2 with the unknown-reason diagnostic on the unmodified helper, so no failed line was ever appended and the assertion on its outcome failed before the launch guard was even invoked"
