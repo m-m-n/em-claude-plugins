@@ -121,9 +121,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/routeback-ssot-drift/task0001
   task0002:
     title: Pin I.2.b step 1 partial-artifact and third-case Residual outcomes
     plan: tasks/task0002.md
@@ -136,9 +136,9 @@ tasks:
     - FR6
     - FR7
     - NFR1
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/routeback-ssot-drift/task0002
 review:
   status: pending
   rounds_completed: 0
