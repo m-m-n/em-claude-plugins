@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: c89257fe26d2d75b3f9ca0223d09418e7550ec76
 last_input_digest: sha256:ab245d7486e1507106cefe73fe1475b306062df4e28dfc0c07a02ee0f518efb1
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -137,9 +137,15 @@ worker_runs:
   status: completed
   input_digest: sha256:ab245d7486e1507106cefe73fe1475b306062df4e28dfc0c07a02ee0f518efb1
 - request_id: create-spec-run-0003
-  status: dispatched
-  input_digest: null
-artifacts: []
+  status: completed
+  input_digest: sha256:8124b03b2d95b908f4573b6c9d12c8364ceabf7775eb411bafb0f2f5bcbc5786
+artifacts:
+- path: feature-docs/tier-decision-staged-jev/REQUIREMENTS.md
+  sha256: sha256:a09a85cca5ceea56e719de3d798889368791cc9c744376a320831d22f09d8865
+  produced_by: create-spec-run-0003
+- path: feature-docs/tier-decision-staged-jev/SPEC.md
+  sha256: sha256:7cf9ffe01a4d039053455d6d856a18b7e3f81a18499d8236670b3289a1bf5e1d
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
