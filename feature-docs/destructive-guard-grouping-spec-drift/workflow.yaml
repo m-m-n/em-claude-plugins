@@ -208,9 +208,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-grouping-spec-drift/task0001
   task0002:
     title: tar -C in extract mode only; pin destination families, rm input shaping and the mv label
     plan: tasks/task0002.md
@@ -239,9 +239,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-grouping-spec-drift/task0002
   task0003:
     title: Revise the prior feature's SPEC.md and REQUIREMENTS.md to match the implementation
     plan: tasks/task0003.md
@@ -254,9 +254,9 @@ tasks:
     requirements:
     - FR10
     - FR11
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-grouping-spec-drift/task0003
 review:
   status: pending
   rounds_completed: 0
