@@ -263,9 +263,13 @@ class TestAC4ReJudgmentPassageNamesAllThreeCountermeasures(unittest.TestCase):
 
     def test_re_judgment_passage_names_all_three(self):
         start = self.section.index("Re-judgment under the owning rule")
-        end = self.section.index(
-            "The state it protects still has a way out", start
-        )
+        # End-of-passage marker updated by task0004
+        # (routeback-deferred-findings): the sentence that used to open the
+        # very next paragraph ("The state it protects still has a way out")
+        # was replaced by that task, so this passage is now bounded by the
+        # sentence immediately preceding it instead -- the passage's own
+        # content and every assertion below are unaffected.
+        end = self.section.index("that same task relaunch.", start)
         passage = self.section[start:end]
         self.assertIn("`deny_already_merged`", passage)
         self.assertIn(
@@ -275,9 +279,7 @@ class TestAC4ReJudgmentPassageNamesAllThreeCountermeasures(unittest.TestCase):
 
     def test_re_judgment_reasons_are_stated_in_terms_of_the_own_id(self):
         start = self.section.index("Re-judgment under the owning rule")
-        end = self.section.index(
-            "The state it protects still has a way out", start
-        )
+        end = self.section.index("that same task relaunch.", start)
         passage = self.section[start:end]
         self.assertIn("the task's own merged id", passage)
         self.assertIn("own last journal event is `merged`", passage)
