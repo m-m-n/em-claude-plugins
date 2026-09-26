@@ -1,0 +1,36 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_routeback_deferred_findings_version_bump.TestPluginManifestVersion.test_manifest_version_is_past_baseline
+      - tests.test_routeback_deferred_findings_version_bump.TestPluginManifestVersion.test_manifest_has_a_version_key
+    red_confirmed: true
+    red_reason: "AssertionError: (0, 2, 10) not greater than (0, 2, 10) -- plugin.json still read 0.2.10 before the bump"
+  AC-2:
+    tests:
+      - tests.test_routeback_deferred_findings_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_past_baseline
+      - tests.test_routeback_deferred_findings_version_bump.TestMarketplaceEntryVersion.test_entry_version_matches_plugin_manifest
+      - tests.test_routeback_deferred_findings_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+    red_confirmed: true
+    red_reason: "AssertionError: (0, 2, 10) not greater than (0, 2, 10) -- the em-workflow marketplace entry still read 0.2.10 before the bump"
+  AC-3:
+    tests:
+      - tests.test_routeback_deferred_findings_version_bump.TestPluginManifestVersion.test_manifest_version_is_past_baseline
+      - tests.test_routeback_deferred_findings_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_past_baseline
+      - tests.test_routeback_deferred_findings_version_bump.TestMarketplaceEntryVersion.test_entry_version_matches_plugin_manifest
+      - tests.test_routeback_deferred_findings_version_bump.TestVersionComparisonIsPerComponentNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
+      - tests.test_routeback_deferred_findings_version_bump.TestVersionComparisonIsPerComponentNumeric.test_parsed_tuple_orders_two_digit_patch_correctly
+      - tests.test_routeback_deferred_findings_version_bump.TestVersionComparisonIsPerComponentNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+      - tests.test_routeback_deferred_findings_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
+      - tests.test_routeback_deferred_findings_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
+      - tests.test_routeback_deferred_findings_version_bump.TestValidationDetectsRegressions.test_fails_for_malformed_version_shape
+    red_confirmed: true
+    red_reason: "The past-baseline assertion (shared helper _assert_version_past_baseline) was observed failing with AssertionError: (0, 2, 10) not greater than (0, 2, 10) while both registries still read 0.2.10, before the bump was applied; the negative-proof tests (string trap, equal-to-baseline, differing versions, malformed shape) assert against the already-implemented matcher helpers and pass unconditionally of the registry state, so their own red is not separately observable -- they are proof-of-rejection tests for the matchers exercised above, not independent behavior under test."
+  AC-4:
+    tests:
+      - tests.test_routeback_deferred_findings_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "Stdlib-only-imports is a static property of the new module's own source as written; there is no prior state in which this module existed with a non-stdlib import to observe failing. The remaining clause (existing version modules pass unmodified; python3 -m unittest discover -s tests passes) was verified by actually running the full suite before and after the change (5973 tests baseline, 5990 tests after, both OK), not by a red/green cycle on a single test."
+notes: "Full suite (python3 -m unittest discover -s tests) baseline: 5973 tests, OK, no failures. After the bump: 5990 tests (17 new), OK, no failures. final_failures re-run was performed (not skipped)."
