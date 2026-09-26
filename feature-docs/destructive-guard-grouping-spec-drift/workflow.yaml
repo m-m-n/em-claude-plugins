@@ -281,7 +281,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: failed
+    status: in_progress
     notes: null
     branch: em-workflow/destructive-guard-grouping-spec-drift/task0004
     provenance:
