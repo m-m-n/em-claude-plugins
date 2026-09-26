@@ -1,0 +1,78 @@
+schema_version: 2
+feature: routeback-deferred-findings
+tier: full
+bases:
+- basis: description_only
+  score:
+    score: 1.93
+    confidence: 0.76
+    probabilities:
+      '0': 0.05
+      '1': 0.05
+      '2': 0.81
+      '3': 0.09
+  observed_at: '2026-09-26T21:32:07+09:00'
+- basis: description_plus_code
+  score:
+    score: 2.04
+    confidence: 0.94
+    probabilities:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.94
+      '3': 0.05
+  observed_at: '2026-09-26T21:36:03+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-schema.md
+  - tests/test_implement_routeback_gate.py
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/hooks/queue_launch_guard.py
+  - em-workflow/scripts/recover-orphaned-task.py
+  - tests/test_routeback_reset_scope_consistency.py
+  - tests/test_stale_launched_recovery_chain.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: true
+  changes_behavior: true
+  rationale: 'main の HEAD bc0dacbdc3d1f0a9e0c000f82bb9aa9d0c39414e では、6 件中 5 件が未解消で、1 件が解消しているよ。既存の未コミット変更を除外して確認し、ファイル操作はしていないよ。変更行数・追加関数数・追加テスト数・依存数の
+    0 は未算定を表し、不要と確認した値ではないよ
+
+
+    12839a507a7df994 は未解消だよ。worktree と branch が両方ない launched は、引き続き in-flight のまま拒否時の終端へ進む規則になっているよ（em-workflow/references/implement-phase.md:567、同:578）。この終端は
+    abort と同じで、別の復旧経路を提供しないよ（同:1023）。追加された復旧処理も両方の存在を条件としているよ（同:588、同:645）
+
+
+    2da3c75adac32650 は未解消だよ。祖先検証に失敗しても、生の journal が merged なら計画への差し戻しを拒否するよ（em-workflow/references/implement-phase.md:875）。再試行も起動時に拒否され、手順外での手動修復が必要だと明記されているよ（同:918、同:923）。実装も
+    merged の再起動を拒否しているよ（em-workflow/hooks/queue_launch_guard.py:227）
+
+
+    bc57aa350bb027c7 は解消しているよ。候補から除外する条件は前セッションかどうかではなく、その処理で現在応答待ちの Task() 呼び出しかどうかになっているよ（em-workflow/references/implement-phase.md:520）。同一セッションで終了を証明できた場合の
+    failed 記録も追加されているよ（同:633、同:656）
+
+
+    59e58726b1b22211 と 9cc0ce6b64087d2f は、どちらも未解消だよ。参照元は failed の解決を再試行か計画への差し戻しに限定したままで、祖先検証失敗の例外を定義していないよ（em-workflow/references/workflow-schema.md:460）。利用側には、この状態では規則を自動経路で満たせないという記述が残っているよ（em-workflow/references/implement-phase.md:927）
+
+
+    94de80a315821a55 は一部追記後も未解消だよ。参照元には session_id を復旧処理が読む説明が追加されているけれど、欠損の影響を停止記録の無処理だけに限定し、用途を停止対象の特定だけとする記述が残っているよ（em-workflow/references/workflow-schema.md:430、同:433、同:435、同:441）。利用側は復旧時の読み取りと、解決不能時の終端到達を定義しているよ（em-workflow/references/implement-phase.md:1155、同:562）。さらに
+    queue_failure_net.py も読み手になっているよ（em-workflow/hooks/queue_failure_net.py:300）
+
+
+    後続修正によるリセット対象の統合と削除対象の限定は確認できるけれど、祖先検証失敗の拒否は維持されているよ（em-workflow/references/implement-phase.md:937、同:966、feature-docs/routeback-residual-connections/SPEC.md:148）
+
+
+    関連テストは存在するよ。ただし、再試行が拒否される文言を要求するテストや、成果物欠損を復旧不能とするテストもあるため、存在だけでは指摘の解消を証明できないよ（tests/test_implement_routeback_gate.py:1749、tests/test_stale_launched_recovery_chain.py:306）。全体テストは一時ファイルを作成する処理を含むため実行しておらず、合格は未確認だよ（tests/test_stale_launched_recovery_chain.py:238）。同時更新指定のある両
+    version は HEAD で 0.2.10 だよ（em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27）'
+decided_at: '2026-09-26T21:36:30+09:00'
