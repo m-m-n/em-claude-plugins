@@ -13,6 +13,25 @@ mutating the real em-workflow/references/tier-rules.yaml.
 Each matcher below is paired with a negative proof / non-vacuity guard per
 IMPLEMENTATION.md's "Test module convention".
 
+D6 rewrite (feature-docs/tier-decision-staged-jev, task0001): this module
+predates that feature and asserted the single-reading score shape
+(`score.probabilities["0"|"1"]` + `expectation_clear`/`confidence` as
+threshold members via `p0_floor`/`expectation_clear_floor`/
+`bucket_sum_floor`) and, in `TestTwoReadingContract`, the two-reading
+`readings` input the new evaluator rejects outright. task0001 rewrites this
+module's fixtures and payload builder to the new `final_score.probabilities`
+(buckets `"0"`-`"3"`) shape and the new `bucket0_floor` /
+`bucket0_1_sum_floor` member names, and removes what the new dedicated file
+`tests/test_decide_tier_final_score.py` now fully supersedes:
+`TestOutOfRangeAndNonFiniteObservations` (bucket range/finiteness is now
+covered by that file's AC-2 tests), `TestNoNonFiniteTokenInEmittedResult`
+(covered by that file's AC-2 strict-JSON tests), and `TestTwoReadingContract`
+(the behavior it tested no longer exists; AC-3 there covers the legacy
+`readings` rejection). The remaining classes below keep testing the same
+generic, still-true invariant (no hardcoded row identifier or threshold
+literal; a row's declared comparisons are always evaluated; only a
+memberless row is an unconditional fallthrough) against the new score shape.
+
 Covers task0012 Acceptance Criteria:
 - AC-1: no row identifier literal and no threshold numeric literal appears
   in the evaluator; a renamed threshold member makes its row not match
@@ -21,24 +40,14 @@ Covers task0012 Acceptance Criteria:
   without its declared comparisons being evaluated, including when its
   identifier is unrecognized; only a row declaring no threshold member is
   an unconditional fallthrough.
-- AC-3: an absent/non-numeric declared member makes its row not match and
-  evaluation continues; with no unconditional row present, the result is
-  the tier that removes nothing.
-- AC-4: a non-finite or out-of-range observation yields the tier that
-  removes nothing with a reason naming the offending member, and neither
-  the most-reducing nor the middle tier is reachable with such an
-  observation.
-- AC-5: no non-finite token can appear in the emitted result; the process
-  exits zero for every input including the malformed ones above.
-- AC-6: the evaluator accepts two readings in one invocation and returns
-  the tier that removes nothing when they evaluate to different tiers; a
-  single reading is still accepted and behaves as it does today.
+- AC-3: a valid score that satisfies no declared row, against a rule table
+  with no unconditional fallthrough row, yields the tier that removes
+  nothing.
 """
 
 import importlib.util
-import json
-import math
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -62,8 +71,6 @@ dt = load_decide_tier_module()
 
 
 def run_cli(stdin_text, rules_path=None):
-    import subprocess
-
     args = [sys.executable, str(DECIDE_TIER_SCRIPT)]
     if rules_path is not None:
         args.append(str(rules_path))
@@ -76,21 +83,16 @@ def run_cli(stdin_text, rules_path=None):
     )
 
 
-def build_payload(p0=None, p1=None, expectation_clear=None, jev_available=True,
-                   codex_available=True, basis="description_plus_code"):
+def build_payload(p0=None, p1=None, p2=None, p3=None, jev_available=True,
+                   codex_available=True):
     probabilities = {}
-    if p0 is not None:
-        probabilities["0"] = p0
-    if p1 is not None:
-        probabilities["1"] = p1
-    score = {"probabilities": probabilities}
-    if expectation_clear is not None:
-        score["expectation_clear"] = expectation_clear
+    for key, value in (("0", p0), ("1", p1), ("2", p2), ("3", p3)):
+        if value is not None:
+            probabilities[key] = value
     return {
         "jev_available": jev_available,
         "codex_available": codex_available,
-        "basis": basis,
-        "score": score,
+        "final_score": {"probabilities": probabilities},
     }
 
 
@@ -123,7 +125,7 @@ class TestNoHardcodedRowIdentifiersOrThresholdLiterals(unittest.TestCase):
         self.assertIsNone(self.GET_WITH_NUMERIC_DEFAULT.search(self.source))
 
     def test_get_with_numeric_default_matcher_fires_on_a_forged_copy(self):
-        forged = self.source + '\nfake = row.get("p0_floor", 0.80)\n'
+        forged = self.source + '\nfake = row.get("bucket0_floor", 0.80)\n'
         self.assertIsNotNone(self.GET_WITH_NUMERIC_DEFAULT.search(forged))
         # Non-vacuity: the real source does not trip it.
         self.assertIsNone(self.GET_WITH_NUMERIC_DEFAULT.search(self.source))
@@ -147,20 +149,21 @@ class TestRenamedThresholdMemberDoesNotMatch(unittest.TestCase):
         "  - id: minimal\n"
         "    order: 1\n"
         "    tier: minimal\n"
-        "    p0_minimum: 0.80\n"  # renamed from p0_floor
-        "    expectation_clear_floor: 0.5\n"
+        "    bucket0_minimum: 0.80\n"  # renamed from bucket0_floor
         "  - id: full\n"
         "    order: 2\n"
         "    tier: full\n"
+        "probability_sum_tolerance: 0.02\n"
     )
 
     def test_renamed_member_row_never_matches_even_with_generous_score(self):
         with tempfile.TemporaryDirectory() as tmp:
             rules_path = write_rules(tmp, self.RENAMED_RULES)
             rules = dt._load_rules(rules_path)
-            payload = build_payload(p0=0.95, expectation_clear=0.95)
+            payload = build_payload(p0=0.95, p1=0.03, p2=0.01, p3=0.01)
             result = dt.decide(payload, rules)
             self.assertEqual(result["tier"], "full")
+            self.assertEqual(result["decided_by"], "threshold_rows:full")
             self.assertNotEqual(result["decided_by"], "threshold_rows:minimal")
 
     def test_non_vacuity_same_score_matches_minimal_against_the_real_table(self):
@@ -168,7 +171,7 @@ class TestRenamedThresholdMemberDoesNotMatch(unittest.TestCase):
         # match: the identical score against the real default rules table
         # DOES resolve to minimal.
         rules = dt._load_rules(TIER_RULES_PATH)
-        payload = build_payload(p0=0.95, expectation_clear=0.95)
+        payload = build_payload(p0=0.95, p1=0.03, p2=0.01, p3=0.01)
         result = dt.decide(payload, rules)
         self.assertEqual(result["tier"], "minimal")
         self.assertEqual(result["decided_by"], "threshold_rows:minimal")
@@ -187,32 +190,33 @@ class TestUnrecognizedRowIdentifierStillEvaluatesItsComparisons(unittest.TestCas
         "  - id: unrecognized_future_row\n"
         "    order: 1\n"
         "    tier: hypothetical\n"
-        "    p0_floor: 0.60\n"
+        "    bucket0_floor: 0.60\n"
         "  - id: full\n"
         "    order: 2\n"
         "    tier: full\n"
+        "probability_sum_tolerance: 0.02\n"
     )
 
     def test_unrecognized_row_matches_when_its_own_condition_holds(self):
         with tempfile.TemporaryDirectory() as tmp:
             rules_path = write_rules(tmp, self.FAIL_OPEN_REGRESSION_RULES)
             rules = dt._load_rules(rules_path)
-            payload = build_payload(p0=0.90)
+            payload = build_payload(p0=0.90, p1=0.05, p2=0.03, p3=0.02)
             result = dt.decide(payload, rules)
             self.assertEqual(result["tier"], "hypothetical")
             self.assertEqual(result["decided_by"], "threshold_rows:unrecognized_future_row")
 
     def test_unrecognized_row_does_not_match_when_its_condition_fails(self):
         # The fail-open regression: pre-task0012 code returned the row the
-        # instant it was reached, regardless of whether p0_floor was met,
-        # because the identifier matched neither "minimal" nor "reduced"
-        # and fell straight into the unconditional-return branch. The
-        # data-driven evaluator must instead evaluate the declared
-        # p0_floor comparison and fall through to `full` when it fails.
+        # instant it was reached, regardless of whether bucket0_floor was
+        # met, because the identifier matched neither "minimal" nor
+        # "reduced" and fell straight into the unconditional-return branch.
+        # The data-driven evaluator must instead evaluate the declared
+        # bucket0_floor comparison and fall through to `full` when it fails.
         with tempfile.TemporaryDirectory() as tmp:
             rules_path = write_rules(tmp, self.FAIL_OPEN_REGRESSION_RULES)
             rules = dt._load_rules(rules_path)
-            payload = build_payload(p0=0.30)
+            payload = build_payload(p0=0.30, p1=0.05, p2=0.35, p3=0.30)
             result = dt.decide(payload, rules)
             self.assertEqual(result["tier"], "full")
             self.assertEqual(result["decided_by"], "threshold_rows:full")
@@ -221,274 +225,71 @@ class TestUnrecognizedRowIdentifierStillEvaluatesItsComparisons(unittest.TestCas
         with tempfile.TemporaryDirectory() as tmp:
             rules_path = write_rules(tmp, self.FAIL_OPEN_REGRESSION_RULES)
             rules = dt._load_rules(rules_path)
-            matching = dt.decide(build_payload(p0=0.90), rules)
-            non_matching = dt.decide(build_payload(p0=0.30), rules)
+            matching = dt.decide(build_payload(p0=0.90, p1=0.05, p2=0.03, p3=0.02), rules)
+            non_matching = dt.decide(
+                build_payload(p0=0.30, p1=0.05, p2=0.35, p3=0.30), rules
+            )
             self.assertNotEqual(matching["tier"], non_matching["tier"])
 
 
 class TestOnlyAMemberlessRowIsUnconditional(unittest.TestCase):
     def test_a_row_with_no_extra_field_beyond_metadata_is_unconditional(self):
         rules = dt._load_rules(TIER_RULES_PATH)
-        # A score satisfying nothing still reaches `full`, which declares
-        # no threshold member.
-        payload = build_payload(p0=0.0, p1=0.0, expectation_clear=0.0)
+        # A valid score satisfying neither minimal nor reduced still reaches
+        # `full`, which declares no threshold member.
+        payload = build_payload(p0=0.10, p1=0.10, p2=0.40, p3=0.40)
         result = dt.decide(payload, rules)
         self.assertEqual(result["tier"], "full")
         self.assertEqual(result["decided_by"], "threshold_rows:full")
 
 
 # ---------------------------------------------------------------------------
-# AC-3: absent/non-numeric declared member -> row not matched, evaluation
-# continues; no unconditional row present -> safest tier.
+# AC-3: a valid score matching no declared row, against a table with no
+# unconditional fallthrough row, yields the tier that removes nothing.
 # ---------------------------------------------------------------------------
 
 
-class TestAbsentOrNonNumericMemberFallsThroughWithNoFallthroughRow(unittest.TestCase):
+class TestNoRowMatchesAndNoFallthroughRowExists(unittest.TestCase):
+    """Rewritten from the task0012 fixture of the same intent: under the new
+    validate-then-evaluate flow (task0001), an absent or non-numeric bucket
+    is caught by probability validation before any row is even reached, so
+    the "no fallthrough row" case is now exercised with a VALID score that
+    simply satisfies no declared row."""
+
     NO_FALLTHROUGH_RULES = (
         "threshold_rows:\n"
         "  - id: minimal\n"
         "    order: 1\n"
         "    tier: minimal\n"
-        "    p0_floor: 0.80\n"
-        "    expectation_clear_floor: 0.5\n"
+        "    bucket0_floor: 0.80\n"
         "  - id: reduced\n"
         "    order: 2\n"
         "    tier: reduced\n"
-        "    p0_floor: 0.40\n"
-        "    bucket_sum_floor: 0.85\n"
+        "    bucket0_1_sum_floor: 0.85\n"
+        "probability_sum_tolerance: 0.02\n"
     )
 
-    def test_absent_p0_with_no_fallthrough_row_yields_safest_tier(self):
+    def test_valid_score_matching_neither_row_yields_safest_tier_with_no_fallthrough(self):
         with tempfile.TemporaryDirectory() as tmp:
             rules_path = write_rules(tmp, self.NO_FALLTHROUGH_RULES)
             rules = dt._load_rules(rules_path)
-            payload = build_payload()  # no p0, no p1, no expectation_clear
+            payload = build_payload(p0=0.10, p1=0.10, p2=0.40, p3=0.40)
             result = dt.decide(payload, rules)
             self.assertEqual(result["tier"], "full")
             self.assertNotEqual(result["decided_by"], "threshold_rows:minimal")
             self.assertNotEqual(result["decided_by"], "threshold_rows:reduced")
-
-    def test_non_numeric_p0_with_no_fallthrough_row_yields_safest_tier(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            rules_path = write_rules(tmp, self.NO_FALLTHROUGH_RULES)
-            rules = dt._load_rules(rules_path)
-            payload = build_payload()
-            payload["score"]["probabilities"]["0"] = "high"
-            result = dt.decide(payload, rules)
-            self.assertEqual(result["tier"], "full")
+            self.assertIn("no threshold row matched", result["reason"])
 
     def test_non_vacuity_a_satisfying_score_still_matches_against_this_table(self):
         # Proves the table above is otherwise capable of matching -- the
-        # safest-tier result in the two cases above comes from the
-        # absent/non-numeric observation, not from a broken custom table.
+        # safest-tier result above comes from no row being satisfied, not
+        # from a broken custom table.
         with tempfile.TemporaryDirectory() as tmp:
             rules_path = write_rules(tmp, self.NO_FALLTHROUGH_RULES)
             rules = dt._load_rules(rules_path)
-            payload = build_payload(p0=0.90, expectation_clear=0.9)
+            payload = build_payload(p0=0.90, p1=0.05, p2=0.03, p3=0.02)
             result = dt.decide(payload, rules)
             self.assertEqual(result["tier"], "minimal")
-
-
-# ---------------------------------------------------------------------------
-# AC-4: non-finite / out-of-range observation -> safest tier, reason names
-# the offending member, neither minimal nor reduced reachable.
-# ---------------------------------------------------------------------------
-
-
-class TestOutOfRangeAndNonFiniteObservations(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.rules = dt._load_rules(TIER_RULES_PATH)
-
-    def test_p0_above_one_yields_safest_tier_with_named_reason(self):
-        payload = build_payload(p0=1.5, expectation_clear=0.9)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertIn("probabilities", result["reason"].lower() + result["reason"])
-        self.assertEqual(result["decided_by"], "fallback_matrix:invalid_observation")
-
-    def test_p0_below_zero_yields_safest_tier(self):
-        payload = build_payload(p0=-0.1, expectation_clear=0.9)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertEqual(result["decided_by"], "fallback_matrix:invalid_observation")
-
-    def test_expectation_clear_nan_yields_safest_tier_not_minimal(self):
-        payload = build_payload(p0=0.90, expectation_clear=float("nan"))
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertIn("expectation_clear", result["reason"])
-
-    def test_expectation_clear_infinite_yields_safest_tier(self):
-        payload = build_payload(p0=0.90, expectation_clear=float("inf"))
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-
-    def test_p1_out_of_range_blocks_reduced_even_when_p0_alone_qualifies(self):
-        # p0=0.50 alone clears reduced's p0_floor (0.40), but the bucket
-        # sum needs p1, and p1 is malformed -- neither minimal nor reduced
-        # may be reached.
-        payload = build_payload(p0=0.50, p1=2.5)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertNotEqual(result["decided_by"], "threshold_rows:reduced")
-        self.assertNotEqual(result["decided_by"], "threshold_rows:minimal")
-
-    def test_negative_infinity_p0_yields_safest_tier(self):
-        payload = build_payload(p0=float("-inf"), expectation_clear=0.9)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-
-    def test_non_vacuity_the_same_p0_in_range_reaches_minimal(self):
-        payload = build_payload(p0=0.90, expectation_clear=0.9)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "minimal")
-
-
-# ---------------------------------------------------------------------------
-# AC-5: no non-finite token in the emitted result; exit zero.
-# ---------------------------------------------------------------------------
-
-
-class TestNoNonFiniteTokenInEmittedResult(unittest.TestCase):
-    def _strict_json_loads(self, text):
-        def _reject(token):
-            raise ValueError(f"non-finite JSON token encountered: {token}")
-
-        return json.loads(text, parse_constant=_reject)
-
-    def test_nan_probability_input_produces_strictly_parseable_output(self):
-        payload = build_payload(p0=0.5, expectation_clear=0.5)
-        payload["score"]["probabilities"]["0"] = float("nan")
-        stdin_text = json.dumps(payload)
-        # Sanity: the input we constructed really does carry a bare
-        # non-finite JSON token (Python's json.dumps default allow_nan).
-        self.assertIn("NaN", stdin_text)
-
-        result = run_cli(stdin_text)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = self._strict_json_loads(result.stdout)
-        self.assertEqual(data["tier"], "full")
-
-    def test_infinite_expectation_clear_input_produces_strictly_parseable_output(self):
-        payload = build_payload(p0=0.5, expectation_clear=0.5)
-        payload["score"]["expectation_clear"] = float("inf")
-        stdin_text = json.dumps(payload)
-        self.assertIn("Infinity", stdin_text)
-
-        result = run_cli(stdin_text)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = self._strict_json_loads(result.stdout)
-        self.assertEqual(data["tier"], "full")
-
-    def test_well_formed_input_still_parses_strictly_and_exits_zero(self):
-        payload = build_payload(p0=0.81, expectation_clear=0.6)
-        result = run_cli(json.dumps(payload))
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = self._strict_json_loads(result.stdout)
-        self.assertEqual(data["tier"], "minimal")
-
-    def test_non_vacuity_the_raw_output_of_the_nan_case_really_did_carry_a_bare_token_pre_sanitization(self):
-        # Confirms the module-level sanitizer is doing real work: encoding
-        # the same malformed observation WITHOUT going through the
-        # evaluator's output path produces a bare, non-standard token.
-        naive = json.dumps({"score": {"probabilities": {"0": float("nan")}}})
-        self.assertIn("NaN", naive)
-        with self.assertRaises(ValueError):
-            json.loads(naive, parse_constant=lambda tok: (_ for _ in ()).throw(ValueError(tok)))
-
-
-# ---------------------------------------------------------------------------
-# AC-6: two readings in one invocation.
-# ---------------------------------------------------------------------------
-
-
-class TestTwoReadingContract(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.rules = dt._load_rules(TIER_RULES_PATH)
-
-    def _reading(self, basis, p0=None, p1=None, expectation_clear=None):
-        probabilities = {}
-        if p0 is not None:
-            probabilities["0"] = p0
-        if p1 is not None:
-            probabilities["1"] = p1
-        score = {"probabilities": probabilities}
-        if expectation_clear is not None:
-            score["expectation_clear"] = expectation_clear
-        return {"basis": basis, "score": score}
-
-    def test_two_readings_agreeing_use_that_tier(self):
-        payload = {
-            "jev_available": True,
-            "codex_available": True,
-            "readings": [
-                self._reading("description_only", p0=0.81, expectation_clear=0.6),
-                self._reading("description_plus_code", p0=0.85, expectation_clear=0.7),
-            ],
-        }
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "minimal")
-
-    def test_two_readings_disagreeing_yield_safest_tier(self):
-        payload = {
-            "jev_available": True,
-            "codex_available": True,
-            "readings": [
-                self._reading("description_only", p0=0.10, expectation_clear=0.1),
-                self._reading("description_plus_code", p0=0.85, expectation_clear=0.7),
-            ],
-        }
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertEqual(result["decided_by"], "fallback_matrix:readings_disagree")
-
-    def test_non_vacuity_two_readings_agreeing_on_full_is_not_flagged_as_disagreement(self):
-        payload = {
-            "jev_available": True,
-            "codex_available": True,
-            "readings": [
-                self._reading("a", p0=0.10, expectation_clear=0.1),
-                self._reading("b", p0=0.10, expectation_clear=0.1),
-            ],
-        }
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "full")
-        self.assertNotEqual(result["decided_by"], "fallback_matrix:readings_disagree")
-
-    def test_single_reading_via_readings_list_behaves_like_today(self):
-        payload = {
-            "jev_available": True,
-            "codex_available": True,
-            "readings": [self._reading("description_only", p0=0.81, expectation_clear=0.6)],
-        }
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "minimal")
-        self.assertEqual(result["decided_by"], "threshold_rows:minimal")
-
-    def test_top_level_basis_score_single_reading_still_accepted(self):
-        # Today's shape, unchanged.
-        payload = build_payload(p0=0.81, expectation_clear=0.6)
-        result = dt.decide(payload, self.rules)
-        self.assertEqual(result["tier"], "minimal")
-        self.assertEqual(result["observed"]["basis"], "description_plus_code")
-        self.assertEqual(result["observed"]["score"], payload["score"])
-
-    def test_cli_accepts_two_readings_end_to_end(self):
-        payload = {
-            "jev_available": True,
-            "codex_available": True,
-            "readings": [
-                self._reading("description_only", p0=0.10, expectation_clear=0.1),
-                self._reading("description_plus_code", p0=0.85, expectation_clear=0.7),
-            ],
-        }
-        result = run_cli(json.dumps(payload))
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = json.loads(result.stdout)
-        self.assertEqual(data["tier"], "full")
-        self.assertEqual(data["decided_by"], "fallback_matrix:readings_disagree")
 
 
 if __name__ == "__main__":
