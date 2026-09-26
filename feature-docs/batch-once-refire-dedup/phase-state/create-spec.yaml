@@ -1,7 +1,7 @@
 schema_version: 1
 feature: batch-once-refire-dedup
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 396b00884a4ca102f4cdf4c7477da8c669a3867e
 last_input_digest: sha256:8eed7d4ce2c9c86f23c03591c453e67944e73c8c7abb520f751c918d8d52a213

@@ -1,0 +1,210 @@
+schema_version: 1
+feature: batch-once-refire-dedup
+created: '2026-09-27'
+base_branch: main
+goal: |
+  # em-workflow: --batch --once の外部再発火が feature 名を持たず、同一タスクに重複 feature を作る
+
+  Notion task: https://www.notion.so/3cc3509ec8ee814e8b13cf45dab026e9
+
+  ## 現象（必須）
+  `/em-workflow:develop --batch <タスク記述> --once` を外部サービス（Notion Webhook）から
+  繰り返し発火させると、同一タスクに対して毎回新しい feature が作られ、integration
+  ブランチが重複して増える。
+  develop の Step A は「パス引数なし: 常に新規 feature として Step A の create-spec ルートへ
+  （既存ブランチの列挙・推測はしない）」と規定しており、`references/batch-mode.md` の
+  Non-packet gates 表も「No path argument → always a new feature ... Existing branches are
+  never enumerated, and a feature is never guessed from them — resuming requires the explicit
+  feature name」と同じことを述べている。この規定自体は「誤った feature への再開」を防ぐ
+  ためのもので妥当だが、`--once` と組み合わさると 1 回の起動で 1 フェーズしか進まないため、
+  同じタスクページから 2 回目以降の発火が起きた時点で必ず重複 feature になる。
+  実際に 2026-08-30 のタスク「em-workflow: Step I.2.a / I.3 の commit-docs.sh 呼び出しが
+  expected_base_tip を渡さず exit 4 が発火しない」で、`exit4-scope-tip-binding` と
+  `exit4-expected-base-tip-callsites` の 2 本の integration ブランチが生まれた。両者の
+  `workflow.yaml` の `goal` は同一タスクページ本文とバイト一致する。
+  ## 再現手順（必須）
+  1. Notion タスクを 1 件用意し、`/em-workflow:develop --batch <そのタスク URL> --once`
+  を起動する。create-spec が完了し、`--once` のフェーズ境界でターンが終わる
+  1. `git branch --list 'em-workflow/*'` で feature ブランチが 1 本できていることを確認する
+  2. 同じタスク URL で同じコマンドをもう一度起動する（Webhook 再発火に相当）
+  3. Step A がパス引数を持たないため新規 feature として解決され、2 本目の
+  `em-workflow/<別名>/integration` が作られる。1 本目の create-plan は pending のまま残る
+  ## 期待する挙動（必須）
+  同一タスクからの再発火が、既存 feature の続きとして走るか、少なくとも重複を作らずに
+  止まること。取りうる形は次のいずれか。
+  - (a) 外部ディスパッチャ側で feature 名を持ち回り、2 回目以降は
+  `/em-workflow:develop --batch <feature 名> --once` の形で発火させる。develop 側は無変更
+  - (b) `--batch` のタスク記述が安定した外部 ID（Notion ページ ID 等）を伴う場合に限り、
+  develop が `workflow.yaml` の `goal` ではなく専用フィールドで突き合わせて既存 feature を
+  解決できるようにする。「既存ブランチを列挙して推測しない」規定は維持したまま、
+  ID 一致という推測でない経路を 1 つ足す形
+  - (c) 重複を許容するが、`--once` のフェーズ境界の終端行または batch レポートに、同一
+  `goal` を持つ既存 feature の存在を必ず載せて、人間が気づける形にする
+  いずれを採るかは運用方針の判断が要る。
+  ## 完了の定義（必須）
+  - [ ] 再現手順で 2 本目の重複 integration ブランチが作られない、または作られたことが
+  出力から必ず分かる
+  - [ ] 「既存ブランチの列挙・推測はしない」という Step A の既存規定が維持されている
+  - [ ] `python3 -m unittest discover -s tests` が通る
+  - [ ] 再発を検出するテストがある
+  ## 該当箇所（任意）
+  - `em-workflow/skills/develop/SKILL.md` — 引数処理の「パス引数なし」節、および Step A
+  「feature の決定」
+  - `em-workflow/references/batch-mode.md` — Non-packet gates 表の
+  「Step A feature resolution」行
+  - `~/.claude/skills/notion-batch-develop/SKILL.md` — タスク URL の解決（develop の
+  Step A より前）。feature 名の持ち回りをここで担う場合の変更先
+  ## 実害・発生条件（任意）
+  `--batch` と `--once` を併用し、かつ外部サービスが feature 名ではなくタスク記述
+  （Notion URL 等）で発火する運用でのみ起きる。`--once` なしの通常の batch 実行は 1 回で
+  Step C まで走り切るため再発火が起きず、この問題は表面化しない。
+  実害は、(1) 同一タスクに対する仕様・計画が 2 系統に分岐して人間がどちらを採るか判断を
+  迫られる、(2) create-spec が毎回フルで走るため計算資源を捨てる、(3) 片付けられない
+  worktree とブランチが溜まる、の 3 点。
+
+
+  ## 起動時の追加指示
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較して良いと判断した方を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/batch-once-refire-dedup/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.33
+      '2': 0.67
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.73
+      '3': 0.0
+  at: '2026-09-27T01:03:56+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: f72257967c0ee315ee500696ddd3877aa430b984
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない変更（references 文書・テスト・version のみ）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 4cfd5c4c7b4f536eaeb44caf591022d6f68dd0ba
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: batch-mode.md の Step A 行に再起動契約を明記
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: SKILL.md の Step A 規定を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: batch-terminal-line.md の phase_done 再起動記述を明確化
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 回帰テストの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: em-workflow プラグインの version を上げる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Test suite
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Test dependencies
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: SKILL.md literal guard
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Format ownership
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
