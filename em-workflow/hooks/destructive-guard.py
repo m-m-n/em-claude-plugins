@@ -2114,6 +2114,51 @@ def flag_value_destinations(word, args):
     return out
 
 
+# tar's own value-taking short flag for `-C`/`--directory` (FLAG_DEST_FLAGS).
+# tar_extract_mode() stops scanning a short-option cluster at this character
+# so a directory value attached to `-C` (`-Cxtra`) is never misread as the
+# `-x` extract flag merely because the VALUE text starts with the letter x —
+# mirrors flag_value_destinations()'s own cluster handling of `-C`.
+_TAR_DIR_SHORT_FLAG = "C"
+
+
+def tar_extract_mode(args):
+    """Whether ARGS put a tar statement in extract mode (IMPLEMENTATION.md
+    "tar extract-mode rule", task0002 FR6).
+
+    True when ARGS contain any of: `-x`; `--extract`; `--get`; a single-dash
+    short-option cluster containing `x` (e.g. `-xzf`); or, only as the FIRST
+    argument after the command word and not itself starting with a dash, a
+    word containing `x` (the traditional dashless form, e.g. `xzf`).
+
+    A long option other than `--extract`/`--get` never indicates extract
+    mode, even when its own name contains the letter x (`--exclude`) —
+    ARGS is only ever tested against the exact long-option spellings above,
+    never substring-matched. Scanning a short-option cluster stops at the
+    `C` character (see _TAR_DIR_SHORT_FLAG): `-C`'s own value is the REST of
+    that cluster, not further option letters, so a directory name starting
+    with `x` there is never read as `-x`. A value that belongs to another
+    option and arrives as its own token (the archive name after `-f`) is
+    never scanned at all — only tokens starting with a single dash, or the
+    statement's own first argument, are examined.
+
+    Each tar statement is judged from its own ARGS only (D2); a caller
+    passing one side of a pipeline gets that side's own answer.
+    """
+    for a in args:
+        if a in ("-x", "--extract", "--get"):
+            return True
+        if a.startswith("-") and not a.startswith("--") and len(a) > 1:
+            for c in a[1:]:
+                if c == "x":
+                    return True
+                if c == _TAR_DIR_SHORT_FLAG:
+                    break
+    if args and not args[0].startswith("-") and "x" in args[0]:
+        return True
+    return False
+
+
 def strip_value_tokens(word, args):
     """Return WORD's positional arguments from ARGS, dropping any token that
     is actually the value of one of WORD's VALUE_TAKING_FLAGS rather than a
@@ -2191,8 +2236,11 @@ def write_targets(word, args, redirects):
     - the last non-flag argument for `rsync`, and for `git` only the last
       positional argument of `git clone` (covers `git clone URL DEST`;
       other git subcommands are not treated as write-target-bearing here)
-    - the value of a command-specific destination flag (`tar -C`/`--directory`,
-      `unzip -d`, `curl -o`/`--output`, `wget -O`/`--output-document`)
+    - the value of a command-specific destination flag: for `tar`, `-C`/
+      `--directory` only when the statement is in extract mode (task0002
+      FR6, tar_extract_mode() / IMPLEMENTATION.md "tar extract-mode rule");
+      unconditionally for `unzip -d`, `curl -o`/`--output`, `wget -O`/
+      `--output-document`
 
     Before taking the last non-flag argument as the destination for `cp`/
     `ln`/`rsync`, value-taking options of theirs (`-S`/`--suffix`, `-t`/
@@ -2258,7 +2306,14 @@ def write_targets(word, args, redirects):
     if word in ("cp", "mv", "ln", "install"):
         targets = targets + flag_dests
 
-    targets = targets + flag_value_destinations(word, args)
+    # tar's -C/--directory value is a write target only in extract mode
+    # (task0002 FR6); every other FLAG_DEST_FLAGS command's destination flag
+    # is unconditional, as before.
+    if word == "tar":
+        if tar_extract_mode(args):
+            targets = targets + flag_value_destinations(word, args)
+    else:
+        targets = targets + flag_value_destinations(word, args)
 
     return targets
 
