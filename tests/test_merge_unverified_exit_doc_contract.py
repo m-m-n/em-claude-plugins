@@ -136,11 +136,17 @@ def _supporting_cast_section(text):
 # pattern per this module's own docstring.
 # ===========================================================================
 
+# task0007: round 1 auto-fix commit 4ad3d3b3 reworded this preconditions
+# sentence -- the old "the ancestor check just failed" wording (still
+# pinned below by ANCESTOR_CHECK_JUST_FAILED_PHRASE, now as an absence
+# assertion, AC-2) became the exit-1 restriction clause pinned here AND
+# separately by R2_EXIT1_RESTRICTION_PHRASE (AC-3) below.
 R2_PRECONDITIONS_PHRASE = (
-    "This exit is reached once three preconditions all hold: the ancestor "
-    "check just failed; the task's journal last event is `merged`; and "
-    "the task's `Task()` call is not among this reconcile step's own "
-    "currently-outstanding calls"
+    "This exit is reached once three preconditions all hold: the task "
+    "branch ref resolves and the ancestor check on it exits 1 (not an "
+    "ancestor) rather than any other exit code; the task's journal last "
+    "event is `merged`; and the task's `Task()` call is not among this "
+    "reconcile step's own currently-outstanding calls"
 )
 R2_TERMINATION_NOT_PROVEN_PHRASE = (
     "A `merged` event is not by itself proof that the launching agent "
@@ -230,6 +236,158 @@ class TestAncestorCheckBulletStatesTheNewExit(unittest.TestCase):
             "or abort)",
             self.i2b,
         )
+
+
+# ===========================================================================
+# task0007 (routeback-deferred-findings, verify TS-8/TS-9/SC-2/SC-4): the
+# preconditions sentence above was reworded by review round 1 auto-fix
+# commit `4ad3d3b3ac7aa4c12b910dca9bff4606e04ae1c1`. The old phrase "the
+# ancestor check just failed" is now an absence assertion (AC-2), and the
+# three new clauses that replaced it -- the exit-1 restriction (AC-3), the
+# exit-128 non-invocation (AC-4), and the already-`merged` exclusion
+# (AC-5) -- each get their own positive pin and negative proof, built from
+# one verbatim live-bullet sample so the three proofs stay independent.
+# ===========================================================================
+
+ANCESTOR_CHECK_JUST_FAILED_PHRASE = "the ancestor check just failed"
+
+# Verbatim excerpt of the preconditions sentence as it read at the parent
+# of commit 4ad3d3b3 -- the only revision that still carries this phrase.
+PRE_CHANGE_ANCESTOR_JUST_FAILED_SAMPLE = (
+    "This exit is reached once three\n"
+    "     preconditions all hold: the ancestor check just failed; the task's\n"
+    "     journal last event is `merged`; and the task's `Task()` call is not\n"
+    "     among this reconcile step's own currently-outstanding calls."
+)
+
+# Present, unchanged, in both the pre-change sample above and the live
+# bullet's preconditions sentence -- guards every negative proof below
+# against passing vacuously.
+ANCESTOR_CHECK_BULLET_RETAINED_ANCHOR = "the task's journal last event is `merged`"
+
+
+class TestAncestorCheckJustFailedPhraseAbsent(unittest.TestCase):
+    """AC-2: the pre-auto-fix preconditions phrase "the ancestor check
+    just failed" is absent from the live ancestor-check bullet -- round 1
+    auto-fix commit 4ad3d3b3 replaced it with the exit-1 restriction
+    clause (AC-3) plus the two clauses AC-4 and AC-5 pin below."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2b = _normalize_ws(_i2b_section(_read()))
+
+    def test_old_phrase_absent_from_live_bullet(self):
+        self.assertNotIn(ANCESTOR_CHECK_JUST_FAILED_PHRASE, self.i2b)
+
+    def test_old_phrase_matcher_flags_presence_in_pre_change_sample(self):
+        sample = _normalize_ws(PRE_CHANGE_ANCESTOR_JUST_FAILED_SAMPLE)
+        self.assertIn(ANCESTOR_CHECK_JUST_FAILED_PHRASE, sample)
+
+    def test_pre_change_sample_retains_anchor(self):
+        sample = _normalize_ws(PRE_CHANGE_ANCESTOR_JUST_FAILED_SAMPLE)
+        self.assertIn(ANCESTOR_CHECK_BULLET_RETAINED_ANCHOR, sample)
+        self.assertIn(ANCESTOR_CHECK_BULLET_RETAINED_ANCHOR, self.i2b)
+
+
+# One verbatim sample of the live preconditions-through-exclusion span,
+# held as a single module-level constant (task plan: "one verbatim sample
+# of the live bullet ... each derivation removing exactly one clause").
+LIVE_ANCESTOR_CHECK_BULLET_SAMPLE = (
+    "This exit is reached once three\n"
+    "     preconditions all hold: the task branch ref resolves and the\n"
+    "     ancestor check on it exits 1 (not an ancestor) rather than any\n"
+    "     other exit code; the task's journal last event is `merged`; and the\n"
+    "     task's `Task()` call is not among this reconcile step's own\n"
+    "     currently-outstanding calls. A task branch ref that fails to\n"
+    "     resolve — exit 128, e.g. because step 4 already deleted it after\n"
+    "     verifying that same task's merge — never reaches this exit;\n"
+    "     `merge-unverified` is not invoked for it. Tasks whose `workflow.yaml`\n"
+    "     status already reads `merged` are step 4's cleaned-up tasks and are\n"
+    "     excluded from this re-check rather than replayed against a ref step\n"
+    "     4 may have already removed."
+)
+
+R2_EXIT1_RESTRICTION_PHRASE = (
+    "the task branch ref resolves and the ancestor check on it exits 1 "
+    "(not an ancestor) rather than any other exit code"
+)
+R2_EXIT128_NON_INVOCATION_PHRASE = (
+    "A task branch ref that fails to resolve — exit 128, e.g. because "
+    "step 4 already deleted it after verifying that same task's merge — "
+    "never reaches this exit; `merge-unverified` is not invoked for it"
+)
+R2_ALREADY_MERGED_EXCLUSION_PHRASE = (
+    "Tasks whose `workflow.yaml` status already reads `merged` are step "
+    "4's cleaned-up tasks and are excluded from this re-check rather "
+    "than replayed against a ref step 4 may have already removed"
+)
+
+
+class TestExitOneRestrictionClausePinned(unittest.TestCase):
+    """AC-3: the precondition holds only when the task branch ref
+    resolves and the ancestor check on it exits 1 (not an ancestor)
+    rather than any other exit code."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2b = _normalize_ws(_i2b_section(_read()))
+        cls.live_sample = _normalize_ws(LIVE_ANCESTOR_CHECK_BULLET_SAMPLE)
+
+    def test_clause_present_in_live_bullet(self):
+        self.assertIn(R2_EXIT1_RESTRICTION_PHRASE, self.i2b)
+
+    def test_live_sample_is_verbatim_substring_of_live_bullet(self):
+        self.assertIn(self.live_sample, self.i2b)
+
+    def test_negative_proof_derived_bullet_lacks_clause(self):
+        derived = self.live_sample.replace(R2_EXIT1_RESTRICTION_PHRASE, "")
+        self.assertNotIn(R2_EXIT1_RESTRICTION_PHRASE, derived)
+
+    def test_retained_anchor_present_in_derived_bullet(self):
+        derived = self.live_sample.replace(R2_EXIT1_RESTRICTION_PHRASE, "")
+        self.assertIn(ANCESTOR_CHECK_BULLET_RETAINED_ANCHOR, derived)
+
+
+class TestExit128NonInvocationSentencePinned(unittest.TestCase):
+    """AC-4: a task branch ref that fails to resolve (exit 128) never
+    reaches this exit; `merge-unverified` is not invoked for it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2b = _normalize_ws(_i2b_section(_read()))
+        cls.live_sample = _normalize_ws(LIVE_ANCESTOR_CHECK_BULLET_SAMPLE)
+
+    def test_sentence_present_in_live_bullet(self):
+        self.assertIn(R2_EXIT128_NON_INVOCATION_PHRASE, self.i2b)
+
+    def test_negative_proof_derived_bullet_lacks_sentence(self):
+        derived = self.live_sample.replace(R2_EXIT128_NON_INVOCATION_PHRASE, "")
+        self.assertNotIn(R2_EXIT128_NON_INVOCATION_PHRASE, derived)
+
+    def test_retained_anchor_present_in_derived_bullet(self):
+        derived = self.live_sample.replace(R2_EXIT128_NON_INVOCATION_PHRASE, "")
+        self.assertIn(ANCESTOR_CHECK_BULLET_RETAINED_ANCHOR, derived)
+
+
+class TestAlreadyMergedExclusionSentencePinned(unittest.TestCase):
+    """AC-5: a task whose `workflow.yaml` status already reads `merged`
+    is step 4's cleaned-up task and is excluded from this re-check."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2b = _normalize_ws(_i2b_section(_read()))
+        cls.live_sample = _normalize_ws(LIVE_ANCESTOR_CHECK_BULLET_SAMPLE)
+
+    def test_sentence_present_in_live_bullet(self):
+        self.assertIn(R2_ALREADY_MERGED_EXCLUSION_PHRASE, self.i2b)
+
+    def test_negative_proof_derived_bullet_lacks_sentence(self):
+        derived = self.live_sample.replace(R2_ALREADY_MERGED_EXCLUSION_PHRASE, "")
+        self.assertNotIn(R2_ALREADY_MERGED_EXCLUSION_PHRASE, derived)
+
+    def test_retained_anchor_present_in_derived_bullet(self):
+        derived = self.live_sample.replace(R2_ALREADY_MERGED_EXCLUSION_PHRASE, "")
+        self.assertIn(ANCESTOR_CHECK_BULLET_RETAINED_ANCHOR, derived)
 
 
 # --- R2's closing sentence: a rewrite of prior text (pre-change sample
