@@ -153,6 +153,11 @@ class TestMappingTableSingleOwnership(unittest.TestCase):
         self.assertGreater(len(section.strip()), 200)
 
     def test_mapping_table_covers_every_persisted_record_field(self):
+        # schema_version 2 (feature-docs/tier-decision-staged-jev/tasks/
+        # task0004.md AC-1/AC-3): `fallback_reason` joined the persisted
+        # record after this module was first written; the coverage check
+        # is extended here rather than left pinned to the schema_version 1
+        # field set.
         section = self._mapping_section()
         for field in (
             "`tier`",
@@ -161,6 +166,7 @@ class TestMappingTableSingleOwnership(unittest.TestCase):
             "`pre_survey_estimate`",
             "`schema_version`",
             "`feature`",
+            "`fallback_reason`",
         ):
             self.assertIn(field, section)
 
