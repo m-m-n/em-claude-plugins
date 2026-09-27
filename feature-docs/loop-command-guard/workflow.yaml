@@ -130,7 +130,8 @@ tasks:
     - FR11
     - FR14
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/loop-command-guard/task0002
     provenance:
       source: review
       source_ids:
