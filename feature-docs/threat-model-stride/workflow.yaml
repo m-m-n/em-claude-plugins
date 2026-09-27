@@ -180,7 +180,7 @@ tasks:
     - FR10
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/threat-model-stride/task0002
   task0003:
