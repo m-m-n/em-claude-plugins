@@ -247,7 +247,7 @@ tasks:
     - FR8
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/threat-model-stride/task0005
   task0006:
