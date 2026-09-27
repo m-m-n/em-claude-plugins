@@ -39,10 +39,21 @@ PreToolUse(Bash) entry, `heredoc-stdin-guard.py`, is appended after
 it cannot reopen the "blanket allow ends the decision" gate `destructive-
 guard.py`'s tail position exists to protect; `EXPECTED_BASH_GUARD_ORDER`
 and `test_destructive_guard_is_last_among_decision_capable_guards` are
-both updated accordingly. The full eight-entry ordered shape (exact
-command/timeout/status-message pinning) is the separate, more detailed
-job of tests/test_hooks_registration.py's
-`TestPreToolUseBashArrayHasTheEightEntryOrderedShape`.
+both updated accordingly.
+
+Extended again by loop-command-guard task0001 (FR9, FR10, AC-6): a ninth
+PreToolUse(Bash) entry, `loop-command-guard.py`, is inserted directly after
+`interpreter-mismatch-guard.py` and directly before `destructive-guard.py`.
+It denies (never allows or asks), so -- like `muse_guard.py` and
+`interpreter-mismatch-guard.py` before it -- it must run before
+`destructive-guard.py`'s blanket allow ends the decision;
+`EXPECTED_BASH_GUARD_ORDER` reflects the insertion, and
+`test_destructive_guard_is_last_among_decision_capable_guards` keeps
+excluding only `heredoc-stdin-guard.py` from the decision-capable tail
+check. The full nine-entry ordered shape (exact command/timeout/status-
+message pinning) is the separate, more detailed job of
+tests/test_hooks_registration.py's
+`TestPreToolUseBashArrayHasTheNineEntryOrderedShape`.
 
 Standard library only, per test/README.md.
 """
@@ -79,7 +90,11 @@ MIGRATED_HOOK_FILES = (
 # (muse-spark-contributor-consent task0001.md Design, "Registration").
 # `interpreter-mismatch-guard.py` also denies, so it sits before
 # `destructive-guard.py` for the same reason as muse_guard.py.
-# `heredoc-stdin-guard.py` runs LAST of all eight (heredoc-stdin-guard
+# `loop-command-guard.py` sits directly after `interpreter-mismatch-guard.py`
+# and directly before `destructive-guard.py` for the same reason again: it
+# denies, so it must run before the blanket allow
+# (loop-command-guard task0001.md Design, "Registration").
+# `heredoc-stdin-guard.py` runs LAST of all nine (heredoc-stdin-guard
 # task0001.md D3): it only ever rewrites `command`, never denies, so
 # placing it after every other Bash guard means none of them ever sees a
 # rewritten command in place of the original.
@@ -90,6 +105,7 @@ EXPECTED_BASH_GUARD_ORDER = [
     "failed-run-cleanup-guard.py",
     "muse_guard.py",
     "interpreter-mismatch-guard.py",
+    "loop-command-guard.py",
     "destructive-guard.py",
     "heredoc-stdin-guard.py",
 ]

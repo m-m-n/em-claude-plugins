@@ -1,0 +1,143 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_deny_rows_are_identical_with_claude_batch_set_or_unset
+    red_confirmed: true
+    red_reason: >
+      With em-workflow/hooks/loop-command-guard.py temporarily removed (the
+      test file left in place) and the suite re-run, every AC-1 deny row in
+      test_cases failed: subprocess exit code 2 and stderr
+      "/usr/bin/python3: can't open file '.../loop-command-guard.py': [Errno
+      2] No such file or directory" instead of the expected deny JSON on
+      stdout with empty stderr. The file was restored immediately afterward
+      and the module re-run green (16/16) before continuing.
+  AC-2:
+    tests:
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+    red_confirmed: true
+    red_reason: >
+      Same guard-removal run as AC-1: every AC-2 row (bash/sh/zsh -c,
+      eval, command substitution, backtick, heredoc, herestring, A6
+      prefixes) failed identically (exit 2, "No such file or directory")
+      before the file was restored.
+  AC-3:
+    tests:
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+    red_confirmed: true
+    red_reason: >
+      Same guard-removal run as AC-1: every AC-3 silent row failed too
+      (assert_silent expects exit 0 and empty stderr; got exit 2 and the
+      "No such file or directory" message on stderr) before the file was
+      restored.
+  AC-4:
+    tests:
+      - tests.test_loop_command_guard.TestMalformedInputFailsOpen.test_malformed_payloads
+      - tests.test_loop_command_guard.TestMalformedInputFailsOpen.test_undecidable_commands
+    red_confirmed: true
+    red_reason: >
+      Same guard-removal run: both methods failed on every subtest for the
+      same reason (missing script -> exit 2, non-empty stderr) instead of
+      the expected silent/exit-0 result.
+  AC-5:
+    tests:
+      - tests.test_loop_command_guard.TestSourceIsSafeAndBounded
+    red_confirmed: true
+    red_reason: >
+      Same guard-removal run: TestSourceIsSafeAndBounded.setUpClass reads
+      GUARD_PATH's source text and raised FileNotFoundError, erroring out
+      every test in the class (imports/calls/stderr/bounded-time/
+      determinism) before the file was restored. Separately, an ad-hoc
+      timing script (not part of the committed suite) measured the
+      bounded-time cases against the real implementation: a 1MB heredoc to
+      a non-shell command in 0.036s, the same heredoc to bash with a loop
+      in 0.22s, and 500 levels of $() nesting in 0.036s -- all comfortably
+      under the 5s bound the tests assert.
+  AC-6:
+    tests:
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_bash_guards_are_declared_in_the_required_order
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_destructive_guard_is_last_among_decision_capable_guards
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_exactly_nine_entries
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_entries_before_heredoc_guard_are_unchanged_verbatim
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_last_entry_invokes_the_heredoc_guard_in_the_pinned_form
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_reordering_the_pinned_entries_would_be_caught
+      - tests.test_muse_guard_registration
+    red_confirmed: true
+    red_reason: >
+      em-workflow/hooks/hooks.json was temporarily reverted to its
+      pre-task (HEAD) content -- eight PreToolUse(Bash) entries, no
+      loop-command-guard.py -- while the updated test files stayed in
+      place, and the two registration modules were re-run. Four tests
+      failed: test_bash_guards_are_declared_in_the_required_order (actual
+      order missing loop-command-guard.py), test_exactly_nine_entries
+      (8 != 9), test_entries_before_heredoc_guard_are_unchanged_verbatim
+      and test_last_entry_invokes_the_heredoc_guard_in_the_pinned_form
+      (list-shape mismatch against the 8-entry array).
+      test_reordering_the_pinned_entries_would_be_caught is a non-vacuity
+      check against the EXPECTED constant itself, not against hooks.json,
+      so it stayed green throughout (by design) and was not separately
+      red/green tested. tests.test_muse_guard_registration reads
+      EXPECTED_BASH_GUARD_ORDER from the migration module and was not
+      independently re-run during the revert (per task0001.md, "it
+      follows automatically"); it passed unmodified in the full-suite run
+      both before and after. hooks.json was restored and both modules
+      re-run green (68/68 across the whole registration set) before
+      continuing.
+  AC-7:
+    tests:
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_readme_has_a_guardrail_table_row_for_the_new_hook
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_readme_execution_order_sentence_matches_hooks_json_order
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_hook_tests_rule_has_a_loop_command_guard_section
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_hook_tests_rule_describes_the_case_format
+    red_confirmed: true
+    red_reason: >
+      tests/test_loop_command_guard.py was run for the first time before
+      em-workflow/README.md and .claude/rules/hook-tests.md were touched
+      (hooks.json was still 8-entry too at that point).
+      test_readme_has_a_guardrail_table_row_for_the_new_hook failed
+      ("no guardrail table row names hooks/loop-command-guard.py"),
+      test_readme_execution_order_sentence_matches_hooks_json_order failed
+      ("'loop-command-guard.py' not found in [...]", since hooks.json did
+      not register it yet), and
+      test_hook_tests_rule_has_a_loop_command_guard_section failed
+      ("'loop-command-guard' not found in ..."). All three passed after
+      the README/hooks.json/hook-tests.md edits.
+      test_hook_tests_rule_describes_the_case_format did not independently
+      go red in that run: the tokens it checks (期待する判定/ラベル/
+      コマンド/deny/silent) already existed in the file's pre-existing
+      interpreter-mismatch-guard section before this task's section was
+      added, so the assertion was vacuously true beforehand. It still
+      directly verifies AC-7's required case-format description and passes
+      now that the loop-command-guard section restates the same format.
+  AC-8:
+    tests:
+      - tests.test_plugin_version_parity
+    red_confirmed: false
+    red_reason: >
+      tests/test_plugin_version_parity.py already exists and checks
+      manifest version equality and "past baseline" against a hardcoded
+      BASELINE_VERSION = "0.1.50" left over from an earlier task
+      (task0004.md) -- unrelated to this task's specific bump. It was
+      already green at 0.3.1 (HEAD) and stays green at 0.3.2, so no red
+      state was observed for this change specifically; per
+      task0001.md Test Notes, "plugin-version-guard enforces the 'raised
+      from HEAD' part at commit time" is the actual enforcement mechanism
+      for the patch-is-higher-than-HEAD requirement, not a unittest. The
+      full suite (python3 -m unittest discover -s tests) was run after
+      every change in this task and passed in full: 6449 tests, 0
+      failures, exit 0 (up from the 6433-test, 0-failure baseline
+      recorded before any file was touched).
+notes: >
+  The implementation (loop-command-guard.py) was built and validated
+  iteratively against an ad-hoc, uncommitted smoke-testing script before
+  tests/test_loop_command_guard.py was authored, rather than writing the
+  formal CASES table first. To still ground the AC-1..AC-7 entries above in
+  an actually-observed red state rather than a fabricated one, the
+  implementation (and, for AC-6/AC-7, hooks.json/README.md/hook-tests.md)
+  was temporarily reverted after the formal test file existed, the affected
+  test modules were re-run and shown to fail for the stated reasons, and
+  everything was then restored and re-verified green before this file was
+  written.
