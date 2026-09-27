@@ -1,0 +1,154 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_deny_rows_are_identical_with_claude_batch_set_or_unset
+    red_confirmed: true
+    red_reason: >
+      em-workflow/hooks/loop-command-guard.py was temporarily reverted to
+      its pre-task (HEAD) content while the new CASES rows stayed in place,
+      and tests.test_loop_command_guard was re-run. All six AC-1 rows
+      ("AC1 task0002: env -u X", "nice -n 5", "timeout -s TERM 2",
+      "timeout -k 5 60", "exec -a name", "stdbuf -o L") errored in
+      test_cases: assert_deny's json.loads(out) raised
+      JSONDecodeError("Expecting value") because stdout was empty (the old
+      option-skip loop stopped at the separated value word -- "X", "5",
+      "TERM", "5", "name", "L" -- treating it as the executed command
+      instead of consuming it as the option's value, so no shell was ever
+      resolved and the guard stayed silent). The same six rows also errored
+      identically in test_deny_rows_are_identical_with_claude_batch_set_or_unset.
+      The file was restored immediately afterward and the module re-run
+      green (16/16) before continuing.
+  AC-2:
+    tests:
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_deny_rows_are_identical_with_claude_batch_set_or_unset
+    red_confirmed: true
+    red_reason: >
+      Same guard-removal run as AC-1. Of the 20 AC-2 rows, the 8
+      separated-value forms genuinely discriminate the fix and errored:
+      "env --unset X", "env -C /tmp", "env -iu X", "nice --adjustment 5",
+      "timeout --signal TERM 2", "timeout --kill-after 5 60",
+      "stdbuf --output L", "stdbuf -i0 -o L -e L" (same
+      JSONDecodeError-on-empty-stdout failure as AC-1, for the same reason:
+      the value word after the space was wrongly resolved as the command).
+      The remaining 12 attached/embedded-"=" forms ("env -uX",
+      "env --unset=X", "env --chdir=/tmp", "env -S X=1", "nice -n5",
+      "nice --adjustment=5", "timeout -sTERM 2", "timeout --signal=TERM 2",
+      "timeout -k5 60", "timeout --kill-after=5 60", "exec -aname",
+      "stdbuf -oL", "stdbuf --output=L") stayed green even under the
+      reverted hook: a single dash-word already carries its whole embedded
+      value, so the pre-task word-at-a-time dash-skip consumed it whole by
+      coincidence and never stopped on it. Those 12 rows are not
+      independently red/green-discriminating for this task's fix, but they
+      still pin the attached/embedded-value grammar this task's AC-2
+      requires and passed once the fix generalized the option-skip logic
+      to cover this case too. The 8 separated-form rows also errored
+      identically in test_deny_rows_are_identical_with_claude_batch_set_or_unset.
+      The file was restored and the module re-run green (16/16) before
+      continuing.
+  AC-3:
+    tests:
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_deny_rows_are_identical_with_claude_batch_set_or_unset
+    red_confirmed: true
+    red_reason: >
+      Same guard-removal run as AC-1. All five AC-3 rows errored in
+      test_cases with the same JSONDecodeError-on-empty-stdout failure:
+      "two prefixes with values" (nice -n 5 timeout -k 5 60 ...), "env
+      value then nice value then sh -c", "nice -n 5 -- bash -c",
+      "herestring behind a prefix with a value", and "timeout -s KILL 5
+      zsh -lc". Same five rows also errored identically in
+      test_deny_rows_are_identical_with_claude_batch_set_or_unset. The
+      file was restored and the module re-run green (16/16) before
+      continuing.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Directly verified by running the reverted (pre-task) hook against
+      each of the five AC-4 commands: all five ("env -u bash python3 -c
+      ...", "exec -a sh python3 -c ...", "timeout -s TERM 2 python3 -c
+      ...", "nice -n 5 echo while", "stdbuf -o L echo until") already
+      produced empty stdout/stderr and exit 0 before this task's change,
+      so no red state was observed for any of them. Tracing why: for the
+      first three, the pre-task option-skip loop resolves the wrong word
+      as the executed command (bash/sh/TERM respectively), but that word
+      is then followed by an argument list whose first word does not look
+      like a bash/sh/zsh flag, so _handle_shell_invocation's own flag scan
+      breaks immediately and finds no -c operand -- the command stays
+      silent regardless of which word was (mis)resolved as the command.
+      For the last two, "while"/"until" never reach command position at
+      all (they are plain arguments to echo, not analyzed by
+      _analyze_simple_command), so the row is silent independent of the
+      prefix fix. These are genuine coverage of the stated behavior (the
+      option's value must never become the executed command) but the
+      specific commands the task plan mandates do not exercise a
+      pre-existing bug, so no dedicated new test module was warranted --
+      searched tests/ (by path and by "loop-command-guard" /
+      "loop_command_guard" filename/content) and the existing
+      tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+      rows already added for AC-4 are the only coverage; they pass now
+      and passed before, so tests: [] is used here per the
+      already-passing-before-implementation rule rather than crediting a
+      red that was never observed.
+  AC-5:
+    tests:
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_cases
+      - tests.test_loop_command_guard.TestLoopCommandGuardCases.test_deny_rows_are_identical_with_claude_batch_set_or_unset
+    red_confirmed: true
+    red_reason: >
+      The CLAUDE_BATCH-parity half of AC-5 was observed red in the same
+      guard-removal run as AC-1/AC-2/AC-3:
+      test_deny_rows_are_identical_with_claude_batch_set_or_unset errored
+      for every one of the 19 new deny rows (the 6 AC-1 rows, the 8
+      separated-form AC-2 rows and the 5 AC-3 rows) with the reverted
+      hook, then passed for all of them (38/38 across both CLAUDE_BATCH
+      settings) once the fix was restored. The "no existing row removed,
+      full suite passes" half of AC-5 is a regression guard rather than a
+      falsifiable behavior: python3 -m unittest discover -s tests was run
+      before any file was touched (6449 tests, 0 failures -- the baseline
+      recorded in the implementer report) and again after every source
+      change (6449 tests, 0 failures both times), so no pre-existing CASES
+      row's verdict changed and none was removed.
+  AC-6:
+    tests:
+      - tests.test_plugin_version_parity
+    red_confirmed: false
+    red_reason: >
+      tests/test_plugin_version_parity.py already exists (added for an
+      earlier task) and checks manifest version equality plus "past
+      baseline" against a hardcoded BASELINE_VERSION = "0.1.50" unrelated
+      to this task's bump. It was already green at 0.3.2 (HEAD at this
+      task's start) and stays green at 0.3.3, so no red state was observed
+      for this change specifically. Per task0001.md Test Notes,
+      plugin-version-guard enforces the "raised strictly above HEAD" part
+      at commit time, not a unittest -- that is the actual enforcement
+      mechanism, exercised when the commit below is made. The full suite
+      (python3 -m unittest discover -s tests) was run after every change
+      in this task and passed in full: 6449 tests, 0 failures, exit 0 (the
+      same count as the 6449-test, 0-failure baseline, since the new AC-1
+      to AC-4 rows are subTest iterations inside already-discovered test
+      methods rather than new discovered tests). "No file under
+      em-workflow/ other than loop-command-guard.py and plugin.json
+      changes" was verified directly by `git status` immediately before
+      committing: exactly em-workflow/hooks/loop-command-guard.py,
+      em-workflow/.claude-plugin/plugin.json,
+      .claude-plugin/marketplace.json (repo root, not under em-workflow/)
+      and tests/test_loop_command_guard.py were modified.
+notes: >
+  Per .claude/rules/hook-tests.md and the task plan's Test Notes, the AC-1
+  to AC-4 CASES rows were added to tests/test_loop_command_guard.py first,
+  against the still-unmodified (buggy) hook, and confirmed to fail for the
+  right reason (or, for AC-4, confirmed to already pass and traced why, per
+  above) before em-workflow/hooks/loop-command-guard.py was changed. The
+  fix replaces each A6 prefix's dash-word skip with a table-driven
+  value-aware skip (env/nice/timeout/exec/stdbuf; nohup/setsid/command/time
+  keep the old no-value skip) per task0002.md's "Prefix option table" and
+  "Skipping one prefix command". Every pre-existing CASES row in
+  tests/test_loop_command_guard.py (from task0001) was left unmodified and
+  none was removed; the full suite was re-run green after the fix (6449
+  tests, 0 failures, matching the pre-task baseline exactly).
