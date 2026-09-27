@@ -26,6 +26,7 @@ Scenario IDs map to SPEC.md as follows:
 - TS-1 to TS-8 correspond one-to-one to SPEC.md's scenarios TS1 to TS8.
 - TS-9 to TS-11 were added at plan time. SPEC.md AC10, AC11 and NFR2 had no
   dedicated scenario.
+- TS-12 was added by review round 1 rework (task0002).
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -40,6 +41,7 @@ Scenario IDs map to SPEC.md as follows:
 | TS-9 | Documentation (plan-added; SPEC AC10) | The em-workflow/README.md guardrail table has a PreToolUse(Bash) row for hooks/loop-command-guard.py. The execution-order sentence matches hooks.json's nine-entry order, with loop-command-guard between interpreter-mismatch-guard and destructive-guard. .claude/rules/hook-tests.md has a loop-command-guard section that names `python3 -m unittest tests.test_loop_command_guard` and the (期待する判定, ラベル, コマンド) / deny / silent case format | Unit (file content) |
 | TS-10 | Change set and version (plan-added; SPEC AC11, FR1, FR14): compare the integration HEAD with its merge base on main | Under em-workflow/hooks/, only loop-command-guard.py (added) and hooks.json change. The em-workflow version in em-workflow/.claude-plugin/plugin.json has the same major and minor as the merge base and a strictly greater patch. The em-workflow entry of .claude-plugin/marketplace.json has the identical value. em-review's marketplace version is unchanged | Integration (verify-phase git comparison) |
 | TS-11 | Bounded time and determinism (plan-added; NFR2): run a command with a heredoc body of about one megabyte (fed to a non-shell command, and fed to bash with a loop), and a command nested several hundred levels deep. Also run representative deny and silent commands twice | Each run finishes inside the test's named bound, which is at most one third of the 15-second registration timeout. Outcomes are silent / deny / silent respectively, exit status is 0 and standard error is empty. Repeated runs give byte-identical standard output | Unit (subprocess) |
+| TS-12 | Prefix-command option values (rework-added; SPEC AC4, FR5, A6, FR4): a loop in a bash / sh / zsh `-c` string or herestring behind env `-u` / `-C` / `-S`, nice `-n`, timeout `-s` / `-k`, exec `-a` and stdbuf `-i` / `-o` / `-e`, with the value as a separate word, attached to the option (`-uX`, `-n5`, `-sTERM`, `-k5`, `-aname`, `-oL`), and in the `--name=value` / `--name value` long forms; a chain of two prefixes with values; `--` after a prefix's options. Also a non-shell command behind the same options whose value word names a shell or a reserved word (`env -u bash python3 -c 'while True: pass'`, `exec -a sh python3 -c 'while True: pass'`, `nice -n 5 echo while`) | Each loop case gives deny, with the same outcome whether CLAUDE_BATCH is set or unset. Each non-shell case leaves standard output empty. Exit status is 0 and standard error is empty in every case | Unit (subprocess) |
 
 ## Code Quality Verification
 - Format: not configured (workflow.yaml format_command is empty).
@@ -54,7 +56,7 @@ Scenario IDs map to SPEC.md as follows:
 | AC1 | Basic while / until / background loops are denied with the `[loop-command-guard]` reason, exit status 0 | TS-1 |
 | AC2 | Loops at every FR2 command position are denied | TS-1 |
 | AC3 | Loops in `-c` strings, eval, command substitutions / backticks, heredocs / herestrings fed to a shell, and double nesting are denied | TS-2 |
-| AC4 | timeout / nohup / env-prefixed shells holding a loop are denied | TS-2 |
+| AC4 | timeout / nohup / env-prefixed shells holding a loop are denied | TS-2, TS-12 |
 | AC5 | The listed non-loop commands are silent with exit status 0 | TS-3 |
 | AC6 | Malformed and undecidable input is silent with exit status 0 | TS-4 |
 | AC7 | Deny regardless of CLAUDE_BATCH | TS-5 |
@@ -70,21 +72,21 @@ Scenario IDs map to SPEC.md as follows:
 | FR1 | task0001 | TS-1, TS-6, TS-10 (new hook exists, is registered, and no other hook script changed) |
 | FR2 | task0001 | TS-1 |
 | FR3 | task0001 | TS-2 |
-| FR4 | task0001 | TS-3 |
-| FR5 | task0001 | TS-2 |
+| FR4 | task0001, task0002 | TS-3, TS-12 |
+| FR5 | task0001, task0002 | TS-2, TS-12 |
 | FR6 | task0001 | TS-1, TS-5 |
 | FR7 | task0001 | TS-3 |
 | FR8 | task0001 | TS-4 |
 | FR9 | task0001 | TS-6 |
 | FR10 | task0001 | TS-6, TS-8 |
-| FR11 | task0001 | TS-1, TS-2, TS-3, TS-4, TS-5 (the new test module and its case format) |
+| FR11 | task0001, task0002 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-12 (the new test module and its case format) |
 | FR12 | task0001 | TS-9 |
 | FR13 | task0001 | TS-9 |
-| FR14 | task0001 | TS-10, TS-8 |
+| FR14 | task0001, task0002 | TS-10, TS-8 |
 | NFR1 | task0001 | TS-7 |
 | NFR2 | task0001 | TS-7, TS-11 |
 | NFR3 | task0001 | TS-6, TS-3 |
-| NFR4 | task0001 | TS-8 |
+| NFR4 | task0001, task0002 | TS-8 |
 
 ## E2E Testing
 None. The project has no E2E framework configured (workflow.yaml
@@ -123,7 +125,7 @@ does not perform that step.
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Test scenarios (TS-1 to TS-11) | 11 | 11 | 0 | 0 |
+| Test scenarios (TS-1 to TS-12) | 12 | 12 | 0 | 0 |
 | Success criteria (AC1 to AC11, SC-NFR4) | 12 | 12 | 0 | 0 |
 | Performance (NFR2) | 1 | 1 | 0 | 0 |
 | Security (TM-1 to TM-5) | 5 | 5 | 0 | 0 |
