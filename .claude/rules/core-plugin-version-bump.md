@@ -12,6 +12,12 @@ Claude Code プラグインの中身を変更したら、同じ変更の中で v
 - version はプラグインごとに独立している。1 つを上げても他は動かさない。
 - 刻み方は semver に従う。挙動の修正は patch、機能追加は minor、互換性を壊す変更は major。
   実際にはほとんどが挙動の修正なので、patch 単位が基本になる。
+- SPEC・計画・受け入れ条件には、version の具体値を書かない。
+  書くのは上げる位置（major / minor / patch のどれか）だけにする。
+    - 例: 「em-workflow の version の patch を上げる」
+    - 悪い例: 「0.2.12 → 0.2.13 に上げる」
+- 具体値はコミット時点の HEAD から決める。HEAD の値から、SPEC が定めた位置を 1 つ上げる。
+- コミットが `plugin-version-guard` に拒否されたら、SPEC が定めた位置を上げてコミットし直す。
 - 変更をユーザーに報告するときは、反映に Claude Code の再起動が要ることを添える。
 
 ## Rationale
