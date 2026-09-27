@@ -60,7 +60,7 @@ workflow:
   base_commit: 073f0a91497151f7a75cc6bbe6a4d581d23d4611
   failed_kind: null
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
 - id: retrospect
@@ -110,8 +110,8 @@ tasks:
     notes: 'batch auto-retry consumed (1/1): first attempt ended with max_output_tokens API error, no commits; journal failed stale-launched'
     branch: em-workflow/loop-command-guard/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -122,6 +122,14 @@ review:
     - perspective: performance
       reason: loop-command-guard.py runs as a PreToolUse hook on every Bash call and does recursive nested-shell parsing, so per-call latency and worst-case expansion need checking
     cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
+    performance: completed
+  residual_critical_high: 1
+  needs_rework: true
 requirements:
   FR1:
     title: 新規ガード hook
