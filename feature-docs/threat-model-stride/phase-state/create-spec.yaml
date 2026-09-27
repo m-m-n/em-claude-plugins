@@ -1,7 +1,7 @@
 schema_version: 1
 feature: threat-model-stride
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 7c3c4af813410bafeabd43b0bb0cee853bbcced3
 last_input_digest: sha256:e461e97c22c28e5836be6218315dcefcf6b61685b64273b4d2d739f0fc8efae1
