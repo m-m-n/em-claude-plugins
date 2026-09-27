@@ -1,0 +1,361 @@
+round: 2
+executed_at: '2026-09-28T02:58:28+09:00'
+scope:
+  review_mode: diff
+  base_commit: 073f0a91497151f7a75cc6bbe6a4d581d23d4611
+  head_commit: daf46fab6560d039b3bcfe7b6807bf286dbfa7f5
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - .claude/rules/hook-tests.md
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/hooks/hooks.json
+  - em-workflow/hooks/loop-command-guard.py
+  - test-docs/loop-command-guard/task0001.tests.yaml
+  - test-docs/loop-command-guard/task0002.tests.yaml
+  - tests/test_guardrail_hooks_migration.py
+  - tests/test_hooks_registration.py
+  - tests/test_loop_command_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: loop-command-guard.py runs as a PreToolUse hook on every Bash call and does recursive nested-shell
+      parsing, so per-call latency and worst-case expansion need checking
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: performance#1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: e082475ba23051be
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 656
+  title: リダイレクトの番号と宛先を通常の単語として扱う
+  description: round 1 の a726c8e6f9a69cab（596 行）がまだ直っていない。_scan はリダイレクト演算子だけを読み飛ばし（656 行）、番号と宛先を単語列に残す。評価側で
+    hook を直接起動し、`</dev/null bash -c '<ループ>'`、`0</dev/null bash -c ...`、`bash 2>/dev/null -c ...`、`bash
+    >/dev/null -c ...`、`bash 3<&0 -c ...` がすべて無出力になることを再現した（ループ条件は false）。逆に `>while printf ok` は deny
+    になる。SPEC FR3 の -c 文字列の検出が、リダイレクトを前や途中に置いた形では働かない。FR4・FR7 に反する誤拒否も起きる。末尾に置く通常の形（`bash -c '...' 2>/dev/null`）は
+    deny できている。security#0・comprehensive#0 も同じ箇所を報告している。
+  suggestion: 番号・演算子・宛先をまとめて 1 つのリダイレクトとして読み、宛先をコマンド語にも引数列にも入れない。リダイレクトはコマンド位置を消費しない（cmd_pos を保つ）ようにする。宛先の中のコマンド置換は引き続き
+    out_nested に渡す。前置き・途中の形を deny ケース、`>while printf ok` を silent ケースとして CASES に足す。
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 8ad253c6f45a0abc
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 636
+  title: time・case のパターン・関数定義の本体でコマンド位置を認識しない
+  description: round 1 の 56d1ef4dbb93183a（602 行）がまだ直っていない。`)` の後を常に非コマンド位置にし（636-637 行）、time を通常のコマンド語として扱う。そのため
+    `time while ...`、`time -p while ...`、`case x in x) while ...;; esac`、`f() while ...; f` が無出力になることを再現した。SPEC
+    FR2 のコマンド位置の列挙は「を含む」で閉じておらず、bash がループとして実行する位置を取りこぼしている。security#0 も case 節と関数本体を報告している。
+  suggestion: コマンド位置の time（-p を含む）を、RESERVED_CHAIN と同じく次の語をコマンド位置に保つ語として扱う。case ... in ... esac の状態を持ち、パターン語自体は非コマンド位置、パターン終端の
+    `)` の後はコマンド位置にする。`name()` の直後の本体開始もコマンド位置にする。
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 48e8178cacd55355
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 627
+  title: 単語内やパラメーター展開内の波括弧をブレースグループとして扱う
+  description: round 1 の 481c01ddeeec12c4（567 行）がまだ直っていない。_WORD_STOP_CHARS と _scan が `{` `}` を常に演算子として切るため、`printf
+    %s {while}` と `while=ok; printf '%s' ${while}` が deny になる（FR4 に反する誤拒否）。評価側で独自に確かめると、影響はさらに広かった。`${#x}`
+    では `{` の後の `#` が語の先頭になってコメントと判定され、行末まで読み飛ばされる。そのため `x=abc; echo ${#x}; <ループ>` は無出力になる。また `n=${#arr[@]};
+    cat <<EOF` 改行 `while the build runs` 改行 `EOF` では `<<EOF` ごと読み飛ばされ、本文の行がコマンドとして読まれて deny になる（シェル以外に渡したヒアドキュメント本文の誤拒否。FR4・TM-2）。`${#var}`
+    は日常的に使う形になる。spec#1 も同じ箇所を報告している。
+  suggestion: '`{` と `}` は、コマンド位置に単独の語として現れたときだけブレースグループとして扱い、それ以外は単語の一部として読む。`${...}` は _read_word_raw
+    の中でパラメーター展開として対応を取り、中のコマンド置換は out_nested に渡す。`${#x}` と同じ行にあるループ（deny）と、同じ行のヒアドキュメント本文（silent）を CASES
+    に足す。'
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 1cbb68a5abad6e52
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 129
+  title: コマンド置換の終端探索がコメントとヒアドキュメントを追跡しない
+  description: 'round 1 の 1cbb68a5abad6e52（同じ行）がまだ直っていない。_scan_cmdsub_end は括弧と引用符だけで終端を探す。`echo "$( #
+    )` 改行 `<ループ>` 改行 `)"` では、コメント内の `)` で置換を閉じてしまい無出力になる。`git commit -m "$(cat <<''EOF''` 改行 `Don''t stop`
+    改行 `EOF` 改行 `)" && <ループ>` では、本文のアポストロフィのせいで全体が判定不能になり無出力になる。どちらも評価側で再現した。security#0 も同じ箇所を報告している。'
+  suggestion: '終端探索でも、コメント（語の先頭の #）とヒアドキュメント（<< の区切り語と本文）の状態を追跡する。_scan の読み取りを再利用して置換の中身を読み、二重実装をなくす。'
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 7b08e787d8e84621
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 175
+  title: 算術展開の中のコマンド置換を検査しない
+  description: round 1 の 7b08e787d8e84621（同じ行）がまだ直っていない。_scan_arith_end は `$(( ... ))` を括弧の対応だけで読み飛ばす。そのため
+    `echo "$((0 + $(<ループ>; echo 1)))"` が無出力になることを再現した。bash は算術式の中のコマンド置換を実行するので、SPEC FR3 の `$( )` の再帰検出が漏れる。security#0
+    も報告している。
+  suggestion: 算術式の中で `$(` とバッククォートを見つけたら、_scan_cmdsub_end / _scan_backtick_end で中身を取り出して out_nested に渡す。算術式そのものは検出対象にしない。
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 1d20c07f80d751ac
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 439
+  title: シェルのオプション解析が -c の位置と値を取るオプションを取り違える
+  description: round 1 の 1d20c07f80d751ac（同じ行）がまだ直っていない。_handle_shell_invocation は c を含むオプション語を見つけた時点で、次の語を
+    -c 文字列とみなす。そのため `bash -c -e '<ループ>'` と `bash -oc posix '<ループ>'` が無出力になる。引用した `bash '-c' '<ループ>'` もオプションとして認識しない。いずれも評価側で再現した。bash
+    は -c の後もオプションを読み、最初の非オプション引数を文字列にする。security#0 も引用した -c を報告している。
+  suggestion: オプション語を静的に引用除去してから読む。c の有無を記録しつつ、残りのオプション（-o / -O / +o / +O とその値、--rcfile など）を最後まで消費し、最初の非オプション引数を
+    -c 文字列にする。
+  sources:
+  - codex:spec
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: e1c806f88925878c
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 613
+  title: 引用されていないヒアドキュメント本文のコマンド置換を見逃す
+  description: round 1 の ea1e5c612ac82e71（553 行）がまだ直っていない。引用されていないヒアドキュメントの本文では、受け取り先にかかわらず外側のシェルが `$(
+    )` とバッククォートを展開して実行する。一方 hook は本文を保存するだけで（613-617 行）、シェルに渡したときだけシェルテキストとして読む。`cat <<EOF` 改行 `$(<ループ>)`
+    改行 `EOF` と、`bash <<EOF` 改行 `# $(<ループ>)` 改行 `EOF` が無出力になることを再現した。どちらも SPEC FR3 の `$( )` の検出対象に当たる。spec#1
+    も報告している。
+  suggestion: 区切り語が引用されていたかを保持する。引用されていない本文からは、二重引用符の中と同じ規則で `$( )` とバッククォートを取り出して out_nested に渡す。シェルへの本文をシェルテキストとして読む処理とは分ける。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: ec9affcab9c217d7
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 271
+  title: 部分的に引用したヒアドキュメントの区切り語を正しく解決しない
+  description: round 1 の ec9affcab9c217d7（同じ行）がまだ直っていない。_read_heredoc_delim は先頭が引用符のときだけ引用を外す。そのため `bash
+    <<E"OF"` 改行 `<ループ>` 改行 `EOF` では区切り語を `E"OF"` として探し、終端が見つからず判定不能になって無出力になることを再現した。bash の区切り語は EOF になる。spec#1
+    も報告している。
+  suggestion: 区切り語を 1 つのシェル単語として読み、引用部分とそれ以外を連結して引用を外した値で終端行と比較する。引用の有無は、本文の展開判定のために別に保持する。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 3650d8ece1e88432
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 557
+  title: eval の先頭の -- を実行文字列に含めてしまう
+  description: round 1 の bf3031c115a3e971（497 行）がまだ直っていない。eval の引数をそのまま連結するため（557-564 行）、`eval -- '<ループ>'`
+    は `-- while ...` として再解析される。while がコマンド位置に来ず、無出力になることを再現した。bash の eval は先頭の -- を取り除いてから実行する。spec#1
+    も報告している。
+  suggestion: eval の引数の先頭が -- なら、それを除いてから連結・再解析する。この形を deny ケースに足す。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: d59f600216118559
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 146
+  title: 入れ子のバッククォートのエスケープを外さずに再解析する
+  description: round 1 の d59f600216118559（同じ行）がまだ直っていない。_scan_backtick_end は外側のバッククォートの中身を、エスケープを残したまま返す。そのため
+    echo `echo \`<ループ>\`` の内側のループを見逃すことを再現した。bash はバッククォートの中身から、バッククォート・バックスラッシュ・$ の前のバックスラッシュを一段外してから実行する。spec#1
+    も報告している。
+  suggestion: バッククォートの中身を返すとき、バッククォート・バックスラッシュ・$ の前のバックスラッシュを一段外してから out_nested に渡す。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 6fb155ef31bd20e0
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 398
+  title: 二重引用符内のバックスラッシュを過剰に外す
+  description: 'round 1 の 6fb155ef31bd20e0（同じ行）がまだ直っていない。_unquote_for_nested_text は、二重引用符内のバックスラッシュを後続の文字にかかわらず外す。`bash
+    -c "echo \#; <ループ>"` は `echo #; ...` と復元され、ループをコメントとして読み飛ばして無出力になる。逆に `bash -c "\while"` はバックスラッシュが外れて予約語になり、deny
+    になる（A7・FR4 に反する誤拒否）。どちらも評価側で再現した。spec#1 も報告している。'
+  suggestion: 二重引用符内では、$・バッククォート・二重引用符・バックスラッシュの前のバックスラッシュだけを外す。バックスラッシュと改行の組は両方除去し、それ以外はバックスラッシュを残す。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 8e8585a26fea1bf2
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 380
+  title: ANSI-C 引用 $'...' の -c 文字列と eval 引数を正しく復元しない
+  description: round 1 の 8e8585a26fea1bf2（同じ行）がまだ直っていない。_unquote_for_nested_text は `$'...'` の $ を残し、引用内のエスケープも解かない。そのため
+    `bash -c $'<ループ>'` と `eval $'<ループ>'` は `$while ...` として読まれ、無出力になることを再現した。spec#1 も報告している。
+  suggestion: '`$''` を ANSI-C 引用として扱い、\n \t \'' \\ \xHH などの主要なエスケープを復元してから再解析する。復元できないエスケープを含む場合は判定不能として扱う。'
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 58a7e9dc4281e9e1
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 698
+  title: 入れ子の eval とコマンド置換を段ごとに二重に走査する
+  description: round 1 の a4c7b7884bca242c（638 行）がまだ直っていない。コマンド置換の中身は _read_word_raw が out_nested に取り出す。一方、eval
+    や -c の引数を組み立てるときにも置換を原文のまま残すので、次の段で同じ中身をもう一度読む。評価側で 1 MiB の printf を `eval "$( ... )"` で包んで計測すると、0
+    段 0.2 秒、3 段 3.8 秒、5 段 14.8 秒、6 段 21.5 秒で、登録 timeout 15 秒（SPEC NFR2）を超えた。THREAT-MODEL.md TM-5 の緩和策（megabyte-scale
+    input finishes far inside the registration timeout）も成り立っていない。timeout になると判定が出ないまま 15 秒待たされる。普段のコマンドにこの形は出ないため、影響は限られる。spec#1
+    も報告している。
+  suggestion: 同じ文字列（または同じ区間）の読み取り結果を、残り深さとともに 1 回の呼び出しの中でキャッシュする。または -c / eval の引数を組み立てるとき、すでに out_nested
+    に取り出した置換を再読の対象から外す。大きな入力と多段の eval を組み合わせた時間上限のテストを足す。
+  sources:
+  - codex:performance
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 5e9d598ab9679a6d
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 505
+  title: env -S / --split-string の値の中のシェル呼び出しを検査しない
+  description: task0002 で env の -S / --split-string を値を取るオプションとして表に入れた（468 行）。しかしその値は読み捨てられ（505-509 行）、値から作られるコマンドは検査されない。`env
+    -S 'bash -c "<ループ>"'`、`env -S'bash -c ...'`、`env --split-string='bash -c ...'` が無出力になることを再現した。GNU
+    env は -S の値を分割して引数列にし、そのまま実行する。SPEC FR5・A6 の、env を前置きしたシェルの中のループに当たる。task0002 より前も無出力だったので、退行ではない。コマンドラインで
+    env -S を使う場面は少ないため medium とした。
+  suggestion: env の -S / --split-string の値を静的に引用除去して空白で分割し、得た語列を env の残りの引数の前に連結してから、前置きコマンドの解決を続ける。分割規則を再現できない値（\_
+    や ${...} を含むものなど）は判定不能として扱う。-S の値そのものにシェルを置いた形を deny ケースに足す。
+  sources:
+  - codex:security
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+evaluation:
+  round_summary: 'Round 2（diff、cross_validation=true）。litellm の architecture#0 / performance#0 / spec#0
+    は rate_limited で skip し、codex の 5 本はすべて完了した。評価側で loop-command-guard.py を読み、hook をサブプロセスで直接起動して、reviewer
+    が挙げた再現例をすべて確かめた（ループ条件は false にし、ループは実行していない）。すべて主張どおり再現した。round 1 の high（58562295e0a7b109、前置きコマンドのオプション値）は
+    task0002 で解消した。6 形はすべて deny になり、回帰ケースが CASES にある。round 1 の medium 13 件はすべてまだ直っていない。同じ行のものは同じタイトル・行で、行がずれたものは現在の行で引き継いだ。新規は
+    env -S の値を検査しない 1 件（medium）。採用は 14 件で、すべて medium。評価側の独自確認では、`${#x}` の `#` をコメントと読んで行末まで読み飛ばし、同じ行のループを見逃す穴と、同じ行のヒアドキュメント本文を誤って拒否する穴を見つけた。どちらも波括弧の指摘（627
+    行）にまとめた。ほかに、配列 `words=(while until)` の誤拒否も確認したが、実際に書かれる形ではないため low 相当として採用していない。medium の報告のうち、次の 4
+    件は low 相当として採用していない（dismissed_sites に記録）。単語内の行継続（security#0・comprehensive#0 の 203 行）と、部分引用のシェル名・eval（security#0
+    の 331 行）は round 1 の判断を維持した。GNU の長いオプションの省略形（security#0 の 497 行）と、前置きコマンドの引用したオプション（security#0 の 432
+    行の一部）は、いずれも難読化でしか生じない。432 行のうち引用した -c は、439 行の指摘にまとめた。登録・文書・version は仕様どおりだった。hooks.json・README.md
+    は round 1 から変更がない。plugin.json と marketplace.json はともに 0.3.3（base の 0.3.1 からコミットごとに patch を上げた）で、em-review
+    は変わっていない。関連テスト 74 件は通った。reviewer 出力にプロンプトインジェクションの試みは見当たらなかった。観点ごとの確認結果: security=corroborated, comprehensive=findings,
+    architecture=corroborated, performance=corroborated, spec=corroborated。読み取り予算 10 件は、round1.yaml、loop-command-guard.py、SPEC.md、THREAT-MODEL.md、review-phase.md（R3b
+    の節）、plugin.json・marketplace.json（差分）、hooks.json・README.md（round 1 以降の差分。変更なし）、test_loop_command_guard.py（回帰ケースの
+    grep）に使った。task0001/0002.tests.yaml と 2 つの登録テストは読んでいないが、テストの実行で通過を確認した。これらのファイルだけに依存する観点は無い。'
+  recommended_action: complete
+  action_rationale: critical / high は 0 件。round 1 の唯一の high（前置きコマンドのオプション値）は task0002 で解消し、回帰ケースもある。残る
+    14 件はすべて medium で、auto-fix と完了ゲートの対象外になる。どれも loop-command-guard.py の 1 本のパーサの読み取りの穴で、互いに絡んでいる。上限付きの
+    auto-fix で個別に直すより、triage で起票し、パーサをまとめて直す 1 つの作業として扱うのが安全。誤拒否の側（波括弧と `${#...}`、二重引用符内のバックスラッシュ、リダイレクト宛先）は無人実行を止めるので、起票時に優先度を上げるとよい。
+dismissed_sites:
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 203
+  run_id: security#0
+  reason: 'demoted: 単語内の行継続（whi + バックスラッシュ改行 + le）は意図的な難読化でしか生じない。round 1 で low 相当として採用しなかった判断を維持する'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 203
+  run_id: comprehensive#0
+  reason: 'demoted: 単語内の行継続は難読化でしか生じない。round 1 の判断を維持する（security#0 の 203 行と同じ扱い）'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 331
+  run_id: security#0
+  reason: 'demoted: 部分引用のシェル名（b''''ash）とエスケープした eval（e\val）は難読化でしか生じない。round 1 で low 相当として採用しなかった判断を維持する'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 497
+  run_id: security#0
+  reason: 'demoted: GNU の長いオプションの省略形（env --un X）は難読化でしか生じず、low 相当で報告基準に届かない'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 432
+  run_id: security#0
+  reason: 'duplicate of another finding: 引用した -c は、439 行のシェルのオプション解析の指摘にまとめた。前置きコマンドの引用したオプション（env ''-u''
+    X）は難読化でしか生じないため low 相当'
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no_candidates
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
