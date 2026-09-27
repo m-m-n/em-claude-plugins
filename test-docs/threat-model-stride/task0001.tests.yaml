@@ -1,0 +1,107 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_threat_model_template.TestTemplateFileExists.test_template_file_exists
+      - tests.test_threat_model_template.TestFullFormSkeletonShape.test_full_form_skeleton_found
+      - tests.test_threat_model_template.TestFullFormSkeletonShape.test_headings_appear_in_order
+      - tests.test_threat_model_template.TestFullFormSkeletonShape.test_tb_subsection_has_three_labeled_lines_in_order
+      - tests.test_threat_model_template.TestFullFormSkeletonShape.test_table_header_has_six_expected_columns
+      - tests.test_threat_model_template.TestVerdictTokensNamed.test_all_three_verdict_tokens_present
+    red_confirmed: true
+    red_reason: >-
+      Before the template file existed (moved aside during the test-writing
+      step): FileNotFoundError on setUpClass reading the template path;
+      test_template_file_exists failed with "False is not true"; every
+      other listed test errored transitively from the same missing-file
+      setUpClass.
+  AC-2:
+    tests:
+      - tests.test_threat_model_template.TestShortFormSkeletonShape.test_short_form_skeleton_found
+      - tests.test_threat_model_template.TestShortFormSkeletonShape.test_short_form_has_exactly_title_verdict_rationale
+      - tests.test_threat_model_template.TestShortFormSkeletonShape.test_states_short_form_verdicts_and_no_mitigation
+    red_confirmed: true
+    red_reason: >-
+      Same missing-template FileNotFoundError on setUpClass as AC-1 (the
+      template did not exist yet).
+  AC-3:
+    tests:
+      - tests.test_threat_model_template.TestTemplateVocabularyAndRoleSplit.test_all_six_stride_categories_named
+      - tests.test_threat_model_template.TestTemplateVocabularyAndRoleSplit.test_states_row_exists_only_when_category_applies
+      - tests.test_threat_model_template.TestTemplateVocabularyAndRoleSplit.test_states_spec_role_split_with_id_citation
+      - tests.test_threat_model_template.TestTemplateVocabularyAndRoleSplit.test_states_content_is_treated_as_untrusted_data
+    red_confirmed: true
+    red_reason: >-
+      Same missing-template FileNotFoundError on setUpClass as AC-1 (the
+      template did not exist yet).
+  AC-4:
+    tests:
+      - tests.test_threat_model_template.TestThreatModelingSectionPlacement.test_section_exists
+      - tests.test_threat_model_template.TestThreatModelingSectionPlacement.test_section_is_between_domains_and_verification_template
+      - tests.test_threat_model_template.TestThreatModelingSectionContent.test_cites_template_by_plugin_relative_path
+      - tests.test_threat_model_template.TestThreatModelingSectionContent.test_states_pass_runs_every_feature_every_tier
+      - tests.test_threat_model_template.TestThreatModelingSectionContent.test_names_four_domains_as_depth_adjusters_only
+      - tests.test_threat_model_template.TestThreatModelingSectionContent.test_states_post_decomposition_consistency_recheck
+    red_confirmed: true
+    red_reason: >-
+      Before plan-writing/SKILL.md was edited: test_section_exists failed
+      with "'## Threat Modeling (STRIDE)' not found in ..."; the placement
+      and content tests errored with ValueError: substring not found
+      (text.index on the missing heading) from _threat_modeling_section /
+      assert_threat_modeling_section_placement.
+  AC-5:
+    tests:
+      - tests.test_threat_model_template.TestPerTierMitigationReflection.test_full_reduced_destination_named
+      - tests.test_threat_model_template.TestPerTierMitigationReflection.test_minimal_destination_named
+      - tests.test_threat_model_template.TestPerTierMitigationReflection.test_short_verdict_produces_no_mitigation_anywhere
+    red_confirmed: true
+    red_reason: >-
+      Same missing-section ValueError as AC-4 (the threat-modeling section
+      did not exist yet in plan-writing/SKILL.md).
+  AC-6:
+    tests:
+      - tests.test_threat_model_template.TestVerificationTemplateAndChecklist.test_perf_security_section_has_tm_n_keyed_placeholder
+      - tests.test_threat_model_template.TestVerificationTemplateAndChecklist.test_no_backtick_quoted_review_perspective_term_added
+      - tests.test_threat_model_template.TestVerificationTemplateAndChecklist.test_presave_checklist_has_three_threat_model_items
+      - tests.test_failed_items_category
+      - tests.test_check_plugin_invariants
+      - tests.test_reference_sweep
+    red_confirmed: true
+    red_reason: >-
+      Before the SKILL.md edits: test_perf_security_section_has_tm_n_keyed_placeholder
+      failed with "'TM-n' not found in ..."; test_presave_checklist_has_three_threat_model_items
+      failed with "'THREAT-MODEL.md is written with exactly one verdict' not
+      found in ...". The three named existing modules
+      (test_failed_items_category, test_check_plugin_invariants,
+      test_reference_sweep) were already green before and after this
+      task's edits (pinned/unmodified by this task per Test Notes); they
+      are listed here as the "pass unmodified" half of AC-6, verified by
+      the full-suite run recorded in this task's report, not by a red/green
+      transition of their own.
+  AC-7:
+    tests:
+      - tests.test_threat_model_template.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_threat_model_template.TestManifestVersionFieldsOnly.test_both_manifests_parse_and_agree_on_em_workflow_version
+    red_confirmed: false
+    red_reason: >-
+      The negative-proof-per-matcher requirement is satisfied by the
+      dedicated test_negative_proof_* methods paired with each matcher
+      throughout this module (each constructs a forged sample and asserts
+      the matcher raises/rejects it); those are exercised together with
+      their positive counterparts above and are not separately red/green
+      transitions of their own (a negative proof is written correct from
+      the start against a matcher function that already exists once its
+      positive counterpart is implemented). The stdlib-only check and the
+      manifest-parses-and-agrees check were true from the moment this test
+      file was written (this module only ever imported the standard
+      library, and the repository's manifests were already internally
+      consistent before this task touched them), so no red state was ever
+      observed for either. The manifest "only the version field changed"
+      clause is a `git diff` property verified directly at commit time
+      (recorded in this task's report), not a unit-test assertion this
+      module could make without hardcoding a pre-task git revision -- the
+      repository's other version-bump tests (e.g.
+      tests/test_em_workflow_version.py) deliberately avoid that pattern
+      too.
