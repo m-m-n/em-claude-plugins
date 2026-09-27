@@ -300,8 +300,8 @@ tasks:
       - c757b2e569edf076
       - 751c5ab440d50b42
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -318,8 +318,8 @@ review:
     architecture: completed
     spec: completed
     performance: completed
-  residual_critical_high: 6
-  needs_rework: true
+  residual_critical_high: 10
+  needs_rework: false
 requirements:
   FR1:
     title: Add grouping/compound-construct cases before the fix
