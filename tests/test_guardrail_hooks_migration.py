@@ -39,10 +39,10 @@ PreToolUse(Bash) entry, `heredoc-stdin-guard.py`, is appended after
 it cannot reopen the "blanket allow ends the decision" gate `destructive-
 guard.py`'s tail position exists to protect; `EXPECTED_BASH_GUARD_ORDER`
 and `test_destructive_guard_is_last_among_decision_capable_guards` are
-both updated accordingly. The full seven-entry ordered shape (exact
+both updated accordingly. The full eight-entry ordered shape (exact
 command/timeout/status-message pinning) is the separate, more detailed
 job of tests/test_hooks_registration.py's
-`TestPreToolUseBashArrayHasTheSevenEntryOrderedShape`.
+`TestPreToolUseBashArrayHasTheEightEntryOrderedShape`.
 
 Standard library only, per test/README.md.
 """
@@ -77,7 +77,9 @@ MIGRATED_HOOK_FILES = (
 # blanket allow must not be able to terminate the decision before the
 # contributor-tier consent check has had a chance to deny
 # (muse-spark-contributor-consent task0001.md Design, "Registration").
-# `heredoc-stdin-guard.py` runs LAST of all seven (heredoc-stdin-guard
+# `interpreter-mismatch-guard.py` also denies, so it sits before
+# `destructive-guard.py` for the same reason as muse_guard.py.
+# `heredoc-stdin-guard.py` runs LAST of all eight (heredoc-stdin-guard
 # task0001.md D3): it only ever rewrites `command`, never denies, so
 # placing it after every other Bash guard means none of them ever sees a
 # rewritten command in place of the original.
@@ -87,6 +89,7 @@ EXPECTED_BASH_GUARD_ORDER = [
     "bash_guard.py",
     "failed-run-cleanup-guard.py",
     "muse_guard.py",
+    "interpreter-mismatch-guard.py",
     "destructive-guard.py",
     "heredoc-stdin-guard.py",
 ]
