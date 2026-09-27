@@ -5,12 +5,89 @@ status: dispatching
 generation: 1
 base_revision: ca8f62aa195334b8a00e96ad57896575917d46e4
 last_input_digest: sha256:b6e4cf0cc95e78866697b67e476e5688369c3f459a645ef9b88e0ca5650106e1
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-27T23:43:09+09:00'
+    questions:
+    - question_id: requirement.loop-scope
+      status: answered
+    - question_id: requirement.detection-depth
+      status: answered
+    - question_id: requirement.exception-forms
+      status: answered
+    - question_id: technical.hook-placement
+      status: answered
+    - question_id: design-step
+      status: answered
+answers:
+  requirement.loop-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T23:43:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - all_loops
+    freeform: null
+    normalized_answer: all_loops
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); orchestrator judged Codex suggestion maps to option
+      all_loops (same as worker recommendation); opus_escalation: false. Codex reasoning:
+      定数条件だけの禁止では外部状態を待ち続けるループを防げない / バックグラウンド指定が無くても終わらないループは起こり得る'
+  requirement.detection-depth:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T23:43:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_nested
+    freeform: null
+    normalized_answer: include_nested
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); orchestrator judged Codex suggestion maps to option
+      include_nested (same as worker recommendation); opus_escalation: false. Codex
+      reasoning: シェルに実行させる文字列の内部でも同じ問題が起こり得る / 最上位だけでは書き方を変えた同じループを見逃す / 引用データとコメントを除外して誤検知を抑える'
+  requirement.exception-forms:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T23:43:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - no_exception
+    freeform: null
+    normalized_answer: no_exception
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); orchestrator judged Codex suggestion maps to option
+      no_exception (same as worker recommendation); opus_escalation: false. Codex
+      reasoning: 依頼に制限時間付きループの例外は無い / timeout コマンドを許す例外は既存方針と矛盾する'
+  technical.hook-placement:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T23:43:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - new_hook
+    freeform: null
+    normalized_answer: new_hook
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); orchestrator judged Codex suggestion maps to option
+      new_hook (same as worker recommendation); opus_escalation: false. Codex reasoning:
+      ループ禁止は破壊的操作の検査と目的が異なる / 一括 allow より前に置けば検査できる / 非該当時に判定を返さなければ既存検査は続く'
+  design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T23:43:09+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: skip
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously ->
+      accepted worker recommendation skip (no UI change)'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:b6e4cf0cc95e78866697b67e476e5688369c3f459a645ef9b88e0ca5650106e1
   output_digest: null
 artifacts: []
