@@ -45,3 +45,14 @@ python3 -m unittest tests.test_interpreter_mismatch_guard
 - ケースは `tests/test_interpreter_mismatch_guard.py` の `CASES` に
   `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `deny` か `silent`。
 - 判定には対象ファイルの中身が要るので、フィクスチャは同じファイルの `FIXTURES` に置く。
+
+## loop-command-guard
+
+`em-workflow/hooks/loop-command-guard.py` を変更したら、同じ変更の中で次を走らせる。
+
+```
+python3 -m unittest tests.test_loop_command_guard
+```
+
+- ケースは `tests/test_loop_command_guard.py` の `CASES` に
+  `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `deny` か `silent`。
