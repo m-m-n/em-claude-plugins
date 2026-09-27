@@ -1,11 +1,11 @@
 schema_version: 1
 feature: threat-model-stride
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: c5138401a81ed3a2a66490a368954003b83e22b4
 last_input_digest: sha256:e6c61a15a675700d849155ff1aed5402aebf910b9a67cedd854e53064a080c29
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -40,7 +40,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: threat-model-stride-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:e6c61a15a675700d849155ff1aed5402aebf910b9a67cedd854e53064a080c29
   base_workflow_blob: 1fdce4df5d5456e2bd8075378d17f6b9344d0048
 progress_fingerprint: null
