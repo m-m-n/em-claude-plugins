@@ -1,0 +1,21 @@
+schema_version: 1
+feature: threat-model-stride
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: c5138401a81ed3a2a66490a368954003b83e22b4
+last_input_digest: sha256:e6c61a15a675700d849155ff1aed5402aebf910b9a67cedd854e53064a080c29
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:e6c61a15a675700d849155ff1aed5402aebf910b9a67cedd854e53064a080c29
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
