@@ -174,7 +174,7 @@ workflow:
   base_commit: 4cfd5c4c7b4f536eaeb44caf591022d6f68dd0ba
   failed_kind: null
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
