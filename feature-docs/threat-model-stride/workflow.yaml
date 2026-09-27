@@ -1,0 +1,244 @@
+schema_version: 1
+feature: threat-model-stride
+created: '2026-09-27'
+base_branch: main
+goal: |
+  # em-workflow に設計段階の脅威モデリング（STRIDE）を組み込む
+
+  Notion: https://www.notion.so/3d43509ec8ee8130a4f4d9bedd9566da
+  種別: 機能
+  指示メモ: SDL の設計段階を create-plan の implementation-planner に載せる。全機能対象で実行し、出力量を脅威の実在に比例させる。プラグイン変更なので version bump を忘れずに
+
+  ## やりたいこと（必須）
+  em-workflow の create-plan フェーズに設計段階の脅威モデリング（STRIDE）を組み込む。`THREAT-MODEL.md` を出力し、緩和策を実装タスクの受け入れ条件と `VERIFICATION.md` に落とし、review-security がその文書を入力に取って緩和策の未実装を検出できるようにする。
+
+  ## 背景・なぜ（必須）
+  SDL（セキュリティ開発ライフサイクル）の各段階のうち、em-workflow が現状持っているのは実装後の検証（review-security による diff レビュー）とシークレット検出（gitleaks の pre-commit hook）だけ。SDL の核心は「設計で潰す」ことにあり、diff レビューでは信頼境界の引き方そのものの誤りが見えない。
+  軽い機能だと思っていたらセキュリティ観点で問題があった、というケースを拾うため、全機能を対象に先に一度目を通す方針とする。
+
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] implementation-planner が SPEC / REQUIREMENTS / DESIGN を読んだ後、信頼境界の洗い出しを**全機能で必ず**実行する（domains 等の条件で間引かない）
+  - [ ] `THREAT-MODEL.md` を独立文書として出力する。信頼境界ごとに、該当する STRIDE カテゴリの脅威と緩和策だけを書く（6 カテゴリの機械的な穴埋めはしない）
+  - [ ] 信頼境界が無い変更では「信頼境界なし + 根拠」の数行で終わる。「見た結果、無かった」という記録が残ること自体を成果とする
+  - [ ] domains（`auth` / `input-handling` / `external-io` / `data-persistence`）は実行可否の判断からは外し、掘る深さの調整材料として使う
+  - [ ] 緩和策がタスクの受け入れ条件と `VERIFICATION.md` の両方に落ちる（文書を書いただけで終わらせない）
+  - [ ] planner の `write_policy` と `digest_inputs` に `THREAT-MODEL.md` を追加する
+  - [ ] review-security に `threat_model_path` を渡し、「設計で決めた緩和策が実装されていない」を検出対象に追加する
+  - [ ] `SPEC.md` の Security Considerations と重複させない。SPEC 側は「何を守るか」（要件・入力）、`THREAT-MODEL.md` は「どう壊されるか・どう防ぐか」（設計に対する分析・出力）
+  - [ ] `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を同じ値で上げる
+
+  ## スコープ外（任意）
+  - 依存の既知脆弱性チェック（SCA）。review-license が持つ「diff が依存マニフェストに触れたら裁量層で追加」のトリガーに相乗りできるが、別タスクとする
+  - セキュアコーディング知識の実装側注入（security-impl 相当）。`impl-skills.yaml` がレイヤー軸のみと明記しているため軸の設計判断が要る。別タスクとする
+  - 独立した threat-model ステップの新設。develop のステートマシン・phase-state・batch-mode・`--once` のフェーズ境界まで波及するため採らない
+
+  ## 制約・前提（任意）
+  - 脅威モデリングは create-plan の implementation-planner に持たせる。フェーズは増やさない
+  - 全機能対象で実行し、出力量を脅威の実在に比例させることでコストを抑える
+  - 変更対象の想定: `em-workflow/agents/implementation-planner.md`、`em-workflow/references/contracts/planner-contract.md`、`em-workflow/references/phases/create-plan-phase.md`、`em-workflow/skills/plan-writing/`、`em-workflow/skills/review-security/SKILL.md`、`em-workflow/references/review-phase.md`、`THREAT-MODEL.md` のテンプレート追加
+
+  ## 追加指示（起動引数）
+  - 実装完了後、integration ブランチを remote へ push し、base_branch への PR を gh pr create で作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、相対的に良いと判断した案を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/threat-model-stride/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.72
+      '3': 0.28
+    description_plus_code:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.56
+      '3': 0.44
+  at: '2026-09-27T18:19:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: a24c6746364ea9ee801e11959094ed55bebb760e
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 変更対象はプラグインの agent / skill / references / テンプレートの文書だけで、UI と視覚設計が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 2ebd7a3fb3896cbc92ef0fc193057e5022a791da
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 信頼境界の洗い出しを全機能・全 tier で実行
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: THREAT-MODEL.md の出力
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR3:
+    title: 信頼境界なしの記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-3
+  FR4:
+    title: domains は深さの調整に使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR5:
+    title: 緩和策の反映先
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR6:
+    title: planner の契約更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR7:
+    title: THREAT-MODEL.md テンプレート
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR8:
+    title: review-security への threat_model_path 受け渡し
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+    - TS-6
+    - TS-8
+  FR9:
+    title: 緩和策の未実装の検出
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR10:
+    title: SPEC との役割分担
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-9
+  FR11:
+    title: version を上げる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  NFR1:
+    title: 出力量は脅威の実在に比例させる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-13
+  NFR2:
+    title: フェーズ・状態機械を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-12
+  NFR3:
+    title: 既存テストを壊さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+    - TS-11
+    - TS-12
+  NFR4:
+    title: 入力の安全性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
