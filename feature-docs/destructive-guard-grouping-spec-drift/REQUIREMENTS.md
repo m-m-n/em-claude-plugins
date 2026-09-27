@@ -145,7 +145,7 @@ feature `destructive-guard-write-target-scoping` のレビュー round2 で high
 | FR9 | 誤解を招く mv ケースのラベルを直す | コマンドと期待判定は変えない | 中 |
 | FR10 | 前 feature の SPEC.md を実装に合わせて改訂する | FR2 / Edge Cases / FR6 と矛盾する周辺記述を直す | 高 |
 | FR11 | 前 feature の REQUIREMENTS.md を同じ内容で改訂する | SPEC.md の改訂と一致させる | 高 |
-| FR12 | em-workflow の version を 2 箇所で patch 上げする | 0.2.12 → 0.2.13 | 中 |
+| FR12 | em-workflow の version を 2 箇所で patch 上げする | 具体値はコミット時点の HEAD から決める | 中 |
 
 ### 4.2 機能詳細
 
@@ -455,7 +455,7 @@ tar は、`-C` / `--directory` の値（分離・連結・`=`・短オプショ�
 
 #### FR12: em-workflow の version を 2 箇所で patch 上げする
 
-**説明**: `.claude/rules/core-plugin-version-bump.md` に従い、同じ変更の中で `em-workflow/.claude-plugin/plugin.json` の `version` と `.claude-plugin/marketplace.json` の em-workflow エントリの `version` を 0.2.12 から 0.2.13 に上げる。em-review の version は変えない。
+**説明**: `.claude/rules/core-plugin-version-bump.md` に従い、同じ変更の中で `em-workflow/.claude-plugin/plugin.json` の `version` と `.claude-plugin/marketplace.json` の em-workflow エントリの `version` の patch を上げる。具体値はコミット時点の HEAD から決め、`em-workflow/` 配下を変えるコミットごとに HEAD の値の patch を上げる。em-review の version は変えない。
 
 **状態**: confirmed
 
@@ -591,7 +591,7 @@ tar は、`-C` / `--directory` の値（分離・連結・`=`・短オプショ�
 |--------|----------|--------|--------|
 | 迂回を塞ぐ修正が、現在 allow のデータ形コマンドを ask / deny にする | 中 | 高 | FR4 と FR7 の allow ケースで守る（NFR5） |
 | 既存ケースの判定が変わる | 中 | 高 | 既存ケースのコマンド・期待判定を変えないことを受け入れ基準にする（NFR3、AC-7） |
-| version 据え置きでキャッシュが更新されない | 中 | 中 | plugin.json と marketplace.json を同値で 0.2.13 に上げる（FR12） |
+| version 据え置きでキャッシュが更新されない | 中 | 中 | plugin.json と marketplace.json の patch を同値で上げる（FR12） |
 
 ## 11. 成功基準
 
@@ -607,7 +607,7 @@ tar は、`-C` / `--directory` の値（分離・連結・`=`・短オプショ�
 - [ ] AC-8: tar `-C` は展開モードでのみ write target になり（`tar -cf /tmp/backup.tar -C ~/.claude/skills .` は allow、`tar -xzf /tmp/a.tgz -C ~/.claude/skills` は ask）、6 族それぞれに ask ケースと allow ケースが 1 件以上ある。
 - [ ] AC-9: `sudo -u` / `bash -c` / `eval` 経由の rm のケースが存在し、通る。
 - [ ] AC-10: `feature-docs/destructive-guard-write-target-scoping/SPEC.md` と REQUIREMENTS.md において、FR2(c)/(d)、Edge Cases の mv の行、FR6 が、mv・宛先 6 族・`head()` / `statements()` についての実装の挙動と一致する。
-- [ ] AC-11: `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の em-workflow の version がどちらも 0.2.13 である。
+- [ ] AC-11: `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の em-workflow の version が同じ値で、基準コミットの値から patch が上がっている（major / minor は変えない）。
 
 ### 11.2 KPI
 
@@ -619,7 +619,7 @@ tar は、`-C` / `--directory` の値（分離・連結・`=`・短オプショ�
 
 - [ ] 正常系: `python3 em-workflow/hooks/tests/run-destructive-guard.py`（TS-1）— ケース表の実行。FR1 / FR7 のケース追加後は red、修正後は green。FR1〜FR4、FR6〜FR9 を扱う。
 - [ ] 正常系: `python3 -m unittest discover -s tests`（TS-2）— リポジトリ全体のユニットテスト。ケース表の不変条件（重複なし、`ORIGINAL_VERDICT_BY_COMMAND` の固定、標準ライブラリのみ、ファイルシステム呼び出しなし）と failed-run-cleanup-guard のテストを含む。FR5、NFR1〜NFR4 を扱う。
-- [ ] 正常系: `python3 em-workflow/hooks/tests/run-destructive-guard.py ~/.claude/plugins/cache/em-claude-plugins/em-workflow/0.2.13/hooks/destructive-guard.py`（TS-3）— 任意。version を上げた後、インストール済みキャッシュのコピーに修正が入っていることを確かめる。FR12 を扱う。
+- [ ] 正常系: `python3 em-workflow/hooks/tests/run-destructive-guard.py ~/.claude/plugins/cache/em-claude-plugins/em-workflow/<version>/hooks/destructive-guard.py`（TS-3）— 任意。`<version>` は feature 完了時点の em-workflow の version。version を上げた後、インストール済みキャッシュのコピーに修正が入っていることを確かめる。FR12 を扱う。
 - [ ] E2E（TS-E2E）: 該当なし。E2E の基盤が無い。
 - [ ] 異常系: グルーピング・複合構文を通した rm 再帰削除・git・self-modification・transcript-write が単体時と同じ判定になる（FR1 (1)〜(6)）。
 - [ ] 境界値: case パターンの `|` / 改行による分割、case パターンの省略可能な先頭 `(`、`)>` / `)>>` / `)2>` の連結トークン、閉じキーワードに付いたリダイレクト（`done > file`、`} 2>/dev/null`）、入れ子構文、ダッシュ無しの tar モード引数と長オプションのみのモード指定。
@@ -647,7 +647,7 @@ tar は、`-C` / `--directory` の値（分離・連結・`=`・短オプショ�
 - [x] grouping-scope: all_including_case。`( )`、`{ }`、if/elif/else、for/select、while/until、`!`、case、関数定義の全てを対象とする。閉じ括弧が引数列に連結した形（`(rm -rf /tmp/x)`、`(cp /tmp/x ~/.claude/settings.json)`）も対象に含める。
 - [x] dest-families-scope: keep_fix_tar_mode。宛先 6 族の判定を残し、tar `-C` は展開モードに限る。tar の作成・一覧・展開のケースを追加する。
 - [x] spec-revision-location: edit_prior_spec_and_req。前 feature の SPEC.md と REQUIREMENTS.md の両方を直接改訂し、本 feature の変更対象に含める。
-- [x] em-workflow の version: 現在 0.2.12、上げ先 0.2.13（patch）。em-review は変えない。
+- [x] em-workflow の version: patch を上げる。具体値はコミット時点の HEAD から決める。em-review は変えない。
 - [x] 既存 E2E 基盤: なし。
 - [x] デザインステップ: skipped。UI も視覚デザインも無い。変更は 1 つのフックスクリプトの静的コマンド解析、そのケース表、前 feature の文書 2 つ、version フィールド 2 つに閉じる。
 

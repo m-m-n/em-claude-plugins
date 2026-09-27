@@ -264,6 +264,8 @@ tasks:
     files:
     - em-workflow/hooks/destructive-guard.py
     - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
     skills:
     - backend-impl
     domains:

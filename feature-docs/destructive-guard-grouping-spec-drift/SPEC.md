@@ -85,7 +85,7 @@ As a maintainer of `destructive-guard.py`, I want the prior feature's SPEC.md an
   - (c) FR6: say that the bodies of `check_rm` and `SAFE_DELETE` are unchanged, but `head()`'s wrapper value-flag consumption and `statements()`'s `-c` / eval / here-string payload re-scan changed the input `check_rm` receives. As a result `sudo -u root rm -rf $HOME/x`, `bash -c 'rm -rf $HOME/x'` and `eval 'rm -rf $HOME/x'` went from allow to ask (demoted to deny under `CLAUDE_BATCH`).
   - (d) Revise any other sentence in that SPEC that now contradicts the revised FR2/FR6: the architecture diagram's `(c) rm / mv / cp / ln / chmod / chown args` label, the component-diagram and Dependencies statements that `check_self_modification` is the only function changed, and the Data Flow description.
 - **FR11 - Revise the prior feature's REQUIREMENTS.md with the same content:** Edit `feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md` so it agrees with the revised SPEC.md. Places to change: 1.3 scope (the 対象外 line for `check_rm` / `SAFE_DELETE`), the 4.1 table rows FR2 and FR6, the FR2 description and its business rule (cp / mv / ln positional-last), the FR6 description, the 10.1 risk row that fixes the sources at three, the 12.1 boundary item `mv a b c dir/ の宛先は最後の 1 つ`, the section 13 glossary entry 書き込み先パス集合, and the 14.1 confirmed item on 対象引数. Wording follows the prior document's existing Japanese style.
-- **FR12 - Bump the em-workflow version in two places (patch):** Following `.claude/rules/core-plugin-version-bump.md`, in the same change raise `version` in `em-workflow/.claude-plugin/plugin.json` and the em-workflow entry's `version` in `.claude-plugin/marketplace.json` from 0.2.12 to 0.2.13. em-review's version does not change.
+- **FR12 - Bump the em-workflow version in two places (patch):** Following `.claude/rules/core-plugin-version-bump.md`, in the same commit raise the patch position of `version` in `em-workflow/.claude-plugin/plugin.json` and of the em-workflow entry's `version` in `.claude-plugin/marketplace.json`. The concrete value is derived from HEAD at commit time: every commit that changes a file under `em-workflow/` raises the patch position of HEAD's value in both places. em-review's version does not change.
 
 ### Non-Functional Requirements
 
@@ -180,7 +180,7 @@ Not applicable.
 ```
 em-workflow/
 ├── .claude-plugin/
-│   └── plugin.json                       # version 0.2.12 → 0.2.13 (FR12)
+│   └── plugin.json                       # version: patch raised (FR12)
 └── hooks/
     ├── destructive-guard.py              # grouping/compound unwrap, closer handling, tar extract-mode -C (FR2-FR6)
     ├── failed-run-cleanup-guard.py       # unchanged (FR5)
@@ -188,7 +188,7 @@ em-workflow/
         ├── destructive-guard-cases.json  # FR1 / FR7 / FR8 cases added, FR9 label changed
         └── run-destructive-guard.py      # unchanged; runner + demotion case
 .claude-plugin/
-└── marketplace.json                      # em-workflow version 0.2.12 → 0.2.13 (FR12)
+└── marketplace.json                      # em-workflow version: patch raised (FR12)
 feature-docs/
 └── destructive-guard-write-target-scoping/
     ├── SPEC.md                           # revised (FR10)
@@ -234,7 +234,7 @@ path that never materializes is not a violation.
 
 ### Unit Tests
 - [ ] TS-1: `python3 em-workflow/hooks/tests/run-destructive-guard.py` - Case-table run: red after the FR1/FR7 cases are added, green after the fix. Covers FR1, FR2, FR3, FR4, FR6, FR7, FR8, FR9.
-- [ ] TS-3: `python3 em-workflow/hooks/tests/run-destructive-guard.py ~/.claude/plugins/cache/em-claude-plugins/em-workflow/0.2.13/hooks/destructive-guard.py` - Optional: after the version bump, confirm the installed cache copy carries the fix. Covers FR12.
+- [ ] TS-3: `python3 em-workflow/hooks/tests/run-destructive-guard.py ~/.claude/plugins/cache/em-claude-plugins/em-workflow/<version>/hooks/destructive-guard.py` - Optional: after the version bump, with `<version>` the em-workflow version the feature ends at, confirm the installed cache copy carries the fix. Covers FR12.
 
 ### Integration Tests
 - [ ] TS-2: `python3 -m unittest discover -s tests` - Repository-wide unit tests, including the case-table invariants (no duplicates, pinned `ORIGINAL_VERDICT_BY_COMMAND`, stdlib-only, no filesystem calls) and failed-run-cleanup-guard tests. Covers FR5, NFR1, NFR2, NFR3, NFR4.
@@ -303,7 +303,7 @@ Not applicable. No performance goals, optimization strategies, or caching are pa
 - [ ] AC-8: tar `-C` is a write target only in extract mode (`tar -cf /tmp/backup.tar -C ~/.claude/skills .` is allow, `tar -xzf /tmp/a.tgz -C ~/.claude/skills` is ask), and each of the six families has at least one ask case and one allow case.
 - [ ] AC-9: Cases for `sudo -u` / `bash -c` / `eval`-routed rm exist and pass.
 - [ ] AC-10: In `feature-docs/destructive-guard-write-target-scoping/SPEC.md` and REQUIREMENTS.md, FR2(c)/(d), the Edge Cases mv line and FR6 match the implementation's behaviour for mv, the six destination families and `head()`/`statements()`.
-- [ ] AC-11: `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` both carry em-workflow version 0.2.13.
+- [ ] AC-11: `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` carry the same em-workflow version, with the patch position raised from the base commit's value and major / minor unchanged.
 
 ## Out of Scope
 
@@ -347,10 +347,10 @@ None. Every requirement is confirmed.
 - The revised `feature-docs/destructive-guard-write-target-scoping/SPEC.md` and `REQUIREMENTS.md` (AC-10)
 
 ### Phase 4: Version bump
-**Goals:** FR12 — raise both em-workflow version fields to 0.2.13.
+**Goals:** FR12 — raise the patch position of both em-workflow version fields.
 **Deliverables:**
-- `em-workflow/.claude-plugin/plugin.json` at 0.2.13
-- `.claude-plugin/marketplace.json` em-workflow entry at 0.2.13 (AC-11)
+- `em-workflow/.claude-plugin/plugin.json` with the patch position raised
+- `.claude-plugin/marketplace.json` em-workflow entry at the same value (AC-11)
 
 ## References
 
