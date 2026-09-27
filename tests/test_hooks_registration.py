@@ -60,14 +60,23 @@ Extended again by heredoc-stdin-guard task0001 (AC-8): this file did not
 yet pin the PreToolUse(Bash) matcher's array as a whole (only
 `bash_guard.py`'s presence, plus the manifest-driven per-entry shape
 checks above, which say nothing about count or order).
-`TestPreToolUseBashArrayHasTheEightEntryOrderedShape` below fills that gap:
-it asserts the array holds exactly eight entries, pins every entry before
+`TestPreToolUseBashArrayHasTheNineEntryOrderedShape` below fills that gap:
+it asserts the array holds exactly nine entries, pins every entry before
 `heredoc-stdin-guard.py` verbatim (command, timeout, status message) so a
 later reordering or edit to any of them fails here, and pins the last
 entry's invocation form for the `heredoc-stdin-guard.py` hook. The relative ordering invariant
-("`destructive-guard.py`'s blanket allow must run last among the ORIGINAL
-six") stays the sole concern of
+("`destructive-guard.py`'s blanket allow must run last among the
+decision-capable guards") stays the sole concern of
 tests/test_guardrail_hooks_migration.py -- not duplicated here.
+
+Extended again by loop-command-guard task0001 (FR9, FR10, NFR3, AC-6): the
+pinned array grew from eight entries to nine -- `loop-command-guard.py` is
+inserted directly after `interpreter-mismatch-guard.py` and directly before
+`destructive-guard.py`, matching that guard's own registration. The class
+above was renamed accordingly
+(`TestPreToolUseBashArrayHasTheEightEntryOrderedShape` ->
+`TestPreToolUseBashArrayHasTheNineEntryOrderedShape`); its assertions keep
+the same shape, just against the grown array.
 """
 
 import importlib.util
@@ -357,6 +366,12 @@ EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC = [
     },
     {
         "type": "command",
+        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/loop-command-guard.py',
+        "timeout": 15,
+        "statusMessage": "while / until ループを含むコマンドでないか検証中...",
+    },
+    {
+        "type": "command",
         "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/destructive-guard.py',
         "timeout": 10,
         "statusMessage": "破壊的コマンドを検証中...",
@@ -372,11 +387,14 @@ EXPECTED_HEREDOC_GUARD_COMMAND = (
 EXPECTED_HEREDOC_GUARD_TIMEOUT = 10
 
 
-class TestPreToolUseBashArrayHasTheEightEntryOrderedShape(unittest.TestCase):
-    """AC-8 (FR7, NFR3, NFR4): the PreToolUse(Bash) matcher holds exactly
-    eight entries; the last invokes heredoc-stdin-guard.py in the
-    pinned invocation form with a 10-second timeout; the first seven are
-    unchanged in order, command, timeout and status message."""
+class TestPreToolUseBashArrayHasTheNineEntryOrderedShape(unittest.TestCase):
+    """AC-8 (FR7, NFR3, NFR4) extended by loop-command-guard task0001 (FR9,
+    FR10, AC-6): the PreToolUse(Bash) matcher holds exactly nine entries;
+    the last invokes heredoc-stdin-guard.py in the pinned invocation form
+    with a 10-second timeout; the first eight (now including
+    loop-command-guard.py, directly after interpreter-mismatch-guard.py and
+    directly before destructive-guard.py) are unchanged in order, command,
+    timeout and status message."""
 
     @classmethod
     def setUpClass(cls):
@@ -391,26 +409,25 @@ class TestPreToolUseBashArrayHasTheEightEntryOrderedShape(unittest.TestCase):
         )
         cls.entries = groups[0].get("hooks", [])
 
-    def test_exactly_eight_entries(self):
-        self.assertEqual(len(self.entries), 8, self.entries)
+    def test_exactly_nine_entries(self):
+        self.assertEqual(len(self.entries), 9, self.entries)
 
     def test_entries_before_heredoc_guard_are_unchanged_verbatim(self):
-        self.assertEqual(self.entries[:7], EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC)
+        self.assertEqual(self.entries[:8], EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC)
 
     def test_last_entry_invokes_the_heredoc_guard_in_the_pinned_form(self):
-        last = self.entries[7] if len(self.entries) >= 8 else {}
+        last = self.entries[8] if len(self.entries) >= 9 else {}
         self.assertEqual(last.get("type"), "command")
         self.assertEqual(last.get("command"), EXPECTED_HEREDOC_GUARD_COMMAND)
         self.assertEqual(last.get("timeout"), EXPECTED_HEREDOC_GUARD_TIMEOUT)
 
     def test_reordering_the_pinned_entries_would_be_caught(self):
         # Non-vacuity guard: a config with the pinned entries reordered
-        # (destructive-guard.py moved ahead of muse_guard.py) must NOT
-        # equal the pinned expectation.
+        # (destructive-guard.py moved ahead of loop-command-guard.py) must
+        # NOT equal the pinned expectation.
         reordered = (
-            EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[:4]
-            + [EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[6], EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[4],
-               EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[5]]
+            EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[:6]
+            + [EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[7], EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[6]]
         )
         self.assertNotEqual(reordered, EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC)
 
