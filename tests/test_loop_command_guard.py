@@ -205,6 +205,181 @@ CASES = [
         "AC3 heredoc piped into bash (attached to the non-shell command)",
         "cat <<EOF | bash\nwhile true; do :; done\nEOF",
     ),
+    # task0002.md AC-1 (FR5, A6; finding 58562295e0a7b109): a value-taking
+    # prefix-command option, separated from its value by a space, must not
+    # make the value word the executed command.
+    ("deny", "AC1 task0002: env -u X", "env -u X bash -c 'while false; do :; done'"),
+    ("deny", "AC1 task0002: nice -n 5", "nice -n 5 bash -c 'while false; do :; done'"),
+    (
+        "deny",
+        "AC1 task0002: timeout -s TERM 2",
+        "timeout -s TERM 2 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC1 task0002: timeout -k 5 60",
+        "timeout -k 5 60 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC1 task0002: exec -a name",
+        "exec -a name bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC1 task0002: stdbuf -o L",
+        "stdbuf -o L bash -c 'while false; do :; done'",
+    ),
+    # task0002.md AC-2 (FR5, A6): attached and long forms of the same
+    # value-taking options.
+    ("deny", "AC2 task0002: env -uX", "env -uX bash -c 'while false; do :; done'"),
+    (
+        "deny",
+        "AC2 task0002: env --unset=X",
+        "env --unset=X bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: env --unset X",
+        "env --unset X bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: env -C /tmp",
+        "env -C /tmp bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: env --chdir=/tmp",
+        "env --chdir=/tmp bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: env -S X=1",
+        "env -S X=1 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: env -iu X",
+        "env -iu X bash -c 'while false; do :; done'",
+    ),
+    ("deny", "AC2 task0002: nice -n5", "nice -n5 bash -c 'while false; do :; done'"),
+    (
+        "deny",
+        "AC2 task0002: nice --adjustment=5",
+        "nice --adjustment=5 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: nice --adjustment 5",
+        "nice --adjustment 5 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: nice -n -5",
+        "nice -n -5 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: timeout -sTERM 2",
+        "timeout -sTERM 2 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: timeout --signal=TERM 2",
+        "timeout --signal=TERM 2 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: timeout --signal TERM 2",
+        "timeout --signal TERM 2 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: timeout -k5 60",
+        "timeout -k5 60 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: timeout --kill-after=5 60",
+        "timeout --kill-after=5 60 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: timeout --kill-after 5 60",
+        "timeout --kill-after 5 60 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: exec -aname",
+        "exec -aname bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: stdbuf -oL",
+        "stdbuf -oL bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: stdbuf --output=L",
+        "stdbuf --output=L bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: stdbuf --output L",
+        "stdbuf --output L bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC2 task0002: stdbuf -i0 -o L -e L",
+        "stdbuf -i0 -o L -e L bash -c 'while false; do :; done'",
+    ),
+    # task0002.md AC-3 (FR5, A6): chains of prefixes, `--`, and a herestring
+    # behind a value-taking prefix.
+    (
+        "deny",
+        "AC3 task0002: two prefixes with values",
+        "nice -n 5 timeout -k 5 60 bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC3 task0002: env value then nice value then sh -c",
+        "env -u X nice -n 5 sh -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC3 task0002: nice -n 5 -- bash -c",
+        "nice -n 5 -- bash -c 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC3 task0002: herestring behind a prefix with a value",
+        "nice -n 5 bash <<< 'while false; do :; done'",
+    ),
+    (
+        "deny",
+        "AC3 task0002: timeout -s KILL 5 zsh -lc",
+        "timeout -s KILL 5 zsh -lc 'while false; do :; done'",
+    ),
+    # task0002.md AC-4 (FR4, FR7): the option's value is not the executed
+    # command, so these stay silent.
+    (
+        "silent",
+        "AC4 task0002: env -u bash (bash is the value, not the command)",
+        "env -u bash python3 -c 'while True: pass'",
+    ),
+    (
+        "silent",
+        "AC4 task0002: exec -a sh (sh is the value, not the command)",
+        "exec -a sh python3 -c 'while True: pass'",
+    ),
+    (
+        "silent",
+        "AC4 task0002: timeout -s TERM 2 python3 -c",
+        "timeout -s TERM 2 python3 -c 'while True: pass'",
+    ),
+    ("silent", "AC4 task0002: nice -n 5 echo while", "nice -n 5 echo while"),
+    ("silent", "AC4 task0002: stdbuf -o L echo until", "stdbuf -o L echo until"),
     # Edge cases (task0001.md Test Notes)
     (
         "deny",
