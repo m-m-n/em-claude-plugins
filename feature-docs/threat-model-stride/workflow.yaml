@@ -135,7 +135,8 @@ workflow:
   failed_items: []
   completed_at_commit: 66bc8164bafd2c73d1ec7124273d738003fdc716
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 71dd0b8b851a9d570adea3f2f608ae0fc48cea1f
 tasks:
   task0001:
     title: THREAT-MODEL.md template and plan-writing threat-modeling guidance
