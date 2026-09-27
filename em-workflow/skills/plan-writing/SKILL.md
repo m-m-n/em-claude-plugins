@@ -121,6 +121,68 @@ When the two disagree on the value set, `review-rules.yaml` wins.
 - `ui` — rendered UI, styling, user-facing interaction flows.
 - `config-infra` — build/CI/deploy config, environment wiring, tooling.
 
+## Threat Modeling (STRIDE)
+
+Every create-plan run performs a STRIDE threat-modeling pass and writes
+`feature-docs/{feature}/THREAT-MODEL.md` from
+`references/templates/threat-model.md`. The pass runs for every feature and
+every tier — nothing about the tier, complexity or domains can skip it.
+
+### Finding trust boundaries
+
+A trust boundary exists wherever data or control crosses between parties of
+different trust: user or external input, an external service, a file from
+outside the project, another process, untrusted text interpolated into an
+LLM prompt, or a privilege change. Each boundary found becomes one `TB-n`
+subsection in THREAT-MODEL.md.
+
+### Picking applicable STRIDE categories
+
+For each trust boundary, ask which of the six STRIDE categories (Spoofing,
+Tampering, Repudiation, Information disclosure, Denial of service,
+Elevation of privilege) realistically applies given what crosses that
+boundary and how. A category that does not realistically apply gets no
+row — never a filler row for completeness.
+
+### Depth: the four domains deepen, never skip
+
+The domains `auth`, `input-handling`, `external-io` and `data-persistence`
+deepen the analysis of the boundaries they touch (more careful boundary
+identification, more categories considered); they never skip or condition
+whether the pass runs at all — the pass itself is unconditional for every
+feature and every tier.
+
+After task decomposition assigns domains to tasks, re-check consistency: a
+task declaring one of these four domains whose files appear in no
+`Boundary files` line either gets a boundary added to THREAT-MODEL.md, or
+the omission is explained in THREAT-MODEL.md's `## Rationale`.
+
+### No invention, proportionality (NFR1)
+
+A mitigation exists only for a threat actually recorded in a `TB-n` table;
+generic hardening is never invented without a recorded threat behind it.
+Document length follows the real threats found: a feature with no trust
+boundary or no applicable threat gets the short form (a few lines), never
+padded to look thorough.
+
+### Role split with SPEC.md (FR10)
+
+SPEC.md's `## Security Considerations` states what is protected;
+THREAT-MODEL.md states how it can be broken and how the design prevents
+it. A threat cites the SPEC.md / REQUIREMENTS.md requirement IDs it
+relates to instead of copying their text.
+
+### Per-tier mitigation reflection
+
+Each `TM-n` is the literal link between THREAT-MODEL.md, the task
+Acceptance Criteria, VERIFICATION.md and review findings.
+
+| Verdict / tier | Acceptance side | Verification side |
+|----------------|-----------------|--------------------|
+| `threats-identified`, full or reduced | At least one AC in the implementing task plan names the `TM-n` and states the observable protective behavior | One item in VERIFICATION.md's Performance / Security Verification section keyed by the `TM-n` |
+| `threats-identified`, minimal | One line appended to TASK.md's Expected Result keyed by the `TM-n` (TASK.md is both the AC and the verify criterion) | Same line |
+| `no-trust-boundary` / `no-applicable-threat` | Nothing | Nothing (no TASK.md write) |
+
 ## VERIFICATION.md Template (feature-wide)
 
 ```markdown
@@ -167,6 +229,7 @@ traceability checks compare these as literal strings.
 
 ## Performance / Security Verification (if applicable)
 - {requirement}: {threshold / check}
+- {TM-n}: {mitigation} — {how it is checked}
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
@@ -186,3 +249,7 @@ traceability checks compare these as literal strings.
 - [ ] Every FR/NFR maps to ≥ 1 task and ≥ 1 test (or is flagged as a gap).
 - [ ] skills values exist in impl-skills.yaml; domains values in the 8-value
       vocabulary; complexity in {low, medium, high}.
+- [ ] THREAT-MODEL.md is written with exactly one verdict.
+- [ ] Every `TM-n` appears in at least one task AC and in VERIFICATION.md
+      (full / reduced) or in TASK.md's Expected Result (minimal).
+- [ ] No mitigation exists without a recorded threat.
