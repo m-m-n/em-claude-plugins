@@ -94,8 +94,8 @@ findings:
   sources:
   - codex:spec
   confidence: 100
-  resolution: unresolved
-  resolution_reason: category spec is outside auto-fix scope; batch rework 1 dispatched
+  resolution: fixed
+  resolution_reason: batch rework task0002 (merged 0695a3c1); confirmed resolved in round 2
 - stable_id: a726c8e6f9a69cab
   severity: medium
   category: spec
