@@ -1,0 +1,373 @@
+round: 1
+executed_at: '2026-09-28T02:12:26+09:00'
+scope:
+  review_mode: diff
+  base_commit: 073f0a91497151f7a75cc6bbe6a4d581d23d4611
+  head_commit: 49253fb4913b6e91a599ce95f657d76bf1ca9d32
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - .claude/rules/hook-tests.md
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/hooks/hooks.json
+  - em-workflow/hooks/loop-command-guard.py
+  - test-docs/loop-command-guard/task0001.tests.yaml
+  - tests/test_guardrail_hooks_migration.py
+  - tests/test_hooks_registration.py
+  - tests/test_loop_command_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: loop-command-guard.py runs as a PreToolUse hook on every Bash call and does recursive nested-shell
+      parsing, so per-call latency and worst-case expansion need checking
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: performance#1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 58562295e0a7b109
+  severity: high
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 478
+  title: 前置きコマンドの値を取るオプションで入れ子のシェルを見逃す
+  description: _analyze_simple_command は env / nice / timeout / exec / stdbuf などの前置きコマンドについて、`-` で始まる語だけを読み飛ばす。そのオプションが取る値（`nice
+    -n 5` の 5、`env -u X` の X、`timeout -s TERM 2` の TERM、`timeout -k 5 60` の 5、`exec -a name` の name、`stdbuf
+    -o L` の L）を実行コマンドと誤認するため、bash に到達しない。評価側でも hook を直接起動し、この 6 形がすべて無出力になることを再現した（ループ条件は false で確認）。SPEC
+    FR5 と A6 はこれらの前置きコマンドを付けたシェル内のループを拒否対象にしている。timeout -k / -s や nice -n は日常的に使う形なので、検出漏れの実害が大きい。security#0
+    と comprehensive#0 も同じ箇所を報告している。
+  suggestion: '前置きコマンドごとに値を取るオプションを表で持つ（env: -u -C -S、nice: -n、timeout: -s -k と後続の時間指定、exec: -a、stdbuf:
+    -i -o -e。値を同じ語に付けた形も含める）。値を消費してから実行コマンドを解決する。上記の各形を deny の回帰ケースとして CASES に足す。'
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: category spec is outside auto-fix scope; batch rework 1 dispatched
+- stable_id: a726c8e6f9a69cab
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 596
+  title: リダイレクトの番号と宛先を通常の単語として扱う
+  description: _scan はリダイレクト演算子だけを読み飛ばし、前の番号（`2>` の 2）と宛先（/dev/null など）を単語列に残す。このため `</dev/null bash -c
+    '...'` と `2>&1 bash -c '...'` では宛先や番号がコマンド名になる。`bash 2>/dev/null -c '...'` では -c の探索が途中で止まる。いずれも無出力になることを再現した。逆に
+    `>while printf ok` は宛先の while をコマンド位置の予約語と誤認して拒否する。SPEC FR3 の -c 文字列の検出が、リダイレクトを前や途中に置いた形では働かない。その位置にリダイレクトを置く書き方は多くないため
+    medium とした（spec#1 と security#0 は high、comprehensive#0 は medium）。
+  suggestion: 番号・演算子・宛先をまとめて 1 つのリダイレクトとして読み、宛先をコマンド語にも引数列にも入れない。リダイレクトはコマンド位置を消費しない（cmd_pos を保つ）ようにする。前置き・途中の両方の形を
+    deny ケース、`>while printf ok` を silent ケースとして足す。
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 56d1ef4dbb93183a
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 602
+  title: time・case のパターン・関数定義の本体でコマンド位置を認識しない
+  description: '`time while ...`（time は bash の予約語）、`case x in x) while ...;; esac`、`f() while ...; f`
+    はいずれも無出力になる。`time until 条件; do sleep 1; done` のような待ち合わせの形も同じく無出力になることを再現した。_scan は time を通常のコマンド語として扱い、`)`
+    の後を常に非コマンド位置にするため。また case の状態を追跡しないので、`;;` の後のパターン語を予約語と誤認する誤拒否も起きる（`case $w in a) echo a;; until)
+    echo b;; esac` が拒否されることを確認した）。SPEC FR2 のコマンド位置の列挙は「を含む」で閉じておらず、bash が実際にループとして実行する位置を取りこぼしている。'
+  suggestion: コマンド位置の time（-p を含む）を、RESERVED_CHAIN と同じく次の語をコマンド位置に保つ語として扱う。case ... in ... esac の状態を持ち、パターン語自体は非コマンド位置、パターン終端の
+    `)` の後はコマンド位置にする。`name()` の直後の本体開始もコマンド位置にする。
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 481c01ddeeec12c4
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 567
+  title: 単語内やパラメーター展開内の波括弧をブレースグループとして扱う
+  description: _WORD_STOP_CHARS と _scan が `{` `}` を常に演算子として切るため、`printf %s {while}` と `while=ok; printf
+    '%s' ${while}` が拒否されることを再現した。bash では前者は文字列、後者は変数展開で、ループは実行されない。SPEC FR4（引数の単語では検出しない）に反する誤拒否になる。security#0
+    と spec#1 も同じ箇所を medium で報告している。
+  suggestion: '`{` と `}` は、コマンド位置に単独の語として現れたときだけブレースグループの開始・終了として扱い、それ以外は単語の一部として読む。`${...}` はパラメーター展開として単語の中で対応を取る。'
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 1cbb68a5abad6e52
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 129
+  title: コマンド置換の終端探索がコメントとヒアドキュメントを追跡しない
+  description: '_scan_cmdsub_end は括弧と引用符だけで終端を探す。そのためコメント内の `)` で置換を閉じてしまい、後続のループを見逃す（`echo "$(echo ok
+    # )` 改行 `while ...)"` が無出力）。置換内のヒアドキュメント本文にある `)` では、逆に本文をループとして拒否する。さらに本文やコメント中のアポストロフィを閉じていない引用符とみなし、コマンド全体を判定不能として無出力にする。評価側で、Claude
+    Code の定型のコミット `git commit -m "$(cat <<''EOF''` 改行 `Don''t ...` 改行 `EOF` 改行 `)" && <ループ>` が無出力になることを確認した。同じコマンドにあるループの検出がまとめて外れる。spec#1
+    と security#0 は high、comprehensive#0 は medium で報告している。ループを同じコマンドに連ねる場面は限られるため medium とした。'
+  suggestion: '終端探索でも、コメント（語の先頭の #）とヒアドキュメント（<< の区切り語と本文）の状態を追跡し、それらの中の括弧や引用符を対応付けに使わない。_scan の読み取りを再利用して置換の中身を読むようにすると、二重実装を避けられる。'
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 7b08e787d8e84621
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 175
+  title: 算術展開の中のコマンド置換を検査しない
+  description: _scan_arith_end は `$(( ... ))` を括弧の対応だけで丸ごと読み飛ばす。そのため `echo "$(( $(while ...) + 1 ))"`
+    の内側の置換が再帰検査に渡らず、無出力になることを再現した。bash は算術式の中のコマンド置換を実行する。SPEC FR3 が求める `$( )` の再帰検出の取りこぼしになる。実際に書かれる形ではないため
+    medium に下げた（spec#1 と security#0 は high）。
+  suggestion: 算術式の中で `$(` とバッククォートを見つけたら、その中身を _scan_cmdsub_end / _scan_backtick_end で取り出して out_nested
+    に渡す。算術式そのものは検出対象にしない。
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 1d20c07f80d751ac
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 439
+  title: シェルのオプション解析が -c の位置と値を取るオプションを取り違える
+  description: _handle_shell_invocation は c を含むオプション語を見つけた時点で、次の語を -c 文字列とみなす。そのため `bash -c -e '...'`
+    では -e を、`bash -oc posix '...'` と `bash -co pipefail '...'` では posix / pipefail を再解析し、実際の文字列を見逃す（再現済み）。引用した
+    `'-c'` もオプションと認識しない。bash は -c の後もオプションを読み、最初の非オプション引数を文字列にする。comprehensive#0 も同じ箇所を medium で報告している。通常の書き方では出にくいため
+    medium に下げた（security#0 は high）。
+  suggestion: オプション語を静的に引用除去してから読む。c の有無を記録しつつ、残りのオプション（-o / -O / +o / +O とその値、--rcfile など）を最後まで消費し、最初の非オプション引数を
+    -c 文字列にする。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: ea1e5c612ac82e71
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 553
+  title: 引用されていないヒアドキュメント本文のコマンド置換を見逃す
+  description: 区切り語を引用しないヒアドキュメントでは、外側のシェルが本文の `$( )` とバッククォートを展開して実行する。しかし hook は本文を、シェルに渡したときだけシェルテキストとして読み、それ以外は捨てる。このため
+    `cat <<EOF` 改行 `$(while ...)` 改行 `EOF` が無出力になる。`bash <<EOF` 改行 `echo '$(while ...)'` 改行 `EOF` も、本文の単一引用符は外側の展開を止めないのに無出力になる。どちらも再現した。SPEC
+    FR4 は非シェルへの本文をデータとして扱うが、その中でも外側のシェルが実行する置換は FR3 の `$( )` の検出対象になる。comprehensive#0 も medium で報告している。security#0
+    の high から medium に下げた。
+  suggestion: 区切り語が引用されていたかを保持する。引用されていない本文からは、二重引用符の中と同じ規則で `$( )` とバッククォートを取り出して out_nested に渡す。本文全体をシェルテキストとして読む処理（シェルへの本文）とは分ける。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: ec9affcab9c217d7
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 271
+  title: 部分的に引用したヒアドキュメントの区切り語を正しく解決しない
+  description: _read_heredoc_delim は先頭が引用符のときだけ引用を外すため、`E'O'F` や `E"OF"` を引用符付きのまま区切り語にする。bash の区切り語は
+    EOF なので終端行が見つからず、判定不能として無出力になる（`bash <<E'O'F` 改行 `<ループ>` 改行 `EOF` で再現）。comprehensive#0 と spec#1 も
+    medium で報告している。実際に書かれる形は少ないため、security#0 の high から medium に下げた。
+  suggestion: 区切り語を 1 つのシェル単語として読み、引用部分とそれ以外を連結して引用を外した値で終端行と比較する。引用の有無は、本文の展開判定（引用されていない本文の置換の指摘）のために別に保持する。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: bf3031c115a3e971
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 497
+  title: eval の先頭の -- を実行文字列に含めてしまう
+  description: bash の eval は先頭の -- を取り除いて残りを実行する。しかし hook は `-- while ...` をそのまま再解析するので、while がコマンド位置に来ず、`eval
+    -- '...'` が無出力になる（再現済み）。comprehensive#0 も medium で報告している。security#0 の high から medium に下げた。
+  suggestion: eval の引数の先頭が -- ならそれを除いてから連結・再解析する。この形を deny ケースに足す。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: d59f600216118559
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 146
+  title: 入れ子のバッククォートのエスケープを外さずに再解析する
+  description: _scan_backtick_end は外側のバッククォートの中身をそのまま返す。内側のバッククォートがバックスラッシュ付きのまま再解析されるため、バッククォートを二重に入れ子にした形の内側のループを見逃すことを再現した。bash
+    はバッククォートの中身から、バッククォート・バックスラッシュ・$ の前のバックスラッシュを一段外してから実行する。SPEC FR3 の多重入れ子の検出が、この形では働かない。comprehensive#0
+    も medium で報告している。security#0 の high から medium に下げた。
+  suggestion: バッククォートの中身を返すとき、バッククォート・バックスラッシュ・$ の前のバックスラッシュを一段外してから out_nested に渡す。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 6fb155ef31bd20e0
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 398
+  title: 二重引用符内のバックスラッシュを過剰に外す
+  description: _unquote_for_nested_text は、二重引用符内のバックスラッシュを後続の文字にかかわらず外す。bash が二重引用符内で外すのは $ ・バッククォート・二重引用符・バックスラッシュ・改行の前だけである。このため
+    `bash -c "echo \; while"` と `eval "echo \; until"` ではセミコロンが生じてループと誤認し、`bash -c "\while"` も予約語に変わって拒否されることを再現した。SPEC
+    A7（バックスラッシュ付きの while は検出しない）と FR4 に反する誤拒否になる。spec#1 も medium で報告している。
+  suggestion: 二重引用符内では、$・バッククォート・二重引用符・バックスラッシュの前のバックスラッシュだけを外す。バックスラッシュと改行の組は両方除去し、それ以外はバックスラッシュを残す。
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: 8e8585a26fea1bf2
+  severity: medium
+  category: security
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 380
+  title: ANSI-C 引用 $'...' の -c 文字列と eval 引数を正しく復元しない
+  description: _unquote_for_nested_text は `$'...'` の $ を残し、引用内のエスケープも解かない。そのため `bash -c $'while ...'`
+    は `$while ...` として読まれ、無出力になることを再現した。$'...' は改行などを埋め込むときに使う通常の引用形式で、FR3 の -c 文字列と eval 引数の再解析がこの形では働かない。使われる頻度は低いため、security#0
+    の high から medium に下げた。
+  suggestion: '`$''` を ANSI-C 引用として扱い、\n \t \'' \\ \xHH などの主要なエスケープを文字列処理で復元してから再解析する。復元できないエスケープを含む場合は判定不能として扱う。'
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+- stable_id: a4c7b7884bca242c
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/loop-command-guard.py
+  line: 638
+  title: 入れ子の eval とコマンド置換を段ごとに二重に走査する
+  description: コマンド置換の中身は _read_word_raw が out_nested に取り出す。一方で eval や -c の引数を _unquote_for_nested_text
+    で組み立てるときにも置換を原文のまま残すので、次の段で同じ中身をもう一度読む。段ごとに走査量が約 2 倍になり、MAX_NESTING_DEPTH=8 まで積み上がる。評価側でも、約 200 KB
+    の printf を `eval "$( ... )"` で包むと、0 段で 0.07 秒、4 段で 1.5 秒、6 段で 4.2 秒かかった。入力が大きいと登録 timeout の 15 秒（NFR2）を超えうる。普段のコマンドにこの形は出ないため、影響は限られる。
+  suggestion: 同じ文字列（または同じ区間）の読み取り結果を、残り深さとともに 1 回の呼び出しの中でキャッシュする。または -c / eval 引数を組み立てるとき、すでに out_nested
+    に取り出した置換を再読の対象から外す。大きな入力と多段の eval を組み合わせた時間上限のテストを足す。
+  sources:
+  - codex:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+evaluation:
+  round_summary: 'Round 1（diff、cross_validation=true）。litellm の architecture#0 / performance#0 / spec#0
+    は rate_limited で skip、codex の 5 本はすべて完了した。評価側で loop-command-guard.py を読み、hook をサブプロセスで直接起動して、reviewer
+    が挙げた再現例をすべて確かめた（ループ条件は false にし、ループは実行していない）。すべて主張どおり再現した。採用は 14 件（high 1・medium 13）で、すべて loop-command-guard.py
+    のシェル構文の読み取りの穴になる。high は SPEC FR5・A6 の前置きコマンドのオプション値の検出漏れ。security#0 の high のうち、難読化でしか生じない 3 件（行継続・部分引用のシェル名・builtin
+    eval）は low に下げた。SPEC が対象外と明記する 2 件（パイプでシェルへ・dash）は false positive とした。medium の報告のうち、次の 4 件は low 相当として採用していない。comprehensive#0
+    の 203 行（行継続）と 455 行（`bash -c ''cat''` の標準入力の誤検出。FR3 の文言はシェルへのヒアドキュメント/ヒアストリングを一律に対象にしている）と 574 行（`((
+    while = 1 ))` の誤検出。評価側では `(( x << 2 ))` を heredoc と読んでコマンド全体が判定不能になることも確認）、spec#1 の 615 行（閉じていないサブシェルの
+    deny。bash 自体が構文エラーで実行しないため実害なし）。登録・文書・version は仕様どおりだった（hooks.json の位置と 9 本の固定、README の表と実行順、plugin.json
+    / marketplace.json とも 0.3.1→0.3.2、em-review は変更なし）。関連テスト 74 件は通った。reviewer 出力にプロンプトインジェクションの試みは見当たらなかった。観点ごとの確認結果:
+    security=findings, comprehensive=findings, architecture=corroborated, performance=corroborated, spec=findings。読み取り予算
+    10 件は SPEC.md、loop-command-guard.py、差分で確認した 6 ファイル（marketplace.json・plugin.json・README.md・hooks.json・2
+    つの登録テスト）、test_loop_command_guard.py、review-phase.md（突き合わせ規則）に使った。test-docs/loop-command-guard/task0001.tests.yaml
+    は未読だが、そのファイルだけに依存する観点は無い。'
+  recommended_action: rework
+  action_rationale: high 1 件と medium 13 件は、すべて 1 本のパーサ（loop-command-guard.py）の中で互いに絡む読み取りの穴になる（単語・リダイレクト・波括弧の切り方、置換の終端探索、ヒアドキュメントの区切り語と本文、オプション解析）。上限付きの
+    auto-fix で個別に直すと相互に退行しやすい。1 つの rework タスクとしてパーサを直し、.claude/rules/hook-tests.md に従って誤検出と見逃しの両方向の回帰ケースを
+    CASES に足すのが安全。登録・文書に修正は要らない。em-workflow/ 配下のコミットには plugin-version-guard（SPEC A11）がかかる点をタスクで扱う必要がある。
+dismissed_sites:
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 306
+  run_id: security#0
+  reason: 'demoted: 予約語を行継続で分割する `whi` + バックスラッシュ改行 + `le` は意図的な難読化でしか生じない。SPEC A3・A4・A6 はスクリプトファイル・for・パイプ経由のループを素通しにしており、この
+    guard は通常のコマンドのハング防止であって敵対的な境界ではない。low 相当で報告基準未満（comprehensive#0 の 203 行の medium も同じ扱い）'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 324
+  run_id: security#0
+  reason: 'demoted: `b''a''sh` のような部分引用のシェル名は難読化でしか生じない。low 相当で報告基準未満'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 473
+  run_id: security#0
+  reason: 'demoted: builtin eval は SPEC A6 の前置きコマンド一覧に無く、通常の書き方でもない。low 相当で報告基準未満'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 455
+  run_id: security#0
+  reason: 'false positive: パイプでシェルに流し込む文字列（echo ''...'' | bash、cat <<EOF | bash）は SPEC A6 が明示的に対象外にしている'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 43
+  run_id: security#0
+  reason: 'false positive: SPEC FR3・A6 は入れ子の検出対象を bash / sh / zsh に限定しており、dash は仕様上の対象外'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 478
+  run_id: security#0
+  reason: 'duplicate of another finding: spec カテゴリの前置きコマンドのオプション値の指摘（478 行、high）にまとめた'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 596
+  run_id: security#0
+  reason: 'duplicate of another finding: spec カテゴリのリダイレクトの指摘（596 行）にまとめ、medium に下げた'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 129
+  run_id: security#0
+  reason: 'duplicate of another finding: spec カテゴリのコマンド置換終端の指摘（129 行）にまとめ、medium に下げた'
+- file: em-workflow/hooks/loop-command-guard.py
+  line: 175
+  run_id: security#0
+  reason: 'duplicate of another finding: spec カテゴリの算術展開の指摘（175 行）にまとめ、medium に下げた'
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no_candidates
+residual_critical_high: 1
+rework_required: true
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
