@@ -55,7 +55,7 @@ workflow:
   status: completed
   completed_at_commit: 60762e7e5fc1de10342da2600b60fd4a23c16723
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 43a4e42a4551925141b486127a24cbcce980b7c6
   base_commit: 073f0a91497151f7a75cc6bbe6a4d581d23d4611
   failed_kind: null
@@ -109,6 +109,33 @@ tasks:
     status: merged
     notes: 'batch auto-retry consumed (1/1): first attempt ended with max_output_tokens API error, no commits; journal failed stale-launched'
     branch: em-workflow/loop-command-guard/task0001
+  task0002:
+    title: Prefix-command option values in loop-command-guard
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/loop-command-guard.py
+    - tests/test_loop_command_guard.py
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills:
+    - infra-impl
+    domains:
+    - auth
+    - input-handling
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR4
+    - FR5
+    - FR11
+    - FR14
+    - NFR4
+    status: pending
+    provenance:
+      source: review
+      source_ids:
+      - 58562295e0a7b109
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -167,8 +194,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-3
+    - TS-12
   FR5:
     title: 例外なし
     status: ok
@@ -176,8 +205,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-2
+    - TS-12
   FR6:
     title: 拒否時の出力
     status: ok
@@ -232,12 +263,14 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
     - TS-3
     - TS-4
     - TS-5
+    - TS-12
   FR12:
     title: README の更新
     status: ok
@@ -263,6 +296,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-10
     - TS-8
@@ -302,10 +336,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
