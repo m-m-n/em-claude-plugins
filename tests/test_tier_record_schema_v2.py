@@ -454,8 +454,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 
 # Recorded when this module was written, from the pre-task0004 content of
 # each file -- any edit to either file (by this task) changes the hash.
+# Refreshed by task0004 of threat-model-stride (FR8): review-phase.md gained
+# Phase R0's threat_model_path resolution/validation and the Phase R2 /
+# R2b / R4 security-perspective carriage of that field.
 REVIEW_PHASE_SHA256 = (
-    "9faf5ce42ad32c8249c1a1b5e6ea59027ed5e0427e1f1d1384b817312d98e5a0"
+    "04b6f8e5968332c521f8db31e6caf2ca7382349faa78b2c1fcba567e31eb8261"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

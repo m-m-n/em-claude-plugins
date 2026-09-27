@@ -1,0 +1,106 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_threat_model_review_phase.TestAC1ThreatModelResolutionStated
+    red_confirmed: true
+    red_reason: >-
+      Before the Phase R0 step-4 edit, the slice contained no
+      "THREAT-MODEL.md" / "threat_model_path" text at all: assertIn on
+      "`{project_root}/feature-docs/{feature}/THREAT-MODEL.md`" and on
+      "The standalone route never sets `threat_model_path`." both raised
+      AssertionError (substring not found). Observed directly by running
+      `python3 -m unittest tests.test_threat_model_review_phase` before
+      writing the review-phase.md paragraph; all three tests in this class
+      failed, then passed after the edit.
+  AC-2:
+    tests:
+      - tests.test_threat_model_review_phase.TestAC2AbsentThreatModelLeavesFieldUnset
+    red_confirmed: true
+    red_reason: >-
+      Same pre-edit run: assertIn on "Absent ⇒ `threat_model_path` stays
+      unset" and on the "no abort, no skip, no finding, and no change to
+      `spec_available` or to perspective selection" sentence both raised
+      AssertionError before the step-4 paragraph existed; both passed after.
+  AC-3:
+    tests:
+      - tests.test_threat_model_review_phase.TestAC3PresentThreatModelValidatedLikeSpecPath
+    red_confirmed: true
+    red_reason: >-
+      Same pre-edit run: assertIn on "exactly the same checks `spec_path`
+      gets" (plus the prompt-control/lstat/realpath/regular-file phrases)
+      and on "a violation aborts exactly as a `spec_path` violation does,
+      never sanitized" both raised AssertionError before the step-4
+      paragraph existed; both passed after.
+  AC-4:
+    tests:
+      - tests.test_threat_model_review_phase.TestAC4PhaseR2SecurityOnlyInputBlock
+      - tests.test_threat_model_review_phase.TestAC4PhaseR2bCarriesSameValue
+      - tests.test_threat_model_review_phase.TestAC4PhaseR4CarriesSameValue
+      - tests.test_threat_model_review_phase.TestAC4EvaluatorInputUntouched
+    red_confirmed: true
+    red_reason: >-
+      Observed red before implementation for the three carriage checks:
+      test_matcher_accepts_the_real_r2_sentence, test_no_other_perspectives_
+      block_carries_it (Phase R2), and the "same `threat_model_path` value"
+      assertions in the Phase R2b and Phase R4 slices all raised
+      AssertionError (the field did not exist anywhere in the document yet);
+      all four passed once the Phase R2 sentence and the Phase R2b/R4
+      carriage sentences were added. TestAC4EvaluatorInputUntouched's
+      assertNotIn("threat_model_path", r3a) was already true before this
+      task (the term existed nowhere in the document), so that one specific
+      assertion was never itself observed red -- it is a preservation
+      invariant guarded going forward, not a demonstrated red-to-green case.
+  AC-5:
+    tests:
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+      - tests.test_threat_model_review_phase.TestAC5StepNumberingAndOrderPreserved
+      - tests.test_threat_model_review_phase.TestAC5SiblingSuitesPassUnmodified
+    red_confirmed: true
+    red_reason: >-
+      Found via the tdd-testing skill's existing-test search:
+      tests/test_tier_record_schema_v2.py already pins REVIEW_PHASE_SHA256
+      as a whole-file digest. Directly observed red: with the constant left
+      at its pre-task0004 value (9faf5ce...) after review-phase.md had
+      already been edited (cache cleared with `python3 -B` between runs to
+      rule out a stale bytecode cache, which had produced a false "still
+      red" reading on a first attempt), `test_review_phase_md_unchanged`
+      raised AssertionError ('04b6f8e...' != '9faf5ce...'); refreshing the
+      constant to '04b6f8e...' with the threat-model-stride/FR8 comment made
+      it pass. The step-numbering-preserved and sibling-suite-pass
+      sub-checks in this task's own new module are preservation invariants
+      this task never intentionally broke, so they were never independently
+      observed red; they are included here because they are the executable
+      checks this criterion's other two clauses ("steps 1-8 keep their
+      numbers"/"sibling suites pass") rest on, and they pass now.
+  AC-6:
+    tests:
+      - tests.test_threat_model_review_phase.TestAC6ManifestVersionOnlyInvariant
+      - tests.test_threat_model_review_phase.TestOwnModuleStdlibOnly
+    red_confirmed: false
+    red_reason: >-
+      The local plugin-version-guard hook DID reject this task's first
+      commit attempt (em-workflow/references/review-phase.md changed while
+      plugin.json's version stayed 0.2.14), so per IMPLEMENTATION.md SC-6's
+      commit-guard fallback both plugin.json and the marketplace.json
+      em-workflow entry were bumped 0.2.14 -> 0.3.0 (minor position) in the
+      same commit. TestAC6ManifestVersionOnlyInvariant's non-version-field
+      hash pins were computed from the pre-bump file content and continued
+      to pass unchanged after the bump (verified by an actual re-run), which
+      is the property AC-6 asks for -- but that property was never false at
+      any point this task could observe (the pins were always going to
+      match, since only "version" was ever touched), so there is no
+      red-to-green transition to report here; only the stdlib-only
+      self-check is a pure hygiene assertion with no red state possible.
+      The full-suite-passes clause of AC-6 is not asserted by the suite
+      itself (a suite cannot assert its own full-suite outcome, per
+      tests/test_sca_axis_review_phase_r0_r3.py's AC-7 precedent); it was
+      verified by actually running `python3 -B -m unittest discover -s
+      tests` (6256 tests, exit 0) both before and after the version bump,
+      recorded in the Step 7 report.
+notes: >-
+  Both test runs were re-executed after implementation (python3 -B -m
+  unittest discover -s tests, 6256 tests, exit 0); no file the suite reads
+  was left unchanged, so the "not re-run" skip never applied.

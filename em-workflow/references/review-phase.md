@@ -59,6 +59,18 @@ Two execution contexts, one protocol:
    `**/SPEC.md`; absent ⇒ `spec_available = false`. Validate `spec_path`
    (prompt-control chars + realpath containment under project_root +
    symlink rejection).
+
+   Locate THREAT-MODEL.md, develop-駆動 only: candidate =
+   `{project_root}/feature-docs/{feature}/THREAT-MODEL.md` — the feature
+   directory inside the integration worktree, the same project_root-based
+   location rule `spec_path` above uses. Absent ⇒ `threat_model_path` stays
+   unset — no abort, no skip, no finding, and no change to `spec_available`
+   or to perspective selection. Present ⇒ validate it with exactly the same
+   checks `spec_path` gets (reject prompt-control characters, a leading
+   dash, newline, CR, NUL; reject symlinks via `lstat`; require a regular
+   file; require `realpath` containment under project_root); a violation
+   aborts exactly as a `spec_path` violation does, never sanitized. The
+   standalone route never sets `threat_model_path`.
 5. Probe codex: `codex_available = [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" ] && command -v codex`.
 6. Probe litellm: `litellm_available` = the optional `vertex-review` plugin
    is installed AND its harness (`codex exec -p litellm`) is configured.
@@ -191,6 +203,10 @@ diff_cmd_quoted, spec_path when perspective == spec, project_license when
 perspective == license (develop-駆動: workflow.yaml `project.license`;
 standalone: detect from `{project_root}/LICENSE*`, `none` when absent),
 project_root, round_context, lessons).
+The security perspective's input block additionally carries
+`threat_model_path` when Phase R0 set it; no other perspective's block
+carries it, normalized to a project_root-based absolute path under the
+same rule as `spec_path`.
 `lessons`: when `feature-docs/LESSONS.md` exists (develop-駆動: in the MAIN
 working tree — the orchestrator reads it itself, it is not a reviewer-side
 path; standalone: under cwd) and it has a `## reviewer:{perspective}`
@@ -338,6 +354,11 @@ Walk rules:
   applies identically to Phase R4's in-loop re-reviews; only the evaluator
   dispatch at the end of the walk is skipped there (Phase R3a, Phase R4 Loop
   termination).
+- Every dispatch in this chain walk — including the chain-exhaustion Claude
+  fallback — carries the same review-protocol input block Phase R2
+  assembled for that perspective; for the `security` perspective this
+  includes the same `threat_model_path` value the round's R2 dispatch
+  carried, unchanged across every hop.
 
 This is the only cross-validation step that runs after seeing another
 reviewer's result — every dispatch in R2 is availability-based and decided
@@ -726,7 +747,10 @@ nothing, ever.
 Loop termination: re-run ALL selected reviewers after any productive loop
 (re-review preamble: per-perspective stable_id/file/line list only — no
 titles/descriptions; other perspectives get a generic collateral-impact
-note). Re-aggregation of this in-loop re-review output does NOT re-dispatch
+note). Each re-reviewed perspective's dispatch carries the same
+review-protocol input block as the round's R2 dispatch; for the `security`
+perspective this includes the same `threat_model_path` value, unchanged.
+Re-aggregation of this in-loop re-review output does NOT re-dispatch
 the evaluator — Phase R3a's "never more than one [dispatch], and never
 skipped" per round is not relaxed here. Instead, run each re-reviewed
 perspective's own findings straight through the Phase R3b mechanical gates,
