@@ -35,6 +35,12 @@
           },
           {
             "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/interpreter-mismatch-guard.py",
+            "timeout": 15,
+            "statusMessage": "シェルに渡すスクリプトの種類を検証中..."
+          },
+          {
+            "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/destructive-guard.py",
             "timeout": 10,
             "statusMessage": "破壊的コマンドを検証中..."
