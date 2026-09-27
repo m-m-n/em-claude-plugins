@@ -1,0 +1,133 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_threat_model_planner_contract.TestPlannerContractAC1.test_ac1_documented
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, planner-contract.md had no `threat_model_template`
+      field and its write_policy/digest_inputs/completed-payload text named
+      only IMPLEMENTATION.md/VERIFICATION.md; the matcher failed with
+      AssertionError: 'threat_model_template' not found in <document text>.
+  AC-2:
+    tests:
+      - test_threat_model_planner_contract.TestPlannerContractAC2.test_ac2_subsection_documented
+      - test_threat_model_planner_contract.TestPlannerContractAC2.test_subsection_sits_inside_the_planning_inputs_section_span
+      - test_threat_model_planner_contract.TestPlannerContractAC2.test_subsection_heading_is_a_level_3_heading
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the "### Minimal-tier `TASK.md` append" subsection
+      did not exist at all; all three tests failed with
+      ValueError/AssertionError: substring not found ("### Minimal-tier
+      `TASK.md` append").
+  AC-3:
+    tests:
+      - test_threat_model_planner_contract.TestCreatePlanPhaseAC3.test_ac3_dispatch_and_completion_documented
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, create-plan-phase.md's sections 1/4/7 named only
+      IMPLEMENTATION.md/VERIFICATION.md/tasks; the matcher failed with
+      AssertionError: 'THREAT-MODEL.md' not found in section 1's text.
+  AC-4:
+    tests:
+      - test_threat_model_planner_contract.TestCreatePlanPhaseAC4.test_ac4_scope_check_delta_and_human_review_documented
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the scope-check delta bullet and the TM-n
+      human-review invariant did not exist; the matcher failed with
+      AssertionError: 'references/contracts/planner-contract.md' not found
+      in the (then-absent) delta bullet's span.
+  AC-5:
+    tests:
+      - test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_pointer_documented
+      - test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_six_actions_unchanged
+    red_confirmed: true
+    red_reason: >-
+      The pointer half went red->green: before the edit, the `extend_only`
+      key-comparison rule section had no mention of planner-contract.md or
+      TASK.md, and the matcher failed with AssertionError:
+      'references/contracts/planner-contract.md' not found. The six-actions
+      half (test_ac5_six_actions_unchanged) asserts an invariant that was
+      already true before this task touched the file (the six-action table
+      is pre-existing and untouched) -- it passed both before and after; a
+      forged-seventh-action negative proof (test_forged_seventh_action_is_rejected)
+      demonstrates the matcher would catch a real violation, but no genuine
+      pre-implementation red state exists for that half specifically.
+  AC-6:
+    tests:
+      - test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_planner_contract_gate_id_set_unchanged
+      - test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_create_plan_phase_gate_id_set_unchanged
+      - test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_spec_writer_contract_gate_id_set_unchanged
+      - tests.test_worker_contracts_planning
+      - tests.test_phase_protocols
+      - tests.test_tier_phase_preconditions
+      - tests.test_tier_task_document_plan
+      - tests.test_check_plugin_invariants
+      - tests.test_gate_option_vocabulary
+    red_confirmed: false
+    red_reason: >-
+      AC-6 asserts an invariant is preserved (no gate_id/phase/step/
+      batch-policies entry introduced by this task's edits) -- it is a
+      no-regression guard, not a feature addition, so there is no
+      implementation step that would make it fail-then-pass: the gate_id
+      sets are identical before and after this task's edits, confirmed by
+      running the AC-6 assertions and the six named pre-existing test
+      modules against both the pre-edit and post-edit document revisions
+      (both green throughout). A negative proof
+      (test_forged_addition_of_a_new_gate_id_is_detected) shows the matcher
+      would catch a real violation if one were introduced.
+  AC-7:
+    tests:
+      - test_threat_model_planner_contract.TestModuleImportsStandardLibraryOnly.test_only_stdlib_top_level_imports
+      - test_threat_model_planner_contract.TestManifestVersionOnlyChange
+    red_confirmed: false
+    red_reason: >-
+      This module was authored importing only the standard library from
+      the start, so there is no red state to observe for the import-hygiene
+      half. For the manifest half: the plugin-version-guard commit hook
+      rejected the initial commit of this task's document edits (em-workflow/
+      .claude-plugin/plugin.json's version, 0.2.14, equaled HEAD's), so per
+      the task plan's conditional file-list note and IMPLEMENTATION.md SC-6
+      the commit-guard fallback fired -- both plugin.json and the
+      marketplace.json em-workflow entry's `version` were bumped from
+      0.2.14 to 0.3.0 (minor position), identically, with no other field
+      touched. This is a version-only edit that satisfies the checked
+      invariant by construction rather than by an implementation step that
+      went red then green; the manifest tests pass against the post-bump
+      state (confirmed by re-running the suite after the bump). `python3 -m
+      unittest discover -s tests` passing (6253 tests, 0 failures) is
+      confirmed by an actual run, not self-assertable from inside the
+      suite.
+notes: >-
+  All three edited documents (planner-contract.md, create-plan-phase.md,
+  spec-writer-contract.md) were verified red-then-green by temporarily
+  `git stash`-ing the three edits, running the new test module against the
+  pre-edit revision (7 real failures/errors observed across AC-1/AC-2/AC-3/
+  AC-4/AC-5-pointer, all failing for the expected missing-content reason),
+  then restoring the edits and re-running to green.
+
+  IMPORTANT operational finding: `git stash` is a repository-wide (not
+  worktree-local) resource -- `.git/refs/stash` is shared across every
+  worktree of this repository. While performing the red-check above, a
+  concurrent implementer (task0002, also mid-flight in a sibling worktree)
+  was independently using `git stash` for the same red-check technique at
+  the same time. My unqualified `git stash pop` popped task0002's top-of-stack
+  WIP entry (their edit to em-workflow/agents/implementation-planner.md
+  plus an untracked test file) into my working tree instead of my own, and
+  git's own stash-drop then discarded that entry from the shared stash
+  list. I recovered it via `git fsck --unreachable` (the commit objects
+  survive until garbage-collected) and restored it to the shared stash
+  list with `git update-ref -m "<original message>" refs/stash <commit>
+  <old-top>` before discarding it from my own working tree and restoring my
+  own edits from my own dangling stash commit (found the same way). No data
+  was lost, but this is a latent hazard for any future implementer tempted
+  to use `git stash` (even scoped with `-- <pathspec>`) inside a
+  worktree-based parallel-implementation workflow: the stash stack is
+  shared, so a blind `pop`/`apply` (without pinning to a specific commit
+  SHA) can silently grab another task's uncommitted work. Safer
+  alternatives: never use bare `git stash push`/`git stash pop`; if a
+  temporary set-aside is unavoidable, capture the commit SHA from `git
+  stash create` immediately and apply/drop by that exact SHA rather than by
+  stack position.

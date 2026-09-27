@@ -99,13 +99,19 @@ orchestrator treats the input as stale and re-requests approval.
 
 ### `extend_only` key-comparison rule
 
-`extend_only` currently applies only to `design-system/tokens.yaml`. The
-worker parses the target as a YAML map, computes the full set of existing
-key paths (nested keys joined with `.`) together with their values, and
-confirms every one of them is unchanged in the new content. The worker
-returns `blocked` (comparison not possible) when the target is not a map,
-or when it contains a YAML alias or merge key. Any removed key, or any
-changed value for an existing key, is a blocked case as well.
+`extend_only` applies to `design-system/tokens.yaml` under this
+key-comparison rule. The worker parses the target as a YAML map, computes
+the full set of existing key paths (nested keys joined with `.`) together
+with their values, and confirms every one of them is unchanged in the new
+content. The worker returns `blocked` (comparison not possible) when the
+target is not a map, or when it contains a YAML alias or merge key. Any
+removed key, or any changed value for an existing key, is a blocked case as
+well.
+
+The planner's minimal-tier `TASK.md` append also uses `extend_only`, under a
+separate Markdown rule (exact-prefix content instead of a YAML key set)
+owned by `references/contracts/planner-contract.md` — not this
+key-comparison rule, which applies to YAML targets only.
 
 ## How the orchestrator chooses each target's action before dispatch
 
