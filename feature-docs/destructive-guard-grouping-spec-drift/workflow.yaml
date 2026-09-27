@@ -182,7 +182,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: e72a1bbe172387422f29048a5c4ca25761641a2e
 tasks:
   task0001:
     title: Judge commands inside grouping and compound constructs
