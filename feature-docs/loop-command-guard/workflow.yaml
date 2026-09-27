@@ -60,7 +60,7 @@ workflow:
   base_commit: 073f0a91497151f7a75cc6bbe6a4d581d23d4611
   failed_kind: null
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -138,7 +138,7 @@ tasks:
       - 58562295e0a7b109
       review_round: 1
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   plan:
     floor:
