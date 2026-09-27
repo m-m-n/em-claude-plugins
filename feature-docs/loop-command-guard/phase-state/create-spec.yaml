@@ -1,11 +1,11 @@
 schema_version: 1
 feature: loop-command-guard
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: ca8f62aa195334b8a00e96ad57896575917d46e4
 last_input_digest: sha256:2509e585adce9e7f8bf5c0bc030de44eee9fb309743db19bb0882213b16afccf
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -95,10 +95,16 @@ worker_runs:
   input_digest: sha256:2509e585adce9e7f8bf5c0bc030de44eee9fb309743db19bb0882213b16afccf
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
-  input_digest: null
+  status: completed
+  input_digest: sha256:2509e585adce9e7f8bf5c0bc030de44eee9fb309743db19bb0882213b16afccf
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/loop-command-guard/REQUIREMENTS.md
+  sha256: sha256:55993f14b766f9609f2420c09a0ac73c8fcf3f75ed711d618afd69a120703e3e
+  produced_by: create-spec-run-0003
+- path: feature-docs/loop-command-guard/SPEC.md
+  sha256: sha256:ea74f5bd36c9049e2fae818ffdfdb3fbeec2a50fdaa65aec4aa7bda4a689ea1a
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
