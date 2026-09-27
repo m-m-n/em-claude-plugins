@@ -460,11 +460,63 @@ def _handle_shell_invocation(rest, heredocs, herestrings, out_nested):
             out_nested.append(unquoted)
 
 
+# task0002.md "Prefix option table": the options, per A6 prefix, that take a
+# value. A prefix absent here (nohup, setsid, command, time) has no
+# value-taking option -- every `-x` word of theirs is skipped whole, as
+# before this task.
+PREFIX_VALUE_OPTIONS = {
+    "env": (frozenset("uCS"), frozenset({"unset", "chdir", "split-string"})),
+    "nice": (frozenset("n"), frozenset({"adjustment"})),
+    "timeout": (frozenset("sk"), frozenset({"signal", "kill-after"})),
+    "exec": (frozenset("a"), frozenset()),
+    "stdbuf": (frozenset("ioe"), frozenset({"input", "output", "error"})),
+}
+
+
+def _skip_prefix_options(prefix, words, i):
+    """Advance `i` past this one A6 prefix command's own options
+    (task0002.md, "Skipping one prefix command"). A value-taking option --
+    per `PREFIX_VALUE_OPTIONS` -- consumes its value: the rest of an attached
+    word (`-uX`, `-n5`) when non-empty, else the following word whole,
+    whatever it looks like (never re-examined as another option, prefix or
+    the command word; `env -u bash`, `nice -n -5`). `--name=value` is one
+    complete option; a bare `--name` in the table's long column consumes the
+    next word; `--` ends this prefix's options and is itself consumed. Any
+    other `-`-led word takes no value. Returns the index of the first word
+    this prefix does not claim (== len(words) when the words run out while a
+    value is still owed, leaving no executed command word for this simple
+    command)."""
+    n = len(words)
+    short_opts, long_opts = PREFIX_VALUE_OPTIONS.get(prefix, (frozenset(), frozenset()))
+    while i < n:
+        w = words[i]
+        if w == "--":
+            return i + 1
+        if not w.startswith("-"):
+            break
+        if w.startswith("--"):
+            name = w[2:]
+            i += 1
+            if "=" not in name and name in long_opts and i < n:
+                i += 1
+            continue
+        letters = w[1:]
+        i += 1
+        for idx, ch in enumerate(letters):
+            if ch in short_opts:
+                if not letters[idx + 1 :] and i < n:
+                    i += 1
+                break
+        continue
+    return i
+
+
 def _analyze_simple_command(words, heredocs, herestrings, out_nested):
     """`words` is the raw word list of one simple command (command word plus
     arguments, in order). Skip leading NAME=value assignments and any chain
-    of A6_PREFIXES with their options (task0001.md Design, "Nested texts"),
-    then dispatch on the resolved command word."""
+    of A6_PREFIXES with their options (task0001.md Design, "Nested texts";
+    task0002.md, "Skipping one prefix command"), then dispatch on the
+    resolved command word."""
     i = 0
     n = len(words)
     while i < n and _is_assignment(words[i]):
@@ -476,16 +528,24 @@ def _analyze_simple_command(words, heredocs, herestrings, out_nested):
         prefix = base
         i += 1
         if prefix == "env":
-            while i < n and (words[i].startswith("-") or _is_assignment(words[i])):
-                i += 1
+            # env's NAME=value operands may be interleaved with its options
+            # in any order (unchanged from before this task); each cycle
+            # skips one assignment, then everything `_skip_prefix_options`
+            # can claim.
+            while i < n:
+                if _is_assignment(words[i]):
+                    i += 1
+                    continue
+                new_i = _skip_prefix_options(prefix, words, i)
+                if new_i == i:
+                    break
+                i = new_i
         elif prefix == "timeout":
-            while i < n and words[i].startswith("-"):
-                i += 1
+            i = _skip_prefix_options(prefix, words, i)
             if i < n:
                 i += 1
         else:
-            while i < n and words[i].startswith("-"):
-                i += 1
+            i = _skip_prefix_options(prefix, words, i)
         while i < n and _is_assignment(words[i]):
             i += 1
     if i >= n:
