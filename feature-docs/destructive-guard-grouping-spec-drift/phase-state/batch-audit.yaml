@@ -63,7 +63,7 @@ records:
     resolution_note: "gate: verify TS-3 (optional) judgment (no gate_id; VERIFICATION.md defines skip only for a missing cache directory). situation: the feature ends at em-workflow 0.2.14, but main independently used 0.2.13 / 0.2.14 and is now at 0.3.0, so ~/.claude/plugins/cache/em-claude-plugins/em-workflow/0.2.14 holds main's build, not this feature's code; the runner gives 341/401 against it. TS-1 401/401, TS-2 6188 tests OK, TS-4, TS-5 (0.2.12 -> 0.2.14, em-review unchanged), AC-4 batch variant (five reproductions deny), case-table diff review and failed-run-cleanup-guard diff all pass. options: A TS-3 not applicable, verify pass, report the version collision / B record TS-3 as a failed item and auto-rework (bump above 0.3.0). choice: A. options not chosen: B (the installed copy is not this feature's build, and bumping above 0.3.0 contradicts AC-11's 'major / minor unchanged from the base commit'). follow-up: the PR will conflict on em-workflow version fields (branch 0.2.14 vs main 0.3.0); the version must be raised above main's value when merging. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
   - question_id: develop.completion-version-conflict
     packet_id: null
-    answered_at: "2026-09-27T21:30:00+09:00"
+    answered_at: "2026-09-27T21:02:00+09:00"
     source: batch-codex-consultation
     answer_mode: select_or_freeform
     selected_option_ids:
