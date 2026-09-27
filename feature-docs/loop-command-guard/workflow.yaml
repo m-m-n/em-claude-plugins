@@ -68,7 +68,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: b07a8a3bf2a329d5bbabd055f259a6500524f4c4
 tasks:
   task0001:
     title: loop-command-guard hook, registration, docs and version
