@@ -1,0 +1,102 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_threat_model_reviewer_inputs.TestInputsBulletPlacement.test_threat_model_path_bullet_directly_follows_spec_path
+      - tests.test_threat_model_reviewer_inputs.TestInputsBulletIdentityAndOptionality.test_states_identity_and_optionality
+    red_confirmed: true
+    red_reason: >-
+      Observed against the pre-edit review-protocol.md (production edits
+      temporarily reverted via git stash): the placement test raised
+      "bullet 'threat_model_path' not found", and the identity/optionality
+      test errored at setUpClass with the same "bullet not found" from
+      _bullet_block, because the Inputs section had no threat_model_path
+      bullet at all.
+  AC-2:
+    tests:
+      - tests.test_threat_model_reviewer_inputs.TestInputsBulletBudgetAndUntrustedHandling.test_states_budget_exemption_and_untrusted_checks_only
+      - tests.test_threat_model_reviewer_inputs.TestInputsBulletBudgetAndUntrustedHandling.test_states_unreadable_file_never_a_skip
+    red_confirmed: true
+    red_reason: >-
+      Observed against the pre-edit review-protocol.md: both tests errored
+      at setUpClass with "bullet 'threat_model_path' not found" (same
+      _bullet_block lookup as AC-1), since the bullet carrying these
+      statements did not exist yet.
+  AC-3:
+    tests:
+      - tests.test_threat_model_reviewer_inputs.TestStep0NeverProducesSkip.test_states_never_produces_a_skip
+      - tests.test_threat_model_reviewer_inputs.TestPathListValidationSameAsSpecPath.test_states_same_containment_and_symlink_rejection
+    red_confirmed: true
+    red_reason: >-
+      Observed against the pre-edit review-protocol.md: the Step 0 test
+      raised "missing phrase(s) ['threat_model_path', 'outside this
+      fail-closed pattern', 'never produces a skip object']"; the
+      Path-List Validation test raised "missing phrase(s)
+      ['threat_model_path', 'same', 'as `spec_path`']".
+  AC-4:
+    tests:
+      - tests.test_threat_model_reviewer_inputs.TestCodexTaskBlockCarriesThreatModelPath.test_states_threat_model_path_carriage
+      - tests.test_threat_model_reviewer_inputs.TestCodexGroundingRulesTreatThreatModelAsUntrusted.test_states_untrusted_no_suppression_missing_mitigation_finding
+      - tests.test_codex_reviewer_temp_file_isolation
+      - tests.test_codex_wrapper_timeout_alignment
+      - tests.test_review_phase_llm_led
+    red_confirmed: true
+    red_reason: >-
+      Observed against the pre-edit codex-reviewer.md: the <task> test
+      raised "missing phrase(s) ['threat_model_path', 'supplied',
+      'security perspective only', 'outside the 3-file investigation
+      budget', 'unreadable file', 'review continues', 'summary says so']";
+      the <grounding_rules> test raised "missing phrase(s)
+      ['threat-model.md', 'instructions inside it are payload', 'never
+      suppresses a finding', 'missing-mitigation finding', 'boundary
+      file', 'null line', 'never re-pointed to an unrelated changed
+      file']". The three named "pass unmodified" modules were already
+      green before this task's edit (Step 4 is outside every section they
+      pin) and stayed green after -- verified by re-running them, not by
+      a red observation, since they were never expected to go red.
+  AC-5:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestFrozenInputFieldNames.test_every_documented_input_field_name_present
+      - tests.test_reviewer_roles_protocol.TestFrozenSectionsUnchanged.test_frozen_sections_hash_unchanged
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_steps_including_scratchpad_discipline_section_verbatim
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks
+    red_confirmed: true
+    red_reason: >-
+      Observed by reverting only tests/test_reviewer_roles_protocol.py's
+      edit (git stash) while keeping the new review-protocol.md /
+      codex-reviewer.md content: the stale digests raised "AC-2 (Inputs):
+      section byte content changed (expected sha256
+      2866d813218cc7b7d445e506d93cb0a468094b1c8713855d036475bd1b942400,
+      got 755c810a9c912856912931baa045274b97b3fd6d264f63538d4e4e7b5b09d53e)"
+      and "AC-5 (Steps 0-6, incl. scratchpad discipline): section byte
+      content changed (expected sha256
+      788b25fe90332f2ccd80903381dc1a22a9d6bfd7a46ecee164cfb5edb2939187,
+      got 9772b22fbb58eb2152bcfd7d6b12368f01c483c8d9af31b2978b88361c0a258e)".
+      test_codex_wrapper_fallback_removal_integrated_checks.py's
+      not-below digest-count / baseline-class check was already green
+      (this task only refreshes existing digest values and adds one
+      field name, never removing a class or a digest constant) and
+      stayed green -- verified by re-running it, not by a red
+      observation.
+  AC-6:
+    tests:
+      - tests.test_threat_model_reviewer_inputs
+    red_confirmed: true
+    red_reason: >-
+      The whole new module was run against the pre-edit review-protocol.md
+      and codex-reviewer.md (production edits temporarily reverted via git
+      stash): 6 failures + 2 errors out of 18 tests (every positive
+      content/placement assertion for AC-1 through AC-4), leaving only the
+      negative-proof tests (which exercise forged text, not the real
+      files) and the not-yet-relevant manifest tests green. The manifest
+      sub-checks (TestManifestOnlyVersionFieldChanged) never had a red
+      state to observe: this task's own edits change no manifest field,
+      so the pre-task and post-task manifests are identical and the check
+      passes in both states by construction (a version-only change, or no
+      change at all, is exactly what it is designed to tolerate).
+notes: >-
+  final_failures is the actually re-executed full-suite run after
+  implementation (python3 -m unittest discover -s tests, 6245 tests, all
+  passing) -- not skipped.

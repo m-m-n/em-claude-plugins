@@ -249,6 +249,7 @@ INPUT_FIELD_NAMES = [
     "project_root",
     "round_context",
     "lessons",
+    "threat_model_path",
 ]
 
 # All skip_reason string values documented in review-protocol.md today.
@@ -270,10 +271,12 @@ SEVERITY_LEVELS = ["critical", "high", "medium"]
 
 FROZEN_SECTIONS = [
     (
+        # Refreshed by feature-docs/threat-model-stride/tasks/task0005.md
+        # (FR8): the Inputs section gained the `threat_model_path` bullet.
         "Inputs",
         "## Inputs (all reviewers)",
         "## Step 0 Fail-Closed Resolution",
-        "2866d813218cc7b7d445e506d93cb0a468094b1c8713855d036475bd1b942400",
+        "755c810a9c912856912931baa045274b97b3fd6d264f63538d4e4e7b5b09d53e",
     ),
     (
         "Investigation Budget",
@@ -623,11 +626,15 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # (tests/test_codex_reviewer_temp_file_isolation.py) keeps unchanged. This
 # hash is recomputed from the post-task0002 file; it is not this file's own
 # task that changed, so no further edit here is expected from that feature.
+#
+# Refreshed again by feature-docs/threat-model-stride/tasks/task0005.md
+# (FR8): Step 4's `<task>` and `<grounding_rules>` prose gained the
+# `threat_model_path` / THREAT-MODEL.md carriage sentences.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "788b25fe90332f2ccd80903381dc1a22a9d6bfd7a46ecee164cfb5edb2939187"
+    "9772b22fbb58eb2152bcfd7d6b12368f01c483c8d9af31b2978b88361c0a258e"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"
