@@ -105,9 +105,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/loop-command-guard/task0001
 review:
   status: pending
   rounds_completed: 0
