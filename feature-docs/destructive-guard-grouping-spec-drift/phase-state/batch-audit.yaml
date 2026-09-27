@@ -1,0 +1,73 @@
+schema_version: 1
+feature: destructive-guard-grouping-spec-drift
+records:
+  - question_id: review.auto-fix-loop-termination
+    packet_id: null
+    answered_at: "2026-09-27T04:18:08+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - C
+    freeform: null
+    normalized_answer: "C: stop the auto-fix loop as no-progress, revert the loop-1 commit 2c32a36f (revert commit 9ceb89ad), restore the 4 loop-1 findings to unresolved, and proceed to the round record and batch auto-rework with the loop-1 re-review observations as context"
+    resolution_note: "gate: review Phase R4 loop termination (no gate_id; protocol leaves 'progress' undefined). options: A continue auto-fix loops 2-3 / B stop as no-progress and keep loop-1 commit / C stop as no-progress and revert loop-1 commit. choice: C. options not chosen: A (the single-file editor cannot add case rows, so continuing violates the test-first rule and loop 1 already regressed base verdicts), B (keeps half-applied fixes with known regressions in the tree the rework would start from). discussion key points: loop 1 applied 4 fixes; in-loop re-review found new regressions vs base (`time ( rm -rf ... )` deny->allow, redirect target after a wrapper dropped so a settings write went ask->allow and a transcript write deny->allow) and the fd-redirect fix was incomplete (`env 2>/dev/null -u X rm -rf ...` still allow); residual high rose from 5 to 8+. Codex judged no-progress reasonable and a revert lets the intertwined fixes be re-implemented test-first from the reviewed state; risk noted: the revert also drops the partially valid fixes, so the record must separate regressions removed by the revert from problems that remain. Orchestrator verified on the reverted tree that the loop-1 regressions are gone and the original findings plus two newly reported ones (quoted `esac` alternative, `echo '()' '{' rm` false positive) reproduce. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
+  - question_id: implement.deviation-admission
+    packet_id: null
+    answered_at: "2026-09-27T05:58:00+09:00"
+    source: batch-policy
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - decline
+    freeform: null
+    normalized_answer: "task0004: deviation declined (not auto-added to files)"
+    resolution_note: "task_id: task0004. The reported deviation names no path to add and no dropped AC/requirement; it reports that the commit step was denied by the personal global hook ~/.claude/hooks/plugin-version-guard.py (plugin content changed without a plugin.json version change vs HEAD 0.2.13), while task0004.md and SPEC FR12/AC-11 pin the version at 0.2.13. Missing evidence parts: path, identifier, observable failure. Staged work (destructive-guard.py, destructive-guard-cases.json, task0004.tests.yaml) is kept uncommitted in the task worktree; tests reported green (guard 401/401, unittest 6188 OK)."
+  - question_id: implement.version-guard-conflict
+    packet_id: null
+    answered_at: "2026-09-27T05:58:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - B
+    freeform: null
+    normalized_answer: "B: do not change the version pin or work around the hook; record task0004 as failed and stop for a human decision, keeping the staged worktree"
+    resolution_note: "conflict: every commit touching em-workflow/ on this branch must change plugin.json version vs HEAD (global hook), but HEAD is already 0.2.13 and SPEC FR12/AC-11/TS-5 and task0004.md pin 0.2.13. options: A spec change to 0.2.14 (amend SPEC FR12/AC-11, VERIFICATION TS-5, task0004.md) / B stop for a human decision with the staged worktree kept / C two commits (bump to 0.2.14 with the code, then restore 0.2.13). excluded up front: committing through the hook's fail-open path, which would circumvent a user safety guard. choice: B. options not chosen: A (changes a pinned acceptance criterion and the plan's explicit stop instruction on the orchestrator's own authority), C (satisfies the hook's letter but reverting the version defeats the rule's purpose of refreshing the installed cache). risk: tested fixes stay uncommitted until a human decides; mitigated by keeping the staged worktree. The batch policy implement.failed-task still applies first: one automatic retry on the kept worktree, told not to raise the version or bypass the hook, so a second failure stops the phase with failed_kind decision. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
+  - question_id: review.auto-fix-midloop-regression
+    packet_id: null
+    answered_at: "2026-09-27T19:20:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - B
+    freeform: null
+    normalized_answer: "B: keep round-2 loop-1 edit 2 (2424f565d83939e8) and dispatch candidate 3 (76b8a0a7e655da11); commit only if the case table is green afterwards, otherwise revert edit 2"
+    resolution_note: "gate: review round 2 Phase R4 loop 1, mid-loop regression (no gate_id; the protocol defines revert-and-abort only for scope violations). situation: edit 1 (b6b2b64d62e8983b) kept the case table 401/401; edit 2 (2424f565d83939e8, split fused '(' redirect tokens) also split the fused '()' token, so the existing deny row for 'NAME() {}' function definitions failed (400/401). options: A revert edit 2 and abort its stable_id, continue with candidate 3 / B keep edit 2 and dispatch candidate 3, which targets function-signature recognition, then re-verify / C revert edits 1 and 2 and stop the loop / D keep edit 1 only and skip candidate 3. choice: B. options not chosen: A (gives up edit 2 before trying the approved candidate that addresses the exact cause), C (round 1's wholesale revert followed a post-loop re-review, not a mid-loop state; loses edit 1), D (the area being fragile alone is a weak reason to skip candidate 3). discussion key points: Codex reproduced 400/401 and traced it to FUNC_SIGNATURE matching a single '()' token; candidate 3 has a concrete reason to restore it; the choice is conditional on re-running all 401 cases and the PoCs before commit, with the in-loop re-review of all perspectives still required. outcome: after candidate 3 the case table was 401/401 and tests/ unittest OK; loop 1 committed as 8f10ce4c. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
+  - question_id: review.auto-fix-loop-termination-r2
+    packet_id: null
+    answered_at: "2026-09-27T19:45:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - C
+    freeform: null
+    normalized_answer: "C: stop the round-2 auto-fix loop as no-progress, revert loop-1 edits 2 and 3 (commit e6bec9e4) and keep edit 1; remaining critical/high go to deferred at the batch rework cap"
+    resolution_note: "gate: review round 2 Phase R4 loop termination after loop 1 (no gate_id; the protocol leaves 'progress' undefined). situation: loop 1 (8f10ce4c) applied edit 1 b6b2b64d62e8983b, edit 2 2424f565d83939e8, edit 3 76b8a0a7e655da11; the in-loop re-review found a new critical deny->allow regression caused by edit 2 (`case=1; ((case)); rm -rf <protected dir>` and the git push --force analogue: splitting the fused `((` made `case` inside arithmetic open a case construct). Other highs were untouched by loop 1. The orchestrator measured an edit-1-only variant: 401/401, the `((case))` repro deny again, the quoted ;; / ;& repros stay deny; the fused `(<` redirect and `f ( ) {...}` repros go back to allow (allow at base too). options: A continue to loop 2 / B stop and keep 8f10ce4c (critical stays, deferred) / C stop, revert edits 2 and 3, keep edit 1 / D stop and revert all of loop 1. choice: C. options not chosen: A (the single-file editor cannot add case rows and 401/401 did not catch this regression, so stacking more edits is less reliable than a verified partial revert), B (hands a known new critical to the human as deferred), D (also loses edit 1, whose repros would go back to allow). risks noted by Codex: this only removes the loop-introduced regression; escaped case (deny->allow vs base) and tar --ext (ask->allow vs base) regressions remain and must not be described as pre-existing; deferred does not mean fixed. outcome: e6bec9e4 committed; case table 401/401, tests/ unittest OK. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
+  - question_id: verify.ts3-installed-cache-mismatch
+    packet_id: null
+    answered_at: "2026-09-27T20:55:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - A
+    freeform: null
+    normalized_answer: "A: record TS-3 as not applicable (skipped with a note); verify result pass; report the em-workflow version collision with main as a merge-time follow-up for the PR"
+    resolution_note: "gate: verify TS-3 (optional) judgment (no gate_id; VERIFICATION.md defines skip only for a missing cache directory). situation: the feature ends at em-workflow 0.2.14, but main independently used 0.2.13 / 0.2.14 and is now at 0.3.0, so ~/.claude/plugins/cache/em-claude-plugins/em-workflow/0.2.14 holds main's build, not this feature's code; the runner gives 341/401 against it. TS-1 401/401, TS-2 6188 tests OK, TS-4, TS-5 (0.2.12 -> 0.2.14, em-review unchanged), AC-4 batch variant (five reproductions deny), case-table diff review and failed-run-cleanup-guard diff all pass. options: A TS-3 not applicable, verify pass, report the version collision / B record TS-3 as a failed item and auto-rework (bump above 0.3.0). choice: A. options not chosen: B (the installed copy is not this feature's build, and bumping above 0.3.0 contradicts AC-11's 'major / minor unchanged from the base commit'). follow-up: the PR will conflict on em-workflow version fields (branch 0.2.14 vs main 0.3.0); the version must be raised above main's value when merging. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
+  - question_id: develop.completion-version-conflict
+    packet_id: null
+    answered_at: "2026-09-27T21:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - A
+    freeform: null
+    normalized_answer: "A: push the integration branch and open the PR as-is; state the em-workflow version conflict with main and its required resolution in the PR body"
+    resolution_note: "gate: Step C (--pr) handling of the merge conflict with main (no gate_id). situation: git merge-tree against origin/main conflicts only in em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json on the em-workflow version (branch 0.2.14, main 0.3.0). options: A open the PR as-is and document the resolution / B merge origin/main into the integration branch, set 0.3.1, re-run tests, then open the PR / C rebase onto main. choice: A. options not chosen: B (pulls in main changes beyond the two fields, so the completed review and verify no longer apply as-is; Step C says no local merge), C (history rewrite unnecessary for a version-field conflict). discussion key points: Step C prescribes push + gh pr create without local merge; keeps the verified commits and the verify-recorded merge-time follow-up; the concrete version is fixed at resolution time per core-plugin-version-bump.md (0.3.1 is a candidate only while main is at 0.3.0). risk: the PR cannot merge until a human resolves the conflict and re-verifies. codex_consulted: true (harness codex, 1 turn); opus_escalation: false."
