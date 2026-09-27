@@ -1,11 +1,11 @@
 schema_version: 1
 feature: threat-model-stride
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 7c3c4af813410bafeabd43b0bb0cee853bbcced3
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
+active_request_id: create-spec-run-0001
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -13,10 +13,15 @@ answers:
     answered_at: '2026-09-27T18:20:00+09:00'
     source: batch-decision-table
     answer_mode: select
-    selected_option_ids: [derive_from_task_description]
+    selected_option_ids:
+    - derive_from_task_description
     freeform: null
-    normalized_answer: 'feature 名をタスク記述（Notion タスク「em-workflow に設計段階の脅威モデリング（STRIDE）を組み込む」）から threat-model-stride と導出した'
-worker_runs: []
+    normalized_answer: feature 名をタスク記述（Notion タスク「em-workflow に設計段階の脅威モデリング（STRIDE）を組み込む」）から threat-model-stride と導出した
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
