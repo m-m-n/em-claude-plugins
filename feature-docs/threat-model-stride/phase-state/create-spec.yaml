@@ -1,12 +1,26 @@
 schema_version: 1
 feature: threat-model-stride
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 7c3c4af813410bafeabd43b0bb0cee853bbcced3
 last_input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
 active_request_id: create-spec-run-0002
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-27T18:38:00+09:00'
+    questions:
+    - question_id: requirement.tier-coverage
+      status: answered
+    - question_id: requirement.missing-mitigation-finding-site
+      status: answered
+    - question_id: requirement.review-protocol-frozen-inputs
+      status: answered
+    - question_id: requirement.rework-threat-model
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -17,18 +31,79 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: feature 名をタスク記述（Notion タスク「em-workflow に設計段階の脅威モデリング（STRIDE）を組み込む」）から threat-model-stride と導出した
+  requirement.tier-coverage:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T18:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - minimal_writes_task_md
+    freeform: '全 tier で create-plan の implementation-planner が信頼境界の洗い出し（STRIDE）を実行し、脅威の実在に比例した分量で THREAT-MODEL.md を出力する。full / reduced では緩和策をタスクの受け入れ条件と VERIFICATION.md の両方に反映する。minimal では TASK.md（create-spec
+      の orchestrator が初期作成）がタスクの受け入れ条件と verify の評価基準を兼ねるため、planner の write_policy を拡張して TASK.md の ## Expected Result に緩和策を検証可能な形で追記し、これを「AC と VERIFICATION.md の双方への反映」の minimal における代替先として明記する。該当する脅威が無い場合は結果だけを記録し、緩和策を捏造しない。'
+    normalized_answer: '全 tier で create-plan の implementation-planner が信頼境界の洗い出し（STRIDE）を実行し、脅威の実在に比例した分量で THREAT-MODEL.md を出力する。full / reduced では緩和策をタスクの受け入れ条件と VERIFICATION.md の両方に反映する。minimal では TASK.md（create-spec
+      の orchestrator が初期作成）がタスクの受け入れ条件と verify の評価基準を兼ねるため、planner の write_policy を拡張して TASK.md の ## Expected Result に緩和策を検証可能な形で追記し、これを「AC と VERIFICATION.md の双方への反映」の minimal における代替先として明記する。該当する脅威が無い場合は結果だけを記録し、緩和策を捏造しない。'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy: codex_consultation (record_as_assumption); codex_consulted: true (harness codex, 2 turns); turn1: Codex judged none of the three
+      options satisfies both ''all features'' and ''AC + VERIFICATION.md'' at minimal; turn2 (orchestrator raised that TASK.md serves as both task AC and verify basis at minimal): Codex selected minimal_writes_task_md
+      with a refining rule (create-spec-phase.md:173, create-plan-phase.md:94,160, develop SKILL.md:776); orchestrator adopted it. not chosen: all_tiers_doc_only_at_minimal (no AC/verify reflection), skip_at_minimal
+      (violates all-features). opus_escalation: not run'
+  requirement.missing-mitigation-finding-site:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T18:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - boundary_file
+    freeform: null
+    normalized_answer: boundary_file
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (turn 1); chosen: boundary_file — points at the file implementing the trust boundary, line null when no line exists;
+      not chosen: threat_model_file (feature-docs excluded from changed_files so every finding capped at confidence 50, review-phase.md:30,461). Codex caveat: never re-attach to an unrelated changed file
+      to dodge the cap. opus_escalation: not run'
+  requirement.review-protocol-frozen-inputs:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T18:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - inputs_section_update_hash
+    freeform: null
+    normalized_answer: inputs_section_update_hash
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (turn 1); chosen: inputs_section_update_hash — Inputs already carries perspective-scoped spec_path (review-protocol.md:61)
+      and the test explicitly anticipates hash recomputation on intended source changes (tests/test_reviewer_roles_protocol.py:72); not chosen: separate_section (splits the input contract). opus_escalation:
+      not run'
+  requirement.rework-threat-model:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T18:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - out_of_scope
+    freeform: null
+    normalized_answer: out_of_scope
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (turn 1); chosen: out_of_scope — rework already mandates AC + verification coverage per added task (rework-task-synthesis.md:81,99);
+      not chosen: rework_updates_threat_model (widens rework-planner write scope). Codex caveat: new trust boundaries introduced by rework are not guaranteed to be reflected in THREAT-MODEL.md; a spec-change
+      route back to create-plan still regenerates it. opus_escalation: not run'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T18:45:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は analyst の推奨どおり skip
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml option_id decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
   status: failed
   input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
   output_digest: sha256:80765533494c86968331d783c94222b0263783ff27d019128026aece98f2f97a
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
-  output_digest: null
+  output_digest: sha256:a0eecef88e886357cf1a8cd4cc638f99fade5d515cf7f82dc3cd6b5a605b40ea
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-spec-run-0001: validate-worker-output gate_id error: questions[4] create-spec.design-step must offer option_id decide_autonomously'
+last_error: null
