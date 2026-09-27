@@ -1,20 +1,36 @@
 schema_version: 1
 feature: loop-command-guard
 phase: create-plan
-status: dispatching
+status: completed
 generation: 1
 base_revision: 40a713523f26ebf372a0e3d0d73f3646fa1b57f5
 last_input_digest: sha256:8eb6fa81b078ae83c62ec033c2aced0ec9fc96430c0c998982a11c76c223eea3
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:8eb6fa81b078ae83c62ec033c2aced0ec9fc96430c0c998982a11c76c223eea3
   output_digest: null
-artifacts: []
-patches: []
+artifacts:
+- path: feature-docs/loop-command-guard/THREAT-MODEL.md
+  sha256: sha256:6563b70bcbb8daf66d1aa75d1b3b9a3fa006620dde9644042aa6705c9572370b
+  produced_by: create-plan-run-0001
+- path: feature-docs/loop-command-guard/IMPLEMENTATION.md
+  sha256: sha256:c1aaf77a3af758ac018086b44470c684f4e233ebe4d383f9f0890eec7a8eb94c
+  produced_by: create-plan-run-0001
+- path: feature-docs/loop-command-guard/tasks/task0001.md
+  sha256: sha256:84f2f8143eca3a6240973d9e079f99d2b06af92b6a63a32c8646ead1f8085337
+  produced_by: create-plan-run-0001
+- path: feature-docs/loop-command-guard/VERIFICATION.md
+  sha256: sha256:146bc4f1c2dac5d56d0be36933416f32c862a77500fbae253446d5647aa3a236
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: loop-command-guard-p0001
+  status: applied
+  base_input_digest: sha256:8eb6fa81b078ae83c62ec033c2aced0ec9fc96430c0c998982a11c76c223eea3
+  base_workflow_blob: a645be8ec667293969a2356bcd2126a73f7b2004
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
