@@ -1,0 +1,67 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> "Ran 6220 tests ... OK" before any edit
+final_failures: []             # actual re-run after implementation -> "Ran 6255 tests ... OK" (6220 baseline + 35 new)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_threat_model_planner_agent.TestAC1TrustBoundaryHeadingPlacementAndUnconditionalRun.test_heading_located_after_step2_and_before_step3
+      - tests.test_threat_model_planner_agent.TestAC1TrustBoundaryHeadingPlacementAndUnconditionalRun.test_states_stride_runs_every_dispatch_naming_all_three_tiers
+      - tests.test_threat_model_planner_agent.TestAC1TrustBoundaryHeadingPlacementAndUnconditionalRun.test_section_has_no_skip_condition
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError('substring not found') extracting the ### 2a. section (text.index(STEP2A_MARKER) failed) before the heading was added; every test in the class errored for that reason."
+  AC-2:
+    tests:
+      - tests.test_threat_model_planner_agent.TestAC2DomainsAsDepthAdjustersAndCitation.test_four_domains_named_as_depth_adjusters_only
+      - tests.test_threat_model_planner_agent.TestAC2DomainsAsDepthAdjustersAndCitation.test_states_post_decomposition_consistency_recheck
+      - tests.test_threat_model_planner_agent.TestAC2DomainsAsDepthAdjustersAndCitation.test_cites_threat_model_template_input_and_plan_writing_skill
+      - tests.test_threat_model_planner_agent.TestAC2DomainsAsDepthAdjustersAndCitation.test_does_not_restate_the_templates_section_list
+    red_confirmed: true
+    red_reason: "Same cause as AC-1: setUpClass errored extracting the (not yet existing) ### 2a. section, so every test in the class failed before the section was added."
+  AC-3:
+    tests:
+      - tests.test_threat_model_planner_agent.TestAC3ArtifactLocationShortFormAndRoleSplit.test_states_written_to_feature_directory
+      - tests.test_threat_model_planner_agent.TestAC3ArtifactLocationShortFormAndRoleSplit.test_states_short_form_conditions_and_no_invented_mitigation
+      - tests.test_threat_model_planner_agent.TestAC3ArtifactLocationShortFormAndRoleSplit.test_states_role_split_with_security_considerations
+      - tests.test_threat_model_planner_agent.TestAC3ArtifactLocationShortFormAndRoleSplit.test_frontmatter_description_mentions_threat_model_md
+    red_confirmed: true
+    red_reason: "Same cause as AC-1/AC-2: setUpClass errored extracting the ### 2a. section; test_frontmatter_description_mentions_threat_model_md additionally would have failed on its own (frontmatter description had no THREAT-MODEL.md mention pre-edit)."
+  AC-4:
+    tests:
+      - tests.test_threat_model_planner_agent.TestAC4MitigationCarriageAndVerificationItem.test_step4_requires_tm_n_named_in_ac_at_full_and_reduced_tiers
+      - tests.test_threat_model_planner_agent.TestAC4MitigationCarriageAndVerificationItem.test_step4_cites_planner_contract_for_minimal_tier_task_md_append
+      - tests.test_threat_model_planner_agent.TestAC4MitigationCarriageAndVerificationItem.test_step5_requires_tm_n_keyed_performance_security_item
+    red_confirmed: true
+    red_reason: "AssertionError: 'TM-n' not found in <step4 section> / 'references/contracts/planner-contract.md' not found in <step4 section> / 'TM-n' not found in <step5 section>, observed against the pre-edit file before the Mitigation carriage paragraph and the VERIFICATION.md TM-n sentence were added."
+  AC-5:
+    tests:
+      - tests.test_threat_model_planner_agent.TestAC5ExistingFilesWrittenArtifactsAndGateIds.test_step7_includes_threat_model_in_existing_files_decision
+      - tests.test_threat_model_planner_agent.TestAC5ExistingFilesWrittenArtifactsAndGateIds.test_step8_lists_threat_model_among_written_artifacts
+      - tests.test_threat_model_planner_agent.TestAC5ExistingFilesWrittenArtifactsAndGateIds.test_output_section_lists_threat_model_among_written_artifacts
+      - tests.test_threat_model_planner_agent.TestAC5ExistingFilesWrittenArtifactsAndGateIds.test_gate_ids_unchanged
+      - tests.test_threat_model_planner_agent.TestAC5ExistingFilesWrittenArtifactsAndGateIds.test_gate_option_vocabulary_table_byte_identical
+    red_confirmed: true
+    red_reason: "AssertionError: 'THREAT-MODEL.md' not found in <step7/step8/Output section>, observed against the pre-edit file before those sections mentioned THREAT-MODEL.md. test_gate_ids_unchanged and test_gate_option_vocabulary_table_byte_identical were already true pre-edit (this task introduces no gate_id and never touches the Gate option vocabulary table) and stayed true post-edit -- they guard the AC's negative half (unchanged) rather than proving new behavior."
+  AC-6:
+    tests:
+      - tests.test_refitted_worker_agents
+      - tests.test_replanning_producer_alignment
+      - tests.test_planner_designer_worktree_docs
+      - tests.test_gate_option_vocabulary
+      - tests.test_assumptions_reversible_criterion
+      - tests.test_worker_contract_docs
+      - tests.test_reference_sweep
+    red_confirmed: false
+    red_reason: "These are pre-existing regression-guard modules from earlier features, not new coverage this task adds; the criterion is that they keep passing unmodified. Verified green both before (4a baseline) and after this task's edit via the full-suite run; never turned red as part of this task's TDD cycle."
+  AC-7:
+    tests:
+      - tests.test_threat_model_planner_agent.TestAC7OwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_threat_model_planner_agent.TestAC7ManifestVersionsConditionalOnChange.test_manifest_and_marketplace_versions_agree
+    red_confirmed: false
+    red_reason: "These are structural self-checks (this module's own import list; the two manifests' version fields agreeing) that hold true by construction from the moment the module/edit was written -- there is no prior state in which they were observed to fail, so no red->green transition occurred for them. The full-suite-passes half of AC-7 is verified by actually running `python3 -m unittest discover -s tests` (6255 tests, OK), recorded in the implementer report per the repository's convention for whole-suite properties."
+notes: |
+  plugin.json and marketplace.json's em-workflow version fields were bumped
+  0.2.14 -> 0.3.0 (minor position, per IMPLEMENTATION.md SC-6) because
+  plugin-version-guard denied the first commit attempt (touches
+  em-workflow/ without a version bump). No other field in either manifest
+  changed; this is the SC-6 commit-guard fallback, not a task0002 design
+  choice.
