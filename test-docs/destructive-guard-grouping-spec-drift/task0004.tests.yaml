@@ -1,0 +1,184 @@
+task_id: task0004
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py: 364/364 passed (363 pre-existing array elements + 1 hard-coded unattended-demotion case); python3 -m unittest discover -s tests: Ran 6188 tests, OK (both on the clean tree, before any edit)
+final_failures: []             # python3 em-workflow/hooks/tests/run-destructive-guard.py: 401/401 passed (400 array elements + 1 hard-coded unattended-demotion case); python3 -m unittest discover -s tests: Ran 6188 tests, OK (both after the implementation)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      All 37 "Case rows to add" rows (R1: 7, R2: 11, R3: 7, R4: 9, R5: 3)
+      were added to em-workflow/hooks/tests/destructive-guard-cases.json, as
+      one contiguous block, before destructive-guard.py was touched
+      (verified via `git stash push -u -- em-workflow/hooks/destructive-
+      guard.py` isolation: the source file's diff was set aside while the
+      row-add-only tree — 400 array elements — was tested, then restored via
+      `git stash apply`/`git stash drop` on the captured SHA). A dedicated
+      dedup script confirmed none of the 37 new command strings duplicated
+      any of the 363 pre-existing rows. A runner run on the isolated,
+      pre-fix tree (CLAUDE_BATCH cleared) exited non-zero: 378/401 passed,
+      23 failed (log: /tmp/task0004-red-run.log). Every one of the 23
+      failing labels is among the 37 newly added rows (4 of R1's 7, 6 of
+      R2's 11, 6 of R3's 7, 5 of R4's 9, 2 of R5's 3 — so at least one row
+      of each of R1 through R5 failed); the other 14 new rows (the R1 base-
+      verdict guard + 2 R1 allow guards, 5 R2 rows already closing/blocking
+      case correctly or already treating a standalone `;;` line as data, 1
+      R3 plain-`))` deny row, 4 R4 base-verdict/allow guards, 1 R5 allow
+      guard) already passed on this pre-fix tree, and all 363 pre-existing
+      rows plus the hard-coded demotion case stayed green — matching the
+      task's own Test Notes ("The base-verdict guards and the allow guards
+      are expected to pass already. They stay in as regression guards and
+      are not expected to go red").
+  AC-2:
+    tests:
+      - "destructive-guard-cases.json: グルーピング(サブシェル)内の bash -c ペイロード: 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(if/then)内の eval ペイロード: 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(ブレースグループ)内のヒアストリングペイロード: 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(for/do + sudo)内の bash -c ペイロード: 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: ラッパー(command)直後のヒアストリングペイロード: 対象は裸形と同じ deny(回帰ガード)"
+      - "destructive-guard-cases.json: サブシェル内でヒアストリングがコマンドの引数として渡るだけなら data のまま allow"
+      - "destructive-guard-cases.json: if/then 内で bash -c の文字列が echo の引数なら data のまま allow"
+    red_confirmed: true
+    red_reason: >-
+      The four deny rows are among the 23 red-run failures (each reported
+      `got=allow`: the payload re-scan was reading the unshaped first token,
+      not the shaped command word, so it never recognised `bash -c`/`eval`/
+      the here-string sitting behind the subshell, if/then, brace group or
+      for/do wrapper). The base-verdict guard `command <<< 'rm -rf
+      /home/sakura/x' bash` and both allow guards already reported their
+      target verdict on the pre-fix tree and continued to. After the
+      implementation, run-destructive-guard.py reports `ok deny` for all
+      five deny rows and `ok allow` for both allow guards.
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json: case アイテムの単独行 ;; 終端子越しでも次アイテムの rm は deny"
+      - "destructive-guard-cases.json: 同一行終端子と単独行終端子が混在する case: git push --force のアイテムも deny"
+      - "destructive-guard-cases.json: case パターン内の `;&` フォールスルー越しでも次アイテムの rm は deny"
+      - "destructive-guard-cases.json: case パターン内の `;|` フォールスルー越しでも次アイテムの rm は deny"
+      - "destructive-guard-cases.json: クォートされた \"case\" は case 構文を開かず、`||` 以降の rm は素のコマンドとして deny"
+      - "destructive-guard-cases.json: ラッパー(command)越しの case は case 構文を開かず、`||` 以降の rm は素のコマンドとして deny"
+      - "destructive-guard-cases.json: time 越しの本物の case: パターン閉じ括弧の後の rm は裸形と同じ deny"
+      - "destructive-guard-cases.json: case パターンの `|` 区切り選択肢中の 'esac' はパターンテキストのまま、閉じ括弧後の rm は deny"
+      - "destructive-guard-cases.json: case パターン自体が 'esac' という文字列でも、閉じ括弧後の rm は deny"
+      - "destructive-guard-cases.json: アイテムの無い空の case(`case x in esac`)は正しく閉じ、後続の rm は素のコマンドとして deny"
+      - "destructive-guard-cases.json: 単独行の ;; の後の次パターンはコマンド語ではなくデータのまま allow"
+    red_confirmed: true
+    red_reason: >-
+      6 of these 11 rows are among the 23 red-run failures: the standalone-
+      line `;;` row (case state was never flipped because the old code only
+      evaluated `ends_case_item` when the statement had at least one token),
+      the `;&`/`;|` fallthrough rows (old code matched only `";;" in sep`),
+      the quoted-`"case"` and wrapper(command)-`case` rows (old code opened
+      a case construct regardless of quoting or a preceding wrapper), and
+      the `esac`-after-`|`-alternative row (old code closed the case on any
+      word spelled `esac` in pattern position, including a later `|`
+      alternative). The other 5 rows — the mixed-terminator row, the
+      `time`-prefixed real case, the pattern-text `esac` used as the whole
+      pattern, the empty `case x in esac`, and the standalone-`;;`
+      allow guard — already reported their target verdict on the pre-fix
+      tree (the underlying single-line `;;` handling, and the fail-closed
+      default when a leading `case` is left unrecognised, already covered
+      those shapes) and are kept as regression guards, matching the task's
+      Test Notes grouping ("R2 maps to AC-3"). After the implementation all
+      11 rows report the verdict named in AC-3.
+  AC-4:
+    tests:
+      - "destructive-guard-cases.json: case パターン閉じ括弧に融着したサブシェル開き(複数行): 中の rm は deny"
+      - "destructive-guard-cases.json: case パターン閉じ括弧に融着したサブシェル開き(単一行): 中の rm は deny"
+      - "destructive-guard-cases.json: 二重に融着した閉じ括弧(`))`)の中の rm は deny"
+      - "destructive-guard-cases.json: 二重に融着した閉じ括弧(`))`)の中の cp 宛先は ask のまま"
+      - "destructive-guard-cases.json: ネストしたサブシェル内の cp 宛先は ask のまま"
+      - "destructive-guard-cases.json: 二重の閉じ括弧にリダイレクトが融着したスクラッチ削除は allow のまま"
+      - "destructive-guard-cases.json: 二重の閉じ括弧にリダイレクトが融着したスクラッチ削除(単純形)は allow のまま"
+    red_confirmed: true
+    red_reason: >-
+      6 of these 7 rows are among the 23 red-run failures: the two case-
+      pattern-closer-fused-to-subshell-opener rows and the two `cp`-
+      destination `ask` rows (old `_split_fused_closer_redirects` did not
+      generalise a run of `)` beyond a single fused pair, so a closer run
+      of length > 1, or one immediately followed by an opener, was not
+      fully unwrapped down to the real command), and the two redirect-
+      fused-to-`))` allow rows (`got=ask`/`got=deny` on the pre-fix tree —
+      the trailing `>/dev/null`/`>/dev/null 2>&1` was itself misread as part
+      of the closer run, so the scratch target was never separated out as a
+      plain redirect and the statement fell through as if it still carried
+      an argument). The plain `( (rm -rf /home/sakura/x))` row already
+      reported `ok deny` on the pre-fix tree (a simple doubled `)` already
+      matched the pre-existing single-fused-pair handling) and is kept as a
+      regression guard. After the implementation all 7 rows report the
+      verdict named in AC-4.
+  AC-5:
+    tests:
+      - "destructive-guard-cases.json: sudo とオプションの間に挟まったリダイレクト越しの rm は deny のまま"
+      - "destructive-guard-cases.json: sudo とオプションの間に挟まったリダイレクト越しの git push --force は deny のまま"
+      - "destructive-guard-cases.json: sudo とオプションの間に挟まったリダイレクト越しの cp 宛先は ask のまま"
+      - "destructive-guard-cases.json: サブシェル + sudo + 挟まったリダイレクト越しの rm は deny のまま"
+      - "destructive-guard-cases.json: env とオプションの間に挟まったリダイレクト越しの rm は deny のまま"
+      - "destructive-guard-cases.json: time + サブシェルの組み合わせは対象裸形と同じ deny(回帰ガード)"
+      - "destructive-guard-cases.json: ラッパー(command)後のリダイレクト宛先は自己設定書き込みとして ask のまま(回帰ガード)"
+      - "destructive-guard-cases.json: ラッパー(command)後のリダイレクト宛先が transcript なら deny のまま(回帰ガード)"
+      - "destructive-guard-cases.json: sudo と ls の間に挟まったリダイレクトがあっても無害コマンドは allow のまま"
+    red_confirmed: true
+    red_reason: >-
+      5 of these 9 rows are among the 23 red-run failures — `sudo
+      2>/dev/null -u root rm/git push --force/cp`, the same shape wrapped in
+      a subshell, and `env 2>/dev/null -u X rm` (each reported `got=allow`:
+      the old wrapper-option skip stopped at the first non-option-shaped
+      token, so a redirect operator sitting between the wrapper and its
+      `-u`/value option was never removed first, and the wrapper skip
+      never resumed past it to reach `rm`/`git`/`cp`). The three base-
+      verdict guards (`time ( rm -rf ... )`, `command > ~/.claude/
+      settings.json true`, `command > ~/.claude/projects/a/b.jsonl true`)
+      and the `sudo 2>/dev/null -u root ls /root` allow guard already
+      reported their target verdict on the pre-fix tree and are kept as
+      regression guards, per the task's own invariants list and Test Notes.
+      After the implementation all 9 rows report the verdict named in AC-5.
+  AC-6:
+    tests:
+      - "destructive-guard-cases.json: パースに失敗した複数行チャンクのフォールバック: if/then で包まれた rm も deny"
+      - "destructive-guard-cases.json: パースに失敗した複数行チャンクのフォールバック: サブシェルで包まれた rm も deny"
+      - "destructive-guard-cases.json: パースに失敗したフォールバックでも閉じ括弧は rm 対象にならず、スクラッチ削除は allow のまま"
+    red_confirmed: true
+    red_reason: >-
+      Both fallback deny rows are among the 23 red-run failures (each
+      reported `got=allow`: the parse-failure fallback path had no grouping
+      recognition at all, so `if`/`then`/`fi` and a subshell `(`/`)` around
+      an `rm -rf` target were left as ordinary words and the rm check never
+      saw `rm` at command position). The scratch-target allow row already
+      reported `ok allow` on the pre-fix tree (the fallback's word-based
+      tokenization already left the closer-fused word `/tmp/x )`'s `)` out
+      of the rm-target scan, since the target itself, `/tmp/x`, was already
+      a separate token) and is kept as a regression guard. After the
+      implementation all 3 rows report the verdict named in AC-6.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Preservation/structural criterion, checked by re-running both project
+      test commands and by reading the diff, not by a red-to-green
+      transition. `python3 em-workflow/hooks/tests/run-destructive-guard.py`
+      reports "401/401 passed" (400 array elements + the trailing hard-coded
+      unattended-demotion case) on the final tree; `python3 -m unittest
+      discover -s tests` reports "Ran 6188 tests ... OK", identical to the
+      4a baseline count, both before any edit and again after the
+      implementation (re-run a third time after a `git stash`/`git stash
+      apply` round-trip used to isolate the AC-1 red run, to rule out that
+      round-trip having altered the tree). `git diff -- em-workflow/hooks/
+      tests/destructive-guard-cases.json` shows every pre-existing row's
+      text byte-identical and in the same order, with the new 37-row block
+      inserted as one contiguous addition before the closing `]`, so no
+      pre-existing row's command, label or expected verdict changed.
+      `git diff --stat -- em-workflow/hooks/failed-run-cleanup-guard.py`
+      produces empty output (no diff). `def head(toks):` ... `return
+      os.path.basename(toks[i]), toks[i + 1 :]` still returns a 2-tuple.
+      `head()`'s docstring no longer claims its callers uniformly receive
+      grouping-stripped tokens; it now names the two callers by what each
+      actually passes (main()'s SHAPED_WORDS, already stripped by
+      _shape_leading(), versus _deferral_head()'s strip_grouping_prefix()-
+      narrowed words, deliberately not the same strip), matching
+      postcondition 1. HEAD's em-workflow `version` at this task's commit
+      time was "0.2.13" (already carrying the bump task0001 landed on this
+      branch's history); `em-workflow/.claude-plugin/plugin.json`'s and
+      `.claude-plugin/marketplace.json`'s em-workflow `version` are both
+      raised to "0.2.14" in the same commit as the destructive-guard.py
+      change, and the em-review entry in `.claude-plugin/marketplace.json`
+      is unchanged at "0.5.13".
