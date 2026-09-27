@@ -529,7 +529,11 @@ def lex_segments(chunk):
         else:
             segs = [t]
         for seg in segs:
-            if seg and all(c in SEGMENT_CHARS for c in seg):
+            if (
+                seg
+                and all(c in SEGMENT_CHARS for c in seg)
+                and getattr(seg, "is_operator", False)
+            ):
                 out.append((current, True, seg))
                 current = []
             else:
@@ -1464,15 +1468,16 @@ def _split_fused_closer_redirects(toks):
     """
     out = []
     for t in toks:
-        if not (getattr(t, "is_operator", False) and len(t) > 1 and t[0] == ")"):
+        if not (
+            getattr(t, "is_operator", False)
+            and len(t) > 1
+            and t[0] in "()"
+        ):
             out.append(t)
             continue
         rest = t
-        while rest and rest[0] == ")":
-            out.append(Tok(")", True))
-            rest = rest[1:]
-        while rest and rest[0] == "(":
-            out.append(Tok("(", True))
+        while rest and rest[0] in "()":
+            out.append(Tok(rest[0], True))
             rest = rest[1:]
         if rest:
             out.append(Tok(rest, True))
@@ -1663,23 +1668,20 @@ def _shape_leading(toks, case_stack):
         if t == "{" and not quoted:
             i += 1
             continue
-        if (
-            i + 2 < n
-            and not quoted
-            and IDENT.match(t)
-            and toks[i + 1] == FUNC_SIGNATURE
-            and toks[i + 2] == "{"
-        ):
-            i += 2  # `NAME() {` — the `{` itself is picked up next round
-            continue
+        if not quoted and IDENT.match(t):
+            sig_len = _func_sig_len(toks, i + 1)
+            if sig_len and i + 1 + sig_len < n and toks[i + 1 + sig_len] == "{":
+                i += 1 + sig_len  # `NAME() {` / `NAME ( ) {` — `{` picked up next round
+                continue
         if (
             t == "function"
             and not quoted
             and i + 1 < n
             and IDENT.match(toks[i + 1])
         ):
-            if i + 3 < n and toks[i + 2] == FUNC_SIGNATURE and toks[i + 3] == "{":
-                i += 3  # `function NAME() {`
+            sig_len = _func_sig_len(toks, i + 2)
+            if sig_len and i + 2 + sig_len < n and toks[i + 2 + sig_len] == "{":
+                i += 2 + sig_len  # `function NAME() {` / `function NAME ( ) {`
                 continue
             if i + 2 < n and toks[i + 2] == "{":
                 i += 2  # `function NAME {`
@@ -2800,6 +2802,32 @@ def check_permissions(word, args):
 # this) rather than three.
 FUNC_SIGNATURE = "()"
 IDENT = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def _func_sig_len(toks, idx):
+    """Return how many tokens starting at IDX form a function signature's
+    `()` — 1 for the fused FUNC_SIGNATURE token, 2 for a split `(` `)`
+    operator-token pair (an unfused `NAME ( ) {`, which never reaches
+    _split_fused_closer_redirects's merge — it only ever splits an
+    already-fused run, never merges separate tokens) — or 0 when neither
+    shape is present at IDX. Every token tested must be unquoted; a quoted
+    `"()"`/`"("`/`")"` is data, not the signature syntax.
+    """
+    if idx < len(toks) and toks[idx] == FUNC_SIGNATURE and not getattr(
+        toks[idx], "quoted", False
+    ):
+        return 1
+    if (
+        idx + 1 < len(toks)
+        and toks[idx] == "("
+        and getattr(toks[idx], "is_operator", False)
+        and not getattr(toks[idx], "quoted", False)
+        and toks[idx + 1] == ")"
+        and getattr(toks[idx + 1], "is_operator", False)
+        and not getattr(toks[idx + 1], "quoted", False)
+    ):
+        return 2
+    return 0
 
 
 def strip_grouping_prefix(toks):
