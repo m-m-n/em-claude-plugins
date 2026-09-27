@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 7c3c4af813410bafeabd43b0bb0cee853bbcced3
 last_input_digest: sha256:e461e97c22c28e5836be6218315dcefcf6b61685b64273b4d2d739f0fc8efae1
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -106,10 +106,16 @@ worker_runs:
   input_digest: sha256:126e8085403370e3c9c251ef16e88372de42917727788f15b64a99057c7d45d4
   output_digest: sha256:dbe1fe332ab1dacda3b7eb3dabf504fd14b19bd4d38402a9cc6afe70a7e4f1dd
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:e461e97c22c28e5836be6218315dcefcf6b61685b64273b4d2d739f0fc8efae1
-  output_digest: null
-artifacts: []
+  output_digest: sha256:259330a075b804ceb7b00b0819c70ab16c14a737a735d90fcf247b24963ef746
+artifacts:
+- path: feature-docs/threat-model-stride/REQUIREMENTS.md
+  sha256: sha256:49d116f187fb85d7bcd6134781344e77463b7613f82b2cb19d3dfee9b79aff0d
+  produced_by: create-spec-run-0004
+- path: feature-docs/threat-model-stride/SPEC.md
+  sha256: sha256:b33fd950a7e13883f4c45d630806f217d658aed8447bf155a80d6973f8c08218
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
