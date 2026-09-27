@@ -155,9 +155,9 @@ tasks:
     - FR7
     - FR10
     - NFR1
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/threat-model-stride/task0001
   task0002:
     title: implementation-planner threat-modeling step and mitigation carriage
     plan: tasks/task0002.md
@@ -180,9 +180,9 @@ tasks:
     - FR10
     - NFR1
     - NFR2
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/threat-model-stride/task0002
   task0003:
     title: planner contract, create-plan dispatch and the TASK.md append permission
     plan: tasks/task0003.md
@@ -202,9 +202,9 @@ tasks:
     - FR5
     - FR6
     - NFR2
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/threat-model-stride/task0003
   task0004:
     title: review phase resolves, validates and passes threat_model_path
     plan: tasks/task0004.md
@@ -224,9 +224,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/threat-model-stride/task0004
   task0005:
     title: review protocol input field and Codex prompt carriage for threat_model_path
     plan: tasks/task0005.md
@@ -247,9 +247,9 @@ tasks:
     - FR8
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/threat-model-stride/task0005
   task0006:
     title: review-security missing-mitigation detection and the em-workflow minor version bump
     plan: tasks/task0006.md
@@ -268,9 +268,9 @@ tasks:
     - FR9
     - FR11
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/threat-model-stride/task0006
 review:
   status: pending
   rounds_completed: 0
