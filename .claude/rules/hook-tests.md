@@ -33,3 +33,15 @@ python3 em-workflow/hooks/tests/run-destructive-guard.py \
 クォートの中に書いた `rm -rf` を実行と誤認する、ヒアドキュメントの本文を 1 行ずつ
 コマンドとして読む、`> /dev/null` を削除対象として数える——いずれも実際に起きて、
 allow 側のケースとして残してある。
+
+## interpreter-mismatch-guard
+
+`em-workflow/hooks/interpreter-mismatch-guard.py` を変更したら、同じ変更の中で次を走らせる。
+
+```
+python3 -m unittest tests.test_interpreter_mismatch_guard
+```
+
+- ケースは `tests/test_interpreter_mismatch_guard.py` の `CASES` に
+  `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `deny` か `silent`。
+- 判定には対象ファイルの中身が要るので、フィクスチャは同じファイルの `FIXTURES` に置く。
