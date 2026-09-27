@@ -1,0 +1,79 @@
+feature: loop-command-guard
+collected_at: '2026-09-28T03:04:38+09:00'
+session_ids:
+- cf520ff3-d214-4492-a065-55bcc443703b
+signals:
+  review_critical_high:
+  - stable_id: 58562295e0a7b109
+    category: spec
+    file: em-workflow/hooks/loop-command-guard.py
+    title: 前置きコマンドの値を取るオプションで入れ子のシェルを見逃す
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: loop-command-guard.py runs as a PreToolUse hook on every Bash call and does recursive nested-shell
+      parsing, so per-call latency and worst-case expansion need checking
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: final reading description_plus_code (P0=0.0, P1=0.39, P2=0.44, P3=0.17) decided full via
+      threshold_rows:full
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.32
+        confidence: 0.62
+        probabilities:
+          '0': 0.03
+          '1': 0.63
+          '2': 0.33
+          '3': 0.01
+      observed_at: '2026-09-27T23:37:11+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.77
+        confidence: 0.44
+        probabilities:
+          '0': 0.0
+          '1': 0.39
+          '2': 0.44
+          '3': 0.17
+      observed_at: '2026-09-27T23:37:11+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/loop-guard.py
+      - em-workflow/hooks/hooks.json
+      - tests/test_loop_guard.py
+      - tests/test_hooks_registration.py
+      - tests/test_guardrail_hooks_migration.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      changed_lines_approx: 300
+      new_functions_needed: 4
+      new_files_needed:
+      - em-workflow/hooks/loop-guard.py
+      - tests/test_loop_guard.py
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 20
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 1
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- review round 2 left 14 medium findings in the hand-written shell scanner of loop-command-guard.py (redirection
+  words, braces/${#x}, cmdsub end scan, arithmetic, -c option parsing, heredoc delimiter/body, eval --,
+  backticks, double-quote backslashes, ANSI-C quoting, time/case/function positions, nested rescan cost,
+  env -S); batch rework only covers critical/high so these stay open
+- litellm (muse-spark-contributor) reviewers returned 429 rate_limited in both rounds; every litellm-first
+  perspective fell back to codex
