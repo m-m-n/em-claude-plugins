@@ -28,7 +28,7 @@ Verdict aggregation and the final `ALLOW_NON_DESTRUCTIVE` fall-through are uncha
 | tar extract-mode rule | Decides whether a tar statement's `-C` / `--directory` value is a write target | Extract mode as defined below; only then is the value a write target | task0002 (implements), task0003 (documents) |
 | Write-target sources | The complete list of places the write-target set is drawn from | Sources (a)-(d) as listed below, describing the post-feature implementation | task0002 (tar part of (d)), task0003 (documents all) |
 | Case table | `em-workflow/hooks/tests/destructive-guard-cases.json` rows `[expected, label, command]` | Rules below; each task adds one contiguous block, existing rows unchanged except one label | task0001, task0002 |
-| em-workflow version fields | `version` in `em-workflow/.claude-plugin/plugin.json` and the em-workflow entry of `.claude-plugin/marketplace.json` | Both equal exactly `0.2.13` after the feature; em-review untouched | task0001, task0002 |
+| em-workflow version fields | `version` in `em-workflow/.claude-plugin/plugin.json` and the em-workflow entry of `.claude-plugin/marketplace.json` | Both carry the same value, with the patch position raised from the base commit; em-review untouched | task0001, task0002 |
 
 ### Shaped statement (contract detail)
 
@@ -67,8 +67,8 @@ The write-target set is drawn from exactly these sources after this feature:
 
 ### em-workflow version fields (contract detail)
 
-- Target value `0.2.13` in both places (a target value, not an increment). The em-review version is not changed.
-- Every task that changes a file under `em-workflow/` (task0001, task0002) sets both fields to `0.2.13` in its own change set. task0003 changes no file under `em-workflow/` and does not touch either field.
+- Raise the patch position in both places. The concrete value is derived from HEAD at commit time. The em-review version is not changed.
+- Every commit that changes a file under `em-workflow/` raises the patch position of HEAD's value in both fields in the same commit. task0003 changes no file under `em-workflow/` and does not touch either field.
 
 ## Conventions
 
@@ -101,9 +101,9 @@ The write-target set is drawn from exactly these sources after this feature:
 
 ### D4: Each em-workflow-changing task carries the version target value
 
-- **Decision**: task0001 and task0002 each set both version fields to `0.2.13` in their own change set.
+- **Decision**: every commit that changes a file under `em-workflow/` raises the patch position of HEAD's value in both version fields in the same commit.
 - **Rationale**: `.claude/rules/core-plugin-version-bump.md` requires the version change in the same change as the plugin content change, and the user-level plugin-version guard rejects commits that change plugin files without it. Identical edits on both task branches merge without conflict.
-- **Affected tasks**: task0001, task0002.
+- **Affected tasks**: task0001, task0002, task0004.
 
 ### D5: Case-table merge policy is a union
 

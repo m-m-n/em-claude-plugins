@@ -24,9 +24,9 @@ This document covers the integrated verification run by the verify phase. Task-l
 |----|----------|-----------------|-----------|
 | TS-1 | Case-table run: `python3 em-workflow/hooks/tests/run-destructive-guard.py` on the integrated tree | Every case passes, including the trailing unattended-demotion case; exit 0. Covers the FR1, FR7 and FR8 rows, the FR9 relabelled row and every pre-existing row | Unit |
 | TS-2 | Repository unit tests: `python3 -m unittest discover -s tests` | Pass, including the case-table invariants (no duplicate commands, pinned verdicts of the pre-task commands), the standard-library-only check, the forbidden-call list and the failed-run-cleanup-guard tests | Integration |
-| TS-3 | Optional: `python3 em-workflow/hooks/tests/run-destructive-guard.py` given the installed cache copy of em-workflow 0.2.13's destructive-guard.py as its argument | Every case passes against the installed copy. Skipped (not a failure) when that cache directory does not exist yet | Unit (optional) |
+| TS-3 | Optional: `python3 em-workflow/hooks/tests/run-destructive-guard.py` given the installed cache copy of destructive-guard.py for the em-workflow version the feature ends at as its argument | Every case passes against the installed copy. Skipped (not a failure) when that cache directory does not exist yet | Unit (optional) |
 | TS-4 | Prior-feature document consistency (SPEC Success Criteria AC-10) | In the prior feature's SPEC.md and REQUIREMENTS.md, FR2 (c) / (d), the Edge Cases mv line and FR6 match the implementation for mv, the six destination families and the head() / statements() input shaping | Manual |
-| TS-5 | Version fields (SPEC Success Criteria AC-11) | The em-workflow `version` in `em-workflow/.claude-plugin/plugin.json` and in `.claude-plugin/marketplace.json` both read 0.2.13; the em-review version is unchanged from the base commit | Unit (file inspection) |
+| TS-5 | Version fields (SPEC Success Criteria AC-11) | The em-workflow `version` in `em-workflow/.claude-plugin/plugin.json` and in `.claude-plugin/marketplace.json` carry the same value, with the patch position raised from the base commit's value and major / minor unchanged; the em-review version is unchanged from the base commit | Unit (file inspection) |
 
 TS-1 to TS-3 are the SPEC's own scenarios. TS-4 and TS-5 are derived from SPEC Success Criteria AC-10 and AC-11, which no SPEC scenario covers. SPEC's TS-E2E is not applicable (see E2E Testing).
 
@@ -51,7 +51,7 @@ TS-1 to TS-3 are the SPEC's own scenarios. TS-4 and TS-5 are derived from SPEC S
 | AC-8 | tar `-C` is a write target only in extract mode; each of the six families has at least one ask and one allow case | TS-1, plus reading the FR7 block of the case table |
 | AC-9 | `sudo -u` / `bash -c` / `eval`-routed rm cases exist and pass | TS-1 |
 | AC-10 | The prior feature's SPEC.md and REQUIREMENTS.md match the implementation | TS-4 |
-| AC-11 | Both em-workflow version fields read 0.2.13 | TS-5 |
+| AC-11 | Both em-workflow version fields carry the same value with the patch position raised from the base commit | TS-5 |
 
 ### Functional Requirements Coverage
 
@@ -85,7 +85,7 @@ Not applicable: the project has no E2E infrastructure (SPEC TS-E2E).
 - [ ] AC-4 batch variant: feed each of the five ticket reproduction commands to `em-workflow/hooks/destructive-guard.py` as a PreToolUse(Bash) hook input with `CLAUDE_BATCH=1` set in the environment; each verdict is deny.
 - [ ] Case-table diff review (AC-7, NFR3): the integrated diff of `em-workflow/hooks/tests/destructive-guard-cases.json` against the base commit contains only added rows plus the single label change on the row `mv ~/.claude/hooks/x.py extra.txt /tmp/y`, whose command and expected verdict (ask) are unchanged.
 - [ ] TS-4 (AC-10): read the prior feature's SPEC.md FR2, Edge Cases, FR6, architecture diagram, component diagram, Dependencies and Data Flow, and the eight listed places in its REQUIREMENTS.md; confirm each matches IMPLEMENTATION.md "Write-target sources" and "tar extract-mode rule" and the head() / statements() input-shaping facts, and that no statement fixes the sources at three or limits mv to its last argument.
-- [ ] TS-3 (optional): after the plugin is reinstalled at 0.2.13, run the runner against the installed cache copy.
+- [ ] TS-3 (optional): after the plugin is reinstalled at the version the feature ends at, run the runner against the installed cache copy.
 - [ ] `em-workflow/hooks/failed-run-cleanup-guard.py` has no diff against the base commit (FR5).
 
 ## Performance / Security Verification
