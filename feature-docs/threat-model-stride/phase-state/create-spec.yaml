@@ -1,11 +1,11 @@
 schema_version: 1
 feature: threat-model-stride
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 7c3c4af813410bafeabd43b0bb0cee853bbcced3
-last_input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:126e8085403370e3c9c251ef16e88372de42917727788f15b64a99057c7d45d4
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -101,6 +101,10 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
   output_digest: sha256:a0eecef88e886357cf1a8cd4cc638f99fade5d515cf7f82dc3cd6b5a605b40ea
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:126e8085403370e3c9c251ef16e88372de42917727788f15b64a99057c7d45d4
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
