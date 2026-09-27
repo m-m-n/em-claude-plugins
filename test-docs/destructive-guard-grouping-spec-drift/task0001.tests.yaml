@@ -1,0 +1,182 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py: 284/284 passed (283 array elements + 1 hard-coded unattended-demotion case); python3 -m unittest discover -s tests: Ran 6188 tests, OK (both on the clean tree, before any edit)
+final_failures: []             # python3 em-workflow/hooks/tests/run-destructive-guard.py: 335/335 passed (334 array elements + 1 hard-coded unattended-demotion case); python3 -m unittest discover -s tests: Ran 6188 tests, OK (both after the implementation)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      All 51 "Case rows to add" rows were added to
+      em-workflow/hooks/tests/destructive-guard-cases.json, as one
+      contiguous block, before destructive-guard.py was touched (verified
+      via `git stash` isolation: the source file's diff was stashed while
+      the row-add-only tree was tested). A programmatic pre-check confirmed
+      none of the 51 new command strings duplicated any of the 283
+      pre-existing rows and no duplicates existed within the new block
+      itself. A runner run on that tree (CLAUDE_BATCH cleared) exited
+      non-zero: 299/335 passed, 36 failed. Every one of the 36 failing
+      labels is among the 51 newly added rows (5 group(1), 20 group(2),
+      3 group(3), 4 group(4), 2 group(5), 2 group(6) — recorded verbatim in
+      /tmp/red-run.log); the other 15 new rows (14 group(7) false-positive
+      guards plus the group(4) done-redirect row) already passed on this
+      pre-fix tree, and all 283 pre-existing rows plus the hard-coded
+      demotion case stayed green, matching the task's own Test Notes
+      ("rows that already pass... stay in as regression guards and are not
+      expected to go red").
+  AC-2:
+    tests:
+      - "destructive-guard-cases.json: グルーピング(サブシェル): チケット再現、$HOME 対象は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(ブレースグループ): チケット再現、$HOME 対象は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(if/then): チケット再現、$HOME 対象は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(for/do): チケット再現、$HOME 対象は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(!): チケット再現、$HOME 対象は裸形と同じ ask"
+    red_confirmed: true
+    red_reason: >-
+      All 5 rows are among the 36 red-run failures (each reported
+      `got=allow`). After the implementation, run-destructive-guard.py
+      reports `ok ask` for all 5, matching the verdict of the bare
+      `rm -rf $HOME/x` form.
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース有り): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース無し): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(ブレースグループ): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(if/then): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(if/elif/else): else 節の対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(if の条件式): 条件位置のコマンドも対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(while/do): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(until の条件式): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(for/do): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(!): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(case パターン): パターン閉じ括弧の直後の対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(case パターン、任意の先頭括弧付き): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(case パターン、パイプ区切りの選択肢): パターンが文をまたいでも対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(case パターン、複数行): パターンが改行をまたいでも対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(関数定義、NAME() {}): 定義と同一コマンド内の呼び出しで本文が実行されたものとして deny"
+      - "destructive-guard-cases.json: グルーピング(関数定義、function NAME {}): 定義と同一コマンド内の呼び出しで本文が実行されたものとして deny"
+      - "destructive-guard-cases.json: グルーピング(ネスト: サブシェル内のブレースグループ): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(ネスト: if/then 内のサブシェル + sudo): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(bash -c ペイロード内のサブシェル): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(コマンド置換本文内の if/then): 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(サブシェル)の git: reset --hard は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の git: force push は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(if/then)の git: git clean -fdx は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の自己設定書き込み: tee 宛先は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(for/do)の自己設定書き込み: mv 宛先は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(for/do の終端子 done に付いたリダイレクト): コマンドを持たない文でも書き込み先は判定対象"
+      - "destructive-guard-cases.json: グルーピング(サブシェル)の transcript 書き込み: mv 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(if/then)の transcript 書き込み: cp 宛先は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(サブシェル)の find -delete: 対象は裸形と同じ deny"
+      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の chmod -R: 対象は裸形と同じ ask"
+    red_confirmed: true
+    red_reason: >-
+      29 of these 30 rows are among the 36 red-run failures. The one
+      exception, "グルーピング(for/do の終端子 done に付いたリダイレクト):
+      コマンドを持たない文でも書き込み先は判定対象" (`for f in a; do echo
+      $f; done > ~/.claude/settings.json`), already passed on the pre-fix
+      tree (`ok ask`) because the pre-existing redirect-target-extraction
+      logic already inspected the trailing `> ~/.claude/settings.json`
+      independently of grouping/command shaping; it is kept as a regression
+      guard, matching the task's Test Notes anticipation that some rows
+      would not go red. After the implementation all 30 rows pass with the
+      verdicts named in AC-3 (rm through each construct deny, git forms
+      deny, the remaining self-modification forms ask, transcript-write
+      forms deny, find -delete deny, chmod -R ask); the two group(4)
+      fused-closer cp rows and the two group(7) fused-closer/bare-parens
+      allow rows are reported under AC-4 instead, per the task's own Test
+      Notes grouping.
+  AC-4:
+    tests:
+      - "destructive-guard-cases.json: グルーピング(サブシェル)の自己設定書き込み: cp 宛先は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(サブシェル + 閉じ括弧とリダイレクトの融着): cp 宛先は裸形と同じ ask"
+      - "destructive-guard-cases.json: グルーピング(サブシェル + 閉じ括弧とリダイレクトの融着)の安全対象: allow のまま"
+      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース無し)のビルド成果物: allow のまま"
+    red_confirmed: true
+    red_reason: >-
+      The two ask rows, `(cp /tmp/x ~/.claude/settings.json)` and
+      `(cp /tmp/x ~/.claude/settings.json)>/dev/null`, are both among the 36
+      red-run failures (`got=allow`); after the implementation both report
+      `ok ask`. The two allow rows, `(rm -rf /tmp/x)>/dev/null` and
+      `(rm -rf node_modules)`, already reported `ok allow` on the pre-fix
+      tree (rm targets under an unrecognised leading `(` fell through to
+      the existing blanket-allow default) and continue to report `ok allow`
+      after the implementation, so no red transition applies to them; they
+      are kept as false-positive regression guards, per the task's own Test
+      Notes ("fused-closer rows to AC-4"). The pre-existing pinned row
+      `git push "(" --force origin main` (label "本物: 引用符付き括弧の
+      force push も検知" in the pre-existing part of the table) was not
+      modified by this task, was green on the baseline run, and stayed
+      green (`ok deny`) on the final run — confirmed via
+      `git diff -- em-workflow/hooks/tests/destructive-guard-cases.json`
+      showing this row's text untouched.
+  AC-5:
+    tests:
+      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース有り)の安全対象: allow のまま"
+      - "destructive-guard-cases.json: グルーピング(if/then)の安全対象: allow のまま"
+      - "destructive-guard-cases.json: グルーピング(サブシェル)の無害コマンド: allow のまま"
+      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の無害コマンド + リダイレクト: allow のまま"
+      - "destructive-guard-cases.json: グルーピング(関数定義)の無害な本文: allow のまま"
+      - "destructive-guard-cases.json: 予約語が引数位置にあるだけなら data のまま allow"
+      - "destructive-guard-cases.json: クォート内のグルーピング文字列(サブシェル形)は data のまま allow"
+      - "destructive-guard-cases.json: クォート内のグルーピング文字列(ブレースグループ形)は data のまま allow"
+      - "destructive-guard-cases.json: for/select ヘッダの WORDS は for ヘッダ自体を通じては判定対象にならず allow"
+      - "destructive-guard-cases.json: case パターンの文字列がコマンド名と同じでも data のまま allow"
+      - "destructive-guard-cases.json: シェルシンク宛てでないヒアドキュメント本文内の if/then は data のまま allow(複数行)"
+      - "destructive-guard-cases.json: コミットメッセージ内のグルーピング文字列は data のまま allow"
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion, per the task plan's own Test Notes ("group
+      (7) and all pre-existing rows to AC-5" — rows expected to already
+      pass and "not expected to go red"). All 12 listed group(7) rows (the
+      remaining 2 of the 14 group(7) rows are reported under AC-4) already
+      reported `ok allow` on the pre-fix, rows-only tree and continue to
+      report `ok allow` after the implementation; no red state was ever
+      observed or expected for them. The "every pre-existing row keeps its
+      command and expected verdict" clause was checked by
+      `git diff -- em-workflow/hooks/tests/destructive-guard-cases.json`,
+      confirming the only change to the pre-existing 283 rows' text is a
+      trailing comma added after the former-last row, with every row
+      otherwise byte-identical and in the same order; and by
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` exiting 0
+      with 335/335 passed, which includes the trailing hard-coded
+      unattended-demotion case (335 = 334 array elements + 1).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural/documentation criterion, checked by reading the diff per
+      the task's own Test Notes ("AC-6 is checked by reading the diff"),
+      not by a red-to-green test transition observed in this session.
+      Verified directly against the final tree: `git diff --stat --
+      em-workflow/hooks/failed-run-cleanup-guard.py` produces empty output
+      (no diff); `def head(toks):` ... `return os.path.basename(toks[i]),
+      toks[i + 1 :]` still returns a 2-tuple; `head()`'s docstring states
+      "that mirror's own head() has no grouping awareness at all, and stays
+      that way" (the grouping-aware skip is local to destructive-guard.py,
+      the same precedent as `.substitution_only`); and
+      `grep -n "stay unexamined" em-workflow/hooks/destructive-guard.py`
+      returns no matches, confirming neither `strip_grouping_prefix()`'s
+      docstring nor the `main()` comment still states that subshell- or
+      brace-wrapped destructive commands stay unexamined by the other
+      checks.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion: true before and required to stay true, not a
+      red-to-green transition. `python3 -m unittest discover -s tests`
+      reported "Ran 6188 tests ... OK" both on the 4a baseline (before any
+      edit) and on the final tree (after the implementation) — identical
+      test count, zero failures in either run.
+  AC-8:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: `em-workflow/.claude-plugin/plugin.json`'s `version`
+      == "0.2.12" (read via the Read tool prior to editing); the
+      `em-workflow` entry's `version` in `.claude-plugin/marketplace.json`
+      == "0.2.12"; the `em-review` entry's `version` == "0.5.13". After the
+      edit: both em-workflow versions read "0.2.13" identically (re-read
+      via the Read tool post-edit and re-verified with
+      `python3 -c "import json; ..."` over both files), and the em-review
+      entry is unchanged at "0.5.13".

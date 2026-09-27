@@ -1,0 +1,68 @@
+schema_version: 2
+feature: destructive-guard-grouping-spec-drift
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 2.0
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.03
+      '2': 0.94
+      '3': 0.03
+  observed_at: '2026-09-27T01:05:25+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.02
+    confidence: 0.87
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.05
+      '2': 0.88
+      '3': 0.07
+  observed_at: '2026-09-27T01:05:25+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - feature-docs/destructive-guard-write-target-scoping/SPEC.md
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: main（4cfd5c4c）で、固定パスへの rm・git reset --hard・cp による設定／transcript
+    書き込みは、単体では ask／deny、( )・{ }・if・for・! 経由ではすべて allow になった一方、出力リダイレクトによる保護対象への書き込みは検知された（em-workflow/hooks/destructive-guard.py:2379、括弧除去は2418行の委譲判定のみ）。mv
+    の全非フラグ引数と6コマンド族の宛先抽出は SPEC の FR2／Edge Cases、wrapper／payload 処理は FR6 との食い違いが残り、6族の宛先ケースと
+    sudo -u ケースも未収録だが、bash -c／eval のケースは既に存在し、依頼文の wrapper 3例は現在すべて ask、既存スイートは284/284合格した（同ファイル:1058,1009,1961、feature-docs/destructive-guard-write-target-scoping/SPEC.md:43,47,191、em-workflow/hooks/tests/destructive-guard-cases.json）。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 0
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-09-27T01:05:25+09:00'

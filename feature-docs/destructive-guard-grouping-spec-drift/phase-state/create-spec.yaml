@@ -1,0 +1,96 @@
+schema_version: 1
+feature: destructive-guard-grouping-spec-drift
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 290fb5170e89401cb699ede3f8926ddcb3278c1b
+last_input_digest: sha256:231d0744a46023de381ba35af94a5c059ab5b6320a72198d822b2d14c9982c44
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-27T01:15:31+09:00'
+    questions:
+    - question_id: grouping-scope
+      status: answered
+    - question_id: dest-families-scope
+      status: answered
+    - question_id: spec-revision-location
+      status: answered
+    - question_id: design-step
+      status: obsolete
+answers:
+  grouping-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T01:15:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - all_including_case
+    freeform: null
+    normalized_answer: all_including_case Codex also observed fused forms (`(rm -rf
+      /tmp/x)`, `(cp /tmp/x ~/.claude/settings.json)`) where the closing `)` joins
+      the argument list; these must be covered too.
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); orchestrator judged Codex suggestion maps to option
+      all_including_case (same as worker recommendation); opus_escalation: false.
+      Codex reasoning: while・関数定義・case でも迂回を確認したよ。未検査の命令が allow になるため、同じ原因の穴をまとめて塞ぐ範囲を推すよ
+      / case はパターン内の | でも区間が分かれるため、区間をまたぐ文脈管理が必要で、head() の読み飛ばし追加だけでは完結しないよ / 引用や分岐パターンの誤認に加え、閉じ括弧が
+      cp の宛先や rm の対象に混ざる問題も防ぐ必要があるよ / hook-tests.md に従い、各構文の検知ケースと安全な allow ケースを修正前に追加し、既存の
+      deny／ask ケースを保持して検証するよ'
+  dest-families-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T01:15:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - keep_fix_tar_mode
+    freeform: null
+    normalized_answer: keep_fix_tar_mode Add tar create / list / extract cases.
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); orchestrator judged Codex suggestion maps to option
+      keep_fix_tar_mode (same as worker recommendation); opus_escalation: false. Codex
+      reasoning: 6族の宛先判定を残すことで、現在検知できている保護対象への書き込みを引き続き検知できるよ / tar の作成例が ask になることも確認したよ。無人実行を止める既知の誤検知なので、-C
+      の宛先扱いは展開時に限定するのが妥当だよ / FR2 にコマンド固有の宛先フラグと位置引数を明記し、6族の ask／allow と tar の作成・一覧・展開ケースを先に追加して検証するよ'
+  spec-revision-location:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-27T01:15:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - edit_prior_spec_and_req
+    freeform: null
+    normalized_answer: edit_prior_spec_and_req
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); orchestrator judged Codex suggestion maps to option
+      edit_prior_spec_and_req (same as worker recommendation); opus_escalation: false.
+      Codex reasoning: 前 feature の SPEC を直接整合させる選択が、提示された完了条件に合っているよ / REQUIREMENTS.md
+      にも同じ不整合が残っているため、両方の該当箇所を修正して要件と仕様の食い違いを解消するよ / mv の移動元も判定対象になることと、check_rm／SAFE_DELETE
+      自体の変更と入力処理による判定変化の違いを明記し、本 feature の変更対象に前文書2つを含めるよ'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: failed
+  input_digest: sha256:216d6254590ab0e74b7675068078226197efa761168d709fbd33f210d6bc677e
+  output_digest: sha256:62340ae8cccf969a98d69c3d3961a94e66db2b2f4df82a15e8959134d6cf6df9
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:5ecf29fe3b281fee525ea2d487e190a64c58e4a7e3197cdbe4a44181a3e9abdc
+  output_digest: sha256:90c0ae4d6726d7f16cc94c1b8b1414d1840142e4822d17b6274c26116a96d4ea
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:231d0744a46023de381ba35af94a5c059ab5b6320a72198d822b2d14c9982c44
+  output_digest: sha256:fa3889e2e4cff340262d6d30b352403d4e4290bdc5d6d69b6128436c44a9c496
+artifacts:
+- path: feature-docs/destructive-guard-grouping-spec-drift/REQUIREMENTS.md
+  sha256: sha256:3e0abd01528dcff3ace4a00ef24e0a56525fbf6af4a77232705bfdac30bea521
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-grouping-spec-drift/SPEC.md
+  sha256: sha256:4778497f03345ec0a96a598272c27828c841578a9d8285642d45a7836b140bbb
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: sha256:26fa24ecc54e218cdb0f16c1a99e8fa583b9a56514813e233fb2573ee0c45789
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: 'create-spec-run-0001: validation error gate_id: create-spec.design-step
+  question did not offer option_id decide_autonomously; packet questions for create-spec.requirement-clarification
+  resolved via Codex and carried into re-dispatch'

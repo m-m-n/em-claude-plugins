@@ -1,0 +1,66 @@
+feature: destructive-guard-grouping-spec-drift
+collected_at: "2026-09-27T20:59:00+09:00"
+session_ids: [01a0e2ba-012f-7602-9b8e-6de9f00f9eb4]
+signals:
+  review_critical_high:
+    # round 1
+    - {stable_id: df32e3552c3ee176, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "グルーピング内の bash -c / eval / <<< の本文が再走査されない", resolution: unresolved}
+    - {stable_id: 25f07de01edba472, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "単独行の `;;` と `;&` / `;|` で case 項目の終端を認識しない", resolution: unresolved}
+    - {stable_id: b6b2b64d62e8983b, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "連続した閉じ括弧 `))` / `)(` / `))>` が分割されず、検知漏れと誤爆の両方が起きる", resolution: unresolved}
+    - {stable_id: b4d16b6b22951280, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "リダイレクトを分離する前にラッパーを飛ばすため、`sudo 2>/dev/null -u root rm` が素通りする", resolution: unresolved}
+    - {stable_id: c757b2e569edf076, category: security, file: em-workflow/hooks/destructive-guard.py, title: "コマンド位置の `case` を無条件に予約語として扱い、pattern 状態が後続の文まで読み飛ばす", resolution: unresolved}
+    - {stable_id: 751c5ab440d50b42, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "パターン内の esac を case の終端として扱わないで", resolution: unresolved}
+    # round 2（round 1 の 6 件は rework task0004 で対応）
+    - {stable_id: b6b2b64d62e8983b, category: security, file: em-workflow/hooks/destructive-guard.py, title: "引用・エスケープされた `;;` / `;&` で case の状態が進み、後続の rm を読み飛ばす", resolution: fixed}
+    - {stable_id: bb8b2d875885e255, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "Loop-1 fix reintroduces a full destructive-guard bypass via `((...))` arithmetic expressions", resolution: fixed}
+    - {stable_id: 1dae9f6060349c0c, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "引数位置の `case` がパターン状態を開き、`||` 以降の rm を読み飛ばす", resolution: deferred}
+    - {stable_id: c0f203e8f68badee, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "パターンの最初の選択肢にある、引用された esac で case の状態を終える", resolution: deferred}
+    - {stable_id: 2424f565d83939e8, category: security, file: em-workflow/hooks/destructive-guard.py, title: "開き括弧とリダイレクトが空白なしで続くと、サブシェル内のコマンドを検査しない", resolution: deferred}
+    - {stable_id: 76b8a0a7e655da11, category: architecture, file: em-workflow/hooks/destructive-guard.py, title: "関数定義の認識が単一の `()` トークンとの文字列一致に頼り、検知漏れと誤爆の両方が起きる", resolution: deferred}
+    - {stable_id: ffa03e03e2976f59, category: architecture, file: em-workflow/hooks/destructive-guard.py, title: "並行するトークン列の語数が合わないと、本文の再走査が素通りになる", resolution: deferred}
+    - {stable_id: 2484eb8e4f93e99d, category: security, file: em-workflow/hooks/destructive-guard.py, title: "閉じ括弧に `>|` / `>&` が続くと、リダイレクト先が書き込み先から漏れる", resolution: deferred}
+    - {stable_id: 2300ecaf383a620e, category: security, file: em-workflow/hooks/destructive-guard.py, title: "tar の展開モード判定が、長いオプションの省略形と TAR_OPTIONS を見逃す", resolution: deferred}
+    - {stable_id: c85ea01ded12085f, category: security, file: em-workflow/hooks/destructive-guard.py, title: "tar の --remove-files と -f の出力先が、作成モードでは書き込み先として検査されない", resolution: deferred}
+    - {stable_id: 0dd489bfdec64271, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "エスケープされた case を予約語として扱わない", resolution: deferred}
+    - {stable_id: 2c2ff4b3757c4691, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "ハイフンを含む関数名でも本文を検査する", resolution: deferred}
+  conflict_reworks: []   # implementer 報告は永続化されておらず conflict_retries を確認できない
+  file_prediction_misses:
+    - task: task0001
+      files: [test-docs/destructive-guard-grouping-spec-drift/task0001.tests.yaml]
+    - task: task0004
+      files: [test-docs/destructive-guard-grouping-spec-drift/task0004.tests.yaml]
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "destructive-guard.py runs as a PreToolUse hook on every Bash call and the diff adds recursive parsing of grouping/compound constructs, so per-call latency and worst-case expansion need checking"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みでバケット 2（確率 0.88）。destructive-guard.py への新規ロジック追加と挙動変更"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 2.0, confidence: 0.94, probabilities: {'0': 0.0, '1': 0.03, '2': 0.94, '3': 0.03}}
+        observed_at: "2026-09-27T01:05:25+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 2.02, confidence: 0.87, probabilities: {'0': 0.0, '1': 0.05, '2': 0.88, '3': 0.07}}
+        observed_at: "2026-09-27T01:05:25+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/destructive-guard.py
+        - em-workflow/hooks/tests/destructive-guard-cases.json
+        - feature-docs/destructive-guard-write-target-scoping/SPEC.md
+        - em-workflow/.claude-plugin/plugin.json
+        - .claude-plugin/marketplace.json
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      body_change_kind: new_logic
+      change_containment: single_module
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review の auto-fix が round 1・round 2 とも loop 1 で退行を持ち込み（round 2 では `((...))` による全迂回の critical）、revert で終わった。shell 構文解析のような状態機械への single-file auto-fix は、個別 finding 単位の修正が相互に干渉しやすい"
+  - "review rework cap（1）到達で round 2 の high 10 件が deferred のまま残った。元タスク自体が前 feature の deferred high 4 件の後始末であり、deferred が連鎖して次 feature を生む構図になっている"
+  - "task0004 は implementer が 2 回『merged event なしで停止』して failed になった。原因は個人グローバル hook plugin-version-guard が 0.2.13 固定の SPEC と衝突してコミットを拒否したこと。SPEC に version の具体値を pin しない規則（core-plugin-version-bump.md）に反する計画が通っていた"
+  - "統合ブランチは em-workflow 0.2.14 で終わるが、main は並行して 0.3.0 まで進んでいる。PR 作成時に plugin.json / marketplace.json の version が衝突する"
+  - "implementer の報告（conflict_retries / deviations）が journal に残らないため、retrospect で conflict_reworks を収集できない"
