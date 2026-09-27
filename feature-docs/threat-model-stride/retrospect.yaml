@@ -1,0 +1,112 @@
+feature: threat-model-stride
+collected_at: '2026-09-27T19:53:00+09:00'
+session_ids:
+- 01a0e27d-17f2-72e9-8437-1e7a25ab70eb.jsonl
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読み（score 2.44, 2 と 3 の確率 0.56 / 0.44）で full
+      に決定した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 2.28
+        confidence: 0.71
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.0
+          '2': 0.72
+          '3': 0.28
+      observed_at: '2026-09-27T18:15:10+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 2.44
+        confidence: 0.56
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.0
+          '2': 0.56
+          '3': 0.44
+      observed_at: '2026-09-27T18:18:44+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/agents/implementation-planner.md
+      - em-workflow/references/contracts/planner-contract.md
+      - em-workflow/references/phases/create-plan-phase.md
+      - em-workflow/skills/plan-writing/SKILL.md
+      - em-workflow/skills/review-security/SKILL.md
+      - em-workflow/references/review-phase.md
+      - em-workflow/references/review-protocol.md
+      - em-workflow/agents/reviewer.md
+      - em-workflow/agents/codex-reviewer.md
+      - em-workflow/references/templates/spec-document.md
+      - em-workflow/references/templates/task-plan.md
+      - em-workflow/references/templates/threat-model.md
+      - em-workflow/skills/develop/SKILL.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_refitted_worker_agents.py
+      - tests/test_worker_contracts_planning.py
+      - tests/test_reviewer_roles_protocol.py
+      - tests/test_review_phase_llm_led.py
+      - tests/test_tier_reduction_develop_loop.py
+      changed_lines_approx: 320
+      new_functions_needed: 0
+      new_files_needed:
+      - em-workflow/references/templates/threat-model.md
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      spillover_modules:
+      - em-workflow/references/review-protocol.md
+      - em-workflow/agents/reviewer.md
+      - em-workflow/agents/codex-reviewer.md
+      - em-workflow/references/templates/spec-document.md
+      - em-workflow/references/templates/task-plan.md
+      - em-workflow/skills/develop/SKILL.md
+      - tests
+      - vertex-review:vertex-reviewer
+      work_still_required: true
+      work_still_required_evidence: THREAT-MODEL.md の生成からレビュー入力までの対応は存在しない。planner
+        の成果物は IMPLEMENTATION.md・VERIFICATION.md・タスク文書で（em-workflow/agents/implementation-planner.md:263）、write_policy
+        と digest_inputs にも THREAT-MODEL.md がない（em-workflow/references/contracts/planner-contract.md:43、同:73）。検証文書には任意のセキュリティ検証欄があるが、脅威モデルの緩和策との対応規則はない（em-workflow/skills/plan-writing/SKILL.md:168）。レビュー入力には
+        threat_model_path がなく（em-workflow/references/review-phase.md:187、em-workflow/references/review-protocol.md:45）、検出対象にも設計で決めた緩和策の未実装が明記されていない（em-workflow/skills/review-security/SKILL.md:12）。SPEC
+        の既存欄は防御方法も要求しているため、要件と設計分析の分離が必要になる（em-workflow/references/templates/spec-document.md:233）。既存の簡略化経路は
+        VERIFICATION.md を省略し、検証時に TASK.md を読むため、全機能対象という条件との整合も必要になる（em-workflow/skills/develop/SKILL.md:610、同:766）。既存契約を検査するテストはあるが（tests/test_worker_contracts_planning.py:117、tests/test_reviewer_roles_protocol.py:311）、THREAT-MODEL.md・STRIDE
+        固有のテストは検索で見つからなかった。両 manifest の現行 version は 0.2.14 で一致している（em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27）。呼び出し・依存数は共通レビュー入力の呼び出し元2系統と受け取り側3系統を数えた（em-workflow/references/review-phase.md:3、同:159、同:165、同:181）。変更行数・追加テスト数と新規テンプレートのファイル名は、必要な変更に対する概算・提案として示したよ
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 12
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 5
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- 'review round1 で litellm（muse-spark-contributor）の spec / architecture / performance
+  が rate_limited でスキップされ、すべて codex の #1 で代替された'
+- review round1 の medium 2 件（c6f8bdd1a0d4cfdb, 65e6da171201d11e）は unresolved のまま。resolution_reason
+  は Notion 起票を述べるが triage_filing.executed は false

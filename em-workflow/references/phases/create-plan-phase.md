@@ -25,13 +25,20 @@ This document does not restate the shapes it builds on — it cites them:
 - The clean-worktree precondition and the post-dispatch scope comparison:
   `references/phases/create-spec-phase.md` ("Scope verification") —
   identical here, so it is not repeated in this document.
+- **Minimal-tier scope-check delta** on top of that shared procedure: at the
+  `minimal` tier, the pre-dispatch snapshot keeps `TASK.md`'s full content,
+  and the post-dispatch check applies
+  `references/contracts/planner-contract.md`'s minimal-tier `TASK.md` append
+  rule to it instead of requiring it to be unchanged.
 
 ## 1. Purpose and ownership
 
 - **implementation-planner**: analyzes SPEC.md / REQUIREMENTS.md / DESIGN.md
-  and produces IMPLEMENTATION.md, VERIFICATION.md, per-task plans, and a
-  proposed workflow patch (`tasks_patch` / `requirements_patch` /
-  `step_patches` / `preserve`). Writes no `workflow.yaml` field directly.
+  and produces IMPLEMENTATION.md, VERIFICATION.md, THREAT-MODEL.md,
+  per-task plans, and a proposed workflow patch (`tasks_patch` /
+  `requirements_patch` / `step_patches` / `preserve`). Writes no
+  `workflow.yaml` field directly. The THREAT-MODEL.md pass runs at every
+  tier.
 - **Orchestrator**: the question loop, patch validation and application,
   `workflow.yaml`, and every commit.
 
@@ -167,11 +174,16 @@ applied).
   present — the task document (`feature-docs/{feature}/TASK.md`) in their
   place at the `minimal` tier (section 2a).
 - Prior answers already recorded in `phase-state/create-plan.yaml`.
-- `write_policy` for the artifacts it may write.
+- `write_policy` for the artifacts it may write: the THREAT-MODEL.md target
+  and, at the `minimal` tier, the TASK.md `extend_only` target
+  (`references/contracts/planner-contract.md`'s minimal-tier `TASK.md`
+  append rule).
 - The registry paths it must consult:
   `references/impl-skills.yaml`, `references/review-rules.yaml`,
   `references/license-compat.md`, `references/workflow-schema.md`,
-  `references/templates/task-plan.md`.
+  `references/templates/task-plan.md`,
+  `references/templates/threat-model.md` (passed as
+  `planning_inputs.threat_model_template`).
 
 ## 5. Question loop
 
@@ -189,7 +201,8 @@ and presentation limits. Not restated here.
 ## 7. Planner completion output
 
 On `status: completed`, the planner's payload carries: the written
-artifacts (IMPLEMENTATION.md, VERIFICATION.md, `tasks/*.md`), the task
+artifacts (IMPLEMENTATION.md, VERIFICATION.md, THREAT-MODEL.md,
+`tasks/*.md`, and TASK.md at the `minimal` tier when appended), the task
 index, and the proposed workflow patch — `tasks_patch`,
 `requirements_patch`, `step_patches`, and `preserve`
 (`references/workflow-patch.md`).
@@ -240,6 +253,8 @@ blocking on them:
 - No `excluded` or `tbd` requirement has a task assigned to it.
 - When `design` is `completed`, VERIFICATION.md includes a manual visual
   comparison step.
+- Every TM-n of a `threats-identified` model is reflected per the
+  plan-writing reflection rules.
 
 **Canonical validator invocation** for an `implementation-planner` result,
 covering every invariant above that the script can check:
