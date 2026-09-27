@@ -1,0 +1,21 @@
+schema_version: 1
+feature: loop-command-guard
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: ca8f62aa195334b8a00e96ad57896575917d46e4
+last_input_digest: sha256:b6e4cf0cc95e78866697b67e476e5688369c3f459a645ef9b88e0ca5650106e1
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:b6e4cf0cc95e78866697b67e476e5688369c3f459a645ef9b88e0ca5650106e1
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
