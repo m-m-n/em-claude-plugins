@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 7c3c4af813410bafeabd43b0bb0cee853bbcced3
 last_input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -19,6 +19,10 @@ answers:
     normalized_answer: feature 名をタスク記述（Notion タスク「em-workflow に設計段階の脅威モデリング（STRIDE）を組み込む」）から threat-model-stride と導出した
 worker_runs:
 - request_id: create-spec-run-0001
+  status: failed
+  input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
+  output_digest: sha256:80765533494c86968331d783c94222b0263783ff27d019128026aece98f2f97a
+- request_id: create-spec-run-0002
   status: dispatched
   input_digest: sha256:53df3e01ffca710a4406f0d49e41444e54206daac95c04ffee4d8d25ac4c6beb
   output_digest: null
@@ -27,4 +31,4 @@ patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-spec-run-0001: validate-worker-output gate_id error: questions[4] create-spec.design-step must offer option_id decide_autonomously'
