@@ -33,6 +33,7 @@ planning_inputs:
   impl_skills_registry: /absolute/.../references/impl-skills.yaml
   review_rules: /absolute/.../references/review-rules.yaml
   license_compat: /absolute/.../references/license-compat.md
+  threat_model_template: /absolute/.../references/templates/threat-model.md
 ```
 
 `write_policy` is also part of the input, in the common path-level form
@@ -41,9 +42,37 @@ model's owning document — the six actions, the `targets` /
 `allowed_write_roots` split, `expect_digest` requirements). This contract
 does not restate that model. The planner's `write_policy.targets` cover
 `IMPLEMENTATION.md` and `VERIFICATION.md` (action `create` on a first pass,
-`replace_own` on a same-phase rewrite); task plan files are new per task and
-so are governed by `allowed_write_roots` (`tasks/`) with `written_artifacts`
-reporting each path created.
+`replace_own` on a same-phase rewrite); `THREAT-MODEL.md` is a target on the
+same terms (action `create` on a first pass, `replace_own` on a same-phase
+rewrite — the existing re-plan authorization path applies unchanged). At the
+`minimal` tier, `TASK.md` is additionally a write_policy target with action
+`extend_only` and `expect_digest` set to its digest at dispatch time (see
+the minimal-tier `TASK.md` append rule below). Task plan files are new per
+task and so are governed by `allowed_write_roots` (`tasks/`) with
+`written_artifacts` reporting each path created.
+
+### Minimal-tier `TASK.md` append (SC-3)
+
+Applies only when the tier is `minimal` and the threat-model verdict is
+`threats-identified`. This is the Markdown counterpart of the `extend_only`
+key-comparison rule `references/contracts/spec-writer-contract.md` owns for
+YAML — the same action, applied to a Markdown file's exact-prefix content
+instead of a YAML key set.
+
+- **write_policy target**: `feature-docs/{feature}/TASK.md`, action
+  `extend_only`, `expect_digest` = its digest at dispatch time. The
+  orchestrator includes this target on every minimal-tier dispatch — the
+  verdict is not known before dispatch — but the planner writes to it only
+  for `threats-identified`.
+- **Exact-prefix rule**: the pre-existing content of `TASK.md` must be an
+  exact prefix of the new content.
+- **No-heading rule**: the appended text contains no heading line.
+- **Final-section precondition**: `## Expected Result` must be the final
+  section of the pre-existing file. When it is missing or not final, the
+  planner returns `blocked` (an existing `status` value) and writes nothing
+  to `TASK.md`.
+- **written_artifacts**: `TASK.md` appears in `written_artifacts` only when
+  it was actually appended.
 
 ## Question packet bundling rule
 
@@ -67,11 +96,13 @@ contract declares — the planner does not expand it:
 - `REQUIREMENTS.md`, `SPEC.md`, `DESIGN.md`, `LESSONS.md`, `workflow.yaml`
 - `references/impl-skills.yaml`, `references/review-rules.yaml`,
   `references/license-compat.md`, `references/workflow-schema.md`
-- `references/templates/task-plan.md`, `skills/plan-writing/SKILL.md`
+- `references/templates/task-plan.md`, `skills/plan-writing/SKILL.md`,
+  `references/templates/threat-model.md`
 - `design-system/tokens.yaml` (design system tokens — see exception below),
   or the project-native design system's own files
-- the existing `IMPLEMENTATION.md` / `VERIFICATION.md` / everything under
-  `tasks/` (so a re-plan detects drift against what is already written)
+- the existing `IMPLEMENTATION.md` / `VERIFICATION.md` / `THREAT-MODEL.md` /
+  everything under `tasks/` (so a re-plan detects drift against what is
+  already written)
 - this contract document itself (a contract change alters the planner's
   output shape)
 
@@ -90,7 +121,7 @@ consequence for the planner's own `digest_inputs`.
 ## `completed` payload
 
 ```yaml
-written_artifacts: [...]        # IMPLEMENTATION.md, VERIFICATION.md, tasks/taskNNNN.md — each with sha256
+written_artifacts: [...]        # IMPLEMENTATION.md, VERIFICATION.md, THREAT-MODEL.md, tasks/taskNNNN.md — each with sha256; TASK.md too at the minimal tier, only when appended
 workflow_patch: {...}           # operation: replace_planning — see references/workflow-patch.md
 payload:
   task_index:
