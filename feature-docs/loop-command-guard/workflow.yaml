@@ -105,8 +105,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
-    notes: null
+    status: failed
+    notes: 'batch auto-retry consumed (1/1): first attempt ended with max_output_tokens API error, no commits; journal failed stale-launched'
     branch: em-workflow/loop-command-guard/task0001
 review:
   status: pending
