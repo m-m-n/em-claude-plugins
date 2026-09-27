@@ -1,7 +1,7 @@
 schema_version: 1
 feature: threat-model-stride
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: c5138401a81ed3a2a66490a368954003b83e22b4
 last_input_digest: sha256:e6c61a15a675700d849155ff1aed5402aebf910b9a67cedd854e53064a080c29
@@ -10,11 +10,39 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:e6c61a15a675700d849155ff1aed5402aebf910b9a67cedd854e53064a080c29
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:dec8d1802c113bfcb40409c19178796ff6bd544b84da982c184cd17994ff525c
+artifacts:
+- path: feature-docs/threat-model-stride/IMPLEMENTATION.md
+  sha256: sha256:1cdc5fdf254a89c1b8f82e748abd0907b83ed1643ebdf85f10bbd4fc9997127c
+  produced_by: create-plan-run-0001
+- path: feature-docs/threat-model-stride/VERIFICATION.md
+  sha256: sha256:1dff36c4adee418aeee0fedb94c7f4d31946e1b22300dc6bec1bb656e6c193c2
+  produced_by: create-plan-run-0001
+- path: feature-docs/threat-model-stride/tasks/task0001.md
+  sha256: sha256:854d439c4930578ac58138b165acc971bc73ab90e8cde737defe7e422408fbba
+  produced_by: create-plan-run-0001
+- path: feature-docs/threat-model-stride/tasks/task0002.md
+  sha256: sha256:e318866380b570e6edd33f82eaf1c99341288164a4c4e8934374dc280eeb55f6
+  produced_by: create-plan-run-0001
+- path: feature-docs/threat-model-stride/tasks/task0003.md
+  sha256: sha256:2de90af8df2e9481c5020fda16c982d09ec340e32ba1684696c5bf1e764460e4
+  produced_by: create-plan-run-0001
+- path: feature-docs/threat-model-stride/tasks/task0004.md
+  sha256: sha256:d79cb4dc0967404f8b524083de4241ad68efccf136d3f765de25688e47a2ddd4
+  produced_by: create-plan-run-0001
+- path: feature-docs/threat-model-stride/tasks/task0005.md
+  sha256: sha256:6001027e5474a62b6e12466d463f33739ff9b45ca432db1239ad49dcd74feac4
+  produced_by: create-plan-run-0001
+- path: feature-docs/threat-model-stride/tasks/task0006.md
+  sha256: sha256:d5c1c25615293bf6e7c7964137f25497b679fc904da0ac86572b58791a2fa99c
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: threat-model-stride-plan-p0001
+  status: validated
+  base_input_digest: sha256:e6c61a15a675700d849155ff1aed5402aebf910b9a67cedd854e53064a080c29
+  base_workflow_blob: 1fdce4df5d5456e2bd8075378d17f6b9344d0048
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
