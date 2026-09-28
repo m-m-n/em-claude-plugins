@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-reset-hard
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: e9163b7dcb400408c2374d0fbc6f6094eca203e0
 last_input_digest: sha256:7fc3fe36ae7d385a6283e9b5913e0cabda7efaae3bf99b62e9b1af0ea384a715
