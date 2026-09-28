@@ -65,3 +65,13 @@ records:
   freeform: null
   normalized_answer: 'commit the human edits left uncommitted in the integration worktree (workflow.yaml implement failed->pending with failed_kind null; IMPLEMENTATION.md version-bump rule: each rework task raises the em-workflow patch version from its own HEAD) before the Step A.3 refresh, and relaunch task0003 once on its kept worktree as the human-authorized retry'
   resolution_note: 'gate: resume entry found uncommitted human edits that resolve the Notion resume condition (no gate_id; unlisted-gate fallback); options: A follow Step A.3 literally (refresh discards edits, stop-condition-3 fires) / B commit the edits as the human resolution, refresh becomes a no-op, relaunch task0003 once as the human-authorized retry / C save diff, refresh, stop and ask the human to commit; chosen: B; codex_consulted: true (1 turn); opus_escalation: false. Key points: the edits answer the resume condition and express a retry decision; committing preserves them; the retry is one-time and does not reopen the batch auto-retry budget. Risks noted: deviates from Step A.3 unconditional-first ordering (its purpose is discarding an abort terminal-commit leftover, which these edits are not); treating the edit as the I.2.c retry choice is an interpretation.'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-09-28T22:57:00+09:00'
+  source: batch-orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: 'declined auto-addition of task0003 deviation paths em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json'
+  resolution_note: 'task_id: task0003; deviation: em-workflow version patch bump made per the updated IMPLEMENTATION.md rule (each rework task raises the patch version). Declined: em-workflow/** is a workflow control path, and no AC-n / requirement id with an observable failure was named. Paths are not appended to tasks.task0003.files; the bump itself is sanctioned by IMPLEMENTATION.md.'
