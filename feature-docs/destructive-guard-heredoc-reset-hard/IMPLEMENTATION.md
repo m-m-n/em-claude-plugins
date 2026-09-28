@@ -34,11 +34,13 @@ lexing and shaping results, such as the command word found through the
 existing assignment / wrapper / grouping skip, but it must not change them.
 
 ## Shared Components
-The feature is one task, so there are no cross-task components.
+The first pass had no cross-task components. Review round 1 rework (D3) adds
+two, both inside destructive-guard.py. task0001 built both of them.
 
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
-| (none) | - | - | - |
+| SC1: statement classification | Classifies one statement for the destination decision | Pre: one statement's shaped words, as produced by the existing shaping. The command word is what `head()` returns. Post: exactly one of `sink` (the command word is a sink word), `data` (the command word is on the data-command list, and every command-specific condition for that word holds) or `undeterminable` (anything else, including no command word or a statically unknown one). It reads only that statement's own words: no other statement, and no chunk text. It is deterministic. | task0001 (built it), task0002 (calls it for host, downstream, group-closer and enclosing statements, and never changes what it decides), task0003 (changes what it decides for `git` only) |
+| SC2: fallback sink match | Decides whether an undeterminable heredoc's body is rescanned | Pre: the heredoc-stripped chunk. Post: true whenever today's chunk-wide SHELL_SINK test matches that text as written. Whether it also matches in other cases is task0003's decision. It is called only for undeterminable heredocs, and its result applies to that heredoc only. It is deterministic and evaluates nothing. | task0001 (built it), task0002 (calls it, unchanged), task0003 (widens the match) |
 
 ## Conventions
 - **Version bump**: every commit that touches `em-workflow/` includes the
@@ -118,6 +120,30 @@ Other parts of the decision:
 
 **Affected tasks**: task0001.
 
+### D3: Review round 1 rework decomposition and version rule
+- **Decision**: the residual review round 1 findings are grouped by root
+  cause into two tasks.
+  - task0002 covers destination inference. It is decided from one
+    structural analysis per chunk that `statements()` shares, and one
+    substitution scanner serves every caller.
+  - task0003 covers the `git` condition inside SC1 and the SC2 match.
+  - The two tasks meet only at SC1 and SC2, whose contracts are pinned
+    above.
+  - Neither rework task changes the em-workflow version. FR8's single
+    patch step for this feature was already taken in task0001. If the
+    plugin-version guard rejects a rework commit, the implementer reports
+    that as a plan deviation instead of raising the version again.
+- **Rationale**:
+  - Most findings share one cause. The destination decision re-lexed the
+    chunk apart from `statements()`, and the same substitution syntax was
+    parsed by more than one routine. Fixing them one at a time is what
+    left them unresolved after three auto-fix loops.
+  - The `git` alias route has a separate cause, and its fix lives inside
+    SC1 and SC2.
+  - Both tasks edit the same two files. Pinning SC1 and SC2 keeps their
+    edits apart at the function level.
+- **Affected tasks**: task0002, task0003.
+
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
@@ -128,6 +154,7 @@ Other parts of the decision:
 | Rewriting the heredoc stripping shifts the verdicts of existing cases | Low | High | Single-operator lines strip exactly as today, and the full suite must pass with no case removed (TM-4) |
 | Heredoc processing becomes super-linear on adversarial input | Low | Medium | An ad-hoc stress measurement against the 10-second hook timeout (TM-5, TS-20) |
 | A commit under `em-workflow/` is rejected by the plugin-version guard | Medium | Low | Land the task's `em-workflow/` changes together with the version bump in one commit |
+| task0002 and task0003 edit destructive-guard.py and the cases file in parallel, and their merge conflicts | Medium | Medium | They meet only at SC1 and SC2, which are pinned in Shared Components. Both tasks only append cases, and the full suite runs after the merge |
 
 ## Open Questions
 None. The earlier questions about execution-prefix commands and the

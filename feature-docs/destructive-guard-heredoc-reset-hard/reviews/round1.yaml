@@ -1,0 +1,838 @@
+round: 1
+executed_at: '2026-09-28T18:50:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: f78802832c98cee71b62d88a4fb2ee18b19c4eb5
+  head_commit: 35af46eddb67550c0cc5b4be91b604a60a469023
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-heredoc-reset-hard/task0001.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: destructive-guard は全 Bash 呼び出しの PreToolUse で走り、入力長に対する計算量が 10 秒のフック制限に直結する
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: performance#1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop1-litellm
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop1-litellm
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop1-litellm
+  perspective: performance
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop2-litellm
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop2-litellm
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop2-litellm
+  perspective: performance
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop3
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop3-litellm
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: architecture#loop3
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop3-litellm
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: spec#loop3
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop3-litellm
+  perspective: performance
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: rate_limited
+- run_id: performance#loop3
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+findings:
+- stable_id: 7c8927cc7dcf50ed
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 998
+  title: パイプ後段の実行プレフィックス・複合コマンド・プロセス置換を見落とし、bash 宛ての本文を data と判定する
+  description: '_pipeline_has_sink() は後段の先頭語を SINK_WORD_RE と照合するだけで、sink でなければ次の段へ進み、最後に False を返す。ホストが DATA_COMMANDS（cat 等）なら _decide_from_chain() は data を返し、本文は再走査されない。基準コミットと比べ、本文が git reset --hard HEAD
+    の次の形がすべて deny から allow に変わることを再現した: `cat <<''EOF'' | timeout 5 bash`、`| xargs -I{} bash -c ''{}''`、`| tee >(bash)`、`| { true; bash; }`。評価者の追加確認では `| /usr/bin/env bash`、`| exec bash`、`| stdbuf -o0 bash`、`|
+    docker exec -i c sh` も同様だった。`| sudo bash` / `| env bash` / `| nice bash` はラッパーの読み飛ばしで deny を保つため、判定がラッパー集合の網羅性に依存している。THREAT-MODEL TM-3 と計画では timeout / exec / 未知のコマンドを宛先不明として保守側のフォールバックに回す。しかし実装はこれをホストと外側の文にしか適用せず、パイプ後段では「sink
+    でなければ安全」と扱っている。comprehensive#0 も同じ箇所（998-1001）で `{ true; bash; }` と `tee >(bash)` を独立に報告した。'
+  suggestion: 後段の各段を「sink」「data（DATA_COMMANDS に含まれ、プロセス置換もグルーピングも無い）」「それ以外」に分ける。「それ以外」が 1 段でもあれば undetermined を返し、既存のチャンク全体 SHELL_SINK フォールバックに渡す。data と確定するのは全段が data のときだけにする。上の各形を deny ケースとして cases.json
+    に追加する（今回追加した deny ケースは旧実装でも全件 pass しており、新しい data 判定とチャンク内の sink 語が同時に現れる形を 1 件も固定していない）。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1; not re-reported by loop-3 re-review
+- stable_id: 59ed6682f7be415d
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1239
+  title: ブレースグループやサブシェル全体のパイプ先を見ず、bash 宛ての本文を data と判定する
+  description: '`{ cat <<''EOF''\ngit reset --hard HEAD\nEOF\n} | bash` と `( cat <<''EOF''\ngit reset --hard HEAD\nEOF\n) | bash` が、基準の deny から allow に変わることを再現した。ホスト文は `{ cat <<EOF` の行のセグメントで、区切りが改行のためパイプラインとして扱われない。グループを閉じる
+    `} | bash` は別のセグメントとして無視される。_shape_leading() がグルーピングを読み飛ばして cat をコマンド語とし、data に確定する。'
+  suggestion: ホスト文の整形でグルーピングの開始（`{` / `(`）を読み飛ばした場合は、グループ全体の出力先を追跡する。少なくとも undetermined を返し、チャンク全体の SHELL_SINK フォールバックに渡す。両方の形を deny ケースとして追加する。
+  sources:
+  - codex:security
+  confidence: 92
+  resolution: unresolved
+  resolution_reason: auto-applied loop 1, bypass variant remains (group opened in a prior statement); loop-3 editor skipped; loop-cap
+- stable_id: c660fd32a708e7e9
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1172
+  title: 入れ子のコマンド置換で外側への探索が SUBSTITUTION_STANDIN に再一致して進まず、中間の bash -c を見落とす
+  description: _walk_enclosing() は見つけた置換を SUBSTITUTION_STANDIN（"$(...)"）で置き換える。しかしこの文字列自体が SUBSTITUTION の `\$\(([^()]*)\)` に一致するため、次の反復では同じ位置の standin が「外側の置換」として見つかり、外側へ進まない。上限の 10 回まで同じ文を繰り返し、中間の階層（bash
+    -c）を一度も判定しない。`echo "$(bash -c "$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)")"` が deny から allow に変わることを再現した。SPEC FR1(iii) と THREAT-MODEL TM-1（外側の文をすべて検査する）に反する。上限に達したときも不完全な chain のまま data を返しうる。comprehensive#0（1172-1175）と
+    spec#1（1167-1175）も同じ欠陥を独立に報告した。
+  suggestion: standin には SUBSTITUTION に一致しない印（括弧も `$(` も含まない語）を使い、反復のたびに必ず外側へ進むようにする。上限に達したときや前進しない反復を検出したときは undetermined を返す。入れ子の中間に sink がある形を deny ケースとして追加する。
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (loop 3 quote-aware span scan); not re-reported by loop-3 re-review
+- stable_id: 1f42d286f7b7455a
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 964
+  title: 宛先判定のための再字句解析が statements() と違う解析状態で動き、case の分岐や置換内の区切りを読み違える
+  description: _shape_and_head() は毎回 case_stack=[] で _shape_leading() を呼ぶ。_locate_statements() / _locate_single() は _mark_substitutions() を通さずに lex_segments() を直接呼ぶ。そのため、statements() が守っている解析の約束（文をまたいで保つ
+    case の状態、コマンド置換の中の `;` を区切りにしない扱い）を、宛先判定だけが破っている。`case cat in\ncat) bash <<'EOF'\ngit reset --hard HEAD\nEOF\n;;\nesac`（分岐パターンの cat をコマンド語と誤認）と、`cat <<'EOF' $(true; true) | bash\ngit reset --hard HEAD\nEOF`（置換内の
+    `;` で文が割れ、| bash がホスト文のパイプラインから外れる）が、どちらも deny から allow に変わることを再現した。spec#1（964-968）も case の例を独立に報告した。構文解析が二重になり、不完全な側の解析を data 判定の根拠にしていることが、このラウンドで見つかった他の見逃しにも共通する原因になっている。
+  suggestion: statements() と宛先判定が同じ字句解析の結果（置換をマーク済みで、case の状態を保ったセグメント列）を共有する仕組みにする。共有が難しければ、ホスト文の手前で case が開いている場合や、ホストの行に置換がある場合は undetermined に倒す。上の 2 例を deny ケースとして追加する。
+  sources:
+  - codex:architecture
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: auto-applied loop 1; loop-3 re-review still reports case-state and duplicated substitution parsing; loop-cap
+- stable_id: 19b046b8bd12ce83
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 991
+  title: パイプ記号の後に空白を挟んだ改行で、後段の sink 探索が止まる
+  description: SPEC FR1(ii) は、下流のパイプ段に sink がある本文を再走査するよう求めている。`cat <<'EOF' | \ngit reset --hard HEAD\nEOF\nbash`（| の後に空白、本文の後に bash）が deny から allow に変わることを再現した。空白の無い `|\n` は区切りが 1 つのトークンにまとまるので deny を保つ。空白があると
+    `|` と改行が別の区切りになり、_pipeline_has_sink() は改行だけの空のセグメントで探索を打ち切る。
+  suggestion: _pipeline_has_sink() で、パイプ区切りの直後にある空のセグメント（改行だけ）を読み飛ばして次の段へ進む。または空のセグメントに当たったら undetermined 扱いにする。空白やタブを挟む形を deny ケースとして追加する。
+  sources:
+  - codex:spec
+  confidence: 88
+  resolution: unresolved
+  resolution_reason: spec category is not an auto-fix candidate; loop-3 spec re-review still reports it
+- stable_id: 11eb805ea0132bba
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1224
+  title: 中に括弧を含むコマンド置換を置換と認識できず、ホスト文を外側の文と取り違える
+  description: _heredoc_destinations() は、ヒアドキュメントが置換の中にあるかどうかを SUBSTITUTION.finditer() で決める。SUBSTITUTION の `$(...)` は中に括弧があると一致しない。一致しなかった置換の中のヒアドキュメントは plain として _locate_statements() に回され、マーカーが外側の文の引用された引数の中に入る。その結果、外側の
+    echo がホスト文として使われる。`echo "$(cat <<'EOF' | (bash)\ngit reset --hard HEAD\nEOF\n)"` が deny から allow に変わることを再現した。plain 経路の前提（置換の外にある）を確かめていない。SPEC FR1(ii)/(iii) に反する。
+  suggestion: plain 経路で、マーカーを含むトークンに `$(` やバッククォートが含まれる場合、またはマーカーが引用の中にある場合は undetermined を返す。括弧の対応を追って置換の範囲を見つける方式に置き換えてもよい。この形を deny ケースとして追加する。
+  sources:
+  - codex:spec
+  confidence: 88
+  resolution: fixed
+  resolution_reason: resolved collaterally by loop-3 paren-stack substitution span scan; not re-reported by loop-3 re-review
+- stable_id: ee950a61a7517d99
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1111
+  title: 置換を `<<印` に置き換えるため、コマンド位置の置換がリダイレクトとして消え、後ろの引数がコマンド語に繰り上がる
+  description: _locate_single() は外側の文を探すとき、置換の範囲全体を `<<` とマーカーに置き換える。split_redirects() がこれをリダイレクトとして取り除くので、置換がコマンド位置にあると次の引数がコマンド語になる。`$(cat <<'EOF'\ngit reset --hard\nEOF\n) cat; echo bash` が deny から allow
+    に変わることを再現した。置換の出力をコマンドとして実行する形は、sink 語の無いチャンクでは基準でも allow になる既存の見逃しで、実際に現れにくい形でもあるため、high から medium に下げた。
+  suggestion: 置換の範囲には、リダイレクトの形ではない通常の語としての印を使う。置換がコマンド位置にあるときはコマンド語が不明（undetermined）として扱う。
+  sources:
+  - codex:spec
+  confidence: 80
+  resolution: fixed
+  resolution_reason: resolved collaterally by loop-2/3 substitution handling; not re-reported by loop-3 re-review
+- stable_id: d0309bdea574eacb
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1064
+  title: 先頭の代入を取り除いた後の語で「代入だけの文」かを判定しているため、外側の代入文の例外が効かない
+  description: _stmt_info_from_segment() は、_shape_and_head() が返す shaped（_shape_leading() が先頭の代入を読み飛ばした後の語）を _is_assignment_only() に渡す。代入だけの文では shaped が空になって常に False になる。そのため、THREAT-MODEL TM-3 と計画が定める「代入だけの外側の文は除外する」が働かない。外側の文の語は
+    None になって undetermined に落ち、チャンクに sink 語があれば再走査される。`echo bash; x="$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)"` と `python3 -V; x="$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)"` は allow になるべきところが deny
+    のままであることを確認した。誤爆側の問題で、基準も deny のため回帰ではない。comprehensive#0 も同じ箇所を独立に報告した。
+  suggestion: 先頭の代入を取り除く前の語（words_only）で、代入だけの文かどうかを判定する。上の 2 形を allow ケースとして追加する。
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: fixed
+  resolution_reason: resolved collaterally by loop-2 assignment handling; not re-reported by loop-3 re-review
+- stable_id: 2afe02365ad4f84a
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1093
+  title: 入力に含まれる制御文字が内部マーカーと衝突し、sink 宛ての本文の判定を上書きできる
+  description: _locate_statements() は `\x03<数字>\x04` をマーカーとしてすべてのセグメントから集め、results[rec_index] を後に見つかった方で上書きする。入力にこの並びを入れると、後ろの文が同じ index を登録し直す。`bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho '<U+0003>0<U+0004>'`
+    が deny から allow に変わることを再現した。制御文字をわざと埋め込まないと起きず、事故では起きない。また基準にも、引用の中の `<<` を演算子と誤認するという、より単純な意図的な回避経路が既にある。このため high から medium に下げた。
+  suggestion: チャンクにマーカー文字が含まれるときは、すべてのヒアドキュメントを undetermined にする。または同じ index が複数のセグメントに現れたら undetermined にする。この形を deny ケースとして追加する。
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: marker collision guard added only to _locate_statements; loop-3 re-review reports the _locate_single path
+- stable_id: 185bd4ac0e52469a
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 843
+  title: splitlines() が改行以外の文字でも行を分けるため、演算子と同じ行にある後続の文を本文として消してしまう
+  description: strip_heredocs() は chunk.splitlines(keepends=True) で行に分ける。str.splitlines() は \n のほかに \r、\v、\f、\x1c から \x1e、\x85、\u2028、\u2029 でも行を分ける。bash は \n でしか行を区切らない。`cat <<'A' <CR>; git reset --hard
+    HEAD\nhello\nA` では、bash は同じ行の `; git reset --hard HEAD` を実行する。一方、新しい実装はこれを本文の 1 行目として取り除き、ホストの cat を data と判定して allow する。\r、\f、\v、\x1e、\x85、\u2028 の各形で、基準の deny から allow に変わることを再現した。bash で後続の文が実際に実行されることも確かめた。sink
+    語を必要とせず、`rm -rf /home/sakura/x` のような git reset --hard 以外の破壊的なコマンドにも同じように効く。基準の HEREDOC 正規表現は `[^\n]*\n` で演算子の行を \n まで保っていたので、この経路は無かった。制御文字をわざと埋め込む必要があり事故では起きにくいので、medium とした。（評価者が自分で確認した指摘で、レビュアーの報告には無い）
+  suggestion: '行の分割を \n だけで行う（例: re.split(r''(?<=\n)'', chunk) や手書きの分割）。基準の正規表現と同じ行境界にそろえる。\r などを挟んだ形を deny ケースとして追加する。'
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: fixed
+  resolution_reason: not re-reported by loop-3 re-review
+- stable_id: f3d740ec94d4fe03
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1246
+  title: 置換の中のヒアドキュメント 1 件ごとにチャンク全体を字句解析し直し、入力長に対して二次的に遅くなる
+  description: _heredoc_destinations() の nested 経路は、置換の中のヒアドキュメント 1 件ごとに、_locate_single() と _walk_enclosing() でチャンク全体を lex_segments() し直す。さらに _walk_enclosing() は standin が再一致するので、上限の 10 回まで同じ解析を繰り返す。評価者の再測定では、`echo
+    "$(cat <<'E'\nhello\nE\n)"` を繰り返した入力で 100 件 1.0 秒、200 件 3.9 秒、300 件（約 8.7KB）8.8 秒だった。基準はどれも 0.03 秒前後。約 320 件で hooks.json の timeout 10 秒を超え、ガードの判定が失われる。NFR3 と THREAT-MODEL TM-5 に反する。置換を含まないヒアドキュメントは
+    3000 件で 0.23 秒と、線形を保っている。security#0 と spec#1 も同じ箇所（1246-1252）を独立に報告した。
+  suggestion: チャンクの字句解析と、置換の階層と文の対応を 1 回だけ作り、すべてのヒアドキュメントで共有する。standin の再一致を直し、外側への探索が深さに比例して終わるようにする。件数が一定を超えたら undetermined に倒すことも検討する。
+  sources:
+  - codex:performance
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: medium; loop-3 performance re-review still reports per-heredoc re-lex
+- stable_id: e115db819e0a3a83
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1712
+  title: 宛先不明のヒアドキュメントごとに SHELL_SINK.search(chunk) をやり直している
+  description: statements() のループの中で、undetermined のヒアドキュメント 1 件ごとにチャンク全体へ SHELL_SINK.search() をかけている。sink 語の無いチャンクでは毎回末尾まで走査するので、件数×チャンク長の計算量になる。報告値は sort のヒアドキュメント 2000 件で 0.066 秒から 0.615 秒。今の実害は小さいが、NFR3
+    の「計算量が爆発しないこと」に対して不要な二次の項を足している。
+  suggestion: SHELL_SINK.search(chunk) の結果をループの前に 1 回だけ求め、ループの中で使い回す。
+  sources:
+  - codex:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: medium; loop-3 performance re-review still reports repeated SHELL_SINK search
+- stable_id: 24c1bec86e467241
+  severity: high
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1721
+  title: 置換内のヒアドキュメントごとにチャンク全体を再解析している
+  description: 前回項目1は未修正。各レコードで呼ぶ _walk_enclosing が置換範囲を再計算し、最外層でチャンク全体を再度字句解析するため、件数H・文字数Lに対して O(H×L) になる。10段の制限は深さだけを制限する。引用付きヒアドキュメントを含む x="$(cat ...)" を繰り返した実測では、200件で解析0.40秒、400件で1.55秒、800件・17.6KBではフック全体が6.17秒かかり、Bash実行を待たせる
+  suggestion: 置換の親子関係と各文の位置をチャンク単位で構築し、同じ解析範囲にあるヒアドキュメントをまとめて処理して結果を共有する方式に変更してほしい
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 0e66c874cb579922
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1623
+  title: case判定がヒアドキュメントごとに先頭から再走査している
+  description: 前回項目2は未修正。1715行から各ヒアドキュメントについて呼び出され、chunk[:pos] のコピーと単語一覧の生成・走査を繰り返す。caseを含まない通常のcatでも発生する。cat <<'E' のヒアドキュメントを2000件・28KBから4000件・56KBに増やすと、statementsの実測時間は0.46秒から1.67秒に増加し、後者の1.50秒をこの関数が占めた
+  suggestion: case/esacを一度だけ走査し、位置順のヒアドキュメントに対して深さを引き継いで判定する方式に変更してほしい
+  sources:
+  - codex:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 84b027c87bc28d38
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2187
+  title: 同じチャンクへのSHELL_SINK検索を繰り返している
+  description: 前回項目3は未修正。宛先がundeterminedで本文が空でないレコードごとに、変更されないchunkを検索する。該当語がない場合は毎回全文を走査する。timeout 1 catのヒアドキュメント1000件と末尾コメントを含む約134KBの入力では、この検索だけで実測1.02秒、2000件・約268KBでは4.07秒かかった
+  suggestion: 検索結果をチャンクごとに一度だけ計算し、ループ内で再利用してほしい
+  sources:
+  - codex:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 981701ed3f0bc82d
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1654
+  title: 置換一覧の全走査がヒアドキュメント数と掛け合わされる
+  description: 前回項目4は未修正。sub_matchesの生成は一度でも、1716行から各ヒアドキュメントについて一覧全体を走査する。1683〜1685行にも各レコードから全spansを調べる処理があり、どちらも O(H×S) になる。echo $(true) を4000行、その後にcatのヒアドキュメントを4000件並べた108KBの入力では、この重なり判定だけで1600万回の比較と実測0.34秒を要した
+  suggestion: 置換範囲とヒアドキュメントを位置順に対応付け、行との重なり判定にも位置索引を利用して全件走査を避けてほしい
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 6f86529d2f276ff4
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1092
+  title: 宛先判定が通常の文解析から case の継続状態を引き継いでいない
+  description: _shape_and_head() は文ごとに空の case_stack を渡すため、statements() と構文の解釈が食い違う。補助の _case_open_before() も単語を数える別実装なので、実行されない分岐の引数 esac で状態が崩れる。例えば「case cat in\nother) echo esac;;\ncat) bash <<'EOF'\ngit
+    reset --hard HEAD\nEOF\n;;\nesac」は bash -n に成功するが、パターン cat が宛先コマンドとして扱われ、変更前の deny が変更後は allow になる
+  suggestion: case の継続状態と区切りの処理を共通の解析段階に集約し、その解析結果を宛先判定にも渡す。単語数による _case_open_before() の状態推定を置き換える回帰テストを追加する
+  sources:
+  - codex:architecture
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 0324d59573ff5fe3
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 104
+  title: 重複する置換解析の片方に引用符対応が反映されていない
+  description: _all_substitution_spans() の引用符対応は確認できたが、本文の置換を抽出するこの関数は独自に括弧を数え、引用符内の ) も終端として扱う。「python3 -V; cat <<EOF\n$(printf '%s' ')'; git reset --hard HEAD)\nEOF」では抽出が途中で終了し、残りの破壊的コマンドが検査されない。bash
+    -n は成功し、変更前の deny が変更後は allow になる。同じ置換構文を別々に解析する設計によって、今回の修正が実行内容の抽出側へ伝わっていない
+  suggestion: 置換内部の引用符・括弧の解析を共通化する。ヒアドキュメント本文と通常のシェル構文では外側の引用規則を分け、内部の境界判定は同じ処理を利用する
+  sources:
+  - codex:architecture
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 2c2ff4b3757c4691
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1674
+  title: コメント内の未閉鎖置換によって実行先の判定が失われる
+  description: 'loop3で生じた後退。`# $(
+
+    b"a"s"h" <<''EOF''
+
+    git reset --hard HEAD
+
+    EOF` は直前のコードでは deny、現在は allow になる。コメント内の `$(` が未閉鎖置換として記録され、引用符を解決すれば bash と判定できる実行先まで undetermined に変更される。その後の生文字列による SHELL_SINK 検索は分割された bash の綴りに一致せず、実際に実行される本文を検査しない'
+  suggestion: 置換構造の走査でシェルのコメントを除外し、無関係な未閉鎖置換によって確定した実行先を失わないようにする。この入力を回帰テストに追加する
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 517c0f9226622122
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 109
+  title: 本文内の引用された閉じ括弧で置換の抽出が途中終了する
+  description: '新しい本文用の抽出関数は引用状態を追跡しない。`cat <<EOF
+
+    $(printf ''%s'' '')''; git reset --hard HEAD)
+
+    EOF` は allow になる。引用された `)` を置換の終端として扱い、抽出結果が `printf ''%s'' ''` で途切れるため、実行される後続の git reset が検査されない。case パターンの `)` でも同じ欠落を確認した'
+  suggestion: 置換内部の引用符と case 構文を考慮して終端を求め、構造が確定できない場合に後続の実行部分を捨てないようにする
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 80895880e323f669
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2226
+  title: 本文の深い入れ子では中間の破壊的コマンドが検査されない
+  description: 'loop3の入れ子対応には検出漏れが残る。`cat <<EOF
+
+    $(echo $(git reset --hard $(echo HEAD)))
+
+    EOF` は allow になる。外側を取り出した後は従来の SUBSTITUTION 正規表現に戻るため、最内側の echo HEAD だけが追加走査される。中間の git reset は外側の echo の引数として残り、実行されるコマンドとして検査されない'
+  suggestion: 抽出した置換内部にも構造を追跡する走査を再帰的に適用し、すべての階層の実行文を検査する。三重以上の入れ子を回帰テストに追加する
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 35e1a4af38df9346
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1267
+  title: 既知・未修正：前の文で開始したグループのパイプ先を見落とす
+  description: '`{ true; cat <<''EOF''
+
+    git reset --hard HEAD
+
+    EOF
+
+    } | bash` は現在も allow になる。グループ開始を現在の区切り内だけで調べるため、先行する `{ true;` の文脈が失われる。本文は cat 向けの data と判定されるが、実際にはグループの出力を bash が実行する'
+  suggestion: 区切りをまたいでグループの包含関係を保持し、グループ全体のパイプ先も本文の実行先判定に反映する
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: fab5b1d068deda78
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1349
+  title: 既知・未修正：入力中の制御文字が単一位置検索の印を偽装する
+  description: '`echo "$(echo ''\x030\x04''; bash <<''EOF''
+
+    git reset --hard HEAD
+
+    EOF
+
+    )"` の \x03 と \x04 を実際の制御文字として入力すると、現在も allow になる。_locate_single は最初に見つかった印を信用するため、先行する echo の引数を挿入した印と誤認し、bash 向けの本文を data と判定する。_locate_statements にある入力中の印の検査が、この経路にはない'
+  suggestion: _locate_single でも入力由来の印を拒否または無害化し、検索対象の位置に挿入した印だけから実行先を決定する
+  sources:
+  - codex:comprehensive
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: e64f20d3c28211dc
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 931
+  title: 既知・未修正：コメント内の偽の演算子が後続コマンドを本文として除去する
+  description: '`cat <<''A'' # <<''B''
+
+    safe
+
+    A
+
+    git reset --hard HEAD
+
+    B` は現在も allow になる。行全体への finditer がコメント内の <<''B'' まで拾い、実際には通常のコマンドである git reset を二つ目の本文として除去する。シェルではコメント内の演算子は無効であり、A の後の git reset が実行される'
+  suggestion: コメントと引用状態を判別したうえで、有効なヒアドキュメント演算子だけを収集する
+  sources:
+  - codex:comprehensive
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: bb97a3fac62c8bd7
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1624
+  title: 既知・未修正：引用された esac が case の追跡を終了させる
+  description: '`case cat in ''esac''|cat) bash <<''EOF''
+
+    git reset --hard HEAD
+
+    EOF
+
+    ;; esac` は現在も allow になる。単語の正規表現走査がパターン中の ''esac'' を終了予約語と誤認する。その結果、case 内であることを見失い、選択肢の cat を本文の実行先と判定するが、実際には一致した分岐の bash が本文を実行する'
+  suggestion: 引用情報と case の構文状態に基づいて開始・終了を追跡し、パターンや引数中の esac で状態を閉じないようにする
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 4821ff653903fd9c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 433
+  title: 追加された本文走査とGit設定経由の判定が期待値テストで実行されない
+  description: 表の423件を計測すると、_extract_heredoc_body_substitutions の呼び出しは0回で、_git_alias_risk が真になるケースも0件だった。引用なしの追加例は exec bash 向けなので、本文用の置換抽出を通らない。loop3直前のコードでも423件すべて通るため、この表では今回の修正の欠落や後退を検出できない
+  suggestion: 引用なしの cat 本文について、実行される置換とエスケープされた置換、深い入れ子、引用された括弧を追加する。--config-env と GIT_CONFIG_* による本文実行も期待値テストに追加する
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: f6537aafdc9f2f9f
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1150
+  title: パイプ後に空白と改行があるとシンクを見落とす
+  description: 入力 `cat <<'EOF' | \ngit reset --hard HEAD\nEOF\nb"a"s"h"` が allow になる。字句解析でパイプと改行が別の区切りになり、空の文で下流の探索が止まるため、引用符除去後の bash に到達しない。SPEC FR1(ii) は下流のシンクへ渡る本文の再走査を要求し、計画書もパイプ直後の改行を含めている。
+  suggestion: パイプに続く改行だけの空の文を読み飛ばし、次の実際のコマンド語まで探索する回帰ケースを追加することを勧めるよ
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: f1ca12544536c788
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1579
+  title: 内側のグループ判定で外側の確定したシンクを無視する
+  description: 入力 `b"a"s"h" -c "$( (cat <<'EOF'\ngit reset --hard HEAD\nEOF\n) )"` が allow になる。内側のグループに parse_failed が設定され、この早期 return により、既に bash と認識できている外側の文を確認しない。SPEC FR1(iii) と計画書 Component 2 は、外側のシンクへ渡る本文を
+    sink-bound として優先的に再走査することを要求している。
+  suggestion: 外側も含めた確定済みのシンク判定を先に行い、シンクが見つからない場合に限って宛先不明へ移すことを勧めるよ
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 2ee8371b6e7faca6
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1169
+  title: 解析できた非シンクの下流コマンドでも本文を再走査する
+  description: 入力 `cat <<'EOF' | sed -n p\ngit reset --hard HEAD\nEOF\necho bash` が deny になる。下流の sed が DATA_COMMANDS にないだけで宛先不明にし、別文の引数 bash によって本文を再走査する。SPEC FR1(ii) は下流のシンクのコマンド語を条件とし、IMPLEMENTATION.md
+    D2 の不明条件はホスト文・外側の文について定義されている。この入力はその条件に該当しない。
+  suggestion: 下流の語がデータコマンド一覧にないことだけで FR5 を適用せず、計画書で定義した不明条件に限定することを勧めるよ
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 8ae4799aa411ebfc
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1714
+  title: 別文の case という語や置換がデータ本文の誤検知を起こす
+  description: 入力 `echo case bash; cat <<'EOF'\ngit reset --hard HEAD\nEOF` と `echo "$(true)" bash; cat <<'EOF'\ngit reset --hard HEAD\nEOF` がどちらも deny になる。cat と解析できているのに、前方の case という引数や同じ行の別文の置換だけで宛先不明へ変更している。SPEC
+    FR1 はそれ以外の本文をデータとして扱うことを要求し、D2 も別文の影響でデータ本文を再走査しないとしている。
+  suggestion: 単語の出現や物理行の一致ではなく、そのヒアドキュメントを持つ文の構造に基づいて不明条件を判断することを勧めるよ
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: d00f4fae5bd8ed6d
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1313
+  title: 置換内部の区切りを外側の文の区切りと誤認する
+  description: 入力 `echo $(true; bash) <<'EOF'\ngit reset --hard HEAD\nEOF` が deny になる。置換をそのまま lex_segments() に渡すため、内部のセミコロンで文が分かれ、本文の宛先が echo ではなく bash と判定される。SPEC FR1(iii) はヒアドキュメント自体が置換内にある場合の条件であり、この入力の
+    echo 宛て本文には適用できない。
+  suggestion: 外側の文を解析する際は置換内部を独立した範囲として扱い、その区切りやコマンド語が外側へ漏れないようにすることを勧めるよ
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 0ad2adec9d885a10
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1623
+  title: ヒアドキュメントごとの前方再走査が制限時間を超える
+  description: '`case x in\nx)\n` に `cat <<''EOF''\nx\nEOF\n` を N 回連結し、`;;\nesac` で閉じる入力で、N=2,000 は約0.95秒、4,000 は約3.51秒、8,000 は12秒で打ち切りとなった。各本文について先頭から正規表現を再実行するため、処理量が二次的に増える。SPEC NFR3 の10秒以内という条件と、計画書の入力長に比例する処理という条件を満たさない。'
+  suggestion: case の状態を一度の前方走査で記録し、各ヒアドキュメントの判定では再走査せず参照することを勧めるよ
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: d00aa6c44e226d9c
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2191
+  title: 明示的に対象外とされた本文内の置換走査が残っている
+  description: 入力 `cat <<EOF\n$(git reset --hard HEAD)\nEOF` とバッククォートで同じ命令を囲んだ入力が deny になる。宛先が data でも、この分岐が本文内の置換を検査キューへ追加する。SPEC Assumptions は、この形が現在 allow であることを明記したうえで、本機能の対象外とし、本文内の置換を走査する要件を追加しないとしている。
+  suggestion: データ本文から置換を抽出して走査する分岐を今回の差分から除外することを勧めるよ
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: d54b3cd3f3f3330a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1264
+  title: 前の文で開かれたグループのパイプ先を見落とす
+  description: 未修正の指摘を再現した。`{\ncat <<'EOF'\ngit reset --hard HEAD\nEOF\n} | bash` は基準版で deny、現在版で allow になる。グループ開始の確認が現在の文だけを対象とするため、cat の本文を data と判定し、グループ全体の出力を実行する bash を見落とす。
+  suggestion: グループの開始・終了とパイプ接続を文をまたいで追跡し、内部のヒアドキュメントにもグループ全体の実行先を適用することを推奨する。
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 13e9b1a36c113a4c
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1351
+  title: 入力中の偽装マーカーでヒアドキュメントの実行先をすり替えられる
+  description: 未修正の指摘を再現した。`printf '\u00030\u0004'; bash -c "$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)"` の Unicode エスケープを実際の制御文字として入力すると、基準版は deny、現在版は allow になる。_locate_single は最初に見つかったマーカーを無条件で採用し、本文の外側の実行先を
+    printf と誤認する。_locate_statements にある入力由来マーカーの検査が、この経路にはない。
+  suggestion: 入力と内部マーカーを識別できる位置情報を使用することを推奨する。少なくとも _locate_single にも衝突・重複検査を適用し、偽装マーカーから data を決定しないようにする必要がある。
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: a9eebe180f529572
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1064
+  title: 先行する export 文で Git 設定の検査を回避できる
+  description: GIT_CONFIG_* 対策は同じ文の先頭にある代入しか確認しない。`export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.x GIT_CONFIG_VALUE_0='!bash'; git x <<'EOF'\ngit reset --hard HEAD\nEOF` は基準版で deny、現在版で allow になる。先行する
+    export によって alias が設定されるが、後続の git は通常の data コマンドとして扱われ、bash が実行する本文が除外される。
+  suggestion: 先行する代入・export による Git 設定も判定に反映するか、設定された alias の実行先を確定できない git 呼び出しを data と扱わないことを推奨する。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 4dbf8ef79588b928
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1579
+  title: 'TM-1: ホストの不明判定で既知の外側シェルを無視してしまう'
+  description: '`b"a"s"h" -c "$({ cat <<''EOF''\ngit reset --hard HEAD\nEOF\n})"` は allow になる。外側の実行先は bash と解析できているが、ホストの parse_failed で先に戻り、生文字列の SHELL_SINK 検索にも一致しないため本文が除外される。feature-docs/destructive-guard-heredoc-reset-hard/THREAT-MODEL.md
+    の TB-1／TM-1 が要求する、外側の実行先に基づく再走査が実施されない。同じ生文字列検索への依存により、`VAL=''!b"a"s"h"'' git --config-env=alias.x=VAL x <<''EOF''\ngit reset --hard HEAD\nEOF` も allow となり、--config-env 対策にも回避が残る。'
+  suggestion: ホストの解析失敗で戻る前に全階層の既知の実行先を確認することを推奨する。また、実行先が不明な場合、生文字列にシェル名がないことだけを根拠に本文の検査を省略しないようにする必要がある。
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 75c00499ddc61b66
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1623
+  title: 'TM-5: 入力全体の反復走査で拒否判定が時間制限を超える'
+  description: _case_open_before は各ヒアドキュメントについて先頭から再走査するため、処理量が二次的に増える。`echo ` に `a ` を20,000回続け、改行後に `:<<E\nx\nE\n` を8,000回、その後に `git reset --hard HEAD` を置いた112,027バイトの入力では、現在版の判定に14.23秒かかった。基準版は0.29秒だった。feature-docs/destructive-guard-heredoc-reset-hard/THREAT-MODEL.md
+    の TB-1／TM-5 が要求する入力サイズに比例した処理が実現されておらず、記載された10秒制限では末尾の破壊操作に対する拒否判定が間に合わない。
+  suggestion: case の状態を一度の走査で記録し、各演算子の位置から参照する方式を推奨する。長い先行文を伴う多数のヒアドキュメントでも、時間制限内に拒否できる回帰テストが必要になる。
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+evaluation:
+  round_summary: 'ラウンド 1（diff、cross_validation=true）。litellm の 3 件（architecture#0 / spec#0 / performance#0）は rate_limited でスキップされ、各観点とも codex のフォールバックが完了している。評価者は基準コミット f7880283 の destructive-guard.py と新しい版の両方に同じ入力を与え、レビュアーが報告した
+    deny から allow への変化をすべて再現した。本文がシェルに渡る形の検知が複数の経路で落ちている。共通の原因は、宛先判定が statements() とは別の不完全な再解析から data を積極的に確定していることで、パイプ後段の実行プレフィックス、グルーピング、入れ子の置換、case、括弧を含む置換、`|` の後の空白が見逃されている。評価者は独自の確認で、splitlines()
+    の行境界が bash と違うことによる、sink 語を必要としない新しい回避経路（\r 等を使う形、rm -rf にも効く）を追加した。性能は、置換の中のヒアドキュメント 300 件で 8.8 秒（基準 0.03 秒）で、NFR3 に反する。FR7（既存ケースは追加だけで削除・変更なし）、FR8（plugin.json と marketplace.json の両方が 0.3.3 から 0.3.4）、テスト
+    424/424 pass は確認した。見送りは次のとおり。git の alias は計画で受け入れ済みの残存リスク。引用符なし本文の中の置換は SPEC の Assumptions で対象外。引用・コメントの中の偽の `<<` は、SPEC で対象外とされた既存の誤認の延長で、基準でもより単純な形が allow になるため見送った。レビュアーの出力にプロンプトインジェクションの試みは無かった。観点ごとの確認状況:
+    security: findings（報告 7 件を再現し、パイプ後段の追加の形と splitlines の新しい経路を評価者が見つけた）。comprehensive: corroborated（high 4 件と medium 1 件を再現）。architecture: corroborated（2 例とも再現。architecture#0 はスキップされ、architecture#1 が担当）。spec:
+    corroborated（high 5 件と medium 2 件を再現し、FR7 / FR8 / AC-7 も確認）。performance: corroborated（二次的な増加を再測定で確認。置換の無い経路は線形）。'
+  recommended_action: rework
+  action_rationale: high の見逃しが 6 系統あり、どれも基準では deny だったものが allow になる検知力の後退で、SPEC の目的 2 と FR5 に反する。根本の原因は設計にある。宛先判定が、statements() と一致しない再解析の、しかも一部分の証拠から data を確定している。そのため個別に直すより、「解析が扱いきれない構造（後段の未知の語、グルーピング、case、認識できない置換、マーカーの衝突）が
+    1 つでもあれば undetermined に倒す」という設計の修正と、字句解析の共有による二次的な処理時間の解消を、まとめて作り直す方がよい。spec に分類された high が 2 件あり、auto-fix の対象外になる点からも rework を勧める。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 857
+  run_id: security#0
+  reason: 'demoted: 引用の中の `<<` を演算子と誤認する挙動は SPEC の Assumptions で対象外とされている。基準でも `echo ''<<B''\n<任意のコマンド>\nB` というより単純な形で allow になることを確認した。新しい回避能力を加えていないため見送る'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 856
+  run_id: comprehensive#0
+  reason: 'demoted: コメントの中の `<<` も同じく SPEC で対象外とされた既存の誤認の延長。基準でも `true # <<B\n<任意のコマンド>\nB` が allow になることを確認した'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 170
+  run_id: security#0
+  reason: 'demoted: git -c alias.x=''!bash'' のように、データコマンドが自分のオプションでプログラムを起動する形は、計画の段階で既知の残存リスクとして受け入れ済みで、後続のタスクで扱う予定'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1711
+  run_id: comprehensive#0
+  reason: 'demoted: 引用符なしのヒアドキュメント本文の中の $(...) は、SPEC の Assumptions で「現在 allow（検知漏れ）、この feature の対象外、別タスクで扱う」とされている。基準の deny は、チャンク全体の sink 一致による偶然の検出だった'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1172
+  run_id: comprehensive#0
+  reason: 'duplicate of another finding: 入れ子の置換で standin が再一致する指摘（security、line 1172）と同じ欠陥'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 998
+  run_id: comprehensive#0
+  reason: 'duplicate of another finding: パイプ後段の複合コマンドとプロセス置換を見落とす指摘（security、line 998）に含めた'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1167
+  run_id: spec#1
+  reason: 'duplicate of another finding: 入れ子の置換で standin が再一致する指摘（security、line 1172）と同じ欠陥'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 964
+  run_id: spec#1
+  reason: 'duplicate of another finding: case_stack を空で始める再解析の指摘（architecture、line 964）と同じ欠陥'
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 14
+  termination: loop-cap
+residual_critical_high: 19
+rework_required: true
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+unreviewed_perspectives: []

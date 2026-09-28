@@ -25,3 +25,23 @@ records:
   freeform: null
   normalized_answer: 'treat non-sink/non-data host or enclosing command words (timeout, exec, stdbuf, setsid, xargs, unknown) and enclosing-statement downstream pipelines as undetermined destination under FR5; per-heredoc conservative fallback'
   resolution_note: 'gate: planner open questions on FR1 narrowing (no gate_id; unlisted-gate fallback); options: A follow FR1 literally (allow both shapes) / B undetermined -> per-heredoc conservative fallback under FR5 / C positively resolve prefix commands and apply (ii) to enclosing statement; chosen: B; codex_consulted: true (1 turn); opus_escalation: false. Key points: FR5 forbids falling toward missed detection; A allows shapes denied today; C needs per-command argument parsing; no existing case covers the shapes (no FR7 conflict), suite 401/401. Orchestrator follow-up (no Codex): extend the undetermined rule to the enclosing statement of a command substitution so `timeout 10 bash -c "$(cat <<EOF...)"` stays deny. Planner-added: closed data-command list (: cat tee head tail wc uniq cut tr grep diff jq read echo printf git gh), assignment-only enclosing statement is not undetermined, process substitution makes it undetermined. Accepted residual: a listed data command running a program via its own options (e.g. git -c alias.x=!bash x <<EOF) is treated as data -> follow-up task.'
+- question_id: review.auto-fix-continuation
+  packet_id: null
+  answered_at: '2026-09-28T17:38:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - A
+  freeform: null
+  normalized_answer: 'continue auto-fix loops 2..3 as normal, including re-reported out-of-scope sites as candidates'
+  resolution_note: 'gate: review round 1 R4 loop termination after loop 1 regressed (no gate_id; unlisted procedural question); options: A continue loops 2..3 normally / B continue but exclude sites the evaluator dismissed as out of scope / C revert loop 1 and terminate as no-progress / D keep loop 1 and terminate as no-progress; chosen: A; codex_consulted: true (1 turn); opus_escalation: false. Key points: no-progress requires no user-resolvable candidates, which did not hold; the protocol has no carry-over exclusion of dismissed sites and no auto-revert. B rejected: adds a rule the protocol does not have. C/D rejected: no-progress condition not met. Outcome: loops 2 and 3 ran, termination loop-cap, 19 residual critical/high -> batch auto-rework (cap 1).'
+- question_id: review.auto-fix-orchestrator-revert
+  packet_id: null
+  answered_at: '2026-09-28T17:58:00+09:00'
+  source: batch-orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - revert
+  freeform: null
+  normalized_answer: 'reverted editor change loop2-865 (quote/comment-aware _iter_heredoc_ops) and marked it aborted'
+  resolution_note: 'The editor edit broke 3 pre-existing deny cases (heredocs inside "$(...)"); the orchestrator restored the HEREDOC_OP.finditer code before the loop-2 commit so the suite stayed 424/424. Editors loop2-case and loop3-1195 returned skipped and were aborted. Loop 3 same_site group (adjacent substitution + marker in _locate_single) had divergent prose -> conflict, skipped in batch.'
