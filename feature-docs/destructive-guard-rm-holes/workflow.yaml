@@ -172,9 +172,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-rm-holes/task0001
 review:
   status: pending
   rounds_completed: 0
