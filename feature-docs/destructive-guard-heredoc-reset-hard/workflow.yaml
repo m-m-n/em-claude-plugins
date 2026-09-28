@@ -174,7 +174,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: in_progress
+    status: failed
     notes: 'batch retry consumed (1/1) after failure (implementer stopped without a merged event); relaunched on the kept worktree'
     branch: em-workflow/destructive-guard-heredoc-reset-hard/task0003
     provenance:
