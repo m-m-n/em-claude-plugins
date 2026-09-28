@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-reset-hard
 phase: create-plan
-status: waiting_worker
+status: dispatching
 generation: 1
 base_revision: ef65cbe095a547abddb9b723ee6749f6d2e27f74
 last_input_digest: sha256:18dcfb3a026d050a0da219180ff7a25419cc16ce90e9eaaa49fa585b27a6d50d
@@ -10,7 +10,7 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: running
+  status: dispatched
   input_digest: sha256:18dcfb3a026d050a0da219180ff7a25419cc16ce90e9eaaa49fa585b27a6d50d
   output_digest: null
 artifacts: []
