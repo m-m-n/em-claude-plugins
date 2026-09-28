@@ -70,6 +70,62 @@ SEGMENT_SPLIT = re.compile(r"(?:\|\||&&|[;|&\n])")
 SEGMENT_CHARS = frozenset(";|&\n")
 SUBSTITUTION = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
 
+
+def _extract_heredoc_body_substitutions(text):
+    """Find each outermost `$( … )`/`` ` … ` `` in an unquoted here-doc body.
+
+    Unlike SUBSTITUTION (deliberately paren-free-interior, one level only),
+    this counts paren depth so a nested substitution
+    (`$(git reset --hard $(echo HEAD))`) yields the WHOLE outer body,
+    including the executed `git reset --hard ...`, rather than just the
+    inner `echo HEAD` -- the queued outer body is re-scanned as an ordinary
+    chunk on the next pending-loop iteration, whose own SUBSTITUTION pass
+    then finds the inner substitution in turn (see call site).
+
+    A `$(` immediately preceded by a backslash is literal (shell-escaped)
+    text, never expanded by the shell, so it is not treated as a
+    substitution boundary.
+
+    Returns `(bodies, needs_whole_body)`. `needs_whole_body` is True when an
+    opening `$(`/`` ` `` has no matching close in the remaining text -- the
+    caller should fall back to scanning the entire input text rather than
+    silently dropping the unresolved tail.
+    """
+    bodies = []
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "\\" and i + 1 < n:
+            i += 2
+            continue
+        if ch == "$" and i + 1 < n and text[i + 1] == "(":
+            j = i + 2
+            depth = 1
+            while j < n and depth > 0:
+                c = text[j]
+                if c == "\\" and j + 1 < n:
+                    j += 2
+                    continue
+                if c == "(":
+                    depth += 1
+                elif c == ")":
+                    depth -= 1
+                j += 1
+            if depth != 0:
+                return bodies, True
+            bodies.append(text[i + 2 : j - 1])
+            i = j
+            continue
+        if ch == "`":
+            end = text.find("`", i + 1)
+            if end == -1:
+                return bodies, True
+            bodies.append(text[i + 1 : end])
+            i = end + 1
+            continue
+        i += 1
+    return bodies, False
+
 # Characters shlex should emit as operator tokens of their own. The default
 # set plus `\n`, which has to be removed from the whitespace set to survive
 # as a separator — a newline ends a statement just as `;` does.
@@ -977,21 +1033,36 @@ class _StmtInfo:
 # are never executed. `-c <name>=<value>` breaks that premise: it can define
 # a shell alias (`-c alias.x=!bash`) that a following subcommand invocation
 # then runs, turning what looks like a data command into code execution.
-# Any `-c`/`--config`/`--git-dir`-style option value cannot be read
-# statically for this, so a git/gh invocation carrying a bare `-c` (or
-# `-C`, which git also treats as a global option position, though it only
-# changes cwd) is judged conservatively: not a data command at all.
+# `--config-env=<name>=<envvar>` reads the value out of an environment
+# variable instead of the command line, but defines the exact same kind of
+# config entry — same risk, same treatment. Any `-c`/`--config`/
+# `--config-env`/`--git-dir`-style option value cannot be read statically
+# for this, so a git/gh invocation carrying a bare `-c` (or `-C`, which git
+# also treats as a global option position, though it only changes cwd) is
+# judged conservatively: not a data command at all.
 GIT_LIKE_DATA_COMMANDS = frozenset({"git", "gh"})
-GIT_UNSAFE_GLOBAL_FLAGS = {"-c", "--config"}
+GIT_UNSAFE_GLOBAL_FLAGS = {"-c", "--config", "--config-env"}
+
+# GIT_CONFIG_COUNT/GIT_CONFIG_KEY_<n>/GIT_CONFIG_VALUE_<n>/
+# GIT_CONFIG_PARAMETERS, set as VAR=value assignments leading a git/gh
+# invocation, configure git exactly as `-c`/`--config`/`--config-env` do —
+# including defining an alias — with no `-c`-shaped flag anywhere on the
+# command line for the checks above to see.
+GIT_CONFIG_ENV_RE = re.compile(r"^GIT_CONFIG_(COUNT|KEY_\d+|VALUE_\d+|PARAMETERS)=")
 
 
-def _git_alias_risk(word, shaped):
-    """True when WORD is `git`/`gh` and SHAPED (its own shaped argument
-    list, command word included) carries a `-c`/`--config` global option —
-    see GIT_LIKE_DATA_COMMANDS's own comment for why that disqualifies it
+def _git_alias_risk(word, shaped, leading=()):
+    """True when WORD is `git`/`gh` and either SHAPED (its own shaped
+    argument list, command word included) carries a `-c`/`--config`/
+    `--config-env` global option, or LEADING (the VAR=value assignment
+    tokens stripped from in front of the command word before SHAPED was
+    built) carries a GIT_CONFIG_-prefixed assignment — see
+    GIT_LIKE_DATA_COMMANDS's own comment for why either disqualifies it
     from being treated as a data command."""
     if word not in GIT_LIKE_DATA_COMMANDS:
         return False
+    if any(GIT_CONFIG_ENV_RE.match(a) for a in leading):
+        return True
     for a in shaped[1:]:
         if a in GIT_UNSAFE_GLOBAL_FLAGS or any(
             a.startswith(f"{flag}=") for flag in GIT_UNSAFE_GLOBAL_FLAGS
@@ -1010,10 +1081,11 @@ def _shape_and_head(toks):
     shaped words, redirects) -- the same shape head()'s other callers
     already work with.
 
-    A `git`/`gh` invocation carrying a `-c`/`--config` global option is
-    reported with WORD forced to None (see _git_alias_risk()): every caller
-    here treats a None word as "no destination could be read", which is
-    exactly the conservative fallback such an invocation needs -- it can
+    A `git`/`gh` invocation carrying a `-c`/`--config`/`--config-env`
+    global option, or a leading GIT_CONFIG_-prefixed environment assignment,
+    is reported with WORD forced to None (see _git_alias_risk()): every
+    caller here treats a None word as "no destination could be read", which
+    is exactly the conservative fallback such an invocation needs -- it can
     define an alias that runs arbitrary code, so it must not be judged a
     plain data command.
     """
@@ -1022,7 +1094,7 @@ def _shape_and_head(toks):
     lead = _shape_leading(words_only, [])
     shaped = _shaped_remainder(words_only, lead)
     word, _ = head(shaped)
-    if _git_alias_risk(word, shaped):
+    if _git_alias_risk(word, shaped, words_only[:lead]):
         word = None
     return word, shaped, redirects
 
@@ -1316,33 +1388,92 @@ def _all_substitution_spans(text):
     just never emitted as a span, so they still consume their own `)` and
     cannot be mistaken for a substitution's closer. Backtick bodies stay
     opaque (no nesting inside them), matching SUBSTITUTION's own
-    `` `[^`]*` ``. Quoting is NOT tracked -- same imprecision SUBSTITUTION
-    itself already has -- so this is linear in len(TEXT), one pass, no
-    backtracking.
+    `` `[^`]*` ``. This is linear in len(TEXT), one pass, no backtracking.
 
     Also returns the start offsets of any `$(` (or backtick) left
     unclosed by the end of TEXT, for the caller to treat as "structure
     could not be confirmed" rather than silently as "nothing encloses
     here".
+
+    Quoting IS tracked, per nesting level: a single-quoted span makes every
+    character inert (no `$(`/`(`/backtick opens there, matching real shell
+    behavior), a backslash makes the one character after it inert, and a
+    double-quoted span still lets `$(` open a fresh substitution -- whose
+    own inner text then starts back at "no quote active", since a nested
+    `$( ... )`'s quoting is its own, independent of whatever quote
+    enclosed the `$(` that opened it. Each stack frame therefore carries
+    its own quote state, not one tracked globally, so a `'` opened inside
+    an inner substitution cannot be mistaken for closing a `'` opened
+    outside it (or vice versa).
     """
     spans = []
     unmatched = []
-    stack = []  # each entry: opening offset, or None for a plain `(`
+    # Each frame: [opening offset (None for a plain `(`), quote state]
+    # where quote state is None, "'", or '"'. stack[0] is the base frame
+    # for TEXT's own top level (never emitted as a span).
+    stack = [[None, None]]
     i = 0
     n = len(text)
     while i < n:
+        frame = stack[-1]
+        q = frame[1]
         c = text[i]
+
+        if q == "'":
+            if c == "'":
+                frame[1] = None
+            i += 1
+            continue
+
+        if c == "\\":
+            # Inert escape of the next character, both unquoted and inside
+            # double quotes -- a rough approximation of shell backslash
+            # rules, but enough to keep an escaped quote/paren/backtick
+            # from being misread as live structure.
+            i += 2
+            continue
+
+        if q == '"':
+            if c == '"':
+                frame[1] = None
+                i += 1
+                continue
+            if c == "$" and i + 1 < n and text[i + 1] == "(":
+                stack.append([i, None])
+                i += 2
+                continue
+            if c == "`":
+                j = text.find("`", i + 1)
+                if j == -1:
+                    unmatched.append(i)
+                    i = n
+                    break
+                spans.append((i, j + 1))
+                i = j + 1
+                continue
+            i += 1
+            continue
+
+        # Unquoted within this frame.
+        if c == "'":
+            frame[1] = "'"
+            i += 1
+            continue
+        if c == '"':
+            frame[1] = '"'
+            i += 1
+            continue
         if c == "$" and i + 1 < n and text[i + 1] == "(":
-            stack.append(i)
+            stack.append([i, None])
             i += 2
             continue
         if c == "(":
-            stack.append(None)
+            stack.append([None, None])
             i += 1
             continue
         if c == ")":
-            if stack:
-                open_pos = stack.pop()
+            if len(stack) > 1:
+                open_pos, _q = stack.pop()
                 if open_pos is not None:
                     spans.append((open_pos, i + 1))
             i += 1
@@ -1351,12 +1482,13 @@ def _all_substitution_spans(text):
             j = text.find("`", i + 1)
             if j == -1:
                 unmatched.append(i)
+                i = n
                 break
             spans.append((i, j + 1))
             i = j + 1
             continue
         i += 1
-    unmatched.extend(pos for pos in stack if pos is not None)
+    unmatched.extend(frame[0] for frame in stack[1:] if frame[0] is not None)
     return spans, unmatched
 
 
@@ -1388,9 +1520,10 @@ def _immediate_parent_span(spans, start, end):
     return min(candidates, key=lambda se: se[1] - se[0])
 
 
-def _walk_enclosing(chunk, sub_match):
-    """The chain of enclosing statements around SUB_MATCH -- the
-    substitution directly holding a heredoc's host statement -- innermost
+def _walk_enclosing(chunk, sub_span):
+    """The chain of enclosing statements around SUB_SPAN -- a (start, end)
+    span from _all_substitution_spans() for the substitution directly
+    holding a heredoc's host statement -- innermost
     first, up to the outermost (task plan Terms, "Enclosing statement":
     "every level outward counts, up to the outermost"). Each step locates
     the statement WITHIN the immediate parent substitution's own body that
@@ -1408,7 +1541,7 @@ def _walk_enclosing(chunk, sub_match):
     """
     spans, unmatched = _all_substitution_spans(chunk)
     chain = []
-    cur_start, cur_end = sub_match.start(), sub_match.end()
+    cur_start, cur_end = sub_span
     for _ in range(10):  # a bound against a malformed/cyclic input, not a
         # limit this task's own commands ever reach
         parent = _immediate_parent_span(spans, cur_start, cur_end)
@@ -1534,13 +1667,25 @@ def _heredoc_destinations(chunk, records):
         return {}
 
     sub_matches = list(SUBSTITUTION.finditer(chunk))
+    spans, unmatched = _all_substitution_spans(chunk)
     plain, nested = [], []
+    forced_undetermined = set()
     for index, record in enumerate(records):
-        containing = None
-        for m in sub_matches:
-            if m.start() <= record.op_start < m.end():
-                containing = m
-                break
+        if any(pos < record.op_start for pos in unmatched):
+            # An opener earlier in CHUNK never closed by end of text --
+            # structurally, it may well enclose this heredoc's operator,
+            # but its own span could not be confirmed (see
+            # _all_substitution_spans()'s own docstring). Guessing "plain"
+            # here would risk reading past a sink hidden behind it.
+            forced_undetermined.add(index)
+            plain.append(index)
+            continue
+        candidates = [
+            (s, e) for s, e in spans if s <= record.op_start < e
+        ]
+        containing = (
+            min(candidates, key=lambda se: se[1] - se[0]) if candidates else None
+        )
         if containing is None:
             plain.append(index)
         else:
@@ -1553,6 +1698,9 @@ def _heredoc_destinations(chunk, records):
         host_infos = _locate_statements(chunk, plain_records)
         for position, index in enumerate(plain):
             record = records[index]
+            if index in forced_undetermined:
+                destinations[index] = "undetermined"
+                continue
             host = host_infos.get(position, _StmtInfo(parse_failed=True))
             decision = _decide_from_chain([host])
             # A sink already resolved from the (possibly misread) host word
@@ -1570,13 +1718,13 @@ def _heredoc_destinations(chunk, records):
                 decision = "undetermined"
             destinations[index] = decision
 
-    for index, sub_match in nested:
+    for index, span in nested:
         record = records[index]
-        inner_text, inner_base = _substitution_inner(sub_match)
+        inner_text, inner_base = _span_inner(chunk, span)
         host = _locate_single(
             inner_text, record.op_start - inner_base, record.op_end - inner_base
         )
-        chain = [host] + _walk_enclosing(chunk, sub_match)
+        chain = [host] + _walk_enclosing(chunk, span)
         destinations[index] = _decide_from_chain(chain)
 
     return destinations
@@ -2046,15 +2194,38 @@ def statements(command):
                     # `$(...)`/`` `...` `` inside the body before the body
                     # ever reaches the destination command -- true even
                     # when that destination is a plain data command (`cat
-                    # <<EOF\n$(git reset --hard HEAD)\nEOF`). The body
-                    # itself is not re-scanned as a statement here (it is
-                    # still just data once expanded), but each
+                    # <<EOF\n$(git reset --hard $(echo HEAD))\nEOF`). The
+                    # body itself is not re-scanned as a statement here (it
+                    # is still just data once expanded), but each OUTERMOST
                     # substitution inside it is queued for the same
-                    # scanning every other substitution gets.
-                    for m in SUBSTITUTION.finditer(record.body):
-                        body = m.group(1) or m.group(2) or ""
-                        if body.strip():
-                            pending.append(body)
+                    # scanning every other substitution gets. SUBSTITUTION
+                    # itself cannot be used here: it matches only a
+                    # paren-free interior, so on a nested substitution
+                    # (`$(git reset --hard $(echo HEAD))`) it would find
+                    # just the inner `echo HEAD` and silently drop the
+                    # outer, actually-executed `git reset --hard ...`.
+                    # _extract_heredoc_body_substitutions() instead counts
+                    # paren depth to find each outermost `$( … )`/`` ` … ` ``
+                    # whole; queuing that whole body (rather than trying to
+                    # recurse here) is enough, because the queued text goes
+                    # through the ordinary chunk path next iteration, whose
+                    # own SUBSTITUTION scan then finds the nested
+                    # substitution in turn. A backslash-escaped `$(` is
+                    # literal text the shell never expands, so it is not a
+                    # substitution boundary here either.
+                    bodies, needs_whole_body = _extract_heredoc_body_substitutions(
+                        record.body
+                    )
+                    if needs_whole_body:
+                        # An unbalanced/unclosed `$(`/`` ` `` could not be
+                        # extracted as a discrete substitution; treat the
+                        # whole body as the scan target rather than silently
+                        # dropping it.
+                        pending.append(record.body)
+                    else:
+                        for body in bodies:
+                            if body.strip():
+                                pending.append(body)
         chunk_subs = [m.group(1) or m.group(2) or "" for m in SUBSTITUTION.finditer(chunk)]
         for body in chunk_subs:
             if body.strip():
