@@ -1852,12 +1852,17 @@ def read_command_name_evidence(raw_body):
     return name or None
 
 
-def route_substitution_headed_statement(remainder, raw_body, segment):
+def route_substitution_headed_statement(remainder, raw_body, segment, next_rm_invocation):
     """The single entry point for a statement whose command-word position
     held a substitution token that _skip_to_command_word() skipped
     (task0002 FR1/FR2/FR3/FR11/FR13 — supersedes task0001's shape-based
     pre-gates, both removed: the dash-leading pre-gate and the recursion-
     AND-force-AND-operand pre-screen _rm_route_candidate() used to apply).
+
+    NEXT_RM_INVOCATION is main()'s counter callback (task0001 FR4): called
+    exactly once, only on the branch that actually reaches check_rm(), so a
+    substitution-headed statement that evidences "git" or nothing readable
+    never consumes an invocation ordinal.
 
     REMAINDER is the statement's own tokens from that skip point onward —
     exactly what would be `args` for the plain spelling of the read command
@@ -1892,7 +1897,7 @@ def route_substitution_headed_statement(remainder, raw_body, segment):
     """
     name = read_command_name_evidence(raw_body)
     if name == "rm":
-        return check_rm(remainder)
+        return check_rm(remainder, next_rm_invocation())
     if name == "git":
         check_git(remainder, segment)
     return []
@@ -2010,8 +2015,19 @@ def gio_available():
     return _GIO
 
 
+DELETION_PLACEHOLDER = "<対象>"
+
+# The gio-versus-mv branch selection below (gio on PATH, target under HOME,
+# control characters in the target) is unchanged by task0001; only the
+# rendering of the chosen alternative changed — a fixed placeholder stands in
+# for the target instead of the target's own text (FR4).
+
+
 def deletion_alternative(target):
-    """A concrete command to offer in place of the delete being refused.
+    """A concrete command TEMPLATE to offer in place of the delete being
+    refused — never the target's own text (task0001 FR4): the caller already
+    designates the target by position (rm_target_designation()), so this
+    function only needs to pick WHICH template applies.
 
     `gio trash` is the good outcome: it records the original path and the
     deletion time under ~/.local/share/Trash, so the file can be restored from
@@ -2026,13 +2042,12 @@ def deletion_alternative(target):
     home = os.path.expanduser("~")
     if any(ord(c) < 0x20 or ord(c) == 0x7F for c in path):
         return "パスに制御文字が含まれているため、安全な代替コマンドを提示できない。手動で確認する。"
-    quoted = shlex.quote(path)
     if not gio_available():
-        return f"`mv -- {quoted} /tmp/` で退避する（gio が無いのでゴミ箱は使えない）。"
+        return f"`mv -- {DELETION_PLACEHOLDER} /tmp/` で退避する（gio が無いのでゴミ箱は使えない）。"
     if path == home or path.startswith(home + os.sep):
-        return f"`gio trash -- {quoted}` に書き換える（復元情報が残り、ゴミ箱から戻せる）。"
+        return f"`gio trash -- {DELETION_PLACEHOLDER}` に書き換える（復元情報が残り、ゴミ箱から戻せる）。"
     return (
-        f"`mv -- {quoted} /tmp/` で退避する"
+        f"`mv -- {DELETION_PLACEHOLDER} /tmp/` で退避する"
         f"（$HOME の外はゴミ箱がファイルシステムをまたげないので `gio trash` は失敗する）。"
     )
 
@@ -2093,16 +2108,60 @@ DECISION_RANK = {"allow": 0, "ask": 1, "deny": 2}
 RM_ROOT_SHAPE = re.compile(r"/+|/\*|~|~/|\$HOME/?")
 
 
-def check_rm(args):
+def rm_target_designation(invocation_index, target_index, target):
+    """A hook-authored designation for TARGET, naming its POSITION instead of
+    its text (task0001 FR4, "Target designation" contract): the
+    INVOCATION_INDEXth `rm` invocation the hook encountered while analysing
+    this command (1-based, in the order main() reaches it — including one
+    found inside a command-substitution body via
+    route_substitution_headed_statement()), and the TARGET_INDEXth operand of
+    that invocation (1-based among TARGETS in check_rm(), options not
+    counted).
+
+    Two different targets never receive the same designation: every target
+    check_rm() judges reaches this function with a distinct
+    (invocation_index, target_index) pair, because target_index is assigned
+    by enumerate() over that one invocation's own TARGETS list and
+    invocation_index is unique per check_rm() call (main() hands out a fresh
+    one per `rm` invocation, direct or substitution-headed). The pair is a
+    pure function of the command text — the same command always drives
+    main()'s loop the same way — so the same command always yields the same
+    designation for the same target (NFR2).
+
+    Contains no character taken from TARGET, with one exception: a TARGET
+    built entirely from command substitution (`.substitution_only`) may show
+    the fixed stand-in the hook already writes for that case
+    (SUBSTITUTION_STANDIN, SPEC.md a3) next to the position — that text is
+    hook-authored and constant, never copied from the target. That suffix
+    uses ASCII square brackets rather than the full-width parentheses every
+    caller below wraps the whole designation in, so the two never nest into
+    an unreadable "（…（…）…）" when both apply to the same target.
+    """
+    designation = f"{invocation_index}番目のrmの{target_index}番目の対象"
+    if getattr(target, "substitution_only", False):
+        designation += f"[`{SUBSTITUTION_STANDIN}`]"
+    return designation
+
+
+def check_rm(args, invocation_index):
     """Return the decision every target of one `rm` invocation warrants, as
-    a list of (tier, rule, target, message) tuples — never emits and never
-    exits. A check that emitted the first decision it reached let an `ask`
-    on an early target end the scan, so a later target — or, once the
+    a list of (tier, rule, designation, message) tuples — never emits and
+    never exits. A check that emitted the first decision it reached let an
+    `ask` on an early target end the scan, so a later target — or, once the
     caller folds multiple calls together, a later segment — that warranted
     `deny` was approved along with it (D6). Collecting every target's
     decision here, uncollapsed, is what lets the caller (main()) evaluate
     every target of every segment before picking the strongest one and
     emitting once.
+
+    INVOCATION_INDEX is this `rm` invocation's own 1-based ordinal among
+    every `rm` invocation main() hands to check_rm() for the command under
+    analysis (task0001 FR4) — passed straight through to
+    rm_target_designation() for every target below whose reason names a
+    position instead of its text. It plays no part in steps 1-2: the
+    `rm-root` decision keeps naming its RAW token verbatim (SPEC.md a2, fixed
+    RM_ROOT_SHAPE vocabulary only, never free text), unaffected by this
+    task.
 
     Per target, in this order (IMPLEMENTATION.md "Recursive-delete check"),
     unchanged from before D6 except that each step now APPENDS instead of
@@ -2187,9 +2246,10 @@ def check_rm(args):
     if not recursive:
         return decisions
 
-    for t in targets:
+    for target_index, t in enumerate(targets, start=1):
         if t in root_hit:
             continue
+        designation = rm_target_designation(invocation_index, target_index, t)
         unresolved = getattr(t, "unresolved", False)
         if (
             getattr(t, "substitution_only", False)
@@ -2201,8 +2261,8 @@ def check_rm(args):
                 (
                     "ask",
                     "rm-unresolvable",
-                    t,
-                    f"再帰削除の対象 `{t}` が変数/コマンド置換で、影響範囲を静的に確定できない。"
+                    designation,
+                    f"再帰削除の対象（{designation}）が変数/コマンド置換で、影響範囲を静的に確定できない。"
                     f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
                 )
             )
@@ -2212,8 +2272,8 @@ def check_rm(args):
                 (
                     "ask",
                     "rm-unresolvable",
-                    t,
-                    f"再帰削除の対象 `{t}` はグロブと親参照(`..`)が混在し、"
+                    designation,
+                    f"再帰削除の対象（{designation}）はグロブと親参照(`..`)が混在し、"
                     f"グロブの展開結果によって実際の削除範囲が変わるため静的に確定できない。"
                     f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
                 )
@@ -2227,8 +2287,8 @@ def check_rm(args):
                 (
                     "ask",
                     "rm-unresolvable",
-                    t,
-                    f"再帰削除の対象 `{t}` がグロブで、影響範囲を静的に確定できない。"
+                    designation,
+                    f"再帰削除の対象（{designation}）がグロブで、影響範囲を静的に確定できない。"
                     f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
                 )
             )
@@ -2240,26 +2300,34 @@ def check_rm(args):
             # — that may or may not be true, and the old wording below
             # asserted it regardless. State the fact that IS true instead.
             message = (
-                f"`rm -r` の対象 `{t}` は一部がコマンド置換によるもので、"
+                f"`rm -r` の対象（{designation}）は一部がコマンド置換によるもので、"
                 f"実際の削除範囲を静的に確定できない。置換を展開した実パスを"
                 f"コマンドに直接書いて撃ち直す。"
             )
         else:
-            message = f"`rm -r` の対象 `{t}` はスクラッチ領域の外。{deletion_alternative(t)}"
-        decisions.append(("deny", "rm-recursive", t, message))
+            message = f"`rm -r` の対象（{designation}）はスクラッチ領域の外。{deletion_alternative(t)}"
+        decisions.append(("deny", "rm-recursive", designation, message))
     return decisions
 
 
 def strongest_rm_decision(decisions):
-    """Pick the strongest decision across every (tier, rule, target,
+    """Pick the strongest decision across every (tier, rule, designation,
     message) tuple check_rm() returned — possibly pooled across several
     `rm` invocations in different segments of one compound command — and
     return (tier, rule, message) for main() to emit, or None when nothing
-    was collected (D6). Every target that reached the winning tier is named
-    in the combined reason text. When more than one reason id shares that
-    tier (`rm-root` alongside `rm-recursive`, both `deny`), `rm-root` is
-    reported — the same priority a single target used to get from being
-    checked first, before D6 separated evaluation from emission.
+    was collected (D6). Every target that reached the winning tier is named,
+    by its designation, in the combined reason text (task0001 FR4: the
+    joined reason, like each individual one, contains no target-derived
+    text — DESIGNATION is rm_target_designation()'s output for every winner
+    except an `rm-root` one, which keeps its fixed RM_ROOT_SHAPE token
+    verbatim, SPEC.md a2). Designations are already unique per
+    (invocation, operand) pair, so no two winners collapse into one entry
+    here — unlike the raw target strings before this task, which could
+    repeat when the same literal text appeared at two positions. When more
+    than one reason id shares the winning tier (`rm-root` alongside
+    `rm-recursive`, both `deny`), `rm-root` is reported — the same priority a
+    single target used to get from being checked first, before D6 separated
+    evaluation from emission.
     """
     if not decisions:
         return None
@@ -2270,10 +2338,10 @@ def strongest_rm_decision(decisions):
     if len(winners) == 1:
         return tier, rule, winners[0][3]
     names = []
-    for _, _, target, _ in winners:
-        if target not in names:
-            names.append(target)
-    joined = "、".join(f"`{n}`" for n in names)
+    for _, _, designation, _ in winners:
+        if designation not in names:
+            names.append(designation)
+    joined = "、".join(names)
     return (
         tier,
         rule,
@@ -3022,6 +3090,21 @@ def main():
     # is emitted once, after every segment has been examined.
     rm_decisions = []
 
+    # task0001 FR4: hands out a fresh, 1-based ordinal each time an `rm`
+    # invocation is actually about to be analysed — direct spelling or
+    # substitution-headed — so rm_target_designation() can name which
+    # invocation a target belongs to. A mutable single-element list stands
+    # in for a nonlocal int (no counter object needed): both call sites
+    # below increment it exactly once per real `rm` invocation, in the same
+    # left-to-right order statements() yields segments, so the same command
+    # text always drives the same sequence of calls and the same ordinals
+    # (NFR2).
+    _rm_invocation_seq = [0]
+
+    def next_rm_invocation():
+        _rm_invocation_seq[0] += 1
+        return _rm_invocation_seq[0]
+
     for segment, toks, lexed, shaped_words, shaped_redirects in statements(command):
         check_bypass(segment, toks)
 
@@ -3063,6 +3146,7 @@ def main():
                     shaped_words[skip_index:],
                     getattr(substitution_tok, "raw_substitution_body", None),
                     segment,
+                    next_rm_invocation,
                 )
             )
 
@@ -3088,7 +3172,7 @@ def main():
         if word == "git":
             check_git(args, segment)
         elif word == "rm":
-            rm_decisions.extend(check_rm(args))
+            rm_decisions.extend(check_rm(args, next_rm_invocation()))
         else:
             check_file_destruction(word, args, segment)
             check_external(word, args, segment)
