@@ -1,0 +1,34 @@
+schema_version: 1
+feature: destructive-guard-rm-holes
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 6f71668753c2e77465a8544f76dad7e1e817c64b
+last_input_digest: sha256:320cacd3f201788f9209b6af118231b52dec3d80e0bd0003ba271b69f668039c
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:320cacd3f201788f9209b6af118231b52dec3d80e0bd0003ba271b69f668039c
+  output_digest: sha256:bf184a6f7c9b864a620d56c899ed3c52ca340bf99e8d85775291adedd353f637
+artifacts:
+- path: feature-docs/destructive-guard-rm-holes/THREAT-MODEL.md
+  sha256: sha256:a342d015a1415828bcbcb864acdafa32c83bc513399dae3bdae955723fedd9b4
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-rm-holes/VERIFICATION.md
+  sha256: sha256:a11beb21b3e140a78035bd29f26124af3aff84bf31d11f50a8d284242deb1561
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-rm-holes/tasks/task0001.md
+  sha256: sha256:e912fea1ee26fd8b8d154c69cec0ee677a5eafaea862f62f8f773a08a91be3cd
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:320cacd3f201788f9209b6af118231b52dec3d80e0bd0003ba271b69f668039c
+  base_workflow_blob: aef17ed908ba9e586bd621e2ae583092f045a787
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

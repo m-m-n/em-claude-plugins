@@ -71,6 +71,15 @@ STANDIN = "$(...)"
 REWRITE_INSTRUCTION = "展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。"
 CONTROL_CHAR = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
+# task0001 FR4/FR7: the reason no longer names a target by its own text — it
+# names a position (rm_target_designation()) and, only for a target built
+# entirely from command substitution, shows STANDIN next to that position,
+# wrapped in backticks inside ASCII square brackets: designation +
+# "[`$(...)`]". This extracts that wrapped rendering, replacing the old
+# `` 対象 `([^`]*)` `` pattern which matched raw target text and no longer
+# matches anything once the target itself is gone from the reason.
+STANDIN_RENDERING = re.compile(r"\[`([^`]*)`\]")
+
 DOLLAR_PAREN = "rm -rf $(printf /home/sakura/valuable)"
 BACKTICK = "rm -rf `printf /home/sakura/valuable`"
 MKTEMP_HOLE = "rm -rf $(mktemp -d)"
@@ -367,10 +376,10 @@ class TestReasonTextNamesTheTarget(unittest.TestCase):
     def test_rendering_identical_across_both_spellings(self):
         _, dollar_reason = decision(DOLLAR_PAREN)
         _, backtick_reason = decision(BACKTICK)
-        dollar_target = re.search(r"対象 `([^`]*)`", dollar_reason).group(1)
-        backtick_target = re.search(r"対象 `([^`]*)`", backtick_reason).group(1)
-        self.assertEqual(dollar_target, backtick_target)
-        self.assertEqual(dollar_target, STANDIN)
+        dollar_rendering = STANDIN_RENDERING.search(dollar_reason).group(1)
+        backtick_rendering = STANDIN_RENDERING.search(backtick_reason).group(1)
+        self.assertEqual(dollar_rendering, backtick_rendering)
+        self.assertEqual(dollar_rendering, STANDIN)
 
     def test_closing_rewrite_instruction_present(self):
         for command in AC1_COMMANDS:
@@ -419,8 +428,8 @@ class TestQuotedWholeWordSubstitutionNeverAllows(unittest.TestCase):
 
     def test_target_rendering_not_whitespace_only(self):
         _, reason = decision(QUOTED_CAT_LIST)
-        target = re.search(r"対象 `([^`]*)`", reason).group(1)
-        self.assertNotEqual(target.strip(), "")
+        rendering = STANDIN_RENDERING.search(reason).group(1)
+        self.assertNotEqual(rendering.strip(), "")
 
 
 # --- AC-4: FR5's pinned verdicts stay unchanged ----------------------------
@@ -628,8 +637,8 @@ class TestPayloadCarriedSubstitutionMatchesDirectForm(unittest.TestCase):
                 wrapped_rule = re.search(r"\[destructive-guard/([\w-]+)\]", wrapped_reason)
                 self.assertEqual(wrapped_rule.group(1), direct_rule.group(1))
                 self.assertEqual(
-                    re.search(r"対象 `([^`]*)`", wrapped_reason).group(1),
-                    re.search(r"対象 `([^`]*)`", direct_reason).group(1),
+                    STANDIN_RENDERING.search(wrapped_reason).group(1),
+                    STANDIN_RENDERING.search(direct_reason).group(1),
                 )
 
     def test_payload_forms_demote_to_deny_when_unattended(self):
@@ -703,11 +712,17 @@ class TestUnflaggedTargetReasonTextUnchanged(unittest.TestCase):
     pre-task0003 wording, byte for byte."""
 
     def test_reason_text_byte_identical_to_pre_task_wording(self):
+        """task0001 FR7: this pin moved from the target's own text to the
+        new position notation (rm_target_designation()) and the fixed
+        deletion-alternative placeholder (DELETION_PLACEHOLDER) — the
+        byte-identical guarantee this test's name refers to is now against
+        THIS task's wording, not the pre-task0001 one, since FR4 deliberately
+        changes this exact string (it used to embed the raw target)."""
         _, reason = decision("rm -rf /home/sakura/valuable")
         self.assertEqual(
             reason,
-            "[destructive-guard/rm-recursive] `rm -r` の対象 `/home/sakura/valuable` "
-            "はスクラッチ領域の外。`gio trash -- /home/sakura/valuable` に書き換える"
+            "[destructive-guard/rm-recursive] `rm -r` の対象（1番目のrmの1番目の対象）"
+            "はスクラッチ領域の外。`gio trash -- <対象>` に書き換える"
             "（復元情報が残り、ゴミ箱から戻せる）。",
         )
 

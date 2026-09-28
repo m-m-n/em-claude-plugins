@@ -1,0 +1,60 @@
+schema_version: 2
+feature: destructive-guard-rm-holes
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.69
+    confidence: 0.69
+    probabilities:
+      '0': 0.0
+      '1': 0.31
+      '2': 0.69
+      '3': 0.0
+  observed_at: '2026-09-28T13:18:53+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.95
+    probabilities:
+      '0': 0.01
+      '1': 0.96
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-09-28T13:20:41+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - tests/test_destructive_guard_command_substitution.py
+  changed_lines_approx: 60
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 8
+  changes_external_contract: false
+  changes_behavior: true
+  hole_status:
+    '1':
+      still_present: false
+      evidence: 正規化後にパス要素単位で判定している。報告された3例と末尾スラッシュなしの tmp・.cache・/var/tmp は実測で deny。ケース表135〜140行に回帰テストがあり、現行スイートは401/401成功
+    '2':
+      still_present: false
+      evidence: 置換だけの対象を substitution_only として保持している。rm -rf $(printf /home/user/valuable)
+        は実測で ask。ケース表187行に同形の回帰テストがある
+    '3':
+      still_present: false
+      evidence: destructive-guard.py:2013 の deletion_alternative() は gio trash または
+        mv を案内し、mkdir の案内は存在しない。0700・既存ディレクトリの所有者検証を実装した形ではない
+    '4':
+      still_present: true
+      evidence: 単独対象の deny、複数対象の deny、グロブ対象の ask で、ファイル名に含めた指示文が理由へ残ることを実測した。埋め込みは2031〜2035行・2205〜2248行・2276行にある。漏出を防ぐテストはなく、既存テスト705行はパス入り理由文を固定している
+decided_at: '2026-09-28T13:21:30+09:00'

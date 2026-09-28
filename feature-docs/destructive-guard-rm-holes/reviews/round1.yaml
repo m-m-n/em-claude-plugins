@@ -1,0 +1,155 @@
+round: 1
+executed_at: '2026-09-28T14:28:16+09:00'
+scope:
+  review_mode: diff
+  base_commit: 87a921271a69efcd076d31da7e043a4a23c977d8
+  head_commit: 7a352aa62feb0ba181be6229b176259165c98636
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/destructive-guard.py
+  - test-docs/destructive-guard-rm-holes/task0001.tests.yaml
+  - tests/test_destructive_guard_command_substitution.py
+  - tests/test_destructive_guard_rm_reason.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: c9d77d33b47dac08
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3104
+  title: rmの呼び出し番号が元のコマンド上の順ではなく解析順で振られる
+  description: 呼び出し番号は main() が check_rm() を呼んだ順に振られるが、statements() は `bash -c '…'`
+    や `$(…)` の本文を後に続く文よりさらに後に返す。このため `echo "$(rm -rf /var/x)"; rm -rf /tmp/y` の拒否理由は「2番目のrmの1番目の対象」になり、左から読むと許可対象の
+    `/tmp/y` を指す。`bash -c 'rm -rf /var/valuable'; rm -rf /tmp/safe` でも同じ。判定と rule
+    id は変わらず安全側に倒れているが、SPEC FR4 の「複合コマンド内の複数の rm をまたいでも対象を一意に特定できる」を満たさない。3093-3101
+    行のコメントと rm_target_designation() の docstring も実際の動きと合っていない。
+  suggestion: 呼び出し番号は解析順ではなく元のコマンド文字列に rm が現れる順で決める。各 rm の語の元の位置を保持し、全文を走査し終えてから番号を振って理由文を組み立てる。本文を含む複合コマンド(`bash
+    -c`、`$(…)`)の回帰テストを追加する。判定と rule id は変えない(FR5)。
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外(完了ゲートは critical/high のみ)。Notion に別タスクとして起票する
+- stable_id: 3d4e1f64664a5d96
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3175
+  title: 置換で始まる文の rm が2経路で判定され、呼び出し番号を2つ消費する
+  description: '`$(printf rm) rm -rf /tmp/cache; rm -rf /var/valuable` では1つ目の文の rm
+    が route_substitution_headed_statement() と通常経路の両方で check_rm() に渡され、呼び出し番号を2つ消費する。rm
+    が2回しか書かれていないのに「3番目のrm」が現れる。置換経由では `rm` の語そのものが1番目の対象として数えられ、対象番号もずれる。SPEC FR4
+    の一意特定の要件に反する。判定と rule id は変わらない。'
+  suggestion: 同じ文を2経路で判定する場合も呼び出し番号は1つだけ消費させ、対象番号を元の引数位置に対応させる。FR5 の判定と rule id は維持し、回帰テストを追加する。
+  sources:
+  - codex:spec
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外(完了ゲートは critical/high のみ)。Notion に別タスクとして起票する
+- stable_id: a7026abc0ff69de7
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2249
+  title: '`--` の後ろにある `-` 始まりのオペランドが対象番号から抜ける'
+  description: check_rm() の targets は `-` で始まる語を一律に除く(2229-2233 行)ため、`--` の後ろの `-`
+    始まりのオペランドも番号に入らない。`rm -rf -- -cache /tmp/scratch /var/valuable` の拒否理由は「1番目のrmの2番目の対象」になるが、実際の2番目は許可対象の
+    `/tmp/scratch`。変更前は対象名が出ていたので取り違えは起きなかった。
+  suggestion: '`--` を考慮した元のオペランド番号を保持し、判定用に絞り込んだ後もその番号を表示する。回帰テストを追加する。`rm -rf --
+    -targets` が allow になるのは変更前からの判定の穴で、FR5 により本フィーチャーの範囲外。'
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外(完了ゲートは critical/high のみ)。Notion に別タスクとして起票する
+- stable_id: c7bd2a13f6985975
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2344
+  title: 複数対象をまとめた rm-recursive の理由文に代替コマンドの雛形がない
+  description: SPEC AC6(FR4)は rm-recursive の理由文に対象の位置と雛形の代替コマンド(gio trash か mv)を求める。`rm
+    -rf /var/a /var/b` のように複数対象で並ぶと strongest_rm_decision()(2340-2350 行)は各対象の理由文を捨て、位置の列挙と一般的な書き換え案内だけを返す。まとめた文言は変更前から代替コマンドを持っていなかったが、今は位置しか出ないため安全な書き換え先の手がかりが無い。AC6
+    が単一対象だけを想定しているかは SPEC に明記されていない。
+  suggestion: まとめた理由文でも、最も強い判定になった各対象について位置と deletion_alternative() の雛形を並べる。対象の生文字列は含めず、gio
+    の有無・HOME 配下・制御文字の分岐は維持する。または AC6 の範囲を単一対象に限ることを SPEC に明記する。
+  sources:
+  - codex:spec
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外(完了ゲートは critical/high のみ)。Notion に別タスクとして起票する
+dropped_by_gate:
+- title: まとめた理由文で rm-root の固定形トークンがバッククォートなしで並ぶ
+  reason: 'R3b step 2: severity low'
+evaluation:
+  round_summary: critical/high 無し。medium 4 件(呼び出し番号・対象番号が元のコマンド上の位置と対応しない 3 件、複数対象の理由文に代替コマンド雛形が無い
+    1 件)を評価者がフックを直接起動して再現。いずれも判定と rule id は変わらず安全側。raw 対象文字列は全経路で理由文に残っていない。run-destructive-guard.py
+    401/401、関連 unittest 50 件成功。version は plugin.json / marketplace.json とも一致。architecture#0
+    / spec#0 は litellm rate_limited で codex に切り替え。範囲外の既存の穴として `-- -targets` 形式の rm
+    が変更前から allow。注入の試みは無し。
+  recommended_action: auto_fix
+  action_rationale: medium 4 件は修正範囲が destructive-guard.py の位置表記とまとめた理由文に閉じ、FR5 に触れずに直せる。F4
+    は AC6 の範囲明記で辞退する選択肢もある。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-rm-holes-20260928T052711Z.md
