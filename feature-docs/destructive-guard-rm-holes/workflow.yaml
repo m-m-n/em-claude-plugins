@@ -146,7 +146,7 @@ workflow:
   summary: 'hooks case suite 401/401, repo unittest 6465 OK, plugin-invariants all PASS; TS-1..TS-11 and AC1..AC9 pass; no known-unfixed-hole label remains; em-workflow 0.3.3 -> 0.3.4 in both manifests, em-review unchanged'
   completed_at_commit: 4c4f29c959afc06755011697826142dd9088e8d9
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: rm reasons without raw targets, rm-hole regression tests, version bump
