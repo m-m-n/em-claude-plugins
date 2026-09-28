@@ -129,10 +129,10 @@ Other parts of the decision:
   - task0003 covers the `git` condition inside SC1 and the SC2 match.
   - The two tasks meet only at SC1 and SC2, whose contracts are pinned
     above.
-  - Neither rework task changes the em-workflow version. FR8's single
-    patch step for this feature was already taken in task0001. If the
-    plugin-version guard rejects a rework commit, the implementer reports
-    that as a plan deviation instead of raising the version again.
+  - Each rework task raises the em-workflow version at the patch position
+    from its own HEAD, in the same commit as its `em-workflow/` changes.
+    `plugin.json` and `.claude-plugin/marketplace.json` carry the same
+    value.
 - **Rationale**:
   - Most findings share one cause. The destination decision re-lexed the
     chunk apart from `statements()`, and the same substitution syntax was
