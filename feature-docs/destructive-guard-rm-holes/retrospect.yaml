@@ -1,0 +1,34 @@
+feature: destructive-guard-rm-holes
+collected_at: "2026-09-28T14:35:37+09:00"
+session_ids: [01a0e681-ad99-72a4-add9-a357bc05ab07]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みがバケット 1 に 0.96 を置き、閾値表で reduced に決まった"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.69, confidence: 0.69, probabilities: {'0': 0.0, '1': 0.31, '2': 0.69, '3': 0.0}}
+        observed_at: "2026-09-28T13:18:53+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.02, confidence: 0.95, probabilities: {'0': 0.01, '1': 0.96, '2': 0.03, '3': 0.0}}
+        observed_at: "2026-09-28T13:20:41+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/destructive-guard.py
+        - tests/test_destructive_guard_command_substitution.py
+      changed_lines_approx: 60
+      new_functions_needed: 0
+      work_still_required: true
+      change_containment: single_module
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "タスク票の 4 件の穴のうち 1〜3 は、起票後の別 feature で既に塞がれていた。Codex 事前調査の hole_status で実測して、残る穴 4 だけに作業を絞れた。古いタスク票は事前調査で現状と突き合わせる価値がある"
+  - "review round 1 の medium 4 件（c9d77d33b47dac08 / 3d4e1f64664a5d96 / a7026abc0ff69de7 / c7bd2a13f6985975）はいずれも rm の呼び出し番号・対象番号・理由文の雛形に関するもので、穴 4 の修正で導入した「位置で対象を名指す」方式の周辺に集中した"
