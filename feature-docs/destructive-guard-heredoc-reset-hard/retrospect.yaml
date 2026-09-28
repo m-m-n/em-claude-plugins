@@ -1,0 +1,308 @@
+feature: destructive-guard-heredoc-reset-hard
+collected_at: '2026-09-29T00:36:17+09:00'
+session_ids:
+- 01a0e8a7-8a6e-7327-b683-b0bc1c8cbfda
+signals:
+  review_critical_high:
+  - stable_id: 7c8927cc7dcf50ed
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: パイプ後段の実行プレフィックス・複合コマンド・プロセス置換を見落とし、bash 宛ての本文を data と判定する
+    resolution: fixed
+  - stable_id: 59ed6682f7be415d
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: ブレースグループやサブシェル全体のパイプ先を見ず、bash 宛ての本文を data と判定する
+    resolution: unresolved
+  - stable_id: c660fd32a708e7e9
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 入れ子のコマンド置換で外側への探索が SUBSTITUTION_STANDIN に再一致して進まず、中間の bash -c を見落とす
+    resolution: fixed
+  - stable_id: 1f42d286f7b7455a
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: 宛先判定のための再字句解析が statements() と違う解析状態で動き、case の分岐や置換内の区切りを読み違える
+    resolution: unresolved
+  - stable_id: 19b046b8bd12ce83
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: パイプ記号の後に空白を挟んだ改行で、後段の sink 探索が止まる
+    resolution: unresolved
+  - stable_id: 11eb805ea0132bba
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: 中に括弧を含むコマンド置換を置換と認識できず、ホスト文を外側の文と取り違える
+    resolution: fixed
+  - stable_id: 24c1bec86e467241
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    title: 置換内のヒアドキュメントごとにチャンク全体を再解析している
+    resolution: unresolved
+  - stable_id: 6f86529d2f276ff4
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: 宛先判定が通常の文解析から case の継続状態を引き継いでいない
+    resolution: unresolved
+  - stable_id: 0324d59573ff5fe3
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: 重複する置換解析の片方に引用符対応が反映されていない
+    resolution: unresolved
+  - stable_id: 2c2ff4b3757c4691
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: コメント内の未閉鎖置換によって実行先の判定が失われる
+    resolution: unresolved
+  - stable_id: 517c0f9226622122
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 本文内の引用された閉じ括弧で置換の抽出が途中終了する
+    resolution: unresolved
+  - stable_id: 80895880e323f669
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 本文の深い入れ子では中間の破壊的コマンドが検査されない
+    resolution: unresolved
+  - stable_id: 35e1a4af38df9346
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 既知・未修正：前の文で開始したグループのパイプ先を見落とす
+    resolution: unresolved
+  - stable_id: fab5b1d068deda78
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 既知・未修正：入力中の制御文字が単一位置検索の印を偽装する
+    resolution: unresolved
+  - stable_id: e64f20d3c28211dc
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 既知・未修正：コメント内の偽の演算子が後続コマンドを本文として除去する
+    resolution: unresolved
+  - stable_id: bb97a3fac62c8bd7
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 既知・未修正：引用された esac が case の追跡を終了させる
+    resolution: unresolved
+  - stable_id: f6537aafdc9f2f9f
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: パイプ後に空白と改行があるとシンクを見落とす
+    resolution: unresolved
+  - stable_id: f1ca12544536c788
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: 内側のグループ判定で外側の確定したシンクを無視する
+    resolution: unresolved
+  - stable_id: d54b3cd3f3f3330a
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 前の文で開かれたグループのパイプ先を見落とす
+    resolution: unresolved
+  - stable_id: 13e9b1a36c113a4c
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 入力中の偽装マーカーでヒアドキュメントの実行先をすり替えられる
+    resolution: unresolved
+  - stable_id: a9eebe180f529572
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 先行する export 文で Git 設定の検査を回避できる
+    resolution: unresolved
+  - stable_id: 4dbf8ef79588b928
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: ホストの不明判定で既知の外側シェルを無視してしまう'
+    resolution: unresolved
+  - stable_id: cdb8382d4bbb0b1d
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: _segment_boundaries() の区切り判定が lex_segments() とずれ、`2>&1`・`>&2`・`&>`・`>|`・`\;`・行継続の後ろにある bash
+      宛ての本文を data と判定する
+    resolution: deferred
+  - stable_id: d4dd6d14dd4ec153
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: if/for/while/until/case の複合文全体を bash へパイプしても、中のヒアドキュメント本文を data と判定する
+    resolution: fixed
+  - stable_id: b7631755fe5aa38a
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: バッククォート置換の中の bash 宛てヒアドキュメントを、外側の文をホストとして data と判定する
+    resolution: fixed
+  - stable_id: 46923ffe262f20b1
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: honor_single_quotes=False の走査が単一引用符内の閉じないバッククォートで打ち切られ、後ろの置換や文を検査しない
+    resolution: fixed
+  - stable_id: 7b7dac1ab73aaac4
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 入れ子のコマンド置換を階層ごとに全文再走査し、深さ×長さの計算量で 10 秒のタイムアウトを超えて判定が失われる
+    resolution: fixed
+  - stable_id: 73a1d7b31734dd22
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: scan_structure() の case 語の読み取りがバックスラッシュを飲み込み、`\'`・`\"` を引用の開始と誤認して区切りを隠す
+    resolution: deferred
+  - stable_id: 477b852b8066e962
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 入れ子の if/while/case の開き語を拾えず、閉じから bash に流れる本文を data と判定する
+    resolution: fixed
+  - stable_id: 6da41df887c67494
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 単一引用符内の `$(` で開いたフレームが引用符の外まで伸び、後続の破壊的な文を丸ごと隠して明示的に allow を返す
+    resolution: fixed
+  - stable_id: a24bbdcbaededef2
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '`then`/`do`/`else`/`elif`/`!` の後ろで開いた `{ }`・`( )`・複合文をグループとして追跡せず、`| bash` へ流れる本文を data と判定する'
+    resolution: fixed
+  - stable_id: 560e87a2468c89fc
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: （未修正・7b7dac1ab73aaac4）入れ子のコマンド置換を階層ごとに全文再走査し、10 秒のタイムアウトを超えて判定が失われる
+    resolution: fixed
+  - stable_id: 59e3bb866d98ab03
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: グループの開き/閉じ判定が _shape_leading() の予約語・case 状態機械を別実装で重複しており、loop-1 修正で食い違いが表面化した
+    resolution: unresolved
+  - stable_id: 53e190d68d8c82d1
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    title: _track_groups() が文ごとに開いているグループのスタック全体を複製し、メモリが文の数×開いたグループの数に膨らむ
+    resolution: fixed
+  - stable_id: 78a95de215c6047f
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop-2 の平坦スパン化で、単一引用符の payload 内にある入れ子のコマンド置換を見落とし、`rm -rf ~` に allow を返す
+    resolution: fixed
+  - stable_id: 40ab909ce0784e2a
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: _group_chain_pipeline() の再帰が、約 1000 段の入れ子グループで RecursionError になり、フックが落ちて判定を出さない
+    resolution: fixed
+  - stable_id: 52f676baac752d9e
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: _group_chain_pipeline() の再帰が入れ子グループ約 1000 段で RecursionError になり、フックが判定を返さず deny が失われる
+    resolution: fixed
+  - stable_id: 53a12115fb5de347
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '`then`/`do`/`else`/`!` の後ろで開いた `{ }`・`( )` をグループとして追跡せず、`| bash` へ流れる本文を data と判定する（未修正）'
+    resolution: fixed
+  - stable_id: 26610c49790aba19
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 入れ子のコマンド置換を階層ごとに全文再走査し、10 秒のタイムアウトを超えて判定が失われる（未修正）
+    resolution: fixed
+  - stable_id: 5a362ee99fa266b5
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop-2 で連結スタック化した _group_chain_pipeline() が親ノードを再帰でたどるため、開いたグループが約 1000 段あると RecursionError
+      でフックが落ち、deny 判定が消える
+    resolution: fixed
+  - stable_id: 7e826c5cc227903d
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop 2 の平坦スパンが最初の `)` で切れるため、単一引用符の shell payload 内の入れ子置換にある reset --hard を見落とす
+    resolution: fixed
+  - stable_id: 911d97982d23ca48
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop 2 の _group_chain_pipeline() の再帰が入れ子約 1000 段で RecursionError になり、フックが落ちて後続の文を検査しない
+    resolution: fixed
+  - stable_id: 26ab9a3d83649eff
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop 3 の単一引用符内 `$(` の均衡探索が二次の計算量になり、50KB 程度の入力で 10 秒のタイムアウトを超えて判定が失われる
+    resolution: deferred
+  - stable_id: 18b99bd71e74c8dc
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 引用符の中やコメントの中の偽の `<<WORD` をヒアドキュメントとみなし、後続の実コマンド行を data として捨てる
+    resolution: deferred
+  - stable_id: 511cd470522973d8
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '`env -S` などのラッパー・代入側で sink を指定した文を、後ろの data コマンド名だけで data と判定する'
+    resolution: deferred
+  - stable_id: b8fd289ca7750a04
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 同じコマンド内の関数定義・alias・hash・PATH 変更で data コマンド名を差し替えると、本文を検査しない
+    resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0002
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+  - task: task0003
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: destructive-guard は全 Bash 呼び出しの PreToolUse で走り、入力長に対する計算量が 10 秒のフック制限に直結する
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: final reading description_plus_code (P0=0.0, P1=0.79, P2=0.21, P3=0.0) decided full
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.08
+        confidence: 0.92
+        probabilities:
+          '0': 0.0
+          '1': 0.92
+          '2': 0.08
+          '3': 0.0
+      observed_at: '2026-09-28T13:05:00+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.21
+        confidence: 0.78
+        probabilities:
+          '0': 0.0
+          '1': 0.79
+          '2': 0.21
+          '3': 0.0
+      observed_at: '2026-09-28T13:20:00+09:00'
+    pre_survey_estimate:
+      files_expected: []
+      changed_lines_approx: 0
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: false
+      test_change_kind: none
+      added_test_cases_approx: 0
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 2
+      changes_external_contract: false
+      changes_behavior: false
+      evidence: 指定のPreToolUse Bash payloadをpython3 em-workflow/hooks/destructive-guard.pyへパイプ入力した結果はallow、終了コード0で、denyは再現しなかった。同ファイル760–774行で本文を除外し、1221–1225行では除外後にコマンド置換を抽出するため、報告された原因は確認できない。git-reset-hard判定は1932–1941行。既存テストは401/401成功したが、cases.jsonにヒアドキュメント内のreset
+        --hard専用ケースはない。呼び出しはhooks.json:50とrun-destructive-guard.py:39–45で確認した。変更は不要で、変更分類は既存の判定処理を指す。ファイル変更は行っていない
+follow_up_drafts: []
+lessons_candidates:
+- tier pre-survey reported work_still_required=false (deny not reproduced) yet the run proceeded at full
+  tier; the heredoc false positive depended on the installed cache vs repo code
+- a one-line heredoc false-positive fix grew into a hand-written shell structure scanner; 2 review rounds
+  x 3 auto-fix loops left 6 critical/high findings deferred at the batch rework cap (cdb8382d4bbb0b1d,
+  73a1d7b31734dd22, 26ab9a3d83649eff, 18b99bd71e74c8dc, 511cd470522973d8, b8fd289ca7750a04)
+- plugin-version-guard forces each rework task to bump the patch version, which the plan's files list
+  did not predict (task0002/task0003) and which stopped implement once with failed_kind decision
+- codex and litellm reviewers were rate_limited in round 2; all perspectives fell back to Claude
+- two implementer runs were orphaned when the launching session ended before the implementer reported
