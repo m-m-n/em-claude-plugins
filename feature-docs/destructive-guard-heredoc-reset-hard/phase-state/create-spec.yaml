@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: e9163b7dcb400408c2374d0fbc6f6094eca203e0
 last_input_digest: sha256:7fc3fe36ae7d385a6283e9b5913e0cabda7efaae3bf99b62e9b1af0ea384a715
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
   input_digest: sha256:7fc3fe36ae7d385a6283e9b5913e0cabda7efaae3bf99b62e9b1af0ea384a715
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:7fc3fe36ae7d385a6283e9b5913e0cabda7efaae3bf99b62e9b1af0ea384a715
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-reset-hard/REQUIREMENTS.md
+  sha256: sha256:99d6484cf428583023c750580fda5e9a088a645e63295d37d597d6faf07aeedd
+  produced_by: create-spec-run-0002
+- path: feature-docs/destructive-guard-heredoc-reset-hard/SPEC.md
+  sha256: sha256:4292536f6269167c1ecae6ac3601fced05d2126bb7b51851a369e04643fe5276
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
