@@ -109,3 +109,23 @@ records:
   normalized_answer: 'round 2 residual critical/high deferred: cdb8382d4bbb0b1d, 73a1d7b31734dd22, 26ab9a3d83649eff, 18b99bd71e74c8dc, 511cd470522973d8, b8fd289ca7750a04'
   resolution_note: 'batch.review_rework_count already 1 (cap); residual findings marked resolution deferred with ''batch mode: rework cap reached'' and the review step completed. All round-2 reviewers ran
     as Claude fallbacks because codex (usage limit) and litellm (429) were unavailable, so no cross-model consultation took place.'
+- question_id: verify.ts18-version-step-count
+  packet_id: null
+  answered_at: '2026-09-30T00:40:00+09:00'
+  source: batch-safe-default
+  answer_mode: single_select
+  selected_option_ids:
+  - A1
+  freeform: null
+  normalized_answer: 'TS-18 pass: three patch steps (0.3.3 -> 0.3.6), one per task commit as IMPLEMENTATION.md D3 prescribes; plugin.json and marketplace.json agree; no other plugin changed'
+  resolution_note: 'gate: verify judgment on TS-18 wording "raised by one patch step" vs D3 per-task bump (no gate_id; unlisted procedural question); options: A1 pass (D3 supersedes the stale TS-18 wording, FR8/AC-8 satisfied) / A2 fail and rework to collapse to 0.3.4; chosen: A1; codex_consulted: attempted, unavailable (Codex usage limit, retry after "Oct 4th, 2026 2:11 AM"); opus_escalation: false. Key points: SPEC FR8/AC-8 only require a patch raise with both files agreeing; D3 explicitly has each rework task raise the patch from its own HEAD; plugin-version-guard forces a bump in every commit under em-workflow/; collapsing would add a version-lowering commit with no behavioural gain.'
+- question_id: verify.ts19-test-docs-scope
+  packet_id: null
+  answered_at: '2026-09-30T00:40:00+09:00'
+  source: batch-safe-default
+  answer_mode: single_select
+  selected_option_ids:
+  - B1
+  freeform: null
+  normalized_answer: 'TS-19 pass: test-docs/destructive-guard-heredoc-reset-hard/task000{1,2,3}.tests.yaml are workflow test records, not product change scope'
+  resolution_note: 'gate: verify judgment on TS-19 "touches only the four task files" vs three extra test-docs records (no gate_id; unlisted procedural question); options: B1 pass / B2 fail; chosen: B1; codex_consulted: attempted, unavailable (Codex usage limit); opus_escalation: false. Key points: test-docs/<feature>/ is the implementer test-record directory used by many features on main; NFR4 scopes product code; hooks.json and run-destructive-guard.py unchanged; destructive-guard.py imports only the standard library and runs no subprocess.'
