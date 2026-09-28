@@ -1,36 +1,73 @@
 schema_version: 1
 feature: destructive-guard-rm-holes
 created: '2026-09-28'
-goal: |
-  destructive-guard: SAFE_DELETE の前方一致トラバーサルとコマンド置換による rm 対象消失を塞ぐ
+goal: 'destructive-guard: SAFE_DELETE の前方一致トラバーサルとコマンド置換による rm 対象消失を塞ぐ
+
 
   ## 現象（必須）
-  em-workflow/hooks/destructive-guard.py の rm 判定に、base 由来の穴が 4 件ある。destructive-guard-trash-rewrite の review round 1（2026-09-02）で security 指摘として検出され、当該 feature では deferred にした。stable_id は feature-docs/destructive-guard-trash-rewrite/reviews/round1.yaml のもの。
-  1. 9bdb454f52936e7d（high）: SAFE_DELETE を正規化前の対象に区切りなしで前方一致させているため、`targets`、`build/../src`、`/tmp/../home/user/valuable` が allow になる。ケース表はこの挙動を「既知の穴(未修正)」として allow で固定している
-  2. a370a41125211623（high）: statements() がコマンド置換の本体を別走査に切り出し、親コマンド側では空白に置換するため、`rm -rf $(printf /home/user/valuable)` は対象なしで check_rm() に届き allow になる。ケース表が allow で固定している
-  3. 1d7b0f52cd63180d（medium）: 理由文で提示する `mkdir -p ~/.local/share/Trash/files` が umask 依存で、022 なら 0755 のゴミ箱ディレクトリが作られる
-  4. 196314a170db0b00（medium）: rm の対象文字列を permissionDecisionReason にそのまま埋め込むため、ファイル名に仕込んだ指示文がフック由来の案内として agent に届く
+
+  em-workflow/hooks/destructive-guard.py の rm 判定に、base 由来の穴が 4 件ある。destructive-guard-trash-rewrite
+  の review round 1（2026-09-02）で security 指摘として検出され、当該 feature では deferred にした。stable_id
+  は feature-docs/destructive-guard-trash-rewrite/reviews/round1.yaml のもの。
+
+  1. 9bdb454f52936e7d（high）: SAFE_DELETE を正規化前の対象に区切りなしで前方一致させているため、`targets`、`build/../src`、`/tmp/../home/user/valuable`
+  が allow になる。ケース表はこの挙動を「既知の穴(未修正)」として allow で固定している
+
+  2. a370a41125211623（high）: statements() がコマンド置換の本体を別走査に切り出し、親コマンド側では空白に置換するため、`rm
+  -rf $(printf /home/user/valuable)` は対象なしで check_rm() に届き allow になる。ケース表が allow で固定している
+
+  3. 1d7b0f52cd63180d（medium）: 理由文で提示する `mkdir -p ~/.local/share/Trash/files` が umask
+  依存で、022 なら 0755 のゴミ箱ディレクトリが作られる
+
+  4. 196314a170db0b00（medium）: rm の対象文字列を permissionDecisionReason にそのまま埋め込むため、ファイル名に仕込んだ指示文がフック由来の案内として
+  agent に届く
+
   ## 再現手順（必須）
+
   1. ブランチ em-workflow/destructive-guard-trash-rewrite/integration を checkout する
+
   2. `python3 em-workflow/hooks/tests/run-destructive-guard.py` を実行する
-  3. em-workflow/hooks/tests/destructive-guard-cases.json の「既知の穴(未修正)」ラベルのケースが allow で pass することを確認する
+
+  3. em-workflow/hooks/tests/destructive-guard-cases.json の「既知の穴(未修正)」ラベルのケースが allow
+  で pass することを確認する
+
   ## 期待する挙動（必須）
+
   - 1 と 2 は deny または ask になる
+
   - 3 はゴミ箱ディレクトリが 0700 で作られる。既存なら所有者と permission を検証する
+
   - 4 は生の対象文字列を理由文に入れない
+
   ## 完了の定義（必須）
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
   - [ ] 既存の deny / ask ケースが 1 件も allow に変わらない。特に末尾スラッシュ無しの `tmp` / `.cache` / `/var/tmp`
+
   ## 該当箇所（任意）
+
   行番号は em-workflow/destructive-guard-trash-rewrite/integration の 781cc82 時点。
+
   - em-workflow/hooks/destructive-guard.py:147（SAFE_DELETE）
+
   - em-workflow/hooks/destructive-guard.py:468（statements）
+
   - em-workflow/hooks/destructive-guard.py:757（ゴミ箱ディレクトリの作成コマンド）
+
   - em-workflow/hooks/destructive-guard.py:783（理由文への埋め込み）
+
   - em-workflow/hooks/tests/destructive-guard-cases.json:133, 138-139
+
   ## 実害・発生条件（任意）
-  2026-09-02 の review で review-editor に 1 と 2 の自動修正を適用したところ、スイートが 150/150 から 130/150 に落ちた。狙った強化（`targets` の deny 化）と同時に、末尾スラッシュ無しの `tmp` / `.cache` / `/var/tmp` が deny から allow に退行した。修正に入る前に、この退行を捕まえる deny ケースを先に足すこと。
+
+  2026-09-02 の review で review-editor に 1 と 2 の自動修正を適用したところ、スイートが 150/150 から 130/150
+  に落ちた。狙った強化（`targets` の deny 化）と同時に、末尾スラッシュ無しの `tmp` / `.cache` / `/var/tmp` が deny
+  から allow に退行した。修正に入る前に、この退行を捕まえる deny ケースを先に足すこと。
+
+  '
 base_branch: main
 parent_branch: em-workflow/destructive-guard-rm-holes/integration
 tier: reduced
@@ -86,7 +123,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: UI や視覚的な成果物が無い、PreToolUse フック内部の判定と理由文の修正（tier reduced でも design step は削減対象）
+  skipped_reason: UI や視覚的な成果物が無い、PreToolUse フック内部の判定と理由文の修正（tier reduced でも design
+    step は削減対象）
 - id: create-plan
   artifacts:
   - VERIFICATION.md
@@ -101,7 +139,40 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: rm reasons without raw targets, rm-hole regression tests, version bump
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_rm_reason.py
+    - tests/test_destructive_guard_command_substitution.py
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -111,92 +182,132 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   FR2:
     title: 置換のみの rm 対象(穴2)
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   FR3:
     title: ゴミ箱ディレクトリ作成を案内しない(穴3)
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   FR4:
     title: rm 対象の生文字列を理由文に入れない(穴4)
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
   FR5:
     title: 既存の deny / ask を退行させない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   FR6:
     title: 再発検出テストの追加
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-9
+    - TS-10
   FR7:
     title: 既存の理由文テストの更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   FR8:
     title: version を上げる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR1:
     title: 標準ライブラリのみ・ファイルシステム/subprocess 呼び出しを新たに加えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR2:
     title: 同じコマンドに同じ判定と byte 単位で同じ理由文
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR3:
     title: stdout に制御文字を出さない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-10
   NFR4:
     title: CLAUDE_BATCH 下の ask→deny 降格と降格文言の維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-7
   NFR5:
     title: 理由文テストは HOME と PATH をテスト側で与える
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+    - TS-9
 batch:
   review_rework_count: 0
   verify_rework:
