@@ -796,14 +796,24 @@ class HeredocRecord:
     around that span, which statement the operator sits in (Component 2's
     "host statement"), without strip_heredocs() itself needing to know
     anything about statements, substitutions, or pipelines.
+
+    QUOTED is whether the delimiter word itself was written quoted
+    (`<<'EOF'`/`<<"EOF"`/`<<\\EOF`) -- when it is, the shell never expands
+    anything inside the body (it is taken completely literally), but when
+    it is NOT, the shell expands `$(...)`/`` `...` `` inside the body before
+    the body ever reaches the destination command -- true regardless of
+    whether that destination is a data command or a sink. A `data`
+    destination therefore still needs its body's own substitutions scanned
+    whenever QUOTED is False; only a quoted delimiter makes the body inert.
     """
 
-    __slots__ = ("body", "op_start", "op_end")
+    __slots__ = ("body", "op_start", "op_end", "quoted")
 
-    def __init__(self, body, op_start, op_end):
+    def __init__(self, body, op_start, op_end, quoted=False):
         self.body = body
         self.op_start = op_start
         self.op_end = op_end
+        self.quoted = quoted
 
 
 def _delimiter_line_word(line):
@@ -872,18 +882,21 @@ def strip_heredocs(chunk):
         # the STRIPPED output is fixed before it, since appending LINE
         # unchanged does not move where its own text starts.
         op_positions = [
-            (out_len + m.start(), out_len + m.end(), m.group(2)) for m in matches
+            (out_len + m.start(), out_len + m.end(), m.group(2), bool(m.group(1)))
+            for m in matches
         ]
         out.append(line)
         out_len += len(line)
         start = i + 1
-        for op_start, op_end, delimiter in op_positions:
+        for op_start, op_end, delimiter, quoted in op_positions:
             candidates = word_to_lines.get(delimiter, ())
             pos = bisect.bisect_left(candidates, start)
             if pos < len(candidates):
                 found = candidates[pos]
                 records.append(
-                    HeredocRecord("".join(lines[start:found]), op_start, op_end)
+                    HeredocRecord(
+                        "".join(lines[start:found]), op_start, op_end, quoted
+                    )
                 )
                 start = found + 1
             # No candidate at/after START for THIS operator: it consumes
@@ -960,6 +973,33 @@ class _StmtInfo:
         self.parse_failed = parse_failed
 
 
+# `git`/`gh` are in DATA_COMMANDS on the premise that their stdin/arguments
+# are never executed. `-c <name>=<value>` breaks that premise: it can define
+# a shell alias (`-c alias.x=!bash`) that a following subcommand invocation
+# then runs, turning what looks like a data command into code execution.
+# Any `-c`/`--config`/`--git-dir`-style option value cannot be read
+# statically for this, so a git/gh invocation carrying a bare `-c` (or
+# `-C`, which git also treats as a global option position, though it only
+# changes cwd) is judged conservatively: not a data command at all.
+GIT_LIKE_DATA_COMMANDS = frozenset({"git", "gh"})
+GIT_UNSAFE_GLOBAL_FLAGS = {"-c", "--config"}
+
+
+def _git_alias_risk(word, shaped):
+    """True when WORD is `git`/`gh` and SHAPED (its own shaped argument
+    list, command word included) carries a `-c`/`--config` global option —
+    see GIT_LIKE_DATA_COMMANDS's own comment for why that disqualifies it
+    from being treated as a data command."""
+    if word not in GIT_LIKE_DATA_COMMANDS:
+        return False
+    for a in shaped[1:]:
+        if a in GIT_UNSAFE_GLOBAL_FLAGS or any(
+            a.startswith(f"{flag}=") for flag in GIT_UNSAFE_GLOBAL_FLAGS
+        ):
+            return True
+    return False
+
+
 def _shape_and_head(toks):
     """Apply the SAME fused-closer split / redirect separation / grouping
     skip statements() itself applies to a chunk's real statements, to one
@@ -969,13 +1009,43 @@ def _shape_and_head(toks):
     case-pattern state to carry across it. Returns (command word or None,
     shaped words, redirects) -- the same shape head()'s other callers
     already work with.
+
+    A `git`/`gh` invocation carrying a `-c`/`--config` global option is
+    reported with WORD forced to None (see _git_alias_risk()): every caller
+    here treats a None word as "no destination could be read", which is
+    exactly the conservative fallback such an invocation needs -- it can
+    define an alias that runs arbitrary code, so it must not be judged a
+    plain data command.
     """
     fused = _split_fused_closer_redirects(toks)
     words_only, redirects = split_redirects(fused, True)
     lead = _shape_leading(words_only, [])
     shaped = _shaped_remainder(words_only, lead)
     word, _ = head(shaped)
+    if _git_alias_risk(word, shaped):
+        word = None
     return word, shaped, redirects
+
+
+# Compound-statement keywords that can start a pipeline continuation stage
+# (`cmd | if ...; then bash; fi`, `cmd | while read x; do bash; done`,
+# `cmd | for x in ...; do bash; done`, `cmd | case $x in ...) bash;; esac`,
+# `cmd | select x in ...; do bash; done`). _shape_and_head() strips one of
+# these via _shape_leading() (RESERVED_SKIP_WORDS) exactly as statements()'s
+# own per-segment scan does, which is right for THAT scan (it later sees
+# every one of the compound's own inner segments as its own, separately-
+# lexed statement) but wrong here: _pipeline_has_sink() only ever looks at
+# ONE lexer segment per pipeline stage (the text up to the compound's own
+# first `;`/newline), so stripping the keyword and reading the word behind
+# it (`if :` -> `:`, a DATA_COMMANDS entry) misses every later branch of the
+# SAME compound statement (`then bash; fi`) that a real shell would also
+# feed this stage's stdin -- and, through it, the piped-in heredoc body.
+# Recognised on the RAW, unshaped token (before _shape_and_head() strips it)
+# so the stage is judged conservatively as "other" rather than by the
+# now-hidden word behind the keyword.
+COMPOUND_STATEMENT_KEYWORDS = frozenset(
+    {"if", "while", "until", "for", "case", "select"}
+)
 
 
 def _is_pipe_sep(sep):
@@ -1012,6 +1082,15 @@ def _pipeline_has_sink(segments, index):
         toks, lexed, _ = segments[i]
         if not lexed:
             return True, has_other
+        raw_index = _skip_assignments_and_wrappers(toks)
+        if raw_index < len(toks) and toks[raw_index] in COMPOUND_STATEMENT_KEYWORDS:
+            # A compound statement's own inner branches sit in later,
+            # separately-lexed segments this single-segment check never
+            # reaches (see COMPOUND_STATEMENT_KEYWORDS) -- judged as
+            # "other" rather than read through to whatever word
+            # _shape_and_head() would otherwise find behind the keyword.
+            has_other = True
+            continue
         word, shaped, _ = _shape_and_head(toks)
         if word is not None and SINK_WORD_RE.match(word):
             return True, has_other
@@ -1113,9 +1192,19 @@ def _stmt_info_from_segment(segments, index):
     toks, lexed, _ = segments[index]
     if not lexed:
         return _StmtInfo(parse_failed=True)
-    if _leading_group_opener(toks):
-        return _StmtInfo(parse_failed=True)
     word, shaped, _ = _shape_and_head(toks)
+    if _leading_group_opener(toks) and not (
+        word is not None and SINK_WORD_RE.match(word)
+    ):
+        # A group ({ / () whose own inner command word is not itself a
+        # known sink is judged conservatively as undetermined (see
+        # _leading_group_opener()'s own docstring): the group's closer and
+        # whatever it pipes into sit in a later, separately-lexed segment
+        # this function never reaches. But a known sink word right behind
+        # the opener (`{ bash <<'EOF'`) must still be read as a sink here --
+        # falling through to parse_failed in that case would let a sink
+        # hiding inside a group slip through as allowed.
+        return _StmtInfo(parse_failed=True)
     pipeline_sink, pipeline_undetermined = _pipeline_has_sink(segments, index)
     return _StmtInfo(
         word=word,
@@ -1138,9 +1227,21 @@ def _locate_statements(chunk, records):
     -- callers route a heredoc through _locate_single()/_walk_enclosing()
     instead whenever its operator sits inside a substitution.
     """
+    if _HDOC_MARKER_OPEN in chunk or _HDOC_MARKER_CLOSE in chunk:
+        # CHUNK is input-derived text, and the marker characters are meant
+        # to be internal-only (see _HDOC_MARKER_OPEN/_HDOC_MARKER_CLOSE's
+        # own docstring). If the input already contains one, a heredoc body
+        # quoting it verbatim could forge a `\x03<digits>\x04` span that
+        # _HDOC_MARKER_RE below would then mistake for this pass's own
+        # marker, letting input content reassign which record a later
+        # segment's destination decision lands on. Treat every record as
+        # undetermined rather than trust indices found in a chunk that could
+        # contain a forged marker.
+        return {idx: _StmtInfo(parse_failed=True) for idx in range(len(records))}
     marked_chunk = _mark_heredoc_operators(chunk, records)
     segments = lex_segments(marked_chunk)
     results = {}
+    seen = set()
     for seg_index, (toks, _lexed, _sep) in enumerate(segments):
         indices = set()
         for t in toks:
@@ -1150,6 +1251,15 @@ def _locate_statements(chunk, records):
             continue
         info = _stmt_info_from_segment(segments, seg_index)
         for rec_index in indices:
+            if rec_index in seen:
+                # RECORDS_INDEX already found in an earlier segment: rather
+                # than let this later segment's info silently overwrite the
+                # earlier one (which would let a forged marker elsewhere in
+                # CHUNK move a record's destination decision to the wrong
+                # statement), judge it undetermined.
+                results[rec_index] = _StmtInfo(parse_failed=True)
+                continue
+            seen.add(rec_index)
             results[rec_index] = info
     return results
 
@@ -1195,46 +1305,129 @@ def _substitution_inner(match):
     return match.group(2), match.start(2)
 
 
+def _all_substitution_spans(text):
+    """Every $(...)/`...` span in TEXT, found by a single paren-stack scan
+    rather than SUBSTITUTION's single-level, paren-free regex -- so a
+    heredoc buried several $(...) levels deep, or sitting beside a SIBLING
+    substitution at the same level (`$(true; echo "$(cat <<'EOF' ...)"
+    "$(true)")`), still yields the true, fully-nested structure instead of
+    one that only becomes visible one regex-matchable layer at a time.
+    Plain grouping parens (`(cd x && y)`) are tracked on the same stack,
+    just never emitted as a span, so they still consume their own `)` and
+    cannot be mistaken for a substitution's closer. Backtick bodies stay
+    opaque (no nesting inside them), matching SUBSTITUTION's own
+    `` `[^`]*` ``. Quoting is NOT tracked -- same imprecision SUBSTITUTION
+    itself already has -- so this is linear in len(TEXT), one pass, no
+    backtracking.
+
+    Also returns the start offsets of any `$(` (or backtick) left
+    unclosed by the end of TEXT, for the caller to treat as "structure
+    could not be confirmed" rather than silently as "nothing encloses
+    here".
+    """
+    spans = []
+    unmatched = []
+    stack = []  # each entry: opening offset, or None for a plain `(`
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == "$" and i + 1 < n and text[i + 1] == "(":
+            stack.append(i)
+            i += 2
+            continue
+        if c == "(":
+            stack.append(None)
+            i += 1
+            continue
+        if c == ")":
+            if stack:
+                open_pos = stack.pop()
+                if open_pos is not None:
+                    spans.append((open_pos, i + 1))
+            i += 1
+            continue
+        if c == "`":
+            j = text.find("`", i + 1)
+            if j == -1:
+                unmatched.append(i)
+                break
+            spans.append((i, j + 1))
+            i = j + 1
+            continue
+        i += 1
+    unmatched.extend(pos for pos in stack if pos is not None)
+    return spans, unmatched
+
+
+def _span_inner(text, span):
+    """(inner text, its own start offset in TEXT) for SPAN, a (start, end)
+    pair from _all_substitution_spans() -- mirrors _substitution_inner()
+    for a regex match, but for a span tuple instead."""
+    start, end = span
+    if text[start] == "`":
+        return text[start + 1 : end - 1], start + 1
+    return text[start + 2 : end - 1], start + 2
+
+
+def _immediate_parent_span(spans, start, end):
+    """The tightest span in SPANS that strictly contains [START, END) --
+    i.e. the immediate enclosing substitution -- or None. Picking the
+    smallest containing span (rather than the first found) is what makes a
+    sibling substitution elsewhere in the same text harmless: every span
+    that merely happens to also contain [START, END) by virtue of being
+    further out is still available, but never chosen ahead of the true
+    immediate parent."""
+    candidates = [
+        (s, e)
+        for s, e in spans
+        if s <= start and end <= e and (s, e) != (start, end)
+    ]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda se: se[1] - se[0])
+
+
 def _walk_enclosing(chunk, sub_match):
     """The chain of enclosing statements around SUB_MATCH -- the
     substitution directly holding a heredoc's host statement -- innermost
     first, up to the outermost (task plan Terms, "Enclosing statement":
-    "every level outward counts, up to the outermost"). None of this
-    task's test commands nests a heredoc-holding substitution inside a
-    further one, so this only ever runs its loop body once for them; the
-    loop itself stays general rather than hard-coding "exactly one level".
+    "every level outward counts, up to the outermost"). Each step locates
+    the statement WITHIN the immediate parent substitution's own body that
+    holds the previous level (not just whatever sits outside the parent
+    entirely) -- skipping that inner lookup is what previously let a
+    middle level, e.g. `bash -c "$(cat <<'EOF' ...)"` sitting inside a
+    further `$(...)`, vanish from the chain entirely.
 
-    Peeling SUB_MATCH itself (or, on a later iteration, whatever the
-    previous one found) out of TEXT and replacing it with the short,
-    filesystem-free SUBSTITUTION_STANDIN before searching again is what
-    lets a FURTHER-out substitution -- one whose own raw span could not
-    match SUBSTITUTION.finditer() while the inner one's parens were still
-    present -- become findable, mirroring how this file's own CHUNK_SUBS
-    resolves nesting iteratively across separate statements() passes; done
-    here, in one function, because the enclosing-statement association
-    would otherwise be lost the moment a substitution body is queued as its
-    own chunk (task plan Component 2, closing paragraph).
+    Containment is resolved once, structurally, via
+    _all_substitution_spans()'s paren-stack scan of the whole (unmodified)
+    CHUNK -- rather than by peeling one level at a time out of a working
+    copy and re-running SUBSTITUTION's paren-free regex on it -- so a
+    sibling substitution at the same nesting level (still holding its own
+    parens) cannot make an enclosing level invisible to the walk.
     """
+    spans, unmatched = _all_substitution_spans(chunk)
     chain = []
-    text = chunk
-    target_start, target_end = sub_match.start(), sub_match.end()
+    cur_start, cur_end = sub_match.start(), sub_match.end()
     for _ in range(10):  # a bound against a malformed/cyclic input, not a
         # limit this task's own commands ever reach
-        outer = _find_containing_substitution(text, target_start)
-        if outer is None:
-            chain.append(_locate_single(text, target_start, target_end))
+        parent = _immediate_parent_span(spans, cur_start, cur_end)
+        if parent is None:
+            if any(pos < cur_start for pos in unmatched):
+                # An opener earlier in CHUNK never closed by end of text --
+                # structurally, it may well enclose CUR, but its own span
+                # could not be confirmed (see _all_substitution_spans()).
+                # Guessing "nothing encloses here" would risk reading past
+                # a sink hidden behind it; fall back to undetermined.
+                chain.append(_StmtInfo(parse_failed=True))
+            else:
+                chain.append(_locate_single(chunk, cur_start, cur_end))
             break
-        chain.append(_locate_single(text, outer.start(), outer.end()))
-        # _ENCLOSING_WALK_STANDIN, unlike SUBSTITUTION_STANDIN, must NOT
-        # itself match SUBSTITUTION -- it replaces the just-found outer
-        # substitution so the NEXT _find_containing_substitution() call can
-        # search further out; a standin shaped like `$(...)` would instead
-        # re-match at the same position every iteration and the walk would
-        # never progress past one level.
-        placeholder = _ENCLOSING_WALK_STANDIN
-        text = text[: outer.start()] + placeholder + text[outer.end() :]
-        target_start = outer.start()
-        target_end = target_start + len(placeholder)
+        inner_text, inner_base = _span_inner(chunk, parent)
+        chain.append(
+            _locate_single(inner_text, cur_start - inner_base, cur_end - inner_base)
+        )
+        cur_start, cur_end = parent
     else:
         # The bound was hit without ever finding the outermost level --
         # treat as undetermined rather than decide from a possibly
@@ -1303,21 +1496,31 @@ def _case_open_before(chunk, pos):
     return depth > 0
 
 
-def _line_has_other_substitution(chunk, pos):
-    """Conservative guard: whether a command-substitution match sits on the
-    same line as POS in CHUNK. _locate_statements()/_locate_single() lex
-    CHUNK directly, without first blanking substitution bodies out via
+def _line_has_other_substitution(chunk, pos, sub_matches):
+    """Conservative guard: whether a command-substitution match overlaps
+    POS's own physical line in CHUNK. _locate_statements()/_locate_single()
+    lex CHUNK directly, without first blanking substitution bodies out via
     _mark_substitutions() as statements() itself does, so a separator
     inside a substitution's own text (`$(true; true)`) can be misread as
     splitting the host statement itself; used only to fall back to
     'undetermined' when that risk is present on the host's own line.
+
+    SUB_MATCHES is the caller's single SUBSTITUTION.finditer(chunk) pass
+    over the whole chunk (computed once in _heredoc_destinations()), not
+    re-scanned here per heredoc. Overlap is checked against the match's
+    full span rather than requiring it to start within POS's line, so a
+    substitution that opens on an earlier physical line and only closes on
+    POS's own line (`$(true;\\ncat) <<'EOF'`) is still caught -- restricting
+    the search window to [line_start, line_end) missed exactly that case,
+    since the match's own start then fell outside the window.
     """
     line_start = chunk.rfind("\n", 0, pos) + 1
     line_end = chunk.find("\n", pos)
     if line_end == -1:
         line_end = len(chunk)
-    for _ in SUBSTITUTION.finditer(chunk, line_start, line_end):
-        return True
+    for m in sub_matches:
+        if m.start() < line_end and m.end() > line_start:
+            return True
     return False
 
 
@@ -1350,13 +1553,22 @@ def _heredoc_destinations(chunk, records):
         host_infos = _locate_statements(chunk, plain_records)
         for position, index in enumerate(plain):
             record = records[index]
-            if _case_open_before(chunk, record.op_start) or _line_has_other_substitution(
-                chunk, record.op_start
-            ):
-                destinations[index] = "undetermined"
-                continue
             host = host_infos.get(position, _StmtInfo(parse_failed=True))
-            destinations[index] = _decide_from_chain([host])
+            decision = _decide_from_chain([host])
+            # A sink already resolved from the (possibly misread) host word
+            # is never downgraded by the line-splitting risk below -- the
+            # risk is that a separator inside a substitution's text gets
+            # misread as ending the host statement early, which can only
+            # ever manufacture a spurious host word or lose one, not turn a
+            # real sink word into a false one. Discarding a resolved sink
+            # here is what let `b"a"s"h" $(true) <<'EOF'` fall through to
+            # 'undetermined' and then to allow.
+            if decision != "sink" and (
+                _case_open_before(chunk, record.op_start)
+                or _line_has_other_substitution(chunk, record.op_start, sub_matches)
+            ):
+                decision = "undetermined"
+            destinations[index] = decision
 
     for index, sub_match in nested:
         record = records[index]
@@ -1828,6 +2040,21 @@ def statements(command):
                     destination == "undetermined" and SHELL_SINK.search(chunk)
                 ):
                     pending.append(record.body)
+                elif not record.quoted:
+                    # An unquoted delimiter (`<<EOF`, not `<<'EOF'`/
+                    # `<<"EOF"`) means the shell itself expands
+                    # `$(...)`/`` `...` `` inside the body before the body
+                    # ever reaches the destination command -- true even
+                    # when that destination is a plain data command (`cat
+                    # <<EOF\n$(git reset --hard HEAD)\nEOF`). The body
+                    # itself is not re-scanned as a statement here (it is
+                    # still just data once expanded), but each
+                    # substitution inside it is queued for the same
+                    # scanning every other substitution gets.
+                    for m in SUBSTITUTION.finditer(record.body):
+                        body = m.group(1) or m.group(2) or ""
+                        if body.strip():
+                            pending.append(body)
         chunk_subs = [m.group(1) or m.group(2) or "" for m in SUBSTITUTION.finditer(chunk)]
         for body in chunk_subs:
             if body.strip():
