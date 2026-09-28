@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-rm-holes
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 4a9d28e231261496474c97057c2fe3a1530dbd28
+last_input_digest: sha256:17f0288ed2f197392be0bcf8a4a5b914781574e6658de25162c37f1d344e0b55
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:17f0288ed2f197392be0bcf8a4a5b914781574e6658de25162c37f1d344e0b55
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
