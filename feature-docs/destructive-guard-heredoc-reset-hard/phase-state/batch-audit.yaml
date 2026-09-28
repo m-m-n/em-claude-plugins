@@ -1,0 +1,17 @@
+schema_version: 1
+feature: destructive-guard-heredoc-reset-hard
+records:
+- question_id: develop.tier-presurvey-no-work
+  packet_id: null
+  answered_at: '2026-09-28T13:18:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - B
+  freeform: null
+  normalized_answer: 'continue: treat pre-survey work_still_required=false as refuted and correct it to true'
+  resolution_note: 'gate: Step A tier decision no-work stop (no gate_id); options: A stop no-work-required / B correct and continue / C treat pre-survey unusable -> full / D re-run pre-survey; chosen: B;
+    codex_consulted: true (1 turn); opus_escalation: false. Key points: the literal ticket repro is already allowed, but the actual incident shape (heredoc + run_codex_exec.sh "$(cat ...)" in the same chunk,
+    SHELL_SINK substring match on .sh) and two-heredocs-on-one-line still deny; the regression allow-case from the definition of done is absent, so ''no work'' is factually wrong. C rejected: not an unusable
+    condition. D rejected: duplicates confirmed evidence. Side decision: unquoted-heredoc command-substitution miss -> separate follow-up task. tier.yaml pre_survey_estimate keeps the original Codex output
+    verbatim; the final Jev call received the corrected estimate.'
