@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 4a9d28e231261496474c97057c2fe3a1530dbd28
 last_input_digest: sha256:b543db73b21a53249be45f72c89c191b50aa174f1b211ec1b1e6b7d1db24dc20
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -81,10 +81,13 @@ worker_runs:
   input_digest: sha256:98202ca022633096dc66842ce33d4295b685424321e2235771c22c3ca982b88a
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:b543db73b21a53249be45f72c89c191b50aa174f1b211ec1b1e6b7d1db24dc20
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/destructive-guard-rm-holes/SPEC.md
+  sha256: sha256:9f717e47ef60f49222220eee63eb60c738afe3af86814d57b6e0dd551885ee5c
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
