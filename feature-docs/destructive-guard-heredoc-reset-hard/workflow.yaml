@@ -128,7 +128,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: 'batch retry consumed (1/1) after failure (orphaned: launching session 01a0e6f4-6326-73d4-b287-7ec74bf90f72 ended before the implementer reported); relaunched on the kept worktree'
     branch: em-workflow/destructive-guard-heredoc-reset-hard/task0002
     provenance:
