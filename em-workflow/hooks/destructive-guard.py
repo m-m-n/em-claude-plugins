@@ -1456,7 +1456,21 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
                 continue
             if not honor_single_quotes and c == "$" and i + 1 < n and text[i + 1] == "(":
                 quote_end = text.find("'", i + 1)
-                close_pos = text.find(")", i + 2)
+                # Balanced close inside the single-quoted range only (it
+                # holds no `'`, so the span can never leak past the quote).
+                limit = quote_end if quote_end != -1 else n
+                close_pos = -1
+                pdepth = 1
+                for k in range(i + 2, limit):
+                    if text[k] == "(":
+                        pdepth += 1
+                    elif text[k] == ")":
+                        pdepth -= 1
+                        if pdepth == 0:
+                            close_pos = k
+                            break
+                if close_pos == -1:
+                    close_pos = text.find(")", i + 2)
                 if close_pos != -1 and (quote_end == -1 or close_pos < quote_end):
                     spans.append((i, close_pos + 1))
                     parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
@@ -1901,12 +1915,23 @@ def _build_statement_table(chunk, marked_chunk):
 
 def _track_groups(table):
     """One forward pass over TABLE building GROUP_CLOSER_OF ({statement
-    index that OPENS a group: the statement index that CLOSES it}) and
+    index that OPENS a group: the statement index that CLOSES it}),
     OPEN_GROUPS_AT (per statement index, a reference to the persistent
     linked-stack node -- (bracket, open index, parent node), or None when
     nothing is open -- describing every group open AT that statement,
     including one it opens itself and any opened by an earlier statement
-    or on an earlier line -- Component 3's own definition).
+    or on an earlier line -- Component 3's own definition), and MISMATCHED
+    (True when a closer was seen that does not match the top of the group
+    stack -- including a closer seen with an empty stack). A vocabulary gap
+    in _leading_group_opener_char() (a compound-statement keyword this pass
+    does not yet recognise as an opener, e.g. one only reachable after
+    `then`/`do`/`else`/`elif`/`!`) produces exactly this shape: its paired
+    closer arrives with no matching opener on the stack. Rather than
+    silently ignoring that closer -- which would leave the heredocs it was
+    meant to re-enclose looking like top-level, undetermined-free
+    statements -- MISMATCHED tells the caller this table's own group
+    tracking is unreliable, so it can fall back to treating every heredoc
+    resolved against this table as undetermined instead of guessing.
 
     The stack is a persistent singly-linked list rather than a Python list
     copied per statement: pushing/popping only ever rebinds the current
@@ -1917,18 +1942,22 @@ def _track_groups(table):
     group_top = None
     group_closer_of = {}
     open_groups_at = []
+    mismatched = False
     for idx, stmt in enumerate(table):
         if stmt.lexed:
             closer = stmt.closes_group
-            if closer is not None and group_top is not None and group_top[0] == closer:
-                _bracket, open_idx, parent = group_top
-                group_closer_of[open_idx] = idx
-                group_top = parent
+            if closer is not None:
+                if group_top is not None and group_top[0] == closer:
+                    _bracket, open_idx, parent = group_top
+                    group_closer_of[open_idx] = idx
+                    group_top = parent
+                else:
+                    mismatched = True
             opener = stmt.opens_group
             if opener is not None:
                 group_top = (opener, idx, group_top)
         open_groups_at.append(group_top)
-    return group_closer_of, open_groups_at
+    return group_closer_of, open_groups_at, mismatched
 
 
 _PIPELINE_MEMO_KEY = "_pipeline_memo"
@@ -1997,21 +2026,21 @@ def _group_chain_pipeline(table, node, group_closer_of, memo):
     (keyed by identity, since nodes are shared linked-stack cells) so a
     node reachable from more than one heredoc's OPEN_GROUPS_AT costs one
     lookup instead of one re-walk of the whole enclosing chain (NFR3)."""
-    key = ("group", id(node))
-    cached = memo.get(key)
-    if cached is not None:
-        return cached
-    _bracket, open_idx, parent = node
-    close_idx = group_closer_of.get(open_idx)
-    if close_idx is None:
-        sink, other = False, True
-    else:
-        sink, other = _pipeline_downstream(table, close_idx, memo)
-    if parent is not None:
-        s2, o2 = _group_chain_pipeline(table, parent, group_closer_of, memo)
+    pending = []
+    cur = node
+    while cur is not None and ("group", id(cur)) not in memo:
+        pending.append(cur)
+        cur = cur[2]
+    sink, other = memo[("group", id(cur))] if cur is not None else (False, False)
+    for nd in reversed(pending):
+        close_idx = group_closer_of.get(nd[1])
+        if close_idx is None:
+            s2, o2 = False, True
+        else:
+            s2, o2 = _pipeline_downstream(table, close_idx, memo)
         sink = sink or s2
         other = other or o2
-    memo[key] = (sink, other)
+        memo[("group", id(nd))] = (sink, other)
     return sink, other
 
 
@@ -2098,19 +2127,31 @@ def _statement_info_at(text, pos, memo_key, tables_cache):
         top_spans = _top_level_spans(spans, parent_of)
         marked = _mark_substitutions(text, top_spans, 0)
         table = _build_statement_table(text, marked)
-        group_closer_of, open_groups_at = _track_groups(table)
+        group_closer_of, open_groups_at, mismatched = _track_groups(table)
         # _segment_boundaries() is the one full-text pass every heredoc's
         # own _segment_index_at() query against THIS text shares (NFR3) --
         # see that function's own docstring.
         boundaries = _segment_boundaries(text, opaque)
-        cached = (table, group_closer_of, open_groups_at, {}, unmatched, boundaries)
+        cached = (
+            table, group_closer_of, open_groups_at, {}, unmatched, boundaries,
+            mismatched,
+        )
         tables_cache[memo_key] = cached
-    table, group_closer_of, open_groups_at, pipe_memo, unmatched, boundaries = cached
+    (
+        table, group_closer_of, open_groups_at, pipe_memo, unmatched, boundaries,
+        mismatched,
+    ) = cached
     if any(p < pos for p in unmatched):
         return None
     idx = _segment_index_at(pos, boundaries)
     if idx >= len(table):
         return None
+    if mismatched:
+        # This table's own group tracking saw a closer that did not match
+        # its stack (see _track_groups()'s own docstring) -- undetermined
+        # here rather than a possibly-wrong sink/data guess; a sink found
+        # at another level of the same chain still wins (_decide_destination()).
+        return _StmtInfo(parse_failed=True)
     return _stmt_destination_info(table, idx, group_closer_of, open_groups_at, pipe_memo)
 
 
@@ -2623,6 +2664,22 @@ def statements(command):
     """
     pending = [command]
     budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
+    # Relative scan-cost cap (TM-5): each chunk popped off PENDING below is
+    # scanned a constant number of times (scan_structure() runs twice, plus
+    # the lexing passes), so the running total of chunk lengths processed is
+    # a fair proxy for total work done. A deeply nested substitution chain
+    # requeues a slightly shorter copy of the same text at every level
+    # (_span_inner()/CHUNK_SUBS above), so that total grows with the SQUARE
+    # of nesting depth even though COMMAND itself only grows linearly — the
+    # O(d x length) blowup this guards against. The cap is deliberately
+    # relative to len(command) (8x, plus a floor so a short command with a
+    # few legitimate levels of nesting is never cut short) rather than an
+    # absolute character count: an absolute cap previously tried here made a
+    # single large, flat command (a 60KB heredoc, a 50KB echo) trip the same
+    # limit a small nested one would, which is wrong — cost must scale with
+    # input length, not sit at a fixed ceiling regardless of it.
+    scanned_chars = 0
+    scan_budget = 8 * len(command) + 4096
     # Run-global: one list for the whole statements() call, appended to as
     # each chunk is processed, never rebuilt per chunk. A marker's encoded
     # index (see _mark_substitutions()) names a position in THIS list, so
@@ -2632,6 +2689,14 @@ def statements(command):
     all_subs = []
     while pending:
         chunk = pending.pop()
+        scanned_chars += len(chunk)
+        if scanned_chars > scan_budget:
+            decide(
+                "ask",
+                "scan-budget-exceeded",
+                "入れ子/積み上げの構造が深く、静的解析の走査量が入力長に対して"
+                "過大になったため打ち切った。安全側で確認を挟む。",
+            )
         chunk, heredocs = strip_heredocs(chunk)
         # Component 1: ONE structural scan of CHUNK, shared by every caller
         # below that needs to know where CHUNK's own top-level substitutions
