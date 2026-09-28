@@ -1455,19 +1455,24 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
                 i += 1
                 continue
             if not honor_single_quotes and c == "$" and i + 1 < n and text[i + 1] == "(":
-                stack.append([i, True, None, []])
-                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-                sub_open_stack.append(i)
-                if depth == 0 and top_opaque_start[0] is None:
-                    top_opaque_start[0] = i
-                i += 2
+                quote_end = text.find("'", i + 1)
+                close_pos = text.find(")", i + 2)
+                if close_pos != -1 and (quote_end == -1 or close_pos < quote_end):
+                    stack.append([i, True, None, []])
+                    parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+                    sub_open_stack.append(i)
+                    if depth == 0 and top_opaque_start[0] is None:
+                        top_opaque_start[0] = i
+                    i += 2
+                    continue
+                i += 1
                 continue
             if not honor_single_quotes and c == "`":
+                quote_end = text.find("'", i + 1)
                 j = text.find("`", i + 1)
-                if j == -1:
-                    unmatched.append(i)
-                    i = n
-                    break
+                if j == -1 or (quote_end != -1 and j > quote_end):
+                    i += 1
+                    continue
                 spans.append((i, j + 1))
                 parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
                 if depth == 0:
@@ -1504,6 +1509,11 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
                     break
                 spans.append((i, j + 1))
                 parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+                sub_open_stack.append(i)
+                while ci < len(checkpoints) and checkpoints[ci] <= j:
+                    containing_open[checkpoints[ci]] = sub_open_stack[-1]
+                    ci += 1
+                sub_open_stack.pop()
                 i = j + 1
                 continue
             i += 1
@@ -1550,6 +1560,11 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
                 break
             spans.append((i, j + 1))
             parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+            sub_open_stack.append(i)
+            while ci < len(checkpoints) and checkpoints[ci] <= j:
+                containing_open[checkpoints[ci]] = sub_open_stack[-1]
+                ci += 1
+            sub_open_stack.pop()
             if depth == 0:
                 if top_opaque_start[0] is None:
                     top_opaque_start[0] = i
@@ -1741,8 +1756,15 @@ class _Stmt:
 def _leading_group_opener_char(toks):
     """Whether TOKS' own command position, after skipping any VAR=value/
     WRAPPERS prefix, lands on an unquoted grouping opener, and which
-    bracket it opens ('{' or '(') -- the type Component 3's group tracking
-    needs to match against the correct closer -- or None."""
+    bracket/keyword-pair it opens ('{', '(', 'if', 'loop' for the
+    for/while/until/select family, or 'case') -- the type Component 3's
+    group tracking needs to match against the correct closer -- or None.
+    Recognising the compound-statement keyword pairs closes the gap where
+    `if ...; then cat <<'EOF' ...\\nEOF\\nfi | bash`,
+    `for ...; do cat <<'EOF' ...\\nEOF\\ndone | bash`, and
+    `case ... in ...) cat <<'EOF' ...\\nEOF\\n;; esac | bash` (and their
+    `while`/`until`/`select` counterparts) piped the closer's own line to a
+    shell sink and were not tracked as a group the way `{`/`(` already are."""
     i = 0
     n = len(toks)
     while i < n:
@@ -1753,17 +1775,36 @@ def _leading_group_opener_char(toks):
     if i >= n:
         return None
     t = toks[i]
+    quoted = getattr(t, "quoted", False)
     if t == "(" and getattr(t, "is_operator", False):
         return "("
-    if t == "{" and not getattr(t, "quoted", False):
+    if t == "{" and not quoted:
         return "{"
+    if t == "if" and not quoted:
+        return "if"
+    if t in ("for", "while", "until", "select") and not quoted:
+        return "loop"
+    if t == "case" and not quoted:
+        return "case"
     return None
 
 
-def _leading_group_closer(toks):
+def _leading_group_closer(toks, case_stack=None):
     """The closer counterpart to _leading_group_opener_char(): which
-    bracket TOKS' own leading position closes ('{' for a bare `}`, '(' for
-    a `)` operator), or None."""
+    bracket/keyword-pair TOKS' own leading position closes ('{' for a bare
+    `}`, '(' for a `)` operator, 'if' for `fi`, 'loop' for `done`, 'case'
+    for `esac`), or None.
+
+    CASE_STACK (the same per-chunk case-pattern/body stack
+    _build_statement_table() carries into _shape_leading(), snapshotted
+    BEFORE that call mutates it) decides whether a leading `esac` closes a
+    case construct here: it does when the case-tracking state at the start
+    of this statement is empty/"body" (ordinary command position) or
+    "pattern_first" (the empty-case-body shape `case x in esac`) -- the
+    same positions _shape_leading() itself treats `esac` as a closer.
+    "await_subject"/"await_in" (the subject/`in` word position) and
+    "pattern_rest" (opaque pattern content past its first word) never treat
+    `esac` as a closer, mirroring _shape_leading() exactly."""
     i = 0
     n = len(toks)
     while i < n:
@@ -1774,10 +1815,28 @@ def _leading_group_closer(toks):
     if i >= n:
         return None
     t = toks[i]
-    if t == "}" and not getattr(t, "quoted", False):
+    quoted = getattr(t, "quoted", False)
+    if t == "}" and not quoted:
         return "{"
     if t == ")" and getattr(t, "is_operator", False):
         return "("
+    if t == "fi" and not quoted:
+        return "if"
+    if t == "done" and not quoted:
+        return "loop"
+    if t == "esac" and not quoted:
+        top = case_stack[-1] if case_stack else None
+        if top in ("await_subject", "await_in", "pattern_rest"):
+            return None
+        if top == "pattern_first":
+            followed_by_closer = (
+                i + 1 < n
+                and toks[i + 1] == ")"
+                and getattr(toks[i + 1], "is_operator", False)
+            )
+            if followed_by_closer:
+                return None
+        return "case"
     return None
 
 
@@ -1799,6 +1858,11 @@ def _build_statement_table(chunk, marked_chunk):
         if lexed:
             fused = _split_fused_closer_redirects(stripped)
             words_only, redirects = split_redirects(fused, lexed)
+            # Snapshotted BEFORE _shape_leading() mutates case_stack, so a
+            # leading `esac` on THIS statement is judged against the
+            # case-tracking state this statement actually started in (see
+            # _leading_group_closer()'s own docstring).
+            case_stack_before = list(case_stack)
             lead = _shape_leading(words_only, case_stack)
             shaped_words = _shaped_remainder(words_only, lead)
             ends_case_item = bool(
@@ -1823,7 +1887,7 @@ def _build_statement_table(chunk, marked_chunk):
                 has_process_sub=_has_process_substitution(stripped),
                 is_assignment_only=_is_assignment_only(words_only),
                 opens_group=_leading_group_opener_char(stripped),
-                closes_group=_leading_group_closer(stripped),
+                closes_group=_leading_group_closer(stripped, case_stack_before),
                 is_compound_keyword=is_compound_keyword,
             ))
         else:
