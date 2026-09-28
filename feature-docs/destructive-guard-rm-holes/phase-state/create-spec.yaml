@@ -21,6 +21,7 @@ packets:
       status: answered
 answers:
   requirement.hole4.rendering:
+    question_id: requirement.hole4.rendering
     packet_id: create-spec-q0001
     answered_at: '2026-09-28T13:26:38+09:00'
     source: batch-codex-consultation
@@ -34,6 +35,7 @@ answers:
       positional_only (same as worker recommendation); opus_escalation: false. Codex
       reasoning: 対象文字列内の指示文が理由へ混入するのを防げる / 位置番号で対象を参照できる / ハッシュ計算を追加せずに済む'
   requirement.hole4.scope:
+    question_id: requirement.hole4.scope
     packet_id: create-spec-q0001
     answered_at: '2026-09-28T13:26:38+09:00'
     source: batch-codex-consultation
@@ -48,6 +50,7 @@ answers:
       指定された修正範囲に一致する / safety-bypass の理由で表示する値は固定の BYPASS_FLAGS に完全一致するため任意の指示文は混入しない（orchestrator
       が destructive-guard.py:2779-2782 で確認）'
   requirement.hole3.handling:
+    question_id: requirement.hole3.handling
     packet_id: create-spec-q0001
     answered_at: '2026-09-28T13:26:38+09:00'
     source: batch-codex-consultation
@@ -61,6 +64,7 @@ answers:
       pin_absence (same as worker recommendation); opus_escalation: false. Codex reasoning:
       現行コードにゴミ箱ディレクトリの作成案内は存在しない / 案内を再導入せず再発をテストで防げる / 所有者・権限の検査をフックへ追加せず既存の制約を守れる'
   design-step:
+    question_id: design-step
     packet_id: create-spec-q0001
     answered_at: '2026-09-28T13:26:38+09:00'
     source: batch-decision-table
