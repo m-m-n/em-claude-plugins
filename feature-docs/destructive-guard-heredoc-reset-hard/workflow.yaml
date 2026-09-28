@@ -128,7 +128,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-heredoc-reset-hard/task0002
     provenance:
       source: review
       source_ids:
@@ -172,7 +173,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-heredoc-reset-hard/task0003
     provenance:
       source: review
       source_ids:
