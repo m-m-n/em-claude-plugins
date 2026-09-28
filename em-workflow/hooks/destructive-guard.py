@@ -1458,12 +1458,9 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
                 quote_end = text.find("'", i + 1)
                 close_pos = text.find(")", i + 2)
                 if close_pos != -1 and (quote_end == -1 or close_pos < quote_end):
-                    stack.append([i, True, None, []])
+                    spans.append((i, close_pos + 1))
                     parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-                    sub_open_stack.append(i)
-                    if depth == 0 and top_opaque_start[0] is None:
-                        top_opaque_start[0] = i
-                    i += 2
+                    i = close_pos + 1
                     continue
                 i += 1
                 continue
@@ -1905,23 +1902,32 @@ def _build_statement_table(chunk, marked_chunk):
 def _track_groups(table):
     """One forward pass over TABLE building GROUP_CLOSER_OF ({statement
     index that OPENS a group: the statement index that CLOSES it}) and
-    OPEN_GROUPS_AT (per statement index, the list of (bracket, open index)
-    pairs open AT that statement, including one it opens itself and any
-    opened by an earlier statement or on an earlier line -- Component 3's
-    own definition)."""
-    group_stack = []
+    OPEN_GROUPS_AT (per statement index, a reference to the persistent
+    linked-stack node -- (bracket, open index, parent node), or None when
+    nothing is open -- describing every group open AT that statement,
+    including one it opens itself and any opened by an earlier statement
+    or on an earlier line -- Component 3's own definition).
+
+    The stack is a persistent singly-linked list rather than a Python list
+    copied per statement: pushing/popping only ever rebinds the current
+    top node, so OPEN_GROUPS_AT holds one O(1) reference per statement
+    instead of an O(open groups) copy, keeping this pass and its memory
+    linear in the number of statements even when groups never close
+    (NFR3)."""
+    group_top = None
     group_closer_of = {}
     open_groups_at = []
     for idx, stmt in enumerate(table):
         if stmt.lexed:
             closer = stmt.closes_group
-            if closer is not None and group_stack and group_stack[-1][0] == closer:
-                _bracket, open_idx = group_stack.pop()
+            if closer is not None and group_top is not None and group_top[0] == closer:
+                _bracket, open_idx, parent = group_top
                 group_closer_of[open_idx] = idx
+                group_top = parent
             opener = stmt.opens_group
             if opener is not None:
-                group_stack.append((opener, idx))
-        open_groups_at.append(list(group_stack))
+                group_top = (opener, idx, group_top)
+        open_groups_at.append(group_top)
     return group_closer_of, open_groups_at
 
 
@@ -1985,6 +1991,30 @@ def _pipeline_downstream(table, index, memo):
     return result
 
 
+def _group_chain_pipeline(table, node, group_closer_of, memo):
+    """(has_sink, has_other) aggregated over NODE's own group's downstream
+    pipeline OR'd with its parent node's own aggregate, memoized per node
+    (keyed by identity, since nodes are shared linked-stack cells) so a
+    node reachable from more than one heredoc's OPEN_GROUPS_AT costs one
+    lookup instead of one re-walk of the whole enclosing chain (NFR3)."""
+    key = ("group", id(node))
+    cached = memo.get(key)
+    if cached is not None:
+        return cached
+    _bracket, open_idx, parent = node
+    close_idx = group_closer_of.get(open_idx)
+    if close_idx is None:
+        sink, other = False, True
+    else:
+        sink, other = _pipeline_downstream(table, close_idx, memo)
+    if parent is not None:
+        s2, o2 = _group_chain_pipeline(table, parent, group_closer_of, memo)
+        sink = sink or s2
+        other = other or o2
+    memo[key] = (sink, other)
+    return sink, other
+
+
 def _statement_pipeline_info(table, idx, group_closer_of, open_groups_at, memo):
     """Component 4 levels 2-3 combined for TABLE[IDX]: its own downstream
     pipeline, OR the downstream pipeline after the closer of any compound
@@ -1992,12 +2022,9 @@ def _statement_pipeline_info(table, idx, group_closer_of, open_groups_at, memo):
     chunk makes this undeterminable (Component 4 rule 2), not silently
     'no sink here'."""
     sink, other = _pipeline_downstream(table, idx, memo)
-    for _bracket, open_idx in open_groups_at[idx]:
-        close_idx = group_closer_of.get(open_idx)
-        if close_idx is None:
-            other = True
-            continue
-        s2, o2 = _pipeline_downstream(table, close_idx, memo)
+    node = open_groups_at[idx]
+    if node is not None:
+        s2, o2 = _group_chain_pipeline(table, node, group_closer_of, memo)
         sink = sink or s2
         other = other or o2
     return sink, other
