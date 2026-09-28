@@ -134,6 +134,14 @@ QUOTED_MARK = "\x01"
 # reach the safe-root exception even if this text's own shape changed later.
 SUBSTITUTION_STANDIN = "$(...)"
 
+# Stand-in used only by _walk_enclosing() to peel one enclosing substitution
+# out of its own working copy of the text before searching for the next one
+# further out. Must NOT match SUBSTITUTION (no `$(`, no backtick, no
+# parens) -- unlike SUBSTITUTION_STANDIN above, which is deliberately
+# shaped like `$(...)` for a different purpose and would make that search
+# re-match its own placeholder forever instead of advancing outward.
+_ENCLOSING_WALK_STANDIN = "\x03ENCLOSING_WALK\x03"
+
 # Redirection operators, matched against a whole token. A redirect and its
 # target are not arguments to the command and must be lifted out before the
 # checks run, or `>` and `/dev/null` read as two more paths to delete.
@@ -936,16 +944,17 @@ class _StmtInfo:
     """
 
     __slots__ = (
-        "word", "pipeline_sink", "has_process_sub", "is_assignment_only",
-        "parse_failed",
+        "word", "pipeline_sink", "pipeline_undetermined", "has_process_sub",
+        "is_assignment_only", "parse_failed",
     )
 
     def __init__(
-        self, word=None, pipeline_sink=False, has_process_sub=False,
-        is_assignment_only=False, parse_failed=False,
+        self, word=None, pipeline_sink=False, pipeline_undetermined=False,
+        has_process_sub=False, is_assignment_only=False, parse_failed=False,
     ):
         self.word = word
         self.pipeline_sink = pipeline_sink
+        self.pipeline_undetermined = pipeline_undetermined
         self.has_process_sub = has_process_sub
         self.is_assignment_only = is_assignment_only
         self.parse_failed = parse_failed
@@ -981,24 +990,39 @@ def _is_pipe_sep(sep):
 
 
 def _pipeline_has_sink(segments, index):
-    """Whether a statement later than SEGMENTS[INDEX], joined to it by an
-    unbroken run of Pipeline separators, has a sink command word (task plan
-    Component 2, rule 1(ii)/(iii)). A later stage that fails to lex is
-    judged conservatively as if it did (FR5's own bias: never lean toward
-    missed detection).
+    """(has_sink, has_other) for the run of statements later than
+    SEGMENTS[INDEX], joined to it by an unbroken run of Pipeline separators
+    (task plan Component 2, rule 1(ii)/(iii)). HAS_SINK is True as soon as
+    any later stage's command word matches SINK_WORD_RE. HAS_OTHER is True
+    as soon as any later stage is neither a sink stage nor a "plain data"
+    stage -- one whose word is in DATA_COMMANDS with no process substitution
+    and no grouping opener of its own (an execution prefix like `xargs -I{}
+    bash -c`, a bare grouping `{ true; bash; }`, or a process substitution
+    like `tee >(bash)` all count as "other": none of these lets the caller
+    keep treating the whole chain as a data sink). A later stage that fails
+    to lex is judged conservatively as a sink (FR5's own bias: never lean
+    toward missed detection).
     """
+    has_other = False
     i = index
     while i < len(segments) and _is_pipe_sep(segments[i][2]):
         i += 1
         if i >= len(segments):
-            return False
+            return False, has_other
         toks, lexed, _ = segments[i]
         if not lexed:
-            return True
-        word, _, _ = _shape_and_head(toks)
+            return True, has_other
+        word, shaped, _ = _shape_and_head(toks)
         if word is not None and SINK_WORD_RE.match(word):
-            return True
-    return False
+            return True, has_other
+        if (
+            word is None
+            or word not in DATA_COMMANDS
+            or _has_process_substitution(toks)
+            or _leading_group_opener(toks)
+        ):
+            has_other = True
+    return False, has_other
 
 
 def _has_process_substitution(toks):
@@ -1055,16 +1079,48 @@ def _mark_heredoc_operators(chunk, records):
     return "".join(out)
 
 
+def _leading_group_opener(toks):
+    """Conservative guard: whether TOKS' own command position, after
+    skipping any VAR=value/WRAPPERS prefix, lands on an unquoted grouping
+    opener (`(` or `{`). A host statement shaped this way -- `{ cat
+    <<'EOF'` / `( cat <<'EOF'` -- has its group's own closer, and whatever
+    that group's output is piped into, sitting in a LATER, separately-lexed
+    segment (the newline that ends the operator's own line splits them
+    apart) that _stmt_info_from_segment() never looks at; used to fall back
+    to 'undetermined' rather than read the group's inner command word alone
+    as if it were the whole statement's destination.
+    """
+    i = 0
+    n = len(toks)
+    while i < n:
+        advance = _skip_assignments_and_wrappers(toks[i:])
+        if not advance:
+            break
+        i += advance
+    if i >= n:
+        return False
+    t = toks[i]
+    if t == "(" and getattr(t, "is_operator", False):
+        return True
+    if t == "{" and not getattr(t, "quoted", False):
+        return True
+    return False
+
+
 def _stmt_info_from_segment(segments, index):
     """Build the _StmtInfo for SEGMENTS[INDEX], a (toks, lexed, sep) triple
     already known to hold at least one marker."""
     toks, lexed, _ = segments[index]
     if not lexed:
         return _StmtInfo(parse_failed=True)
+    if _leading_group_opener(toks):
+        return _StmtInfo(parse_failed=True)
     word, shaped, _ = _shape_and_head(toks)
+    pipeline_sink, pipeline_undetermined = _pipeline_has_sink(segments, index)
     return _StmtInfo(
         word=word,
-        pipeline_sink=_pipeline_has_sink(segments, index),
+        pipeline_sink=pipeline_sink,
+        pipeline_undetermined=pipeline_undetermined,
         has_process_sub=_has_process_substitution(toks),
         is_assignment_only=_is_assignment_only(shaped),
     )
@@ -1169,10 +1225,21 @@ def _walk_enclosing(chunk, sub_match):
             chain.append(_locate_single(text, target_start, target_end))
             break
         chain.append(_locate_single(text, outer.start(), outer.end()))
-        placeholder = SUBSTITUTION_STANDIN
+        # _ENCLOSING_WALK_STANDIN, unlike SUBSTITUTION_STANDIN, must NOT
+        # itself match SUBSTITUTION -- it replaces the just-found outer
+        # substitution so the NEXT _find_containing_substitution() call can
+        # search further out; a standin shaped like `$(...)` would instead
+        # re-match at the same position every iteration and the walk would
+        # never progress past one level.
+        placeholder = _ENCLOSING_WALK_STANDIN
         text = text[: outer.start()] + placeholder + text[outer.end() :]
         target_start = outer.start()
         target_end = target_start + len(placeholder)
+    else:
+        # The bound was hit without ever finding the outermost level --
+        # treat as undetermined rather than decide from a possibly
+        # incomplete chain.
+        chain.append(_StmtInfo(parse_failed=True))
     return chain
 
 
@@ -1201,6 +1268,10 @@ def _decide_from_chain(chain):
         return "undetermined"
     if host.has_process_sub or any(level.has_process_sub for level in enclosing):
         return "undetermined"
+    if host.pipeline_undetermined or any(
+        level.pipeline_undetermined for level in enclosing
+    ):
+        return "undetermined"
     if host.word is None or host.word not in DATA_COMMANDS:
         return "undetermined"
     for level in enclosing:
@@ -1210,6 +1281,44 @@ def _decide_from_chain(chain):
             return "undetermined"
 
     return "data"
+
+
+def _case_open_before(chunk, pos):
+    """Conservative guard: whether an unclosed `case ... in` construct opens
+    somewhere before POS in CHUNK. _locate_statements()/_locate_single()
+    re-lex CHUNK independently of statements()'s own CASE_STACK-carrying
+    walk (see their docstrings), so they cannot tell a case-pattern word
+    from a command word; this is a rough, quote/substitution-unaware word
+    scan used only to fall back to 'undetermined' rather than risk reading
+    a pattern word as a command word, deliberately biased toward reporting
+    an open case (a false positive here only costs precision, never
+    correctness -- see _heredoc_destinations()).
+    """
+    depth = 0
+    for word in re.findall(r"\b\w+\b", chunk[:pos]):
+        if word == "case":
+            depth += 1
+        elif word == "esac" and depth > 0:
+            depth -= 1
+    return depth > 0
+
+
+def _line_has_other_substitution(chunk, pos):
+    """Conservative guard: whether a command-substitution match sits on the
+    same line as POS in CHUNK. _locate_statements()/_locate_single() lex
+    CHUNK directly, without first blanking substitution bodies out via
+    _mark_substitutions() as statements() itself does, so a separator
+    inside a substitution's own text (`$(true; true)`) can be misread as
+    splitting the host statement itself; used only to fall back to
+    'undetermined' when that risk is present on the host's own line.
+    """
+    line_start = chunk.rfind("\n", 0, pos) + 1
+    line_end = chunk.find("\n", pos)
+    if line_end == -1:
+        line_end = len(chunk)
+    for _ in SUBSTITUTION.finditer(chunk, line_start, line_end):
+        return True
+    return False
 
 
 def _heredoc_destinations(chunk, records):
@@ -1240,6 +1349,12 @@ def _heredoc_destinations(chunk, records):
         plain_records = [records[i] for i in plain]
         host_infos = _locate_statements(chunk, plain_records)
         for position, index in enumerate(plain):
+            record = records[index]
+            if _case_open_before(chunk, record.op_start) or _line_has_other_substitution(
+                chunk, record.op_start
+            ):
+                destinations[index] = "undetermined"
+                continue
             host = host_infos.get(position, _StmtInfo(parse_failed=True))
             destinations[index] = _decide_from_chain([host])
 
