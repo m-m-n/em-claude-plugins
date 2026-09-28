@@ -1,0 +1,292 @@
+task_id: task0002
+
+# All "tests" entries below name one case (by its TS-id and its exact
+# label text) inside em-workflow/hooks/tests/destructive-guard-cases.json,
+# executed via the shared runner:
+#   python3 em-workflow/hooks/tests/run-destructive-guard.py
+# There is no separate per-AC test file (NFR4): every criterion here is
+# verified through that one suite, or (AC-7) through an ad-hoc timing
+# script kept outside the repository per the task plan's Test Notes.
+#
+# Special circumstance: this worktree already held an uncommitted,
+# substantially-complete implementation of this task's guard/cases changes
+# when this session started (no prior commit; git status was dirty before
+# any edit in this session). The cases file (all TS-28..TS-45 entries) was
+# already fully populated at that point, so the AC-1 "red" baseline below
+# was reconstructed by extracting the guard as it stood at the commit this
+# branch forked from (`git show <task0002-branch-point>:em-workflow/hooks/
+# destructive-guard.py`) into a scratch copy and running the shared runner
+# against that copy with the (already-present) new cases file -- exactly
+# the run AC-1 itself asks for. baseline_failures below is the case suite
+# state as inherited (the guard already in the worktree, before this
+# session's own edits): 443/448 passing, 5 failing (4 of the new TS-28..45
+# cases not yet handled, plus one regression this session found against an
+# EXISTING pinned case that the inherited, uncommitted guard rewrite had
+# broken). This session's own work fixed all 5 without weakening any test.
+
+baseline_failures:
+  - "TS-33: case のクォートされた 'esac' パターンは case を閉じず、bash 宛ては deny"
+  - "TS-37: パイプ演算子の後の空行を越えた宛先がクォート分割の b\"a\"s\"h\" でも deny"
+  - "TS-39: コメント行の $( は置換を開かず、次行の b\"a\"s\"h\" 宛てヒアドキュメントは deny"
+  - "TS-40: 2 つ目の演算子はコメント内にあるため、A の区切り後の reset 行は実コマンドとして deny"
+  - "引用符(rm-recursive): 同じ並び(置換直後に親参照付きパスが続く形)を単一引用符で囲んでも裸形と同じ deny — クォート種別で判定は変わらない (regression: got 'ask' instead of the pinned 'deny')"
+
+final_failures: []
+
+acceptance_tests:
+  AC-1:
+    tests:
+      - "TS-28a: グループ({ ... })の閉じがパイプ先 bash ならヒアドキュメントも deny"
+      - "TS-28b: グループ(( ... ))の閉じがパイプ先 bash ならヒアドキュメントも deny"
+      - "TS-29a: グループが前の文で開いていてもパイプ先 bash なら deny"
+      - "TS-29b: グループが前の行だけで開いていてもパイプ先 bash なら deny"
+      - "TS-30: グループの閉じがファイル書き込みなら allow(TS-28 の対照)"
+      - "TS-31: case のパターン語 cat はコマンド語にならず、bash 宛てヒアドキュメントは deny"
+      - "TS-32: case の前の枝の引数に esac があっても現在の枝は閉じず、bash 宛ては deny"
+      - "TS-33: case のクォートされた 'esac' パターンは case を閉じず、bash 宛ては deny"
+      - "TS-34: case の枝で cat 宛てにヒアドキュメントを書くなら allow(TS-31 の対照)"
+      - "TS-35: 置換内の ; はホスト文を分割せず、パイプ先 bash は deny"
+      - "TS-36a: パイプ演算子の後に空白が続いても、空行を越えた bash 宛ては deny"
+      - "TS-36b: パイプ演算子の後にタブが続いても、空行を越えた bash 宛ては deny"
+      - "TS-37: パイプ演算子の後の空行を越えた宛先がクォート分割の b\"a\"s\"h\" でも deny"
+      - "TS-38a: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の( )グループの宛先不明より優先され deny"
+      - "TS-38b: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の{ }グループの宛先不明より優先され deny"
+      - "TS-39: コメント行の $( は置換を開かず、次行の b\"a\"s\"h\" 宛てヒアドキュメントは deny"
+      - "TS-40: 2 つ目の演算子はコメント内にあるため、A の区切り後の reset 行は実コマンドとして deny"
+      - "TS-41a: 制御文字 U+0003/U+0004 を挟んでも bash 宛てヒアドキュメントは deny"
+      - "TS-41b: 制御文字を挟んでも bash -c 経由の置換内ヒアドキュメントは deny"
+      - "TS-42a: クォートなし区切りの本文内、$( ... ) に隠れた reset は deny"
+      - "TS-42b: 同上、前置文が無い場合も deny"
+      - "TS-43: 本文内の case パターンの閉じ ) を挟んだ置換内 reset も deny"
+      - "TS-44: 本文内の入れ子になった置換それぞれの reset を deny"
+      - "TS-45: クォート区切りの本文は置換されないので $(git reset --hard HEAD) の文字列は allow(TS-42 の対照)"
+    red_confirmed: true
+    red_reason: >
+      Every TS-28..TS-45 case listed above is present in
+      destructive-guard-cases.json (verified by diff: the cases-file change
+      only appends these 24 entries, nothing existing removed or
+      reworded). Run against the guard as it stood at this task's own base
+      (extracted via `git show`, not the worktree's in-progress rewrite),
+      17 of the 24 new cases failed: TS-29a, TS-29b, TS-30, TS-32, TS-33,
+      TS-37, TS-38a, TS-38b, TS-39, TS-40, TS-41a, TS-41b, TS-42a, TS-42b,
+      TS-43 and TS-44 (all wanted "deny"/"allow" but the base guard
+      returned the opposite verdict via its old chunk-wide-only sink
+      match); full run was 431/448 passing against that base. Full suite
+      result recorded above under baseline_failures reflects the SAME
+      cases file but the guard as this session inherited it (already a
+      near-complete, uncommitted rewrite), which is a separate,
+      independent red observation for the 4 cases still unresolved at
+      session start (TS-33, TS-37, TS-39, TS-40).
+
+  AC-2:
+    tests:
+      - "TS-31: case のパターン語 cat はコマンド語にならず、bash 宛てヒアドキュメントは deny"
+      - "TS-32: case の前の枝の引数に esac があっても現在の枝は閉じず、bash 宛ては deny"
+      - "TS-33: case のクォートされた 'esac' パターンは case を閉じず、bash 宛ては deny"
+      - "TS-34: case の枝で cat 宛てにヒアドキュメントを書くなら allow(TS-31 の対照)"
+    red_confirmed: true
+    red_reason: >
+      Against this task's base guard, TS-32, TS-33 and TS-34 failed (got
+      "allow" for the first two, "deny" for TS-34, all opposite the wanted
+      verdict); TS-31 already passed at base (task0001's simpler mechanism
+      already covered that one shape) and is kept here as a still-denied
+      control. This session additionally found and fixed a genuine defect
+      in the inherited, uncommitted rewrite's case-pattern tracking: a
+      quoted 'esac' as the FIRST alternative of a `|`-split pattern
+      (`'esac'|cat)`) was popping the case stack regardless of `.quoted`
+      (TS-33), traced to `_shape_leading()`'s pattern_first branch not
+      consulting the quoting flag for that specific shape; fixed by adding
+      a `not getattr(t, "quoted", False)` guard alongside the existing
+      `followed_by_closer` check.
+
+  AC-3:
+    tests:
+      - "TS-28a: グループ({ ... })の閉じがパイプ先 bash ならヒアドキュメントも deny"
+      - "TS-28b: グループ(( ... ))の閉じがパイプ先 bash ならヒアドキュメントも deny"
+      - "TS-29a: グループが前の文で開いていてもパイプ先 bash なら deny"
+      - "TS-29b: グループが前の行だけで開いていてもパイプ先 bash なら deny"
+      - "TS-30: グループの閉じがファイル書き込みなら allow(TS-28 の対照)"
+      - "TS-35: 置換内の ; はホスト文を分割せず、パイプ先 bash は deny"
+      - "TS-36a: パイプ演算子の後に空白が続いても、空行を越えた bash 宛ては deny"
+      - "TS-36b: パイプ演算子の後にタブが続いても、空行を越えた bash 宛ては deny"
+      - "TS-37: パイプ演算子の後の空行を越えた宛先がクォート分割の b\"a\"s\"h\" でも deny"
+      - "TS-6: パイプ先が bash のヒアドキュメントは deny"
+      - "TS-23: 外側の文のパイプ先が bash なら置換内ヒアドキュメントも deny"
+      - "TS-24: 外側の文にパイプ先の sink が無ければ置換内ヒアドキュメントは allow(TS-23 の対照)"
+    red_confirmed: true
+    red_reason: >
+      Against this task's base guard, TS-29a, TS-29b, TS-30 and TS-37
+      failed (opposite verdict); TS-28a/b, TS-35, TS-36a/b already passed
+      at base and are kept as still-denied controls, same as TS-6/TS-23
+      (deny) and TS-24 (allow), all unchanged regression controls from
+      task0001. This session additionally found and fixed a genuine defect
+      in the inherited rewrite's pipeline downstream walk
+      (`_pipeline_downstream()`): a blank statement between a pipe and its
+      real downstream stage (`cmd | \n<content>`, produced whenever a
+      trailing space/tab follows `|` before the newline) has its OWN
+      separator as a plain `\n`, not `|`, so the walk stopped there instead
+      of skipping it -- reproduced directly: with TS-37's quote-split
+      `b"a"s"h"` destination (which the old chunk-wide SHELL_SINK fallback
+      cannot text-match), this surfaced as "allow" where TS-36's plain
+      `bash` spelling happened to still pass by accident (the fallback
+      caught it via raw text, masking the same underlying defect). Fixed
+      by rewriting `_pipeline_downstream()` to skip statements with no
+      tokens at all before evaluating the next real stage.
+
+  AC-4:
+    tests:
+      - "TS-38a: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の( )グループの宛先不明より優先され deny"
+      - "TS-38b: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の{ }グループの宛先不明より優先され deny"
+      - "TS-13: bash -c への置換内ヒアドキュメントは deny"
+      - "TS-21: timeout 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
+      - "TS-22: exec 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
+      - "TS-26: 外側の文に実行プレフィックスがあれば置換内ヒアドキュメントも deny(宛先不明)"
+      - "TS-27: プロセス置換 tee >(bash) を伴うヒアドキュメントは deny(宛先不明)"
+      - "TS-25: 宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
+    red_confirmed: true
+    red_reason: >
+      Against this task's base guard, both TS-38 cases failed (got
+      "allow"; the base guard has no cross-level sink-priority rule at
+      all). TS-13/21/22/26/27 (deny) and TS-25 (allow) are unchanged
+      regression controls from task0001, still passing throughout.
+
+  AC-5:
+    tests:
+      - "TS-39: コメント行の $( は置換を開かず、次行の b\"a\"s\"h\" 宛てヒアドキュメントは deny"
+      - "TS-40: 2 つ目の演算子はコメント内にあるため、A の区切り後の reset 行は実コマンドとして deny"
+      - "TS-41a: 制御文字 U+0003/U+0004 を挟んでも bash 宛てヒアドキュメントは deny"
+      - "TS-41b: 制御文字を挟んでも bash -c 経由の置換内ヒアドキュメントは deny"
+      - "TS-4: 1 行に複数のヒアドキュメント演算子があっても、両方 cat 宛てなら allow"
+      - "TS-9: 1 行に複数のヒアドキュメント演算子: 2 つ目が bash 宛てなら deny"
+      - "TS-10: ヒアドキュメントの後に続く行は通常のコマンドとして deny"
+    red_confirmed: true
+    red_reason: >
+      Against this task's base guard, all four of TS-39/40/41a/41b failed
+      (opposite verdict; the base guard's position tracking used inline
+      marker characters susceptible to control-character/comment
+      confusion, per the task plan's rationale for replacing it).
+      TS-4/9/10 are unchanged regression controls from task0001. This
+      session additionally found and fixed two genuine defects surfaced by
+      TS-39/TS-40 in code shared far beyond heredoc handling: (1)
+      scan_structure()'s own comment-span end boundary excluded the
+      terminating newline, desyncing _segment_index_at()'s separator count
+      from lex_segments()'s actual statement split whenever a comment sits
+      with nothing before it on its line; (2) more fundamentally, Python's
+      shlex (via its default `commenters`) swallows a comment's own
+      terminating newline without emitting a separator token for it, so
+      ANY comment following real command text on the same line silently
+      merged that statement with the next line's statement everywhere in
+      the file, not just for heredocs (`echo hi # x\nrm -rf y` lexed as
+      ONE statement, with `rm -rf y` read as mere arguments to `echo`).
+      Fixed by adding `_blank_comments()` (a quote-aware pass that blanks
+      comment TEXT but preserves the terminating newline) ahead of every
+      lex_segments() call, with shlex's own `commenters` turned off since
+      it is now redundant.
+
+  AC-6:
+    tests:
+      - "TS-42a: クォートなし区切りの本文内、$( ... ) に隠れた reset は deny"
+      - "TS-42b: 同上、前置文が無い場合も deny"
+      - "TS-43: 本文内の case パターンの閉じ ) を挟んだ置換内 reset も deny"
+      - "TS-44: 本文内の入れ子になった置換それぞれの reset を deny"
+      - "TS-45: クォート区切りの本文は置換されないので $(git reset --hard HEAD) の文字列は allow(TS-42 の対照)"
+    red_confirmed: true
+    red_reason: >
+      Against this task's base guard, TS-42a, TS-42b, TS-43 and TS-44 all
+      failed (got "allow"; the base guard never extracted substitutions
+      from an unquoted-delimiter heredoc body at all, only from the chunk
+      surrounding it). TS-45 already passed at base and is kept as the
+      still-allowed control for a quoted delimiter's literal body.
+
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      No named unit test exists for this criterion (NFR4: the stress
+      generator is intentionally not committed). Verified with an ad-hoc
+      timing script outside the repository, feeding each generated input
+      to destructive-guard.py as a hook JSON payload via subprocess and
+      timing the wall-clock call, per the task plan's Test Notes. Before
+      this session's own fixes (still on the inherited, uncommitted
+      rewrite), the actually-observed measurements were: Family A (N
+      repetitions of `x="$(cat <<'EOF'\nhello\nEOF\n)"`) took 0.319s at
+      N=800 and 1.011s at N=1600 (ratio 3.17x, over the 3x limit); Family B
+      (N repetitions of `case x in x) cat <<'EOF'\nhello\nEOF\n;; esac`)
+      took 0.541s at N=800 and 1.866s at N=1600 (ratio 3.45x, also over the
+      limit) -- both genuine reds against AC-7's own "at most three times"
+      threshold, confirmed by a finer N=100..3200 sweep on Family B showing
+      near-quadratic growth. Root causes, both traced by profiling: (1)
+      _segment_index_at() rescanned from position 0 on every call instead
+      of reusing prior work, costing O(n) per heredoc and O(n^2) over a
+      chunk whose heredoc count grows with its own length -- fixed by
+      _segment_boundaries(), one O(n) pass per (text, memo_key) producing a
+      sorted boundary list, queried per heredoc via bisect in O(log n); (2)
+      _is_assignment_only() was checking the POST-_shape_leading()
+      remainder, which is always empty for a statement that is nothing but
+      an assignment (`x="$(...)"`), so that exemption could never apply,
+      routing every such heredoc through the "undetermined" branch and its
+      O(chunk-length) SHELL_SINK.search() fallback once per heredoc --
+      fixed by checking the statement's own pre-skip word list instead.
+      After both fixes, re-measured (this session, same methodology):
+      Family A 0.133s/0.243s (N=800/1600, ratio 1.83x); Family B
+      0.123s/0.222s (ratio 1.80x); both well under 2s and under the 3x
+      ratio. TS-20's own shape (roughly 2,000/4,000 lines, several
+      heredoc operators per line, some unterminated) was re-approximated
+      the same way and measured at 0.180s/0.341s (ratio 1.89x), also
+      holding. All timings recorded here per Test Notes.
+
+  AC-8:
+    tests:
+      - "full suite: python3 em-workflow/hooks/tests/run-destructive-guard.py (448 cases + the batch-demotion check)"
+      - "full suite: python3 -m unittest discover -s tests (6449 tests)"
+    red_confirmed: true
+    red_reason: >
+      The run-destructive-guard.py suite was observed failing at session
+      start (443/448; see baseline_failures) on the inherited, uncommitted
+      guard, including a genuine regression against an EXISTING, pinned
+      case ("引用符(rm-recursive): ...単一引用符で囲んでも裸形と同じ deny"
+      went from the pinned "deny" to "ask") -- a direct violation of this
+      criterion's "existing verdicts... are kept", confirmed red before
+      this session's fix and green (448/448) after it. Root cause: the
+      inherited rewrite's general (non-heredoc) substitution discovery in
+      statements() had switched to scan_structure()'s quote-aware span
+      list, which correctly excludes a single-quoted `$(` from being a
+      real substitution for STRUCTURAL purposes (Component 1 postcondition
+      2) but, used unmodified for the file-wide `.unresolved` marking
+      check_rm() and friends read, also stopped marking a single-quoted
+      `$(pwd)/../tmp/scratch` the way the pre-task0002 guard's quote-
+      agnostic regex always had -- changing that ONE case's verdict.
+      Fixed by adding scan_structure()'s HONOR_SINGLE_QUOTES parameter
+      (default True, unchanged everywhere else) and computing a second,
+      quote-agnostic span pass specifically for that general marking, so
+      heredoc/case-state structural analysis (chunk_scan) keeps the
+      quote-aware default while check_rm() and the rest of the per-token
+      checks keep their pre-existing, quote-agnostic reach. The
+      inspection-only clauses of this criterion (file scope, stdlib-only
+      imports, no version bump) were checked by inspecting `git diff
+      --stat` and `git status` (only em-workflow/hooks/destructive-guard.py
+      and em-workflow/hooks/tests/destructive-guard-cases.json changed,
+      the cases-file diff is append-only, `em-workflow/.claude-plugin/
+      plugin.json` and `.claude-plugin/marketplace.json` are untouched)
+      and the module's own `import` lines (bisect, json, os, re, shlex,
+      shutil, sys -- all standard library); no executable check exists for
+      these, so no red was or could be observed for them specifically.
+
+notes: >
+  This worktree held an uncommitted, near-complete implementation of this
+  task when the session began (git status was dirty before any edit this
+  session made; branch was already on task0002 with no prior commit). All
+  5 baseline_failures above were diagnosed and fixed in place rather than
+  reimplemented from scratch: 4 were incomplete new-case coverage (case
+  quoting, pipeline blank-segment skip, comment-newline separator sync,
+  and shlex's own comment/newline merge quirk fixed at its source in
+  lex_segments()); 1 was a genuine regression against an existing pinned
+  case, traced to the general (non-heredoc) substitution marking losing
+  its pre-existing quote-agnostic reach when it started sharing
+  scan_structure()'s correctly quote-aware span list. Two additional
+  correctness/performance defects (_is_assignment_only() checking the
+  wrong word list; _segment_index_at() re-scanning from position 0 on
+  every call) were found via profiling while chasing AC-7's stress
+  thresholds and fixed in the same session, since AC-7 explicitly failed
+  without them. No test was weakened or removed at any point; every fix
+  was made in destructive-guard.py itself.

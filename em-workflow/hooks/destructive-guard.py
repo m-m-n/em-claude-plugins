@@ -68,63 +68,7 @@ BATCH_OFF = ("", "0", "false", "no")
 # The regex is the fallback path only; see lex_segments().
 SEGMENT_SPLIT = re.compile(r"(?:\|\||&&|[;|&\n])")
 SEGMENT_CHARS = frozenset(";|&\n")
-SUBSTITUTION = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
 
-
-def _extract_heredoc_body_substitutions(text):
-    """Find each outermost `$( … )`/`` ` … ` `` in an unquoted here-doc body.
-
-    Unlike SUBSTITUTION (deliberately paren-free-interior, one level only),
-    this counts paren depth so a nested substitution
-    (`$(git reset --hard $(echo HEAD))`) yields the WHOLE outer body,
-    including the executed `git reset --hard ...`, rather than just the
-    inner `echo HEAD` -- the queued outer body is re-scanned as an ordinary
-    chunk on the next pending-loop iteration, whose own SUBSTITUTION pass
-    then finds the inner substitution in turn (see call site).
-
-    A `$(` immediately preceded by a backslash is literal (shell-escaped)
-    text, never expanded by the shell, so it is not treated as a
-    substitution boundary.
-
-    Returns `(bodies, needs_whole_body)`. `needs_whole_body` is True when an
-    opening `$(`/`` ` `` has no matching close in the remaining text -- the
-    caller should fall back to scanning the entire input text rather than
-    silently dropping the unresolved tail.
-    """
-    bodies = []
-    i, n = 0, len(text)
-    while i < n:
-        ch = text[i]
-        if ch == "\\" and i + 1 < n:
-            i += 2
-            continue
-        if ch == "$" and i + 1 < n and text[i + 1] == "(":
-            j = i + 2
-            depth = 1
-            while j < n and depth > 0:
-                c = text[j]
-                if c == "\\" and j + 1 < n:
-                    j += 2
-                    continue
-                if c == "(":
-                    depth += 1
-                elif c == ")":
-                    depth -= 1
-                j += 1
-            if depth != 0:
-                return bodies, True
-            bodies.append(text[i + 2 : j - 1])
-            i = j
-            continue
-        if ch == "`":
-            end = text.find("`", i + 1)
-            if end == -1:
-                return bodies, True
-            bodies.append(text[i + 1 : end])
-            i = end + 1
-            continue
-        i += 1
-    return bodies, False
 
 # Characters shlex should emit as operator tokens of their own. The default
 # set plus `\n`, which has to be removed from the whitespace set to survive
@@ -189,14 +133,6 @@ QUOTED_MARK = "\x01"
 # flag itself before this text is ever pattern-matched, so the token cannot
 # reach the safe-root exception even if this text's own shape changed later.
 SUBSTITUTION_STANDIN = "$(...)"
-
-# Stand-in used only by _walk_enclosing() to peel one enclosing substitution
-# out of its own working copy of the text before searching for the next one
-# further out. Must NOT match SUBSTITUTION (no `$(`, no backtick, no
-# parens) -- unlike SUBSTITUTION_STANDIN above, which is deliberately
-# shaped like `$(...)` for a different purpose and would make that search
-# re-match its own placeholder forever instead of advancing outward.
-_ENCLOSING_WALK_STANDIN = "\x03ENCLOSING_WALK\x03"
 
 # Redirection operators, matched against a whole token. A redirect and its
 # target are not arguments to the command and must be lifted out before the
@@ -533,6 +469,69 @@ class _TrackingLexer(shlex.shlex):
         return super().read_token()
 
 
+_COMMENT_WORD_BOUNDARY = " \t\r\n;|&()<>"
+
+
+def _blank_comments(text):
+    """TEXT with every `#`-comment -- a `#` outside quotes, at the start of
+    a word -- replaced by spaces from the `#` up to but NOT including its
+    terminating newline. Quote tracking mirrors scan_structure()'s own
+    shell-mode rule (a `#` inside a quoted span is literal, never a
+    comment); a backslash-escaped character, in or out of quotes, is
+    skipped whole so an escaped quote/`#` is never misread as one starting
+    or ending. Kept as its own light, self-contained pass rather than a
+    scan_structure() call because every lex_segments() caller already hands
+    it a MARKED chunk (substitutions already replaced by marker residue),
+    so no substitution/case tracking is needed to find a comment's own
+    boundary here -- only where it starts and where its line ends.
+
+    This exists because Python's shlex, given `commenters` containing `#`
+    (its own default), swallows the comment's OWN terminating newline
+    along with the comment text -- it never emits a separator token for
+    that specific newline, so two statements split only by a trailing
+    comment (`echo hi # x\nrm -rf y`) lex as ONE merged statement, with
+    `rm -rf y` read as mere arguments to `echo` rather than as its own
+    statement. Blanking the comment text here, while leaving the newline
+    itself in place, removes every `#` character before the lexer ever
+    sees one (lex_segments() below turns its OWN `commenters` off to
+    match) -- so the newline the comment used to swallow now reaches the
+    lexer as ordinary text and is tokenized as a real, counted separator,
+    same as any other newline. This does not change the WORDS surrounding
+    a comment -- comment text was already discarded, never yielded as a
+    token, on the old commenters path too -- only whether the newline that
+    follows still separates them.
+    """
+    out = list(text)
+    n = len(text)
+    q = None
+    i = 0
+    while i < n:
+        c = text[i]
+        if q:
+            if c == q:
+                q = None
+            elif c == "\\" and q == '"' and i + 1 < n:
+                i += 1
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            i += 2
+            continue
+        if c in ("'", '"'):
+            q = c
+            i += 1
+            continue
+        if c == "#" and (i == 0 or text[i - 1] in _COMMENT_WORD_BOUNDARY):
+            j = text.find("\n", i)
+            end = j if j != -1 else n
+            for k in range(i, end):
+                out[k] = " "
+            i = end
+            continue
+        i += 1
+    return "".join(out)
+
+
 def lex_segments(chunk):
     """Split a chunk into statements, each returned as (tokens, lexed, sep).
 
@@ -566,12 +565,21 @@ def lex_segments(chunk):
     unbalanced quote, usually. That path keeps the old false positives and
     returns LEXED False (and SEP always None, since separator provenance is
     unavailable there too); a parse failure is rare, and waving the chunk
-    through unexamined would be a hole rather than a nuisance.
+    through unexamined would be a hole rather than a nuisance. The fallback
+    reads the ORIGINAL, un-blanked CHUNK — _blank_comments() only changes
+    which characters a `#` comment's own newline separates, never which
+    quote pairing balances, so nothing about when this path is taken
+    changes; keeping it on the original text avoids any risk, however
+    small, of the blanking pass itself disagreeing with shlex about where
+    an unbalanced quote sits.
     """
     try:
-        lex = _TrackingLexer(chunk, posix=True, punctuation_chars=PUNCTUATION)
+        lex = _TrackingLexer(
+            _blank_comments(chunk), posix=True, punctuation_chars=PUNCTUATION
+        )
         lex.whitespace = " \t\r"
         lex.whitespace_split = True
+        lex.commenters = ""
         toks = []
         while True:
             raw = lex.get_token()
@@ -886,6 +894,42 @@ def _delimiter_line_word(line):
     return m.group(1) if m else None
 
 
+def _line_comment_start(line):
+    """The offset of a `#`-comment's start in LINE (one operator line from
+    strip_heredocs(), never a heredoc body line), or None. Mirrors Component
+    1's own word-start/quote rules (scan_structure()'s `_at_word_start()`
+    and its quote handling) but scoped to one line, since an operator line
+    is examined here before any statement/substitution structure has been
+    resolved: a `#` outside quotes and at the start of a word starts a
+    comment that runs to the end of LINE, and an operator inside that
+    comment (`# <<X`) is not a real heredoc operator at all -- see this
+    function's call site.
+    """
+    quote = None
+    i = 0
+    n = len(line)
+    while i < n:
+        c = line[i]
+        if quote:
+            if c == quote:
+                quote = None
+            elif c == "\\" and quote == '"' and i + 1 < n:
+                i += 1
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            i += 2
+            continue
+        if c in ("'", '"'):
+            quote = c
+            i += 1
+            continue
+        if c == "#" and (i == 0 or line[i - 1] in " \t\r\n;|&()<>"):
+            return i
+        i += 1
+    return None
+
+
 def strip_heredocs(chunk):
     """Return (CHUNK with every heredoc body removed, an ordered list of
     HeredocRecord). See the task plan's Component 1 for the exact
@@ -901,6 +945,11 @@ def strip_heredocs(chunk):
       consumes nothing (its would-be body stays in the chunk, exactly as
       before this task), and does not stop a LATER operator on the same
       line from finding its own delimiter independently.
+    - An operator inside a `#`-comment on its own line (_line_comment_start()
+      above) is never collected, at any position on the line: the text
+      after `#` is never real syntax, so a `<<DELIM` written there opens no
+      heredoc and consumes no body -- it stays in the chunk as ordinary
+      (comment) text, exactly as a real shell would leave it.
 
     Delimiter-line CANDIDATES (every line that is nothing but a bare word,
     per _delimiter_line_word()) are indexed once, up front, into
@@ -929,6 +978,9 @@ def strip_heredocs(chunk):
     while i < n:
         line = lines[i]
         matches = list(HEREDOC_OP.finditer(line))
+        comment_start = _line_comment_start(line)
+        if comment_start is not None:
+            matches = [m for m in matches if m.start() < comment_start]
         if not matches:
             out.append(line)
             out_len += len(line)
@@ -986,20 +1038,6 @@ PROCESS_SUB_TOKENS = ("<(", ">(")
 # question ("is EVERY word one of these") from that function's own ("skip a
 # run of these at the front").
 ASSIGNMENT_PREFIX = re.compile(r"^[A-Za-z_]\w*=")
-
-# A private marker pair distinct from UNRESOLVED_MARK/QUOTED_MARK/
-# _MARK_TERMINATOR (destructive-guard-command-substitution's own family) and
-# from SUBSTITUTION_STANDIN -- used only inside this section's own,
-# throwaway re-lexing passes, never reaching a check or another marker
-# consumer. Same properties as those markers (not shlex whitespace, not a
-# PUNCTUATION operator, not a quote), so a marked span survives lexing as
-# ordinary word content.
-_HDOC_MARKER_OPEN = "\x03"
-_HDOC_MARKER_CLOSE = "\x04"
-_HDOC_MARKER_RE = re.compile(
-    re.escape(_HDOC_MARKER_OPEN) + r"(\d+)" + re.escape(_HDOC_MARKER_CLOSE)
-)
-
 
 class _StmtInfo:
     """One statement's contribution to a heredoc destination decision: its
@@ -1071,50 +1109,23 @@ def _git_alias_risk(word, shaped, leading=()):
     return False
 
 
-def _shape_and_head(toks):
-    """Apply the SAME fused-closer split / redirect separation / grouping
-    skip statements() itself applies to a chunk's real statements, to one
-    throwaway TOKS from this section's own re-lexing passes, with a fresh
-    case_stack ([]): this is always a single, self-contained statement,
-    never part of a chunk statements() itself is yielding, so there is no
-    case-pattern state to carry across it. Returns (command word or None,
-    shaped words, redirects) -- the same shape head()'s other callers
-    already work with.
-
-    A `git`/`gh` invocation carrying a `-c`/`--config`/`--config-env`
-    global option, or a leading GIT_CONFIG_-prefixed environment assignment,
-    is reported with WORD forced to None (see _git_alias_risk()): every
-    caller here treats a None word as "no destination could be read", which
-    is exactly the conservative fallback such an invocation needs -- it can
-    define an alias that runs arbitrary code, so it must not be judged a
-    plain data command.
-    """
-    fused = _split_fused_closer_redirects(toks)
-    words_only, redirects = split_redirects(fused, True)
-    lead = _shape_leading(words_only, [])
-    shaped = _shaped_remainder(words_only, lead)
-    word, _ = head(shaped)
-    if _git_alias_risk(word, shaped, words_only[:lead]):
-        word = None
-    return word, shaped, redirects
-
-
 # Compound-statement keywords that can start a pipeline continuation stage
 # (`cmd | if ...; then bash; fi`, `cmd | while read x; do bash; done`,
 # `cmd | for x in ...; do bash; done`, `cmd | case $x in ...) bash;; esac`,
-# `cmd | select x in ...; do bash; done`). _shape_and_head() strips one of
-# these via _shape_leading() (RESERVED_SKIP_WORDS) exactly as statements()'s
-# own per-segment scan does, which is right for THAT scan (it later sees
-# every one of the compound's own inner segments as its own, separately-
-# lexed statement) but wrong here: _pipeline_has_sink() only ever looks at
-# ONE lexer segment per pipeline stage (the text up to the compound's own
-# first `;`/newline), so stripping the keyword and reading the word behind
-# it (`if :` -> `:`, a DATA_COMMANDS entry) misses every later branch of the
+# `cmd | select x in ...; do bash; done`). Component 3's own per-statement
+# shaping strips one of these via _shape_leading() (RESERVED_SKIP_WORDS)
+# exactly as statements()'s own per-segment scan does, which is right for
+# THAT scan (it later sees every one of the compound's own inner segments
+# as its own, separately-lexed statement) but wrong for pipeline lookahead
+# (_pipeline_downstream()): that function only ever looks at ONE lexer
+# segment per pipeline stage (the text up to the compound's own first
+# `;`/newline), so stripping the keyword and reading the word behind it
+# (`if :` -> `:`, a DATA_COMMANDS entry) misses every later branch of the
 # SAME compound statement (`then bash; fi`) that a real shell would also
 # feed this stage's stdin -- and, through it, the piped-in heredoc body.
-# Recognised on the RAW, unshaped token (before _shape_and_head() strips it)
-# so the stage is judged conservatively as "other" rather than by the
-# now-hidden word behind the keyword.
+# Recognised on the RAW, unshaped token so the stage is judged
+# conservatively as "other" rather than by the now-hidden word behind the
+# keyword.
 COMPOUND_STATEMENT_KEYWORDS = frozenset(
     {"if", "while", "until", "for", "case", "select"}
 )
@@ -1129,51 +1140,6 @@ def _is_pipe_sep(sep):
     if not sep:
         return False
     return sep.replace("\n", "") in ("|", "|&")
-
-
-def _pipeline_has_sink(segments, index):
-    """(has_sink, has_other) for the run of statements later than
-    SEGMENTS[INDEX], joined to it by an unbroken run of Pipeline separators
-    (task plan Component 2, rule 1(ii)/(iii)). HAS_SINK is True as soon as
-    any later stage's command word matches SINK_WORD_RE. HAS_OTHER is True
-    as soon as any later stage is neither a sink stage nor a "plain data"
-    stage -- one whose word is in DATA_COMMANDS with no process substitution
-    and no grouping opener of its own (an execution prefix like `xargs -I{}
-    bash -c`, a bare grouping `{ true; bash; }`, or a process substitution
-    like `tee >(bash)` all count as "other": none of these lets the caller
-    keep treating the whole chain as a data sink). A later stage that fails
-    to lex is judged conservatively as a sink (FR5's own bias: never lean
-    toward missed detection).
-    """
-    has_other = False
-    i = index
-    while i < len(segments) and _is_pipe_sep(segments[i][2]):
-        i += 1
-        if i >= len(segments):
-            return False, has_other
-        toks, lexed, _ = segments[i]
-        if not lexed:
-            return True, has_other
-        raw_index = _skip_assignments_and_wrappers(toks)
-        if raw_index < len(toks) and toks[raw_index] in COMPOUND_STATEMENT_KEYWORDS:
-            # A compound statement's own inner branches sit in later,
-            # separately-lexed segments this single-segment check never
-            # reaches (see COMPOUND_STATEMENT_KEYWORDS) -- judged as
-            # "other" rather than read through to whatever word
-            # _shape_and_head() would otherwise find behind the keyword.
-            has_other = True
-            continue
-        word, shaped, _ = _shape_and_head(toks)
-        if word is not None and SINK_WORD_RE.match(word):
-            return True, has_other
-        if (
-            word is None
-            or word not in DATA_COMMANDS
-            or _has_process_substitution(toks)
-            or _leading_group_opener(toks)
-        ):
-            has_other = True
-    return False, has_other
 
 
 def _has_process_substitution(toks):
@@ -1198,248 +1164,205 @@ def _has_process_substitution(toks):
     return False
 
 
-def _is_assignment_only(shaped_words):
-    """Whether every one of SHAPED_WORDS is a VAR=value assignment and
-    there is at least one -- the exemption Component 2 gives an enclosing
-    statement whose only job is to store a substitution's output
-    (`x="$(cat <<'EOF' ... EOF)"`)."""
-    return bool(shaped_words) and all(
-        ASSIGNMENT_PREFIX.match(t) for t in shaped_words
+def _is_assignment_only(words_only):
+    """Whether every one of WORDS_ONLY (a statement's own words BEFORE
+    _shape_leading()'s command-position skip -- redirects already pulled
+    out, but nothing else) is a VAR=value assignment, and there is at
+    least one -- the exemption Component 2 gives an enclosing statement
+    whose only job is to store a substitution's output (`x="$(cat <<'EOF'
+    ... EOF)"`). Deliberately NOT the shaped remainder _shape_leading()
+    itself would produce: a statement that is nothing BUT assignments has
+    _shape_leading() consume every one of them as leading VAR=value
+    tokens, leaving an EMPTY remainder -- `bool([])` is False, so checking
+    the remainder can never recognise the exact shape this function's own
+    docstring example names as its purpose. Checking the PRE-skip words
+    instead means a real command word surviving the skip (`FOO=bar cat`)
+    still fails this test on its own account (`cat` itself does not match
+    ASSIGNMENT_PREFIX), so the result is identical to checking the
+    remainder in every case except the one the remainder can never catch."""
+    return bool(words_only) and all(
+        ASSIGNMENT_PREFIX.match(t) for t in words_only
     )
 
 
-def _mark_heredoc_operators(chunk, records):
-    """Replace each of RECORDS' own operator spans in CHUNK with `<<`
-    followed by a marker carrying that record's own position in RECORDS
-    (mirroring _mark_substitutions()'s own index-in-marker technique) --
-    keeping the redirect shape (an operator token followed by one target
-    token) so split_redirects() still strips both out exactly as it would
-    the real `<<DELIM`, rather than leaving an opaque marker word sitting
-    where a real command word or argument would be judged instead. Built in
-    ONE pass over CHUNK (never once per record), so locating every record's
-    own host statement (_locate_statements() below) stays linear in
-    CHUNK's own size regardless of how many heredocs it holds (NFR3).
-    """
-    out = []
-    cursor = 0
-    for idx, rec in enumerate(records):
-        out.append(chunk[cursor : rec.op_start])
-        out.append(f"<<{_HDOC_MARKER_OPEN}{idx}{_HDOC_MARKER_CLOSE}")
-        cursor = rec.op_end
-    out.append(chunk[cursor:])
-    return "".join(out)
+# --- Component 1: lexical structure scan -----------------------------------
+#
+# One scanner, shared by every caller that needs to find comment spans,
+# quoted spans, or command-substitution spans: chunk processing (statements()
+# itself), heredoc operator collection (strip_heredocs()) and body-
+# substitution extraction (_extract_heredoc_body_substitutions()). It is the
+# only routine in the file that decides where a substitution starts and
+# ends, so a heredoc's destination, and every other caller, agree by
+# construction rather than by two independent re-lexes drawing the same line
+# differently.
+
+_SUB_WORD_STOP = frozenset(' \t\r\n;|&()<>"\'`$')
 
 
-def _leading_group_opener(toks):
-    """Conservative guard: whether TOKS' own command position, after
-    skipping any VAR=value/WRAPPERS prefix, lands on an unquoted grouping
-    opener (`(` or `{`). A host statement shaped this way -- `{ cat
-    <<'EOF'` / `( cat <<'EOF'` -- has its group's own closer, and whatever
-    that group's output is piped into, sitting in a LATER, separately-lexed
-    segment (the newline that ends the operator's own line splits them
-    apart) that _stmt_info_from_segment() never looks at; used to fall back
-    to 'undetermined' rather than read the group's inner command word alone
-    as if it were the whole statement's destination.
-    """
-    i = 0
-    n = len(toks)
-    while i < n:
-        advance = _skip_assignments_and_wrappers(toks[i:])
-        if not advance:
-            break
-        i += advance
-    if i >= n:
-        return False
-    t = toks[i]
-    if t == "(" and getattr(t, "is_operator", False):
+def _word_at(text, i):
+    """The maximal run of characters starting at I that are not whitespace,
+    a statement separator/operator, a quote, `$`, or a backtick -- used only
+    to recognise `case`/`esac` as WHOLE words, never as a substring of a
+    longer identifier (`case-sensitive` is one word, not the keyword)."""
+    j = i
+    n = len(text)
+    while j < n and text[j] not in _SUB_WORD_STOP:
+        j += 1
+    return text[i:j], j
+
+
+def _at_word_start(text, i):
+    """Whether TEXT[I] could begin a new word: start of text, or the
+    previous character is whitespace or one of the operator characters a
+    word never continues across."""
+    if i == 0:
         return True
-    if t == "{" and not getattr(t, "quoted", False):
-        return True
-    return False
+    return text[i - 1] in ' \t\r\n;|&()<>'
 
 
-def _stmt_info_from_segment(segments, index):
-    """Build the _StmtInfo for SEGMENTS[INDEX], a (toks, lexed, sep) triple
-    already known to hold at least one marker."""
-    toks, lexed, _ = segments[index]
-    if not lexed:
-        return _StmtInfo(parse_failed=True)
-    word, shaped, _ = _shape_and_head(toks)
-    if _leading_group_opener(toks) and not (
-        word is not None and SINK_WORD_RE.match(word)
-    ):
-        # A group ({ / () whose own inner command word is not itself a
-        # known sink is judged conservatively as undetermined (see
-        # _leading_group_opener()'s own docstring): the group's closer and
-        # whatever it pipes into sit in a later, separately-lexed segment
-        # this function never reaches. But a known sink word right behind
-        # the opener (`{ bash <<'EOF'`) must still be read as a sink here --
-        # falling through to parse_failed in that case would let a sink
-        # hiding inside a group slip through as allowed.
-        return _StmtInfo(parse_failed=True)
-    pipeline_sink, pipeline_undetermined = _pipeline_has_sink(segments, index)
-    return _StmtInfo(
-        word=word,
-        pipeline_sink=pipeline_sink,
-        pipeline_undetermined=pipeline_undetermined,
-        has_process_sub=_has_process_substitution(toks),
-        is_assignment_only=_is_assignment_only(shaped),
-    )
+def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=True):
+    """Component 1. One pass over TEXT (a text and an outer MODE, `shell`
+    or `heredoc-body`). Returns (spans, parent_of, unmatched, opaque,
+    containing_span):
 
+    - SPANS: every `$( … )`/`` ` … ` `` span found, at every nesting level.
+    - PARENT_OF: {span: its immediate enclosing span, or None} -- a span
+      strictly containing it with nothing tighter in between.
+    - UNMATCHED: start offsets of an opener never closed by end of text.
+    - OPAQUE: TOP-LEVEL ranges inert for statement-separator counting: a
+      quoted span, a comment span, or a top-level substitution span (mode
+      `shell` only -- `heredoc-body` mode returns `[]` here, since quotes
+      and comments are literal at that mode's own top level and no caller
+      needs separator counting over heredoc-body text).
+    - CONTAINING_SPAN: {checkpoint position: the innermost span enclosing
+      it, or None} for every position in CHECKPOINTS, found for free while
+      the scan passes each one -- the position-only way a heredoc operator
+      is matched to the substitution (if any) that holds it, with no
+      marker text ever written into TEXT (Component 3: "no marker
+      characters are inserted... a control character in the input has no
+      special meaning").
 
-def _locate_statements(chunk, records):
-    """Return {index into RECORDS: _StmtInfo} for every record's host
-    statement, all found from ONE lexing pass of CHUNK (_mark_heredoc_
-    operators() above) -- the fast path _heredoc_destinations() uses for
-    every heredoc whose operator is not inside a command substitution,
-    which is the shape the stress measurement in the task plan's Test
-    Notes exercises. Correct only for that shape: a marker landing inside a
-    substitution's own (quoted, whole-word) argument would be found in the
-    OUTER statement here, not the statement inside the substitution's body
-    -- callers route a heredoc through _locate_single()/_walk_enclosing()
-    instead whenever its operator sits inside a substitution.
-    """
-    if _HDOC_MARKER_OPEN in chunk or _HDOC_MARKER_CLOSE in chunk:
-        # CHUNK is input-derived text, and the marker characters are meant
-        # to be internal-only (see _HDOC_MARKER_OPEN/_HDOC_MARKER_CLOSE's
-        # own docstring). If the input already contains one, a heredoc body
-        # quoting it verbatim could forge a `\x03<digits>\x04` span that
-        # _HDOC_MARKER_RE below would then mistake for this pass's own
-        # marker, letting input content reassign which record a later
-        # segment's destination decision lands on. Treat every record as
-        # undetermined rather than trust indices found in a chunk that could
-        # contain a forged marker.
-        return {idx: _StmtInfo(parse_failed=True) for idx in range(len(records))}
-    marked_chunk = _mark_heredoc_operators(chunk, records)
-    segments = lex_segments(marked_chunk)
-    results = {}
-    seen = set()
-    for seg_index, (toks, _lexed, _sep) in enumerate(segments):
-        indices = set()
-        for t in toks:
-            for m in _HDOC_MARKER_RE.finditer(t):
-                indices.add(int(m.group(1)))
-        if not indices:
-            continue
-        info = _stmt_info_from_segment(segments, seg_index)
-        for rec_index in indices:
-            if rec_index in seen:
-                # RECORDS_INDEX already found in an earlier segment: rather
-                # than let this later segment's info silently overwrite the
-                # earlier one (which would let a forged marker elsewhere in
-                # CHUNK move a record's destination decision to the wrong
-                # statement), judge it undetermined.
-                results[rec_index] = _StmtInfo(parse_failed=True)
-                continue
-            seen.add(rec_index)
-            results[rec_index] = info
-    return results
+    Postconditions:
+    1. Inside a substitution body, shell rules apply in BOTH modes: a `)`
+       inside quotes, inside a comment, or ending a case pattern never
+       closes the span, and nested substitutions are reported at every
+       level.
+    2. In `shell` mode, a `#` at the start of a word outside quotes starts
+       a comment that runs to the end of the line. Text inside a comment
+       or inside single quotes opens no substitution.
+    3. In `heredoc-body` mode, quote characters and `#` outside any
+       substitution are literal text. A backslash-escaped `$` or backtick
+       opens no span, in either mode.
+    4. An unterminated span is reported as unterminated (in UNMATCHED) and
+       extends to the end of the text; it is never truncated silently.
 
-
-def _locate_single(text, start, end):
-    """Like _locate_statements(), for exactly one span [START, END) in
-    TEXT -- used for a heredoc operator sitting inside a substitution's own
-    inner text (the host statement there), and for an enclosing statement's
-    own span in whichever text currently holds it (_walk_enclosing()).
-    Heavier per call than the batch path above (a fresh lex of TEXT every
-    time), but only ever called for a substitution-involving heredoc or an
-    enclosing level of one -- rare relative to the plain, no-substitution
-    heredocs the performance budget (NFR3) is measured against.
-    """
-    marked = text[:start] + f"<<{_HDOC_MARKER_OPEN}0{_HDOC_MARKER_CLOSE}" + text[end:]
-    segments = lex_segments(marked)
-    for seg_index, (toks, _lexed, _sep) in enumerate(segments):
-        if any(_HDOC_MARKER_RE.search(t) for t in toks):
-            return _stmt_info_from_segment(segments, seg_index)
-    return _StmtInfo(parse_failed=True)
-
-
-def _find_containing_substitution(text, offset):
-    """The SUBSTITUTION match in TEXT whose span contains OFFSET, or None.
-    TEXT is raw (unmarked), so -- because SUBSTITUTION's `$(...)`
-    alternative disallows nested parens -- a match found here is always the
-    INNERMOST substitution at OFFSET, regardless of how many further levels
-    enclose it (an outer `$(...)` around a nested one fails to match at
-    all, since its own interior then contains the inner substitution's own
-    parens).
-    """
-    for m in SUBSTITUTION.finditer(text):
-        if m.start() <= offset < m.end():
-            return m
-    return None
-
-
-def _substitution_inner(match):
-    """(inner text, its own start offset in the matched string) for a
-    SUBSTITUTION match -- group(1) for `$(...)`, group(2) for backticks."""
-    if match.group(1) is not None:
-        return match.group(1), match.start(1)
-    return match.group(2), match.start(2)
-
-
-def _all_substitution_spans(text):
-    """Every $(...)/`...` span in TEXT, found by a single paren-stack scan
-    rather than SUBSTITUTION's single-level, paren-free regex -- so a
-    heredoc buried several $(...) levels deep, or sitting beside a SIBLING
-    substitution at the same level (`$(true; echo "$(cat <<'EOF' ...)"
-    "$(true)")`), still yields the true, fully-nested structure instead of
-    one that only becomes visible one regex-matchable layer at a time.
-    Plain grouping parens (`(cd x && y)`) are tracked on the same stack,
-    just never emitted as a span, so they still consume their own `)` and
-    cannot be mistaken for a substitution's closer. Backtick bodies stay
-    opaque (no nesting inside them), matching SUBSTITUTION's own
-    `` `[^`]*` ``. This is linear in len(TEXT), one pass, no backtracking.
-
-    Also returns the start offsets of any `$(` (or backtick) left
-    unclosed by the end of TEXT, for the caller to treat as "structure
-    could not be confirmed" rather than silently as "nothing encloses
-    here".
-
-    Quoting IS tracked, per nesting level: a single-quoted span makes every
-    character inert (no `$(`/`(`/backtick opens there, matching real shell
-    behavior), a backslash makes the one character after it inert, and a
-    double-quoted span still lets `$(` open a fresh substitution -- whose
-    own inner text then starts back at "no quote active", since a nested
-    `$( ... )`'s quoting is its own, independent of whatever quote
-    enclosed the `$(` that opened it. Each stack frame therefore carries
-    its own quote state, not one tracked globally, so a `'` opened inside
-    an inner substitution cannot be mistaken for closing a `'` opened
-    outside it (or vice versa).
+    HONOR_SINGLE_QUOTES defaults to True, which is postcondition 2 exactly
+    (real shell semantics: single quotes suppress expansion, so a `$(`/
+    backtick inside them opens no span) -- used by every heredoc-facing
+    caller (chunk-wide `chunk_scan`, `_statement_info_at()`,
+    `_extract_heredoc_body_substitutions()`), since Component 3/4's
+    statement/case-state analysis needs the position of a REAL shell
+    separator, which a single-quoted `$(`/backtick can never introduce.
+    Passing False keeps every other rule identical but stops single quotes
+    from suppressing `$(`/backtick recognition -- used ONLY by
+    `statements()`'s own general, non-heredoc substitution discovery (the
+    span list `_mark_substitutions()`/`_mark_quoted_substitutions()` mark
+    and that `pending` recurses into), which predates this task and must
+    keep its own pre-existing, quote-agnostic reach: check_rm() and the
+    other per-token checks read `.unresolved` as "this token's value was
+    never fully present, regardless of how the substitution sitting in it
+    was written" -- a static, conservative reading that intentionally does
+    not depend on whether a real shell would actually expand that spot,
+    the same way UNRESOLVED_EXPANSION's own raw-text search (check_rm()
+    step 3) never did either. Since the only code path this flag touches
+    is the `q == "'"` branch, every other input -- and this same function's
+    heredoc-facing callers, which never pass it -- is completely unaffected.
     """
     spans = []
+    parent_open_of = {}
     unmatched = []
-    # Each frame: [opening offset (None for a plain `(`), quote state]
-    # where quote state is None, "'", or '"'. stack[0] is the base frame
-    # for TEXT's own top level (never emitted as a span).
-    stack = [[None, None]]
-    i = 0
+    opaque = []
+    containing_open = {}
+
+    checkpoints = sorted(set(checkpoints or ()))
+    ci = 0
+
+    # Stack of frames: [open_pos_or_None, is_sub, quote_char_or_None,
+    # case_stack]. stack[0] is the implicit top-level frame (never itself a
+    # span). CASE_STACK is per FRAME -- a case construct cannot span a
+    # subshell/substitution boundary, so each pushed frame starts fresh,
+    # mirroring statements()'s own per-chunk reset.
+    stack = [[None, False, None, []]]
+    sub_open_stack = []
+    top_opaque_start = [None]
+
+    def close_top_opaque(end):
+        if top_opaque_start[0] is not None:
+            opaque.append((top_opaque_start[0], end))
+            top_opaque_start[0] = None
+
     n = len(text)
+    i = 0
     while i < n:
+        while ci < len(checkpoints) and checkpoints[ci] <= i:
+            containing_open[checkpoints[ci]] = (
+                sub_open_stack[-1] if sub_open_stack else None
+            )
+            ci += 1
+
         frame = stack[-1]
-        q = frame[1]
+        depth = len(stack) - 1
+        literal = depth == 0 and mode == "heredoc-body"
+        q = frame[2]
         c = text[i]
 
         if q == "'":
             if c == "'":
-                frame[1] = None
+                frame[2] = None
+                if depth == 0:
+                    close_top_opaque(i + 1)
+                i += 1
+                continue
+            if not honor_single_quotes and c == "$" and i + 1 < n and text[i + 1] == "(":
+                stack.append([i, True, None, []])
+                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+                sub_open_stack.append(i)
+                if depth == 0 and top_opaque_start[0] is None:
+                    top_opaque_start[0] = i
+                i += 2
+                continue
+            if not honor_single_quotes and c == "`":
+                j = text.find("`", i + 1)
+                if j == -1:
+                    unmatched.append(i)
+                    i = n
+                    break
+                spans.append((i, j + 1))
+                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+                if depth == 0:
+                    if top_opaque_start[0] is None:
+                        top_opaque_start[0] = i
+                    close_top_opaque(j + 1)
+                i = j + 1
+                continue
             i += 1
             continue
 
-        if c == "\\":
-            # Inert escape of the next character, both unquoted and inside
-            # double quotes -- a rough approximation of shell backslash
-            # rules, but enough to keep an escaped quote/paren/backtick
-            # from being misread as live structure.
+        if c == "\\" and i + 1 < n:
             i += 2
             continue
 
         if q == '"':
             if c == '"':
-                frame[1] = None
+                frame[2] = None
+                if depth == 0:
+                    close_top_opaque(i + 1)
                 i += 1
                 continue
             if c == "$" and i + 1 < n and text[i + 1] == "(":
-                stack.append([i, None])
+                stack.append([i, True, None, []])
+                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+                sub_open_stack.append(i)
                 i += 2
                 continue
             if c == "`":
@@ -1449,35 +1372,45 @@ def _all_substitution_spans(text):
                     i = n
                     break
                 spans.append((i, j + 1))
+                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
                 i = j + 1
                 continue
             i += 1
             continue
 
         # Unquoted within this frame.
-        if c == "'":
-            frame[1] = "'"
+        if not literal and c == "#" and _at_word_start(text, i):
+            j = text.find("\n", i)
+            end = j if j != -1 else n
+            if depth == 0:
+                if top_opaque_start[0] is None:
+                    top_opaque_start[0] = i
+                close_top_opaque(end)
+            i = end
+            continue
+
+        if not literal and c == "'":
+            frame[2] = "'"
+            if depth == 0 and top_opaque_start[0] is None:
+                top_opaque_start[0] = i
             i += 1
             continue
-        if c == '"':
-            frame[1] = '"'
+        if not literal and c == '"':
+            frame[2] = '"'
+            if depth == 0 and top_opaque_start[0] is None:
+                top_opaque_start[0] = i
             i += 1
             continue
+
         if c == "$" and i + 1 < n and text[i + 1] == "(":
-            stack.append([i, None])
+            stack.append([i, True, None, []])
+            parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+            sub_open_stack.append(i)
+            if depth == 0 and top_opaque_start[0] is None:
+                top_opaque_start[0] = i
             i += 2
             continue
-        if c == "(":
-            stack.append([None, None])
-            i += 1
-            continue
-        if c == ")":
-            if len(stack) > 1:
-                open_pos, _q = stack.pop()
-                if open_pos is not None:
-                    spans.append((open_pos, i + 1))
-            i += 1
-            continue
+
         if c == "`":
             j = text.find("`", i + 1)
             if j == -1:
@@ -1485,122 +1418,438 @@ def _all_substitution_spans(text):
                 i = n
                 break
             spans.append((i, j + 1))
+            parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
+            if depth == 0:
+                if top_opaque_start[0] is None:
+                    top_opaque_start[0] = i
+                close_top_opaque(j + 1)
             i = j + 1
             continue
+
+        if c == "(":
+            stack.append([i, False, None, []])
+            i += 1
+            continue
+
+        case_stack = frame[3]
+        top = case_stack[-1] if case_stack else None
+        if c == ")":
+            if top in ("pattern_first", "pattern_rest"):
+                # A case pattern's own closer -- never the frame's closer,
+                # regardless of nesting depth (postcondition 1).
+                case_stack[-1] = "body"
+                i += 1
+                continue
+            if len(stack) > 1:
+                open_pos, is_sub, _q, _cs = stack.pop()
+                if is_sub:
+                    spans.append((open_pos, i + 1))
+                    if sub_open_stack and sub_open_stack[-1] == open_pos:
+                        sub_open_stack.pop()
+                if len(stack) == 1:
+                    close_top_opaque(i + 1)
+            i += 1
+            continue
+
+        if (c.isalnum() or c == "_") and _at_word_start(text, i):
+            word, end = _word_at(text, i)
+            if top == "await_subject":
+                case_stack[-1] = "await_in"
+            elif top == "await_in":
+                case_stack[-1] = "pattern_first"
+            elif top == "pattern_first":
+                rest = end
+                while rest < n and text[rest] in " \t":
+                    rest += 1
+                followed_by_closer = rest < n and text[rest] == ")"
+                if word == "esac" and not followed_by_closer:
+                    case_stack.pop()
+                else:
+                    case_stack[-1] = "pattern_rest"
+            elif top == "pattern_rest":
+                pass
+            else:
+                if word == "esac" and case_stack:
+                    case_stack.pop()
+                elif word == "case":
+                    case_stack.append("await_subject")
+            i = end
+            continue
+
         i += 1
-    unmatched.extend(frame[0] for frame in stack[1:] if frame[0] is not None)
-    return spans, unmatched
+
+    while ci < len(checkpoints):
+        containing_open[checkpoints[ci]] = (
+            sub_open_stack[-1] if sub_open_stack else None
+        )
+        ci += 1
+
+    for frame in stack[1:]:
+        if frame[1]:
+            unmatched.append(frame[0])
+    if top_opaque_start[0] is not None:
+        opaque.append((top_opaque_start[0], n))
+
+    open_to_span = {s: (s, e) for s, e in spans}
+    parent_of = {}
+    for s, e in spans:
+        p_open = parent_open_of.get(s)
+        parent_of[(s, e)] = open_to_span.get(p_open) if p_open is not None else None
+
+    opaque.sort()
+    containing_span = {
+        pos: (open_to_span.get(open_pos) if open_pos is not None else None)
+        for pos, open_pos in containing_open.items()
+    }
+    return spans, parent_of, unmatched, opaque, containing_span
+
+
+def _top_level_spans(spans, parent_of):
+    """SPANS with no enclosing parent, sorted left to right -- the ones a
+    caller marks/queues at THIS level; a nested one is found again once its
+    parent's own body is queued and re-scanned as its own chunk."""
+    return sorted(s for s in spans if parent_of.get(s) is None)
 
 
 def _span_inner(text, span):
     """(inner text, its own start offset in TEXT) for SPAN, a (start, end)
-    pair from _all_substitution_spans() -- mirrors _substitution_inner()
-    for a regex match, but for a span tuple instead."""
+    pair from scan_structure()."""
     start, end = span
     if text[start] == "`":
         return text[start + 1 : end - 1], start + 1
     return text[start + 2 : end - 1], start + 2
 
 
-def _immediate_parent_span(spans, start, end):
-    """The tightest span in SPANS that strictly contains [START, END) --
-    i.e. the immediate enclosing substitution -- or None. Picking the
-    smallest containing span (rather than the first found) is what makes a
-    sibling substitution elsewhere in the same text harmless: every span
-    that merely happens to also contain [START, END) by virtue of being
-    further out is still available, but never chosen ahead of the true
-    immediate parent."""
-    candidates = [
-        (s, e)
-        for s, e in spans
-        if s <= start and end <= e and (s, e) != (start, end)
-    ]
-    if not candidates:
-        return None
-    return min(candidates, key=lambda se: se[1] - se[0])
+def _segment_boundaries(text, opaque):
+    """The START offset of every real (non-comment, non-quoted, non-
+    substitution) statement-separator run in TEXT, in ascending order,
+    using OPAQUE (scan_structure()'s top-level ranges) to skip inert
+    regions -- ONE forward pass over the whole of TEXT, built once per
+    TEXT/OPAQUE pair and shared by every _segment_index_at() query against
+    it (see that function), rather than each query re-scanning from
+    position 0 on its own. A chunk with K heredocs would otherwise cost
+    O(K) scans, each up to that heredoc's own (growing) offset -- O(n^2)
+    total on a chunk whose heredoc count grows with its own length
+    (NFR3/TM-5) -- where this one pass, plus a bisect per query, costs
+    O(n) once and O(log n) per query."""
+    boundaries = []
+    i = 0
+    n = len(text)
+    oi = 0
+    m = len(opaque)
+    while i < n:
+        while oi < m and opaque[oi][1] <= i:
+            oi += 1
+        if oi < m and opaque[oi][0] <= i < opaque[oi][1]:
+            i = min(opaque[oi][1], n)
+            continue
+        c = text[i]
+        if c in SEGMENT_CHARS:
+            boundaries.append(i)
+            j = i
+            while j < n and text[j] in SEGMENT_CHARS:
+                j += 1
+            i = j
+            continue
+        i += 1
+    return boundaries
 
 
-def _walk_enclosing(chunk, sub_span):
-    """The chain of enclosing statements around SUB_SPAN -- a (start, end)
-    span from _all_substitution_spans() for the substitution directly
-    holding a heredoc's host statement -- innermost
-    first, up to the outermost (task plan Terms, "Enclosing statement":
-    "every level outward counts, up to the outermost"). Each step locates
-    the statement WITHIN the immediate parent substitution's own body that
-    holds the previous level (not just whatever sits outside the parent
-    entirely) -- skipping that inner lookup is what previously let a
-    middle level, e.g. `bash -c "$(cat <<'EOF' ...)"` sitting inside a
-    further `$(...)`, vanish from the chain entirely.
+def _segment_index_at(pos, boundaries):
+    """Which lex_segments(marked_text) statement index contains character
+    POS in TEXT -- the count of separator runs in BOUNDARIES (see
+    _segment_boundaries()) that START strictly before POS, found by
+    bisecting the precomputed, sorted list rather than re-scanning TEXT
+    from position 0 (Component 3: position only, no marker ever inserted
+    into TEXT)."""
+    return bisect.bisect_left(boundaries, pos)
 
-    Containment is resolved once, structurally, via
-    _all_substitution_spans()'s paren-stack scan of the whole (unmodified)
-    CHUNK -- rather than by peeling one level at a time out of a working
-    copy and re-running SUBSTITUTION's paren-free regex on it -- so a
-    sibling substitution at the same nesting level (still holding its own
-    parens) cannot make an enclosing level invisible to the walk.
-    """
-    spans, unmatched = _all_substitution_spans(chunk)
-    chain = []
-    cur_start, cur_end = sub_span
-    for _ in range(10):  # a bound against a malformed/cyclic input, not a
-        # limit this task's own commands ever reach
-        parent = _immediate_parent_span(spans, cur_start, cur_end)
-        if parent is None:
-            if any(pos < cur_start for pos in unmatched):
-                # An opener earlier in CHUNK never closed by end of text --
-                # structurally, it may well enclose CUR, but its own span
-                # could not be confirmed (see _all_substitution_spans()).
-                # Guessing "nothing encloses here" would risk reading past
-                # a sink hidden behind it; fall back to undetermined.
-                chain.append(_StmtInfo(parse_failed=True))
-            else:
-                chain.append(_locate_single(chunk, cur_start, cur_end))
+
+# --- Component 5: substitutions in an unquoted-delimiter heredoc body ------
+
+
+def _extract_heredoc_body_substitutions(text):
+    """Every OUTERMOST `$( … )`/`` ` … ` `` in TEXT (an unquoted-delimiter
+    heredoc body), found by Component 1's own scanner in `heredoc-body`
+    mode rather than a separate ad hoc parse -- so a `)` that closes a case
+    pattern or sits inside a quoted string, however deep the nesting, never
+    ends the span early. Returns (bodies, needs_whole_body); NEEDS_WHOLE_BODY
+    is True when an opener is never closed, so the caller falls back to
+    scanning the whole text rather than silently dropping the unresolved
+    tail. Each returned body is queued as its own chunk by the caller;
+    nested levels are found in turn when THAT chunk is scanned next."""
+    spans, parent_of, unmatched, _opaque, _containing = scan_structure(
+        text, mode="heredoc-body"
+    )
+    if unmatched:
+        return [], True
+    top_spans = _top_level_spans(spans, parent_of)
+    return [_span_inner(text, span)[0] for span in top_spans], False
+
+
+# --- Component 3: chunk statement analysis, built once per chunk -----------
+
+
+class _Stmt:
+    """One statement's contribution to Component 3's per-chunk table --
+    everything Component 4's destination decision (and, for its own
+    purposes, _mark_substitutions()'s callers) reads about ONE lex_segments()
+    statement, computed once and shared by every heredoc in the chunk."""
+
+    __slots__ = (
+        "toks", "lexed", "sep", "shaped_words", "redirects", "word",
+        "has_process_sub", "is_assignment_only", "opens_group",
+        "closes_group", "is_compound_keyword",
+    )
+
+    def __init__(self, **kw):
+        for key in self.__slots__:
+            setattr(self, key, kw.get(key))
+
+
+def _leading_group_opener_char(toks):
+    """Whether TOKS' own command position, after skipping any VAR=value/
+    WRAPPERS prefix, lands on an unquoted grouping opener, and which
+    bracket it opens ('{' or '(') -- the type Component 3's group tracking
+    needs to match against the correct closer -- or None."""
+    i = 0
+    n = len(toks)
+    while i < n:
+        advance = _skip_assignments_and_wrappers(toks[i:])
+        if not advance:
             break
-        inner_text, inner_base = _span_inner(chunk, parent)
-        chain.append(
-            _locate_single(inner_text, cur_start - inner_base, cur_end - inner_base)
-        )
-        cur_start, cur_end = parent
-    else:
-        # The bound was hit without ever finding the outermost level --
-        # treat as undetermined rather than decide from a possibly
-        # incomplete chain.
-        chain.append(_StmtInfo(parse_failed=True))
-    return chain
+        i += advance
+    if i >= n:
+        return None
+    t = toks[i]
+    if t == "(" and getattr(t, "is_operator", False):
+        return "("
+    if t == "{" and not getattr(t, "quoted", False):
+        return "{"
+    return None
 
 
-def _decide_from_chain(chain):
-    """The task plan's Component 2 decision, given CHAIN[0] (the host
-    statement) and CHAIN[1:] (its enclosing statements, innermost first, if
-    any): 'sink', 'undetermined', or 'data'."""
-    host = chain[0]
-    enclosing = chain[1:]
+def _leading_group_closer(toks):
+    """The closer counterpart to _leading_group_opener_char(): which
+    bracket TOKS' own leading position closes ('{' for a bare `}`, '(' for
+    a `)` operator), or None."""
+    i = 0
+    n = len(toks)
+    while i < n:
+        advance = _skip_assignments_and_wrappers(toks[i:])
+        if not advance:
+            break
+        i += advance
+    if i >= n:
+        return None
+    t = toks[i]
+    if t == "}" and not getattr(t, "quoted", False):
+        return "{"
+    if t == ")" and getattr(t, "is_operator", False):
+        return "("
+    return None
 
-    if host.parse_failed:
-        return "undetermined"
-    if host.word is not None and SINK_WORD_RE.match(host.word):
-        return "sink"
-    if host.pipeline_sink:
-        return "sink"
-    for level in enclosing:
+
+def _build_statement_table(chunk, marked_chunk):
+    """Component 3. ONE lexing pass of MARKED_CHUNK (CHUNK with every
+    top-level substitution already blanked by _mark_substitutions()),
+    yielding the same per-statement shaping statements() itself computes
+    (case state carried statement-by-statement via _shape_leading(), the
+    same fused-closer/redirect/wrapper/git-alias handling) -- built once
+    per chunk and read by every heredoc's destination decision instead of
+    each heredoc re-lexing the chunk on its own."""
+    segments = lex_segments(marked_chunk)
+    case_stack = []
+    table = []
+    for toks, lexed, sep in segments:
+        stripped = _strip_unresolved_marks(toks)
+        if lexed:
+            fused = _split_fused_closer_redirects(stripped)
+            words_only, redirects = split_redirects(fused, lexed)
+            lead = _shape_leading(words_only, case_stack)
+            shaped_words = _shaped_remainder(words_only, lead)
+            ends_case_item = bool(
+                sep and any(term in sep for term in (";;", ";&", ";|"))
+            )
+            if ends_case_item and case_stack and case_stack[-1] == "body":
+                case_stack[-1] = "pattern_first"
+            word, _args = head(shaped_words)
+            if _git_alias_risk(word, shaped_words, words_only[:lead]):
+                word = None
+            raw_index = _skip_assignments_and_wrappers(stripped)
+            is_compound_keyword = (
+                raw_index < len(stripped)
+                and stripped[raw_index] in COMPOUND_STATEMENT_KEYWORDS
+            )
+            table.append(_Stmt(
+                toks=stripped, lexed=True, sep=sep, shaped_words=shaped_words,
+                redirects=redirects, word=word,
+                has_process_sub=_has_process_substitution(stripped),
+                is_assignment_only=_is_assignment_only(words_only),
+                opens_group=_leading_group_opener_char(stripped),
+                closes_group=_leading_group_closer(stripped),
+                is_compound_keyword=is_compound_keyword,
+            ))
+        else:
+            fallback_words, redirects = split_redirects(stripped, lexed)
+            shaped_words = _shape_fallback(fallback_words)
+            table.append(_Stmt(
+                toks=stripped, lexed=False, sep=sep, shaped_words=shaped_words,
+                redirects=redirects, word=None, has_process_sub=False,
+                is_assignment_only=False, opens_group=None, closes_group=None,
+                is_compound_keyword=False,
+            ))
+    return table
+
+
+def _track_groups(table):
+    """One forward pass over TABLE building GROUP_CLOSER_OF ({statement
+    index that OPENS a group: the statement index that CLOSES it}) and
+    OPEN_GROUPS_AT (per statement index, the list of (bracket, open index)
+    pairs open AT that statement, including one it opens itself and any
+    opened by an earlier statement or on an earlier line -- Component 3's
+    own definition)."""
+    group_stack = []
+    group_closer_of = {}
+    open_groups_at = []
+    for idx, stmt in enumerate(table):
+        if stmt.lexed:
+            closer = stmt.closes_group
+            if closer is not None and group_stack and group_stack[-1][0] == closer:
+                _bracket, open_idx = group_stack.pop()
+                group_closer_of[open_idx] = idx
+            opener = stmt.opens_group
+            if opener is not None:
+                group_stack.append((opener, idx))
+        open_groups_at.append(list(group_stack))
+    return group_closer_of, open_groups_at
+
+
+_PIPELINE_MEMO_KEY = "_pipeline_memo"
+
+
+def _pipeline_downstream(table, index, memo):
+    """(has_sink, has_other) for the run of statements later than
+    TABLE[INDEX], joined to it by an unbroken run of Pipeline separators --
+    same semantics the first pass's _pipeline_has_sink() had, but reading
+    each lookahead statement's WORD/flags from the shared, case-aware
+    TABLE instead of re-lexing it with a fresh case_stack, and memoized so
+    a group closer or enclosing level queried by more than one heredoc in
+    the same chunk costs one lookup, not one re-walk (NFR3).
+
+    A statement holding no tokens at all (Component 3: "Segments that hold
+    only whitespace or newlines are skipped. They never end the downstream
+    search.") is skipped over, regardless of its OWN separator -- a bare
+    trailing space/tab after a pipe (`cmd | \n...`, `cmd |\t\n...`) lexes as
+    an empty statement whose own SEP is a plain `\n`, not `|`, since nothing
+    else shares its line; without this skip, that empty statement's
+    non-pipe SEP would end the walk right there, one stage short of the
+    statement the pipe actually feeds."""
+    if index in memo:
+        return memo[index]
+    n = len(table)
+    if index >= n or not _is_pipe_sep(table[index].sep):
+        memo[index] = (False, False)
+        return memo[index]
+    has_other = False
+    i = index + 1
+    while True:
+        while i < n and table[i].lexed and not table[i].toks:
+            i += 1
+        if i >= n:
+            result = (False, has_other)
+            break
+        stmt = table[i]
+        if not stmt.lexed:
+            result = (True, has_other)
+            break
+        if stmt.is_compound_keyword:
+            has_other = True
+        else:
+            word = stmt.word
+            if word is not None and SINK_WORD_RE.match(word):
+                result = (True, has_other)
+                break
+            if (
+                word is None
+                or word not in DATA_COMMANDS
+                or stmt.has_process_sub
+                or stmt.opens_group is not None
+            ):
+                has_other = True
+        if not _is_pipe_sep(stmt.sep):
+            result = (False, has_other)
+            break
+        i += 1
+    memo[index] = result
+    return result
+
+
+def _statement_pipeline_info(table, idx, group_closer_of, open_groups_at, memo):
+    """Component 4 levels 2-3 combined for TABLE[IDX]: its own downstream
+    pipeline, OR the downstream pipeline after the closer of any compound
+    group open at it. A group whose closer cannot be found anywhere in the
+    chunk makes this undeterminable (Component 4 rule 2), not silently
+    'no sink here'."""
+    sink, other = _pipeline_downstream(table, idx, memo)
+    for _bracket, open_idx in open_groups_at[idx]:
+        close_idx = group_closer_of.get(open_idx)
+        if close_idx is None:
+            other = True
+            continue
+        s2, o2 = _pipeline_downstream(table, close_idx, memo)
+        sink = sink or s2
+        other = other or o2
+    return sink, other
+
+
+def _stmt_destination_info(table, idx, group_closer_of, open_groups_at, memo):
+    """The _StmtInfo Component 4 reads for TABLE[IDX] as either a host or
+    an enclosing statement."""
+    stmt = table[idx]
+    if not stmt.lexed:
+        return _StmtInfo(parse_failed=True)
+    pipeline_sink, pipeline_undetermined = _statement_pipeline_info(
+        table, idx, group_closer_of, open_groups_at, memo
+    )
+    return _StmtInfo(
+        word=stmt.word,
+        pipeline_sink=pipeline_sink,
+        pipeline_undetermined=pipeline_undetermined,
+        has_process_sub=stmt.has_process_sub,
+        is_assignment_only=stmt.is_assignment_only,
+    )
+
+
+# --- Component 4: destination decision --------------------------------------
+
+
+def _decide_destination(chain):
+    """The task plan's Component 4 decision, given CHAIN[0] (the host
+    statement, its own pipeline/group levels already folded in) and
+    CHAIN[1:] (its enclosing statements, innermost first, each with its
+    own pipeline/group levels folded in the same way): 'sink',
+    'undetermined', or 'data'.
+
+    A sink at ANY level wins outright, even when another level in the same
+    chain is unlexable or undeterminable (checked first, in its own pass,
+    before any parse-failure/undetermined check runs)."""
+    for level in chain:
         if level.parse_failed:
-            continue  # judged under "undeterminable" below, not here
+            continue
         if level.word is not None and SINK_WORD_RE.match(level.word):
             return "sink"
         if level.pipeline_sink:
             return "sink"
 
-    if any(level.parse_failed for level in enclosing):
-        return "undetermined"
-    if host.has_process_sub or any(level.has_process_sub for level in enclosing):
-        return "undetermined"
-    if host.pipeline_undetermined or any(
-        level.pipeline_undetermined for level in enclosing
-    ):
-        return "undetermined"
+    for level in chain:
+        if level.parse_failed or level.pipeline_undetermined or level.has_process_sub:
+            return "undetermined"
+
+    host = chain[0]
     if host.word is None or host.word not in DATA_COMMANDS:
         return "undetermined"
-    for level in enclosing:
+    for level in chain[1:]:
         if level.is_assignment_only:
             continue
         if level.word is None or level.word not in DATA_COMMANDS:
@@ -1609,133 +1858,108 @@ def _decide_from_chain(chain):
     return "data"
 
 
-def _case_open_before(chunk, pos):
-    """Conservative guard: whether an unclosed `case ... in` construct opens
-    somewhere before POS in CHUNK. _locate_statements()/_locate_single()
-    re-lex CHUNK independently of statements()'s own CASE_STACK-carrying
-    walk (see their docstrings), so they cannot tell a case-pattern word
-    from a command word; this is a rough, quote/substitution-unaware word
-    scan used only to fall back to 'undetermined' rather than risk reading
-    a pattern word as a command word, deliberately biased toward reporting
-    an open case (a false positive here only costs precision, never
-    correctness -- see _heredoc_destinations()).
-    """
-    depth = 0
-    for word in re.findall(r"\b\w+\b", chunk[:pos]):
-        if word == "case":
-            depth += 1
-        elif word == "esac" and depth > 0:
-            depth -= 1
-    return depth > 0
+def _statement_info_at(text, pos, memo_key, tables_cache):
+    """The Component 3 table (built once per TEXT, cached in TABLES_CACHE
+    keyed by MEMO_KEY) plus the statement index at POS in TEXT, plus that
+    table's own group-tracking and pipeline memo -- shared by every level
+    of every heredoc's chain that resolves against this same TEXT."""
+    cached = tables_cache.get(memo_key)
+    if cached is None:
+        spans, parent_of, unmatched, opaque, _containing = scan_structure(
+            text, mode="shell"
+        )
+        top_spans = _top_level_spans(spans, parent_of)
+        marked = _mark_substitutions(text, top_spans, 0)
+        table = _build_statement_table(text, marked)
+        group_closer_of, open_groups_at = _track_groups(table)
+        # _segment_boundaries() is the one full-text pass every heredoc's
+        # own _segment_index_at() query against THIS text shares (NFR3) --
+        # see that function's own docstring.
+        boundaries = _segment_boundaries(text, opaque)
+        cached = (table, group_closer_of, open_groups_at, {}, unmatched, boundaries)
+        tables_cache[memo_key] = cached
+    table, group_closer_of, open_groups_at, pipe_memo, unmatched, boundaries = cached
+    if any(p < pos for p in unmatched):
+        return None
+    idx = _segment_index_at(pos, boundaries)
+    if idx >= len(table):
+        return None
+    return _stmt_destination_info(table, idx, group_closer_of, open_groups_at, pipe_memo)
 
 
-def _line_has_other_substitution(chunk, pos, sub_matches):
-    """Conservative guard: whether a command-substitution match overlaps
-    POS's own physical line in CHUNK. _locate_statements()/_locate_single()
-    lex CHUNK directly, without first blanking substitution bodies out via
-    _mark_substitutions() as statements() itself does, so a separator
-    inside a substitution's own text (`$(true; true)`) can be misread as
-    splitting the host statement itself; used only to fall back to
-    'undetermined' when that risk is present on the host's own line.
-
-    SUB_MATCHES is the caller's single SUBSTITUTION.finditer(chunk) pass
-    over the whole chunk (computed once in _heredoc_destinations()), not
-    re-scanned here per heredoc. Overlap is checked against the match's
-    full span rather than requiring it to start within POS's line, so a
-    substitution that opens on an earlier physical line and only closes on
-    POS's own line (`$(true;\\ncat) <<'EOF'`) is still caught -- restricting
-    the search window to [line_start, line_end) missed exactly that case,
-    since the match's own start then fell outside the window.
-    """
-    line_start = chunk.rfind("\n", 0, pos) + 1
-    line_end = chunk.find("\n", pos)
-    if line_end == -1:
-        line_end = len(chunk)
-    for m in sub_matches:
-        if m.start() < line_end and m.end() > line_start:
-            return True
-    return False
+def _walk_enclosing_chain(chunk, cur_span, parent_of, tables_cache):
+    """The chain of enclosing statements around CUR_SPAN -- a (start, end)
+    span for the substitution directly holding a heredoc's host statement
+    -- innermost first, up to the outermost. Each level is resolved
+    against whichever text actually holds it (CHUNK itself for the
+    outermost level, or the immediate parent substitution's own inner text
+    otherwise), using PARENT_OF (built once per chunk) for O(1) lookups
+    rather than re-scanning the whole chunk per heredoc (NFR3)."""
+    chain = []
+    cur = cur_span
+    for _ in range(10):
+        parent = parent_of.get(cur)
+        if parent is None:
+            info = _statement_info_at(chunk, cur[0], "chunk", tables_cache)
+            chain.append(info if info is not None else _StmtInfo(parse_failed=True))
+            break
+        inner_text, inner_base = _span_inner(chunk, parent)
+        local_pos = cur[0] - inner_base
+        info = _statement_info_at(inner_text, local_pos, parent, tables_cache)
+        chain.append(info if info is not None else _StmtInfo(parse_failed=True))
+        cur = parent
+    else:
+        chain.append(_StmtInfo(parse_failed=True))
+    return chain
 
 
-def _heredoc_destinations(chunk, records):
+def _heredoc_destinations(chunk, records, chunk_scan):
     """{index into RECORDS: 'sink'/'data'/'undetermined'} for every heredoc
     strip_heredocs() found in CHUNK -- the single entry point statements()
     calls, once per popped chunk, before that chunk's own substitution
-    bodies are queued (task plan Component 2's closing requirement).
-    """
+    bodies are queued. CHUNK_SCAN is CHUNK's own Component 1 scan result
+    (scan_structure(chunk, mode="shell", checkpoints=[r.op_start for r in
+    RECORDS])), computed once by the caller and shared with this chunk's
+    substitution marking -- never a separate re-lex of CHUNK."""
     if not records:
         return {}
 
-    sub_matches = list(SUBSTITUTION.finditer(chunk))
-    spans, unmatched = _all_substitution_spans(chunk)
-    plain, nested = [], []
-    forced_undetermined = set()
-    for index, record in enumerate(records):
-        if any(pos < record.op_start for pos in unmatched):
-            # An opener earlier in CHUNK never closed by end of text --
-            # structurally, it may well enclose this heredoc's operator,
-            # but its own span could not be confirmed (see
-            # _all_substitution_spans()'s own docstring). Guessing "plain"
-            # here would risk reading past a sink hidden behind it.
-            forced_undetermined.add(index)
-            plain.append(index)
-            continue
-        candidates = [
-            (s, e) for s, e in spans if s <= record.op_start < e
-        ]
-        containing = (
-            min(candidates, key=lambda se: se[1] - se[0]) if candidates else None
-        )
-        if containing is None:
-            plain.append(index)
-        else:
-            nested.append((index, containing))
+    spans, parent_of, unmatched, opaque, containing_span = chunk_scan
+    tables_cache = {}
 
     destinations = {}
-
-    if plain:
-        plain_records = [records[i] for i in plain]
-        host_infos = _locate_statements(chunk, plain_records)
-        for position, index in enumerate(plain):
-            record = records[index]
-            if index in forced_undetermined:
-                destinations[index] = "undetermined"
-                continue
-            host = host_infos.get(position, _StmtInfo(parse_failed=True))
-            decision = _decide_from_chain([host])
-            # A sink already resolved from the (possibly misread) host word
-            # is never downgraded by the line-splitting risk below -- the
-            # risk is that a separator inside a substitution's text gets
-            # misread as ending the host statement early, which can only
-            # ever manufacture a spurious host word or lose one, not turn a
-            # real sink word into a false one. Discarding a resolved sink
-            # here is what let `b"a"s"h" $(true) <<'EOF'` fall through to
-            # 'undetermined' and then to allow.
-            if decision != "sink" and (
-                _case_open_before(chunk, record.op_start)
-                or _line_has_other_substitution(chunk, record.op_start, sub_matches)
-            ):
-                decision = "undetermined"
-            destinations[index] = decision
-
-    for index, span in nested:
-        record = records[index]
-        inner_text, inner_base = _span_inner(chunk, span)
-        host = _locate_single(
-            inner_text, record.op_start - inner_base, record.op_end - inner_base
-        )
-        chain = [host] + _walk_enclosing(chunk, span)
-        destinations[index] = _decide_from_chain(chain)
-
+    for index, record in enumerate(records):
+        if any(pos < record.op_start for pos in unmatched):
+            destinations[index] = "undetermined"
+            continue
+        containing = containing_span.get(record.op_start)
+        if containing is None:
+            info = _statement_info_at(chunk, record.op_start, "chunk", tables_cache)
+            chain = [info if info is not None else _StmtInfo(parse_failed=True)]
+        else:
+            inner_text, inner_base = _span_inner(chunk, containing)
+            local_start = record.op_start - inner_base
+            host = _statement_info_at(inner_text, local_start, containing, tables_cache)
+            chain = [host if host is not None else _StmtInfo(parse_failed=True)]
+            chain.extend(
+                _walk_enclosing_chain(chunk, containing, parent_of, tables_cache)
+            )
+        destinations[index] = _decide_destination(chain)
     return destinations
 
 
-def _mark_substitutions(chunk, offset_=0):
-    """Blank every command-substitution match in CHUNK by replacing it with
-    UNRESOLVED_MARK, so the word it sat in survives lexing as a token no
-    matter whether the match filled the whole word or sat beside real text
-    (destructive-guard-command-substitution task0001 Design Part 1, "evidence
-    survives the lexing boundary").
+def _mark_substitutions(chunk, top_spans, offset_=0):
+    """Blank every span in TOP_SPANS -- CHUNK's own top-level `$( … )`/
+    `` ` … ` `` spans, Component 1's scan_structure() result narrowed by
+    _top_level_spans() -- by replacing it with UNRESOLVED_MARK, so the word
+    it sat in survives lexing as a token no matter whether the span filled
+    the whole word or sat beside real text (destructive-guard-command-
+    substitution task0001 Design Part 1, "evidence survives the lexing
+    boundary"). Unlike SUBSTITUTION's own single-level, paren-free regex,
+    TOP_SPANS already reflects true nesting (Component 1), so a chunk whose
+    only substitution is several levels deep is still marked correctly here
+    -- the nested levels are found in turn once this span's own inner text
+    is queued and re-scanned as its own chunk (see call site).
 
     Unlike before this task, there is no boundary test here and no separate
     "blank to a space" branch: every match becomes marker residue, and
@@ -1759,35 +1983,35 @@ def _mark_substitutions(chunk, offset_=0):
     function's output is ever tokenized — no special case is needed for it
     here.
 
-    Each match is replaced with a marker carrying that match's own ordinal
-    position among SUBSTITUTION.finditer(chunk), OFFSET by OFFSET_ —
-    statements() passes the number of entries already accumulated in its
-    run-global ALL_SUBS list before this chunk's own matches are appended,
-    so the index baked into each marker names a position in that run-global
-    list rather than in this chunk's own local enumeration (destructive-
-    guard-command-name-substitution). A marker's index therefore stays
-    meaningful even if the marked token text later leaks into a re-scanned
-    chunk (e.g. via a `bash -c '...'` payload pushed back onto PENDING),
-    where a fresh, differently-numbered local list would otherwise either
-    miss the entry (index out of range) or, worse, resolve to an unrelated
-    entry that merely happens to be in range. This lets _strip_unresolved_
-    marks() recover the right ALL_SUBS entry for a surviving marker by
-    direct index lookup even when some other match in the same chunk never
-    reaches the token stream at all (dropped whole by a lexer-level
-    comment).
+    Each span is replaced with a marker carrying that span's own ordinal
+    position among TOP_SPANS, OFFSET by OFFSET_ — statements() passes the
+    number of entries already accumulated in its run-global ALL_SUBS list
+    before this chunk's own spans are appended, so the index baked into
+    each marker names a position in that run-global list rather than in
+    this chunk's own local enumeration (destructive-guard-command-name-
+    substitution). A marker's index therefore stays meaningful even if the
+    marked token text later leaks into a re-scanned chunk (e.g. via a
+    `bash -c '...'` payload pushed back onto PENDING), where a fresh,
+    differently-numbered local list would otherwise either miss the entry
+    (index out of range) or, worse, resolve to an unrelated entry that
+    merely happens to be in range. This lets _strip_unresolved_marks()
+    recover the right ALL_SUBS entry for a surviving marker by direct index
+    lookup even when some other span in the same chunk never reaches the
+    token stream at all (dropped whole by a lexer-level comment).
     """
-    counter = [offset_]
+    out = []
+    cursor = 0
+    for i, (start, end) in enumerate(top_spans):
+        out.append(chunk[cursor:start])
+        index = offset_ + i
+        out.append(f"{UNRESOLVED_MARK}{index}{_MARK_TERMINATOR}")
+        cursor = end
+    out.append(chunk[cursor:])
+    return "".join(out)
 
-    def replace(_match):
-        index = counter[0]
-        counter[0] += 1
-        return f"{UNRESOLVED_MARK}{index}{_MARK_TERMINATOR}"
 
-    return SUBSTITUTION.sub(replace, chunk)
-
-
-def _mark_quoted_substitutions(chunk):
-    """Like _mark_substitutions(), but a substitution match that sits
+def _mark_quoted_substitutions(chunk, top_spans):
+    """Like _mark_substitutions(), but a span in TOP_SPANS that sits
     immediately between a pair of double-quote characters in CHUNK's raw
     text — `"$(...)"` / `` "`...`" ``, with nothing else between the quote
     and the substitution boundary on either side — is replaced with
@@ -1795,7 +2019,11 @@ def _mark_quoted_substitutions(chunk):
     single-quoted — a real shell would not expand that, but this module has
     never distinguished it either — or mixed with other text inside the
     quotes) gets the ordinary UNRESOLVED_MARK, byte for byte as
-    _mark_substitutions() itself would produce.
+    _mark_substitutions() itself would produce (a single marker character,
+    no index, no terminator — the two functions' outputs are compared only
+    by segment/token shape, never by absolute offset, so this narrower
+    replacement is enough; see this function's own second docstring
+    paragraph below).
 
     Used ONLY by extract_shell_payload() (task0001 FR4), which lexes this
     output as a second, parallel token sequence to _mark_substitutions()'s
@@ -1805,14 +2033,17 @@ def _mark_quoted_substitutions(chunk):
     that specific substitution was written enclosed in quotes. No other
     stage calls this function.
     """
-
-    def replace(match):
-        start, end = match.span()
+    out = []
+    cursor = 0
+    for start, end in top_spans:
+        out.append(chunk[cursor:start])
         if 0 < start and end < len(chunk) and chunk[start - 1] == '"' and chunk[end] == '"':
-            return QUOTED_MARK
-        return UNRESOLVED_MARK
-
-    return SUBSTITUTION.sub(replace, chunk)
+            out.append(QUOTED_MARK)
+        else:
+            out.append(UNRESOLVED_MARK)
+        cursor = end
+    out.append(chunk[cursor:])
+    return "".join(out)
 
 
 def _strip_unresolved_marks(toks, chunk_subs=None):
@@ -2175,11 +2406,37 @@ def statements(command):
     while pending:
         chunk = pending.pop()
         chunk, heredocs = strip_heredocs(chunk)
+        # Component 1: ONE structural scan of CHUNK, shared by every caller
+        # below that needs to know where CHUNK's own top-level substitutions
+        # sit -- the heredoc destination decision, and this chunk's own
+        # CHUNK_SUBS/marking -- rather than each re-lexing or re-scanning
+        # CHUNK on its own (NFR3; also what lets a heredoc's destination and
+        # this chunk's own substitution marking agree by construction).
+        chunk_scan = scan_structure(
+            chunk, mode="shell", checkpoints=[r.op_start for r in heredocs]
+        )
+        # This chunk's own general, non-heredoc substitution discovery --
+        # what CHUNK_SUBS (recursion) and this loop's own _mark_
+        # substitutions()/_mark_quoted_substitutions() calls below read --
+        # predates this task and must keep its own, wider, quote-agnostic
+        # reach (scan_structure()'s HONOR_SINGLE_QUOTES docstring): every
+        # per-token check downstream (check_rm() among them) reads
+        # `.unresolved`/`.substitution_only` as "this token's value was
+        # never fully present", a static reading that has never depended on
+        # whether the `$(`/backtick sat inside a pair of single quotes. The
+        # heredoc destination decision (CHUNK_SCAN above, passed to
+        # _heredoc_destinations() untouched) stays on the quote-aware
+        # default it needs for correct statement/case-state structure; only
+        # TOP_SPANS below reads the wider scan.
+        legacy_spans, legacy_parent_of, _l_unmatched, _l_opaque, _l_containing = (
+            scan_structure(chunk, mode="shell", honor_single_quotes=False)
+        )
+        top_spans = _top_level_spans(legacy_spans, legacy_parent_of)
         if heredocs:
             # Component 2/3 (task0001): each heredoc is judged on its own
             # destination, not on whether a sink word appears ANYWHERE in
             # the chunk -- see _heredoc_destinations().
-            destinations = _heredoc_destinations(chunk, heredocs)
+            destinations = _heredoc_destinations(chunk, heredocs, chunk_scan)
             for index, record in enumerate(heredocs):
                 if not record.body.strip():
                     continue  # a blank body is never queued, as before this task
@@ -2198,18 +2455,17 @@ def statements(command):
                     # body itself is not re-scanned as a statement here (it
                     # is still just data once expanded), but each OUTERMOST
                     # substitution inside it is queued for the same
-                    # scanning every other substitution gets. SUBSTITUTION
-                    # itself cannot be used here: it matches only a
-                    # paren-free interior, so on a nested substitution
-                    # (`$(git reset --hard $(echo HEAD))`) it would find
-                    # just the inner `echo HEAD` and silently drop the
-                    # outer, actually-executed `git reset --hard ...`.
-                    # _extract_heredoc_body_substitutions() instead counts
-                    # paren depth to find each outermost `$( … )`/`` ` … ` ``
-                    # whole; queuing that whole body (rather than trying to
+                    # scanning every other substitution gets.
+                    # _extract_heredoc_body_substitutions() uses Component
+                    # 1's own scan_structure() (`heredoc-body` mode) to find
+                    # each outermost `$( … )`/`` ` … ` `` whole, however
+                    # deeply nested, rather than a single-level regex that
+                    # would find just the inner `echo HEAD` and silently
+                    # drop the outer, actually-executed `git reset --hard
+                    # ...`; queuing that whole body (rather than trying to
                     # recurse here) is enough, because the queued text goes
                     # through the ordinary chunk path next iteration, whose
-                    # own SUBSTITUTION scan then finds the nested
+                    # own top-level-span scan then finds the nested
                     # substitution in turn. A backslash-escaped `$(` is
                     # literal text the shell never expands, so it is not a
                     # substitution boundary here either.
@@ -2226,17 +2482,23 @@ def statements(command):
                         for body in bodies:
                             if body.strip():
                                 pending.append(body)
-        chunk_subs = [m.group(1) or m.group(2) or "" for m in SUBSTITUTION.finditer(chunk)]
+        # TOP_SPANS (Component 1, computed once above) already reflects true
+        # nesting, unlike SUBSTITUTION's own single-level, paren-free regex:
+        # a chunk-local substitution several levels deep no longer needs a
+        # second regex pass here to be marked at all. Each span's own inner
+        # text is queued; a nested level inside it is found in turn once
+        # that text is popped off PENDING and scanned as its own chunk.
+        chunk_subs = [_span_inner(chunk, span)[0] for span in top_spans]
         for body in chunk_subs:
             if body.strip():
                 pending.append(body)
         offset = len(all_subs)
         all_subs.extend(chunk_subs)
-        quoted_segments = lex_segments(_mark_quoted_substitutions(chunk))
+        quoted_segments = lex_segments(_mark_quoted_substitutions(chunk, top_spans))
         # task0001: case-pattern/body state, scoped to this one chunk only.
         case_stack = []
         for seg_index, (marked, lexed, sep) in enumerate(
-            lex_segments(_mark_substitutions(chunk, offset))
+            lex_segments(_mark_substitutions(chunk, top_spans, offset))
         ):
             toks = _strip_unresolved_marks(marked, all_subs)
             if lexed:
@@ -2555,13 +2817,17 @@ def _shape_leading(toks, case_stack):
     token) — that shape (`esac)`) means the pattern's literal text IS the
     string `esac`, so it is read as opaque pattern content instead
     (transition to "pattern_rest") and the following `)` still closes the
-    pattern normally on the next token. `esac` reached in "pattern_rest" —
-    a LATER alternative after a pipe-split, or any word past the first —
-    is always opaque content, never a closer (task0004 postcondition 4);
-    quoting is not consulted for either "esac" check, matching the fact
-    that quoting cannot be told apart at this layer for this specific
-    shape (the stricter, pattern-text reading applies either way,
-    IMPLEMENTATION.md Conventions). A case statement with no items at all,
+    pattern normally on the next token — OR unless the token is quoted
+    (`.quoted`, task0002 Component 3: "A quoted esac... never closes it"),
+    which reads as pattern text on that footing alone, regardless of what
+    follows it — the FIRST alternative of a `|`-split pattern (`'esac'|x)
+    ...`) has nothing of its own immediately after it (the `|` ends this
+    statement, same as any pipe-split pattern; see below), so only the
+    quoting test, not the closer-adjacency one, keeps it from closing
+    there. `esac` reached in "pattern_rest" — a LATER alternative after a
+    pipe-split, or any word past the first — is always opaque content,
+    never a closer regardless of quoting (task0004 postcondition 4). A
+    case statement with no items at all,
     `case x in esac`, is still valid: "pattern_first" with nothing after
     `esac`, which is not "followed by `)`" and so pops. The caller
     (statements()) additionally flips a "body" frame to "pattern_first"
@@ -2603,7 +2869,11 @@ def _shape_leading(toks, case_stack):
                     and toks[i + 1] == ")"
                     and getattr(toks[i + 1], "is_operator", False)
                 )
-                if t == "esac" and not followed_by_closer:
+                if (
+                    t == "esac"
+                    and not getattr(t, "quoted", False)
+                    and not followed_by_closer
+                ):
                     case_stack.pop()
                     i += 1
                     continue
