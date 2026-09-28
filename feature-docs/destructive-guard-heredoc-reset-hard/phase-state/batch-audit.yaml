@@ -45,3 +45,13 @@ records:
   freeform: null
   normalized_answer: 'reverted editor change loop2-865 (quote/comment-aware _iter_heredoc_ops) and marked it aborted'
   resolution_note: 'The editor edit broke 3 pre-existing deny cases (heredocs inside "$(...)"); the orchestrator restored the HEREDOC_OP.finditer code before the loop-2 commit so the suite stayed 424/424. Editors loop2-case and loop3-1195 returned skipped and were aborted. Loop 3 same_site group (adjacent substitution + marker in _locate_single) had divergent prose -> conflict, skipped in batch.'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-09-28T22:10:00+09:00'
+  source: batch-orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: 'declined auto-addition of task0002 deviation paths em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json'
+  resolution_note: 'task_id: task0002; deviation: em-workflow version patch bump (plugin.json + marketplace.json) made to pass the plugin-version-guard commit hook, against IMPLEMENTATION.md D3. Declined: em-workflow/** is a workflow control path, and no AC-n / requirement id with an observable failure was named. Paths are not appended to tasks.task0002.files; the containment check handles them as an ordinary deviation.'
