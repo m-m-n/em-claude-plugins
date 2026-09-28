@@ -1,0 +1,179 @@
+task_id: task0001
+baseline_failures:
+  - "test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "変数展開した宛先の cat ヒアドキュメント: 別文に .sh 末尾コマンドがあっても allow"
+      - "同じチャンクに python3 呼び出しがあっても cat 宛てヒアドキュメントは allow"
+      - "1 行に複数のヒアドキュメント演算子があっても、両方 cat 宛てなら allow"
+      - "宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
+    red_confirmed: true
+    red_reason: >-
+      All 23 listed cases (TS-1 to TS-13, TS-15 to TS-17, TS-21 to TS-27)
+      were added to em-workflow/hooks/tests/destructive-guard-cases.json
+      before destructive-guard.py was touched. Running
+      run-destructive-guard.py against that unmodified guard produced
+      420/424 passed, with exactly these four labels (TS-2, TS-3, TS-4,
+      TS-25) reported FAIL (each observed "got=deny" against an "allow"
+      expectation) -- matching the task plan's own stated expected
+      failures exactly. The other 19 new cases already passed against the
+      unmodified guard (its cruder "any sink word anywhere in the chunk"
+      rule already produced the correct verdict for those shapes).
+  AC-2:
+    tests:
+      - "複数行ヒアドキュメント本文に git reset --hard の記述があっても宛先が cat なら allow"
+      - "変数展開した宛先の cat ヒアドキュメント: 別文に .sh 末尾コマンドがあっても allow"
+      - "同じチャンクに python3 呼び出しがあっても cat 宛てヒアドキュメントは allow"
+      - "bash 宛てヒアドキュメント(裸)は deny"
+      - "sudo 経由の bash 宛てヒアドキュメントは deny"
+      - "絶対パスの /bin/sh 宛てヒアドキュメントは deny"
+      - "バージョン付きスペル python3.12 宛てヒアドキュメントは deny"
+      - "bash ヒアドキュメントは実行"
+    red_confirmed: true
+    red_reason: >-
+      TS-2 and TS-3 (the allow side, host command word "cat") were
+      observed to fail against the unmodified guard -- see AC-1's
+      red_reason for the exact baseline run. TS-1, the deny-side pins
+      (TS-5, TS-7, TS-8, TS-16) and the pre-existing case "bash
+      ヒアドキュメントは実行" already passed against the unmodified guard
+      (its chunk-wide sink search already matched, or already found
+      nothing, for these specific shapes); they are regression pins for
+      this criterion's own text, not new red-to-green evidence on their
+      own.
+  AC-3:
+    tests:
+      - "パイプ先が bash のヒアドキュメントは deny"
+      - "bash -c への置換内ヒアドキュメントは deny"
+      - "外側の文のパイプ先が bash なら置換内ヒアドキュメントも deny"
+      - "外側の文にパイプ先の sink が無ければ置換内ヒアドキュメントは allow(TS-23 の対照)"
+    red_confirmed: false
+    red_reason: >-
+      All four (TS-6, TS-13, TS-23, TS-24) already passed against the
+      unmodified guard: its cruder "any sink word anywhere in the
+      heredoc-stripped chunk" rule already matched "bash" textually
+      present in the stripped chunk for the three deny cases, and found no
+      sink word at all for the one allow control (TS-24) -- the same
+      verdicts this task's per-heredoc, per-pipeline/enclosing-statement
+      decision also produces, but for a different, more precise reason.
+      No executable red state was observed for this criterion; the change
+      here is a structural correctness fix (destination decided from the
+      pipeline/enclosing statement rather than a chunk-wide text search),
+      not a case that regresses under the old rule.
+  AC-4:
+    tests:
+      - "1 行に複数のヒアドキュメント演算子があっても、両方 cat 宛てなら allow"
+      - "1 行に複数のヒアドキュメント演算子: 2 つ目が bash 宛てなら deny"
+      - "ヒアドキュメントの後に続く行は通常のコマンドとして deny"
+    red_confirmed: true
+    red_reason: >-
+      TS-4 was observed to fail against the unmodified guard (see AC-1's
+      red_reason). TS-9 and TS-10 already passed against the unmodified
+      guard (a real sink word, "bash", is textually present in TS-9's
+      stripped chunk; TS-10's trailing statement was already checked as a
+      command by the unrelated, pre-existing per-statement loop) and serve
+      here as regression pins for the rest of this criterion's text.
+  AC-5:
+    tests:
+      - "ヒアドキュメント除去後のチャンクがパース失敗するなら deny(フォールバック)"
+      - "複合コマンドの閉じ({ ... } <<EOF)に付いたヒアドキュメントは deny(宛先不明の保守的フォールバック)"
+      - "timeout 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
+      - "exec 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
+      - "外側の文に実行プレフィックスがあれば置換内ヒアドキュメントも deny(宛先不明)"
+      - "プロセス置換 tee >(bash) を伴うヒアドキュメントは deny(宛先不明)"
+      - "宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
+    red_confirmed: true
+    red_reason: >-
+      TS-25 was observed to fail against the unmodified guard (see AC-1's
+      red_reason: "got=deny" where "allow" was expected, because the old
+      rule rescanned every heredoc in a chunk once any sink word appeared
+      anywhere in it, spilling onto the data-aimed second heredoc on the
+      same line). TS-15, TS-17, TS-21, TS-22, and TS-26/TS-27 already
+      passed against the unmodified guard (each stripped chunk already
+      contains a literal sink word -- "bash" or a lexing failure the old
+      code's fallback already denies) and serve as regression pins for the
+      rest of this criterion's text.
+  AC-6:
+    tests:
+      - "git reset --hard の文字列を echo するだけなら allow"
+      - "コミットメッセージ内の git reset --hard 言及は allow"
+      - "test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+    red_confirmed: true
+    red_reason: >-
+      test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      asserts run-destructive-guard.py's own stdout contains no "FAIL" and
+      matches "N/N passed"; it failed at baseline (stdout showed "420/424
+      passed" with four FAIL lines, see AC-1) and passes now (424/424, no
+      FAIL). TS-11 and TS-12 carry no heredoc operator at all -- untouched
+      by this task's change in either direction -- and were already
+      "allow" before and after; they are pins for this criterion's own
+      wording, not new red-to-green evidence.
+  AC-7:
+    tests:
+      - "test_em_workflow_version.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest"
+      - "test_plugin_version_parity.TestMarketplaceEntryVersion (equivalent check, older task-pinned baseline)"
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/ for existing coverage before concluding: both
+      test_em_workflow_version.py and test_plugin_version_parity.py read
+      plugin.json and the marketplace.json em-workflow entry live and
+      assert the two agree, plus that the version compares past that
+      task's own historical baseline (0.2.9 / 0.1.50 respectively) --
+      detecting a registry mismatch or a version at/under those old
+      floors. Both already passed before this task's bump (HEAD's
+      0.3.3 already exceeds both floors) and still pass now (0.3.4 in
+      both files), so no red state was observed through them for this
+      change. The specific claim "raised by exactly one patch step from
+      HEAD's parent" (0.3.3 -> 0.3.4) has no executable check in this
+      suite; it is verified by inspection -- plugin.json read before any
+      edit showed "0.3.3", and both files were changed to "0.3.4" in this
+      task's own commit.
+  AC-8:
+    tests:
+      - "test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library"
+      - "test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls"
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/ for existing coverage before concluding: these two
+      existing tests parse destructive-guard.py's AST for non-stdlib
+      imports and grep its source for forbidden filesystem/subprocess/eval
+      call shapes; both already passed before this task (nothing of the
+      kind was present) and still pass now (the only new import is
+      `bisect`, stdlib; no filesystem/process/eval call was added), so no
+      red state occurred through them. The file/dependency-scope limit
+      ("only the four Scope files changed") and the performance
+      requirement have no executable check in this suite per the task
+      plan's Test Notes ("Inspection" section routes AC-7/AC-8 to diff
+      inspection and an ad-hoc, uncommitted stress measurement): `git diff
+      --stat` against the task's start shows only
+      em-workflow/hooks/destructive-guard.py,
+      em-workflow/hooks/tests/destructive-guard-cases.json,
+      em-workflow/.claude-plugin/plugin.json, and
+      .claude-plugin/marketplace.json changed (hooks.json and
+      run-destructive-guard.py untouched). Stress measurement (generator
+      not committed, per NFR4): a ~2,000-line input (each line opening two
+      or three heredoc operators aimed at `cat`, roughly one in five never
+      terminated) ran in 0.477s; a ~4,000-line input built the same way
+      ran in 0.974s (ratio ~2.04x, under the 3x ceiling); a 4,000-line,
+      100%-unterminated adversarial input (12,000 heredoc operators, none
+      ever closed) ran in 1.443s -- all three well under the 2-second
+      budget, all exit 0 with empty stderr.
+unconfirmed_reds:
+  - "AC-3: TS-6, TS-13, TS-23, and TS-24 all already passed under the pre-task guard (a real sink word happens to already be present, or absent, in the stripped chunk for exactly these four shapes); no executable red was observed for this criterion, only a structural correctness change with the same net verdicts."
+  - "AC-7: the sub-claim \"raised by exactly one patch step from HEAD's parent\" has no executable check in this suite (no test reads git history); verified only by inspection of plugin.json's value immediately before this task's edit (0.3.3) versus after (0.3.4)."
+  - "AC-8: the file/dependency-scope limit and the performance requirement have no executable check in this suite (Test Notes route both to diff inspection and an ad-hoc, uncommitted stress measurement); only the import/no-filesystem-call sub-claims are covered by an existing automated test."
+notes: >-
+  This is a retry on a kept worktree. A prior, orphaned implementer had
+  already added all 23 new cases to
+  em-workflow/hooks/tests/destructive-guard-cases.json, uncommitted; that
+  addition was inspected against the task plan's Expectation-cases list
+  (command text, newlines, and expected verdict all matched exactly) and
+  kept as-is rather than redone. The 4a baseline was captured by
+  git-stash-ing only destructive-guard.py (keeping the inherited
+  cases.json addition in place, since that reflects the worktree's actual
+  starting state) and running both `python3 -m unittest discover -s
+  tests` and `python3 em-workflow/hooks/tests/run-destructive-guard.py`;
+  the stash was then restored before implementation continued. Both
+  suites were re-run after implementation (final_failures above) --
+  neither run was skipped.
