@@ -1,0 +1,61 @@
+schema_version: 2
+feature: destructive-guard-heredoc-reset-hard
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.08
+    confidence: 0.92
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  observed_at: '2026-09-28T13:05:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.21
+    confidence: 0.78
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.21
+      '3': 0.0
+  observed_at: '2026-09-28T13:20:00+09:00'
+pre_survey_estimate:
+  files_expected: []
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: false
+  test_change_kind: none
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: false
+  evidence: 指定のPreToolUse Bash payloadをpython3 em-workflow/hooks/destructive-guard.pyへパイプ入力した結果はallow、終了コード0で、denyは再現しなかった。同ファイル760–774行で本文を除外し、1221–1225行では除外後にコマンド置換を抽出するため、報告された原因は確認できない。git-reset-hard判定は1932–1941行。既存テストは401/401成功したが、cases.jsonにヒアドキュメント内のreset
+    --hard専用ケースはない。呼び出しはhooks.json:50とrun-destructive-guard.py:39–45で確認した。変更は不要で、変更分類は既存の判定処理を指す。ファイル変更は行っていない
+decided_at: '2026-09-28T13:21:00+09:00'
