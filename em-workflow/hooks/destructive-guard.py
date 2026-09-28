@@ -46,6 +46,7 @@ see matches_target_shape().
 Output: a PreToolUse permission decision on stdout; exit 0 either way.
 """
 
+import bisect
 import json
 import os
 import re
@@ -142,14 +143,36 @@ REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|<>|>&|<&|&>>?)\d*")
 # `<<<`, which are read-only) and must join the write-target set.
 READWRITE_REDIRECT = re.compile(r"\d*<>\d*")
 
-# A here-document and its body, up to the line bearing the delimiter.
-HEREDOC = re.compile(
-    r"<<-?(?!<)[ \t]*(['\"]?)(\w+)\1[^\n]*\n(.*?)^[ \t]*\2[ \t]*$",
-    re.S | re.M,
-)
+# A here-document operator on its own -- the opening `<<`/`<<-` plus its
+# delimiter word, quoted or not -- matched per line rather than swallowing
+# the body in one regex: several operators can share a line (task0001 FR3),
+# and each operator's own body/delimiter-line search is now a separate,
+# index-assisted lookup (see strip_heredocs()) rather than backtracking
+# regex match. `<<<` (a here-string, not a here-document) stays excluded by
+# the negative lookahead, unchanged from before this task.
+HEREDOC_OP = re.compile(r"<<-?(?!<)[ \t]*(['\"]?)(\w+)\1")
 # Commands that run what arrives on stdin, so a here-doc body aimed at one is
 # not data but code, and has to be scanned like any other statement.
 SHELL_SINK = re.compile(r"\b(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
+# The word-anchored form of SHELL_SINK (task0001 Component 2's "sink word"):
+# matches only when the sink vocabulary BEGINS the word under test, for
+# judging a heredoc's own host/enclosing command word directly instead of
+# searching for a sink anywhere in a larger string. Kept as its own pattern
+# rather than reusing SHELL_SINK via re.match() so an edit to one can never
+# silently drift from the other -- the task plan requires them to stay the
+# same vocabulary.
+SINK_WORD_RE = re.compile(r"^(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
+# Command words that treat stdin and their own arguments as data and never
+# run them as a program (task0001 Component 2's "data command"). `sed`,
+# `awk`, `sort`, and `rg` are deliberately absent -- each can take a program
+# from its input or run one named in an option (task plan Terms). Reviewed
+# change: any edit to this list is part of this task's contract.
+DATA_COMMANDS = frozenset(
+    {
+        ":", "cat", "tee", "head", "tail", "wc", "uniq", "cut", "tr", "grep",
+        "diff", "jq", "read", "echo", "printf", "git", "gh",
+    }
+)
 
 # Shell words whose `-c` argument, or a here-string (`<<<`) redirected into
 # them, is a script the shell executes rather than ordinary data. `eval` gets
@@ -757,21 +780,479 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
     return None
 
 
-def strip_heredocs(chunk):
-    """Return (chunk without here-doc bodies, the bodies removed).
-
-    A here-doc body is data, not commands: `cat <<EOF` followed by a line
-    reading `rm -rf ~` deletes nothing. Leaving it in place meant the newline
-    split treated every line of the body as its own statement, so writing a
-    shell example into a file was refused as though it were being run.
+class HeredocRecord:
+    """One here-document found by strip_heredocs(): BODY is the raw text
+    removed for it, and OP_START/OP_END are the character offsets, in the
+    STRIPPED chunk strip_heredocs() returns, of this heredoc's own operator
+    (`<<`/`<<-` through its delimiter word) -- enough to find, by re-lexing
+    around that span, which statement the operator sits in (Component 2's
+    "host statement"), without strip_heredocs() itself needing to know
+    anything about statements, substitutions, or pipelines.
     """
-    bodies = []
 
-    def take(m):
-        bodies.append(m.group(3))
-        return m.group(0)[: m.start(3) - m.start(0)]
+    __slots__ = ("body", "op_start", "op_end")
 
-    return HEREDOC.sub(take, chunk), bodies
+    def __init__(self, body, op_start, op_end):
+        self.body = body
+        self.op_start = op_start
+        self.op_end = op_end
+
+
+def _delimiter_line_word(line):
+    r"""The bare word LINE closes a heredoc with, if LINE -- its own
+    trailing newline, if any, ignored -- is nothing but optional leading/
+    trailing spaces/tabs around a run of word characters; None otherwise.
+    Matches the closing-line shape the single-pattern strip this replaces
+    always accepted (`^[ \t]*WORD[ \t]*$`), for both `<<` and `<<-` alike --
+    this task does not change that (task plan Design, "current handling
+    stays" for delimiter lines).
+    """
+    text = line[:-1] if line.endswith("\n") else line
+    m = re.match(r"^[ \t]*(\w+)[ \t]*$", text)
+    return m.group(1) if m else None
+
+
+def strip_heredocs(chunk):
+    """Return (CHUNK with every heredoc body removed, an ordered list of
+    HeredocRecord). See the task plan's Component 1 for the exact
+    postconditions this implements; in short:
+
+    - A line with one heredoc operator strips exactly as the old single-
+      pattern version did: the operator line stays, the body and the
+      delimiter line go.
+    - Several operators on one line consume body lines in left-to-right
+      order, each up to its own delimiter line, the next starting right
+      after that delimiter line.
+    - An operator whose delimiter never appears in the rest of the input
+      consumes nothing (its would-be body stays in the chunk, exactly as
+      before this task), and does not stop a LATER operator on the same
+      line from finding its own delimiter independently.
+
+    Delimiter-line CANDIDATES (every line that is nothing but a bare word,
+    per _delimiter_line_word()) are indexed once, up front, into
+    WORD_TO_LINES. Finding (or ruling out) a given operator's own closing
+    line is then a bisect lookup into that word's own candidate list --
+    O(log m), m being how many lines share that one word -- rather than a
+    linear scan of everything after the operator. This is what keeps an
+    unterminated operator from costing a fresh scan of the remaining input
+    (NFR3, TM-5): the line-by-line pass below still visits every line
+    exactly once, in order, and a delimiter that never appears anywhere
+    later is discovered by an empty/exhausted bisect range, never by
+    reading all the way to the end of the chunk.
+    """
+    lines = chunk.splitlines(keepends=True)
+    n = len(lines)
+    word_to_lines = {}
+    for idx, line in enumerate(lines):
+        word = _delimiter_line_word(line)
+        if word is not None:
+            word_to_lines.setdefault(word, []).append(idx)
+
+    out = []
+    records = []
+    out_len = 0
+    i = 0
+    while i < n:
+        line = lines[i]
+        matches = list(HEREDOC_OP.finditer(line))
+        if not matches:
+            out.append(line)
+            out_len += len(line)
+            i += 1
+            continue
+        # The operator line is kept verbatim; each operator's own offset in
+        # the STRIPPED output is fixed before it, since appending LINE
+        # unchanged does not move where its own text starts.
+        op_positions = [
+            (out_len + m.start(), out_len + m.end(), m.group(2)) for m in matches
+        ]
+        out.append(line)
+        out_len += len(line)
+        start = i + 1
+        for op_start, op_end, delimiter in op_positions:
+            candidates = word_to_lines.get(delimiter, ())
+            pos = bisect.bisect_left(candidates, start)
+            if pos < len(candidates):
+                found = candidates[pos]
+                records.append(
+                    HeredocRecord("".join(lines[start:found]), op_start, op_end)
+                )
+                start = found + 1
+            # No candidate at/after START for THIS operator: it consumes
+            # nothing, and START stays put, so a LATER operator on this
+            # same line still searches from the same point (Component 1
+            # postcondition 3).
+        i = start
+    return "".join(out), records
+
+
+# --- Component 2: per-heredoc destination decision -------------------------
+#
+# A heredoc's body is data, sink-bound, or of undeterminable destination,
+# judged from the statement its own operator sits in (the "host statement")
+# and, when that statement is itself inside a command substitution, every
+# statement enclosing that substitution in turn -- see the task plan's
+# Component 2 for the exact rules. The functions below implement that
+# decision; _heredoc_destinations() is the single entry point statements()
+# calls, once per popped chunk, with every heredoc found in it.
+
+# Process-substitution operators (`<(`/`>(`), matched either as one fused
+# token (adjacent in the source, e.g. `>(bash)`) or as two adjacent operator
+# tokens (a space in between, e.g. `> (bash)`) -- see _has_process_
+# substitution().
+PROCESS_SUB_TOKENS = ("<(", ">(")
+
+# VAR=value assignment shape, the same test _skip_assignments_and_wrappers()
+# applies inline -- kept as its own named pattern here rather than reusing a
+# private detail of that function, since _is_assignment_only() below checks
+# it against an ALREADY-shaped statement's remaining words, a different
+# question ("is EVERY word one of these") from that function's own ("skip a
+# run of these at the front").
+ASSIGNMENT_PREFIX = re.compile(r"^[A-Za-z_]\w*=")
+
+# A private marker pair distinct from UNRESOLVED_MARK/QUOTED_MARK/
+# _MARK_TERMINATOR (destructive-guard-command-substitution's own family) and
+# from SUBSTITUTION_STANDIN -- used only inside this section's own,
+# throwaway re-lexing passes, never reaching a check or another marker
+# consumer. Same properties as those markers (not shlex whitespace, not a
+# PUNCTUATION operator, not a quote), so a marked span survives lexing as
+# ordinary word content.
+_HDOC_MARKER_OPEN = "\x03"
+_HDOC_MARKER_CLOSE = "\x04"
+_HDOC_MARKER_RE = re.compile(
+    re.escape(_HDOC_MARKER_OPEN) + r"(\d+)" + re.escape(_HDOC_MARKER_CLOSE)
+)
+
+
+class _StmtInfo:
+    """One statement's contribution to a heredoc destination decision: its
+    own command WORD (None when it has none of its own, or lexing failed --
+    see PARSE_FAILED), whether a LATER statement in its own pipeline has a
+    sink command word (PIPELINE_SINK), whether it contains a process
+    substitution (HAS_PROCESS_SUB), and whether every one of its own words
+    is a VAR=value assignment (IS_ASSIGNMENT_ONLY -- the exemption
+    Component 2 gives an enclosing statement that only stores a
+    substitution's output).
+    """
+
+    __slots__ = (
+        "word", "pipeline_sink", "has_process_sub", "is_assignment_only",
+        "parse_failed",
+    )
+
+    def __init__(
+        self, word=None, pipeline_sink=False, has_process_sub=False,
+        is_assignment_only=False, parse_failed=False,
+    ):
+        self.word = word
+        self.pipeline_sink = pipeline_sink
+        self.has_process_sub = has_process_sub
+        self.is_assignment_only = is_assignment_only
+        self.parse_failed = parse_failed
+
+
+def _shape_and_head(toks):
+    """Apply the SAME fused-closer split / redirect separation / grouping
+    skip statements() itself applies to a chunk's real statements, to one
+    throwaway TOKS from this section's own re-lexing passes, with a fresh
+    case_stack ([]): this is always a single, self-contained statement,
+    never part of a chunk statements() itself is yielding, so there is no
+    case-pattern state to carry across it. Returns (command word or None,
+    shaped words, redirects) -- the same shape head()'s other callers
+    already work with.
+    """
+    fused = _split_fused_closer_redirects(toks)
+    words_only, redirects = split_redirects(fused, True)
+    lead = _shape_leading(words_only, [])
+    shaped = _shaped_remainder(words_only, lead)
+    word, _ = head(shaped)
+    return word, shaped, redirects
+
+
+def _is_pipe_sep(sep):
+    """Whether SEP -- the raw separator lex_segments() returned for a
+    statement -- is a Pipeline separator per the task plan's Terms: `|` or
+    `|&`, allowing a fused trailing newline (a pipe directly followed by a
+    line break; punctuation_chars fuses the two into one separator token).
+    """
+    if not sep:
+        return False
+    return sep.replace("\n", "") in ("|", "|&")
+
+
+def _pipeline_has_sink(segments, index):
+    """Whether a statement later than SEGMENTS[INDEX], joined to it by an
+    unbroken run of Pipeline separators, has a sink command word (task plan
+    Component 2, rule 1(ii)/(iii)). A later stage that fails to lex is
+    judged conservatively as if it did (FR5's own bias: never lean toward
+    missed detection).
+    """
+    i = index
+    while i < len(segments) and _is_pipe_sep(segments[i][2]):
+        i += 1
+        if i >= len(segments):
+            return False
+        toks, lexed, _ = segments[i]
+        if not lexed:
+            return True
+        word, _, _ = _shape_and_head(toks)
+        if word is not None and SINK_WORD_RE.match(word):
+            return True
+    return False
+
+
+def _has_process_substitution(toks):
+    """Whether TOKS -- one statement's own raw (unshaped) tokens -- contains
+    a process substitution opener. `>(`/`<(` survive lex_segments() as one
+    fused token when adjacent in the source (both characters are
+    PUNCTUATION and neither is a SEGMENT_CHARS separator, so lex_segments()'s
+    own fused-token re-split keeps them together); the two-token check below
+    covers the same construct written with a space before the `(`.
+    """
+    for idx, t in enumerate(toks):
+        if t in PROCESS_SUB_TOKENS:
+            return True
+        if (
+            t in ("<", ">")
+            and getattr(t, "is_operator", False)
+            and idx + 1 < len(toks)
+            and toks[idx + 1] == "("
+            and getattr(toks[idx + 1], "is_operator", False)
+        ):
+            return True
+    return False
+
+
+def _is_assignment_only(shaped_words):
+    """Whether every one of SHAPED_WORDS is a VAR=value assignment and
+    there is at least one -- the exemption Component 2 gives an enclosing
+    statement whose only job is to store a substitution's output
+    (`x="$(cat <<'EOF' ... EOF)"`)."""
+    return bool(shaped_words) and all(
+        ASSIGNMENT_PREFIX.match(t) for t in shaped_words
+    )
+
+
+def _mark_heredoc_operators(chunk, records):
+    """Replace each of RECORDS' own operator spans in CHUNK with `<<`
+    followed by a marker carrying that record's own position in RECORDS
+    (mirroring _mark_substitutions()'s own index-in-marker technique) --
+    keeping the redirect shape (an operator token followed by one target
+    token) so split_redirects() still strips both out exactly as it would
+    the real `<<DELIM`, rather than leaving an opaque marker word sitting
+    where a real command word or argument would be judged instead. Built in
+    ONE pass over CHUNK (never once per record), so locating every record's
+    own host statement (_locate_statements() below) stays linear in
+    CHUNK's own size regardless of how many heredocs it holds (NFR3).
+    """
+    out = []
+    cursor = 0
+    for idx, rec in enumerate(records):
+        out.append(chunk[cursor : rec.op_start])
+        out.append(f"<<{_HDOC_MARKER_OPEN}{idx}{_HDOC_MARKER_CLOSE}")
+        cursor = rec.op_end
+    out.append(chunk[cursor:])
+    return "".join(out)
+
+
+def _stmt_info_from_segment(segments, index):
+    """Build the _StmtInfo for SEGMENTS[INDEX], a (toks, lexed, sep) triple
+    already known to hold at least one marker."""
+    toks, lexed, _ = segments[index]
+    if not lexed:
+        return _StmtInfo(parse_failed=True)
+    word, shaped, _ = _shape_and_head(toks)
+    return _StmtInfo(
+        word=word,
+        pipeline_sink=_pipeline_has_sink(segments, index),
+        has_process_sub=_has_process_substitution(toks),
+        is_assignment_only=_is_assignment_only(shaped),
+    )
+
+
+def _locate_statements(chunk, records):
+    """Return {index into RECORDS: _StmtInfo} for every record's host
+    statement, all found from ONE lexing pass of CHUNK (_mark_heredoc_
+    operators() above) -- the fast path _heredoc_destinations() uses for
+    every heredoc whose operator is not inside a command substitution,
+    which is the shape the stress measurement in the task plan's Test
+    Notes exercises. Correct only for that shape: a marker landing inside a
+    substitution's own (quoted, whole-word) argument would be found in the
+    OUTER statement here, not the statement inside the substitution's body
+    -- callers route a heredoc through _locate_single()/_walk_enclosing()
+    instead whenever its operator sits inside a substitution.
+    """
+    marked_chunk = _mark_heredoc_operators(chunk, records)
+    segments = lex_segments(marked_chunk)
+    results = {}
+    for seg_index, (toks, _lexed, _sep) in enumerate(segments):
+        indices = set()
+        for t in toks:
+            for m in _HDOC_MARKER_RE.finditer(t):
+                indices.add(int(m.group(1)))
+        if not indices:
+            continue
+        info = _stmt_info_from_segment(segments, seg_index)
+        for rec_index in indices:
+            results[rec_index] = info
+    return results
+
+
+def _locate_single(text, start, end):
+    """Like _locate_statements(), for exactly one span [START, END) in
+    TEXT -- used for a heredoc operator sitting inside a substitution's own
+    inner text (the host statement there), and for an enclosing statement's
+    own span in whichever text currently holds it (_walk_enclosing()).
+    Heavier per call than the batch path above (a fresh lex of TEXT every
+    time), but only ever called for a substitution-involving heredoc or an
+    enclosing level of one -- rare relative to the plain, no-substitution
+    heredocs the performance budget (NFR3) is measured against.
+    """
+    marked = text[:start] + f"<<{_HDOC_MARKER_OPEN}0{_HDOC_MARKER_CLOSE}" + text[end:]
+    segments = lex_segments(marked)
+    for seg_index, (toks, _lexed, _sep) in enumerate(segments):
+        if any(_HDOC_MARKER_RE.search(t) for t in toks):
+            return _stmt_info_from_segment(segments, seg_index)
+    return _StmtInfo(parse_failed=True)
+
+
+def _find_containing_substitution(text, offset):
+    """The SUBSTITUTION match in TEXT whose span contains OFFSET, or None.
+    TEXT is raw (unmarked), so -- because SUBSTITUTION's `$(...)`
+    alternative disallows nested parens -- a match found here is always the
+    INNERMOST substitution at OFFSET, regardless of how many further levels
+    enclose it (an outer `$(...)` around a nested one fails to match at
+    all, since its own interior then contains the inner substitution's own
+    parens).
+    """
+    for m in SUBSTITUTION.finditer(text):
+        if m.start() <= offset < m.end():
+            return m
+    return None
+
+
+def _substitution_inner(match):
+    """(inner text, its own start offset in the matched string) for a
+    SUBSTITUTION match -- group(1) for `$(...)`, group(2) for backticks."""
+    if match.group(1) is not None:
+        return match.group(1), match.start(1)
+    return match.group(2), match.start(2)
+
+
+def _walk_enclosing(chunk, sub_match):
+    """The chain of enclosing statements around SUB_MATCH -- the
+    substitution directly holding a heredoc's host statement -- innermost
+    first, up to the outermost (task plan Terms, "Enclosing statement":
+    "every level outward counts, up to the outermost"). None of this
+    task's test commands nests a heredoc-holding substitution inside a
+    further one, so this only ever runs its loop body once for them; the
+    loop itself stays general rather than hard-coding "exactly one level".
+
+    Peeling SUB_MATCH itself (or, on a later iteration, whatever the
+    previous one found) out of TEXT and replacing it with the short,
+    filesystem-free SUBSTITUTION_STANDIN before searching again is what
+    lets a FURTHER-out substitution -- one whose own raw span could not
+    match SUBSTITUTION.finditer() while the inner one's parens were still
+    present -- become findable, mirroring how this file's own CHUNK_SUBS
+    resolves nesting iteratively across separate statements() passes; done
+    here, in one function, because the enclosing-statement association
+    would otherwise be lost the moment a substitution body is queued as its
+    own chunk (task plan Component 2, closing paragraph).
+    """
+    chain = []
+    text = chunk
+    target_start, target_end = sub_match.start(), sub_match.end()
+    for _ in range(10):  # a bound against a malformed/cyclic input, not a
+        # limit this task's own commands ever reach
+        outer = _find_containing_substitution(text, target_start)
+        if outer is None:
+            chain.append(_locate_single(text, target_start, target_end))
+            break
+        chain.append(_locate_single(text, outer.start(), outer.end()))
+        placeholder = SUBSTITUTION_STANDIN
+        text = text[: outer.start()] + placeholder + text[outer.end() :]
+        target_start = outer.start()
+        target_end = target_start + len(placeholder)
+    return chain
+
+
+def _decide_from_chain(chain):
+    """The task plan's Component 2 decision, given CHAIN[0] (the host
+    statement) and CHAIN[1:] (its enclosing statements, innermost first, if
+    any): 'sink', 'undetermined', or 'data'."""
+    host = chain[0]
+    enclosing = chain[1:]
+
+    if host.parse_failed:
+        return "undetermined"
+    if host.word is not None and SINK_WORD_RE.match(host.word):
+        return "sink"
+    if host.pipeline_sink:
+        return "sink"
+    for level in enclosing:
+        if level.parse_failed:
+            continue  # judged under "undeterminable" below, not here
+        if level.word is not None and SINK_WORD_RE.match(level.word):
+            return "sink"
+        if level.pipeline_sink:
+            return "sink"
+
+    if any(level.parse_failed for level in enclosing):
+        return "undetermined"
+    if host.has_process_sub or any(level.has_process_sub for level in enclosing):
+        return "undetermined"
+    if host.word is None or host.word not in DATA_COMMANDS:
+        return "undetermined"
+    for level in enclosing:
+        if level.is_assignment_only:
+            continue
+        if level.word is None or level.word not in DATA_COMMANDS:
+            return "undetermined"
+
+    return "data"
+
+
+def _heredoc_destinations(chunk, records):
+    """{index into RECORDS: 'sink'/'data'/'undetermined'} for every heredoc
+    strip_heredocs() found in CHUNK -- the single entry point statements()
+    calls, once per popped chunk, before that chunk's own substitution
+    bodies are queued (task plan Component 2's closing requirement).
+    """
+    if not records:
+        return {}
+
+    sub_matches = list(SUBSTITUTION.finditer(chunk))
+    plain, nested = [], []
+    for index, record in enumerate(records):
+        containing = None
+        for m in sub_matches:
+            if m.start() <= record.op_start < m.end():
+                containing = m
+                break
+        if containing is None:
+            plain.append(index)
+        else:
+            nested.append((index, containing))
+
+    destinations = {}
+
+    if plain:
+        plain_records = [records[i] for i in plain]
+        host_infos = _locate_statements(chunk, plain_records)
+        for position, index in enumerate(plain):
+            host = host_infos.get(position, _StmtInfo(parse_failed=True))
+            destinations[index] = _decide_from_chain([host])
+
+    for index, sub_match in nested:
+        record = records[index]
+        inner_text, inner_base = _substitution_inner(sub_match)
+        host = _locate_single(
+            inner_text, record.op_start - inner_base, record.op_end - inner_base
+        )
+        chain = [host] + _walk_enclosing(chunk, sub_match)
+        destinations[index] = _decide_from_chain(chain)
+
+    return destinations
 
 
 def _mark_substitutions(chunk, offset_=0):
@@ -1218,10 +1699,20 @@ def statements(command):
     all_subs = []
     while pending:
         chunk = pending.pop()
-        chunk, bodies = strip_heredocs(chunk)
-        if bodies and SHELL_SINK.search(chunk):
-            # `bash <<EOF` does execute its body, so put it back in the queue.
-            pending.extend(b for b in bodies if b.strip())
+        chunk, heredocs = strip_heredocs(chunk)
+        if heredocs:
+            # Component 2/3 (task0001): each heredoc is judged on its own
+            # destination, not on whether a sink word appears ANYWHERE in
+            # the chunk -- see _heredoc_destinations().
+            destinations = _heredoc_destinations(chunk, heredocs)
+            for index, record in enumerate(heredocs):
+                if not record.body.strip():
+                    continue  # a blank body is never queued, as before this task
+                destination = destinations.get(index, "undetermined")
+                if destination == "sink" or (
+                    destination == "undetermined" and SHELL_SINK.search(chunk)
+                ):
+                    pending.append(record.body)
         chunk_subs = [m.group(1) or m.group(2) or "" for m in SUBSTITUTION.finditer(chunk)]
         for body in chunk_subs:
             if body.strip():
