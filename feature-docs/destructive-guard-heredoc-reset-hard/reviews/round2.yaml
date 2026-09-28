@@ -1,0 +1,1366 @@
+round: 2
+executed_at: '2026-09-29T00:27:24+09:00'
+scope:
+  review_mode: diff
+  base_commit: f78802832c98cee71b62d88a4fb2ee18b19c4eb5
+  head_commit: 927fd9658a4150e3053314e1a3e455b2c3f0b71b
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-heredoc-reset-hard/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-reset-hard/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-reset-hard/task0003.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: destructive-guard は全 Bash 呼び出しの PreToolUse で走り、入力長に対する計算量が 10 秒のフック制限に直結する
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#fallback
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#fallback
+  perspective: spec
+  role: fallback
+  source: claude
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: performance#1
+  perspective: performance
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: performance#fallback
+  perspective: performance
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: security#loop1
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: architecture#loop1
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: spec#loop1
+  perspective: spec
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: performance#loop1
+  perspective: performance
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: security#loop2
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: architecture#loop2
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: spec#loop2
+  perspective: spec
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: performance#loop2
+  perspective: performance
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: security#loop3
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: architecture#loop3
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: spec#loop3
+  perspective: spec
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: performance#loop3
+  perspective: performance
+  role: fallback
+  source: claude
+  status: completed
+  note: harness chain unavailable (codex usage limit until 2026-10-04 02:11 JST; litellm 429)
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: cdb8382d4bbb0b1d
+  severity: critical
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1678
+  title: _segment_boundaries() の区切り判定が lex_segments() とずれ、`2>&1`・`>&2`・`&>`・`>|`・`\;`・行継続の後ろにある bash 宛ての本文を data と判定する
+  description: '_segment_boundaries() は opaque 範囲の外にある SEGMENT_CHARS をすべて区切りとして数える。一方 lex_segments() は `2>&1`・`>&2`・`&>`・`&>>`・`>|` を 1 個の REDIRECT トークンとして扱い、`\;`・`\&`・行継続 `\<改行>` はエスケープとして扱うので区切りにしない。この差で
+    _segment_index_at() の文番号が後ろへずれ、後続の文がホスト文に選ばれる。後続が DATA_COMMANDS（echo など）だと data が確定し、SHELL_SINK フォールバックにも回らない。評価者が基準 f7880283 と現在版で再実行し、次の形がすべて基準 deny、現在 allow になることを確かめた: `make 2>&1 | tail -5\nbash
+    <<''EOF''\ngit reset --hard HEAD\nEOF\necho done`、`ls &>/dev/null; bash <<''EOF''…EOF\ncat /dev/null`、`docker ps \\\n  -a\nbash <<''EOF''…EOF\necho done`、`find . -exec ls {} \; -print\nbash <<''EOF''…EOF\necho
+    done`、`echo hi >| /tmp/x; bash <<''EOF''…EOF\necho done`、`bash 2>&1 <<''EOF''\nrm -rf /home/sakura/x\nEOF\necho hi`、`bash &>/dev/null <<''EOF''…EOF\necho hi`、`bash >|/tmp/log <<''EOF''…EOF\necho hi`、`echo
+    a\\&b; bash <<''EOF''…EOF\necho hi`、`echo x >&2\nbash <<''EOF''…EOF\necho done`、`ls &>>/tmp/l\nbash <<''EOF''…EOF\necho done`。`2>&1` と `>&2` は日常的な書き方なので、AC-4 のシンク検知が実際の利用で外れる。逆向きのずれで誤検知も戻る（`ls 2>&1\ncat
+    > /tmp/p <<''EOF''\ngit reset --hard HEAD\nEOF\npython3 x.py` は deny、`2>&1` を外すと allow）。architecture#fallback も同じ根本原因を critical で報告した（1321 行の「字句構造は 1 つのスキャナで決める」という約束と実装の食い違い）。'
+  suggestion: '文番号の出どころを lex_segments() の区切りトークンに一本化する。_TrackingLexer にトークンの元テキスト上の位置を記録させ、_mark_substitutions() の置換前後のオフセットと対応付けて文番号を引く。あわせて fail-closed の確認を入れる: _statement_info_at() が選んだ table[idx] に
+    `<<`/`<<-` 演算子トークンが無ければ None（undetermined）を返し、FR5 のフォールバックに回す。_segment_boundaries() を REDIRECT・エスケープの規則に合わせるだけの修正では、scan_structure() 側の opaque 範囲の誤り（別指摘の `\''`）を拾えないので、fail-closed の確認は必須とする。上の各形を deny
+    ケース、`ls 2>&1\ncat > /tmp/p <<''EOF''…EOF\npython3 x.py` を allow ケースとして cases.json に追加する。'
+  sources:
+  - claude:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (editor skipped the structural refactor in loop 1; orchestrator re-ran the repro on 927fd965 and it still allows)'
+- stable_id: d4dd6d14dd4ec153
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1841
+  title: if/for/while/until/case の複合文全体を bash へパイプしても、中のヒアドキュメント本文を data と判定する
+  description: _leading_group_opener_char()/_leading_group_closer() が認識するのは `{`/`}` と `(`/`)` だけで、_track_groups() は `fi`/`done`/`esac` の後ろのパイプ先を読まない。評価者の再実行で、`if true; then cat <<'EOF'\ngit reset --hard
+    HEAD\nEOF\nfi | bash`、`for i in 1; do cat <<'EOF'…EOF\ndone | bash`、`case x in x) cat <<'EOF'…EOF\n;; esac | bash`、`while true; do cat <<'EOF'…EOF\nbreak; done | sh` がすべて基準 deny、現在 allow。同じ構造の `{ cat
+    <<'EOF'…EOF\n} | bash` は deny なので、ブレースグループとサブシェルだけが守られている。bash では本文が外側の bash の標準入力に流れて実行される。round 1 の 35e1a4af / 59ed6682（グループのパイプ先の見落とし）の取り残し。
+  suggestion: クォートされていないコマンド位置の予約語の対（`if`/`fi`、`for`・`while`・`until`・`select`/`done`、`case`/`esac`）を opener/closer に加え、_track_groups() が閉じ側の文のパイプ先（FR1 ii）を読むようにする。`esac` は case_stack が pattern 状態でないときだけ閉じとして扱う。上の
+    4 形を deny ケースとして追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 1; not re-reported by later re-reviews
+- stable_id: b7631755fe5aa38a
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1545
+  title: バッククォート置換の中の bash 宛てヒアドキュメントを、外側の文をホストとして data と判定する
+  description: scan_structure() はバッククォートの範囲を text.find() で一度に読み飛ばし、その範囲を sub_open_stack に積まない（1545 行。ダブルクォート内の 1499 行も同じ）。そのため範囲内のヒアドキュメント演算子の containing_span が None になり、_heredoc_destinations() は外側の文（echo）をホストとして
+    data と判定する。評価者の再実行で、`echo \`bash <<'EOF'\ngit reset --hard HEAD\nEOF\n\`` と、それをダブルクォートで囲んだ形がともに基準 deny、現在 allow。`$( … )` 版は deny のまま。FR1 の置換内のホスト判定がバッククォートで外れている。
+  suggestion: バッククォート範囲 (i, j) を記録するとき、範囲内の checkpoint の containing_open をこの範囲にし、parent_open_of にも登録して `$(` と同じ連鎖をたどれるようにする。最低限の対応としては、op_start がバッククォート範囲に入るヒアドキュメントを undetermined にしてフォールバックへ回す。上の 2 形を
+    deny ケースとして追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 1; not re-reported by later re-reviews
+- stable_id: 46923ffe262f20b1
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1465
+  title: honor_single_quotes=False の走査が単一引用符内の閉じないバッククォートで打ち切られ、後ろの置換や文を検査しない
+  description: legacy_spans を求める scan_structure(…, honor_single_quotes=False) は、単一引用符内のバッククォートを開き記号として扱い、閉じが無いと `i = n; break` で走査全体を打ち切る（1465-1470 行）。同じチャンクでそれより後ろの `$(…)` は、マークも PENDING への積み込みもされない。単一引用符内の
+    `$(` も同様に、閉じ引用符を越えて本物の文を飲み込む。評価者の再実行で、`tr -d '\`' < a > b; echo "$(rm -rf /home/sakura/x)"`、`echo 'don\`t'; echo "$(rm -rf /home/sakura/x)"`、`echo 'a $(' ; rm -rf /home/sakura/x ; f "(" ; echo ')'`（トップレベルの
+    rm が見えなくなる）がすべて基準 deny、現在 allow。ヒアドキュメントを含まない通常のコマンドの検知力が落ちており、Objectives 2 に反する。`'don\`t'` は文章中によく現れる形。
+  suggestion: legacy 用の走査が旧 SUBSTITUTION 正規表現の到達範囲を下回らないようにする。(a) 単一引用符内で閉じないバッククォートは文字として扱い、走査を続ける。(b) 単一引用符内の `$(` は、閉じ引用符より前に対応する `)` があるときだけ範囲として扱う。または、マーク用の範囲だけは旧正規表現と同じ意味の関数で求める。上の 3 形を deny ケースとして追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1; not re-reported by later re-reviews
+- stable_id: 7b7dac1ab73aaac4
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2551
+  title: 入れ子のコマンド置換を階層ごとに全文再走査し、深さ×長さの計算量で 10 秒のタイムアウトを超えて判定が失われる
+  description: 'statements() はポップしたチャンクごとに scan_structure() を全文に対して 2 回（2551 行の chunk_scan と 2567 行の legacy scan）走らせ、最外側の置換の内側テキスト（内側の全階層を含む）を 2638 行で PENDING に積み直す。深さ d・長さ n の入れ子で O(n·d) になる。MAX_SHELL_PAYLOAD_EXPANSIONS
+    は bash -c のペイロードにしか効かない。評価者の再計測（フック全体、python3 の起動込み）: `echo $(` を d 段重ねて最内に `git reset --hard HEAD` を置いた入力で、d=1000（8KB）1.12 秒、d=2000（16KB）4.41 秒、d=3000（24KB）10.05 秒。基準はどれも 0.04〜0.07 秒で deny。hooks.json
+    の timeout 10 秒を超えると deny が返らず、埋め込んだ破壊的コマンドが検査を逃れる。各階層にヒアドキュメントを置くとさらに重い（d=800・6KB で 0.74 秒、基準 0.03 秒）。NFR3 と THREAT-MODEL の TM-5（TB-1）に対する退行。spec#fallback（2567 行）と performance#fallback（2551 行）も同じ箇所を
+    medium で独立に報告した。'
+  suggestion: (a) 最初の scan_structure() が返す全階層の spans/parent_of を子チャンクへオフセット付きで引き継ぎ、各階層を「子の置換をマーカーに置き換えたテキスト」として 1 回ずつ lex する。内側の全文を積み直して再走査するのをやめれば全体で O(n) になる。chunk_scan と legacy scan の 2 回の走査も 1 回にまとめる。(b)
+    最低限の対応として、statements() のすべての pending.append()（置換本文・ヒアドキュメント本文・シェルペイロード）で共有する作業量の上限（処理文字数の合計または入れ子の深さ）を設け、超えたら保守的に deny か ask を返す。深い入れ子に破壊的コマンドを埋めたケースを追加し、10 秒を大きく下回ることを確かめる。
+  sources:
+  - claude:security
+  confidence: 100
+  resolution: fixed
+  resolution_reason: absolute-budget fix applied in loop 1 was reverted (it denied large legitimate commands); resolved by the relative scan budget auto-applied in loop 3 (26610c49790aba19); repro now denies
+- stable_id: 73a1d7b31734dd22
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1586
+  title: scan_structure() の case 語の読み取りがバックスラッシュを飲み込み、`\'`・`\"` を引用の開始と誤認して区切りを隠す
+  description: '評価者自身の点検で見つけた指摘。scan_structure() の語の分岐（1586 行）は _word_at() で語を読み飛ばすが、_SUB_WORD_STOP にバックスラッシュが無い。そのため `it\''s` の `it\` までを 1 語として読み、i が `''` に着地する。1482 行のエスケープ処理を通らないので、エスケープされた `''`/`"`
+    が引用の開始として扱われ、次の引用符までが opaque になる。内部状態を確かめた: `echo it\''s; bash <<''EOF''\nX\nEOF` の opaque は [(8, 20), …] で、`; bash <<''` が不透明範囲に入る。その結果 _segment_boundaries() が `;` を数えず、ヒアドキュメントのホストが先行の `echo` になり
+    data が確定する。評価者の再実行で、`echo it\''s; bash <<''EOF''\ngit reset --hard HEAD\nEOF`（後続の文なし）、その後ろに `ls` を続けた形、`echo a\"b; bash <<''EOF''…EOF\necho done` がすべて基準 deny、現在 allow。critical 指摘（_segment_boundaries
+    のずれ）とは別の根本原因で、_segment_boundaries() を REDIRECT・エスケープの規則に合わせるだけでは直らない。'
+  suggestion: _word_at() の停止文字にバックスラッシュを加える。または scan_structure() の語の分岐で、バックスラッシュと次の 1 文字を語の一部として読み飛ばし、直後の文字を引用として扱わない。あわせて critical 指摘の fail-closed の確認（table[idx] に `<<` 演算子が無ければ undetermined）を入れる。上の 3
+    形を deny ケースとして追加する。
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (evaluator-only finding, never auto-applicable; repro still allows on 927fd965)'
+- stable_id: fb0b084358071a85
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 984
+  title: strip_heredocs() の splitlines() が \n 以外でも行を分け、演算子行の後続の文を本文として消す（round 1 の 185bd4ac は fixed と記録されたが未修正）
+  description: 'strip_heredocs() は chunk.splitlines(keepends=True) で行を分けるので、\r・\v・\f・\x1c-\x1e・\x85・\u2028・\u2029 でも行が切れる。bash と旧 HEREDOC 正規表現は \n だけで行を区切る。評価者の再実行で、`cat <<''A'' \r; git reset --hard HEAD\nhello\nA`、その
+    \f 版と \u2028 版、`cat > /tmp/p <<''EOF''\r ; git reset --hard HEAD\nEOF`、偽の区切り行の形 `cat <<EOF\njunk\rEOF\ncat <<ZZZ\nEOF\nrm -rf /home/sakura/x\nZZZ` がすべて基準 deny、現在 allow（FR4・Objectives 2 に反する）。round_context
+    では 185bd4ac0e52469a が fixed だが、`git log -S splitlines` では splitlines を持ち込んだ task0001（18c2444d）以降この行は一度も変わっていない。comprehensive#fallback と architecture#fallback も同じ 984 行を medium で報告した。architecture は、_line_comment_start()
+    が行ごとに引用状態をリセットする独自モデルである点も同じ根本原因として挙げている（`echo ''a\nb'' # <<X\n…\nX`、基準でも allow）。'
+  suggestion: '行の分割を \n だけで行う（例: `re.findall(r"[^\n]*\n|[^\n]+", chunk)`）。演算子がコメントや引用の中にあるかは scan_structure(chunk) の opaque 範囲で判定し、1321 行のコメントどおり 1 つのスキャナにまとめる。\r・\f・\u2028 を挟んだ形と偽の区切り行の形を deny ケースとして追加する。'
+  sources:
+  - claude:spec
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: spec category is not an auto-fix candidate; loop-3 spec re-review still reports it (3d03736125fa160a)
+- stable_id: 6066de2d27af2e1e
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1028
+  title: 閉じない先行演算子の宛先を判定せずに捨てるため、同じ行の後続ヒアドキュメント本文を data と判定する
+  description: strip_heredocs() は区切り行が見つからない演算子を記録せずに捨てる（1028-1032 行）。そのため、その演算子がシェルシンク宛てでも判定に入らない。同じ行の後ろの演算子は同じ位置から本文を探し、その本文は後ろの演算子自身の宛先で判定される。評価者の再実行で、`bash <<'A' ; cat <<'B'\ngit reset --hard HEAD\nB`、2
+    つ目が `tee /tmp/b <<'B'`・`git commit -F - <<'B'` の形がすべて基準 deny、現在 allow。bash では A の本文が入力の終わりまで続き、内側の bash がその行を実行する。SPEC の Assumptions は閉じないヒアドキュメントを「現行の扱いのまま変えない」としており、FR5（検知漏れの方向に倒さない）にも反する。
+  suggestion: 閉じない演算子も位置付きで返す（HeredocRecord に unterminated フラグを付け、本文は演算子行より後ろの残り全部とする）。その宛先が sink または undetermined なら、残りを再走査キューに積む。最低限の対応として、同じ行で閉じない演算子より後ろにある演算子の本文を undetermined として FR5 のフォールバックに回す。上の
+    3 形を deny ケースとして追加する。
+  sources:
+  - claude:spec
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: spec category is not an auto-fix candidate; loop-3 spec re-review still reports it (f9e7b5a043109ceb)
+- stable_id: e2354806c0c5fa93
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1196
+  title: git の組み込みサブコマンドの閉じたリストでも、-e とエディタ設定を経由して本文が実行される経路が残る
+  description: _git_is_data() は `-c`/`--config-env` と先頭の代入を読み飛ばし、サブコマンドが GIT_DATA_SUBCOMMANDS にあれば data とする。しかし commit・tag・notes は `-e`/`--edit` を付けると、標準入力から読んだメッセージを core.editor/GIT_EDITOR/EDITOR のプログラムに渡す。評価者の再実行で、`git
+    -c core.editor=bash commit -e -F - <<'EOF'\ngit reset --hard HEAD\nEOF` と `GIT_EDITOR=bash git commit -e -F - <<'EOF'…EOF` がともに基準 deny、現在 allow。エイリアス以外にも、設定からプログラムを起動する経路がある。
+  suggestion: (a) 閉じたリストのサブコマンドでも、`-e`/`--edit`/`-t`/`--template` があれば undetermined にする。または (b) `-c`/`--config-env`/GIT_CONFIG_*/GIT_EDITOR/EDITOR/VISUAL で設定されるキーを安全と分かっているもの（user.* など）に限り、それ以外は undetermined
+    にする。上の 2 形を deny ケースとして追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium, not an auto-fix candidate; loop-3 security re-review reports the same shape (511cd470522973d8)
+- stable_id: 96d5395a938f4b94
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1109
+  title: gh は旧来のフラグ検査のままで、エイリアスや拡張を経由して本文が実行される経路が開いている
+  description: task0003 は git について、リスト外のサブコマンドが外部設定のエイリアスである経路を閉じたリストで塞いだ。gh は GIT_LIKE_DATA_COMMANDS に残り、`-c` と GIT_CONFIG_* を見るだけになっている。gh には `gh alias set --shell` と拡張（`gh <ext>` は任意の実行ファイルを起動し、標準入力も渡す）がある。評価者の再実行で、`bash
+    x.sh; gh foo <<'EOF'\ngit reset --hard HEAD\nEOF` は基準 deny、現在 allow。git 版の `git foo` は deny のまま。
+  suggestion: gh にも組み込みサブコマンドの閉じたリストを適用する。リストができるまでは、gh を data から外して undetermined として扱う。上の形を deny ケースとして追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: medium, not an auto-fix candidate
+- stable_id: 477b852b8066e962
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1768
+  title: 入れ子の if/while/case の開き語を拾えず、閉じから bash に流れる本文を data と判定する
+  description: loop-1 の修正（db3edffc）で if/for/while/until/select/case もグループとして追跡するようになった。ただし _leading_group_opener_char() が見るのは、代入とラッパーを読み飛ばした後の先頭トークンだけ。then/do/else/!/{ の後ろにある開き語は push されない（`then if`、`do
+    while`、`else if`、`! if`、`{ if`）。閉じ語は認識されるので、_track_groups() は型が一致すれば外側の同じ型のグループを誤って pop し、一致しなければ黙って無視する。その結果 bash へパイプされる閉じが host のグループと結び付かず data 判定の allow になる。`if a; then if b; then cat <<'EOF'…EOF\nfi;
+    fi | bash` など 5 形が allow、base ではすべて deny。FR1(ii) と FR5 に反する。
+  suggestion: (a) 開き語の検出を _shape_leading() と同じ語彙を読み飛ばしながら進め、文中の開き語をすべて順に push する。(b) 最低限、閉じ語の型がスタック先頭と一致しないとき等は開いている全グループを閉じ不明として undetermined に倒す。deny ケースを先に追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: conflict with a24bbdcbaededef2 at the same site (skipped in loop 2); resolved collaterally by the loop-3 mismatched-closer fallback (53a12115fb5de347)
+- stable_id: 1b2dddfd969ec3ef
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1889
+  title: 関数定義の本文にあるヒアドキュメントを data と判定し、`f | bash` で実行される本文を見落とす
+  description: '`f() { cat <<''EOF''\n<本文>\nEOF\n}; f | bash`、`function f { cat <<''EOF''…}; f | bash` などが allow（base では deny）。関数本文の出力先は呼び出し側で決まり静的には決められないので、FR5 に従えば undetermined に倒すべき形。'
+  suggestion: '`NAME() {` / `function NAME {` で始まる文を関数本文用の型でグループとして push し、その型が開いている文は undetermined を返す。deny ケースを先に追加する。'
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not re-reported by loop-2/3 re-review, not verified
+- stable_id: 8f329684b14cfbbb
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1555
+  title: バッククォート内の $( ) を置換として登録しないため、その中の bash 宛てヒアドキュメントの host を取り違える
+  description: loop-1 でバッククォート区間に checkpoint の包含を記録するようになったが、内側の `$(` を span として登録しない。"echo `echo $(bash <<'EOF'\nrm -rf ~/important\nEOF\n)`" とダブルクォート版がどちらも allow（base では deny）。
+  suggestion: (a) バッククォート本体も再帰的に走査して入れ子の span・parent_of・包含を登録する。(b) containing がバッククォート区間で演算子位置が opaque 区間に入るなら undetermined に倒す。
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not re-reported by loop-2/3 re-review, not verified
+- stable_id: 689341674d604fa7
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 473
+  title: loop-1 修正で増えた判定経路に期待値ケースが無い
+  description: db3edffc は destructive-guard.py だけを変更し、cases.json にケースを足していない。`fi | bash`、`done | bash`、`esac | bash` を含むケースは 0 件。hook-tests.md は見逃しを直す前にケースを足すことを求めている。
+  suggestion: deny `if true; then cat <<'EOF'\ngit reset --hard HEAD\nEOF\nfi | bash` 等と allow の対照 `... fi > /tmp/out` を追加する。入れ子・関数定義・バッククォート内の $( ) の形も deny ケースとして先に追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; superseded by 1775423080603fbd (cases.json still lacks the loop 1-3 cases)
+- stable_id: 6da41df887c67494
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1457
+  title: 単一引用符内の `$(` で開いたフレームが引用符の外まで伸び、後続の破壊的な文を丸ごと隠して明示的に allow を返す
+  description: 'honor_single_quotes=False の走査（statements() の top_spans の元）は、単一引用符内の `$(` について「最初の `)` が最初の `''` より前にあるか」だけを確かめ、そのあと引用状態なし（q=None）のフレームを積む。フレームの中では `"`・`#`・バッククォート・`(` が普通に解釈されるので、実際にフレームを閉じる
+    `)` は引用符のはるか外になり得る。そのスパンは _mark_substitutions() でマーカーに置き換わって外側チャンクから消え（外側は引用符が閉じずに lex 失敗→フォールバックへ）、内側テキストとして積み直された側では破壊的な文が二重引用符の文字列の中に入るため、文として検査されない。検証結果（現在→基準 f7880283）: `echo ''$(a " b)'' ; rm
+    -rf /home/sakura/x ; echo " )"` は allow→deny、`grep -n ''$(x " y)'' f.txt; git reset --hard HEAD; echo "done)"` は allow→deny、改行区切りでも allow。bash では `''$(a " b)''` はただの文字列なので、真ん中の文はそのまま実行される（`echo EXECUTED`
+    に差し替えて実行を確認した）。ガードが出す判定は無言ではなく明示的な allow なので、auto モードの分類器も通らない。ヒアドキュメントに限らず、ガードの検査全体を回避できる。46923ffe（1465 行）に対する loop 1 の修正で最初の `)` を確かめる処理は入ったが、フレームを積む作りが残っているため塞がっていない。THREAT-MODEL の TB-1 / TM-4（既存の検知を黙って弱めない）に対する退行。'
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -1457,13 +1457,10 @@\n             if not honor_single_quotes and c == \"$\" and i + 1 < n and\
+    \ text[i + 1] == \"(\":\n                 quote_end = text.find(\"'\", i + 1)\n                 close_pos = text.find(\")\", i + 2)\n                 if close_pos != -1 and (quote_end == -1 or close_pos\
+    \ < quote_end):\n-                    stack.append([i, True, None, []])\n+                    spans.append((i, close_pos + 1))\n                     parent_open_of[i] = sub_open_stack[-1] if sub_open_stack\
+    \ else None\n-                    sub_open_stack.append(i)\n-                    if depth == 0 and top_opaque_start[0] is None:\n-                        top_opaque_start[0] = i\n-                 \
+    \   i += 2\n+                    i = close_pos + 1\n                     continue\n                 i += 1\n                 continue\n(バッククォートの分岐と同じく、単一引用符の中では最初の `)` までを平らなスパンとして記録し、フレームは積まない。基準の\
+    \ `\\$\\(([^()]*)\\)` と同じ届き方になる。スクラッチのコピーで試したところ上の 4 形はすべて deny になり、既存スイートも 456/456 通った。上の形を deny ケースとして destructive-guard-cases.json に追加すること。)"
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2; loop-2 security re-review confirmed the fix
+- stable_id: a24bbdcbaededef2
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1768
+  title: '`then`/`do`/`else`/`elif`/`!` の後ろで開いた `{ }`・`( )`・複合文をグループとして追跡せず、`| bash` へ流れる本文を data と判定する'
+  description: '_leading_group_opener_char() は _skip_assignments_and_wrappers() で代入とラッパーだけを飛ばす。予約語の `then`/`do`/`else`/`elif`/`!` は飛ばさないため、`then { ...`、`do ( ...`、`! { ...`、`! if ...` はグループの開始と認識されない。閉じ側の
+    `} | bash` も対応する開きが無いので pop されず、ホストの cat が data になる。検証結果（現在→基準）: `if true; then { cat <<''EOF''\ngit reset --hard HEAD\nEOF\n} | bash; fi`、`if true; then ( cat ... ) | bash; fi`、`for x in a; do { cat
+    ... } | bash; done`、`if false; then :; else { cat ... } | bash; fi`、`while true; do ( cat ... ) | bash; break; done`、`! { cat ... } | bash`、`! ( cat ... ) | bash`、`! if true; then cat ... fi | bash`（前置の文が無くても）、`!
+    while ...; done | bash`、`! case ... esac | bash` がすべて allow→deny。bash は本文を実行する（`! if ... fi | bash` で実行を確認した）。TB-1 / TM-1（「外側の文のパイプライン後段に sink があれば再走査する」）が実装されていない。いずれも明示的な allow なので分類器も通らない。'
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -1768,4 +1768,8 @@\n     i = 0\n     n = len(toks)\n     while i < n:\n+        t = toks[i]\n\
+    +        if t in (\"then\", \"do\", \"else\", \"elif\", \"!\") and not getattr(t, \"quoted\", False):\n+            i += 1\n+            continue\n         advance = _skip_assignments_and_wrappers(toks[i:])\n\
+    (スクラッチで試したところ上の全形が deny になり、既存スイートは 456/456 通った。_build_statement_table() の is_compound_keyword を判定する raw_index も `!` を飛ばすように揃え、上の形を deny ケースとして追加すること。)"
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: conflict with 477b852b8066e962 at the same site (skipped in loop 2); resolved by the loop-3 mismatched-closer fallback (53a12115fb5de347)
+- stable_id: 0b3bbd70cb4adfef
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1988
+  title: 関数定義の本文にあるヒアドキュメントを data と判定し、その関数を `| bash` で呼ぶ形を明示的に allow する
+  description: '`f() { cat <<''EOF''\ngit reset --hard HEAD\nEOF\n}; f | bash` と `function f { cat <<''EOF'' ... }; f | bash` は現在 allow、基準は deny。関数本文の出力先は呼び出し側で決まるので定義の時点では確定できないのに、閉じ `}` の後ろにパイプが無いことから
+    data と判定している。SPEC の Assumptions が対象外にしているのは「ファイルに書いて後続の文で実行する」形だけで、関数を経由する形は含まれない。TM-3（宛先を確定できないときはチャンク全体の sink 一致に戻る）の趣旨にも反する。'
+  suggestion: '_leading_group_opener_char() で関数定義の開き（`name ( ) {` / `name ( ) (` / `function name [()] {`）を別種のグループ（例: ''func''）として認識し、_statement_pipeline_info() でそのグループが開いている文は other=True（undetermined）にする。こうすれば本文はチャンク全体の
+    SHELL_SINK フォールバックで判定される。上の 2 形を deny ケースとして追加すること。'
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: resolved collaterally by the loop-3 mismatched-closer fallback; repro now denies
+- stable_id: 560e87a2468c89fc
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2615
+  title: （未修正・7b7dac1ab73aaac4）入れ子のコマンド置換を階層ごとに全文再走査し、10 秒のタイムアウトを超えて判定が失われる
+  description: 'loop 1 の修正（db3edffc）はこの箇所に触れていない。statements() はポップしたチャンクごとに scan_structure() を 2 回（2615 行の chunk_scan と 2631 行の legacy scan）走らせ、最外側の置換の内側テキスト（内側の全階層を含む）を 2705 行で PENDING に積み直すため、深さ d・長さ
+    n に対して O(n·d) のままである。MAX_SHELL_PAYLOAD_EXPANSIONS が効くのは bash -c のペイロードだけ。フック全体の再計測（`echo $(` を d 段重ね、最内に `git reset --hard HEAD`）: d=1000（8KB）1.12 秒、d=2000（16KB）4.43 秒、d=3000（24KB）10.15 秒。基準は d=3000
+    で 0.07 秒。hooks.json の destructive-guard の timeout は 10 秒なので、これを超えると deny が返らず、埋め込んだ破壊的コマンドが検査を逃れる。TB-1 / TM-5 に対する退行。'
+  suggestion: (a) 最初の scan_structure() が返す全階層の spans/parent_of をオフセット付きで子チャンクへ引き継ぎ、各階層を「子の置換をマーカーに置き換えたテキスト」として 1 回ずつ lex する。内側の全文を積み直して再走査するのをやめ、chunk_scan と legacy scan の 2 回の走査も 1 回にまとめる。(b) 最低限の対応として、statements()
+    のすべての pending.append()（置換本文・ヒアドキュメント本文・シェルペイロード）で共有する作業量の上限（処理文字数の合計または入れ子の深さ）を設け、超えたら保守的に deny か ask を返す。d=3000 の入れ子に破壊的コマンドを埋めたケースを追加し、10 秒を大きく下回ることを確かめること。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: same defect as reverted 7b7dac1ab73aaac4 (aborted in loop 2); resolved by the loop-3 relative scan budget (26610c49790aba19)
+- stable_id: 59e3bb866d98ab03
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1756
+  title: グループの開き/閉じ判定が _shape_leading() の予約語・case 状態機械を別実装で重複しており、loop-1 修正で食い違いが表面化した
+  description: loop-1（db3edffc）で _leading_group_opener_char() と _leading_group_closer() に if/loop/case の対を足した。しかし予約語の認識規則（クォート、ラッパーや VAR= による抑止、case パターン状態、then/do/else/!/パターンを越えた先の予約語）の正本は _shape_leading()
+    にあり、2 関数はそれを「先頭トークンだけ」の簡易版として作り直している。すでに次の点で食い違っている。(1) 閉じ側は loop-1 で case_stack のスナップショットを参照するようになったが、開き側は参照しない。(2) どちらも _shape_leading() が読み飛ばす then/do/else/!/case パターンの後ろに来る予約語を見ない。(3) _track_groups()
+    は種類の合わない閉じを黙って無視するので、取りこぼした開きがあると、後から来た閉じが外側の別のグループと誤って対になる。その結果は「宛先不明」ではなく、確信をもった「data」になる。実行して確認した具体的な失敗は次の 2 種類。【誤爆（loop-1 で生じた退行）】`python3 x.py; case $k in\nfor) cat > /tmp/p <<'EOF'\ngit reset
+    --hard HEAD\nEOF\n;;\nesac` は loop-1 前は allow、現在は deny。パターン語 for/if/while が開きとして積まれ、本物の case の閉じも対にならなくなる。そのため同じチャンクで esac の後ろにあるヒアドキュメント（`...esac\ncat > /tmp/p <<'EOF'...`）や、後の枝のヒアドキュメントまで宛先不明になり、フォールバックで
+    deny される。`(x)` 形式のパターンでも同じ原因の誤爆が以前からある。【見逃し（base f7880283 では deny だったもの）】`if a; then if b; then cat <<'EOF'\ngit reset --hard HEAD\nEOF\nfi\nfi | bash`、`! if true; then cat <<'EOF'...EOF\nfi | bash`、`case
+    $k in\nx) if true; then cat <<'EOF'...EOF\nfi | bash;;\nesac`、`for f in a; do while read x; do cat <<'EOF'...EOF\ndone\ndone | bash` は、現在すべて allow。内側の開きが認識されず、最初の fi/done が外側の開きと対になるため、本物の `| bash`
+    がどのグループにも結び付かない。ホストの cat が data と判定され、チャンク全体のフォールバックも発動しない。loop-1 が直せたのは、開きが文の先頭に来る形だけ。今後の修正も、_shape_leading()、2 つの _leading_group_*、COMPOUND_STATEMENT_KEYWORDS の少なくとも 4 か所に散らばり続ける。
+  suggestion: 開き/閉じの判定を _shape_leading() から導き、状態機械を 1 つにする。(a) _shape_leading() に任意の events 出力引数を足す。コマンド位置（case_stack が空か "body"、クォートなし、blocked でない）で消費した構文を順に記録する：`(`/`{`/`if`/`while`/`until`/`for`/`select`/`case`
+    は push、`)`/`}`/`fi`/`done`/`esac` は pop。then/do/else/!/case パターンの後ろにあるものも同じループで拾える。_build_statement_table() はその events リスト（1 文に複数あり得る）を _Stmt に載せ、_track_groups() は events を順に適用する。_leading_group_opener_char()/_leading_group_closer()
+    は削除し、is_compound_keyword も同じ events から求める。(b) あわせて _track_groups() は、種類の合わない閉じを見たら無視せず、その時点で開いているグループを「閉じ不明」として扱う。こうすれば _statement_pipeline_info() が undetermined を返し、チャンク全体のフォールバックに乗る（取りこぼしを data に倒さない）。hook-tests.md
+    に従い、直す前に destructive-guard-cases.json へ次のケースを足す：allow 側に `for)`/`if)` パターン、esac 後のヒアドキュメント、deny 側に `then if`/`! if`/`x) if`/`do while` の 4 形。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: editor skipped the state-machine refactor in loops 2 and 3; its miss forms now deny via the loop-3 fallback; the remaining duplication is reported as fe629be6ce3c7578 (medium)
+- stable_id: 1832cd97bd3da214
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 984
+  title: splitlines() が \n 以外の文字でも行を分けるため、演算子行の後ろの文が本文として消える（loop 1 後も未修正）
+  description: SPEC Objectives 2「実際にシェルが実行する位置の `git reset --hard`（通常のコマンド…）の検知力は落とさない」と FR4「区切り行より後ろの文は、これまでどおりコマンドとして検査する」に反する。strip_heredocs() は今も `chunk.splitlines(keepends=True)` で行を分けている。splitlines()
+    は \r・\v・\f・\x1c-\x1e・\x85・\u2028・\u2029 でも行を切る。一方、旧 HEREDOC 正規表現（`[^\n]*\n`）と bash は \n でしか行を区切らない。db3edffc の時点で再実行した。`cat > /tmp/p <<'EOF'\r ; git reset --hard HEAD\nEOF` と、\r を \v に替えた形は、基準 f7880283
+    では deny、現在の版では allow になる。この形は sink 語を含まない。round 1 で fixed と記録された 185bd4ac と同じ欠陥。
+  suggestion: '--- a/em-workflow/hooks/destructive-guard.py
+
+    +++ b/em-workflow/hooks/destructive-guard.py
+
+    @@ -984 +984,2 @@
+
+    -    lines = chunk.splitlines(keepends=True)
+
+    +    # bash と旧 HEREDOC 正規表現（[^\n]*\n）に合わせ、"\n" だけで行を分ける。
+
+    +    lines = re.findall(r"[^\n]*\n|[^\n]+", chunk)
+
+    '
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: spec category is not an auto-fix candidate; loop-3 spec re-review still reports it (3d03736125fa160a)
+- stable_id: 3cc3952d792fdd5d
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1028
+  title: 閉じない先行演算子がシンク宛てでも捨てられ、同じ行の後ろのヒアドキュメント本文が data と判定される（loop 1 後も未修正）
+  description: SPEC FR5「検知漏れの方向には倒さない」と Objectives 2 に反する。Assumptions は、閉じる区切り行が無いヒアドキュメントを「現行の扱いのまま変えない」としている。strip_heredocs() は、区切り行が見つからない演算子を記録せずに捨てる（1028-1032 行）。このため、その演算子の宛先がシェルシンクでも判定の対象にならない。同じ行の後ろの演算子は同じ位置から本文を探し、見つかった本文は後ろの演算子自身の宛先で判定される。db3edffc
+    の時点で再実行した。`bash <<'A' ; cat <<'B'\ngit reset --hard HEAD\nB` と、2 つ目を `tee /tmp/b <<'B'` に替えた形は、基準では deny、現在の版では allow になる。実際の bash では A の本文が入力の終わりまで続き、内側の bash がその行を実行する。
+  suggestion: strip_heredocs() が、閉じない演算子も位置付きで返すようにする。たとえば HeredocRecord に unterminated フラグを付け、本文は演算子行より後ろの残りすべてとする。そのうえで statements() では次のどちらかにする。(a) 閉じない演算子自身の宛先を _heredoc_destinations() で判定し、sink または
+    undetermined なら、残りの本文を再走査キューに積む。(b) 最低限の対応として、同じ行で閉じない演算子より後ろにある演算子の本文をすべて undetermined として扱い、FR5 のフォールバックに回す。どちらの場合も、上の 2 形を deny ケースとして cases.json に追加する。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: spec category is not an auto-fix candidate; loop-3 spec re-review still reports it (f9e7b5a043109ceb)
+- stable_id: be5fe3304ac69dae
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1777
+  title: then/do/else/{/case 項目の後ろで始まる複合文を追跡しないため、その複合文を bash へパイプしても本文が data と判定される
+  description: SPEC FR1 (ii) と Objectives 2 に反する。loop 1（db3edffc）で、_leading_group_opener_char() は if/for/while/until/select/case を開き語として扱うようになったが、見るのは文の先頭の語 1 つだけ。`do if …`、`then for …`、`{ if …`、`x) if
+    …` のような複合文は積まれず、閉じ語は種類が合わないと無視される。`for i in 1; do if true; then cat <<'EOF'\ngit reset --hard HEAD\nEOF\nfi | bash; done` など 7 形が基準 deny、現在 allow。
+  suggestion: (a) 文の先頭に並ぶ予約語を順に読み進め、途中の開き語をすべて積む。(b) 最低限、閉じ語の種類が合わないときは開いているグループを閉じ語不明として undetermined にする。上の各形を deny ケースとして追加する。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: fixed
+  resolution_reason: resolved collaterally by the loop-3 mismatched-closer fallback; loop-3 spec re-review confirmed
+- stable_id: 53e190d68d8c82d1
+  severity: high
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1924
+  title: _track_groups() が文ごとに開いているグループのスタック全体を複製し、メモリが文の数×開いたグループの数に膨らむ
+  description: '_track_groups() は文ごとに open_groups_at.append(list(group_stack)) を実行し、その時点で開いているグループのスタック全体をコピーする。閉じが見つからないグループはスタックに残り続けるので、S 文・G 個の閉じないグループに対して O(S×G) の要素を確保する。loop-1（db3edffc）で if / for
+    / while / until / select / case も開き記号に加わり、引き金になる形が増えた。表はチャンクにヒアドキュメントが 1 つあれば作られる。実測（statements() 単体、ヒアドキュメント 1 件付き）: `if :;` を 16000 回（80KB）で RSS 1.0GB、32000 回（160KB）で 4.0GB。`{ :;` を 16000 回（64KB）でも
+    1.0GB。ヒアドキュメントが無い同じ入力は 48MB、基準コミットは 47MB。要素数は入力長の二乗で増えるので、300KB 程度で十数 GB になる。OOM でフックが落ちるかスワップで 10 秒の timeout を超え、判定が失われる（NFR3 / TM-5）。さらに _statement_pipeline_info() はヒアドキュメントごとにこのリストを全部たどるので、時間も K×G
+    になる。'
+  suggestion: 文ごとにリストを複製せず、永続的な連結スタックにする。push は node = (bracket, open_idx, parent_node)、pop は node = node[2] とし、open_groups_at には各文の時点の node への参照だけを積む（1 文あたり O(1)）。_statement_pipeline_info() は node の連鎖をたどり、node
+    ごとに集約結果（その node の閉じの下流パイプラインと親 node の集約結果の OR）をメモする。閉じないグループを大量に並べた入力で時間とメモリが線形に収まることを確かめる計時ケースを追加する。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (linked node stack); RSS 1.04GB -> 56MB
+- stable_id: bad24fb350e25def
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1931
+  title: _pipeline_downstream() のメモが歩き始めの文にしか効かず、長いパイプラインの各段にヒアドキュメントがあると二次の計算量になる
+  description: memo[index] に歩き始めた index の結果しか記録しないため、K 段のパイプラインの各段にヒアドキュメントがあると O(K²)。`cat <<A | cat <<A |` を繰り返す形で 2001 行 0.225 秒、4001 行 0.777 秒、8001 行 2.9 秒（基準 0.041 / 0.082 / 0.167 秒）。TS-20 / TS-46 の倍率基準を満たさず、約
+    190KB で timeout 10 秒を超える。
+  suggestion: 表ごとに 1 回、末尾から逆順に全 index の結果を求めて memo を埋め、全体を O(n) にする。同じ形の 2000 / 4000 行入力を TS-20 の計時ケースに加える。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; loop-3 performance re-review still reports it (f32990b66eed207a)
+- stable_id: 5ce11ada600e24fe
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2132
+  title: 閉じない開き記号の一覧を、ヒアドキュメントごと・呼び出しごとに線形に走査している
+  description: _heredoc_destinations() と _statement_info_at() の any(... for pos in unmatched) がヒアドキュメント 1 件ごとに unmatched を走査し、2×K×U になる。ヒアドキュメント 8000 件の後ろに閉じない `$(` 8000 個（96KB）で 1.74 秒（基準 0.25 秒）、約 230KB
+    で timeout を超える。
+  suggestion: 走査結果ごとに first_unmatched = min(unmatched) を 1 回だけ求め、比較を定数時間にする。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; loop-3 performance re-review still reports it (1538a1ab1ce276ab)
+- stable_id: 78a95de215c6047f
+  severity: critical
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1457
+  title: loop-2 の平坦スパン化で、単一引用符の payload 内にある入れ子のコマンド置換を見落とし、`rm -rf ~` に allow を返す
+  description: honor_single_quotes=False の単一引用符分岐が、`$(` の後で最初に現れる `)` までを平坦なスパンとして登録するようになった（ea2dce04）。このため入れ子の置換は途中で切れる。キューに積まれる内側のテキストは `echo $(rm -rf ~` のような閉じない形になり、再走査ではレガシー走査の unmatched が捨てられるので、`rm
+    -rf ~` は単独の文として一度も検査されない。bash -c や eval の payload はまさに単一引用符で書かれ、payload 側ではこのスパンが MARK に置き換わっている。scratchpad のコピーで base（f7880283）、loop1（db3edffc）、HEAD を比べて確かめた。`bash -c 'v=$(printf "%s" "$(rm -rf ~)")'`、`bash
+    -c 'echo $(echo $(rm -rf ~))'`、`eval 'echo $(echo $(rm -rf ~))'`、`bash -c 'echo $(a $(git reset --hard) c)'` は、base と loop1 では deny、HEAD では allow になる。どれもよくある書き方で、base からの回帰にあたる。loop-2 の本来の目的（引用符の外まで伸びたフレームで後続の文が隠れる件）は、HEAD
+    で直っていることを確認した。loop-2 の修正には期待値ケースが追加されておらず、テストは 456/456 のまま通るので、この回帰は検出されない。
+  suggestion: "括弧の対応を、単一引用符の範囲（`'` を含まない i+2..quote_end）の中だけで数える。範囲が引用符の中に限られるので、loop-1 のバイパス（フレームが `'` の外まで伸びる件）は再発しない。scratchpad のコピーでこの修正を当てると、上の例はすべて deny になり、`echo '$(a (b) c' ; rm -rf ~ ; ')'` も deny\
+    \ のまま、既存スイートも 456/456 で通った。あわせて destructive-guard-cases.json に、上の deny ケースと loop-2 のバイパスケースを追加すること（hook-tests ルール）。\n--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n\
+    @@ -1457,4 +1457,18 @@\n             if not honor_single_quotes and c == \"$\" and i + 1 < n and text[i + 1] == \"(\":\n                 quote_end = text.find(\"'\", i + 1)\n-                close_pos\
+    \ = text.find(\")\", i + 2)\n+                # Balanced close inside the single-quoted range only (it\n+                # holds no `'`, so the span can never leak past the quote).\n+              \
+    \  limit = quote_end if quote_end != -1 else n\n+                close_pos = -1\n+                pdepth = 1\n+                for k in range(i + 2, limit):\n+                    if text[k] == \"(\"\
+    :\n+                        pdepth += 1\n+                    elif text[k] == \")\":\n+                        pdepth -= 1\n+                        if pdepth == 0:\n+                            close_pos\
+    \ = k\n+                            break\n+                if close_pos == -1:\n+                    close_pos = text.find(\")\", i + 2)\n                 if close_pos != -1 and (quote_end == -1 or\
+    \ close_pos < quote_end):"
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3; loop-3 re-reviews confirmed
+- stable_id: 40ab909ce0784e2a
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1994
+  title: _group_chain_pipeline() の再帰が、約 1000 段の入れ子グループで RecursionError になり、フックが落ちて判定を出さない
+  description: loop-2 では per-statement のリストコピーを連結スタックに置き換えた代わりに、グループの鎖を親方向へたどる処理が再帰になった。`{`+改行を 1200 行並べ、`cat <<'EOF'`/`hello`/`EOF`、最後に `rm -rf ~` を置く（約 2.4KB）と、HEAD では RecursionError により exit 1 で終わり、フックは判定を出さずに落ちる（fail-open）。base
+    と loop1 では deny。900 段では通る。
+  suggestion: memo 済みの祖先（または根）まで親をたどってから、根に近い側から畳み込む反復処理に書き換える（architecture / performance の同位置の指摘と同じ差分）。深い入れ子のケースを destructive-guard-cases.json に追加すること。
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: same-site conflict group (skipped); resolved by 911d97982d23ca48 auto-applied in loop 3
+- stable_id: 52f676baac752d9e
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2000
+  title: _group_chain_pipeline() の再帰が入れ子グループ約 1000 段で RecursionError になり、フックが判定を返さず deny が失われる
+  description: ループ 2 で入れた _group_chain_pipeline() は親ノードを再帰でたどるため、開いているグループの入れ子の深さがそのまま再帰の深さになる。`{ :; ` を 1000 回並べ、続けて `cat <<'EOF'\nhello\nEOF\nrm -rf ~/important` を置いた約 5KB の 1 行コマンドで確かめた。現行版は RecursionError
+    で終了コード 1 になり、出力は無い。基準コミット f7880283 では deny になる。main() は例外を捕まえないため、PreToolUse は非ブロッキングエラー扱いになる。その結果、同じコマンド内の rm -rf に対する deny が消え、通常の許可フロー（分類器や許可ルール）に判断が委ねられる。これは TB-1 / TM-5（feature-docs/destructive-guard-heredoc-reset-hard/THREAT-MODEL.md）が防ぐはずの「判定の喪失」と同じ結果になる。ループ
+    1 のリスト走査版には無かった退行。
+  suggestion: '--- a/em-workflow/hooks/destructive-guard.py
+
+    +++ b/em-workflow/hooks/destructive-guard.py
+
+    @@ -2000,16 +2000,20 @@ def _group_chain_pipeline(table, node, group_closer_of, memo):
+
+    -    key = ("group", id(node))
+
+    -    cached = memo.get(key)
+
+    -    if cached is not None:
+
+    -        return cached
+
+    -    _bracket, open_idx, parent = node
+
+    -    close_idx = group_closer_of.get(open_idx)
+
+    -    if close_idx is None:
+
+    -        sink, other = False, True
+
+    -    else:
+
+    -        sink, other = _pipeline_downstream(table, close_idx, memo)
+
+    -    if parent is not None:
+
+    -        s2, o2 = _group_chain_pipeline(table, parent, group_closer_of, memo)
+
+    -        sink = sink or s2
+
+    -        other = other or o2
+
+    -    memo[key] = (sink, other)
+
+    -    return sink, other
+
+    +    pending = []
+
+    +    cur = node
+
+    +    acc = (False, False)
+
+    +    while cur is not None:
+
+    +        cached = memo.get(("group", id(cur)))
+
+    +        if cached is not None:
+
+    +            acc = cached
+
+    +            break
+
+    +        pending.append(cur)
+
+    +        cur = cur[2]
+
+    +    for cur in reversed(pending):
+
+    +        _bracket, open_idx, _parent = cur
+
+    +        close_idx = group_closer_of.get(open_idx)
+
+    +        if close_idx is None:
+
+    +            sink, other = False, True
+
+    +        else:
+
+    +            sink, other = _pipeline_downstream(table, close_idx, memo)
+
+    +        acc = (sink or acc[0], other or acc[1])
+
+    +        memo[("group", id(cur))] = acc
+
+    +    return acc
+
+    '
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: same-site conflict group (skipped); resolved by 911d97982d23ca48 auto-applied in loop 3
+- stable_id: 53a12115fb5de347
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1768
+  title: '`then`/`do`/`else`/`!` の後ろで開いた `{ }`・`( )` をグループとして追跡せず、`| bash` へ流れる本文を data と判定する（未修正）'
+  description: 'a24bbdcbaededef2 の再確認。ループ 1/2 で行頭の if/for/while/until/select/case を開きとして認識するようになった。しかし _leading_group_opener_char() が飛ばすのは代入と WRAPPERS だけなので、予約語の後ろにある `{`/`(` は今も開きとして数えられない。次の 4 つはいずれも現行版で
+    allow、基準版で deny になる: `if :; then { cat <<''EOF''\nrm -rf ~/important\nEOF\n} | bash; fi`、`for i in 1; do { ... } | bash; done`、`if false; then :; else ( ... ) | bash; fi`、`! { ... } | bash`。対応する `}`/`)`
+    は開きの無い閉じとして無視され、ホスト文の `cat` が data と判定される。TM-1 の「囲む文のパイプ後段が sink なら本文を再走査する」が満たされていない。'
+  suggestion: '次のどちらか。(a) _leading_group_opener_char() で、`then`/`do`/`else`/`elif`/`!`（_shape_leading() が飛ばす予約語と同じ語彙）を繰り返し飛ばしてから、`{`/`(`/複合文キーワードを判定する。(b) 保守側に倒す: _track_groups() で、スタック先頭と一致しない閉じや、空のスタックに対する閉じを
+    1 つでも見たら、そのチャンクの全ヒアドキュメントを undetermined にしてチャンク全体の sink 照合へ回す。(b) は語彙の取りこぼしにも効く。'
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (needs-judgment, Apply as-is); repro now denies
+- stable_id: 26610c49790aba19
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2642
+  title: 入れ子のコマンド置換を階層ごとに全文再走査し、10 秒のタイムアウトを超えて判定が失われる（未修正）
+  description: 560e87a2468c89fc / 7b7dac1ab73aaac4 の再確認。statements() はチャンクごとに scan_structure() を 2 回走らせる（ヒアドキュメント用と honor_single_quotes=False 用）。さらにトップレベル置換の内側の全文を次のチャンクとして積むため、深さ d の入れ子では合計 O(d × 長さ) になる。`echo
+    ` + `$(echo x `×d + `)`×d + ` ; rm -rf ~/important` で計測した。d=800（約 8KB）は現行 1.02 秒、基準 0.04 秒。d=3200（約 32KB）は現行 15.9 秒、基準 0.09 秒。フックの 10 秒タイムアウトを超えるため、main() が最後にまとめて出す rm の deny が失われる。TM-5 の「処理コストを入力長に比例させる」が満たされていない。
+  suggestion: '次のどちらか。(a) 子チャンクを積むとき、親の scan_structure() の結果（spans/parent_of）をオフセット付きで渡し、子では再走査しない。(b) 保守側の上限を設ける: statements() で走査した文字数の累計を数え、入力長の定数倍（例: 8 倍）を超えたら残りを処理せず decide("ask", ...) で止める。'
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (needs-judgment, Apply as-is); repro now denies; follow-ups reported as c1971c4c72142127 / 5f736d84f0aff55f / e4d4d3cbc400a63e
+- stable_id: 9da75bdb1f77c58e
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2151
+  title: ANSI-C 引用 `$'\''` で字句解析が引用符の対応を取り違え、`| bash` 宛ての本文を data と判定する
+  description: '新しい宛先判定は、scan_structure() と lex_segments()（shlex）が出す文の境界を信頼している。しかしどちらも、`$''...''` の中の `\''` を引用の終わりとして読む。例: `echo $''\'''' ; cat <<''EOF'' | bash ; echo \''\nrm -rf ~/important\nEOF`。シェルは
+    `$''\''''` を 1 文字の `''` として閉じ、`cat <<''EOF'' | bash` で本文を実行する。一方、解析側は `; cat <<` と ` | bash ; echo \` を引用の内側とみなし、全体を `echo` の 1 文として data と判定する。現行版は allow、基準版はチャンク全体の sink 照合で deny になる。TM-3 は「字句解析に成功すれば境界も正しい」ことを前提にしているが、この入力ではそれが成り立たない。なお同じ根本原因で、`echo
+    $''\'''' ; rm -rf ~/important ; echo \''` は基準版でも現行版でも allow になる。これは今回の差分より前からある抜け穴で、範囲外として別に扱う必要がある。'
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -2151,4 +2151,7 @@ def _heredoc_destinations(chunk, records, chunk_scan):\n     if not records:\n\
+    \         return {}\n \n+    if \"$'\" in chunk:\n+        return {index: \"undetermined\" for index in range(len(records))}\n+\n     spans, parent_of, unmatched, opaque, containing_span = chunk_scan\n"
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not re-reported by loop-3 re-review, not verified
+- stable_id: 5a362ee99fa266b5
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1994
+  title: loop-2 で連結スタック化した _group_chain_pipeline() が親ノードを再帰でたどるため、開いたグループが約 1000 段あると RecursionError でフックが落ち、deny 判定が消える
+  description: loop-2（ea2dce04）で、_statement_pipeline_info() の「開いているグループの一覧を for で回す」処理を、_group_chain_pipeline() の再帰に置き換えた。この関数は親ノードへ 1 段ずつ再帰する。メモは再帰から戻るときにしか埋まらないので、最初の問い合わせの再帰の深さは、その文で開いているグループの数そのものになる。main()
+    は statements() を try で包んでいない。このため、閉じない `{` が約 1000 行並ぶと Python の再帰上限を超えて例外が出て、フックは rc=1 で終わる。PreToolUse フックの rc=1 は処理を止めないエラーなので、同じコマンド内の破壊的な文に対する deny が出ず、通常の許可判定に回る。スクラッチのコピーで実行して確かめた。`rm -rf /home/sakura/x\n`
+    + `{\n`×1100 + `cat <<'EOF'\nhi\nEOF` は、base（f7880283）と loop-1（db3edffc）では deny、HEAD では rc=1 で判定なし（RecursionError）。`git reset --hard HEAD` を先頭に置いた形も同じ結果になった。50 段なら HEAD でも deny になる。THREAT-MODEL TM-5
+    と同じ種類の問題（判定が失われる）で、loop-2 の修正が新たに持ち込んだ退行にあたる。
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -1997,19 +1997,19 @@ def _group_chain_pipeline(table, node, group_closer_of, memo):\n     (keyed\
+    \ by identity, since nodes are shared linked-stack cells) so a\n     node reachable from more than one heredoc's OPEN_GROUPS_AT costs one\n     lookup instead of one re-walk of the whole enclosing chain\
+    \ (NFR3).\"\"\"\n-    key = (\"group\", id(node))\n-    cached = memo.get(key)\n-    if cached is not None:\n-        return cached\n-    _bracket, open_idx, parent = node\n-    close_idx = group_closer_of.get(open_idx)\n\
+    -    if close_idx is None:\n-        sink, other = False, True\n-    else:\n-        sink, other = _pipeline_downstream(table, close_idx, memo)\n-    if parent is not None:\n-        s2, o2 = _group_chain_pipeline(table,\
+    \ parent, group_closer_of, memo)\n-        sink = sink or s2\n-        other = other or o2\n-    memo[key] = (sink, other)\n-    return sink, other\n+    path = []\n+    cur = node\n+    while cur is\
+    \ not None and (\"group\", id(cur)) not in memo:\n+        path.append(cur)\n+        cur = cur[2]\n+    sink, other = memo[(\"group\", id(cur))] if cur is not None else (False, False)\n+    for nd\
+    \ in reversed(path):\n+        close_idx = group_closer_of.get(nd[1])\n+        if close_idx is None:\n+            s, o = False, True\n+        else:\n+            s, o = _pipeline_downstream(table,\
+    \ close_idx, memo)\n+        sink = sink or s\n+        other = other or o\n+        memo[(\"group\", id(nd))] = (sink, other)\n+    return sink, other\n(再帰をやめ、メモ済みの祖先まで反復で登ってから、上から順にメモを埋める。スクラッチのコピーで試したところ、上の\
+    \ 1100 段の形はすべて base と同じ判定に戻り、既存スイートも 456/456 で通った。hook-tests.md に従い、1100 段の形を deny ケースとして destructive-guard-cases.json に先に足すこと。)"
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: fixed
+  resolution_reason: same-site conflict group (skipped); resolved by 911d97982d23ca48 auto-applied in loop 3; loop-3 architecture re-review confirmed
+- stable_id: 7e826c5cc227903d
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1459
+  title: loop 2 の平坦スパンが最初の `)` で切れるため、単一引用符の shell payload 内の入れ子置換にある reset --hard を見落とす
+  description: SPEC Objectives 2「実際にシェルが実行する位置の `git reset --hard`（通常のコマンド…）の検知力は落とさない」に反する。loop 2（ea2dce04）で、honor_single_quotes=False の走査は単一引用符内の `$(` を「最初の `)` まで」の平坦なスパンとして記録するようになった。入れ子を数えないため、`bash
+    -c 'echo $(echo $(git reset --hard HEAD))'` では外側のスパンが内側の `)` で終わる。キューに積まれる中身は `echo $(git reset --hard HEAD` になり、閉じない `$(` は置換として扱われず、git もコマンド位置に来ない。判定は、基準 f7880283 と loop 2 直前の db3edffc で deny、現在の版で
+    allow。`bash -c 'x=$(true $(git reset --hard HEAD))'` と `eval 'echo $(echo $(git reset --hard HEAD))'` も同じく allow になる。bash は -c の payload 内の入れ子の置換を実行する。ヒアドキュメントが無い形でも起きる。下の差分をスクラッチのコピーに当てると、456/456 pass
+    のまま上の 3 形が deny になり、loop 2 の対象だった 6da41df887c67494 の 3 形も deny のままだった。上の形を deny ケースとして cases.json に足す必要がある。
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -1457,5 +1457,15 @@\n             if not honor_single_quotes and c == \"$\" and i + 1 < n and\
+    \ text[i + 1] == \"(\":\n                 quote_end = text.find(\"'\", i + 1)\n-                close_pos = text.find(\")\", i + 2)\n-                if close_pos != -1 and (quote_end == -1 or close_pos\
+    \ < quote_end):\n+                limit = quote_end if quote_end != -1 else n\n+                close_pos = -1\n+                depth_q = 0\n+                for k in range(i + 1, limit):\n+      \
+    \              if text[k] == \"(\":\n+                        depth_q += 1\n+                    elif text[k] == \")\":\n+                        depth_q -= 1\n+                        if depth_q ==\
+    \ 0:\n+                            close_pos = k\n+                            break\n+                if close_pos != -1:\n                     spans.append((i, close_pos + 1))\n"
+  sources:
+  - claude:spec
+  confidence: 75
+  resolution: fixed
+  resolution_reason: same defect as 78a95de215c6047f, auto-applied loop 3; loop-3 spec re-review confirmed
+- stable_id: 911d97982d23ca48
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2011
+  title: loop 2 の _group_chain_pipeline() の再帰が入れ子約 1000 段で RecursionError になり、フックが落ちて後続の文を検査しない
+  description: 'SPEC FR4「ヒアドキュメントを閉じる区切り行より後ろの文は、これまでどおりコマンドとして検査する」、FR5「検知漏れの方向には倒さない」、Objectives 2 に反する。loop 2 で連結スタック化した _group_chain_pipeline() は、親ノードごとに自分を再帰呼び出しする。開いたグループが Python の再帰上限（1000）を超える深さにあるヒアドキュメントで
+    RecursionError になる。main() は statements() の例外を捕まえないので、フックは exit 1 で終わり判定を出さない。Claude Code は exit 2 以外の非 0 を非ブロッキングのエラーとして扱うため、コマンドはそのまま実行される。例: `{\n` を 1100 回、`cat > /tmp/p <<''EOF''\nx\nEOF\ngit reset
+    --hard HEAD\n`、`}\n` を 1100 回（約 4.4KB）。基準 f7880283 と loop 2 直前の db3edffc は deny、現在の版は RecursionError で exit 1。`(\n` と `if true; then\n` の入れ子でも同じ。実際の bash はこの 1100 段の入れ子を受け付けて中の文を実行する（echo に替えて確認した）。下の差分（親をたどる部分をループにする）をスクラッチのコピーに当てると、456/456
+    pass のまま上の形が deny になった。深い入れ子の deny ケースも cases.json に足す必要がある。'
+  suggestion: '--- a/em-workflow/hooks/destructive-guard.py
+
+    +++ b/em-workflow/hooks/destructive-guard.py
+
+    @@ -2000,16 +2000,19 @@
+
+    -    key = ("group", id(node))
+
+    -    cached = memo.get(key)
+
+    -    if cached is not None:
+
+    -        return cached
+
+    -    _bracket, open_idx, parent = node
+
+    -    close_idx = group_closer_of.get(open_idx)
+
+    -    if close_idx is None:
+
+    -        sink, other = False, True
+
+    -    else:
+
+    -        sink, other = _pipeline_downstream(table, close_idx, memo)
+
+    -    if parent is not None:
+
+    -        s2, o2 = _group_chain_pipeline(table, parent, group_closer_of, memo)
+
+    -        sink = sink or s2
+
+    -        other = other or o2
+
+    -    memo[key] = (sink, other)
+
+    -    return sink, other
+
+    +    pending = []
+
+    +    cur = node
+
+    +    acc = (False, False)
+
+    +    while cur is not None:
+
+    +        cached = memo.get(("group", id(cur)))
+
+    +        if cached is not None:
+
+    +            acc = cached
+
+    +            break
+
+    +        pending.append(cur)
+
+    +        cur = cur[2]
+
+    +    for nd in reversed(pending):
+
+    +        close_idx = group_closer_of.get(nd[1])
+
+    +        if close_idx is None:
+
+    +            sink, other = False, True
+
+    +        else:
+
+    +            sink, other = _pipeline_downstream(table, close_idx, memo)
+
+    +        acc = (sink or acc[0], other or acc[1])
+
+    +        memo[("group", id(nd))] = acc
+
+    +    return acc
+
+    '
+  sources:
+  - claude:spec
+  - claude:performance
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3; loop-3 re-reviews confirmed
+- stable_id: f6345b2f51d963a2
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 984
+  title: splitlines() が \n 以外の文字でも行を分けるため、演算子行の後ろの文が本文として消える（loop 2 後も未修正）
+  description: SPEC Objectives 2 と FR4「区切り行より後ろの文は、これまでどおりコマンドとして検査する」に反する。strip_heredocs() は今も `chunk.splitlines(keepends=True)` で行を分けている。splitlines() は \r・\v・\f・\x1c-\x1e・\x85・\u2028・\u2029 でも行を切るが、bash
+    と旧 HEREDOC 正規表現（FR3 が挙げる `[^\n]*`）は \n でしか行を区切らない。ea2dce04 で再実行した。`cat > /tmp/p <<'EOF'\r ; git reset --hard HEAD\nEOF` と、\r を \v・\x85 に替えた形は、基準 f7880283 で deny、現在の版で allow になる。sink 語は要らない。round 1 で
+    fixed と記録された 185bd4ac0e52469a と同じ欠陥で、loop 2 後も未修正。下の差分をスクラッチのコピーに当てると、456/456 pass のまま 3 形とも deny になった。
+  suggestion: '--- a/em-workflow/hooks/destructive-guard.py
+
+    +++ b/em-workflow/hooks/destructive-guard.py
+
+    @@ -984,1 +984,1 @@
+
+    -    lines = chunk.splitlines(keepends=True)
+
+    +    lines = re.findall(r"[^\n]*\n|[^\n]+\Z", chunk)
+
+    '
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: spec category is not an auto-fix candidate; loop-3 spec re-review still reports it (3d03736125fa160a)
+- stable_id: 7cf14951df77dd68
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1028
+  title: 閉じない先行演算子がシンク宛てでも捨てられ、同じ行の後ろのヒアドキュメント本文が data と判定される（loop 2 後も未修正）
+  description: SPEC FR5「検知漏れの方向には倒さない」と Objectives 2 に反する。Assumptions は、閉じる区切り行が無いヒアドキュメントを「現行の扱いのまま変えない」としている。strip_heredocs() は、区切り行が見つからない演算子を記録せずに飛ばし（1028-1031 行）、同じ行の後ろの演算子が同じ位置から本文を探す。見つかった本文は後ろの演算子自身の宛先で判定される。ea2dce04
+    で再実行した。`bash <<'A' ; cat <<'B'\ngit reset --hard HEAD\nB` と、2 つ目を `tee /tmp/b <<'B'` に替えた形は、基準 f7880283 で deny、現在の版で allow になる。実際の bash では A の本文が入力の終わりまで続き、bash がその行を実行する。loop 2 後も未修正。
+  suggestion: 'Either (a) 区切り行が見つからない演算子に当たったら、その行の残りの演算子の処理をやめる（`if pos < len(candidates): ... else: break`）。後ろの行はこれまでどおりチャンクに残り、文として検査される。スクラッチのコピーで 456/456 pass のまま上の 2 形が deny、TS-4 は allow のままを確認した。計画の
+    Component 1 postcondition 3 を変えることになる。or (b) 閉じない演算子について、入力の終わりまでを本文とする HeredocRecord を作り、その演算子自身の宛先で判定する（bash の挙動と一致する）。どちらでも上の形を deny ケースとして cases.json に足す。'
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: spec category is not an auto-fix candidate; loop-3 spec re-review still reports it (f9e7b5a043109ceb)
+- stable_id: f873c7a35a46460c
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1777
+  title: then / do / { の後ろなど文頭以外で始まる複合文を追跡しないため、その複合文を bash へパイプしても本文が data と判定される（loop 2 後も未修正）
+  description: SPEC FR1 (ii)「その文が属するパイプラインの下流にシェルシンクのコマンド語がある」と Objectives 2 に反する。_leading_group_opener_char() は、代入・ラッパーを読み飛ばした後の先頭の語 1 つだけで開き語を判定する。`do if …`、`then for …`、`{ if …` のように文の途中で始まる複合文は積まれず、対応する閉じ語（fi
+    / done）は種類が合わないので無視される。そのため、閉じ語の後ろのパイプ先 bash がヒアドキュメントに結び付かない。ea2dce04 で再実行した。`for i in 1; do if true; then cat <<'EOF'\ngit reset --hard HEAD\nEOF\nfi | bash; done`、`if true; then for i in 1; do cat
+    <<'EOF'\n…\nEOF\ndone | bash; fi`、`{ if true; then cat <<'EOF'\n…\nEOF\nfi | bash; }` は、基準 f7880283 で deny、現在の版で allow になる。loop 2 の連結スタック化はこの判定を変えていない。
+  suggestion: 文の先頭だけでなく、do / then / else / elif / { / ( / case 項目の `)` の直後など、コマンド位置に来るすべての開き語を順に積むことを勧める。それが難しければ、文の途中に開き語（if / for / while / until / select / case）が現れた文や、種類の合わない閉じ語を見た文のグループ内にあるヒアドキュメントを
+    undetermined に倒す。上の形を deny ケースとして cases.json に足す。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: fixed
+  resolution_reason: resolved collaterally by the loop-3 mismatched-closer fallback; loop-3 spec re-review confirmed
+- stable_id: 0f04051af706b69c
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1937
+  title: （未解決・再掲）_pipeline_downstream() のメモが歩き始めの文にしか効かず、各段にヒアドキュメントがある長いパイプラインで二次の計算量になる
+  description: bad24fb350e25def は loop-2 でも変わっていない。4000 段（48KB）が 1.37 秒（基準 0.13 秒）、8000 段（96KB）が 5.08 秒（基準 0.23 秒）。およそ 130KB でフックの timeout 10 秒を超え、判定が失われる（NFR3）。
+  suggestion: 表ごとに 1 回、末尾から先頭へ逆順に全 index の結果を求めて memo を埋め、線形時間にする。2000 / 4000 / 8000 段の入力を計時ケースに加える。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; loop-3 performance re-review still reports it (f32990b66eed207a)
+- stable_id: 24e5ac9f02b26f7f
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2159
+  title: （未解決・再掲）閉じない開き記号の一覧を、ヒアドキュメントごと・呼び出しごとに線形に走査している
+  description: 5ce11ada600e24fe は loop-2 でも変わっていない。2×K×U になり、ヒアドキュメント 8000 件の後ろに閉じない `$(` を 8000 個置いた入力（136KB）で 1.83 秒（基準 0.35 秒）。
+  suggestion: first_unmatched = min(unmatched, default=None) を 1 回だけ求めてキャッシュし、比較を定数時間にする。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; loop-3 performance re-review still reports it (1538a1ab1ce276ab)
+- stable_id: 26ab9a3d83649eff
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1461
+  title: loop 3 の単一引用符内 `$(` の均衡探索が二次の計算量になり、50KB 程度の入力で 10 秒のタイムアウトを超えて判定が失われる
+  description: loop 3（927fd965）の均衡 `)` 探索は、単一引用符内の `$(` を見つけるたびに、引用の終わりまで Python の `for k in range(i + 2, limit)` で走査する。閉じない `$(` が並ぶと、どの `$(` も残り全体を走査するので O(n²) になる。honor_single_quotes=False の走査は statements()
+    がすべてのチャンクで実行する。コストは 1 回の scan_structure() の中で膨らむため、新設の scan budget（チャンク長の累計）では止まらない。計測の入力は `echo '` + `$(`×K + `' ; rm -rf ~/important`。K=25000（50KB）は HEAD 9.96 秒、loop2 0.09 秒。K=30000（60KB）は HEAD 14.4
+    秒、loop2 0.11 秒、base 0.05 秒。hooks.json の timeout は 10 秒なので、rm の deny が出ないまま終わる。loop 3 が新たに持ち込んだ退行で、26610c49 と同じ TM-5 の「判定の喪失」にあたる。
+  suggestion: 単一引用符の範囲に入った時点で、その範囲をスタックで 1 回だけ走査し、各 `(` に対応する `)` の位置を表にする。`$(` ごとの探索はこの表を引くだけにする（範囲ごとに O(長さ)）。quote_end ごとに結果をキャッシュする方法でもよい。あわせて、50〜60KB の閉じない `$(` 入力で性能の退行を確かめる。
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: c1971c4c72142127
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2693
+  title: scan budget 超過の ask が statements() 内で即座に終了するため、収集済みの rm の deny が ask に下がる
+  description: loop 3 で statements() に入った decide("ask", "scan-budget-exceeded") は、その場でプロセスを終わらせる。main() は rm の判定を rm_decisions に貯め、最後に最も強いものを出す（D6）。予算超過は、トップレベルのチャンクの文をすべて yield し終えた後、入れ子のチャンクを pop した時点で起きる。そのため、すでに集めた
+    deny が捨てられる。`rm -rf ~/important; echo ` + `$(echo x `×60 + `)`×60（625 文字）は base と loop2 で deny、HEAD で ask になる。rm を後ろに置いた形も同じ。対話モードでは、確認プロンプトの理由に「走査量が過大」しか出ず、`rm -rf ~/important` が示されないまま承認されうる。D6 の「早い段階の
+    ask が後の deny を消さない」が崩れている。無人実行では ask が deny に下がるので、影響は対話モードに限られる。
+  suggestion: 'statements() の中では decide() を呼ばない。専用の例外（例: `_ScanBudgetExceeded`）を投げるか、番兵を yield する。main() はそれを受けたら `rm_decisions.append(("ask", "scan-budget-exceeded", "", msg))` を足して走査を打ち切り、strongest_rm_decision()
+    で判定を出す。こうすると、収集済みの deny が優先される。'
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 4220886f3405959e
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2149
+  title: 開きの無い閉じが 1 つあると同じテキストの全ヒアドキュメントが宛先不明になり、関数定義を含むコマンドの commit ヒアドキュメントがまた deny される
+  description: loop 3 の `mismatched` は表全体に 1 つのフラグで、_statement_info_at() はその表で判定するヒアドキュメントをすべて parse_failed にする。ヒアドキュメントが不一致の閉じより後ろにあっても変わらない。関数定義 `f() { ...; }` の `}` は、開きが文頭に無いため必ず不一致になる。次の 3 形は loop2
+    で allow、HEAD で deny になり、base と同じ誤爆に戻る。(1) `run() { python3 x.py; }\nrun\ngit commit -F - <<'EOF'\ngit reset --hard HEAD\nEOF`。(2) `check() { bash scripts/check.sh; }\ncheck && git commit -m "$(cat <<'EOF'\ngit
+    reset --hard HEAD\nEOF\n)"`。(3) `python3 x.py; if true; then for i in 1; do echo; done; fi\n` の後に同じヒアドキュメントを続けた形。関数定義や入れ子の複合文を含むチャンクでは、この機能の目的である誤爆の解消が失われる。無人実行では、この deny がその場で走行を止める。
+  suggestion: mismatched を真偽値ではなく「最後に不一致になった閉じの文インデックス」にする。_statement_info_at() では `idx <= last_mismatch` のときだけ parse_failed を返す。認識されなかった開きの中にあるヒアドキュメントには、必ずその後ろに不一致の閉じがある。したがって、それより後ろの文は通常どおり判定してよい。スクラッチのコピーで試した結果、テストは
+    456/456 pass のままだった。上の 3 形（不一致の閉じより後ろにあるヒアドキュメント）は allow になり、53a12115 / 0b3bbd70 / f873c7a3 / 59e3bb86 の見逃し形 9 つは deny のままだった。
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: a823f35af5aa9d2d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1832
+  title: 1 行で閉じるサブシェル `( ... )` が閉じないグループとして積まれ、後ろにある全ヒアドキュメントが宛先不明になる
+  description: _leading_group_opener_char() は文頭の `(` を開きとして積むが、_leading_group_closer() が閉じと認めるのは文頭の `)` だけ。`(cd em && python3 -m pytest -q)` は lex_segments() で `(cd em` と `python3 -m pytest -q)` に分かれ、`)`
+    が文頭に来ないのでグループが閉じない。_group_chain_pipeline() は閉じの無いグループを other=True とするので、それより後ろのヒアドキュメントはすべて undetermined になる。チャンク内に sink 語があれば本文が再走査される。`(cd em && python3 -m pytest -q) && git commit -m "$(cat <<'EOF'\ngit
+    reset --hard HEAD\nEOF\n)"` は HEAD で deny になり、サブシェルを外すと allow になる。`(ls)\npython3 -V\ngit commit -F - <<'EOF'...` も deny になる。1 行サブシェルはよく使われる形で、この機能が解消するはずの誤爆がそのまま残っている（base と同じ結果なので退行ではない）。さらに、後ろの文頭にある閉じ語（`}`/`fi`/`done`）はスタックの一番上が
+    `(` のため不一致になり、loop 3 の mismatched によって表全体が宛先不明になる。
+  suggestion: 文ごとに、クォートされていない `(`/`)` 演算子トークンの増減を数え、文末で残った差の分だけ開き／閉じとして扱う。数えないものは、`<(`/`>(` のプロセス置換と、case_stack がパターン位置にあるときの `)`。少なくとも、同じ文の中で開いて閉じる `(ls)` はグループとして積まない。1 行サブシェルの後ろに commit ヒアドキュメントを置く allow
+    ケースを cases.json に足す。
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 1775423080603fbd
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 472
+  title: review loop 1〜3 の修正（見逃しの解消と退行の修正）に対応するケースが cases.json に 1 件も足されていない
+  description: '.claude/rules/hook-tests.md は、見逃しや誤爆を見つけたら、直す前にケースを足すよう求めている。loop 1〜3（db3edffc / ea2dce04 / 927fd965）はどれも destructive-guard.py だけを変え、cases.json は task0003 以降変わっていない。その結果、loop 2 の critical
+    な退行（78a95de2: `bash -c ''echo $(echo $(rm -rf ~))''` が allow）は 456/456 pass のまま入り込み、loop 3 の修正もテストでは守られていない。確かめた範囲では、次のどれにもケースが無い: 単一引用符の payload 内の入れ子置換、1000 段を超える入れ子グループ（RecursionError）、`then {`・`do
+    if`・関数定義を `| bash` へ流す形、scan budget の超過。次の修正でまた壊れても検出されない。'
+  suggestion: '少なくとも次のケースを足す。deny: `bash -c ''echo $(echo $(rm -rf /home/sakura/x))''`、`eval ''echo $(echo $(git reset --hard HEAD))''`、`{\n`×1100 + `cat <<''EOF''\nhi\nEOF\nrm -rf /home/sakura/x`、`if :;
+    then { cat <<''EOF''\nrm -rf /home/sakura/x\nEOF\n} | bash; fi`、`f() { cat <<''EOF''\nrm -rf /home/sakura/x\nEOF\n}; f | bash`、`for i in 1; do if true; then cat <<''EOF''\nrm -rf /home/sakura/x\nEOF\nfi
+    | bash; done`。ask（または deny）: 深い入れ子で scan budget を超える形。rm と組み合わせた場合の期待値は、scan budget の finding の修正方針に合わせる。'
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 18b99bd71e74c8dc
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 998
+  title: 引用符の中やコメントの中の偽の `<<WORD` をヒアドキュメントとみなし、後続の実コマンド行を data として捨てる
+  description: 'strip_heredocs() は、行内の `<<WORD` がヒアドキュメント演算子かどうかをほぼ検査していない。除外しているのは、その行だけを見て判定したコメントの中の演算子だけ。引用符の中の演算子は除外されない。前の行から続く引用符の中にある `#` もコメントとして扱われない。その結果、実際には実行される次の行が本文として取り除かれる。新しい宛先判定はその行の文（例:
+    echo）を DATA_COMMANDS として data と判定するので、取り除いた行は二度と検査されない。base はチャンク内に sink 語があれば本文を検査し直していたので、次の入力は base では deny、現在は allow になる（実測）。1) `echo ''<<EOF''; bash --version` / `rm -rf ~` / `EOF`。2) `python3
+    -V; echo "<<EOF"` / `rm -rf ~` / `EOF`。3) `bash --version; echo "abc` / `def" # <<EOF` / `rm -rf ~` / `EOF`（2 行にまたがる二重引用符の後のコメント）。sink 語が無い `echo ''x <<EOF''` / `git reset --hard HEAD~3` / `EOF` は base・現在ともに
+    allow。書き直したこの関数の中で、判定器を丸ごと素通りできる。TB-1 / TM-2 の「本文の取り込みが実際の文を飲み込む」脅威にあたる。'
+  suggestion: strip 後のチャンクに対する scan_structure() の結果（chunk_scan）で判定する。record.op_start がトップレベルの opaque 範囲（引用符・コメント）の中にあり、containing_span が None（`"$(cat <<EOF ...)"` のような置換の中の本物の演算子ではない）なら、その演算子は偽物で、『本文』は実コマンド行になる。_heredoc_destinations()
+    でその record を強制的に 'sink' 扱いにして、本文を必ず pending に積む。行ごとの引用符追跡に頼らないので、複数行の引用符やコメントにも効く。あわせて、`echo '<<EOF'` 形と、複数行の二重引用符の後に来るコメント形を deny ケースとして destructive-guard-cases.json に追加する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 511cd470522973d8
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1884
+  title: '`env -S` などのラッパー・代入側で sink を指定した文を、後ろの data コマンド名だけで data と判定する'
+  description: _build_statement_table() は、代入とラッパーを飛ばした後の語をホストのコマンド語とみなす（TM-1 の『代入・ラッパー・グループを飛ばした後の語』）。ところが `env -S` / `--split-string` の値は WRAPPER_VALUE_FLAGS の値として読み飛ばされる。そのため `env -S 'bash -s' cat <<'EOF'`
+    は cat（data）と判定される。実際には env が `bash -s cat` を起動し、標準入力の本文を実行する。base は `bash` がチャンク内にあるので deny、現在は allow になる（`env --split-string='bash -s' cat`、`env -S'sh -s' jq` も同じ）。同じ形の `GIT_EDITOR=bash git commit
+    -e -F - <<'EOF'` と `git -c core.editor=sh commit -e -F -` も base の deny から allow に変わった。この 2 つは task0003 で記録済みのリスクだが、下記の修正で追加コストなしに塞がる。
+  suggestion: _build_statement_table() でホストのコマンド語を data と認める前に、コマンド語より前で読み飛ばしたトークン（VAR=value の代入、ラッパーのオプションとその値）を見る。git / gh ではグローバルオプションの値も見る。これらのどれかに SHELL_SINK（_strip_quote_chars() 後も含む）が一致するとき、または env
+    が `-S` / `--split-string` を持つときは、word=None（判定不能）にする。判定不能にすれば既存のチャンク全体の sink フォールバックが働き、base と同じく本文を検査し直す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: b8fd289ca7750a04
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2106
+  title: 同じコマンド内の関数定義・alias・hash・PATH 変更で data コマンド名を差し替えると、本文を検査しない
+  description: _decide_destination() は、ホストのコマンド語が DATA_COMMANDS に名前として含まれていれば data と判定する。しかし同じコマンド文字列の中で、その名前が実行する中身を差し替えられる。現在は allow、base は deny だった入力（実測）は次のとおり。1) `cat() ( bash )` の改行後に `cat <<'EOF'`
+    / `rm -rf ~` / `EOF`（本体を括弧で書いた関数は _track_groups の mismatch 検出にかからない）。2) `hash -p /bin/sh git; git status <<'EOF' ...`。3) `shopt -s expand_aliases; alias cat=bash` の改行後に `cat <<'EOF' ...`。4) `ln -sf
+    /bin/bash /tmp/p/cat && PATH=/tmp/p cat <<'EOF' ...`。どれも sink 語はチャンク内にあるので、判定不能に倒せば既存のフォールバックで捕まる。round1 の a9eebe180f529572（先行する export 文による回避）と同じ種類の、『前の文が data コマンドの意味を変える』経路。
+  suggestion: コマンド全体（最低でもチャンク）に、コマンド名を差し替える構文が 1 つでもあれば、そのチャンクの 'data' 判定をすべて 'undetermined' に落とす。対象は、関数定義（`NAME()` / `function NAME`）、`alias`、`hash`、`enable`、PATH への代入・export。判定不能に落とせば、チャンク全体の SHELL_SINK
+    フォールバックが base と同じ判断をする。検出は _build_statement_table() の 1 回の走査で済むので、コストは線形のまま。上の 4 形を deny ケースとして追加する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 5f736d84f0aff55f
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2693
+  title: 走査量の上限で出す ask が、先に集めた rm の deny を上書きして弱める
+  description: loop 3 で追加した走査量の上限は、statements() ジェネレータの中で decide("ask") を呼び、その場でプロセスを終了する。check_rm() の判定は rm_decisions に貯めておき、ループの後で出す作りになっている。そのため、先に yield された `rm -rf ~` の deny が出る前に ask で終わる。`rm -rf
+    ~; echo $(echo $(echo ...))`（入れ子 12〜40 段と埋め草）は、base では deny、現在は ask（理由は『走査量が過大』）になる（実測）。対話実行では、攻撃者が深い入れ子を付け足すだけで、取り消せない削除が承認を求める形に下がる。しかも理由の表示は削除に触れない。無人実行では ask が deny に変わるので、影響は対話実行に限られる。
+  suggestion: 'statements() の中で decide() を呼ばない。上限を超えたらフラグ（例: 走査を打ち切ったという印）を立てて、それ以上 yield せずに return する。main() はループの後で strongest_rm_decision() の結果と打ち切りの ask を比べ、強い方（deny が勝つ）を出す。こうすれば、先に集めた deny が上限の ask
+    に上書きされない。'
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: e4d4d3cbc400a63e
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2693
+  title: loop-3 の走査量上限で statements() が generator の中から decide("ask") して終了するため、main() が溜めた rm の deny が ask に格下げされる
+  description: loop-3（927fd965）で走査量の上限を足した。上限を超えると、字句解析の generator である statements() の中で decide("ask") を呼び、そのままプロセスを終える。しかし main() は D6 の設計で、check_rm() の判定を rm_decisions に溜め、全文を見終えてから strongest_rm_decision()
+    で最も強いものを 1 回だけ出す。deny が ask より優先されるのはこの集約があるからで、statements() が途中で終了すると、それまでに溜めた deny が捨てられる。判定の方針を持つ層（main）ではなく、文を生成する層（statements）が最終判定を出しているのが原因。スクラッチで確かめた結果は次のとおり（CLAUDE_BATCH なし）。`rm -rf /home/sakura/x;
+    echo ` の後ろに `$(echo ` を 60 段入れ子にした 509 文字のコマンドは、base（f7880283）が deny（rm-recursive）、HEAD が ask（scan-budget-exceeded）。120 段・300 段でも同じ。先頭が `git reset --hard` の場合は check_git() がその場で deny して終了するので deny のまま。つまり、同じ走査量でも、どちらの検査に当たるかで結果が変わる。対話実行では、分かっている
+    rm の deny が利用者の承認待ちに変わる。無人実行では ask が deny に降格されるので実害はない。
+  suggestion: 'statements() から decide() を呼ばない。代わりに専用の例外（例: `class _ScanBudgetExceeded(Exception)`）を送出するか、上限到達を示す印を yield する。main() は `for ... in statements(command)` を try で包み、上限到達を受けたら次の順で判定する。(1) それまでに溜めた
+    rm_decisions を strongest_rm_decision() にかけ、deny ならそれを出す。(2) そうでなければ decide("ask", "scan-budget-exceeded", ...) を出す。こうすれば D6 の「最も強い判定を 1 回だけ出す」が上限到達時にも守られる。hook-tests.md に従い、直す前に `rm -rf /home/sakura/x;
+    echo ` + 60 段の入れ子を deny ケースとして cases.json に足すこと。'
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: fe629be6ce3c7578
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1767
+  title: （59e3bb866d98ab03 の続き）開き/閉じ判定が _shape_leading() と重複したまま残り、loop-3 の表全体への mismatched フォールバックが、loop-2 で解消していた誤爆を戻した
+  description: 'loop-3 では _track_groups() に mismatched（1955 行目）を足し、対応の合わない閉じを見つけたら、表全体を parse_failed として扱うようにした（2149 行目）。これで前回挙げた見逃し 4 形は HEAD ですべて deny になり、この部分は直っている。一方、根本原因は残っている。_leading_group_opener_char()/_leading_group_closer()
+    は、文頭のトークンだけを見る別実装のまま。`then`/`do`/`else`/`!` の後ろの複合文や、関数定義 `f() {` を開きとして認識しない。そのため、正しいシェルでも mismatched が立つ。立つと、同じチャンクにあるすべてのヒアドキュメントが、グループと無関係な位置にあっても undetermined になり、チャンク全体で SHELL_SINK を探すフォールバックに戻る。スクラッチで確かめた。①`for
+    f in a.py b.py; do if [ -f "$f" ]; then python3 "$f"; fi; done` ②`setup() { python3 -V; }` + `setup` ③`if a; then if b; then python3 x.py; fi; fi`。この 3 つそれぞれの後ろに、グループがすべて閉じた後の `cat > /tmp/notes.md <<''EOF''`（本文に
+    reset --hard を含む）を続けた。結果は loop-2（ea2dce04）が allow、HEAD が deny（base と同じ）。対照として、入れ子のない `python3 x.py` や `if a; then python3 x.py; fi` を前に置いた場合は、HEAD でも allow になる。ループの中の if や関数定義は、複数行のコマンドでよく出てくる形。この形では、この機能の目的（AC-1:
+    チャンクの別の場所に sink 語があっても、data 宛てのヒアドキュメントは allow にする）が果たされない。hook-tests.md が言うとおり、無人実行では誤爆 1 件で走行が止まる。'
+  suggestion: 開き/閉じの判定を _shape_leading() から導き、状態機械を 1 つにする。_shape_leading() は、予約語（then/do/else/!）、関数定義の頭、case の状態をすでに正しく読み飛ばしている。そこで、読み飛ばした開き/閉じを events として返すようにし、_track_groups() はその events を順に適用する。_leading_group_opener_char()/_leading_group_closer()
+    は削除する。mismatched は、それでも説明できない形に対する最後の安全装置として残してよい。ただし、正しいシェルで立たないことを、下記の allow ケースで確かめること。直す前に、上の ①〜③ に data 宛てヒアドキュメントを続けた形を allow ケースとして cases.json に足す。あわせて、既存の見逃し 4 形と関数定義を `| bash` で呼ぶ形を、deny ケースとして固定しておく。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 3d03736125fa160a
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 984
+  title: splitlines() が \n 以外の文字でも行を分けるため、演算子行の後ろの文が本文として消える（loop 3 後も未修正）
+  description: SPEC FR4「ヒアドキュメントを閉じる区切り行より後ろの文は、これまでどおりコマンドとして検査する」と Objectives 2 に反する。strip_heredocs() は今も `chunk.splitlines(keepends=True)` で行を分けている。splitlines() は \r・\v・\f・\x1c-\x1e・\x85・\u2028・\u2029
+    でも行を切るが、bash と旧 HEREDOC 正規表現（FR3 が挙げる `[^\n]*`）は \n でしか行を区切らない。927fd965 で再実行した。`cat > /tmp/p <<'EOF'\r ; git reset --hard HEAD\nEOF` と、\r を \v・\x85 に替えた形は、基準 f7880283 で deny、現在の版で allow になる。sink 語は要らない。loop
+    3 はこの行に触れていない。
+  suggestion: '--- a/em-workflow/hooks/destructive-guard.py
+
+    +++ b/em-workflow/hooks/destructive-guard.py
+
+    @@ -984,1 +984,1 @@
+
+    -    lines = chunk.splitlines(keepends=True)
+
+    +    lines = re.findall(r"[^\n]*\n|[^\n]+\Z", chunk)
+
+    '
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: f9e7b5a043109ceb
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1028
+  title: 閉じない先行演算子がシンク宛てでも捨てられ、同じ行の後ろのヒアドキュメント本文が data と判定される（loop 3 後も未修正）
+  description: SPEC FR5「検知漏れの方向には倒さない」と Objectives 2 に反する。Assumptions は、閉じる区切り行が無いヒアドキュメントを「現行の扱いのまま変えない」としている。strip_heredocs() は、区切り行が見つからない演算子を記録せずに飛ばす。同じ行の後ろの演算子は同じ位置から本文を探し、見つかった本文はその演算子自身の宛先で判定される。927fd965
+    で再実行した。`bash <<'A' ; cat <<'B'\ngit reset --hard HEAD\nB` と、2 つ目を `tee /tmp/b <<'B'` に替えた形は、基準 f7880283 で deny、現在の版で allow になる。実際の bash では A の本文が入力の終わりまで続き、その行を bash が実行する。
+  suggestion: 'Either (a) 区切り行が見つからない演算子に当たったら、その行に残る演算子の処理をやめる（`if pos < len(candidates): ... else: break`）。後ろの行はこれまでどおりチャンクに残り、文として検査される。or (b) 閉じない演算子について、入力の終わりまでを本文とする HeredocRecord を作り、その演算子自身の宛先で判定する。どちらを選んでも、上の形を
+    deny ケースとして cases.json に足す。'
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 931664ef8a6e4e9c
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2149
+  title: loop 3 の mismatched がテーブル全体に効くため、グループ外の data ヒアドキュメントまで再走査されて誤爆する
+  description: 'SPEC FR1「これ以外のヒアドキュメント本文はデータとして扱い、再走査しない」と FR3「各本文の再走査の要否は FR1 に従い、ヒアドキュメントごとに個別に判定する」に反する。FR5 のフォールバックは「宛先を決められないとき」に限られる。loop 3 では、閉じ語が 1 つでも食い違うと、そのテーブルで判定するすべてのヒアドキュメントが parse_failed（undetermined）になる。関数定義（`f()
+    {`、`function f {`）は _leading_group_opener_char() が開き語として認識しないため、その `}` は必ず mismatched を立てる。例: `die() { echo x; }` / `cat > /tmp/p <<''EOF''` / `git reset --hard HEAD` / `EOF` / `python3 x.py`。ヒアドキュメントは関数の外にあり、どのグループにも属さない
+    cat > file 宛ての data。それでも loop 2（ea2dce04）の allow が、現在の版では deny になる。関数定義をヒアドキュメントの後ろに置いた形も deny になる。TS-1 の本文に `log() { printf ''%s\n'' "$*"; }` と `bash scripts/check.sh` を足した形も deny。`for …; do if …;
+    then :; fi; done` のように、別の文にある途中開始の複合文でも同じく全体が undetermined に倒れる。同じチャンクにシンク語があれば、隣の文の構造を理由に data 本文が再走査される。これは IMPLEMENTATION D2 が防ぐとした「隣のせいで data 本文が再走査される」形で、SPEC Objectives 1 の誤爆が戻る。'
+  suggestion: mismatched を bool ではなく、食い違った閉じ語の位置（最後のもの）として持つ。undetermined に倒すのは、その位置より前にあるヒアドキュメントだけにする。最後の食い違いより後ろのヒアドキュメントは、取りこぼした開き語のグループに入り得ない。あわせて、_leading_group_opener_char() が関数定義（`name ( ) {` /
+    `name ( ) (` / `function name {`）の開き括弧を開き語として返すようにする。上の allow 形を cases.json に足す。
+  sources:
+  - claude:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: b5c2125b8c9c9f49
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1832
+  title: 語に続く `)` 閉じ語を認識しないため、取りこぼした `(` 開き語と数が釣り合うと mismatched が立たず、パイプ先 bash が見えなくなる
+  description: SPEC Objectives 2「実際にシェルが実行する位置の git reset --hard の検知力は落とさない」、FR1 (ii)、FR5「検知漏れの方向には倒さない」に反する。_leading_group_closer() は文の先頭のトークンしか見ない。そのため `true)` のように語に続けて書いた `)` はサブシェルの閉じ語として数えない。一方で、`!
+    (` や関数定義 `f() (` の `(` は開き語として積まれない。この 2 つの取りこぼしが打ち消し合うと、_track_groups() は食い違いを見ない。loop 3 の docstring は「取りこぼした開き語は、対になる閉じ語が食い違うことで必ず見つかる」としているが、この前提が崩れる。927fd965 で確認した。`( cat <<'EOF'` / `git reset --hard
+    HEAD` / `EOF` / `true) | bash; ! ( :` / `) | cat` と、末尾を `f() (` / `:` / `)` に替えた形は、基準 f7880283 で deny、現在の版で allow になる。外側の `(` の閉じ語が最後の `) | cat` に結び付き、下流が data と判定される。実際の bash では、`( … true) | bash`
+    のサブシェル出力が bash に流れて実行される（echo に替えて確認した）。
+  suggestion: Either (a) 文の先頭以外にある演算子 `)` トークンも、閉じ語の候補として扱う。ただし case パターンの `)` と、関数シグネチャ `()` の `)` は除く。先頭以外の閉じ語はスタックと照合し、合わなければ mismatched にする。or (b) 開き語・閉じ語として認識しなかった演算子 `(` / `)` が文中に 1 つでもあれば mismatched
+    にする。どちらでも、上の 2 形を deny ケースとして cases.json に足す。
+  sources:
+  - claude:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 4a6885dc0971c0e3
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: null
+  title: round 2 の loop 1〜3 で直した検知漏れに deny ケースが無く、戻ってもスイートが通る
+  description: SPEC FR6 は `.claude/rules/hook-tests.md` に従うとしている。同ルールは「見逃し（deny すべきものが allow になった）も同じ」に、直す前にケースを足すことを求める。round 2 の db3edffc・ea2dce04・927fd965 は destructive-guard.py だけを変え、cases.json には 1
+    件も足していない。loop 3 で直した次の形は、どれもケースで固定されていない。単一引用符の -c / eval payload 内の入れ子置換（`bash -c 'echo $(echo $(git reset --hard HEAD))'`）、1100 段の `{` / `(` / `if` の入れ子の後の本物の reset、`do if` / `then for` / `{ if` の途中開始の複合文を
+    bash にパイプする形。実際に、これらを allow（または RecursionError）にする loop 2 版 ea2dce04 の guard に現在の cases.json を当てても 456/456 pass になる。
+  suggestion: loop 1〜3 の各修正の再現形を、deny ケースとして cases.json に追加する。追加するのは上に挙げた形と、loop 1 で直した形。深い入れ子は生成したコマンド文字列をそのまま JSON に入れる。追加後、ea2dce04 の guard でそれらが fail し、現在の guard で pass することを確かめる。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 2c17ed4727b157fd
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1457
+  title: loop-3 で入れた単一引用符内 `$(` の対応括弧探索が Python の 1 文字ずつのループで、`$(` の数×引用符の長さの二次になり、52KB でフックの timeout 10 秒を超える
+  description: '927fd965 で、honor_single_quotes=False のときの `$(` の閉じ位置探索を `text.find(")")`（C 実装）から、`range(i + 2, limit)` を回す Python ループに替えた。対応する `)` が引用符の中に無い `$(` では、このループが毎回引用符の終わり（閉じていなければ文字列の末尾）まで走る。1
+    つの単一引用符の中に K 個の `$(` があると、O(K×L) の Python レベルの反復になる。statements() は chunk ごとに必ずこの経路（legacy_spans の走査）を通すので、ヒアドキュメントの有無に関係なくすべてのコマンドで到達する。新しい scan_budget は chunk の長さの合計しか数えないので、1 chunk の中で起きるこの二次の処理は抑えられない。実測（`echo
+    ''` + `$(`×K + `''`）: K=5000（10KB）で 0.42 秒（loop2 は 0.03 秒）、K=10000（20KB）で 1.60 秒（0.05 秒）、K=20000（40KB）で 6.29 秒（0.07 秒）。末尾に `; rm -rf /home/sakura/x` を付けた K=26000（52KB）は 10.68 秒かかる（loop2 は 0.09 秒で deny）。hooks.json
+    の timeout は 10 秒なので、フックは打ち切られて deny を出せない。引用符を閉じない形（`rm ...; echo ''` + `$(`×20000）でも 6.31 秒かかる。'
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -1414,6 +1414,7 @@\n     unmatched = []\n     opaque = []\n     containing_open = {}\n+    sq_paren_match\
+    \ = {}\n \n     checkpoints = sorted(set(checkpoints or ()))\n     ci = 0\n@@ -1459,16 +1460,19 @@\n                 # Balanced close inside the single-quoted range only (it\n                 # holds\
+    \ no `'`, so the span can never leak past the quote).\n                 limit = quote_end if quote_end != -1 else n\n-                close_pos = -1\n-                pdepth = 1\n-                for\
+    \ k in range(i + 2, limit):\n-                    if text[k] == \"(\":\n-                        pdepth += 1\n-                    elif text[k] == \")\":\n-                        pdepth -= 1\n-   \
+    \                     if pdepth == 0:\n-                            close_pos = k\n-                            break\n+                # One stack pass per single-quoted range, shared by every\n+ \
+    \               # `$(` inside it: O(len) total instead of O(K x len).\n+                match = sq_paren_match.get(limit)\n+                if match is None:\n+                    match = {}\n+    \
+    \                pstack = []\n+                    for k in range(i + 1, limit):\n+                        ch = text[k]\n+                        if ch == \"(\":\n+                            pstack.append(k)\n\
+    +                        elif ch == \")\" and pstack:\n+                            match[pstack.pop()] = k\n+                    sq_paren_match[limit] = match\n+                close_pos = match.get(i\
+    \ + 1, -1)\n                 if close_pos == -1:\n                     close_pos = text.find(\")\", i + 2)\n                 if close_pos != -1 and (quote_end == -1 or close_pos < quote_end):\n(Verified\
+    \ on a scratch copy: 456/456 cases pass. Differential fuzzing of scan_structure(honor_single_quotes=False) over 200k random strings found 0 mismatches. K=20000 drops to 0.07s. Also worth adding the\
+    \ K=20000/26000 inputs as timing cases.)"
+  sources:
+  - claude:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: f32990b66eed207a
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1966
+  title: （未解決・再掲）_pipeline_downstream() のメモが歩き始めの文にしか効かず、各段にヒアドキュメントがある長いパイプラインで二次の計算量になる
+  description: '0f04051af706b69c は loop-3 でも変わっていない。memo[index] に入るのは歩き始めの index だけで、途中で通った文の結果は入らない。そのため各段にヒアドキュメントがある長いパイプラインでは、ヒアドキュメントごとに末尾まで歩き直す。loop-3 で _group_chain_pipeline() を反復に変えたのは正しいが、各ノードからこの関数を呼ぶので、そちらの計算量もこの二次に縛られたまま。実測（`cat
+    <<A |\nA\n`×N + `cat`）: N=4000（48KB）で 1.35 秒（基準 0.13 秒）、N=8000（96KB）で 5.01 秒（基準 0.24 秒）。およそ 130KB で timeout 10 秒を超え、判定が失われる（NFR3）。'
+  suggestion: 表ごとに 1 回、末尾から先頭へ逆順に全 index の (has_sink, has_other) を求めて memo を埋め、線形時間にする（i の結果は、i+1 以降の空文を飛ばした最初の文と、その文の sep が pipe かどうかだけで決まる）。N=2000/4000/8000 の入力を計時ケースに加える。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+- stable_id: 1538a1ab1ce276ab
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2144
+  title: （未解決・再掲）閉じない開き記号の一覧を、ヒアドキュメントごと・呼び出しごとに線形に走査している
+  description: 24e5ac9f02b26f7f は loop-3 でも変わっていない。_statement_info_at() の `any(p < pos for p in unmatched)`（2144 行）と、_heredoc_destinations() の `any(pos < record.op_start for pos in unmatched)`（2200 行）の両方が、ヒアドキュメントごとに
+    unmatched 全体をなめる。計算量は 2×K×U になる。実測（`cat <<A\nA\n`×8000 + `echo $(`×8000、136KB）で 1.84 秒（基準 0.35 秒）。
+  suggestion: unmatched の最小値（first_unmatched = min(unmatched, default=None)）を表のキャッシュを作るときと chunk_scan を受け取ったときに 1 回だけ求め、`first_unmatched is not None and first_unmatched < pos` の定数時間の比較に置き換える。
+  sources:
+  - claude:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop-3 re-review finding; auto-fix loop cap reached
+evaluation:
+  round_summary: 'round 2 は全観点が Claude fallback で実行された（codex と litellm はレート制限）。reviewer が報告した critical/high の 6 箇所はすべて、評価者が基準 f7880283 と現在版の両方で再実行して再現を確かめた。中心は、ヒアドキュメントのホスト文を決める位置と文番号の対応付け（_segment_boundaries）が
+    lex_segments と別の規則で動き、`2>&1`・`>&2` などの後ろで bash 宛ての本文が allow になる critical の退行。ほかに、複合文のパイプ、バッククォート、legacy 走査の打ち切り、置換の入れ子による 10 秒超過が high。評価者自身の点検で、scan_structure の語の読み取りがバックスラッシュを飲み込み、`\''` の後ろのシンク宛て本文を
+    data と判定する high を 1 件追加した。round 1 で fixed と記録された 185bd4ac（splitlines）は未修正のまま残っている。comprehensive の「本文中の `(` がフレームを開く」指摘（medium）は、基準でも allow で、SPEC が対象外とした本文内の置換走査（Component 5）の範囲なので、low に下げて findings
+    から外した。spec の summary が触れた Component 5 と SPEC の Assumptions の食い違い（round 1 の d00aa6c4、未解決）も残っている。reviewer 出力に指示の注入は無かった。既存スイートは 456/456 pass、変更前の 400 ケースは期待値ごと保持、plugin.json と marketplace.json の version
+    は一致している。観点ごとの点検: comprehensive = findings（7 件すべてを再実行で確認し、評価者自身の指摘を 1 件追加）、security = corroborated（入れ子の置換の計時を再現）、architecture = corroborated（_segment_boundaries と strip_heredocs のコードと再現形を確認）、spec = corroborated（FR7・FR8
+    と 3 件の退行を確認）、performance = corroborated（入れ子の計時を再現し、ヒアドキュメント 2000 件・1 行 3000 演算子・3000 段のグループは線形のままであることを確認）。'
+  recommended_action: rework
+  action_rationale: critical 1 件と high 5 件は、いずれも基準で deny だった形が allow になる検知漏れ方向の退行で、完了にはできない。直すには、位置と文番号の対応付けを lex_segments に一本化する、複合文のグループ追跡を広げる、バッククォートを置換の連鎖に入れる、置換の再帰に作業量の上限を入れる、といった構造の変更が要り、限定的な auto-fix
+    の範囲を超える。round 1 の auto-fix もループ上限で終わっている。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1654
+  run_id: architecture#fallback
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 9
+  termination: loop-cap
+residual_critical_high: 6
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-heredoc-reset-hard-20260928T152717Z.md
+unreviewed_perspectives: []

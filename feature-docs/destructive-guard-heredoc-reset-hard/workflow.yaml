@@ -58,7 +58,8 @@ workflow:
   failed_kind: null
   base_commit: f78802832c98cee71b62d88a4fb2ee18b19c4eb5
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 927fd9658a4150e3053314e1a3e455b2c3f0b71b
 - id: verify
   status: pending
 - id: retrospect
@@ -174,9 +175,9 @@ tasks:
       - 4dbf8ef79588b928
       review_round: 1
 review:
-  status: in_progress
-  needs_rework: true
-  rounds_completed: 1
+  status: completed
+  needs_rework: false
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -193,7 +194,7 @@ review:
   - architecture
   - spec
   - performance
-  residual_critical_high: 19
+  residual_critical_high: 6
 requirements:
   FR1:
     title: ヒアドキュメント本文の再走査を、そのヒアドキュメント自身の宛先で判定する
