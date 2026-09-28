@@ -15,3 +15,13 @@ records:
     SHELL_SINK substring match on .sh) and two-heredocs-on-one-line still deny; the regression allow-case from the definition of done is absent, so ''no work'' is factually wrong. C rejected: not an unusable
     condition. D rejected: duplicates confirmed evidence. Side decision: unquoted-heredoc command-substitution miss -> separate follow-up task. tier.yaml pre_survey_estimate keeps the original Codex output
     verbatim; the final Jev call received the corrected estimate.'
+- question_id: create-plan.fr1-fr5-interpretation
+  packet_id: null
+  answered_at: '2026-09-28T14:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - B
+  freeform: null
+  normalized_answer: 'treat non-sink/non-data host or enclosing command words (timeout, exec, stdbuf, setsid, xargs, unknown) and enclosing-statement downstream pipelines as undetermined destination under FR5; per-heredoc conservative fallback'
+  resolution_note: 'gate: planner open questions on FR1 narrowing (no gate_id; unlisted-gate fallback); options: A follow FR1 literally (allow both shapes) / B undetermined -> per-heredoc conservative fallback under FR5 / C positively resolve prefix commands and apply (ii) to enclosing statement; chosen: B; codex_consulted: true (1 turn); opus_escalation: false. Key points: FR5 forbids falling toward missed detection; A allows shapes denied today; C needs per-command argument parsing; no existing case covers the shapes (no FR7 conflict), suite 401/401. Orchestrator follow-up (no Codex): extend the undetermined rule to the enclosing statement of a command substitution so `timeout 10 bash -c "$(cat <<EOF...)"` stays deny. Planner-added: closed data-command list (: cat tee head tail wc uniq cut tr grep diff jq read echo printf git gh), assignment-only enclosing statement is not undetermined, process substitution makes it undetermined. Accepted residual: a listed data command running a program via its own options (e.g. git -c alias.x=!bash x <<EOF) is treated as data -> follow-up task.'
