@@ -162,6 +162,24 @@ SHELL_SINK = re.compile(r"\b(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
 # silently drift from the other -- the task plan requires them to stay the
 # same vocabulary.
 SINK_WORD_RE = re.compile(r"^(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
+
+# task0003 Change 2 (SC2's widened fallback match): the three characters a
+# sink name can be split across without changing what the shell itself
+# executes -- `b"a"s"h"` and `bash` run the identical program once quoting
+# is resolved, and `\` before/between letters is likewise inert to a real
+# shell in that position. Removing exactly these three characters from the
+# heredoc-stripped chunk before re-running SHELL_SINK against it is enough
+# to catch that spelling; nothing is evaluated (NFR1), and every character
+# outside this set is left untouched.
+_QUOTE_CHARS_TABLE = str.maketrans("", "", "'\"\\")
+
+
+def _strip_quote_chars(text):
+    """TEXT with every `'`, `"` and `\\` character removed -- see
+    _QUOTE_CHARS_TABLE."""
+    return text.translate(_QUOTE_CHARS_TABLE)
+
+
 # Command words that treat stdin and their own arguments as data and never
 # run them as a program (task0001 Component 2's "data command"). `sed`,
 # `awk`, `sort`, and `rg` are deliberately absent -- each can take a program
@@ -1075,28 +1093,40 @@ class _StmtInfo:
 # variable instead of the command line, but defines the exact same kind of
 # config entry — same risk, same treatment. Any `-c`/`--config`/
 # `--config-env`/`--git-dir`-style option value cannot be read statically
-# for this, so a git/gh invocation carrying a bare `-c` (or `-C`, which git
-# also treats as a global option position, though it only changes cwd) is
-# judged conservatively: not a data command at all.
-GIT_LIKE_DATA_COMMANDS = frozenset({"git", "gh"})
+# for this, so a gh invocation carrying a bare `-c` (or `-C`, which git also
+# treats as a global option position, though it only changes cwd) is judged
+# conservatively: not a data command at all.
+#
+# `git` itself no longer uses this condition (task0003, IMPLEMENTATION.md
+# D3/SC1): its own data/undeterminable split is _git_is_data() below, a
+# closed list of built-in subcommands rather than a flag blocklist, because
+# an alias route through `git` is not confined to `-c`/`--config`/
+# `--config-env`/GIT_CONFIG_* — any subcommand not on that closed list can
+# itself BE an alias defined by a configuration source this module never
+# reads (a `.gitconfig` file, say), and a flag-shaped test can only ever
+# catch the routes that happen to look like a flag. `gh` keeps this
+# condition unchanged; task0003 changes what SC1 decides for `git` only.
+GIT_LIKE_DATA_COMMANDS = frozenset({"gh"})
 GIT_UNSAFE_GLOBAL_FLAGS = {"-c", "--config", "--config-env"}
 
 # GIT_CONFIG_COUNT/GIT_CONFIG_KEY_<n>/GIT_CONFIG_VALUE_<n>/
-# GIT_CONFIG_PARAMETERS, set as VAR=value assignments leading a git/gh
-# invocation, configure git exactly as `-c`/`--config`/`--config-env` do —
+# GIT_CONFIG_PARAMETERS, set as VAR=value assignments leading a gh
+# invocation, configure it exactly as `-c`/`--config`/`--config-env` do —
 # including defining an alias — with no `-c`-shaped flag anywhere on the
-# command line for the checks above to see.
+# command line for the checks above to see. (`git` no longer reads this;
+# see GIT_LIKE_DATA_COMMANDS above.)
 GIT_CONFIG_ENV_RE = re.compile(r"^GIT_CONFIG_(COUNT|KEY_\d+|VALUE_\d+|PARAMETERS)=")
 
 
 def _git_alias_risk(word, shaped, leading=()):
-    """True when WORD is `git`/`gh` and either SHAPED (its own shaped
-    argument list, command word included) carries a `-c`/`--config`/
-    `--config-env` global option, or LEADING (the VAR=value assignment
-    tokens stripped from in front of the command word before SHAPED was
-    built) carries a GIT_CONFIG_-prefixed assignment — see
-    GIT_LIKE_DATA_COMMANDS's own comment for why either disqualifies it
-    from being treated as a data command."""
+    """True when WORD is `gh` and either SHAPED (its own shaped argument
+    list, command word included) carries a `-c`/`--config`/`--config-env`
+    global option, or LEADING (the VAR=value assignment tokens stripped
+    from in front of the command word before SHAPED was built) carries a
+    GIT_CONFIG_-prefixed assignment — see GIT_LIKE_DATA_COMMANDS's own
+    comment for why either disqualifies it from being treated as a data
+    command. `git` is judged by _git_is_data() instead, not by this
+    function (task0003)."""
     if word not in GIT_LIKE_DATA_COMMANDS:
         return False
     if any(GIT_CONFIG_ENV_RE.match(a) for a in leading):
@@ -1107,6 +1137,107 @@ def _git_alias_risk(word, shaped, leading=()):
         ):
             return True
     return False
+
+
+# `git`'s own global options that take a value, either as a separate token
+# or attached with `=` — task0003 Change 1, task plan step 1. Skipped left
+# to right before the subcommand word is read, so `git -c user.name=x
+# commit` and `git -C /tmp/r commit` still reach their subcommand.
+GIT_GLOBAL_VALUE_FLAGS = frozenset(
+    {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--config-env"}
+)
+# `git`'s own global options that take no value — skipped the same way, but
+# consuming only their own token.
+GIT_GLOBAL_BOOLEAN_FLAGS = frozenset(
+    {
+        "-p", "-P", "--paginate", "--no-pager", "--bare", "--no-replace-objects",
+        "--literal-pathspecs", "--glob-pathspecs", "--noglob-pathspecs",
+        "--icase-pathspecs", "--no-optional-locks",
+    }
+)
+
+# The closed list of `git` built-in subcommands SC1 treats as data (task
+# plan step 3) — stdin/arguments a real shell never hands to a configured
+# or option-named program. `credential` and `hook` are deliberately absent
+# (each hands stdin to a configured program); so are `bisect`,
+# `filter-branch`, `submodule`, `difftool`, `mergetool` and `rebase` (each
+# runs a program named in its own options or configuration). Any subcommand
+# NOT on this list — including an alias defined by any configuration
+# source, an external `git-*` program, or an unlisted built-in — is
+# undeterminable (task plan step 4): a built-in cannot be shadowed by an
+# alias, so this closed list is the only route through which an alias can
+# be reached.
+GIT_DATA_SUBCOMMANDS = frozenset(
+    {
+        "add", "am", "apply", "blame", "branch", "cat-file", "check-attr",
+        "check-ignore", "check-mailmap", "commit", "commit-tree", "diff",
+        "diff-tree", "fast-import", "hash-object", "interpret-trailers",
+        "log", "ls-files", "ls-tree", "mailinfo", "mailsplit", "mktag",
+        "mktree", "notes", "rev-list", "rev-parse", "show", "status", "tag",
+        "update-index", "update-ref",
+    }
+)
+
+
+def _statically_unknown_word(word):
+    """Whether WORD -- a shaped token -- cannot be read statically: built
+    entirely from a command substitution (`.substitution_only`), or
+    carrying an unresolved variable/positional/special-parameter expansion
+    anywhere in its own text (UNRESOLVED_EXPANSION/UNRESOLVED_PARAM — the
+    same two tests check_rm() already uses for an unresolvable rm target).
+    """
+    return bool(
+        getattr(word, "substitution_only", False)
+        or UNRESOLVED_EXPANSION.search(word)
+        or UNRESOLVED_PARAM.search(word)
+    )
+
+
+def _git_is_data(args):
+    """Whether a `git` statement counts as a data command (task0003 Change
+    1 / task plan "Change 1: the git condition in statement classification
+    (SC1)"). ARGS is everything after the `git` command word itself (as
+    head() returns it) -- global options, the subcommand, and whatever
+    follows.
+
+    Global options are skipped left to right first (GIT_GLOBAL_VALUE_FLAGS/
+    GIT_GLOBAL_BOOLEAN_FLAGS, task plan step 1). The statement is
+    undeterminable (returns False) when, after that skip: another
+    `-`-leading word remains before a subcommand is reached (this includes
+    `--exec-path`, which is not on either recognized-option list, so it
+    falls straight into this case); no subcommand word remains; or the
+    subcommand word cannot be read statically (_statically_unknown_word()).
+    Only a subcommand on the closed GIT_DATA_SUBCOMMANDS list makes the
+    statement data; any other subcommand is undeterminable (task plan step
+    4) -- including one that is itself an alias defined by any
+    configuration source (`.gitconfig`, `-c`, `--config-env`,
+    GIT_CONFIG_*, …): a built-in cannot be shadowed by an alias, so an
+    alias can only be reached through a subcommand this list does not
+    contain, and that route is already undeterminable by construction.
+    Assignments in front of the statement (GIT_CONFIG_COUNT=… and similar)
+    therefore need no special-case handling here — unlike gh's own
+    condition (_git_alias_risk()), which still reads them.
+    """
+    i = 0
+    n = len(args)
+    while i < n:
+        a = args[i]
+        if a in GIT_GLOBAL_VALUE_FLAGS:
+            i += 2
+            continue
+        if any(a.startswith(f"{flag}=") for flag in GIT_GLOBAL_VALUE_FLAGS):
+            i += 1
+            continue
+        if a in GIT_GLOBAL_BOOLEAN_FLAGS:
+            i += 1
+            continue
+        break
+    if i >= n or args[i].startswith("-"):
+        return False
+    sub = args[i]
+    if _statically_unknown_word(sub):
+        return False
+    return sub in GIT_DATA_SUBCOMMANDS
 
 
 # Compound-statement keywords that can start a pipeline continuation stage
@@ -1655,9 +1786,11 @@ def _build_statement_table(chunk, marked_chunk):
     top-level substitution already blanked by _mark_substitutions()),
     yielding the same per-statement shaping statements() itself computes
     (case state carried statement-by-statement via _shape_leading(), the
-    same fused-closer/redirect/wrapper/git-alias handling) -- built once
-    per chunk and read by every heredoc's destination decision instead of
-    each heredoc re-lexing the chunk on its own."""
+    same fused-closer/redirect/wrapper handling, and -- SC1's git/gh
+    condition -- _git_is_data() for a `git` command word, _git_alias_risk()
+    for a `gh` one, task0003) -- built once per chunk and read by every
+    heredoc's destination decision instead of each heredoc re-lexing the
+    chunk on its own."""
     segments = lex_segments(marked_chunk)
     case_stack = []
     table = []
@@ -1673,8 +1806,11 @@ def _build_statement_table(chunk, marked_chunk):
             )
             if ends_case_item and case_stack and case_stack[-1] == "body":
                 case_stack[-1] = "pattern_first"
-            word, _args = head(shaped_words)
-            if _git_alias_risk(word, shaped_words, words_only[:lead]):
+            word, args = head(shaped_words)
+            if word == "git":
+                if not _git_is_data(args):
+                    word = None
+            elif _git_alias_risk(word, shaped_words, words_only[:lead]):
                 word = None
             raw_index = _skip_assignments_and_wrappers(stripped)
             is_compound_keyword = (
@@ -2437,12 +2573,23 @@ def statements(command):
             # destination, not on whether a sink word appears ANYWHERE in
             # the chunk -- see _heredoc_destinations().
             destinations = _heredoc_destinations(chunk, heredocs, chunk_scan)
+            # task0003 Change 2 (SC2): the fallback for an undeterminable
+            # heredoc matches when SHELL_SINK finds a sink word in the
+            # heredoc-stripped chunk as written (today's behaviour, kept
+            # exactly) OR in that same chunk with every `'`/`"`/`\` removed
+            # (task plan Change 2) -- so a sink name split across quote
+            # characters (`b"a"s"h"`) is still caught. Computed once per
+            # chunk, not once per heredoc, since every undeterminable
+            # heredoc in this chunk asks the identical chunk-wide question.
+            chunk_sink_fallback = bool(
+                SHELL_SINK.search(chunk) or SHELL_SINK.search(_strip_quote_chars(chunk))
+            )
             for index, record in enumerate(heredocs):
                 if not record.body.strip():
                     continue  # a blank body is never queued, as before this task
                 destination = destinations.get(index, "undetermined")
                 if destination == "sink" or (
-                    destination == "undetermined" and SHELL_SINK.search(chunk)
+                    destination == "undetermined" and chunk_sink_fallback
                 ):
                     pending.append(record.body)
                 elif not record.quoted:
