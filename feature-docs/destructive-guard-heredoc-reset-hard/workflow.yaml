@@ -1,0 +1,217 @@
+schema_version: 1
+feature: destructive-guard-heredoc-reset-hard
+created: '2026-09-28'
+goal: |
+  # destructive-guard の git-reset-hard 判定が、ヒアドキュメント本文の reset --hard 文字列で誤爆する
+
+  Notion タスク: https://www.notion.so/3cc3509ec8ee815eac09f3b89799f372 （種別: バグ）
+
+  ## 現象（必須）
+  `em-workflow/hooks/destructive-guard.py` の `git-reset-hard` 判定が、**実行されない位置**に
+  書かれた `reset --hard` の文字列で発火する。ヒアドキュメント本文（`<<'EOF'` … `EOF`）の中で
+  散文として言及しただけでも deny になる。
+  出たエラー:
+  ```
+  [destructive-guard/git-reset-hard] `reset --hard` は未コミットの変更を復元不能に捨てる。個別ファイルなら `git checkout -- <path>` を使う。
+  ```
+  `.claude/rules/hook-tests.md` は allow 側の既知ケースとして「ヒアドキュメントの本文を 1 行ずつ
+  コマンドとして読む」を挙げているが、`git-reset-hard` 判定はその除外が効いていない。
+
+  ## 再現手順（必須）
+  1. 次の内容の Bash コマンドを実行する（ヒアドキュメント本文にだけ `reset --hard` が現れる）:
+  ```
+     cat > /tmp/p.txt <<'EOF'
+     Some prose mentioning `git reset --hard` inside a documentation quote.
+     EOF
+     echo done
+  ```
+  2. `[destructive-guard/git-reset-hard]` で deny されることを確認する。ファイルは書かれず、
+  `echo done` にも到達しない。
+  3. 同じ payload を `python3 em-workflow/hooks/destructive-guard.py` に直接流しても同じ結果に
+  なる（インストール済みキャッシュではなくリポジトリ側のコードで再現する）。
+
+  ## 期待する挙動（必須）
+  ヒアドキュメント本文・クォート内の文字列など、シェルがコマンドとして解釈しない位置に現れる
+  `reset --hard` では発火しない。実際に `git reset --hard` を実行するコマンドセグメントのときだけ
+  `ask` / `deny` になる。
+
+  ## 完了の定義（必須）
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json` に
+  allow 側ケースとして追加し、`python3 em-workflow/hooks/tests/run-destructive-guard.py` が通る）
+  - [ ] 既存の deny / ask ケースが 1 件も消えていない
+
+  ## 該当箇所（任意）
+  - `em-workflow/hooks/destructive-guard.py` — `git-reset-hard` ルールと、ヒアドキュメント本文の除外処理
+  - `em-workflow/hooks/tests/destructive-guard-cases.json` — allow 側ケースの追加先
+  - `.claude/rules/hook-tests.md` — 誤爆を見つけたら先にケースを足す規律
+
+  ## 実害・発生条件（任意）
+  `--batch` の無人実行をその場で止める。`ask` は `claude-batch` 下で `deny` に降格されるので、
+  誰も答えられないまま走行が終わる。
+  実際に踏んだ経路: `/em-workflow:develop --batch` の create-spec フェーズで、
+  `references/question-resolution.md` の Codex consultation を実行しようとした。プロンプト本文に
+  「Step I.2.a には `git reset --hard` の記述が無い」という調査対象の説明が含まれていたため、
+  プロンプトをヒアドキュメントでファイルに書き出す時点で deny された。回避には Write ツールへの
+  切り替えが必要だった。em-workflow 自身のプロトコル文書が `reset --hard` を多数含むため、
+  このリポジトリを対象にした batch 実行では踏みやすい。
+
+  ## 追加指示（起動引数より）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・remote 双方に残す（base_branch へ自動マージしない）。
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+  - その議論内容を Notion に記録する。
+base_branch: main
+parent_branch: em-workflow/destructive-guard-heredoc-reset-hard/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.21
+      '3': 0.0
+  at: '2026-09-28T13:21:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: e54de6259afc8871ec936cd2cf903ec8aea44dfa
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: PreToolUse hook の判定ロジックの修正で、UI や画面が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  failed_kind: null
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: ヒアドキュメント本文の再走査を、そのヒアドキュメント自身の宛先で判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: シェルシンクの判定を語単位にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 1 行に複数あるヒアドキュメントの本文をすべて除去する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: ヒアドキュメントの後に続く文は引き続き検査する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 宛先が決められないときは現行の保守的な挙動に倒す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 誤爆の再発を検出するケースを先に足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 既存ケースを保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: em-workflow の version の patch を上げる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 静的解析のみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 依存を増やさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 性能
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 変更範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
