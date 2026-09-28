@@ -75,3 +75,37 @@ records:
   freeform: null
   normalized_answer: 'declined auto-addition of task0003 deviation paths em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json'
   resolution_note: 'task_id: task0003; deviation: em-workflow version patch bump made per the updated IMPLEMENTATION.md rule (each rework task raises the patch version). Declined: em-workflow/** is a workflow control path, and no AC-n / requirement id with an observable failure was named. Paths are not appended to tasks.task0003.files; the bump itself is sanctioned by IMPLEMENTATION.md.'
+- question_id: review.auto-fix-revert
+  packet_id: null
+  answered_at: '2026-09-28T23:20:00+09:00'
+  source: batch-orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - revert
+  freeform: null
+  normalized_answer: reverted the loop-1 auto-applied fix for 7b7dac1ab73aaac4 (absolute MAX_STATEMENTS_TOTAL_CHARS=40000 budget)
+  resolution_note: 'gate: an auto-applied fix turned large legitimate commands (60KB cat > file heredoc, 50KB echo) from allow into deny; no gate_id (unlisted-gate fallback). Codex consultation requested
+    by the user was not possible (codex usage limit until 2026-10-04 02:11 JST; litellm 429), so the minimum-side-effect option was chosen without consultation. The defect was later resolved in loop 3 by
+    a budget relative to input length (26610c49790aba19).'
+- question_id: review.auto-fix-conflict
+  packet_id: null
+  answered_at: '2026-09-29T00:10:00+09:00'
+  source: batch-orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - skip
+  freeform: null
+  normalized_answer: 'skipped same-site conflict groups in round 2 (loop 2: 477b852b8066e962 / a24bbdcbaededef2; loop 3: 40ab909ce0784e2a / 52f676baac752d9e / 5a362ee99fa266b5)'
+  resolution_note: 'batch-mode Non-packet gate review.auto-fix-conflict: non-equivalent prescriptions at one site are skipped. needs-judgment findings 53a12115fb5de347 / 59e3bb866d98ab03 / 26610c49790aba19
+    were auto-selected Apply as-is (review.auto-fix-judgment); the editor skipped 59e3bb866d98ab03 as an out-of-scope refactor.'
+- question_id: review.rework-cap
+  packet_id: null
+  answered_at: '2026-09-29T00:40:00+09:00'
+  source: batch-orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - defer
+  freeform: null
+  normalized_answer: 'round 2 residual critical/high deferred: cdb8382d4bbb0b1d, 73a1d7b31734dd22, 26ab9a3d83649eff, 18b99bd71e74c8dc, 511cd470522973d8, b8fd289ca7750a04'
+  resolution_note: 'batch.review_rework_count already 1 (cap); residual findings marked resolution deferred with ''batch mode: rework cap reached'' and the review step completed. All round-2 reviewers ran
+    as Claude fallbacks because codex (usage limit) and litellm (429) were unavailable, so no cross-model consultation took place.'
