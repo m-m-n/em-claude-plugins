@@ -116,7 +116,7 @@ workflow:
   failed_kind: null
   base_commit: f78802832c98cee71b62d88a4fb2ee18b19c4eb5
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -154,8 +154,18 @@ tasks:
     notes: 'batch retry consumed (1/1) after orphaned failure: launching session 01a0e668-6e01-7299-90ba-5ce93d8d33ea ended before the implementer reported; relaunched on the kept worktree'
     branch: em-workflow/destructive-guard-heredoc-reset-hard/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: destructive-guard は全 Bash 呼び出しの PreToolUse で走り、差分がヒアドキュメント再走査のロジックを大きく足しているため
+    cross_validation: true
 requirements:
   FR1:
     title: ヒアドキュメント本文の再走査を、そのヒアドキュメント自身の宛先で判定する
