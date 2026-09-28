@@ -459,5 +459,15 @@
   ["deny", "同上、前置文が無い場合も deny", "cat <<EOF\n$(printf '%s' ')'; git reset --hard HEAD)\nEOF"],
   ["deny", "本文内の case パターンの閉じ ) を挟んだ置換内 reset も deny", "cat <<EOF\n$(case x in x) git reset --hard HEAD;; esac)\nEOF"],
   ["deny", "本文内の入れ子になった置換それぞれの reset を deny", "cat <<EOF\n$(echo $(git reset --hard $(echo HEAD)))\nEOF"],
-  ["allow", "クォート区切りの本文は置換されないので $(git reset --hard HEAD) の文字列は allow(TS-42 の対照)", "python3 x.py; cat > /tmp/p <<'EOF'\n$(git reset --hard HEAD)\nEOF"]
+  ["allow", "クォート区切りの本文は置換されないので $(git reset --hard HEAD) の文字列は allow(TS-42 の対照)", "python3 x.py; cat > /tmp/p <<'EOF'\n$(git reset --hard HEAD)\nEOF"],
+
+  ["deny", "GIT_CONFIG_* でエイリアス定義した git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)", "export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.x GIT_CONFIG_VALUE_0='!bash'; git x <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["deny", "--config-env のエイリアス値をクォート文字で分割した sink 名は deny(フォールバックがクォート除去後に一致)", "VAL='!b\"a\"s\"h\"' git --config-env=alias.x=VAL x <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["deny", "コマンド外で定義されたエイリアスへの git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)", "bash scripts/check.sh; git x <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["deny", "sink 名をクォート文字で分割した timeout 経由ヒアドキュメントは deny(フォールバックがクォート除去後に一致)", "timeout 10 b\"a\"s\"h\" <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["allow", "-c でも組み込みサブコマンド commit 宛てのヒアドキュメントは allow のまま", "bash scripts/check.sh && git -c user.name=x commit -F - <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["allow", "-C と置換内 commit -m の組み込みサブコマンド宛てのヒアドキュメントは allow のまま", "bash scripts/check.sh && git -C /tmp/r commit -m \"$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)\""],
+
+  ["deny", "--exec-path は未対応の global option なので git 宛てヒアドキュメントは deny(宛先不明、任意のサブコマンド前)", "bash x.sh; git --exec-path=/tmp commit -F - <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["deny", "サブコマンドが変数展開の git 宛てヒアドキュメントは deny(静的に読めないサブコマンド)", "bash x.sh; git \"$sub\" <<'EOF'\ngit reset --hard HEAD\nEOF"]
 ]

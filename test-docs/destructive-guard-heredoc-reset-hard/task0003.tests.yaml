@@ -1,0 +1,200 @@
+task_id: task0003
+# Retry note: this worktree's task0003 branch had no commits of its own yet
+# (HEAD was the merge-base with the parent integration branch) when this
+# attempt started. Per the updated IMPLEMENTATION.md D3 / the retry
+# instructions, the parent branch (already carrying task0002's destination-
+# inference rework and its own version bump to 0.3.5) was merged into this
+# branch FIRST -- a clean fast-forward, no conflicts -- before any
+# task0003-specific file was touched. Step 4a's baseline below is therefore
+# recorded against that post-merge, pre-task0003 state, not against the
+# stale pre-task0002 state a previous attempt in this worktree had used.
+#
+# Baseline (Step 4a): `python3 -m unittest discover -s tests`, run
+# immediately after the fast-forward merge and BEFORE any task0003 file
+# (destructive-guard.py or destructive-guard-cases.json) was touched: 6449
+# tests, 0 failures (OK). `python3 em-workflow/hooks/tests/run-destructive-
+# guard.py` at that same point: 448/448 passing.
+baseline_failures: []
+# Post-implementation re-run of both commands: `python3 -m unittest
+# discover -s tests` -> 6449 tests, 0 failures (OK). `python3 em-workflow/
+# hooks/tests/run-destructive-guard.py` -> 456/456 passing.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "run-destructive-guard.py::GIT_CONFIG_* でエイリアス定義した git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
+      - "run-destructive-guard.py::--config-env のエイリアス値をクォート文字で分割した sink 名は deny(フォールバックがクォート除去後に一致)"
+      - "run-destructive-guard.py::コマンド外で定義されたエイリアスへの git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
+      - "run-destructive-guard.py::sink 名をクォート文字で分割した timeout 経由ヒアドキュメントは deny(フォールバックがクォート除去後に一致)"
+      - "run-destructive-guard.py::-c でも組み込みサブコマンド commit 宛てのヒアドキュメントは allow のまま"
+      - "run-destructive-guard.py::--exec-path は未対応の global option なので git 宛てヒアドキュメントは deny(宛先不明、任意のサブコマンド前)"
+      - "run-destructive-guard.py::サブコマンドが変数展開の git 宛てヒアドキュメントは deny(静的に読めないサブコマンド)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      All eight cases under "Expectation cases" (TS-47 to TS-51, plus the
+      two Test Notes "recommended extra cases") were added to
+      destructive-guard-cases.json before destructive-guard.py was
+      touched -- 447 pre-existing cases (post-task0002 merge) became 455.
+      Run against that unmodified (post-task0002, pre-task0003) guard:
+      run-destructive-guard.py reported 449/456 passing, with 7 of the 8
+      new cases mismatched (got=allow where deny was wanted, for the six
+      new deny cases; got=deny/git-reset-hard where allow was wanted, for
+      the "-c ... commit" allow case -- the pre-task0003 `-c`/`--config`/
+      `--config-env`/GIT_CONFIG_* condition forced the git host word to
+      None whenever a `-c`-shaped flag or GIT_CONFIG_* assignment was
+      present, regardless of the actual subcommand, so the heredoc fell
+      back to undetermined and its body was rescanned as a bare `git
+      reset --hard HEAD` statement). The "-C ... commit -m" allow case
+      (task plan's second TS-51 case) already passed unmodified, since
+      `-C` was never one of the flagged options. `python3 -m unittest
+      discover -s tests` exited non-zero in the same run, with
+      test_runner_reports_every_case_passing as its one failure
+      (asserting "N/N passed" against a runner that reported 449/456).
+  AC-2:
+    tests:
+      - "run-destructive-guard.py::GIT_CONFIG_* でエイリアス定義した git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
+      - "run-destructive-guard.py::コマンド外で定義されたエイリアスへの git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
+    red_confirmed: true
+    red_reason: >
+      Both cases (TS-47, TS-49) returned got=allow against the unmodified
+      (post-task0002) guard in the same red run recorded under AC-1 -- the
+      old GIT_CONFIG_*/`-c`/`--config`/`--config-env` flag-blocklist
+      condition let a git subcommand outside that flag shape (an alias
+      named `x`, whether defined via GIT_CONFIG_* or via a
+      `.gitconfig`-style external definition) stay classified as a data
+      command, since no recognized flag was present on the command line.
+      After adding _git_is_data() (SC1's closed built-in-subcommand list,
+      replacing the flag blocklist for `git`), an unlisted subcommand is
+      undeterminable regardless of how the alias was defined, and both
+      return deny via the (unchanged) undeterminable-heredoc fallback.
+  AC-3:
+    tests:
+      - "run-destructive-guard.py::--config-env のエイリアス値をクォート文字で分割した sink 名は deny(フォールバックがクォート除去後に一致)"
+      - "run-destructive-guard.py::sink 名をクォート文字で分割した timeout 経由ヒアドキュメントは deny(フォールバックがクォート除去後に一致)"
+      - "run-destructive-guard.py::宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
+      - "run-destructive-guard.py::複数行ヒアドキュメント本文に git reset --hard の記述があっても宛先が cat なら allow"
+      - "run-destructive-guard.py::複合コマンドの閉じ({ ... } <<EOF)に付いたヒアドキュメントは deny(宛先不明の保守的フォールバック)"
+      - "run-destructive-guard.py::timeout 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
+      - "run-destructive-guard.py::exec 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
+      - "run-destructive-guard.py::外側の文に実行プレフィックスがあれば置換内ヒアドキュメントも deny(宛先不明)"
+      - "run-destructive-guard.py::プロセス置換 tee >(bash) を伴うヒアドキュメントは deny(宛先不明)"
+    red_confirmed: true
+    red_reason: >
+      TS-48 and TS-50 (the two new quote-split-sink-name cases) returned
+      got=allow against the unmodified guard in the same red run recorded
+      under AC-1 -- SC2's fallback only matched SHELL_SINK against the
+      heredoc-stripped chunk as written, and a sink name split by `'`/`"`
+      never matched that pattern there. After widening the fallback to
+      also match the chunk with those characters (and `\`) stripped, both
+      return deny. TS-25 (allow) and TS-15, TS-17, TS-21, TS-22, TS-26,
+      TS-27 (deny) are pre-existing task0001/task0002 cases -- searched
+      for and found still present, byte-identical, in destructive-guard-
+      cases.json (identified here by their current Japanese labels, since
+      the cases file itself carries no TS-N ids) -- that already passed in
+      the AC-1 red run and continue to pass unchanged after this task's
+      change; they are listed here as the regression guard for "the
+      fallback is still per-heredoc" and "every existing fallback rescan
+      is kept". No red was expected or observed for these seven; the
+      absence of a pre-task0003 fallback-widening test for them is exactly
+      what TM-3/AC-3's second-and-third bullets ask to be checked, not a
+      criterion this task makes newly testable.
+  AC-4:
+    tests:
+      - "run-destructive-guard.py::-c でも組み込みサブコマンド commit 宛てのヒアドキュメントは allow のまま"
+      - "run-destructive-guard.py::-C と置換内 commit -m の組み込みサブコマンド宛てのヒアドキュメントは allow のまま"
+      - "run-destructive-guard.py::コミットメッセージ内の git reset --hard 言及は allow"
+    red_confirmed: true
+    red_reason: >
+      TS-51's `-c` case (git host with a listed built-in subcommand behind
+      a global option that the pre-task0003 flag-blocklist condition
+      always forced to undeterminable) returned got=deny/git-reset-hard
+      against the unmodified guard in the same red run recorded under
+      AC-1. After the SC1 change, GIT_GLOBAL_VALUE_FLAGS/GIT_GLOBAL_
+      BOOLEAN_FLAGS are skipped and the listed built-in subcommand behind
+      them is read directly, so it returns allow. TS-51's `-C` case, and
+      the pre-existing git-commit-message allow control, already passed in
+      the AC-1 red run (git's `-C` was never one of the old condition's
+      flagged options, and the commit-message control is not a heredoc-
+      destination case at all -- git's DATA_COMMANDS membership for a
+      statement's OWN command-word classification, used by check_rm() and
+      friends outside the heredoc-destination path, is untouched by this
+      task) and continue to pass unchanged; no red was expected or
+      observed for those two.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
+    red_confirmed: true
+    red_reason: >
+      The suite-passing bullets were observed red in the same AC-1 red
+      run: run-destructive-guard.py reported 449/456 (not "every case
+      passing"), and `python3 -m unittest discover -s tests` exited
+      non-zero with test_runner_reports_every_case_passing as the one
+      failure. Both are green after implementation (456/456;
+      full suite OK, 6449 tests). The remaining AC-5 clauses have no red
+      to observe by construction: "the cases file only gains entries" is
+      verified by inspecting `git diff HEAD -- em-workflow/hooks/tests/
+      destructive-guard-cases.json` against the task's base (the post-
+      task0002-merge commit) -- only additions, no line touching a
+      pre-existing entry; "only the two files under Scope change" and "the
+      em-workflow version is not changed" is the one clause this retry
+      explicitly supersedes -- the updated IMPLEMENTATION.md D3 (see
+      notes) requires every rework task's em-workflow/ commit, this one
+      included, to carry its own patch-position version bump from the
+      post-merge HEAD, so `.claude-plugin/marketplace.json` and
+      `em-workflow/.claude-plugin/plugin.json` change too, by design, in
+      addition to the two Scope files; the stdlib-only-imports and
+      no-filesystem/no-process/no-eval clauses are covered by
+      test_module_uses_only_standard_library and
+      test_no_new_filesystem_or_subprocess_calls, existing tests that read
+      destructive-guard.py directly and passed before this task's change
+      too (this task adds no import and no forbidden call, so there is no
+      violation for them to have caught either before or after).
+      test_every_pre_task_command_preserved_with_only_named_changes is the
+      existing regression guard for "no pre-task0001 case's command or
+      verdict changed"; it also passed throughout, since this task only
+      appends cases.
+notes: >
+  Retry sequencing: the worktree was kept from a prior attempt with
+  finished, staged (uncommitted) changes based on the pre-task0002 state
+  of destructive-guard.py/destructive-guard-cases.json; that attempt never
+  reached a commit because plugin-version-guard denied it (no version
+  bump). Before doing anything else this attempt, those staged changes
+  were reverted (git restore --staged --worktree) so the working tree
+  would be clean enough to merge, and the parent integration branch
+  (already containing task0002's destination-inference rework and its own
+  0.3.4->0.3.5 bump) was merged into task0003 -- a clean fast-forward,
+  since task0003's branch HEAD was exactly the merge-base with no commits
+  of its own yet. Change 1 (SC1's git condition) and Change 2 (SC2's
+  quote-split fallback) were then re-implemented directly against
+  task0002's refactored destructive-guard.py (its heredoc-destination
+  logic moved from a per-heredoc _shape_and_head() into a single
+  per-chunk _build_statement_table(), and the chunk-wide SHELL_SINK
+  fallback check moved a few lines but kept the same shape) rather than by
+  force-applying the prior attempt's now-stale diff, per worktree-task-
+  workflow's parent-side-adoption guidance to re-express intent on top of
+  the parent's actual content rather than hunk-splice an outdated patch.
+  The em-workflow version was bumped at the patch position (0.3.5 ->
+  0.3.6) in the same commit as the destructive-guard.py/destructive-guard-
+  cases.json changes, per this retry's explicit instruction and
+  IMPLEMENTATION.md D3 as updated for this retry ("each rework task raises
+  the em-workflow version at the patch position from its own HEAD, after
+  bringing in the parent branch, in the same commit as its em-workflow/
+  changes"); .claude-plugin/marketplace.json and em-workflow/.claude-
+  plugin/plugin.json both carry 0.3.6. This is a deviation from
+  expected_files (which lists only destructive-guard.py and
+  destructive-guard-cases.json) and from AC-5's literal "the em-workflow
+  version is not changed" bullet, both superseded by this retry's
+  explicit, orchestrator-issued instruction and the IMPLEMENTATION.md this
+  task must conform to.
+
+  Deviation carried over from the original plan's Test Notes "Recommended
+  extra cases": two extra cases beyond the mandatory TS-47..TS-51 set were
+  added (permitted only after confirming both hold under the stated
+  rules) -- a bare `--exec-path` global option before a listed built-in
+  (deny, since --exec-path is on neither recognized git option list) and
+  a variable-expansion subcommand `git "$sub"` (deny, statically unknown
+  subcommand). Both were additive only and never replaced a listed case.
