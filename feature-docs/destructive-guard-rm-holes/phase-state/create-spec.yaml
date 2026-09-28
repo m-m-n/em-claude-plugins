@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-rm-holes
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 4a9d28e231261496474c97057c2fe3a1530dbd28
 last_input_digest: sha256:b543db73b21a53249be45f72c89c191b50aa174f1b211ec1b1e6b7d1db24dc20
