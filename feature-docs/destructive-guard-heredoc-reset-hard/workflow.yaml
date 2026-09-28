@@ -1,17 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-reset-hard
 created: '2026-09-28'
-goal: "# destructive-guard の git-reset-hard 判定が、ヒアドキュメント本文の reset --hard 文字列で誤爆する\n\nNotion タスク: https://www.notion.so/3cc3509ec8ee815eac09f3b89799f372 （種別: バグ）\n\n## 現象（必須）\n`em-workflow/hooks/destructive-guard.py`\
-  \ の `git-reset-hard` 判定が、**実行されない位置**に\n書かれた `reset --hard` の文字列で発火する。ヒアドキュメント本文（`<<'EOF'` … `EOF`）の中で\n散文として言及しただけでも deny になる。\n出たエラー:\n```\n[destructive-guard/git-reset-hard] `reset --hard` は未コミットの変更を復元不能に捨てる。個別ファイルなら\
-  \ `git checkout -- <path>` を使う。\n```\n`.claude/rules/hook-tests.md` は allow 側の既知ケースとして「ヒアドキュメントの本文を 1 行ずつ\nコマンドとして読む」を挙げているが、`git-reset-hard` 判定はその除外が効いていない。\n\n## 再現手順（必須）\n1. 次の内容の Bash コマンドを実行する（ヒアドキュメント本文にだけ\
-  \ `reset --hard` が現れる）:\n```\n   cat > /tmp/p.txt <<'EOF'\n   Some prose mentioning `git reset --hard` inside a documentation quote.\n   EOF\n   echo done\n```\n2. `[destructive-guard/git-reset-hard]`\
-  \ で deny されることを確認する。ファイルは書かれず、\n`echo done` にも到達しない。\n3. 同じ payload を `python3 em-workflow/hooks/destructive-guard.py` に直接流しても同じ結果に\nなる（インストール済みキャッシュではなくリポジトリ側のコードで再現する）。\n\n## 期待する挙動（必須）\nヒアドキュメント本文・クォート内の文字列など、シェルがコマンドとして解釈しない位置に現れる\n\
-  `reset --hard` では発火しない。実際に `git reset --hard` を実行するコマンドセグメントのときだけ\n`ask` / `deny` になる。\n\n## 完了の定義（必須）\n- [ ] 再現手順で現象が起きない\n- [ ] 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json` に\n\
-  allow 側ケースとして追加し、`python3 em-workflow/hooks/tests/run-destructive-guard.py` が通る）\n- [ ] 既存の deny / ask ケースが 1 件も消えていない\n\n## 該当箇所（任意）\n- `em-workflow/hooks/destructive-guard.py` — `git-reset-hard` ルールと、ヒアドキュメント本文の除外処理\n\
-  - `em-workflow/hooks/tests/destructive-guard-cases.json` — allow 側ケースの追加先\n- `.claude/rules/hook-tests.md` — 誤爆を見つけたら先にケースを足す規律\n\n## 実害・発生条件（任意）\n`--batch` の無人実行をその場で止める。`ask` は `claude-batch` 下で `deny`\
-  \ に降格されるので、\n誰も答えられないまま走行が終わる。\n実際に踏んだ経路: `/em-workflow:develop --batch` の create-spec フェーズで、\n`references/question-resolution.md` の Codex consultation を実行しようとした。プロンプト本文に\n「Step I.2.a には `git reset --hard`\
-  \ の記述が無い」という調査対象の説明が含まれていたため、\nプロンプトをヒアドキュメントでファイルに書き出す時点で deny された。回避には Write ツールへの\n切り替えが必要だった。em-workflow 自身のプロトコル文書が `reset --hard` を多数含むため、\nこのリポジトリを対象にした batch 実行では踏みやすい。\n\n## 追加指示（起動引数より）\n- 実装完了後、integration\
-  \ ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・remote 双方に残す（base_branch へ自動マージしない）。\n- 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。\n- その議論内容を Notion に記録する。\n"
+goal: "# destructive-guard の git-reset-hard 判定が、ヒアドキュメント本文の reset --hard 文字列で誤爆する\n\nNotion タスク: https://www.notion.so/3cc3509ec8ee815eac09f3b89799f372 （種別: バグ）\n\n## 現象（必須）\n`em-workflow/hooks/destructive-guard.py` の `git-reset-hard` 判定が、**実行されない位置**に\n書かれた `reset --hard` の文字列で発火する。ヒアドキュメント本文（`<<'EOF'` … `EOF`）の中で\n散文として言及しただけでも deny になる。\n出たエラー:\n```\n[destructive-guard/git-reset-hard] `reset --hard` は未コミットの変更を復元不能に捨てる。個別ファイルなら `git checkout -- <path>` を使う。\n```\n`.claude/rules/hook-tests.md` は allow 側の既知ケースとして「ヒアドキュメントの本文を 1 行ずつ\nコマンドとして読む」を挙げているが、`git-reset-hard` 判定はその除外が効いていない。\n\n## 再現手順（必須）\n1. 次の内容の Bash コマンドを実行する（ヒアドキュメント本文にだけ `reset --hard` が現れる）:\n```\n   cat > /tmp/p.txt <<'EOF'\n   Some prose mentioning `git reset --hard` inside a documentation quote.\n   EOF\n   echo done\n```\n2. `[destructive-guard/git-reset-hard]` で deny されることを確認する。ファイルは書かれず、\n`echo done` にも到達しない。\n3. 同じ payload を `python3 em-workflow/hooks/destructive-guard.py` に直接流しても同じ結果に\nなる（インストール済みキャッシュではなくリポジトリ側のコードで再現する）。\n\n## 期待する挙動（必須）\nヒアドキュメント本文・クォート内の文字列など、シェルがコマンドとして解釈しない位置に現れる\n`reset --hard` では発火しない。実際に `git reset --hard` を実行するコマンドセグメントのときだけ\n`ask` / `deny` になる。\n\n## 完了の定義（必須）\n- [ ] 再現手順で現象が起きない\n- [ ] 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json` に\nallow 側ケースとして追加し、`python3 em-workflow/hooks/tests/run-destructive-guard.py` が通る）\n- [ ] 既存の deny / ask ケースが 1 件も消えていない\n\n## 該当箇所（任意）\n- `em-workflow/hooks/destructive-guard.py` — `git-reset-hard` ルールと、ヒアドキュメント本文の除外処理\n- `em-workflow/hooks/tests/destructive-guard-cases.json` — allow 側ケースの追加先\n- `.claude/rules/hook-tests.md` — 誤爆を見つけたら先にケースを足す規律\n\n## 実害・発生条件（任意）\n`--batch` の無人実行をその場で止める。`ask` は `claude-batch` 下で `deny` に降格されるので、\n誰も答えられないまま走行が終わる。\n実際に踏んだ経路: `/em-workflow:develop --batch` の create-spec フェーズで、\n`references/question-resolution.md` の Codex consultation を実行しようとした。プロンプト本文に\n「Step I.2.a には `git reset --hard` の記述が無い」という調査対象の説明が含まれていたため、\nプロンプトをヒアドキュメントでファイルに書き出す時点で deny された。回避には Write ツールへの\n切り替えが必要だった。em-workflow 自身のプロトコル文書が `reset --hard` を多数含むため、\nこのリポジトリを対象にした batch 実行では踏みやすい。\n\n## 追加指示（起動引数より）\n- 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・remote 双方に残す（base_branch へ自動マージしない）。\n- 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。\n- その議論内容を Notion に記録する。\n"
 base_branch: main
 parent_branch: em-workflow/destructive-guard-heredoc-reset-hard/integration
 tier: full
@@ -68,7 +58,7 @@ workflow:
   failed_kind: null
   base_commit: f78802832c98cee71b62d88a4fb2ee18b19c4eb5
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -175,7 +165,7 @@ tasks:
     - NFR2
     - NFR4
     status: merged
-    notes: 'batch retry consumed (1/1) after failure (implementer stopped without a merged event); relaunched on the kept worktree. Human-authorized retry after the resume condition (version-bump rule changed in IMPLEMENTATION.md); relaunched on the kept worktree'
+    notes: batch retry consumed (1/1) after failure (implementer stopped without a merged event); relaunched on the kept worktree. Human-authorized retry after the resume condition (version-bump rule changed in IMPLEMENTATION.md); relaunched on the kept worktree
     branch: em-workflow/destructive-guard-heredoc-reset-hard/task0003
     provenance:
       source: review
@@ -184,7 +174,7 @@ tasks:
       - 4dbf8ef79588b928
       review_round: 1
 review:
-  status: pending
+  status: in_progress
   needs_rework: true
   rounds_completed: 1
   plan:
