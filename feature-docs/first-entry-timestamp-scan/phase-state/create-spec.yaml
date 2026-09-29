@@ -1,7 +1,7 @@
 schema_version: 1
 feature: first-entry-timestamp-scan
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 482f37494cfb6e3289d7e88ed3744f578ace8e65
 last_input_digest: sha256:7db9ccf4ab00bab92141776c990e0e44141fb6c24bb7cdcad704f90a600ab8dd
