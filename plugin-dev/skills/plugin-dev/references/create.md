@@ -62,7 +62,7 @@
 - main への push で発火する。
 - push 前後の差分に含まれるプラグイン（`.claude-plugin/plugin.json` を持つディレクトリ）
   ごとに、plugin.json と marketplace.json の `version` の patch を 1 上げてコミットし、
-  main に push する。
+  PR を作って main にマージする。
 - 次のプラグインは上げない。
     - その push で新しく追加されたプラグイン
     - その push の中で `version` が手で変えられたプラグイン
@@ -71,5 +71,7 @@
 
 ### 前提
 
-- main に保護ルールがあり Actions からの直接 push を禁じていると、push が拒否される。
+- リポジトリ設定の Settings → Actions → General で
+  「Allow GitHub Actions to create and approve pull requests」を有効にする。
+- main の保護ルールで PR の承認を必須にしていると、マージできない。
 - 置いた後のプラグイン変更は [update.md](update.md) に従う。
