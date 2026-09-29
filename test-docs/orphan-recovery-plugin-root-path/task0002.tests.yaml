@@ -1,0 +1,51 @@
+task_id: task0002
+baseline_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+  - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+final_failures: []  # full suite re-executed after all edits: Ran 6495 tests, OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+    red_confirmed: true
+    red_reason: "Baseline run (HEAD copy of the module against the current marketplace.json): AssertionError '2 != 1' from the length equality in _assert_other_entries_match_expected_shape (two non-em-workflow entries, one-entry OTHER_PLUGIN_ENTRIES_BASELINE). Green after adding the plugin-dev baseline entry after em-review."
+  AC-2:
+    tests:
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_new_unexpected_key
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_matcher_rejects_other_entries_missing_plugin_dev
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_plugin_dev_matcher_accepts_unaltered_entry
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_plugin_dev_matcher_rejects_altered_identity_field
+    red_confirmed: true
+    red_reason: "Tests written before the baseline constants existed. Run before implementation: the four em-review proofs (rewritten to compare against [EM_REVIEW_BASELINE_ENTRY]) and the two plugin-dev proofs that use PLUGIN_DEV_BASELINE_ENTRY errored with NameError (name not defined); test_matcher_rejects_other_entries_missing_plugin_dev failed with 'AssertionError not raised' because the one-entry baseline still accepted an em-review-only list. Green after defining the two named baseline entries and the two-entry OTHER_PLUGIN_ENTRIES_BASELINE. test_plugin_dev_matcher_accepts_unaltered_entry is a positive control so the altered-field rejection cannot come from a length or key-set mismatch."
+  AC-3:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+      - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+    red_confirmed: true
+    red_reason: "Baseline run (HEAD copy of each module): AssertionError \"'e19b9efb...12fc' != '91990cec...e363'\" in both modules -- the stale pinned digest against the digest of the current marketplace.json. Green after pinning e19b9efbf3a9d089661a145070011ee539ccccaedb5aaa4697ee9d18fa7812fc, computed with each module's own _sha256(_canonicalize_marketplace(...)) (identical in both). One-time check: the same canonicalization with the plugin-dev entry removed gives 91990cece50d28af2864b67d70eb1171e6bbb5ded548e6ca200ecfb5f8a3e363, the previous value, in both modules."
+  AC-4:
+    tests:
+      - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+      - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+    red_confirmed: true
+    red_reason: "Baseline run (HEAD copy of each module): AssertionError '3 != 2' from assertEqual(len(plugins), EXPECTED_PLUGINS_COUNT). Green after setting EXPECTED_PLUGINS_COUNT = 3; the check is still assertEqual."
+  AC-5:
+    tests:
+      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing negative-proof and forged-sanity tests in the five modules (TestValidationDetectsRegressions classes and the version, digest and count checks) detect their own behavior and all pass; no red state occurred for this change. The 'diff changes no version literal, version baseline, plugin-manifest digest, em-workflow/em-review identity pin, test method or exact assertion' part is a property of the task diff, verified by reading git diff (only removed lines are the old baseline list literal, the four baseline references in the em-review proofs, the two old digests, the two old counts and comment lines); it has no executable check that can be made to fail first."
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: "python3 -m unittest discover -s tests, run before any edit, ended FAILED (failures=5) -- the five baseline failures above. After implementation the same command ends OK (Ran 6495 tests). The outcome is the suite exit status, not a single test."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "Task-diff scope property, verified by git status and git diff --name-only listing only the five declared test files (plus this tests.yaml); it passes vacuously on an empty diff, so no executable red exists. The existing digest tests (test_batch_structured_result_output_version_bump and test_muse_consent_version_bump, test_marketplace_nonversion_content_unchanged and the manifest non-version digest tests) read the real marketplace.json and em-workflow plugin.json and would detect a non-version edit there, but none of them can detect a version-value edit or a change under em-workflow/, so they do not cover this criterion as a whole."
