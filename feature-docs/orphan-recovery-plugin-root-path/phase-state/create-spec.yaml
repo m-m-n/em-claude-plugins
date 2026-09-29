@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: a558a22db2a8c9bcebea07878c225144febf44ee
 last_input_digest: sha256:98972c37f381b04ce1ba702e08b0fbffe92b346bcbef772a1fa80f350575e834
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -71,10 +71,13 @@ worker_runs:
   input_digest: sha256:71124373f35274de7afb845c85ee80cc85bc20b00ebfa65a010bf0f1ea2d3941
   output_digest: sha256:4b9c0c4e88a67ae5828a11f79219476e1c0dbf7f5acfc6dce5522e6924d0bbf8
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:98972c37f381b04ce1ba702e08b0fbffe92b346bcbef772a1fa80f350575e834
-  output_digest: null
-artifacts: []
+  output_digest: sha256:a79ed24bc536d3aeb77defba15dd16ffdc16e45d41b58bd5ffae8c643c1d1f32
+artifacts:
+- path: feature-docs/orphan-recovery-plugin-root-path/SPEC.md
+  sha256: sha256:a79ed24bc536d3aeb77defba15dd16ffdc16e45d41b58bd5ffae8c643c1d1f32
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
