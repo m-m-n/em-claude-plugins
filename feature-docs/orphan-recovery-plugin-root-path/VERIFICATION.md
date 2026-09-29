@@ -21,6 +21,7 @@
 | TS-4 | I.2.b states the resolution-failure outcomes: RECOVER_SCRIPT unresolved means Residual with the journal unchanged; the journal helper unresolved means Helper-failure residue with the journal unchanged | Both statements present, with forged sanity | Unit (doc-contract) |
 | TS-5 | Existing pins stay green unchanged: ORPHAN_JOURNAL_HELPER_INVOCATION_PHRASE (script-internal invocation), R5_HELPER_NAMED_AS_EXCEPTION_PHRASE (Journal bullet), and the merge-task.sh / queue_launch_guard.py sha256 guards | All pass without edits to those constants or hashes | Unit (existing suite) |
 | TS-6 | Planner-added (SPEC.md defines no scenario for NFR4): the feature diff from the implement base commit to the integration tip leaves `em-workflow/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `em-workflow/scripts/recover-orphaned-task.py`, `em-workflow/references/workflow-schema.md`, `em-workflow/scripts/merge-task.sh` and `em-workflow/hooks/queue_launch_guard.py` untouched | None of these paths appears in the changed-file list | Automated diff check (verify phase) |
+| TS-7 | Planner-added in verify rework (SC-suite). The five version-bump modules that pin the marketplace pass against the current three-entry `.claude-plugin/marketplace.json`: `test_batch_policy_option_id_version_bump`, `test_batch_structured_result_output_version_bump`, `test_muse_consent_version_bump`, `test_goal_vs_spec_divergence_version_bump` and `test_rework_contract_drift_version_bump`. The other-entries baseline pins the `plugin-dev` identity next to em-review. The two digest modules carry the non-version digest of the current marketplace. The two count modules expect exactly 3 entries. Then `python3 -m unittest discover -s tests` is run | All five modules pass, and so do all their pre-existing negative proofs. No version literal, version baseline or manifest digest changed, and no exact check was loosened. A forged other-entries list without `plugin-dev`, or a `plugin-dev` entry with an altered identity field, is rejected. The full suite exits 0 | Unit (existing suite) + full suite run |
 
 ## Code Quality Verification
 - Format: none configured (`format_command` is empty) / Static analysis: none configured
@@ -33,9 +34,9 @@
 | AC-2 | Same-session re-invocation uses the same RECOVER_SCRIPT and the same cwd | TS-1 |
 | AC-3 | merge-unverified invocation uses `${CLAUDE_PLUGIN_ROOT}/scripts/journal-append-failed.py`, cites Step I.0 step 4, and keeps the exactly-once / merge-unverified / no-launch-identity meaning | TS-1 |
 | AC-4 | Resolution failure: recovery sites become Residual, merge-unverified becomes Helper-failure residue, journal unchanged | TS-4 |
-| AC-5 | No cwd-relative orchestrator invocation remains, a test detects it, and the full suite passes including the two updated pins | TS-2, TS-5, Test Verification command |
+| AC-5 | No cwd-relative orchestrator invocation remains, a test detects it, and the full suite passes including the two updated pins | TS-2, TS-5, TS-7, Test Verification command |
 | AC-6 | FR7 out-of-scope text and recover-orphaned-task.py are unchanged | TS-5, TS-6 |
-| SC-suite | `python3 -m unittest discover -s tests` passes | Test Verification command |
+| SC-suite | `python3 -m unittest discover -s tests` passes | TS-7, Test Verification command |
 
 ### Functional Requirements Coverage
 | Requirement | Tasks | Verification |
@@ -45,12 +46,12 @@
 | FR3 | task0001 | TS-1 |
 | FR4 | task0001 | TS-4 |
 | FR5 | task0001 | TS-1, TS-3 |
-| FR6 | task0001 | TS-2, TS-5 |
+| FR6 | task0001, task0002 | TS-2, TS-5, TS-7 |
 | FR7 | task0001 | TS-5, TS-6 |
 | NFR1 | task0001 | TS-1, TS-3 |
-| NFR2 | task0001 | TS-2, TS-5 |
+| NFR2 | task0001, task0002 | TS-2, TS-5, TS-7 |
 | NFR3 | task0001 | TS-2, TS-5 |
-| NFR4 | task0001 | TS-6 |
+| NFR4 | task0001, task0002 | TS-6 |
 
 ## Manual Testing (E2E Not Possible)
 - [ ] Distribution-configuration check: with em-workflow installed from the marketplace and a project that has no `em-workflow/` directory as the working directory, confirm that `${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py` and `${CLAUDE_PLUGIN_ROOT}/scripts/journal-append-failed.py` resolve to existing files in the installed plugin, so the I.2.b text now points at helpers that exist. Not automatable in this repository: its own working directory always contains `em-workflow/`, so the cwd-relative path resolved here even before the fix.
@@ -63,8 +64,8 @@
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Test scenarios (TS-1 to TS-6) | 6 | 6 | 0 | 0 |
+| Test scenarios (TS-1 to TS-7) | 7 | 7 | 0 | 0 |
 | Success criteria (AC-1 to AC-6, SC-suite) | 7 | 7 | 0 | 0 |
 | Security (TM-1, TM-2) | 2 | 2 | 0 | 0 |
 | Manual checks | 1 | 0 | 0 | 1 |
-| Total | 16 | 15 | 0 | 1 |
+| Total | 17 | 16 | 0 | 1 |
