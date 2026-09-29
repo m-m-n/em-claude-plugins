@@ -25,6 +25,7 @@ Each plugin lives at the marketplace root as `./<plugin-name>/`. Adding a new pl
 |--------|-------------|
 | [em-workflow](./em-workflow/) | Unified SDD + parallel-implementation + dynamic-review workflow. `/em-workflow:develop` drives spec → plan → wave-based parallel implementation in git worktrees → dynamic review → verify → retrospect. |
 | [em-review](./em-review/) | Standalone version of the em-workflow review phase. `/em-review:multi-review` runs dynamically selected, skill-injected parallel reviewers (Claude + optional GPT/Codex cross-validation) with bounded auto-fix. Never commits. |
+| [plugin-dev](./plugin-dev/) | Toolbox for developing Claude Code plugins. The `plugin-dev` skill guides creating a new plugin and updating an existing one; plugin versions are bumped by GitHub Actions on merge to main. |
 
 ### How the plugins relate
 
@@ -41,6 +42,7 @@ Then install a specific plugin:
 ```
 /plugin install em-workflow@em-claude-plugins
 /plugin install em-review@em-claude-plugins
+/plugin install plugin-dev@em-claude-plugins
 ```
 
-The marketplace is named `em-claude-plugins`; each plugin's name becomes its slash-command namespace (`/em-workflow:...`, `/em-review:...`).
+The marketplace is named `em-claude-plugins`; each plugin's name becomes its slash-command namespace (`/em-workflow:...`, `/em-review:...`, `/plugin-dev:...`).

@@ -1,24 +1,23 @@
 # Plugin Version Bump
 
-Claude Code プラグインの中身を変更したら、同じ変更の中で version を上げる。
+プラグインの version は、main への push 時に GitHub Actions
+（`.github/workflows/plugin-version-bump.yml`）が上げる。実装では version を触らない。
 
 ## Rules
 
-- `<plugin>/` 配下のファイル（hooks / skills / agents / scripts など）を
-  変更したら、その変更に含めて version を上げる。
-- 上げる場所は 2 箇所。両方を同じ値にする。
+- `<plugin>/` 配下のファイルを変更しても、version は変えない。
     - `<plugin>/.claude-plugin/plugin.json` の `version`
     - リポジトリルート `.claude-plugin/marketplace.json` の該当プラグインの `version`
-- version はプラグインごとに独立している。1 つを上げても他は動かさない。
-- 刻み方は semver に従う。挙動の修正は patch、機能追加は minor、互換性を壊す変更は major。
-  実際にはほとんどが挙動の修正なので、patch 単位が基本になる。
-- SPEC・計画・受け入れ条件には、version の具体値を書かない。
-  書くのは上げる位置（major / minor / patch のどれか）だけにする。
-    - 例: 「em-workflow の version の patch を上げる」
-    - 悪い例: 「0.2.12 → 0.2.13 に上げる」
-- 具体値はコミット時点の HEAD から決める。HEAD の値から、SPEC が定めた位置を 1 つ上げる。
-- コミットが `plugin-version-guard` に拒否されたら、SPEC が定めた位置を上げてコミットし直す。
+- main に push されると、Actions が変更のあったプラグインの patch を上げてコミットする。
+- 機能追加（minor）や互換性を壊す変更（major）のときだけ、上の 2 箇所を同じ値に手で上げ、
+  変更と同じコミットに含める。その push では Actions は patch を上げない。
+- SPEC・計画・受け入れ条件に version の変更を書かない。minor / major を上げる場合だけ、
+  上げる位置を書く。具体値は書かない。
+    - 例: 「em-workflow の version の minor を上げる」
+    - 悪い例: 「0.2.12 → 0.3.0 に上げる」
+- main に push した後は、Actions のコミットを `git pull` で取り込んでから次の作業に入る。
 - 変更をユーザーに報告するときは、反映に Claude Code の再起動が要ることを添える。
+- 詳細は `plugin-dev` プラグインの `plugin-dev` スキルを参照する。
 
 ## Rationale
 
