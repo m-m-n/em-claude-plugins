@@ -154,7 +154,7 @@ workflow:
   status: completed
   completed_at_commit: 0b3588dc27223f0d2255f4182176906a8badb894
 - id: verify
-  status: pending
+  status: in_progress
   result: fail
   failed_items:
   - id: SC-suite
