@@ -1,5 +1,5 @@
 feature: orphan-recovery-plugin-root-path
-collected_at: "2026-09-29T21:50:00+09:00"
+collected_at: "2026-09-29T21:42:00+09:00"
 session_ids: [01a0ed2e-c7a8-74d2-9843-93193aff7d69]
 signals:
   review_critical_high: []
