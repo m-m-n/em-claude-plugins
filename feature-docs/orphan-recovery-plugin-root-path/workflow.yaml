@@ -147,14 +147,14 @@ workflow:
   status: completed
   completed_at_commit: 03ef40db5f65668c74f95337596ba3f504b0d19b
 - id: implement
-  status: completed
+  status: pending
   base_commit: 7d296b4d9434ea3db2e75a2751963f267a956153
   completed_at_commit: 47d548b4ac174e519aba19893505cb2a34f904a2
 - id: review
   status: completed
   completed_at_commit: 0b3588dc27223f0d2255f4182176906a8badb894
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: SC-suite
@@ -192,6 +192,31 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/orphan-recovery-plugin-root-path/task0001
+  task0002:
+    title: Realign stale marketplace pins in five version-bump test modules to the three-plugin marketplace
+    plan: tasks/task0002.md
+    files:
+    - tests/test_batch_policy_option_id_version_bump.py
+    - tests/test_batch_structured_result_output_version_bump.py
+    - tests/test_muse_consent_version_bump.py
+    - tests/test_goal_vs_spec_divergence_version_bump.py
+    - tests/test_rework_contract_drift_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR6
+    - NFR2
+    - NFR4
+    status: pending
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - SC-suite
+      review_round: null
 review:
   status: completed
   rounds_completed: 1
@@ -267,9 +292,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-2
     - TS-5
+    - TS-7
   FR7:
     title: 対象外箇所を変更しない
     status: ok
@@ -297,9 +324,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-2
     - TS-5
+    - TS-7
   NFR3:
     title: 既存の byte-identity ガードを保つ
     status: ok
@@ -317,6 +346,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-6
 batch:
