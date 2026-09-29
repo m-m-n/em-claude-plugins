@@ -1,0 +1,70 @@
+schema_version: 2
+feature: first-entry-timestamp-scan
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-09-29T20:33:24+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.23
+    confidence: 0.76
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.76
+      '2': 0.24
+      '3': 0.0
+  observed_at: '2026-09-29T20:36:25+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/recover-orphaned-task.py
+  - tests/test_recover_orphaned_task.py
+  - feature-docs/orphaned-implementer-recovery/IMPLEMENTATION.md
+  - feature-docs/orphaned-implementer-recovery/VERIFICATION.md
+  changed_lines_approx: 50
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 先頭行の timestamp 欠落による失敗は既に修正されている。em-workflow/scripts/recover-orphaned-task.py:292
+    の _earliest_entry_timestamp は欠落行を読み飛ばし、同ファイル:351 で marker 解決に使用される。ただし同ファイル:316
+    は全行の最小時刻を選ぶため、依頼の「最初に見つかった timestamp」とは異なる。メモリ上で先頭行を last-prompt、後続時刻を15時・10時として実行すると10時が返ったため、依頼文どおりの動作には変更が残る。tests/test_recover_orphaned_task.py:551
+    に timestamp のない last-prompt の回帰テスト、:1000 に recovered を確認する結合テストが存在するが、:620 は時刻順が逆の場合に最小時刻を期待する。既存テストの期待値変更で対応できる。IMPLEMENTATION.md:124
+    と VERIFICATION.md:44（ともに feature-docs/orphaned-implementer-recovery/ 配下）も最小時刻を規定しており整合が必要。同ディレクトリの
+    workflow.yaml:95 に MANUAL-D2 の実セッション検証成功が記録されている。関数の直接呼び出し元は1か所、主要依存は json.loads
+    と parse_timestamp。変更行数は上記の規則差を合わせる場合の概算。ファイル変更は行わず、既存テストと実セッション検証は今回再実行していない
+decided_at: '2026-09-29T20:36:40+09:00'
