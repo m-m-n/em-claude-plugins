@@ -1,10 +1,10 @@
 schema_version: 1
 feature: first-entry-timestamp-scan
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 482f37494cfb6e3289d7e88ed3744f578ace8e65
-last_input_digest: sha256:3c0d5ae6fdb30758bdc285c361626cc68c05249028fb21ae46381404d9aec68d
+last_input_digest: sha256:7db9ccf4ab00bab92141776c990e0e44141fb6c24bb7cdcad704f90a600ab8dd
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -49,7 +49,21 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:3c0d5ae6fdb30758bdc285c361626cc68c05249028fb21ae46381404d9aec68d
   output_digest: sha256:3072598295a21d87d452b55c95dfc34d45c7e5080bf7b9e864aefff56780820d
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:af7329c773876239bc83b4459b8430fc6e58581e5d5a594808ed188ee66b1b9a
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:7db9ccf4ab00bab92141776c990e0e44141fb6c24bb7cdcad704f90a600ab8dd
+  output_digest: null
+artifacts:
+- path: feature-docs/first-entry-timestamp-scan/REQUIREMENTS.md
+  sha256: sha256:87cb15396620563545146d6558da3d08d012afe5c1bb31de8c986ccf7274b9fc
+  produced_by: create-spec-run-0003
+- path: feature-docs/first-entry-timestamp-scan/SPEC.md
+  sha256: sha256:0b243ac24064d6bd389dcedab6135761d4e79809c486eeaa0e399ff583d195bd
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
