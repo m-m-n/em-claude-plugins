@@ -151,7 +151,7 @@ workflow:
   base_commit: 7d296b4d9434ea3db2e75a2751963f267a956153
   completed_at_commit: 47d548b4ac174e519aba19893505cb2a34f904a2
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -189,8 +189,17 @@ tasks:
     notes: null
     branch: em-workflow/orphan-recovery-plugin-root-path/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   residual_critical_high: 0
   needs_rework: false
 requirements:
