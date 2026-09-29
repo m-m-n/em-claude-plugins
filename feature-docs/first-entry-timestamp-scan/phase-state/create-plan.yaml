@@ -1,11 +1,11 @@
 schema_version: 1
 feature: first-entry-timestamp-scan
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 9d01c4558428d30c04cfa4458b36faee0c29bb2b
 last_input_digest: sha256:ac069bdddf17f47eabb863ec5835f351d2abd09a7314b7e97b0a0e837512b308
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
