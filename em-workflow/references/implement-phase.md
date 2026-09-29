@@ -603,7 +603,9 @@ Triggered whenever a launched implementer's `Task()` call returns.
      one further attempt before the Residual above is taken as final. It first emits a marker token into
      its own transcript via a command run immediately before the next step
      (IMPLEMENTATION.md D2), then invokes
-     `em-workflow/scripts/recover-orphaned-task.py` for the candidate task,
+     `RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py`
+     (resolved per Step I.0 step 4) for the candidate task with
+     `{project_root}` (the main working tree) as its working directory,
      passing that marker (or, when the orchestrator's own session identity
      and start time are already known some other way, those values
      directly — D2 form 1 takes precedence over the marker scan). That
@@ -637,7 +639,12 @@ Triggered whenever a launched implementer's `Task()` call returns.
      restated. Any residual outcome from either script leaves the journal
      byte-identical
      to its pre-call content: the Residual above stands unchanged as this
-     candidate's outcome. Full contract: IMPLEMENTATION.md's SC2
+     candidate's outcome. When RECOVER_SCRIPT cannot be resolved, whether
+     for this invocation or for the re-invocation under the Same-session
+     extension below, nothing is invoked — no other location, in
+     particular no cwd-relative path, is tried — and this candidate's
+     outcome is the Residual above, with the journal unchanged. Full
+     contract: IMPLEMENTATION.md's SC2
      (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`), SC6
      (the reason-code set) and D7 (the launch-binding rule).
 
@@ -673,8 +680,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
      above does.
 
      Invocation contract for this branch: the orchestrator re-invokes
-     `em-workflow/scripts/recover-orphaned-task.py` for the same candidate
-     task, with the same journal, Agent-index and identity inputs the call
+     the same
+     `RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py`
+     (resolved per Step I.0 step 4) for the same candidate task with
+     `{project_root}` (the main working tree) as its working directory,
+     and with the same journal, Agent-index and identity inputs the call
      above already passes, plus at least one of seven evidence inputs —
      `--worktree-present yes|no`, `--branch-present yes|no`,
      `--task-worktree` set to the task's expected worktree path
@@ -718,9 +728,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
      terminated: termination is confirmed first, under the drain step
      above and this reconcile step's own outstanding-call bookkeeping,
      cited here rather than restated. Once termination is confirmed, the
-     orchestrator invokes `em-workflow/scripts/journal-append-failed.py`
-     exactly once, with the task id and `--reason merge-unverified`,
-     supplying no launch identity (IMPLEMENTATION.md's SC-1, D4). Step 1
+     orchestrator invokes
+     `${CLAUDE_PLUGIN_ROOT}/scripts/journal-append-failed.py` (resolved per
+     Step I.0 step 4) exactly once, with the task id and
+     `--reason merge-unverified`, supplying no launch identity
+     (IMPLEMENTATION.md's SC-1, D4). Step 1
      re-replays the journal within this same reconcile step, so by the
      time step 3 and step 5 consume it, the task's journal last event —
      not only its reconciled state — reads `failed`; I.2.c's third
@@ -732,7 +744,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
      unchanged, and this task is governed by the existing text for a task
      that is journal `merged` with reconciled state `failed` — I.2.c's
      third conjunct still blocks route-back for it, the gate-rejected
-     cause enumeration names it, and the phase report names it. Either
+     cause enumeration names it, and the phase report names it. When the
+     journal helper cannot be resolved, nothing is invoked — no other
+     location, in particular no cwd-relative path, is tried — and this
+     task is governed by the Helper-failure residue just stated, with the
+     journal unchanged. Either
      way, retry follows the existing I.2.c drain and the I.2.a resume
      guard, on the task's kept worktree; when the integration branch
      already contains the task branch, `merge-task.sh` records `merged`
