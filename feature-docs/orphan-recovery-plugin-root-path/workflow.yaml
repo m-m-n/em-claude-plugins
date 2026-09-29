@@ -160,7 +160,7 @@ workflow:
   summary: 'python3 -m unittest discover -s tests: 6495 tests OK. TS-1..TS-5, TS-7 pass (feature doc-contract and five realigned version-bump modules). TS-6: none of plugin.json / marketplace.json / recover-orphaned-task.py / workflow-schema.md / merge-task.sh / queue_launch_guard.py in the feature diff from merge-base 090a4f06. Manual distribution check: both helpers exist under em-workflow/scripts/ (plugin root), not executed in an installed-plugin environment.'
   completed_at_commit: 16fd87a8fd3152d010775802a19ab8202ca83455
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Resolve I.2.b orchestrator helper invocations through CLAUDE_PLUGIN_ROOT
