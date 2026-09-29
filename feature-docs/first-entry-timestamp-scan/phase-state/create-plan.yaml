@@ -1,0 +1,21 @@
+schema_version: 1
+feature: first-entry-timestamp-scan
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 9d01c4558428d30c04cfa4458b36faee0c29bb2b
+last_input_digest: sha256:ac069bdddf17f47eabb863ec5835f351d2abd09a7314b7e97b0a0e837512b308
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:ac069bdddf17f47eabb863ec5835f351d2abd09a7314b7e97b0a0e837512b308
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
