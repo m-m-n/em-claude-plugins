@@ -711,9 +711,15 @@ ORPHAN_MARKER_EMISSION_PHRASE = (
 ORPHAN_D2_FORM1_PRECEDENCE_PHRASE = (
     "D2 form 1 takes precedence over the marker scan"
 )
+# orphan-recovery-plugin-root-path task0001: the orchestrator's own
+# invocation is resolved under `${CLAUDE_PLUGIN_ROOT}` by citing Step I.0
+# step 4 (no longer the cwd-relative `em-workflow/scripts/...` path), with
+# `{project_root}` as the working directory. Presence test unchanged.
 ORPHAN_RECOVER_SCRIPT_INVOCATION_PHRASE = (
-    "invokes `em-workflow/scripts/recover-orphaned-task.py` for the "
-    "candidate task"
+    "invokes `RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/"
+    "recover-orphaned-task.py` (resolved per Step I.0 step 4) for the "
+    "candidate task with `{project_root}` (the main working tree) as its "
+    "working directory"
 )
 ORPHAN_JOURNAL_HELPER_INVOCATION_PHRASE = (
     "invoke `em-workflow/scripts/journal-append-failed.py` exactly once, "
