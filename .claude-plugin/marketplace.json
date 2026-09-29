@@ -25,6 +25,16 @@
       "category": "workflow",
       "source": "./em-workflow",
       "version": "0.3.7"
+    },
+    {
+      "name": "plugin-dev",
+      "description": "Toolbox for developing Claude Code plugins and marketplaces. The plugin-dev skill guides creating a new plugin (layout, marketplace registration, and a GitHub Actions workflow that bumps the patch version of changed plugins on merge to main) and updating an existing one (leave the version alone; Actions bumps it).",
+      "author": {
+        "name": "em"
+      },
+      "category": "development",
+      "source": "./plugin-dev",
+      "version": "0.1.0"
     }
   ]
 }
