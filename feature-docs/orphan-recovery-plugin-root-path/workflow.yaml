@@ -154,12 +154,11 @@ workflow:
   status: completed
   completed_at_commit: 0b3588dc27223f0d2255f4182176906a8badb894
 - id: verify
-  status: in_progress
-  result: fail
-  failed_items:
-  - id: SC-suite
-    category: unknown
-    note: '`python3 -m unittest discover -s tests` fails 5/6492 (test_batch_policy_option_id_version_bump, test_batch_structured_result_output_version_bump, test_goal_vs_spec_divergence_version_bump, test_muse_consent_version_bump, test_rework_contract_drift_version_bump: marketplace plugin-count / other-entry assertions). Pre-existing: identical 5 failures at implement base 7d296b4d, caused by main 090a4f06 adding plugin-dev to marketplace.json; feature diff does not touch them. TS-1..TS-6 and all feature tests pass. category unknown: SC-suite maps to no requirement ID.'
+  status: completed
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 6495 tests OK. TS-1..TS-5, TS-7 pass (feature doc-contract and five realigned version-bump modules). TS-6: none of plugin.json / marketplace.json / recover-orphaned-task.py / workflow-schema.md / merge-task.sh / queue_launch_guard.py in the feature diff from merge-base 090a4f06. Manual distribution check: both helpers exist under em-workflow/scripts/ (plugin root), not executed in an installed-plugin environment.'
+  completed_at_commit: 16fd87a8fd3152d010775802a19ab8202ca83455
 - id: retrospect
   status: pending
 tasks:
