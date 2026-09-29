@@ -102,6 +102,34 @@ reproduces today's behaviour exactly (D-A, FR5/NFR5) -- including the
 `launch_at` are now parameters of the call, not a hardcoded module
 constant); the new opt-in chain itself is covered by
 tests/test_stale_launched_recovery_chain.py.
+
+Covers first-entry-timestamp-scan task0001 Acceptance Criteria
+(feature-docs/first-entry-timestamp-scan/tasks/task0001.md) -- two
+regression pins for D2 form 2 (marker-based current-session resolution)
+against a current-session transcript whose leading records carry no
+`timestamp`. Both guard against the two regressed derivations of the start
+time: reading only the first line (resolves nothing) and taking the
+positionally-first timestamp (yields 15:00 instead of the earliest,
+10:00). Each is a pin on already-correct behaviour (IMPLEMENTATION.md D2);
+the fixture shape is what gives it discriminating power.
+
+- AC-1, AC-2, AC-3: TestCLIEntryPoint.test_first_entry_scan_cli_* -- the
+  command-line entry point, given only --journal, --agents-index, --task,
+  --transcripts-dir and --marker (form 2 alone; the default sibling
+  journal-append-failed.py performs the append), reports `recovered` and
+  the journal gains exactly one `failed`/`orphaned` entry after the
+  unchanged `launched` one. The current session's transcript opens with a
+  JSON object carrying no `timestamp`; a later line carries the marker and a
+  parseable timestamp; no other transcript contains the marker.
+- AC-4: TestCurrentSessionResolution.test_first_entry_scan_* -- three
+  timestamp-less leading records with pairwise distinct `type` values, then
+  a 15:00 line and a 10:00 line (same date, same offset): the resolved pair
+  is the file-name stem and the 10:00 instant.
+- AC-5, AC-6: no new test -- properties of this task's diff (no change to
+  the frozen script, D2/TS-14 documents, or the two plugin version files),
+  checked against the diff itself.
+- AC-7: verified by running the project test command itself; the new tests
+  are pure additions and import only standard-library modules.
 """
 
 import importlib.util
@@ -111,7 +139,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -651,6 +679,31 @@ class TestCurrentSessionResolution(unittest.TestCase):
 
             result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
             self.assertIsNone(result)
+
+    def test_first_entry_scan_timestampless_lead_resolves_earliest_not_first_timestamp(self):
+        # first-entry-timestamp-scan task0001 AC-4: the marker-bearing
+        # transcript opens with three JSON-object records that carry no
+        # `timestamp` (pairwise distinct `type`), then a 15:00 line, then a
+        # 10:00 line (same date, same explicit offset). A first-line-only
+        # derivation would return None; a positionally-first-timestamp one
+        # would return 15:00. Only the earliest parseable timestamp yields
+        # 10:00. The expected instant is a timezone-aware datetime built
+        # independently of the code under test, never a string.
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = "FIRST-ENTRY-SCAN-MARKER"
+            stem = "sess-timestampless-lead-out-of-order"
+            write_transcript(tmp, stem, [
+                {"type": "queue-operation"},
+                {"type": "file-history-snapshot"},
+                {"type": "last-prompt"},
+                {"timestamp": "2026-06-01T15:00:00+00:00", "type": "user", "text": marker},
+                {"timestamp": "2026-06-01T10:00:00+00:00", "type": "assistant"},
+            ])
+            result = ROT.resolve_current_session(None, None, marker, tmp)
+            self.assertEqual(
+                result,
+                (stem, datetime(2026, 6, 1, 10, 0, tzinfo=timezone.utc)),
+            )
 
     def test_no_form_provided_is_unresolved(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1270,6 +1323,73 @@ class TestCLIEntryPoint(unittest.TestCase):
         proc = run_cli(["--task", "task0001"])
         self.assertNotEqual(proc.returncode, 0)
         self.assertEqual(proc.stdout.strip(), "")
+
+    def test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper(self):
+        # first-entry-timestamp-scan task0001 AC-1, AC-2, AC-3: form 2 alone
+        # (no --current-session-id / --current-session-start /
+        # --journal-helper) resolves the current session from a transcript
+        # whose FIRST record has no `timestamp`, and the default sibling
+        # journal-append-failed.py performs the append. The recorded
+        # session's newest activity is a day before the resolved start.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proven_fixture(tmp)
+            transcripts_dir = fx["transcripts_dir"]
+            marker = "FIRST-ENTRY-SCAN-CLI-MARKER"
+            current_path = write_transcript(transcripts_dir, "sess-current-timestampless-lead", [
+                {"type": "last-prompt"},
+                {"timestamp": CURRENT_SESSION_START, "type": "user", "text": marker},
+            ])
+
+            # AC-3: guard the fixture's own discriminating shape.
+            current_lines = Path(current_path).read_text(encoding="utf-8").splitlines()
+            first_record = json.loads(current_lines[0])
+            self.assertIsInstance(first_record, dict)
+            self.assertNotIn("timestamp", first_record)
+            self.assertTrue(any(
+                marker in line
+                and ROT.parse_timestamp(json.loads(line).get("timestamp")) is not None
+                for line in current_lines[1:]
+            ))
+            for name in os.listdir(transcripts_dir):
+                other_path = os.path.join(transcripts_dir, name)
+                if other_path != current_path:
+                    self.assertNotIn(marker, Path(other_path).read_text(encoding="utf-8"))
+
+            journal_before = Path(fx["journal_path"]).read_bytes()
+            launched_entry = json.loads(journal_before.decode("utf-8").splitlines()[0])
+
+            args = [
+                "--journal", fx["journal_path"],
+                "--agents-index", fx["agents_index_path"],
+                "--task", fx["task_id"],
+                "--transcripts-dir", transcripts_dir,
+                "--marker", marker,
+            ]
+            # AC-1: exactly these five options, none of the form 1 / helper
+            # override ones.
+            self.assertEqual(
+                [arg for arg in args if arg.startswith("--")],
+                ["--journal", "--agents-index", "--task", "--transcripts-dir", "--marker"],
+            )
+            proc = run_cli(args)
+
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(
+                json.loads(proc.stdout),
+                {"outcome": "recovered", "task": TASK_ID, "reason": ""},
+            )
+
+            # AC-2: the pre-existing `launched` entry is unchanged and
+            # exactly one `failed`/`orphaned` entry follows it.
+            journal_after = Path(fx["journal_path"]).read_bytes()
+            self.assertTrue(journal_after.startswith(journal_before))
+            entries = [json.loads(line) for line in journal_after.decode("utf-8").splitlines()]
+            self.assertEqual(len(entries), 2)
+            self.assertEqual(entries[0], launched_entry)
+            self.assertEqual(entries[0]["event"], "launched")
+            self.assertEqual(entries[1]["event"], "failed")
+            self.assertEqual(entries[1]["task"], TASK_ID)
+            self.assertEqual(entries[1]["reason"], "orphaned")
 
 
 if __name__ == "__main__":
