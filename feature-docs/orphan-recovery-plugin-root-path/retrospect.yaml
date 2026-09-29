@@ -1,0 +1,34 @@
+feature: orphan-recovery-plugin-root-path
+collected_at: "2026-09-29T21:50:00+09:00"
+session_ids: [01a0ed2e-c7a8-74d2-9843-93193aff7d69]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - id: SC-suite
+      category: unknown
+      note: '`python3 -m unittest discover -s tests` fails 5/6492 (test_batch_policy_option_id_version_bump, test_batch_structured_result_output_version_bump, test_goal_vs_spec_divergence_version_bump, test_muse_consent_version_bump, test_rework_contract_drift_version_bump: marketplace plugin-count / other-entry assertions). Pre-existing: identical 5 failures at implement base 7d296b4d, caused by main 090a4f06 adding plugin-dev to marketplace.json; feature diff does not touch them. TS-1..TS-6 and all feature tests pass. category unknown: SC-suite maps to no requirement ID.'
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1（規則追加 + テスト追加、少数ファイル）が 0.98"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 0.95, confidence: 0.94}
+        observed_at: "2026-09-29T20:33:15+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 0.98, confidence: 0.98}
+        observed_at: "2026-09-29T20:34:37+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/implement-phase.md
+        - tests/test_implement_routeback_gate.py
+      changed_lines_approx: 20
+      new_files_needed: 0
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "verify round 1 の SC-suite 失敗は feature と無関係な既存失敗（main 090a4f06 で plugin-dev を marketplace に追加したことによる version-bump テスト 5 件のピンずれ）。rework task0002 で吸収したが、feature のスコープ外の修正が同じ PR に入った"
+  - "verification_failures は verify round 1 の failed_items。round 2 で pass（6495 tests OK）"
