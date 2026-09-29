@@ -152,10 +152,15 @@ R2_TERMINATION_NOT_PROVEN_PHRASE = (
     "A `merged` event is not by itself proof that the launching agent "
     "terminated"
 )
+# orphan-recovery-plugin-root-path task0001: the orchestrator's own
+# invocation is resolved under `${CLAUDE_PLUGIN_ROOT}` by citing Step I.0
+# step 4 (no longer the cwd-relative `em-workflow/scripts/...` path). The
+# `exactly once, ... supplying no launch identity` clause is unchanged.
 R2_HELPER_INVOCATION_PHRASE = (
-    "the orchestrator invokes `em-workflow/scripts/journal-append-failed.py` "
-    "exactly once, with the task id and `--reason merge-unverified`, "
-    "supplying no launch identity"
+    "the orchestrator invokes "
+    "`${CLAUDE_PLUGIN_ROOT}/scripts/journal-append-failed.py` (resolved per "
+    "Step I.0 step 4) exactly once, with the task id and `--reason "
+    "merge-unverified`, supplying no launch identity"
 )
 R2_REPLAY_READS_FAILED_PHRASE = (
     "the task's journal last event — not only its reconciled state — "
