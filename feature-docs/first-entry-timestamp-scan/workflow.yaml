@@ -1,0 +1,236 @@
+schema_version: 1
+feature: first-entry-timestamp-scan
+created: '2026-09-29'
+goal: |
+  # em-workflow: _first_entry_timestamp が先頭行のみを見るため D2 の現セッション解決が実運用で失敗する
+
+  Notion タスク: https://www.notion.so/3d33509ec8ee81d189d8ebda9c2fd034 （種別: バグ / 優先度: 高）
+
+  ## 現象（必須）
+  `recover-orphaned-task.py` の marker ベース現セッション解決（IMPLEMENTATION.md D2 の
+  form 2）が、実セッションではほぼ常に失敗して `current-session-unknown` に落ちる。
+  `_resolve_current_session_via_marker` は marker を含む transcript を正しく特定するが、
+  `_first_entry_timestamp` が「最初の非空行」だけを見て `timestamp` フィールドが無ければ
+  None を返す。実際の `~/.claude/projects/{encoded-cwd}/*.jsonl` は先頭行が
+  `{"type":"last-prompt",...}` のような timestamp を持たない記録であることが多く
+  （実測サンプル 40 件中 34 件）、解決に失敗する。
+  結果として I.2.b の orphan recovery（FR2 の証明経路）が実運用で発火しない。
+  form 1（session id + start の明示指定）を使える場合のみ機能する。
+  feature `orphaned-implementer-recovery` の verify フェーズで MANUAL-D2 として検出。
+  batch の verify rework 上限に達していたため未修正のまま停止した。
+
+  ## 再現手順（必須）
+  1. 実際の Claude Code セッションから `recover-orphaned-task.py` の D2 form 2
+  （marker ベース現セッション解決）を 1 度実行する
+  2. transcript には marker が含まれているのに解決結果が None になる
+  3. 該当 transcript の先頭行を見ると `timestamp` フィールドが無い
+
+  ## 期待する挙動（必須）
+  先頭行に `timestamp` が無くても、以降の行を走査して最初に見つかった `timestamp` を
+  セッション開始時刻として採用する。走査は上限行数などで打ち切ってよいが、
+  `{"type":"last-prompt",...}` のような timestamp を持たない先頭行があるだけで
+  None を返さないこと。
+
+  ## 完了の定義（必須）
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（先頭行に timestamp が無い fixture を含める）
+  - [ ] VERIFICATION.md の Manual Testing 2 件目（D2）が成立する
+
+  ## 該当箇所（任意）
+  `em-workflow/scripts/recover-orphaned-task.py` の `_first_entry_timestamp` /
+  `_resolve_current_session_via_marker`
+
+  ## 実害・発生条件（任意）
+  自動テスト（TS-1..TS-13、3029 件）は fixture が timestamp 付き先頭行を前提としている
+  ため全て pass する。この乖離は実セッションでのみ露出する。既存 fixture に timestamp
+  無しの先頭行パターンを足すのが再発検出の要点。
+
+  ## 起動時の追加指示
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作る。integration ブランチはローカル・リモート共に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+  - その議論の内容を Notion に記録する
+base_branch: main
+parent_branch: em-workflow/first-entry-timestamp-scan/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.76
+      '2': 0.24
+      '3': 0.0
+  at: '2026-09-29T20:36:40+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 0f2f22088a418dd97807f9b0309156028228da3e
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無い。変更対象は tests/ 配下の unittest だけで、視覚的な成果物もデザインシステムの候補も無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 20424a9e889b8a73bc50b1b76b4f86ac81c3874e
+- id: implement
+  status: completed
+  base_commit: d33926aae9bd82cf89075c6c4de2f029e0e0d733
+  completed_at_commit: 1838f73fd2f9b7cda6f3210f6e1f5c91cfe320c6
+- id: review
+  status: completed
+  completed_at_commit: 79631612b7d52b1be17eeb2dc2c6ee21df85d7ee
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 2bcbecfa2df6bc927670e0fa44bb1a00d26a2207
+  notes: >-
+    TS-1/TS-2/TS-5/TS-6 pass. TS-4 (manual, read-only D2 form 2 from this real
+    session) resolved stem 01a0ed16-beed-75ad-8b6d-a9e63e8a7f5c with start
+    2026-09-29T21:14:48.801+09:00; the first attempt right after emitting the
+    marker returned None because the transcript line had not been flushed yet,
+    the second attempt resolved. TS-3: 6467 tests, 0 errors, 5 failures, all in
+    other features' *_version_bump tests (marketplace plugin count/hash
+    snapshots broken by main commit 090a4f06 adding plugin-dev); the same 5
+    fail at base_commit d33926aa, so they are pre-existing and out of scope.
+    Passed for this feature's scope with that exception (Codex-consulted, see
+    phase-state/batch-audit.yaml); not a full-suite green.
+- id: retrospect
+  status: completed
+  completed_at_commit: b183fb170a985ca36c23c22472fdda753c76313f
+tasks:
+  task0001:
+    title: Regression tests for D2 form 2 over timestamp-less leading records
+    plan: tasks/task0001.md
+    files:
+    - tests/test_recover_orphaned_task.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/first-entry-timestamp-scan/task0001
+review:
+  status: completed
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: コマンドライン入口から form 2 を通す回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR2:
+    title: 実際の transcript の冒頭を模した fixture の回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+  FR3:
+    title: 開始時刻の導出規則は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR1:
+    title: テストの配置と標準ライブラリ限定、一時ディレクトリの使用
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+  NFR2:
+    title: unittest discover が失敗 0・エラー 0
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+  NFR3:
+    title: 安全側に倒す方向を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR4:
+    title: em-workflow の version を手で変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

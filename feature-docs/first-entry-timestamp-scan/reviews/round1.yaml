@@ -1,0 +1,91 @@
+round: 1
+executed_at: '2026-09-29T21:12:42+09:00'
+scope:
+  review_mode: diff
+  base_commit: d33926aae9bd82cf89075c6c4de2f029e0e0d733
+  head_commit: 79631612b7d52b1be17eeb2dc2c6ee21df85d7ee
+  changed_files:
+  - test-docs/first-entry-timestamp-scan/task0001.tests.yaml
+  - tests/test_recover_orphaned_task.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: rate_limited
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: ead8160231776beb
+  severity: medium
+  category: spec
+  file: test-docs/first-entry-timestamp-scan/task0001.tests.yaml
+  line: 80
+  title: NFR2（SPEC AC-4 / task AC-7）の「失敗 0・エラー 0」が未達のまま記録されている
+  description: 'SPEC.md:25 の NFR2 と SPEC.md:175 の AC-4、tasks/task0001.md:123 の AC-7 は、`python3 -m unittest
+    discover -s tests` が失敗 0・エラー 0 で終わることを求めている。記録（task0001.tests.yaml:8-15, 76-86）では、実装後の全件実行でも 5 件の失敗が残っている。5
+    件はどれも marketplace.json を前提にした version_bump 系の既存テスト（例: tests/test_goal_vs_spec_divergence_version_bump.py:292-293
+    は plugins が EXPECTED_PLUGINS_COUNT 件であることを確かめる）。main の 090a4f06（plugin-dev の追加）で plugins が 3 件に増えたため、ベース時点で既に失敗している。今回の差分が生んだ失敗ではなく、SPEC
+    A1 と task の Out of Scope により、この feature の中では直せない。それでも、仕様に書かれた受け入れ条件は文面どおりには満たされていない'
+  suggestion: (a) 古くなった marketplace 前提の 5 テストを、この feature とは別の変更として main 側で直してから NFR2 を再確認する。または (b) SPEC
+    の NFR2 / AC-4 と task AC-7 に、ベース時点の既存失敗は除くという例外を明記して整合させる
+  sources:
+  - codex:spec
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外。ベース main で既に失敗している marketplace 系 5 テストが原因で、この feature の範囲外。人の判断が要る'
+evaluation:
+  round_summary: 'round 1（diff モード、cross_validation なし）。変更は tests/test_recover_orphaned_task.py（FR1 の
+    CLI テストと FR2 の resolve_current_session テストの 2 件追加、import 1 行とヘッダの docstring）と task0001.tests.yaml。FR1
+    のテストは subprocess で CLI を呼び、本物の journal-append-failed.py を通して recovered と failed/orphaned がちょうど 1 件であることを確かめている。FR2
+    のテストは timestamp の無い 3 レコードの後に 15:00、10:00 を置き (stem, 10:00 UTC) を期待しており SPEC どおり。recover-orphaned-task.py
+    と plugin.json / marketplace.json は差分に含まれていない（FR3 / NFR4）。持ち越したのは spec#1 の medium 1 件（NFR2 未達）で、原因はベース時点で既にある
+    marketplace テストの失敗。critical/high は 0 件、dismissed_sites は空、インジェクションの試みは無し。カバレッジ: comprehensive = corroborated
+    / security = corroborated / spec = corroborated（spec#0 はレート制限でスキップ、spec#1 が完了）。読み取り予算は約 11 ファイルで上限
+    10 をわずかに超えた'
+  recommended_action: complete
+  action_rationale: 残っている critical/high は 0 件。唯一の medium はベースの main で既に失敗している無関係なテストが原因で、この feature の範囲内の
+    auto_fix や rework では解消できない。差分そのものは FR1 / FR2 / FR3 / NFR1 / NFR3 / NFR4 に合っている。NFR2 の扱いは人の判断に委ねるものとして記録し、review
+    は完了してよい
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-first-entry-timestamp-scan-20260929T121226Z.md

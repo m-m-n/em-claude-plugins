@@ -1,0 +1,71 @@
+schema_version: 1
+feature: first-entry-timestamp-scan
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 482f37494cfb6e3289d7e88ed3744f578ace8e65
+last_input_digest: sha256:7db9ccf4ab00bab92141776c990e0e44141fb6c24bb7cdcad704f90a600ab8dd
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-29T20:45:00+09:00'
+    questions:
+    - question_id: requirement.residual-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.residual-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-29T20:48:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - keep-earliest-add-tests
+    freeform: null
+    normalized_answer: '最小値（D2）のまま挙動は変えず、回帰テストを 2 件追加する: (1) CLI 入口を subprocess で呼び
+      --marker で form 2 を通し、timestamp の無い先頭記録を持つ transcript で recovered・journal に
+      reason: orphaned の failed が 1 件追記されることを確認 (2) type の異なる timestamp 無し記録を 3 件以上並べ、後に
+      15 時・10 時の順で有効時刻を置いた fixture で、marker 解決が stem と 10 時を返すことを確認。位置で最初への変更・D2/TS-14
+      の意味変更・無関係な整理は範囲外'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); harness: codex (1 turn); Codex chose keep-earliest-add-tests:
+      最小値は安全側（位置で最初だと 15時→10時 の順で旧セッション最終活動 12 時のとき誤って回収する）、CLI 経由 --marker の検証が欠けている、記録だけでは経路を継続的に守れない。orchestrator
+      mapped to option keep-earliest-add-tests. Opus escalation: not run'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-29T20:48:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は analyst 推奨どおり skip
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml option_id
+      decide_autonomously'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:3c0d5ae6fdb30758bdc285c361626cc68c05249028fb21ae46381404d9aec68d
+  output_digest: sha256:3072598295a21d87d452b55c95dfc34d45c7e5080bf7b9e864aefff56780820d
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:af7329c773876239bc83b4459b8430fc6e58581e5d5a594808ed188ee66b1b9a
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:7db9ccf4ab00bab92141776c990e0e44141fb6c24bb7cdcad704f90a600ab8dd
+  output_digest: null
+artifacts:
+- path: feature-docs/first-entry-timestamp-scan/REQUIREMENTS.md
+  sha256: sha256:87cb15396620563545146d6558da3d08d012afe5c1bb31de8c986ccf7274b9fc
+  produced_by: create-spec-run-0003
+- path: feature-docs/first-entry-timestamp-scan/SPEC.md
+  sha256: sha256:0b243ac24064d6bd389dcedab6135761d4e79809c486eeaa0e399ff583d195bd
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
