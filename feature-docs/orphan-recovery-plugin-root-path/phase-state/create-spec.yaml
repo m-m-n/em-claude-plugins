@@ -4,14 +4,71 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: a558a22db2a8c9bcebea07878c225144febf44ee
-last_input_digest: sha256:08ad2e379083a36d473a14ba5e9e60456412a08eb148ad69b6874ac3330be9af
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:71124373f35274de7afb845c85ee80cc85bc20b00ebfa65a010bf0f1ea2d3941
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-29T20:39:00+09:00'
+    questions:
+    - question_id: requirement.invocation-cwd
+      status: answered
+    - question_id: requirement.fix-scope
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.invocation-cwd:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-29T20:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - project_root
+    freeform: null
+    normalized_answer: recover-orphaned-task.py はプロジェクトルート（envelope の project_root、main
+      working tree）を cwd として起動する
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption). Codex (1 turn) recommended project_root: feature-docs/integration-worktree-orchestration/SPEC.md:118
+      keeps the session cwd at the project root and recover-orphaned-task.py:197 derives
+      transcripts dir from cwd. Not chosen: integration_worktree. Caveat: a session
+      started elsewhere is not guaranteed discoverable. Opus escalation: not run.'
+  requirement.fix-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-29T20:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - all_orchestrator_invocations
+    freeform: null
+    normalized_answer: orchestrator が cwd 相対で起動している 3 箇所（implement-phase.md の recover
+      起動・same-session 再起動・merge-unverified の journal-append-failed.py 起動）をすべて Step
+      I.0 step 4 の規律で直す
+    resolution_note: 'gate: create-spec.requirement-clarification. Codex (1 turn)
+      recommended all_orchestrator_invocations: :606/:676/:721 share the same cwd-relative
+      defect; confirmed these three are the only orchestrator-side direct launches
+      in the document (:629/:670/:694 describe script-internal calls). Caveat: :721
+      wording is pinned by tests/test_merge_unverified_exit_doc_contract.py:155,210
+      and :606 by tests/test_implement_routeback_gate.py:715; both tests must be updated.
+      Not chosen: recover_script_sites, primary_site_only. Opus escalation: not run.'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-29T20:45:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 設計ステップは推奨どおり skip
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:08ad2e379083a36d473a14ba5e9e60456412a08eb148ad69b6874ac3330be9af
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:71124373f35274de7afb845c85ee80cc85bc20b00ebfa65a010bf0f1ea2d3941
   output_digest: null
 artifacts: []
 patches: []
