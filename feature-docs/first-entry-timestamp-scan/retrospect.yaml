@@ -1,0 +1,36 @@
+feature: first-entry-timestamp-scan
+collected_at: "2026-09-29T21:22:00+09:00"
+session_ids: [01a0ed1c-64ee-7629-b3d5-d90f143b4755]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読み（bucket 1: 0.76 / bucket 2: 0.24）から評価器が閾値行で full を決定"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.01, confidence: 0.99}
+        observed_at: "2026-09-29T20:33:24+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.23, confidence: 0.76}
+        observed_at: "2026-09-29T20:36:25+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/recover-orphaned-task.py
+        - tests/test_recover_orphaned_task.py
+        - feature-docs/orphaned-implementer-recovery/IMPLEMENTATION.md
+        - feature-docs/orphaned-implementer-recovery/VERIFICATION.md
+      changed_lines_approx: 50
+      work_still_required: true
+      body_change_kind: new_logic
+      change_containment: single_module
+follow_up_drafts: []
+lessons_candidates:
+  - "Codex 事前調査で本体の修正（_earliest_entry_timestamp）が既に入っていると判明し、実際の変更はテスト追加のみになった。事前見積りの files_expected 4 件に対し実変更は tests/ 1 件"
+  - "main 090a4f06（plugin-dev 追加）で marketplace 前提の *_version_bump テスト 5 件がベース時点から失敗しており、NFR2（失敗 0）が文面どおり満たせなかった。verify は scoped pass（batch-audit.yaml 参照）、review に medium ead8160231776beb が unresolved で残存"
+  - "review の spec#0（LiteLLM muse-spark-contributor）が rate_limited で skip、spec#1（codex）で補完"
+  - "D2 form 2 の手動確認で、marker 出力直後は transcript が未 flush で None、2 回目で解決した"
