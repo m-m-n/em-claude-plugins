@@ -36,7 +36,12 @@ matcher, task0005.md): negative proofs are
 `test_em_review_matcher_rejects_missing_or_malformed_version`; the positive
 proof that the version is asserted by shape, never by literal, is
 `test_em_review_matcher_accepts_forged_higher_version`; the key-set edge
-case is `test_em_review_matcher_rejects_new_unexpected_key`.
+case is `test_em_review_matcher_rejects_new_unexpected_key`. The em-review
+proofs compare against an em-review-only baseline. The `plugin-dev` pin is
+proven by `test_matcher_rejects_other_entries_missing_plugin_dev` (a removed
+entry is rejected against the full baseline) and
+`test_plugin_dev_matcher_rejects_altered_identity_field` (an altered identity
+field is rejected against a `plugin-dev`-only baseline).
 """
 
 import json
@@ -61,16 +66,34 @@ BASELINE_PATCH = 41
 # pinned into this snapshot, since `.claude/rules/core-plugin-version-bump.md`
 # requires it to change over time -- see
 # `_assert_other_entries_match_expected_shape`.
+#
+# One named constant per entry, so a hermetic proof can use either entry
+# alone. The list keeps marketplace order, which the matcher pairs by:
+# `plugin-dev` follows `em-review` (orphan-recovery-plugin-root-path
+# task0002, after the `plugin-dev` entry was added to the marketplace).
+EM_REVIEW_BASELINE_ENTRY = {
+    "name": "em-review",
+    "description_anchor": (
+        "/em-review:multi-review reviews the current git diff"
+    ),
+    "author": {"name": "em"},
+    "category": "code-review",
+    "source": "./em-review",
+}
+
+PLUGIN_DEV_BASELINE_ENTRY = {
+    "name": "plugin-dev",
+    "description_anchor": (
+        "Toolbox for developing Claude Code plugins and marketplaces"
+    ),
+    "author": {"name": "em"},
+    "category": "development",
+    "source": "./plugin-dev",
+}
+
 OTHER_PLUGIN_ENTRIES_BASELINE = [
-    {
-        "name": "em-review",
-        "description_anchor": (
-            "/em-review:multi-review reviews the current git diff"
-        ),
-        "author": {"name": "em"},
-        "category": "code-review",
-        "source": "./em-review",
-    },
+    EM_REVIEW_BASELINE_ENTRY,
+    PLUGIN_DEV_BASELINE_ENTRY,
 ]
 
 EXPECTED_OTHER_ENTRY_KEYS = {"name", "description", "author", "category", "source", "version"}
@@ -276,7 +299,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
                 forged = dict(self.FORGED_EM_REVIEW_ENTRY, **{field: forged_value})
                 with self.assertRaises(AssertionError):
                     _assert_other_entries_match_expected_shape(
-                        self, [forged], OTHER_PLUGIN_ENTRIES_BASELINE
+                        self, [forged], [EM_REVIEW_BASELINE_ENTRY]
                     )
 
     def test_em_review_matcher_rejects_missing_or_malformed_version(self):
@@ -289,7 +312,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         for forged in (missing, malformed):
             with self.assertRaises(AssertionError):
                 _assert_other_entries_match_expected_shape(
-                    self, [forged], OTHER_PLUGIN_ENTRIES_BASELINE
+                    self, [forged], [EM_REVIEW_BASELINE_ENTRY]
                 )
 
     def test_em_review_matcher_accepts_forged_higher_version(self):
@@ -298,7 +321,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         # version is accepted.
         forged = dict(self.FORGED_EM_REVIEW_ENTRY, version="99.0.0")
         _assert_other_entries_match_expected_shape(
-            self, [forged], OTHER_PLUGIN_ENTRIES_BASELINE
+            self, [forged], [EM_REVIEW_BASELINE_ENTRY]
         )  # must not raise
 
     def test_em_review_matcher_rejects_new_unexpected_key(self):
@@ -308,8 +331,51 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         forged = dict(self.FORGED_EM_REVIEW_ENTRY, extra_field="surprise")
         with self.assertRaises(AssertionError):
             _assert_other_entries_match_expected_shape(
-                self, [forged], OTHER_PLUGIN_ENTRIES_BASELINE
+                self, [forged], [EM_REVIEW_BASELINE_ENTRY]
             )
+
+    FORGED_PLUGIN_DEV_ENTRY = {
+        "name": "plugin-dev",
+        "description": (
+            "Toolbox for developing Claude Code plugins and marketplaces. "
+            "The plugin-dev skill guides creating a new plugin."
+        ),
+        "author": {"name": "em"},
+        "category": "development",
+        "source": "./plugin-dev",
+        "version": "0.1.0",
+    }
+
+    def test_matcher_rejects_other_entries_missing_plugin_dev(self):
+        # A forged other-entries list holding only the em-review entry (the
+        # plugin-dev entry removed) is rejected against the full baseline.
+        forged = [dict(self.FORGED_EM_REVIEW_ENTRY)]
+        with self.assertRaises(AssertionError):
+            _assert_other_entries_match_expected_shape(
+                self, forged, OTHER_PLUGIN_ENTRIES_BASELINE
+            )
+
+    def test_plugin_dev_matcher_accepts_unaltered_entry(self):
+        # Positive control for the rejection proof below: the unaltered
+        # forged plugin-dev entry is accepted against the plugin-dev-only
+        # baseline, so that proof's rejection comes from the altered field.
+        _assert_other_entries_match_expected_shape(
+            self, [dict(self.FORGED_PLUGIN_DEV_ENTRY)], [PLUGIN_DEV_BASELINE_ENTRY]
+        )  # must not raise
+
+    def test_plugin_dev_matcher_rejects_altered_identity_field(self):
+        for field, forged_value in (
+            ("name", "plugin-dev-forked"),
+            ("author", {"name": "someone-else"}),
+            ("category", "other"),
+            ("source", "./plugin-dev-forked"),
+        ):
+            with self.subTest(field=field):
+                forged = dict(self.FORGED_PLUGIN_DEV_ENTRY, **{field: forged_value})
+                with self.assertRaises(AssertionError):
+                    _assert_other_entries_match_expected_shape(
+                        self, [forged], [PLUGIN_DEV_BASELINE_ENTRY]
+                    )
 
 
 if __name__ == "__main__":

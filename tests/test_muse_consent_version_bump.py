@@ -62,10 +62,14 @@ EM_REVIEW_BASELINE_VERSION = "0.5.7"
 # non-version content of `em-workflow/.claude-plugin/plugin.json` --
 # em-workflow's version keeps advancing, but its other fields are what this
 # digest guards, so the reference point is "now", not a one-time-past
-# snapshot. The other two digests below were computed from the tree as it
-# stood immediately before this module's original task's edit (AC-3) and
-# remain valid because em-review's manifest and the marketplace's
-# non-version content have not changed since.
+# snapshot. EM_REVIEW_MANIFEST_NONVERSION_SHA256 was computed from the tree
+# as it stood immediately before this module's original task's edit (AC-3)
+# and remains valid because em-review's manifest has not changed since.
+# MARKETPLACE_NONVERSION_SHA256 was recomputed from the current tree after
+# the `plugin-dev` entry was added to the marketplace
+# (orphan-recovery-plugin-root-path task0002, FR6); canonicalizing the
+# marketplace with that entry removed gives the previous value, so the entry
+# addition is the only non-version change it absorbs.
 EM_WORKFLOW_MANIFEST_NONVERSION_SHA256 = (
     "bf70d7104511c338b6f076c3d9ab08b6a19b757b59d45397324242f11008ebf0"
 )
@@ -73,7 +77,7 @@ EM_REVIEW_MANIFEST_NONVERSION_SHA256 = (
     "6f6b717184be5c2a250c80e39f0a526e103f9d752d039fa47f6343e9bd0dc3b3"
 )
 MARKETPLACE_NONVERSION_SHA256 = (
-    "91990cece50d28af2864b67d70eb1171e6bbb5ded548e6ca200ecfb5f8a3e363"
+    "e19b9efbf3a9d089661a145070011ee539ccccaedb5aaa4697ee9d18fa7812fc"
 )
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
