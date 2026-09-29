@@ -1,0 +1,142 @@
+task_id: task0001
+# Inherited red state, recorded by running `python3 -m unittest discover -s tests`
+# in the worktree before any file was touched (6465 tests, 5 failures). All five
+# are marketplace.json-shape tests from other features' version-bump modules;
+# this task does not touch marketplace.json or any plugin.json.
+baseline_failures:
+  - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+# Re-executed after the implementation (same command, 6492 tests, 5 failures):
+# exactly the baseline set, no new failure.
+final_failures:
+  - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_each_new_invocation_sentence_present_in_i2b
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_site_a_keeps_marker_passing_clause_and_d2_precedence
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_each_constant_carries_its_plugin_root_path
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_each_constant_cites_step_i0_step4
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_recovery_constants_carry_project_root_working_directory
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_forged_sanity_each_new_sentence_detected_if_removed
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_recover_orphaned_task_invocation
+    red_confirmed: true
+    red_reason: >-
+      Observed against the unedited implement-phase.md (tests and pins written
+      first): test_each_new_invocation_sentence_present_in_i2b failed for
+      site A with "AssertionError: 'invokes `RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py`
+      (resolved per Step I.0 step 4) for the candidate task with `{project_root}`
+      ... not found in '### I.2.b: Wake phase ...'", and the updated
+      ORPHAN_RECOVER_SCRIPT_INVOCATION_PHRASE presence test
+      (test_states_recover_orphaned_task_invocation) failed the same way.
+      The marker-passing / D2 form 1 retention test and the constant-content
+      tests passed before and after (they guard wording this task keeps, or
+      the constants themselves), so they are not the red evidence.
+  AC-2:
+    tests:
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_each_new_invocation_sentence_present_in_i2b
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_site_b_keeps_its_inputs_list
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestCwdRelativeInvocationFormsAbsent.test_old_forms_absent_from_whole_document
+    red_confirmed: true
+    red_reason: >-
+      Observed against the unedited document: test_each_new_invocation_sentence_present_in_i2b
+      failed for site B ("the orchestrator re-invokes the same `RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py`
+      (resolved per Step I.0 step 4) ... not found"), and
+      test_old_forms_absent_from_whole_document failed for site B
+      ("'re-invokes `em-workflow/scripts/recover-orphaned-task.py`' unexpectedly
+      found"). test_site_b_keeps_its_inputs_list passed before and after
+      (retention guard for the unchanged inputs list).
+  AC-3:
+    tests:
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_each_new_invocation_sentence_present_in_i2b
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestNewInvocationWording.test_site_c_keeps_verbatim_merge_unverified_clause
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present
+    red_confirmed: true
+    red_reason: >-
+      Observed against the unedited document: test_each_new_invocation_sentence_present_in_i2b
+      failed for site C ("the orchestrator invokes `${CLAUDE_PLUGIN_ROOT}/scripts/journal-append-failed.py`
+      (resolved per Step I.0 step 4) exactly once, ... not found"), and the
+      updated R2_HELPER_INVOCATION_PHRASE presence test
+      (test_all_new_phrases_present, subTest for that phrase) failed the same
+      way. test_site_c_keeps_verbatim_merge_unverified_clause passed before
+      and after (the verbatim clause is retained by design).
+  AC-4:
+    tests:
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestResolutionFailureStatements.test_resolution_failure_statements_present_in_i2b
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestResolutionFailureStatements.test_journal_helper_statement_sits_next_to_the_existing_residue
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestResolutionFailureStatements.test_forged_sanity_each_statement_detected_if_removed
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestResolutionFailureStatements.test_existing_helper_failure_residue_sentence_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Observed against the unedited document: test_resolution_failure_statements_present_in_i2b
+      failed for both statements ("'When RECOVER_SCRIPT cannot be resolved, ...'
+      not found in '### I.2.b: Wake phase ...'" and the journal-helper
+      counterpart), and test_journal_helper_statement_sits_next_to_the_existing_residue
+      errored with "ValueError: substring not found". The existing
+      Helper-failure residue sentence test passed before and after (that
+      sentence is unchanged by design; another module pins it too).
+  AC-5:
+    tests:
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestCwdRelativeInvocationFormsAbsent.test_old_forms_absent_from_whole_document
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestCwdRelativeInvocationFormsAbsent.test_old_form_matchers_flag_the_pre_change_samples
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestCwdRelativeInvocationFormsAbsent.test_pre_change_samples_come_from_the_same_place
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestCwdRelativeInvocationFormsAbsent.test_script_internal_and_out_of_scope_sentences_survive
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestFallbackLiteralsConfinedToStepI0.test_each_literal_count_in_whole_document_equals_step_i0_count
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestFallbackLiteralsConfinedToStepI0.test_forged_copy_with_literal_inserted_into_i2b_fails_the_check
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestFallbackLiteralsConfinedToStepI0.test_new_invocation_sentences_do_not_restate_the_literals
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: true
+    red_reason: >-
+      Observed against the unedited document: test_old_forms_absent_from_whole_document
+      failed for all three sites ("'invokes `em-workflow/scripts/recover-orphaned-task.py`'
+      unexpectedly found", the re-invokes form, and "'the orchestrator invokes
+      `em-workflow/scripts/journal-append-failed.py`' unexpectedly found").
+      The Step I.0 confinement checks (TS-3) passed before and after because
+      the fallback literals were already confined to Step I.0; their
+      non-vacuity rests on the forged-copy negative proof
+      (test_forged_copy_with_literal_inserted_into_i2b_fails_the_check), not
+      on a red state. The negative-proof samples were verified verbatim
+      against `git show efadb30ff28dab548db0da5a986e670b8203cbe5:em-workflow/references/implement-phase.md`.
+  AC-6:
+    tests:
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_recover_orphaned_task_invocation
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_journal_helper_invocation_on_proof
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_forged_sanity_each_phrase_detected_if_removed
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical
+    red_confirmed: true
+    red_reason: >-
+      Observed against the unedited document after updating the two pins:
+      test_states_recover_orphaned_task_invocation and
+      test_all_new_phrases_present (R2_HELPER_INVOCATION_PHRASE subTest) both
+      failed with "not found" for the new wording. ORPHAN_JOURNAL_HELPER_INVOCATION_PHRASE
+      and R5_HELPER_NAMED_AS_EXCEPTION_PHRASE were not edited (git diff shows
+      only the two updated constants) and their tests
+      (test_states_journal_helper_invocation_on_proof, the R5 tests) pass
+      before and after. The full-suite outcome equals the baseline; the
+      merge-task.sh / queue_launch_guard.py sha256 guards pass.
+  AC-7:
+    tests:
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract.TestCwdRelativeInvocationFormsAbsent.test_script_internal_and_out_of_scope_sentences_survive
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_journal_helper_invocation_on_proof
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical
+    red_confirmed: false
+    red_reason: >-
+      "The task's diff touches only the four declared files" is a property of
+      the diff, not of the document, so no executable check can be made to
+      fail for it; it was verified by inspecting `git diff --stat` against the
+      base commit (only implement-phase.md and the three test modules changed;
+      workflow-schema.md, recover-orphaned-task.py, merge-task.sh,
+      queue_launch_guard.py and both version fields untouched) and the
+      implement-phase.md hunks (only sites A, B, C and their
+      resolution-failure statements). A dedicated new module is out of scope,
+      but the existing tests listed here detect the retention of the
+      script-internal sentences, the Journal-bullet exception and the two
+      guarded files' sha256; no red state occurred for this change.
