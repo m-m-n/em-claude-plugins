@@ -1,0 +1,26 @@
+schema_version: 1
+feature: first-entry-timestamp-scan
+records:
+  - question_id: verify.pre-existing-suite-failures
+    packet_id: null
+    answered_at: "2026-09-29T21:18:30+09:00"
+    source: codex
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "A: pass verify for this feature's scope, list the 5 pre-existing failures, file a follow-up task"
+    normalized_answer: "A: pass with explicit out-of-scope exception + follow-up task"
+    resolution_note: >-
+      gate: verify TS-3/NFR2 (0 failures) vs 5 pre-existing failures in
+      test_batch_policy_option_id_version_bump,
+      test_batch_structured_result_output_version_bump,
+      test_goal_vs_spec_divergence_version_bump,
+      test_muse_consent_version_bump, test_rework_contract_drift_version_bump
+      (marketplace.json snapshot tests broken by main 090a4f06 adding
+      plugin-dev; reproduce at base_commit d33926aa).
+      options: A = pass with explicit exception + follow-up task;
+      B = mark verify failed and auto-rework those 5 unrelated test files
+      (outside SPEC's change scope). chosen: A. not chosen: B.
+      key points: failures predate this feature and its diff does not touch
+      them or marketplace.json; B would breach the SPEC change scope; risk of A
+      is that TS-3 is literally unmet, so it is recorded as a scoped pass, not
+      a full-suite green. codex_consulted: true; opus_escalation: false.
