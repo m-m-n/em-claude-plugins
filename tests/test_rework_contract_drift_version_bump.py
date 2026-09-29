@@ -108,7 +108,10 @@ EXPECTED_MARKETPLACE_DESCRIPTION = (
     "Personal marketplace of Claude Code plugins maintained by em"
 )
 EXPECTED_MARKETPLACE_OWNER = {"name": "em"}
-EXPECTED_PLUGINS_COUNT = 2
+# The marketplace lists three plugins (em-review, em-workflow, plugin-dev);
+# 3 since the `plugin-dev` entry was added (orphan-recovery-plugin-root-path
+# task0002).
+EXPECTED_PLUGINS_COUNT = 3
 
 EXPECTED_EM_WORKFLOW_ENTRY_KEYS = {
     "name",
