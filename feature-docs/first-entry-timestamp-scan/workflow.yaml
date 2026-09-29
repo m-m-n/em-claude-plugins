@@ -107,9 +107,21 @@ workflow:
   status: completed
   completed_at_commit: 79631612b7d52b1be17eeb2dc2c6ee21df85d7ee
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  completed_at_commit: 2bcbecfa2df6bc927670e0fa44bb1a00d26a2207
+  notes: >-
+    TS-1/TS-2/TS-5/TS-6 pass. TS-4 (manual, read-only D2 form 2 from this real
+    session) resolved stem 01a0ed16-beed-75ad-8b6d-a9e63e8a7f5c with start
+    2026-09-29T21:14:48.801+09:00; the first attempt right after emitting the
+    marker returned None because the transcript line had not been flushed yet,
+    the second attempt resolved. TS-3: 6467 tests, 0 errors, 5 failures, all in
+    other features' *_version_bump tests (marketplace plugin count/hash
+    snapshots broken by main commit 090a4f06 adding plugin-dev); the same 5
+    fail at base_commit d33926aa, so they are pre-existing and out of scope.
+    Passed for this feature's scope with that exception (Codex-consulted, see
+    phase-state/batch-audit.yaml); not a full-suite green.
 - id: retrospect
   status: pending
 tasks:
