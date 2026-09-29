@@ -1,0 +1,86 @@
+task_id: task0001
+baseline_failures:
+  - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+final_failures:
+  # Actually re-executed after implementation: `python3 -m unittest discover -s tests`
+  # ran 6467 tests (baseline run: 6465; +2 are the new tests) with the same five failures.
+  - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
+    red_confirmed: false
+    red_reason: >-
+      The test passed on its first run against the unchanged script: the behaviour it
+      pins (form 2 start = earliest parseable timestamp) already existed
+      (IMPLEMENTATION.md D2), and the task forbids modifying the script to obtain a
+      failing run, so no red state occurred. Supplementary observation, not a red:
+      running the same fixture in-process through decide() with the real journal
+      helper, with the start derivation temporarily replaced in memory by a
+      first-line-only reader (script file untouched), gave residual /
+      current-session-unknown instead of recovered.
+  AC-2:
+    tests:
+      - test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
+    red_confirmed: false
+    red_reason: >-
+      Same test as AC-1 (its journal assertions); passed on first run against the
+      unchanged script, behaviour pre-existed, no red state occurred.
+  AC-3:
+    tests:
+      - test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
+    red_confirmed: false
+    red_reason: >-
+      Fixture-shape criterion, asserted inside the same test (first record has no
+      timestamp, a later line has the marker plus a parseable timestamp, no other
+      transcript contains the marker). It passed on first run because the fixture is
+      built to that shape; no red state occurred.
+  AC-4:
+    tests:
+      - test_recover_orphaned_task.TestCurrentSessionResolution.test_first_entry_scan_timestampless_lead_resolves_earliest_not_first_timestamp
+    red_confirmed: false
+    red_reason: >-
+      Passed on first run against the unchanged script (behaviour pre-existed, D2); no
+      red state occurred. Supplementary observation, not a red: with the start
+      derivation temporarily replaced in memory (script file untouched) by a
+      first-line-only reader the test failed with `None != (stem, 10:00 UTC)`, and by
+      a positionally-first-timestamp reader it failed (15:00 instead of 10:00).
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Property of this task's diff (no change to recover-orphaned-task.py or to
+      D2/TS-14 documents), checked with `git diff --name-only` against the parent
+      branch, not by a test. Searched tests/ by relative path and basename
+      (recover-orphaned-task, orphaned-implementer-recovery): the matching modules
+      exercise the script's behaviour or cite the documents but none fails on a diff
+      that leaves them unchanged, and no failing run of this check was observed.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Property of this task's diff (no change to em-workflow plugin.json or
+      marketplace.json), checked with `git diff --name-only` against the parent
+      branch, not by a test. Searched tests/ by relative path and basename
+      (plugin.json, marketplace.json): the *_version_bump / parity modules assert
+      version >= baseline and parity, which an unchanged manifest satisfies; none
+      detects "no change", and no failing run of this check was observed.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by running `python3 -m unittest discover -s tests` from the repository
+      root: 0 errors, and the same five inherited failures as the baseline (no new
+      failure). "0 failures" is not reachable by this task because those five
+      pre-existing marketplace tests fail before any change. Import-only-stdlib,
+      temp-directory-only paths and no removed/altered existing test are properties
+      of the diff (only additions plus the datetime import line and the header
+      docstring), not of an executable check that can be made to fail first.
