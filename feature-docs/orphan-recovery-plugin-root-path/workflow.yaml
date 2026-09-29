@@ -210,8 +210,9 @@ tasks:
     - FR6
     - NFR2
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/orphan-recovery-plugin-root-path/task0002
     provenance:
       source: verify
       source_ids:
