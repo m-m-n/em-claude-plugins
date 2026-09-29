@@ -123,7 +123,8 @@ workflow:
     Passed for this feature's scope with that exception (Codex-consulted, see
     phase-state/batch-audit.yaml); not a full-suite green.
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: b183fb170a985ca36c23c22472fdda753c76313f
 tasks:
   task0001:
     title: Regression tests for D2 form 2 over timestamp-less leading records
