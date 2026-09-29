@@ -1,93 +1,54 @@
 schema_version: 1
 feature: first-entry-timestamp-scan
 created: '2026-09-29'
-goal: '# em-workflow: _first_entry_timestamp が先頭行のみを見るため D2 の現セッション解決が実運用で失敗する
-
+goal: |
+  # em-workflow: _first_entry_timestamp が先頭行のみを見るため D2 の現セッション解決が実運用で失敗する
 
   Notion タスク: https://www.notion.so/3d33509ec8ee81d189d8ebda9c2fd034 （種別: バグ / 優先度: 高）
 
-
   ## 現象（必須）
-
   `recover-orphaned-task.py` の marker ベース現セッション解決（IMPLEMENTATION.md D2 の
-
   form 2）が、実セッションではほぼ常に失敗して `current-session-unknown` に落ちる。
-
   `_resolve_current_session_via_marker` は marker を含む transcript を正しく特定するが、
-
   `_first_entry_timestamp` が「最初の非空行」だけを見て `timestamp` フィールドが無ければ
-
   None を返す。実際の `~/.claude/projects/{encoded-cwd}/*.jsonl` は先頭行が
-
   `{"type":"last-prompt",...}` のような timestamp を持たない記録であることが多く
-
   （実測サンプル 40 件中 34 件）、解決に失敗する。
-
   結果として I.2.b の orphan recovery（FR2 の証明経路）が実運用で発火しない。
-
   form 1（session id + start の明示指定）を使える場合のみ機能する。
-
   feature `orphaned-implementer-recovery` の verify フェーズで MANUAL-D2 として検出。
-
   batch の verify rework 上限に達していたため未修正のまま停止した。
 
-
   ## 再現手順（必須）
-
   1. 実際の Claude Code セッションから `recover-orphaned-task.py` の D2 form 2
-
   （marker ベース現セッション解決）を 1 度実行する
-
   2. transcript には marker が含まれているのに解決結果が None になる
-
   3. 該当 transcript の先頭行を見ると `timestamp` フィールドが無い
 
-
   ## 期待する挙動（必須）
-
   先頭行に `timestamp` が無くても、以降の行を走査して最初に見つかった `timestamp` を
-
   セッション開始時刻として採用する。走査は上限行数などで打ち切ってよいが、
-
   `{"type":"last-prompt",...}` のような timestamp を持たない先頭行があるだけで
-
   None を返さないこと。
 
-
   ## 完了の定義（必須）
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある（先頭行に timestamp が無い fixture を含める）
-
   - [ ] VERIFICATION.md の Manual Testing 2 件目（D2）が成立する
 
-
   ## 該当箇所（任意）
-
   `em-workflow/scripts/recover-orphaned-task.py` の `_first_entry_timestamp` /
-
   `_resolve_current_session_via_marker`
 
-
   ## 実害・発生条件（任意）
-
   自動テスト（TS-1..TS-13、3029 件）は fixture が timestamp 付き先頭行を前提としている
-
   ため全て pass する。この乖離は実セッションでのみ露出する。既存 fixture に timestamp
-
   無しの先頭行パターンを足すのが再発検出の要点。
 
-
   ## 起動時の追加指示
-
   - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作る。integration ブランチはローカル・リモート共に残す（base_branch へ自動マージしない）
-
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
-
   - その議論の内容を Notion に記録する
-
-  '
 base_branch: main
 parent_branch: em-workflow/first-entry-timestamp-scan/integration
 tier: full
@@ -136,7 +97,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 20424a9e889b8a73bc50b1b76b4f86ac81c3874e
 - id: implement
   status: pending
 - id: review
