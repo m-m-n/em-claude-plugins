@@ -1,0 +1,12 @@
+schema_version: 1
+feature: orphan-recovery-plugin-root-path
+records:
+  - question_id: verify.failed
+    packet_id: null
+    answered_at: "2026-09-29T21:26:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "record verify result=fail (SC-suite) and auto-rework"
+    normalized_answer: "record verify result=fail (SC-suite) and auto-rework"
+    resolution_note: "gate: verify-phase handling of 5 pre-existing full-suite failures (stale version-bump tests after main 090a4f06 added plugin-dev); options: A) pass relative to base + follow-up task, B) fail SC-suite + batch auto-rework fixing the stale tests in this branch, C) fail but fix out of band (Codex's suggestion); codex_consulted: true; Codex chose C, arguing SC-suite text cannot be reinterpreted as 'no regression vs base' and the failures are not this feature's defect; adopted B because the literal criterion fails (A would disguise verification) and batch protocol has no fail-without-rework path below cap, so C reduces to B; lineage cap 1 / hard cap 3 bound the rework"
