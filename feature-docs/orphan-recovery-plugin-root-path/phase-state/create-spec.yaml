@@ -1,0 +1,27 @@
+schema_version: 1
+feature: orphan-recovery-plugin-root-path
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: a558a22db2a8c9bcebea07878c225144febf44ee
+last_input_digest: sha256:08ad2e379083a36d473a14ba5e9e60456412a08eb148ad69b6874ac3330be9af
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:08ad2e379083a36d473a14ba5e9e60456412a08eb148ad69b6874ac3330be9af
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null
