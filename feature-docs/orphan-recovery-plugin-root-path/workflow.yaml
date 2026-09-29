@@ -2,53 +2,98 @@ schema_version: 1
 feature: orphan-recovery-plugin-root-path
 created: '2026-09-29'
 base_branch: main
-goal: |
-  em-workflow: orphan-recovery ヘルパーの起動パスが cwd 相対で配布構成では発火しない
+goal: 'em-workflow: orphan-recovery ヘルパーの起動パスが cwd 相対で配布構成では発火しない
+
 
   ## 現象（必須）
+
   `em-workflow/references/implement-phase.md` の I.2.b orphan-recovery ブロックが、
+
   孤児 launched の復旧ヘルパーを `em-workflow/scripts/recover-orphaned-task.py` という
+
   cwd 相対パスで起動するよう orchestrator に指示している。em-workflow はマーケット
+
   プレイス経由で任意のプロジェクトへ配布されるため、利用者の cwd 配下に `em-workflow/`
+
   は存在しない。結果として、インストール済みプラグイン構成では recovery が一度も発火せず、
+
   すべての候補が Residual（journal 不変・gate-rejected terminal）に落ちる。
+
   feature `orphaned-implementer-recovery` の review round3 で high として検出されたが、
+
   batch の rework 上限に達していたため `deferred` で残った（stable_id: `ebad15de2c79c36c`）。
+
   ## 再現手順（必須）
+
   1. em-claude-plugins をマーケットプレイスからインストールし、`em-workflow/` を含まない
+
   別プロジェクトを cwd にする
+
   1. implement フェーズで孤児 launched（journal 最終イベントが `launched`、worktree と
+
   branch あり、Agent index に live なし）を作る
+
   1. 次の run の I.2.b reconcile を走らせる
+
   2. ヘルパーのパスが解決できず recovery が発火しない
+
   ## 期待する挙動（必須）
+
   同じ文書の Step 4 が定めるプラグイン同梱スクリプトの解決規律と同じ経路をたどること。
+
   `RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py` を解決し、
+
   fail-closed で `$HOME/.claude/plugins` / `$HOME/.claude/skills` を
+
   `*/em-workflow/*/scripts/*` で探索する。cwd は見ない。解決に失敗した場合は Residual
+
   として扱う旨も明記する。
+
   あわせて、起動時の cwd（feature の integration worktree / プロジェクトルート）を同じ
+
   文で固定し、D1 の既定導出（`default_transcripts_dir` の `os.getcwd()`）を決定的にする。
+
   ## 完了の定義（必須）
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
   - [ ] `implement-phase.md` の起動文が `${CLAUDE_PLUGIN_ROOT}` 経由になり、Step 4 を
+
   owning section として cite している（NFR7 の SSOT 重複禁止）
+
   - [ ] 起動時の cwd が明記されている
+
   ## 該当箇所（任意）
+
   - `em-workflow/references/implement-phase.md:472`（起動文）
+
   - `em-workflow/references/implement-phase.md:124-127`（Step 4 の解決規律。owning section）
+
   - `tests/test_implement_routeback_gate.py:681` — 現行の文言
+
   \``invokes `em-workflow/scripts/recover-orphaned-task.py` for the `\` を逐語で assert
+
   しているため、同じ変更でこのリテラルも更新する
+
   `implement-phase.md:496` / `:845` と `workflow-schema.md:313` は「どのスクリプトが
+
   書き手か」の同定であって起動指示ではないため対象外。`recover-orphaned-task.py` 自身は
+
   `_SCRIPT_DIR` で兄弟ヘルパーを自力解決しているので変更不要。
+
   ## 実害・発生条件（任意）
+
   配布構成（マーケットプレイス経由でインストールした利用者）でのみ発生する。開発リポジトリ
+
   本体を cwd にしている限り再現しないため、自動テストでは露出しない。SPEC AC-2 / FR2 は
+
   I.2.b reconcile 中に実際に recovery を走らせることを要求しているので、この feature の
+
   目玉挙動そのものが配布先で到達不能になる。
+
+  '
 parent_branch: em-workflow/orphan-recovery-plugin-root-path/integration
 tier: reduced
 tier_decision:
@@ -99,7 +144,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 03ef40db5f65668c74f95337596ba3f504b0d19b
 - id: implement
   status: pending
 - id: review
@@ -110,7 +156,36 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Resolve I.2.b orchestrator helper invocations through CLAUDE_PLUGIN_ROOT
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_implement_routeback_gate.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    - tests/test_orphan_recovery_plugin_root_path_doc_contract.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -122,7 +197,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-3
@@ -131,7 +207,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   FR3:
@@ -139,7 +216,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   FR4:
@@ -147,7 +225,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   FR5:
@@ -155,7 +234,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-3
@@ -164,7 +244,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-5
@@ -173,15 +254,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
+    - TS-6
   NFR1:
     title: SSOT 重複禁止（NFR7）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-3
@@ -190,7 +274,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-5
@@ -199,7 +284,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-5
@@ -208,8 +294,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
 batch:
   review_rework_count: 0
   verify_rework:
