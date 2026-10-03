@@ -51,16 +51,24 @@ unit module rather than the case table (TS-2/TS-11 per its VERIFICATION.md):
 - AC-6 (task0003): the payload scenario's regression evidence is a
   substitution-carrying case (fails pre-task, passes post-task); the
   literal-path payload case from task0001 is retained separately.
+
+Also covers task0002 (FR3): the bound on the expectation-runner invocation in
+`TestCaseTableDiscipline.test_runner_reports_every_case_passing` is the number
+of cases in the case file times a per-case budget (`runner_timeout_seconds()`),
+not a fixed number of seconds; `TestRunnerTimeoutDerivation` pins that
+derivation without running the runner.
 """
 
 import ast
 import json
+import math
 import os
 import re
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GUARD_PATH = REPO_ROOT / "em-workflow" / "hooks" / "destructive-guard.py"
@@ -147,6 +155,21 @@ def decision(command, batch=False):
         return None, ""
     out = json.loads(result.stdout)["hookSpecificOutput"]
     return out["permissionDecision"], out.get("permissionDecisionReason", "")
+
+
+# The expectation runner starts one hook subprocess per case, one after another,
+# so its wall time is linear in the number of cases. Observed cost on a loaded
+# host was 0.27-0.36 s per case; the budget below is the floor, not the
+# measurement. The bound stays finite so a hung runner still fails the test.
+RUNNER_SECONDS_PER_CASE = 1
+
+
+def runner_timeout_seconds():
+    """Bound, in seconds, for one invocation of the expectation runner: the
+    number of cases in the case file as it stands now times the per-case
+    budget."""
+    cases = json.loads(CASES_PATH.read_text(encoding="utf-8"))
+    return len(cases) * RUNNER_SECONDS_PER_CASE
 
 
 ORIGINAL_VERDICT_BY_COMMAND = {
@@ -550,11 +573,90 @@ class TestCaseTableDiscipline(unittest.TestCase):
 
     def test_runner_reports_every_case_passing(self):
         result = subprocess.run(
-            [sys.executable, str(RUNNER_PATH)], capture_output=True, text=True, timeout=120
+            [sys.executable, str(RUNNER_PATH)],
+            capture_output=True,
+            text=True,
+            timeout=runner_timeout_seconds(),
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("FAIL", result.stdout)
         self.assertRegex(result.stdout, r"(\d+)/\1 passed")
+
+
+class TestRunnerTimeoutDerivation(unittest.TestCase):
+    """task0002 AC-1/AC-2/AC-3 (FR3): the bound on the expectation-runner
+    invocation grows with the case file instead of staying a fixed number of
+    seconds. The runner starts one hook subprocess per case, one after
+    another, so its wall time is linear in the case count; a fixed bound
+    turns a growing case table into a spurious `TimeoutExpired`.
+
+    None of these tests runs the real runner: AC-1 drives the real test
+    method against a stand-in for `subprocess.run` that records the keyword
+    arguments it receives."""
+
+    def case_count(self):
+        return len(json.loads(CASES_PATH.read_text(encoding="utf-8")))
+
+    def passing_result(self):
+        # The runner reports every case plus one extra check (the unattended
+        # demotion), as "<n>/<n> passed".
+        total = self.case_count() + 1
+        return subprocess.CompletedProcess(
+            args=[], returncode=0, stdout=f"{total}/{total} passed\n", stderr=""
+        )
+
+    def invoke_runner_test(self, completed):
+        """Run `test_runner_reports_every_case_passing` with `subprocess.run`
+        replaced by a stand-in returning COMPLETED; return the stand-in."""
+        stand_in = mock.Mock(return_value=completed)
+        method = TestCaseTableDiscipline("test_runner_reports_every_case_passing")
+        with mock.patch.object(subprocess, "run", stand_in):
+            method.test_runner_reports_every_case_passing()
+        return stand_in
+
+    def test_derived_timeout_is_finite_and_covers_every_case(self):
+        """AC-2: derived from the CURRENT case file, finite, and at least one
+        second per case. A fixed 120 seconds is below the case count."""
+        count = self.case_count()
+        timeout = runner_timeout_seconds()
+        self.assertGreater(count, 0)
+        self.assertTrue(math.isfinite(timeout), f"timeout is not finite: {timeout!r}")
+        self.assertGreaterEqual(
+            timeout, count, f"{timeout} s cannot cover {count} cases at 1 s each"
+        )
+
+    def test_runner_invocation_receives_the_derived_finite_timeout(self):
+        """AC-1: the invocation inside the real test method passes a finite
+        timeout equal to the derivation, covering every case."""
+        stand_in = self.invoke_runner_test(self.passing_result())
+        stand_in.assert_called_once()
+        timeout = stand_in.call_args.kwargs.get("timeout")
+        self.assertIsNotNone(timeout, "runner invocation passes no timeout")
+        self.assertTrue(math.isfinite(timeout), f"timeout is not finite: {timeout!r}")
+        self.assertEqual(timeout, runner_timeout_seconds())
+        self.assertGreaterEqual(timeout, self.case_count())
+
+    def test_runner_invocation_arguments_unchanged(self):
+        """AC-3: the runner's arguments stay as they were."""
+        stand_in = self.invoke_runner_test(self.passing_result())
+        self.assertEqual(stand_in.call_args.args, ([sys.executable, str(RUNNER_PATH)],))
+        self.assertIs(stand_in.call_args.kwargs.get("capture_output"), True)
+        self.assertIs(stand_in.call_args.kwargs.get("text"), True)
+
+    def test_runner_test_still_fails_on_nonzero_exit_or_a_failing_case(self):
+        """AC-3: the exit-status and every-case-passing assertions stay."""
+        total = self.case_count() + 1
+        for label, completed in (
+            ("non-zero exit", subprocess.CompletedProcess([], 1, f"{total}/{total} passed\n", "")),
+            (
+                "FAIL line",
+                subprocess.CompletedProcess([], 0, f"FAIL ask x\n{total - 1}/{total} passed\n", ""),
+            ),
+            ("partial count", subprocess.CompletedProcess([], 0, f"{total - 1}/{total} passed\n", "")),
+        ):
+            with self.subTest(label):
+                with self.assertRaises(AssertionError):
+                    self.invoke_runner_test(completed)
 
 
 # --- AC-7: source hygiene and determinism ----------------------------------
