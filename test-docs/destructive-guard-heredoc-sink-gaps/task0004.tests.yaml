@@ -1,92 +1,92 @@
 task_id: task0004
-baseline_failures: []   # 4a, before any change: python3 -m unittest discover -s tests = 6497 tests OK; run-destructive-guard.py = 456/456 passed. After merging the parent (task0003 landed) and adopting its cases file the suite was re-run: unittest OK, runner 476/476 passed; baseline still empty.
-final_failures: []      # re-executed after the implementation and the re-implementation on the updated parent: unittest discover = 6497 tests OK; run-destructive-guard.py = 530/530 passed
+baseline_failures: []   # 4a, before any change: python3 -m unittest discover -s tests = 6497 tests OK; run-destructive-guard.py = 456/456 passed. Each time the parent was merged in (task0003 landed first, then task0001) and its cases file adopted, the suite was re-run before re-appending this task's cases: unittest OK both times, runner 476/476 and 480/480 passed; the baseline stayed empty.
+final_failures: []      # re-executed after the implementation and the re-implementation on the updated parent: unittest discover = 6497 tests OK; run-destructive-guard.py = 534/534 passed
 acceptance_tests:
   AC-1:
-    tests: ["destructive-guard-cases.json lines 494-498 (511cd470522973d8 AC-7.1 .. AC-7.5), run by em-workflow/hooks/tests/run-destructive-guard.py"]
+    tests: ["destructive-guard-cases.json lines 499-503 (511cd470522973d8 AC-7.1 .. AC-7.5), run by em-workflow/hooks/tests/run-destructive-guard.py"]
     red_confirmed: true
     red_reason: "All five cases FAILed against the pre-change guard: expected deny, got allow (the host cat/jq/git was judged data, so the body was never scanned)."
   AC-2:
-    tests: ["destructive-guard-cases.json lines 499-514 (511cd470522973d8 task0004 AC-2(a), AC-2(b), AC-2(c)), run by run-destructive-guard.py"]
+    tests: ["destructive-guard-cases.json lines 504-519 (511cd470522973d8 task0004 AC-2(a), AC-2(b), AC-2(c)), run by run-destructive-guard.py"]
     red_confirmed: true
-    red_reason: "15 of 16 cases FAILed against the pre-change guard (expected deny, got allow). Line 502 (env -iS 'bash -s' cat) already denied before the change: the clustered -iS is not in WRAPPER_VALUE_FLAGS, so the pre-change resolution read 'bash -s' as the command word."
+    red_reason: "15 of 16 cases FAILed against the pre-change guard (expected deny, got allow). Line 507 (env -iS 'bash -s' cat) already denied before the change: the clustered -iS is not in WRAPPER_VALUE_FLAGS, so the pre-change resolution read 'bash -s' as the command word."
   AC-3:
-    tests: ["destructive-guard-cases.json lines 4, 36, 416-419, 468, 469 as numbered before this task (existing allow cases; cases 468 and 469 are still the first two FR6 allow cases)", "destructive-guard-cases.json lines 515-524 (task0004 AC-3, new allow cases)"]
+    tests: ["destructive-guard-cases.json lines 4, 36, 416-419, 468, 469 as numbered before this task (existing allow cases; cases 468 and 469 are still the first two FR6 allow cases)", "destructive-guard-cases.json lines 520-529 (task0004 AC-3, new allow cases)"]
     red_confirmed: false
-    red_reason: "Allow-direction guards against over-triggering: the criterion requires these to stay allow, so they PASS before and after the change and no red state exists. The new script-writing case (line 515) was checked allow against the pre-change guard first, as the task plan requires. The existing cases are also exercised by tests/test_destructive_guard_command_substitution.py and tests/test_guard_deferral_parity.py, which read destructive-guard.py; no red state occurred for this change."
+    red_reason: "Allow-direction guards against over-triggering: the criterion requires these to stay allow, so they PASS before and after the change and no red state exists. The new script-writing case (line 520) was checked allow against the pre-change guard first, as the task plan requires. The existing cases are also exercised by tests/test_destructive_guard_command_substitution.py and tests/test_guard_deferral_parity.py, which read destructive-guard.py; no red state occurred for this change."
   AC-4:
-    tests: ["destructive-guard-cases.json lines 525-529 (b8fd289ca7750a04 AC-8.1 .. AC-8.5), run by run-destructive-guard.py"]
+    tests: ["destructive-guard-cases.json lines 530-534 (b8fd289ca7750a04 AC-8.1 .. AC-8.5), run by run-destructive-guard.py"]
     red_confirmed: true
     red_reason: "All five cases FAILed against the pre-change guard: expected deny, got allow."
   AC-5:
-    tests: ["destructive-guard-cases.json lines 530-547 (b8fd289ca7750a04 task0004 AC-5), run by run-destructive-guard.py"]
+    tests: ["destructive-guard-cases.json lines 535-552 (b8fd289ca7750a04 task0004 AC-5), run by run-destructive-guard.py"]
     red_confirmed: true
-    red_reason: "14 of 18 cases FAILed against the pre-change guard (expected deny, got allow): enable, standalone PATH, export PATH, space-before-parens definition, function NAME()( ... ), env PATH=, PATH+=, builtin alias, definitions inside a substitution (three spellings), alias inside a substitution, alias inside bash -c, alias in a sink heredoc body. Lines 530, 531, 532 and 537 (brace-bodied function definitions at the top level) already denied before the change, incidentally: the closing } is read as an unmatched group closer, which makes the whole chunk undetermined. The substitution-nested variants have no such closer in the outer chunk and are the red cases for the brace-bodied constructs."
+    red_reason: "14 of 18 cases FAILed against the pre-change guard (expected deny, got allow): enable, standalone PATH, export PATH, space-before-parens definition, function NAME()( ... ), env PATH=, PATH+=, builtin alias, definitions inside a substitution (three spellings), alias inside a substitution, alias inside bash -c, alias in a sink heredoc body. Lines 535, 536, 537 and 542 (brace-bodied function definitions at the top level) already denied before the change, incidentally: the closing } is read as an unmatched group closer, which makes the whole chunk undetermined. The substitution-nested variants have no such closer in the outer chunk and are the red cases for the brace-bodied constructs."
   AC-6:
     tests: ["python3 em-workflow/hooks/tests/run-destructive-guard.py <copy of the guard before this task's change> (the parent branch's guard at the start of the re-implementation)"]
     red_confirmed: true
-    red_reason: "The cases were committed before the guard change (commit 'task0004: add skipped-word sink and command-name override cases'). Run against the pre-change guard the runner reported 491/530: 39 FAIL, all of them added cases, including all five 511cd470522973d8 AC-7 forms and all five b8fd289ca7750a04 AC-8 forms. Per-case results are in added_cases below."
+    red_reason: "The cases were committed before the guard change (commit 'task0004: add skipped-word sink and command-name override cases'). Run against the pre-change guard the runner reported 495/534: 39 FAIL, all of them added cases, including all five 511cd470522973d8 AC-7 forms and all five b8fd289ca7750a04 AC-8 forms. Per-case results are in added_cases below."
   AC-7:
     tests: ["python3 em-workflow/hooks/tests/run-destructive-guard.py", "python3 -m unittest discover -s tests", "tests/test_destructive_guard_command_substitution.py", "tests/test_destructive_guard_rm_reason.py", "tests/test_guard_deferral_parity.py", "tests/test_protocol_git_ops_pass_destructive_guard.py"]
     red_confirmed: false
-    red_reason: "Regression guard: the 475 entries present when this task's cases were appended are an exact prefix of the new 529-entry array (checked by loading both and comparing), and all of them PASS before and after. A dedicated new module is out of scope, but the existing tests/test_destructive_guard_command_substitution.py, test_guard_deferral_parity.py and the runner detect any change to those verdicts; no red state occurred for this change."
+    red_reason: "Regression guard: the 479 entries present when this task's cases were appended are an exact prefix of the new 533-entry array (checked by loading both and comparing), and all of them PASS before and after. A dedicated new module is out of scope, but the existing tests/test_destructive_guard_command_substitution.py, test_guard_deferral_parity.py and the runner detect any change to those verdicts; no red state occurred for this change."
 added_cases:
   # Every case appended by this task. pre_change = verdict-vs-expectation against the guard without this task's change;
   # post_change = against the guard with it. Key = line number in destructive-guard-cases.json.
-  494: {id: "511cd470522973d8 AC-7.1", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  495: {id: "511cd470522973d8 AC-7.2", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  496: {id: "511cd470522973d8 AC-7.3", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  497: {id: "511cd470522973d8 AC-7.4", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  498: {id: "511cd470522973d8 AC-7.5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  499: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  500: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  501: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  502: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "PASS", post_change: "PASS"}
-  503: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  499: {id: "511cd470522973d8 AC-7.1", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  500: {id: "511cd470522973d8 AC-7.2", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  501: {id: "511cd470522973d8 AC-7.3", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  502: {id: "511cd470522973d8 AC-7.4", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  503: {id: "511cd470522973d8 AC-7.5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   504: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   505: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  506: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  507: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  508: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  509: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  510: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  506: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  507: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "PASS", post_change: "PASS"}
+  508: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  509: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  510: {id: "511cd470522973d8 task0004 AC-2(a)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   511: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  512: {id: "511cd470522973d8 task0004 AC-2(c)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  513: {id: "511cd470522973d8 task0004 AC-2(c)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  514: {id: "511cd470522973d8 task0004 AC-2(c)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  515: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
-  516: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
-  517: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
-  518: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
-  519: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
+  512: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  513: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  514: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  515: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  516: {id: "511cd470522973d8 task0004 AC-2(b)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  517: {id: "511cd470522973d8 task0004 AC-2(c)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  518: {id: "511cd470522973d8 task0004 AC-2(c)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  519: {id: "511cd470522973d8 task0004 AC-2(c)", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   520: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
   521: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
   522: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
   523: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
   524: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
-  525: {id: "b8fd289ca7750a04 AC-8.1", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  526: {id: "b8fd289ca7750a04 AC-8.2", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  527: {id: "b8fd289ca7750a04 AC-8.3", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  528: {id: "b8fd289ca7750a04 AC-8.4", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  529: {id: "b8fd289ca7750a04 AC-8.5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  530: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "PASS", post_change: "PASS"}
-  531: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "PASS", post_change: "PASS"}
-  532: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "PASS", post_change: "PASS"}
-  533: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  534: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  535: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  536: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  525: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
+  526: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
+  527: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
+  528: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
+  529: {id: "task0004 AC-3", expect: allow, pre_change: "PASS", post_change: "PASS"}
+  530: {id: "b8fd289ca7750a04 AC-8.1", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  531: {id: "b8fd289ca7750a04 AC-8.2", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  532: {id: "b8fd289ca7750a04 AC-8.3", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  533: {id: "b8fd289ca7750a04 AC-8.4", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  534: {id: "b8fd289ca7750a04 AC-8.5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  535: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "PASS", post_change: "PASS"}
+  536: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "PASS", post_change: "PASS"}
   537: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "PASS", post_change: "PASS"}
   538: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   539: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   540: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   541: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-  542: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  542: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "PASS", post_change: "PASS"}
   543: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   544: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   545: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   546: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
   547: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
-pre_change_summary: "run-destructive-guard.py against the pre-change guard: 491/530; 39 FAIL (all added cases); 15 added cases already PASS (10 allow guards, 5 deny cases named in the AC-2 and AC-5 red_reason)"
-post_change_summary: "run-destructive-guard.py: 530/530 passed; python3 -m unittest discover -s tests: 6497 tests OK"
-notes: "No existing entry in destructive-guard-cases.json was edited; the only change to an existing line is the trailing comma added to the last pre-existing entry so the array continues. The merge into the parent conflicted once in the cases file (task0003 had appended its block); the parent's version was adopted and this task's block re-appended after it."
+  548: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  549: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  550: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  551: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+  552: {id: "b8fd289ca7750a04 task0004 AC-5", expect: deny, pre_change: "FAIL(got allow)", post_change: "PASS"}
+pre_change_summary: "run-destructive-guard.py against the pre-change guard: 495/534; 39 FAIL (all added cases); 15 added cases already PASS (10 allow guards, 5 deny cases named in the AC-2 and AC-5 red_reason)"
+post_change_summary: "run-destructive-guard.py: 534/534 passed; python3 -m unittest discover -s tests: 6497 tests OK"
+notes: "No existing entry in destructive-guard-cases.json was edited; the only change to an existing line is the trailing comma added to the last pre-existing entry so the array continues. The merge into the parent conflicted twice in the cases file (task0003, then task0001, had appended their blocks); each time the parent's version was adopted and this task's block re-appended after it. destructive-guard.py merged without textual conflicts both times."
