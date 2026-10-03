@@ -1,0 +1,127 @@
+task_id: task0001
+baseline_failures: []          # refreshed after the parent-side adoption of the parent branch (task0003 merged in): python3 -m unittest discover -s tests -> Ran 6497 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 476/476 passed. (Before the adoption, on the untouched worktree: unittest Ran 6497 tests OK; runner 456/456 passed.)
+final_failures: []             # re-executed on the final tree after re-implementing the cases on the updated parent: python3 -m unittest discover -s tests -> Ran 6497 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 480/480 passed (479 array elements + 1 hard-coded unattended-demotion case)
+acceptance_tests:
+  AC-1:
+    tests:
+      - "run-destructive-guard.py <pre-change copy of destructive-guard.py>: case 26ab9a3d83649eff AC-4 (timeout reporting)"
+    red_confirmed: true
+    red_reason: >-
+      Observed against the pre-task runner (git 27388290) loaded with the new
+      case table and pointed at the pre-change guard: exit 0, "460/460
+      passed", no timeout FAIL, although the 60KB case alone takes 15.3 s on
+      that guard (timed directly: 15.35 s and 15.32 s in two runs). With the
+      changed runner against the same pre-change guard: the case printed
+      "FAIL deny 26ab9a3d83649eff AC-4: ... [TIMEOUT 10s]" followed by
+      "got=(timeout) 10 秒の制限時間を超えたため中断した。"; the remaining 459
+      cases were evaluated and printed; summary "459/460 passed"; exit status 1;
+      no traceback. Direct verdict() timing on the pre-change guard: 10.01 s
+      for the plain evaluation and 10.01 s for the batch=True (unattended
+      demotion) evaluation. pgrep afterwards showed no leftover guard process.
+      After the parent-side adoption the same run against the parent's guard
+      (the guard before this task's change, task0003 included) again printed
+      the same timeout FAIL and "479/480 passed", exit 1.
+  AC-2:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope (NFR4), but the existing
+      tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      detects a changed exit status or a FAIL line in an all-PASS run; no red
+      state occurred for this change. Output compatibility was also checked
+      by hand: the pre-task runner (git 27388290) and the changed runner, each
+      with the pre-task 455-entry case table and the changed guard, produced
+      byte-identical output (456/456 passed, exit 0); against a stub guard
+      that answers deny for everything (249 FAIL lines, 207/456 passed), they
+      again produced byte-identical output and both exited 1.
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json: 26ab9a3d83649eff AC-4: 単一引用符内に $( を 30000 個並べた約 60KB の入力でも 10 秒以内に deny を返す"
+    red_confirmed: true
+    red_reason: >-
+      Run through the changed runner against the pre-change guard (no guard
+      implementation present): "FAIL deny 26ab9a3d83649eff AC-4: ... [TIMEOUT
+      10s]", got=(timeout). Against the changed guard the same case prints
+      "ok   deny", the whole runner reports 460/460 passed, and the case's
+      evaluation takes about 0.12 s. The runner evaluates this case once
+      (plain); the batch=True evaluation is the separate hard-coded
+      demotion case.
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      One-off timing outside the repository (not a committed test; script and
+      output kept only under the git-ignored tmp/ of the worktree), the AC-3
+      shape timed as a direct subprocess run of the guard, 30000 and 60000
+      repetitions of `$(` back to back. Changed guard, 5 alternating rounds:
+      30000 reps 0.117 / 0.122 / 0.119 / 0.118 / 0.119 s (median 0.119 s);
+      60000 reps 0.273 / 0.276 / 0.278 / 0.273 / 0.276 s (median 0.276 s);
+      ratio of medians 2.32, ratio of minimums 2.33 (< 3, PASS). The same
+      measurement on the pre-change guard (red): 30000 reps 15.32 s, 60000
+      reps 60.91 s, ratio 3.98 (> 3, FAIL); earlier pre-change runs
+      7500 reps 1.00 s, 15000 reps 3.88 s, 30000 reps 15.35 s show the
+      quadratic growth. In isolation the changed code is linear:
+      _single_quoted_sub_closes() takes 0.0015 / 0.0032 / 0.0063 / 0.0133 /
+      0.0278 / 0.0560 s for 15000 / 30000 / 60000 / 120000 / 240000 / 480000
+      repetitions, and scan_structure() 0.0039 / 0.0082 / 0.0167 / 0.0329 /
+      0.0672 / 0.1363 s. The whole guard process still grows slightly faster
+      than linear above 60000 repetitions (30000->60000 2.32x, 60000->120000
+      2.65x, 15000->30000 1.84x), and cProfile puts that time in
+      lex_segments()/shlex tokenization, not in the changed code. Re-measured
+      on the final tree after the parent-side adoption (5 alternating
+      rounds): 30000 reps median 0.117 s, 60000 reps median 0.270 s, ratio
+      of medians 2.30, ratio of minimums 2.34 (< 3, PASS).
+  AC-5:
+    tests:
+      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.1: 単一引用符内の閉じないバッククォート('`' 形)の後ろにある置換内の rm は deny"
+      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.2: 単一引用符内の閉じないバッククォート(don`t 形)の後ろにある置換内の rm は deny"
+      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.3: 単一引用符内の閉じない $( の後ろにある文の rm は deny"
+    red_confirmed: false
+    red_reason: >-
+      The three forms are regression guards for the FR4 rewrite and the
+      behavior they pin already existed: all three printed "ok   deny" against
+      the pre-change guard, so no red state occurred. After the change they
+      still PASS (460/460). A variant of the changed guard that lets a `$(`
+      close past the end of its single-quoted span was run through the runner
+      and fails AC-5.3 only (459/460).
+  AC-6:
+    tests:
+      - "destructive-guard-cases.json: 26ab9a3d83649eff AC-4: 単一引用符内に $( を 30000 個並べた約 60KB の入力でも 10 秒以内に deny を返す"
+      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.1 / AC-5.2 / AC-5.3"
+    red_confirmed: true
+    red_reason: >-
+      Order of work: runner time limit and the four cases were committed
+      (bcb2eea4) before the guard change (def52f4a). Result of every added
+      case against the pre-change guard, run through the changed runner:
+      26ab9a3d83649eff AC-4 (60KB) FAIL [TIMEOUT 10s]; 46923ffe262f20b1 AC-5.1
+      ok deny; 46923ffe262f20b1 AC-5.2 ok deny; 46923ffe262f20b1 AC-5.3 ok
+      deny. The AC-3 case FAILing against the pre-change guard is the observed
+      red for this criterion. After the parent-side adoption the four cases
+      were re-appended on the updated case table and run against the parent's
+      guard (the guard before this task's change): the same four results.
+  AC-7:
+    tests:
+      - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      - "python3 -m unittest discover -s tests"
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes"
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope (NFR4), but the existing
+      tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline
+      tests detect a changed or missing pre-task case and a runner that does
+      not report every case passing; no red state occurred for this change.
+      Checked directly: json.loads of the base (git 27388290) case file has
+      455 entries and is an exact prefix of the final 479-entry array (list
+      equality), and so is the parent branch's 475-entry array (task0003
+      merged in); the only textual change to a pre-existing line is the
+      trailing comma added after what was the last entry. A differential
+      check of scan_structure(honor_single_quotes=False) between the
+      pre-change guard and the changed guard returned identical tuples
+      (spans, parent_of, unmatched, opaque, containing_span) for all
+      48,427,561 strings of length <= 8 over the alphabet  ' $ ( ) ` " \ a
+      space, plus 60,000 random strings with up to 3 checkpoints; repeated
+      against the parent's guard after the adoption (5,380,840 exhaustive
+      strings of length <= 7, plus the same random set): identical.
+      Both commands pass on the final tree.
