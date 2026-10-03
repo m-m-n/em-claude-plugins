@@ -128,7 +128,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/plan-version-bump-per-commit/task0001
     notes: null
   task0002:
     title: conflict-protocol version exception in worktree-task-workflow
@@ -147,7 +148,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/plan-version-bump-per-commit/task0002
     notes: null
   task0003:
     title: plugin_versioning input for implementation-planner and the create-plan dispatch
@@ -168,7 +170,8 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/plan-version-bump-per-commit/task0003
     notes: null
   task0004:
     title: rework-planner version rules reference and plugin_versioning input
@@ -191,7 +194,8 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/plan-version-bump-per-commit/task0004
     notes: null
 review:
   status: pending
