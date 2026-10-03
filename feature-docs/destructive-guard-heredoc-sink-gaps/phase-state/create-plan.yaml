@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-sink-gaps
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 893ad2cbb2e47393c3d73f202765f3f3c9e92c07
 last_input_digest: sha256:d67fe827be56365ed647e9232b3532f26270d38771ce39fafa39118a09daf1c5
@@ -37,7 +37,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: destructive-guard-heredoc-sink-gaps-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:d67fe827be56365ed647e9232b3532f26270d38771ce39fafa39118a09daf1c5
   base_workflow_blob: ea3269c11524ee66b32cc821106188dd548aebed
 progress_fingerprint: null
