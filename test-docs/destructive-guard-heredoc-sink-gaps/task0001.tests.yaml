@@ -1,6 +1,6 @@
 task_id: task0001
-baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 6497 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 456/456 passed
-final_failures: []             # re-executed on the final tree after the guard change: python3 -m unittest discover -s tests -> Ran 6497 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 460/460 passed (459 array elements + 1 hard-coded unattended-demotion case)
+baseline_failures: []          # refreshed after the parent-side adoption of the parent branch (task0003 merged in): python3 -m unittest discover -s tests -> Ran 6497 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 476/476 passed. (Before the adoption, on the untouched worktree: unittest Ran 6497 tests OK; runner 456/456 passed.)
+final_failures: []             # re-executed on the final tree after re-implementing the cases on the updated parent: python3 -m unittest discover -s tests -> Ran 6497 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 480/480 passed (479 array elements + 1 hard-coded unattended-demotion case)
 acceptance_tests:
   AC-1:
     tests:
@@ -18,6 +18,9 @@ acceptance_tests:
       no traceback. Direct verdict() timing on the pre-change guard: 10.01 s
       for the plain evaluation and 10.01 s for the batch=True (unattended
       demotion) evaluation. pgrep afterwards showed no leftover guard process.
+      After the parent-side adoption the same run against the parent's guard
+      (the guard before this task's change, task0003 included) again printed
+      the same timeout FAIL and "479/480 passed", exit 1.
   AC-2:
     tests:
       - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
@@ -65,7 +68,10 @@ acceptance_tests:
       0.0672 / 0.1363 s. The whole guard process still grows slightly faster
       than linear above 60000 repetitions (30000->60000 2.32x, 60000->120000
       2.65x, 15000->30000 1.84x), and cProfile puts that time in
-      lex_segments()/shlex tokenization, not in the changed code.
+      lex_segments()/shlex tokenization, not in the changed code. Re-measured
+      on the final tree after the parent-side adoption (5 alternating
+      rounds): 30000 reps median 0.117 s, 60000 reps median 0.270 s, ratio
+      of medians 2.30, ratio of minimums 2.34 (< 3, PASS).
   AC-5:
     tests:
       - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.1: 単一引用符内の閉じないバッククォート('`' 形)の後ろにある置換内の rm は deny"
@@ -91,7 +97,9 @@ acceptance_tests:
       26ab9a3d83649eff AC-4 (60KB) FAIL [TIMEOUT 10s]; 46923ffe262f20b1 AC-5.1
       ok deny; 46923ffe262f20b1 AC-5.2 ok deny; 46923ffe262f20b1 AC-5.3 ok
       deny. The AC-3 case FAILing against the pre-change guard is the observed
-      red for this criterion.
+      red for this criterion. After the parent-side adoption the four cases
+      were re-appended on the updated case table and run against the parent's
+      guard (the guard before this task's change): the same four results.
   AC-7:
     tests:
       - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
@@ -105,7 +113,15 @@ acceptance_tests:
       tests detect a changed or missing pre-task case and a runner that does
       not report every case passing; no red state occurred for this change.
       Checked directly: json.loads of the base (git 27388290) case file has
-      455 entries and is an exact prefix of the 459-entry new array (list
-      equality); the only textual change to a pre-existing line is the
-      trailing comma added after what was the last entry. Both commands pass
-      on the final tree.
+      455 entries and is an exact prefix of the final 479-entry array (list
+      equality), and so is the parent branch's 475-entry array (task0003
+      merged in); the only textual change to a pre-existing line is the
+      trailing comma added after what was the last entry. A differential
+      check of scan_structure(honor_single_quotes=False) between the
+      pre-change guard and the changed guard returned identical tuples
+      (spans, parent_of, unmatched, opaque, containing_span) for all
+      48,427,561 strings of length <= 8 over the alphabet  ' $ ( ) ` " \ a
+      space, plus 60,000 random strings with up to 3 checkpoints; repeated
+      against the parent's guard after the adoption (5,380,840 exhaustive
+      strings of length <= 7, plus the same random set): identical.
+      Both commands pass on the final tree.
