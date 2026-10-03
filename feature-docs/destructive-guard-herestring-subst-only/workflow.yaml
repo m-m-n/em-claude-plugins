@@ -1,0 +1,161 @@
+schema_version: 1
+feature: destructive-guard-herestring-subst-only
+created: '2026-10-04'
+base_branch: main
+goal: |
+  # destructive-guard: here-string の後ろが置換だけのシェル呼び出しで IndexError が起き、後続の rm が判定されず素通りする
+
+  出典: https://www.notion.so/3ee3509ec8ee8187906dc9215030bf6f
+
+  種別: バグ
+
+  ## 現象
+  destructive-guard で、here-string（`<<<`）の後ろの語がコマンド置換だけのシェル呼び出しを含む複合コマンドを渡すと、`extract_shell_payload_anchored()` の here-string 分岐で `IndexError` が起き、フックが exit 1（ブロックしないエラー）で終わる。同じ複合コマンドの後続の `rm -rf /var/b` の deny が出ず、ガードが素通りになる（fail-open）。
+  shell 語の後ろの語が here-string の置換トークンだけだと `words` は `['bash']` の 1 要素になる。`_payload_index(words, 1)` は START=1 が範囲外のときそのまま 1 を返すので、`words[j]` で `IndexError` になる。
+  em-workflow/destructive-guard-rm-reason-positions の review round 2 で検出した（stable_id 46effc0976b8d93e）。ベース 94875785 でも同じ入力で落ちる既存の不具合。
+
+  ## 再現手順
+  1. 次のコマンドを `em-workflow/hooks/destructive-guard.py` に PreToolUse の入力として渡す
+     - `bash <<< $(echo hi); rm -rf /var/b`
+     - ``sh <<< `x`; rm -rf /var/b``
+  2. フックが traceback を出して exit 1 で終わり、deny が出ない
+
+  ## 期待する挙動
+  フックが落ちず、後続の `rm -rf /var/b` が通常どおり deny される。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+  - 直す前に `em-workflow/hooks/tests/destructive-guard-cases.json` に `["deny", "here-string 置換のみ + 後続 rm", "bash <<< $(echo hi); rm -rf /var/b"]` を足している（`.claude/rules/hook-tests.md`）
+
+  ## 該当箇所
+  - `em-workflow/hooks/destructive-guard.py:911` 付近（`j = _payload_index(words, 1)` の直後の `words[j]`）
+  - 修正案: 条件を `0 < j < len(words) and not getattr(words[j], "substitution_only", False)` にする
+
+  ## 実害・発生条件
+  here-string の本文がコマンド置換だけのシェル呼び出しを先頭に置くと、同じコマンド列の破壊的コマンドがすべて判定されずに通る。
+parent_branch: em-workflow/destructive-guard-herestring-subst-only/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  at: '2026-10-04T02:34:03+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+  - IMPLEMENTATION.md (同一ファイルを複数タスクが宣言しない場合)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    hooks:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: bffbeaf58100a95f16062cb26aeb258575ea40cc
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない Python フックのバグ修正のため
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  failed_kind: null
+  base_commit: null
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: here-string 分岐の範囲外参照をなくす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 後続の破壊的コマンドを判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 再発検出ケースを修正前に追加する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: here-string 分岐以外の挙動を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: version を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
