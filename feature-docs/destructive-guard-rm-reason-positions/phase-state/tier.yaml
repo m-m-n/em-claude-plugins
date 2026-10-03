@@ -1,0 +1,73 @@
+schema_version: 2
+feature: destructive-guard-rm-reason-positions
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.64
+    confidence: 0.64
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.36
+      '2': 0.64
+      '3': 0.0
+  observed_at: '2026-10-03T21:49:05+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.74
+    confidence: 0.74
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.74
+      '3': 0.0
+  observed_at: '2026-10-03T21:55:35+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - tests/test_destructive_guard_rm_reason.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 4
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 'mainのHEAD a9ff8bae59b28d795bd87ec364fff98a894fa723で4件すべて再現した。ファイルの変更はしていない。以下の実行結果はHOME=/home/rm-reason-test-home、PATH空、CLAUDE_BATCH未設定で確認し、すべてdeny／rm-recursiveだった。
+
+    1. c9d77d33b47dac08: echo "$(rm -rf /var/x)"; rm -rf /tmp/y → 「2番目のrmの1番目の対象」。destructive-guard.pyのstatements()は2794–2797行で置換本文をpendingに追加し、2826行で外側の文を先に返す。main()のnext_rm_invocation()（4681–4683行）はcheck_rm()の解析順で採番する。bash
+    -c本文でも同じずれを確認した。
+
+    2. 3d4e1f64664a5d96: $(printf rm) rm -rf /tmp/cache; rm -rf /var/valuable → 「1番目のrmの1番目の対象、3番目のrmの1番目の対象」。main()の4720–4728行からroute_substitution_headed_statement()の3477行を経由する呼び出しは番号1、args=[rm,-rf,/tmp/cache]。通常経路の4752行は番号2、args=[-rf,/tmp/cache]。後続のrmは番号3になる。
+
+    3. a7026abc0ff69de7: rm -rf -- -cache /tmp/scratch /var/valuable → 「1番目のrmの2番目の対象」。check_rm()の3806–3810行が-cacheを除外し、3826行で残った対象を採番するため、元の3番目のオペランドが2番目になる。
+
+    4. c7bd2a13f6985975: rm -rf /var/a /var/b → 位置の列挙のみで、gio trash／mvの雛形がない。check_rm()の3885行では対象別の雛形を生成するが、strongest_rm_decision()の3918–3926行は各理由文を捨てて共通文を返す。
+
+    既存テスト: em-workflow/hooks/tests/run-destructive-guard.pyの58–61行は判定だけを比較する。実行結果は456/456 passedで、cases.jsonに指定4入力はない。tests/test_destructive_guard_rm_reason.pyの253–268行は位置表記の区別、288–307行は単一対象の雛形を確認するが、今回の4現象を検出する検証はない。
+
+    必要な変更は、元位置に基づく採番と経路間の番号共有、元のオペランド位置の保持、集約時の対象別雛形の保持、および理由文の回帰テスト追加。判定・rule id・入出力形式は維持する要求がある。変更行数と追加関数数は実装前には確定できず、数値0は未算定を表す。caller_and_dependency_countの5は調査対象のstatements、main、route_substitution_headed_statement、check_rm、strongest_rm_decisionを数えたもの。'
+decided_at: '2026-10-03T21:55:40+09:00'
