@@ -1,0 +1,114 @@
+schema_version: 2
+feature: destructive-guard-heredoc-sink-gaps
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.82
+    confidence: 0.82
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.18
+      '2': 0.82
+      '3': 0.0
+  observed_at: '2026-10-03T20:07:12+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.72
+    confidence: 0.72
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.73
+      '3': 0.0
+  observed_at: '2026-10-03T20:14:34+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 24
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 'main の HEAD は 9a3feb34c91b32d452a5c5a4540258a24c22fc7b。6 件すべて現在の main
+    で再現した。再現文字列は Bash 用 JSON の tool_input.command として python3 -B em-workflow/hooks/destructive-guard.py
+    に渡した。文字列内の破壊的コマンド自体は実行していない。CLAUDE_BATCH は解除した。
+
+
+    cdb8382d4bbb0b1d：review の根拠は feature-docs/destructive-guard-heredoc-reset-hard/reviews/round2.yaml:211。2>&1・>&2・&>・&>>・>|・\;・\&・行継続を含む検知漏れの再現形
+    11 件がすべて allow。例：make 2>&1 | tail -5\nbash <<''EOF''\ngit reset --hard HEAD\nEOF\necho
+    done。em-workflow/hooks/destructive-guard.py:1704 は区切り文字を直接数える一方、同ファイル:631 はリダイレクト演算子を分割しない。逆方向の誤検知例
+    ls 2>&1\ncat > /tmp/p <<''EOF''\ngit reset --hard HEAD\nEOF\npython3 x.py は deny、2>&1
+    を除いた対照は allow。
+
+
+    73a1d7b31734dd22：review の根拠は round2.yaml:294。echo it\''s; bash <<''EOF''\ngit
+    reset --hard HEAD\nEOF、その末尾に ls を加えた形、エスケープした二重引用符の形の 3 件がすべて allow。destructive-guard.py:1330
+    の停止文字にバックスラッシュが含まれず、同ファイル:1612 で _word_at() の読み取り位置まで進めている。
+
+
+    26ab9a3d83649eff：review の根拠は round2.yaml:1013。入力を "echo ''" + "$(" * K + "'' ;
+    rm -rf ~/important" として実測した。K=10000、20,028 バイトは約 1.749 秒で deny。K=25000、50,028
+    バイトと K=30000、60,028 バイトはいずれも 10 秒の実行制限で終了させられ、標準出力・標準エラーとも 0 バイトだった。destructive-guard.py:1457
+    は各 $( から引用範囲の残りを走査し、同ファイル:2724 はこの処理を呼ぶ。実際のフック制限も em-workflow/hooks/hooks.json:51
+    で 10 秒。
+
+
+    18b99bd71e74c8dc：review の根拠は round2.yaml:1094。echo ''<<EOF''; bash --version\nrm
+    -rf ~\nEOF、二重引用符内の <<EOF、複数行の二重引用符を閉じた後のコメント内の <<EOF の 3 件がすべて allow。sink 語を含まない追加例も
+    allow。destructive-guard.py:998 は行内の正規表現一致から本文を取り除き、同ファイル:2203 は演算子位置が引用・コメント範囲内かを確認していない。
+
+
+    511cd470522973d8：review の根拠は round2.yaml:1111。env -S ''bash -s'' cat、env --split-string=''bash
+    -s'' cat、env -S''sh -s'' jq、GIT_EDITOR=bash git commit -e -F -、git -c core.editor=sh
+    commit -e -F - に破壊的本文のヒアドキュメントを付けた 5 件がすべて allow。destructive-guard.py:2899 はラッパーの値を読み飛ばし、同ファイル:1884
+    は残ったコマンド語で宛先を判定する。
+
+
+    b8fd289ca7750a04：review の根拠は round2.yaml:1127。cat() ( bash ) の関数定義、hash -p /bin/sh
+    git、alias cat=bash、PATH=/tmp/p cat による差し替えの再現形 4 件がすべて allow。destructive-guard.py:2106
+    はホストの名前が DATA_COMMANDS に含まれるかで data と判定する。
+
+
+    テスト：em-workflow/hooks/tests/run-destructive-guard.py を実行し、455 件と無人実行の確認 1 件の合計
+    456/456 が成功した。上記の検知漏れ・誤検知の再現入力 28 件は destructive-guard-cases.json に同一コマンドの登録がなかった。関連構文の検索でも対象ケースは見つからず、既存入力の最大長は
+    5,018 バイト。run-destructive-guard.py:39 の実行には時間制限がない。レビュー基準 f7880283 の deny / ask
+    281 件と round2 HEAD 927fd965 の deny / ask 323 件を現在のケースと比較し、削除はどちらも 0 件だった。
+
+
+    対象の既存 6 関数について、直接呼び出し元と直接呼び出す同一ファイル内関数を重複除外すると 24 関数。対象コードの import は標準ライブラリのみ。変更内容は既存
+    hooks 内の判定処理とテストに関係し、入出力形式の変更は依頼されていない。
+
+
+    ファイルの作成・変更・削除は行っていない。調査終了時の git status と git diff は空。変更行数・新規関数数・追加テスト数の 0 は未実装の記録であり、必要量の推定ではない。必要量はこの調査では未確定。規模判定・tier
+    判定は行っていない。'
+decided_at: '2026-10-03T20:15:00+09:00'
