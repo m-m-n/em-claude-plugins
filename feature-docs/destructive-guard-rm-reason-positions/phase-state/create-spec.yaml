@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: a7c332630f9de3e7b6724e73f0bcbfb1cde0efd6
 last_input_digest: sha256:905b6182cbafe5c21f0743b806e1bd8cc38c1997d063bd05cf2c7694295c4fed
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
   input_digest: sha256:350d988822b4ee758eaebf3b3259df59d6e41f11efa903b52ad6d1a586832607
   output_digest: sha256:d198d7b83bea9c4212374539e9efb61bec90d5b928d8dd61da75761a1b19efd3
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:905b6182cbafe5c21f0743b806e1bd8cc38c1997d063bd05cf2c7694295c4fed
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/destructive-guard-rm-reason-positions/REQUIREMENTS.md
+  sha256: sha256:d33190b682f82b4c4df398513329c8e253b8878a889b102a82ceb6cb4d5d7d6a
+  produced_by: create-spec-run-0002
+- path: feature-docs/destructive-guard-rm-reason-positions/SPEC.md
+  sha256: sha256:c115ed489329c8b857e3df4dab41255c53491bf0465501b861967132bf70081f
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
