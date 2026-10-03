@@ -1,11 +1,11 @@
 schema_version: 1
 feature: plan-version-bump-per-commit
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: db2eea1547434b5ac5e39e6fc16ff0eb6dbf8212
+base_revision: 12d2b257c6527de7d740c80c0dcea22ac870ada2
 last_input_digest: sha256:e08f289780b6af608ce48285f2c5f473c0e53cb608f81333575e4c85a2c50bfe
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
