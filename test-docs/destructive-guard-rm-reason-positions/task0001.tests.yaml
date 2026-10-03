@@ -1,0 +1,176 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestOriginalStringOrder.test_each_form_designates_the_unsafe_target_by_original_position
+      - tests.test_destructive_guard_rm_reason_positions.TestOriginalStringOrder.test_first_command_does_not_name_a_second_rm
+    red_confirmed: true
+    red_reason: >
+      Run against the unmodified hook (a copy of HEAD's destructive-guard.py
+      substituted for the module's GUARD_PATH). Seven subtests of
+      test_each_form_designates_the_unsafe_target_by_original_position
+      failed: the dollar-paren body, the backtick body, the -c payload, the
+      here-string payload and the eval payload each named the unsafe target
+      as 2番目のrmの1番目の対象 where the original-string position is
+      1番目 (diff "['2番目のrmの1番目の対象'] != ['1番目のrmの1番目の対象']",
+      reason "`rm -r` の対象（2番目のrmの1番目の対象）はスクラッチ領域の外。
+      `mv -- <対象> /tmp/` で退避する"). The two forms with a substitution
+      inside a -c payload were numbered the other way round: the unsafe
+      rm written after the substitution was named 1番目 where 2番目 is
+      required, and the unsafe substitution written before the safe rm was
+      named 2番目 where 1番目 is required.
+      test_first_command_does_not_name_a_second_rm failed
+      with "'2番目のrm' unexpectedly found". Four subtests of the same method
+      were already green on the unmodified hook and are not red evidence: the
+      nested rm -rf $(rm -rf /var/x) form and the three heredoc forms (the
+      heredoc operator-line forms with an unquoted delimiter, a quoted
+      delimiter, and a substitution inside the body). The old numbering
+      already agreed with the original string for them; they pin the
+      body-start anchor against regression.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestOneOrdinalPerStatement.test_substitution_headed_rm_then_a_later_statement
+      - tests.test_destructive_guard_rm_reason_positions.TestOneOrdinalPerStatement.test_substitution_headed_rm_consumes_one_ordinal_for_both_routes
+      - tests.test_destructive_guard_rm_reason_positions.TestOneOrdinalPerStatement.test_rm_inside_a_substitution_precedes_the_written_rm_that_follows_it
+      - tests.test_destructive_guard_rm_reason_positions.TestOneOrdinalPerStatement.test_evidence_that_does_not_read_rm_leaves_the_written_rm_as_command_word
+    red_confirmed: true
+    red_reason: >
+      Run against the unmodified hook. For "$(printf rm) rm -rf /var/cache"
+      the reason listed 1番目のrmの1番目の対象、1番目のrmの2番目の対象、
+      2番目のrmの1番目の対象 (the substitution route consumed an ordinal of its
+      own, so a spurious 2番目のrm appeared) where exactly the first two are
+      required. For "$(printf rm) rm -rf /tmp/cache; rm -rf /var/valuable"
+      the reason named 1番目のrmの1番目の対象 and 3番目のrmの1番目の対象
+      (the later statement shifted by the extra ordinal) where the second
+      designation must be 2番目のrmの1番目の対象, so
+      test_substitution_headed_rm_then_a_later_statement failed, and
+      test_rm_inside_a_substitution_precedes_the_written_rm_that_follows_it
+      failed with the inner rm named 2番目のrmの1番目の対象. The fourth test
+      ($(foo) rm -rf /var/x, the written rm stays the command word) was
+      already green on the unmodified hook and is a regression pin, not red
+      evidence.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestOperandNumbering.test_dash_leading_operand_after_double_dash_is_counted
+      - tests.test_destructive_guard_rm_reason_positions.TestOperandNumbering.test_second_double_dash_is_an_operand
+      - tests.test_destructive_guard_rm_reason_positions.TestOperandNumbering.test_numbering_through_the_substitution_route_uses_the_same_rule
+      - tests.test_destructive_guard_rm_reason_positions.TestOperandNumbering.test_lone_dash_before_any_double_dash_is_not_counted
+      - tests.test_destructive_guard_rm_reason_positions.TestOperandNumbering.test_dash_leading_operand_after_double_dash_is_still_not_judged
+      - tests.test_destructive_guard_rm_reason_positions.TestOperandNumbering.test_options_before_double_dash_are_not_counted
+    red_confirmed: true
+    red_reason: >
+      Run against the unmodified hook. rm -rf -- -cache /tmp/scratch
+      /var/valuable designated 1番目のrmの2番目の対象 where
+      1番目のrmの3番目の対象 is required (the dash-leading operand after the
+      first -- was not counted); rm -rf -- -- /var/x designated
+      1番目のrmの1番目の対象 where 2番目 is required, and the substitution
+      route spelling $(printf rm) -rf -- -cache /var/x designated
+      1番目のrmの1番目の対象 where 2番目 is required.
+      The three remaining tests (lone dash before any --, rm -rf -- -x stays
+      allow, options before -- are not counted) were already green on the
+      unmodified hook; they pin the unchanged side of the numbering rule and
+      the unchanged allow verdict (A2), not red evidence.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_two_outside_targets_without_gio_get_an_mv_template_each
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_two_outside_targets_with_gio_still_get_an_mv_template_each
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_two_targets_under_home_with_gio_get_a_gio_trash_template_each
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_root_alongside_a_plain_target_has_one_template_after_the_designation
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_partially_substituted_target_gets_no_template
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_two_rm_joined_by_semicolon_get_a_template_each
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_single_winner_text_is_exactly_the_single_target_text
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_unresolvable_targets_get_no_template
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_repeated_root_token_is_named_once
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_entries_follow_ascending_invocation_then_target_order
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_other_single_target_texts_are_unchanged
+    red_confirmed: true
+    red_reason: >
+      Run against the unmodified hook. For rm -rf /var/a /var/b the combined
+      reason carried the designations only: "AssertionError: 0 != 1" on the
+      template count after 1番目のrmの1番目の対象, both without gio on PATH
+      (mv template) and with a gio stub on PATH (still mv for the outside
+      targets, gio trash for the two targets under the fixed HOME). The same
+      failure was observed for the semicolon-joined pair, for
+      rm -rf / /var/a (rm-root: no template after 1番目のrmの2番目の対象), for
+      the partially substituted target case, and for the single-winner text of
+      rm -rf -- -cache /tmp/scratch /var/valuable, which differed from today's
+      single-target text because of the operand number (3番目). The
+      remaining tests (unresolvable targets get no template, a repeated root
+      token is named once, entries follow ascending order, other single-target
+      texts unchanged) were already green on the unmodified hook; they pin
+      sentences and ordering that must not change.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_control_character_targets_in_a_combined_reason_get_the_fixed_sentence
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_one_rm_two_planted_targets
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_two_rm_joined_by_semicolon_two_planted_targets
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_forged_prefix_target_never_reaches_a_single_winner_reason
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_forged_prefix_target_never_reaches_a_combined_ask_reason
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_stdout_carries_no_raw_control_character
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_same_command_same_environment_gives_byte_identical_stdout
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_parse_failure_fallback_is_stable_and_does_not_raise
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonHygiene.test_parse_failure_fallback_with_substitution_is_stable
+    red_confirmed: true
+    red_reason: >
+      Run against the unmodified hook, with and without CLAUDE_BATCH:
+      test_control_character_targets_in_a_combined_reason_get_the_fixed_sentence
+      failed in all four (designation x batch) subtests with "AssertionError:
+      0 != 1" on the count of the fixed control-character sentence, because
+      the combined reason carried no per-target entry at all. Every other
+      test listed here was already green on the unmodified hook (planted
+      strings, forged prefixes and raw control characters never reached the
+      reason before this task either, and stdout was already deterministic):
+      they guard those properties against regression by the new template
+      text and are not red evidence. Plan defect, recorded rather than
+      worked around: the plan's case (c) puts a forged [destructive-guard/...]
+      prefix and a control character in one combined deny reason, but a
+      forged-prefix target contains a bracket, which makes it a glob (ask
+      tier, no template) and so it can never share a combined deny reason
+      with a control-character target. The module therefore tests (c) as
+      three variants: both control-character targets (combined deny, fixed
+      sentence), a forged-prefix target as a single winner, and a forged
+      prefix beside a glob in a combined ask reason.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestVerdictsPinnedBeforeEditing.test_verdict_and_rule_id_equal_the_recorded_values
+      - tests.test_destructive_guard_rm_reason_positions.TestVerdictsPinnedBeforeEditing.test_unattended_run_downgrades_ask_to_deny_without_changing_the_rule
+    red_confirmed: false
+    red_reason: >
+      The verdicts and rule ids of the AC-1 to AC-5 commands were recorded
+      from the unmodified hook before editing (that is what the pin test
+      asserts), and the unmodified hook equals the recorded values by
+      construction, so these tests cannot be red against it; the criterion
+      requires NO change, and the other bullets are the existing suites
+      passing unchanged (em-workflow/hooks/tests/run-destructive-guard.py
+      with its cases file untouched, tests/test_destructive_guard_rm_reason.py
+      and every existing module unmodified), which were green before and
+      after. Existing tests searched by path and filename
+      (em-workflow/hooks/tests/run-destructive-guard.py,
+      em-workflow/hooks/tests/destructive-guard-cases.json,
+      tests/test_destructive_guard_rm_reason.py and the other
+      tests/test_destructive_guard_*.py modules) and they cover the
+      verdict / rule id behaviour but not the new designations. The
+      stdlib-only and explicit HOME and PATH bullets are properties of the
+      new module's source with no failing check to run.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_no_listed_description_carries_a_stale_statement
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_ordinals_are_assigned_after_the_scan_in_original_string_order
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_a_statement_gets_one_ordinal_across_both_routes
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_operands_are_numbered_with_the_double_dash_rule
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_statements_describes_the_origin_position_it_reports
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_the_combined_reason_pairs_each_plain_designation_with_its_template
+    red_confirmed: true
+    red_reason: >
+      Run against the unmodified hook (the tests read the module's docstrings
+      and the main() comment through ast, so they run against any hook copy).
+      Failures observed include: stale phrases still present in
+      rm_target_designation (the regex for "in the order main() reaches"
+      matched), "'origin position' not found" in statements(),
+      "'template' not found" in strongest_rm_decision(), "'`--`' not found"
+      in rm_target_designation(), "Regex didn't match: 'after the whole
+      command (?:has been|is) scanned'" in rm_target_designation() and in the
+      main() comments, and "'one ordinal' not found" in
+      route_substitution_headed_statement().
