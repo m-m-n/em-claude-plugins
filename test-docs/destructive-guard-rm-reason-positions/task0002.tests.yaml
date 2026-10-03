@@ -1,0 +1,26 @@
+task_id: task0002
+baseline_failures: []          # run before any edit: run-destructive-guard.py 456/456, unittest discover 6682 OK, check-plugin-invariants all PASS
+final_failures: []             # re-executed after the fix: run-destructive-guard.py 456/456, unittest discover 6686 OK (6682 + 4 new), check-plugin-invariants exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestForgedMarkerWithUnparsableIndex.test_ac1_verdict_and_rule_id_equal_the_values_recorded_from_the_base_hook
+      - tests.test_destructive_guard_rm_reason_positions.TestForgedMarkerWithUnparsableIndex.test_the_digit_limit_is_the_boundary_and_both_sides_give_the_same_verdict
+    red_confirmed: true
+    red_reason: "All 5 position subtests failed against the unfixed hook: guard exit status 1 (expected 0) with ValueError 'Exceeds the limit (4300 digits) for integer string conversion' raised from _register_marker_positions. The 4301-digit boundary subtest failed the same way (4300 digits passed, as before). Expected deny / rm-recursive was recorded from the base hook 94875785 for all 5 commands (exit 0) before editing."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestForgedMarkerWithUnparsableIndex.test_ac2_no_traceback_and_stdout_is_one_parsable_decision_object
+    red_confirmed: true
+    red_reason: "All 5 position subtests failed against the unfixed hook: 'Traceback' unexpectedly found in stderr (ValueError from _register_marker_positions), stdout empty"
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestForgedMarkerWithUnparsableIndex.test_ac3_stdout_carries_no_raw_control_character
+    red_confirmed: true
+    red_reason: "All 5 position subtests failed against the unfixed hook: AssertionError 'guard produced no output' (the hook died before emitting a decision, so there was no stdout to check). The control-character check itself passes on the fixed hook, whose stdout is byte-length-identical to the base hook's."
+  AC-4:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_rm_reason_positions
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope; the existing run-destructive-guard.py cases and tests/test_destructive_guard_rm_reason_positions.py (task0001 cases) detect any verdict or rule id change in the hook; no red state occurred for this change (both passed in the baseline and still pass, cases file and task0001 expectations unchanged)."
