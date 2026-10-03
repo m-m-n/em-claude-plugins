@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 8d88a288871047cdcc238d3eff8fea6127df429a
 last_input_digest: sha256:d111670eaf6165936b7a17cb116cebf50f60cee7cf6958cb932477f666169a8f
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -96,10 +96,16 @@ worker_runs:
   input_digest: sha256:2019ecdf08c00ef688a365169cb2239868707b0d22d11a58861f9ba4b0d986f4
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:d111670eaf6165936b7a17cb116cebf50f60cee7cf6958cb932477f666169a8f
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/REQUIREMENTS.md
+  sha256: sha256:f2d9ca337da8fc2f11b95f165ff3a00d7d07ab5b1f4bbe135708aead3be4c9d9
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/SPEC.md
+  sha256: sha256:0bfe4782bd3fbbd130cae37b8cd67c5fa7051cf61d2ccaa02f84152223f0973b
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
