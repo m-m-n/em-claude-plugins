@@ -18,6 +18,11 @@ CLAUDE_BATCH is cleared for every run. The hook demotes `ask` to `deny` when
 it sees that variable (nobody is there to answer), which would fail every
 `ask` case if the suite happened to run inside a batch session. The demotion
 itself is covered by the last case, which sets the variable back.
+
+Every evaluation is bounded at GUARD_TIMEOUT_SECONDS. A case that runs past
+the limit is stopped, counted as a FAIL marked as a timeout, and the run goes
+on with the remaining cases, so a performance regression in the hook shows up
+as a FAIL instead of hanging the suite.
 """
 
 import json
@@ -29,6 +34,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CASES = os.path.join(HERE, "destructive-guard-cases.json")
 GUARD = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..", "destructive-guard.py")
 
+# Limit for one evaluation, in seconds. Mirrors the "timeout" hooks.json sets
+# for destructive-guard.py: past it the real hook's verdict is lost, so the
+# suite treats the same overrun as a failure.
+GUARD_TIMEOUT_SECONDS = 10
+
+# The decision verdict() reports for an evaluation that ran past the limit.
+TIMED_OUT = "(timeout)"
+
 
 def verdict(command, batch=False):
     """Run the guard over one command and return (decision, reason)."""
@@ -36,19 +49,31 @@ def verdict(command, batch=False):
     env.pop("CLAUDE_BATCH", None)
     if batch:
         env["CLAUDE_BATCH"] = "1"
-    proc = subprocess.run(
-        [sys.executable, GUARD],
-        input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    try:
+        proc = subprocess.run(
+            [sys.executable, GUARD],
+            input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=GUARD_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        # subprocess.run() has already killed and reaped the child.
+        return TIMED_OUT, "%d 秒の制限時間を超えたため中断した。" % GUARD_TIMEOUT_SECONDS
     if proc.returncode != 0:
         return "(exit %d)" % proc.returncode, (proc.stderr or "").strip()
     if not proc.stdout.strip():
         return "(silent)", "フックが判定を出さずに終了した。"
     out = json.loads(proc.stdout)["hookSpecificOutput"]
     return out["permissionDecision"], out["permissionDecisionReason"]
+
+
+def timeout_marker(got):
+    """The suffix a FAIL line carries when the evaluation timed out."""
+    if got == TIMED_OUT:
+        return " [TIMEOUT %ds]" % GUARD_TIMEOUT_SECONDS
+    return ""
 
 
 def main():
@@ -59,7 +84,7 @@ def main():
         got, reason = verdict(command)
         if got != want:
             failed.append((label, want, got, reason))
-        print(f"{'ok  ' if got == want else 'FAIL'} {want:5} {label}")
+        print(f"{'ok  ' if got == want else 'FAIL'} {want:5} {label}{timeout_marker(got)}")
         if got != want:
             print(f"       got={got} {reason[:150]}")
 
@@ -69,7 +94,7 @@ def main():
     label = "無人実行では ask が deny に降格"
     if got != "deny":
         failed.append((label, "deny", got, reason))
-    print(f"{'ok  ' if got == 'deny' else 'FAIL'} deny  {label}")
+    print(f"{'ok  ' if got == 'deny' else 'FAIL'} deny  {label}{timeout_marker(got)}")
 
     total = len(cases) + 1
     print(f"\n{total - len(failed)}/{total} passed")

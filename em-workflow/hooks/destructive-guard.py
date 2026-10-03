@@ -1482,6 +1482,58 @@ def _at_word_start(text, i):
     return text[i - 1] in ' \t\r\n;|&()<>'
 
 
+_SQ_PAREN_TOKEN = re.compile(r"\$\(|[()]")
+
+
+def _single_quoted_sub_closes(text, start, limit):
+    """Closing parenthesis of every `$(` in TEXT[START:LIMIT], found in ONE
+    forward pass -- the rest of one single-quoted span for the
+    honor_single_quotes=False scan in scan_structure(), LIMIT being its
+    closing quote (or the end of TEXT when the quote is never closed).
+    Returns {offset of the `$`: offset of its `)`}; a `$(` absent from the
+    result stays unmatched. Each character in the range is examined a
+    bounded number of times however many `$(` it holds, so the total cost
+    is linear in the range.
+
+    Each `$(` gets what a search started at that `$(` alone would find.
+    Every `(` and `)` after it up to LIMIT counts alike (no quote, escape
+    or nested-`$(` rule), and
+    1. the `)` that balances the `$(`'s own `(` is its close; failing that,
+    2. the first `)` after the `$(` is its close; with none in the range,
+    3. the `$(` is unmatched.
+    A `$(` the caller skips over (inside an earlier span) is resolved too and
+    simply never asked for.
+    """
+    closes = {}
+    first_close = {}
+    # One entry per `(` still waiting for its `)`: the offset of the `$` for
+    # a `$(`'s own `(`, -1 for a plain `(`.
+    open_stack = []
+    # `$(` offsets that have not seen any `)` after them yet; the next `)`
+    # is the first one for all of them, and each is settled exactly once.
+    waiting = []
+    for m in _SQ_PAREN_TOKEN.finditer(text, start, limit):
+        tok = m.group()
+        if tok == ")":
+            k = m.start()
+            for d in waiting:
+                first_close[d] = k
+            waiting.clear()
+            if open_stack:
+                d = open_stack.pop()
+                if d >= 0:
+                    closes[d] = k
+        elif tok == "(":
+            open_stack.append(-1)
+        else:
+            d = m.start()
+            open_stack.append(d)
+            waiting.append(d)
+    for d, k in first_close.items():
+        closes.setdefault(d, k)
+    return closes
+
+
 def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=True):
     """Component 1. One pass over TEXT (a text and an outer MODE, `shell`
     or `heredoc-body`). Returns (spans, parent_of, unmatched, opaque,
@@ -1557,6 +1609,10 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
     stack = [[None, False, None, []]]
     sub_open_stack = []
     top_opaque_start = [None]
+    # Closes of the `$(` in the single-quoted span being scanned (only for
+    # honor_single_quotes=False): None until the span's first `$(`, then
+    # {offset of `$`: offset of `)`}. Reset at every single-quote opener.
+    sq_closes = None
 
     def close_top_opaque(end):
         if top_opaque_start[0] is not None:
@@ -1586,23 +1642,18 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
                 i += 1
                 continue
             if not honor_single_quotes and c == "$" and i + 1 < n and text[i + 1] == "(":
-                quote_end = text.find("'", i + 1)
-                # Balanced close inside the single-quoted range only (it
-                # holds no `'`, so the span can never leak past the quote).
-                limit = quote_end if quote_end != -1 else n
-                close_pos = -1
-                pdepth = 1
-                for k in range(i + 2, limit):
-                    if text[k] == "(":
-                        pdepth += 1
-                    elif text[k] == ")":
-                        pdepth -= 1
-                        if pdepth == 0:
-                            close_pos = k
-                            break
-                if close_pos == -1:
-                    close_pos = text.find(")", i + 2)
-                if close_pos != -1 and (quote_end == -1 or close_pos < quote_end):
+                if sq_closes is None:
+                    # First `$(` of this single-quoted span: resolve every
+                    # `$(` left in the span in one pass instead of searching
+                    # from each one (that was quadratic). The close is inside
+                    # the single-quoted range only (it holds no `'`, so the
+                    # span can never leak past the quote).
+                    quote_end = text.find("'", i + 1)
+                    sq_closes = _single_quoted_sub_closes(
+                        text, i, quote_end if quote_end != -1 else n
+                    )
+                close_pos = sq_closes.get(i, -1)
+                if close_pos != -1:
                     spans.append((i, close_pos + 1))
                     parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
                     i = close_pos + 1
@@ -1674,6 +1725,7 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
 
         if not literal and c == "'":
             frame[2] = "'"
+            sq_closes = None
             if depth == 0 and top_opaque_start[0] is None:
                 top_opaque_start[0] = i
             i += 1
