@@ -1,0 +1,212 @@
+schema_version: 1
+feature: destructive-guard-heredoc-sink-gaps
+created: '2026-10-03'
+base_branch: main
+goal: |
+  # destructive-guard: ヒアドキュメント宛先判定のレビュー deferred 6 件（critical 1 / high 5）
+
+  Notion タスク: https://www.notion.so/3e93509ec8ee81ca9217fb5485e678bc
+  種別: バグ
+
+  ## 現象 (必須)
+  feature `destructive-guard-heredoc-reset-hard`（PR https://github.com/m-m-n/em-claude-plugins/pull/65 ）の review round 2 で、batch の rework 上限により deferred にした critical / high 6 件。いずれも `em-workflow/hooks/destructive-guard.py` のヒアドキュメント宛先判定まわりで、bash 宛ての本文を data と誤判定して検知を漏らす、または性能上の問題がある。
+  - cdb8382d4bbb0b1d（critical）: `_segment_boundaries()` の区切り判定が `lex_segments()` とずれ、`2>&1`・`>&2`・`&>`・`>|`・`\;`・行継続の後ろにある bash 宛ての本文を data と判定する
+  - 73a1d7b31734dd22（high）: `scan_structure()` の case 語の読み取りがバックスラッシュを飲み込み、`\'`・`\"` を引用の開始と誤認して区切りを隠す
+  - 26ab9a3d83649eff（high）: 単一引用符内 `$(` の均衡探索が二次の計算量になり、50KB 程度の入力で 10 秒のタイムアウトを超えて判定が失われる
+  - 18b99bd71e74c8dc（high）: 引用符の中やコメントの中の偽の `<<WORD` をヒアドキュメントとみなし、後続の実コマンド行を data として捨てる
+  - 511cd470522973d8（high）: `env -S` などのラッパー・代入側で sink を指定した文を、後ろの data コマンド名だけで data と判定する
+  - b8fd289ca7750a04（high）: 同じコマンド内の関数定義・alias・hash・PATH 変更で data コマンド名を差し替えると、本文を検査しない
+
+  ## 再現手順 (必須)
+  1. 各 finding の詳細は integration ブランチ `em-workflow/destructive-guard-heredoc-reset-hard/integration` の `feature-docs/destructive-guard-heredoc-reset-hard/reviews/round2.yaml` にある（stable_id で検索）
+  2. 該当する形のコマンドを `python3 em-workflow/hooks/destructive-guard.py` に流す
+
+  ## 期待する挙動 (必須)
+  bash 宛てのヒアドキュメント本文にある破壊的コマンドは ask / deny になる。単一引用符内 `$(` を含む大きな入力でも判定がタイムアウトしない。
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json`）
+  - [ ] 既存の deny / ask ケースが 1 件も消えていない
+
+  ## 該当箇所 (任意)
+  - `em-workflow/hooks/destructive-guard.py`（`_segment_boundaries` / `scan_structure` / ヒアドキュメント宛先判定）
+
+  ## 実害・発生条件 (任意)
+  破壊的コマンドの検知漏れ（critical 1 件、high 4 件）と、大きな入力での判定喪失（high 1 件）。PR #65 のマージが前提（2026-09-28 マージ済み）。
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
+  - 不明点は Codex に相談し、比較的よいと判断した選択肢を採用する。
+  - その議論の内容を Notion に記録する。
+parent_branch: em-workflow/destructive-guard-heredoc-sink-gaps/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.18
+      '2': 0.82
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.73
+      '3': 0.0
+  at: '2026-10-03T20:15:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: f68f92daba7ec569c863607406142fca4ce36d9b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない PreToolUse フックのバグ修正であるため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: ホスト文の特定を lex_segments() の文の区切りに合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: ホスト文が確定できないときは判定不能にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: エスケープされた引用符を引用の開始として扱わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 単一引用符内 $( の対応探索を線形にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 偽のヒアドキュメント演算子は本文を取り込まない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 読み飛ばした語に sink がある文は data にしない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: コマンド名を差し替える構文があれば、コマンド全体の data 判定を判定不能にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 修正より前にケースを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: 既存ケースを保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: テストランナーに制限時間を入れる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 静的解析のみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 依存を増やさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 性能
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 変更範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
