@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-rm-reason-positions
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 2aa69ef048eea7ab7a3cd4b9147fab07da4e3c85
 last_input_digest: sha256:0885658613d399cf5cfc3d5c35a4a4f15ab07f6f6e7c7495f5fa56720ae67569
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
