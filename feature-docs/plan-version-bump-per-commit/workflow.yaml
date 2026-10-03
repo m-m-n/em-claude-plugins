@@ -119,7 +119,7 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: plan-writing plugin version handling rules
