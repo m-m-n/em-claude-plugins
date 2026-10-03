@@ -1,0 +1,72 @@
+schema_version: 2
+feature: destructive-guard-herestring-subst-only
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-04T02:29:49+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-04T02:34:03+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 4
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEAD は指定の 5070e881ce31659ca7bbde46ea1be77c3dbd218d と一致した。PreToolUse 入力として「bash
+    <<< $(echo hi); rm -rf /var/b」と「sh <<< `x`; rm -rf /var/b」を渡すと、両方とも em-workflow/hooks/destructive-guard.py:912
+    で IndexError、exit 1、標準出力なしとなり、deny が出ない現象を確認した。「rm -rf /var/b」単独は exit 0、deny
+    となった。同ファイル:725 の _payload_index は範囲外の start をそのまま返し、:912 には上限確認がない。最小修正案は条件を「0
+    < j < len(words) and not getattr(words[j], "substitution_only", False)」に置換すること。条件1行の置換を削除・追加で2行、再現入力に対応する既存
+    JSON 形式の deny ケース2行を追加する想定で、差分は約4行となる。直接の呼び出し元は同ファイル:744 と :3100 の2関数、直接依存する内部関数は
+    :845、:846、:870、:911 にある _strip_unresolved_marks、split_redirects、head、_payload_index
+    の4関数で、合計6と数えた。本体変更は1関数内に収まり、関数署名や :375 の出力 JSON 形式の変更は不要となる。em-workflow/hooks/tests/destructive-guard-cases.json:253
+    と :266 に関連ケースはあるが、全455ケースに今回の再現入力は含まれない。python3 em-workflow/hooks/tests/run-destructive-guard.py
+    は exit 0、456/456 passed となった。同実行器:39、:46、:58 が既存形式の追加ケースを実行し、exit 1 を失敗として検出できるため、新しい関数・ファイル・依存関係は不要となる。.claude/rules/hook-tests.md:19
+    と :21 に従い、修正前に指定の「here-string 置換のみ + 後続 rm」ケースを追加し、バッククォート形も追加する。ファイルは変更していない
+decided_at: '2026-10-04T02:34:03+09:00'
