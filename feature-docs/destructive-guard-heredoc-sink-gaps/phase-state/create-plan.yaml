@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-heredoc-sink-gaps
+phase: create-plan
+status: waiting_worker
+generation: 1
+base_revision: 893ad2cbb2e47393c3d73f202765f3f3c9e92c07
+last_input_digest: sha256:d67fe827be56365ed647e9232b3532f26270d38771ce39fafa39118a09daf1c5
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: running
+  input_digest: sha256:d67fe827be56365ed647e9232b3532f26270d38771ce39fafa39118a09daf1c5
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
