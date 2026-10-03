@@ -105,9 +105,12 @@ workflow:
   status: completed
   completed_at_commit: b418c7af430600f34891fbd01f5ad4faedb0f51f
 - id: verify
-  status: in_progress
-  result: null
-  failed_items: []
+  status: failed
+  result: fail
+  failed_items:
+  - id: VF-1
+    note: 'repo-tests (python3 -m unittest discover -s tests) exit 1 on 2 consecutive runs: tests/test_destructive_guard_command_substitution.py TestCaseTableDiscipline.test_runner_reports_every_case_passing raises subprocess.TimeoutExpired (run-destructive-guard.py exceeds the fixed 120s timeout; standalone 2:02 for 458 cases, base copy 2:44 for the same case file; host load avg 16-33). hooks suite 458/458, TS-1..TS-6 and plugin-invariants pass.'
+    category: unknown
 - id: retrospect
   status: pending
 tasks:
@@ -202,8 +205,9 @@ requirements:
 batch:
   review_rework_count: 0
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      VF-1: 1
   infra_resume:
     rounds: 0
     cap: 2
