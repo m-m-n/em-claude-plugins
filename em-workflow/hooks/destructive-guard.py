@@ -909,7 +909,11 @@ def extract_shell_payload_anchored(toks, lexed, quoted_toks=None):
                     if i + 1 < len(quoted_redirects) and QUOTED_MARK in quoted_redirects[i + 1]:
                         return None, None
                     j = _payload_index(words, 1)
-                    if j > 0 and not getattr(words[j], "substitution_only", False):
+                    if (
+                        j > 0
+                        and j < len(words)
+                        and not getattr(words[j], "substitution_only", False)
+                    ):
                         return marked_words[j], marked_words[j]
                     return marked_redirects[i + 1], marked_redirects[i + 1]
                 i += 2
