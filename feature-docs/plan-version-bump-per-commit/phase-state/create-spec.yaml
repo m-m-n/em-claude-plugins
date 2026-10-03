@@ -1,7 +1,7 @@
 schema_version: 1
 feature: plan-version-bump-per-commit
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 33856b281933c383aabbc321406e32aac6862072
 last_input_digest: sha256:b774cbb8f61c8ca64fbaeaa7d5d5d44954ffdec0e2097176261e993b093ef115
