@@ -41,6 +41,9 @@ on its own.
 | TS-16 | FR6 variants (task0004 AC-2): env split-string spellings not in TS-7 (separate, attached, `=`-joined, inside a short-option cluster); a quoted sink as an assignment value and as a git global option value; a sink as a skipped wrapper option value | each PASS (deny) | Unit (case table) |
 | TS-17 | FR7 constructs not in TS-8 (task0004 AC-5): `function NAME` with and without `()`, a brace-body definition, `enable`, a standalone PATH assignment, `export` with PATH. Also the allow case of task0004 AC-3: a script written through a data heredoc whose body defines a function | constructs PASS (deny); the script-writing case PASSes (allow) | Unit (case table) |
 | TS-18 | NFR1, NFR2, NFR4 static review of the base..integrated diff | outside `feature-docs/` and `test-docs/`, only the three files in NFR4 change. hooks.json and both plugin version fields are unchanged. No import outside the Python standard library is added. No added guard code accesses the file system or evaluates commands or substitutions | Manual |
+| TS-19 | The bc9a99dd0d07ffa5 deny cases (task0005 AC-1): the reproduction form (`echo $'a\'b'; bash <<EOF`, `git reset --hard HEAD`, `EOF`, `echo x\'y` as four lines) and at least two further forms. In each further form, the host statement selected for a shell-sink heredoc lacks the heredoc's own operator only because the operator-context reader and the lex_segments() tokenizer disagree about quoting | each PASS (deny) | Unit (case table) |
+| TS-20 | The bc9a99dd0d07ffa5 fused-operator allow cases (task0005 AC-4): data heredocs whose operator token is fused (`cat<<EOF`, `cat<<-EOF`, `cat<<'EOF'`, `cat >notes.txt<<EOF`). Each has a destructive body line and a SHELL_SINK word in its chunk | each PASS (allow) | Unit (case table) |
+| TS-21 | FR2 own-operator check sensitivity. Use two copies of the integrated guard outside the repository: (a) the own-operator check is made to always report that the statement holds the operator; (b) the check is made to always report undetermined | (a) every TS-19 case FAILs. (b) for each fused spelling in TS-20, at least one case is not allow. The unmodified integrated guard PASSes every TS-19 and TS-20 case | Integration (scripted) |
 
 ## Code Quality Verification
 - Format: none configured (`format_command` is empty)
@@ -50,8 +53,8 @@ on its own.
 ### Success Criteria
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
-| SC-1 | All functional requirements are implemented and tested | Functional Requirements Coverage below; TS-1 to TS-17 pass |
-| SC-2 | All test scenarios pass | TS-1 to TS-18 |
+| SC-1 | All functional requirements are implemented and tested | Functional Requirements Coverage below; TS-1 to TS-17 and TS-19 to TS-21 pass |
+| SC-2 | All test scenarios pass | TS-1 to TS-21 |
 | SC-3 | Performance meets the specified goals | TS-4, TS-13, TS-14 |
 | SC-4 | Security requirements are satisfied | Performance / Security Verification below (TM-1 to TM-7); TS-18 |
 | SC-5 | REQUIREMENTS.md 11.1 AC-1 to AC-9 are all met | AC-1: TS-1. AC-2: TS-2. AC-3: TS-3. AC-4: TS-4, TS-13. AC-5: TS-5. AC-6: TS-6. AC-7: TS-7. AC-8: TS-8. AC-9: TS-10, TS-12 |
@@ -61,19 +64,19 @@ on its own.
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
 | FR1 | task0002 | TS-1, TS-2 |
-| FR2 | task0002 | TS-1, TS-3 |
+| FR2 | task0002, task0005 | TS-1, TS-3, TS-19, TS-20, TS-21 |
 | FR3 | task0002 | TS-3 |
 | FR4 | task0001 | TS-4, TS-9, TS-14 |
 | FR5 | task0003 | TS-5, TS-6, TS-15 |
 | FR6 | task0004 | TS-7, TS-16 |
 | FR7 | task0004 | TS-8, TS-17 |
-| FR8 | task0001, task0002, task0003, task0004 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7, TS-8, TS-11 |
-| FR9 | task0001, task0002, task0003, task0004 | TS-9, TS-10, TS-12 |
+| FR8 | task0001, task0002, task0003, task0004, task0005 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7, TS-8, TS-11, TS-19 |
+| FR9 | task0001, task0002, task0003, task0004, task0005 | TS-9, TS-10, TS-12 |
 | FR10 | task0001 | TS-4, TS-10, TS-13 |
-| NFR1 | task0001, task0002, task0003, task0004 | TS-18 |
-| NFR2 | task0001, task0002, task0003, task0004 | TS-18 |
-| NFR3 | task0001, task0002, task0003, task0004 | TS-4, TS-10, TS-14 |
-| NFR4 | task0001, task0002, task0003, task0004 | TS-18 |
+| NFR1 | task0001, task0002, task0003, task0004, task0005 | TS-18 |
+| NFR2 | task0001, task0002, task0003, task0004, task0005 | TS-18 |
+| NFR3 | task0001, task0002, task0003, task0004, task0005 | TS-4, TS-10, TS-14 |
+| NFR4 | task0001, task0002, task0003, task0004, task0005 | TS-18 |
 
 ## E2E Testing
 - [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` (e2e_test_command) passes. This is the same run as TS-10.
@@ -83,7 +86,7 @@ on its own.
 
 ## Performance / Security Verification (if applicable)
 - NFR3: every runner evaluation finishes within 10 seconds (TS-10, TS-13), and the scaling ratio stays below 3 (TS-14).
-- TM-1: the host statement is taken from lex_segments(), and a host statement without its own operator yields undetermined. Checked by TS-1 PASS; the own-operator contribution is recorded under task0002 AC-4.
+- TM-1: the host statement is taken from lex_segments(), and a host statement without its own operator yields undetermined. Checked by TS-1 PASS; the own-operator contribution is recorded under task0002 AC-4. The own-operator check is also checked by TS-19 PASS, TS-20 PASS and TS-21 (task0005, bc9a99dd0d07ffa5).
 - TM-2: escaped quotes are not quote starts in scan_structure(). Checked by TS-3 PASS.
 - TM-3: fake heredoc operators capture no body, and cross-line state skips real bodies. Checked by TS-5, TS-6 and TS-15 PASS.
 - TM-4: skipped-word sinks and env split-string yield undetermined. Checked by TS-7 and TS-16 PASS.
@@ -95,8 +98,8 @@ on its own.
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Test scenarios (case table) | 13 (TS-1 to TS-9, TS-15 to TS-17, plus TS-10) | 13 | 1 (TS-10) | 0 |
-| Scripted integration / performance | 4 (TS-11 to TS-14) | 4 | 0 | 0 |
+| Test scenarios (case table) | 15 (TS-1 to TS-9, TS-15 to TS-17, TS-19, TS-20, plus TS-10) | 15 | 1 (TS-10) | 0 |
+| Scripted integration / performance | 5 (TS-11 to TS-14, TS-21) | 5 | 0 | 0 |
 | Static review | 1 (TS-18) | 0 | 0 | 1 |
 | Security / performance items | 8 (NFR3, TM-1 to TM-7) | 8 | 0 | 0 |
-| Total scenario IDs | 18 | 17 | 1 | 1 |
+| Total scenario IDs | 21 | 20 | 1 | 1 |
