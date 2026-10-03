@@ -126,8 +126,8 @@ tasks:
     - FR3
     - NFR1
     - NFR2
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-herestring-subst-only/task0001
 review:
   status: pending
   rounds_completed: 0
