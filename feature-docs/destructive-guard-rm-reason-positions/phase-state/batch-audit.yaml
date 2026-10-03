@@ -38,3 +38,15 @@ records:
   resolution_note: 'gate: 評価者が dismissed にした security high（rm -rf -- -/../../x が allow、ベースから存在、SPEC
     FR3/A2 で範囲外）; options: (a) 記録だけ残す (b) 別タスク起票; chosen: (b); key points: 範囲外は今回直さない理由であって安全という判断ではない;
     codex_consulted: true; opus_escalation: false'
+- question_id: review.rework-plan-normalization
+  packet_id: null
+  answered_at: '2026-10-03T23:37:21+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: tasks/task0002.md の '- (none)' 行を削除
+  normalized_answer: tasks/task0002.md の '- (none)' 行を削除
+  resolution_note: 'gate: rework-planner 結果の検証（validate-worker-output.py task-plan-files）;
+    options: 再 dispatch / 空セクションの ''- (none)'' 行だけ削除; chosen: 行の削除（内容の変更なし、最小の副作用）;
+    rework-planner は TS-17 を cases.json ではなく機能自身の unittest モジュールに置いた（SPEC A6・VERIFICATION
+    TS-7 が cases.json を変えないと定めるため）; codex_consulted: false; opus_escalation: false'

@@ -1,12 +1,31 @@
 schema_version: 1
 feature: destructive-guard-rm-reason-positions
-rounds:
+phase: rework
+status: completed
+generation: 1
+base_revision: d562af5a4a7169c78f3711cab60a2a973de64c25
+last_input_digest: sha256:233b509fdd5bcaf0ab396e8d5d786e88891c51bb034d9b8c65f439fc8f5e3235
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
 - request_id: rework-run-0001
-  source: review
-  review_round: 1
   status: completed
   input_digest: sha256:233b509fdd5bcaf0ab396e8d5d786e88891c51bb034d9b8c65f439fc8f5e3235
-  patch_id: rework-round1-p0001
-  patch_status: applied
-  tasks_added: [task0002]
-  orchestrator_note: "tasks/task0002.md の Files to Create にあった '- (none)' の行を、validate-worker-output.py の task-plan-files 検査を通すため削除した（内容の変更なし）"
+  output_digest: sha256:d5f05a9815e3f06e87f31f565c0acc94e622c73573452481895db0e148ba9a49
+artifacts:
+- path: feature-docs/destructive-guard-rm-reason-positions/tasks/task0002.md
+  sha256: sha256:8c65fddbe002489c112326ea25995f373b737d173b1a02b272df60e2858dad70
+  produced_by: rework-run-0001
+- path: feature-docs/destructive-guard-rm-reason-positions/VERIFICATION.md
+  sha256: sha256:f4c6e44c7f659223014f1efc0ed33f52e8fc91d4668417d1b33df017ec08cedd
+  produced_by: rework-run-0001
+patches:
+- patch_id: rework-round1-p0001
+  status: applied
+  base_input_digest: sha256:233b509fdd5bcaf0ab396e8d5d786e88891c51bb034d9b8c65f439fc8f5e3235
+  base_workflow_blob: 1daa1ae6a2491e6285823e5f0eea43671313f9f5
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
