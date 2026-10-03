@@ -591,28 +591,58 @@ def lex_segments(chunk):
     small, of the blanking pass itself disagreeing with shlex about where
     an unbalanced quote sits.
     """
+    return _lex_segments_with_ends(chunk)[0]
+
+
+def _lex_segments_with_ends(chunk):
+    """lex_segments()'s result plus SEG_ENDS, the character offset in CHUNK
+    (the lexed text is exactly as long as CHUNK, comments being blanked in
+    place) at which each statement's own separator starts — the offset where
+    the statement ends — and `len(CHUNK)` for the trailing statement. A
+    statement's number is its index in the result, so an offset maps to
+    "how many statements end at or before it" by bisecting SEG_ENDS
+    (statements() uses that to place a heredoc body between statements).
+    SEG_ENDS is None on the parse-failure fallback, whose statements carry
+    no offsets. Everything lex_segments() documents applies here unchanged;
+    reading offsets does not change which statements or tokens come out."""
     try:
-        lex = _TrackingLexer(
-            _blank_comments(chunk), posix=True, punctuation_chars=PUNCTUATION
-        )
+        text = _blank_comments(chunk)
+        lex = _TrackingLexer(text, posix=True, punctuation_chars=PUNCTUATION)
         lex.whitespace = " \t\r"
         lex.whitespace_split = True
         lex.commenters = ""
         toks = []
+        token_ends = []
         while True:
             raw = lex.get_token()
             if raw is None or raw == lex.eof:
                 break
             toks.append(Tok(raw, lex.last_was_operator, quoted=lex.last_was_quoted))
+            # Where the lexer stands once this token is complete: what it
+            # has read from the text, less a character it read ahead and
+            # pushed back. It may stand one character past the token — a
+            # whitespace character that ended the token is consumed, not
+            # pushed back — so this bounds the token's end from above only.
+            token_ends.append(
+                lex.instream.tell() - len(getattr(lex, "_pushback_chars", ()))
+            )
     except ValueError:
-        return [
-            (tokens(seg), False, None)
-            for seg in SEGMENT_SPLIT.split(chunk)
-            if seg.strip()
-        ]
+        return (
+            [
+                (tokens(seg), False, None)
+                for seg in SEGMENT_SPLIT.split(chunk)
+                if seg.strip()
+            ],
+            None,
+        )
 
-    out, current = [], []
-    for t in toks:
+    out, current, seg_ends = [], [], []
+    for t, t_end in zip(toks, token_ends):
+        # Only an operator token's own start is ever read (a separator is
+        # one), and an operator token's text is the source text verbatim —
+        # so its start is where that text last occurs before the lexer's
+        # position. (-1 for any other token, whose start is never read.)
+        piece_start = text.rfind(t, 0, t_end) if getattr(t, "is_operator", False) else -1
         # punctuation_chars makes shlex fuse adjacent punctuation into one
         # token, so a separator with no space before the next operator
         # (';>', '\n(') arrives as a single token that is neither a clean
@@ -648,11 +678,14 @@ def lex_segments(chunk):
                 and getattr(seg, "is_operator", False)
             ):
                 out.append((current, True, seg))
+                seg_ends.append(piece_start)
                 current = []
             else:
                 current.append(seg)
+            piece_start += len(seg)
     out.append((current, True, None))
-    return out
+    seg_ends.append(len(chunk))
+    return out, seg_ends
 
 
 def split_redirects(toks, lexed=True):
@@ -705,13 +738,25 @@ def _payload_index(seq, start):
 
 
 def extract_shell_payload(toks, lexed, quoted_toks=None):
-    """Return the literal script a shell-invocation segment (TOKS) will
-    execute via `-c`, `eval`, or a here-string (`<<<`) redirect aimed at a
-    shell word — or None when the segment is not such an invocation, its
+    """The literal script a shell-invocation segment (TOKS) will execute —
+    extract_shell_payload_anchored()'s first value, None when there is no
+    such script. See that function for the contract."""
+    return extract_shell_payload_anchored(toks, lexed, quoted_toks)[0]
+
+
+def extract_shell_payload_anchored(toks, lexed, quoted_toks=None):
+    """Return (payload, anchor): the literal script a shell-invocation
+    segment (TOKS) will execute via `-c`, `eval`, or a here-string (`<<<`)
+    redirect aimed at a shell word, and the token of TOKS that script was
+    taken from — the payload word (for `eval`, its first argument) whose
+    position in the original command string is where the payload's own
+    statements are anchored (statements() origin positions). Returns
+    (None, None) when the segment is not such an invocation, its
     payload is not a single literal token statements() can push back onto
     its own queue and re-scan like any other statement, or (task0001 FR4/
     FR7) the payload argument position is a substitution enclosed in
-    quotes.
+    quotes. ANCHOR is always one of the very objects in TOKS (never a
+    rebuilt copy), so statements() finds it again by identity.
 
     Out-of-scope declaration (FR7, task0002; stated identically in the case
     labels for the two forms it covers and here — a divergence in scope
@@ -792,7 +837,7 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
     tokens alone.
     """
     if not lexed:
-        return None
+        return None, None
 
     # Structural decisions use marker-stripped spellings. The parallel
     # marked lists retain the evidence that must be copied into a payload
@@ -827,7 +872,9 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
     quoted_args = quoted_words[-len(args):] if args else []
 
     if word == "eval":
-        return " ".join(marked_args) if marked_args else None
+        if marked_args:
+            return " ".join(marked_args), marked_args[0]
+        return None, None
     if word in SHELL_WORDS:
         if "-c" in args:
             idx = args.index("-c")
@@ -840,10 +887,11 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
                 # "this is the payload boundary" (quoted) and "promote to
                 # the next word" (unquoted).
                 if not getattr(args[idx + 1], "substitution_only", False):
-                    return marked_args[idx + 1]
+                    return marked_args[idx + 1], marked_args[idx + 1]
                 if idx + 1 < len(quoted_args) and QUOTED_MARK in quoted_args[idx + 1]:
-                    return None
-                return marked_args[_payload_index(args, idx + 1)]
+                    return None, None
+                promoted = marked_args[_payload_index(args, idx + 1)]
+                return promoted, promoted
         i = 0
         while i < len(redirects):
             t = redirects[i]
@@ -857,17 +905,17 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
                     # it is the first non-placeholder word in `words[1:]`,
                     # the actual here-string body a real shell would run.
                     if not getattr(redirects[i + 1], "substitution_only", False):
-                        return marked_redirects[i + 1]
+                        return marked_redirects[i + 1], marked_redirects[i + 1]
                     if i + 1 < len(quoted_redirects) and QUOTED_MARK in quoted_redirects[i + 1]:
-                        return None
+                        return None, None
                     j = _payload_index(words, 1)
                     if j > 0 and not getattr(words[j], "substitution_only", False):
-                        return marked_words[j]
-                    return marked_redirects[i + 1]
+                        return marked_words[j], marked_words[j]
+                    return marked_redirects[i + 1], marked_redirects[i + 1]
                 i += 2
             else:
                 i += 1
-    return None
+    return None, None
 
 
 class HeredocRecord:
@@ -1734,14 +1782,19 @@ def _extract_heredoc_body_substitutions(text):
     is True when an opener is never closed, so the caller falls back to
     scanning the whole text rather than silently dropping the unresolved
     tail. Each returned body is queued as its own chunk by the caller;
-    nested levels are found in turn when THAT chunk is scanned next."""
+    nested levels are found in turn when THAT chunk is scanned next.
+
+    BODIES is a list of (inner text, start offset in TEXT of the whole
+    substitution — its `$(` or backtick), in ascending offset order: the
+    caller anchors each queued chunk at that offset inside the heredoc body
+    (statements() origin positions)."""
     spans, parent_of, unmatched, _opaque, _containing = scan_structure(
         text, mode="heredoc-body"
     )
     if unmatched:
         return [], True
     top_spans = _top_level_spans(spans, parent_of)
-    return [_span_inner(text, span)[0] for span in top_spans], False
+    return [(_span_inner(text, span)[0], span[0]) for span in top_spans], False
 
 
 # --- Component 3: chunk statement analysis, built once per chunk -----------
@@ -2545,14 +2598,153 @@ def _shape_fallback(words):
     return words
 
 
+# --- Origin positions (destructive-guard-rm-reason-positions) ---------------
+#
+# statements() walks the command's own text first and then every chunk derived
+# from it (substitution bodies, `-c` / eval / here-string payloads, heredoc
+# bodies), in an order that has nothing to do with where those chunks were
+# written. An ORIGIN POSITION is what lets a later stage put two tokens from
+# different chunks back into the order they have in the original command
+# string: a tuple of steps, each step a (statement index, token index, within)
+# triple of ints, compared as ordinary tuples.
+#
+# - A chunk carries an ANCHOR: the steps that lead from the original command
+#   to the place the chunk was derived from. The original command's anchor is
+#   `()`.
+# - A token's position is its chunk's anchor followed by one step for the
+#   token itself: its statement index in the chunk, its index among that
+#   statement's tokens as written (before shaping — wrappers, assignments and
+#   grouping tokens included), and 0.
+# - A derived chunk's anchor is the anchor of the chunk it came from followed
+#   by the step of the place it was derived from (see statements()):
+#   `within` is 1 + the occurrence number of a substitution inside its token
+#   (after the token's own start, 0), -1 for a heredoc body (before the first
+#   token of the statement that follows the operator's line), and the offset
+#   inside a heredoc body for a substitution extracted from it.
+#
+# A shorter tuple that is a prefix of a longer one sorts first, so a token
+# sorts before everything derived from inside it.
+
+# Greater than any statement or token index a chunk can hold.
+_AFTER_EVERYTHING = 1 << 30
+
+
+def _token_index(toks, tok):
+    """Index of TOK in TOKS: by identity first (shaping and payload
+    extraction hand back the very token objects lexing produced), then by
+    text, then 0 — a token a fallback shaping step rewrote cannot be found by
+    identity, and any stable index serves there."""
+    for i, t in enumerate(toks):
+        if t is tok:
+            return i
+    for i, t in enumerate(toks):
+        if t == tok:
+            return i
+    return 0
+
+
+def token_position(origin, toks, tok):
+    """Origin position of TOK, a token of the statement whose TOKS and
+    ORIGIN statements() yielded together."""
+    anchor, statement_index = origin
+    return anchor + ((statement_index, _token_index(toks, tok), 0),)
+
+
+def _statements_ended_by(chunk, top_spans, offset_, seg_ends, opaque):
+    """A function mapping a character position in CHUNK to the number of
+    statements of the lexed chunk that END at or before it (their separator
+    starts at or before it) — so the statement with that index is the first
+    one that starts after the position.
+
+    The statements are those statements() lexes: the chunk with TOP_SPANS
+    replaced by markers (the marker for span I is `UNRESOLVED_MARK`, the
+    number OFFSET_ + I and `_MARK_TERMINATOR`, shorter or longer than the
+    span it stands for), and SEG_ENDS their separator offsets in that marked
+    text (_lex_segments_with_ends()). A position is first moved from CHUNK to
+    the marked text; a position inside a span lands on that span's marker.
+    When the chunk fell back to the regex split (SEG_ENDS None) there are no
+    lexer offsets, and the count comes from _segment_boundaries() over OPAQUE
+    (the chunk scan's opaque ranges) instead — best effort, and stable."""
+    if seg_ends is None:
+        boundaries = _segment_boundaries(chunk, opaque)
+        return lambda pos: bisect.bisect_right(boundaries, pos)
+    separators = seg_ends[:-1]
+    span_ends = [end for _, end in top_spans]
+    shifts = []
+    total = 0
+    for i, (start, end) in enumerate(top_spans):
+        marker_length = len(f"{UNRESOLVED_MARK}{offset_ + i}{_MARK_TERMINATOR}")
+        total += (end - start) - marker_length
+        shifts.append(total)
+
+    def ended_by(pos):
+        before = bisect.bisect_right(span_ends, pos)
+        shift = shifts[before - 1] if before else 0
+        if before < len(top_spans) and top_spans[before][0] <= pos:
+            marked_pos = top_spans[before][0] - shift
+        else:
+            marked_pos = pos - shift
+        return bisect.bisect_right(separators, marked_pos)
+
+    return ended_by
+
+
+def _heredoc_body_step(chunk, ended_by, record, index):
+    """The step a heredoc body queued whole is anchored at: the start of the
+    body, which sits after everything on its operator's line and before
+    anything that follows the delimiter line — before the first token of the
+    first statement that starts after that line. CHUNK is the heredoc-
+    stripped chunk, ENDED_BY its _statements_ended_by() function, RECORD the
+    heredoc and INDEX its number among the chunk's heredocs (two operators on
+    one line keep their written order)."""
+    newline = chunk.find("\n", record.op_end)
+    if newline == -1:
+        newline = len(chunk)
+    return (ended_by(newline), -1, index)
+
+
+def _register_marker_positions(marker_pos, marked, anchor, statement_index):
+    """Record, for every substitution marker in MARKED (one statement's
+    tokens before marks are stripped), the origin position of the place the
+    marker sits in this chunk. A payload chunk repeats its parent's marker
+    text, so its registration — made later — refines the parent's: the
+    substitution body is then anchored where the substitution sits inside
+    the payload, not merely inside the payload word."""
+    for token_index, tok in enumerate(marked):
+        if UNRESOLVED_MARK not in tok:
+            continue
+        for occurrence, m in enumerate(_MARK_RE.finditer(tok)):
+            marker_pos[int(m.group(1))] = anchor + (
+                (statement_index, token_index, occurrence + 1),
+            )
+
+
 def statements(command):
-    """Yield (text, tokens, lexed, shaped_words, redirects) per command
-    segment, substitution bodies included.
+    """Yield (text, tokens, lexed, shaped_words, redirects, origin) per
+    command segment, substitution bodies included.
 
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
     parse-success flag — False only on the parse-failure fallback, where
     token provenance is unavailable.
+
+    ORIGIN (destructive-guard-rm-reason-positions) is the statement's origin
+    position information: an (anchor, statement index) pair, which
+    token_position() turns into the origin position of any token of the
+    statement — a tuple whose order, across statements of every chunk, is
+    the order the tokens have when the original command string is read left
+    to right. Chunks are scanned in a stack order unrelated to that, so the
+    caller sorts by origin position rather than by arrival. The anchor of a
+    derived chunk is the position it was derived from in the chunk it came
+    out of: a substitution body, at the substitution's own opening (refined
+    to where the substitution sits inside the payload when it was written
+    inside a `-c` / eval / here-string payload); a payload, at the payload
+    word; a heredoc body queued whole, at the start of the body (after
+    everything on the operator's line, before anything after the delimiter
+    line — not at the operator); a substitution extracted from an unquoted
+    heredoc body, at its offset inside that body's start. A chunk lexed
+    through the parse-failure fallback gets positions from the fallback's
+    own statement and token order.
 
     SHAPED_WORDS (task0001 D1, reshaped by task0004 postcondition 6) is
     TOKENS with every redirect operator/target (and any leading fd digit)
@@ -2662,7 +2854,16 @@ def statements(command):
     beyond what this loop already performs, just string processing over
     CHUNK alone plus one running list.
     """
-    pending = [command]
+    # Each entry is (chunk text, anchor, substitution index): the anchor is
+    # the chunk's origin-position prefix (see "Origin positions" above); the
+    # substitution index is the run-global ALL_SUBS index of the substitution
+    # a body chunk was queued for (None for every other chunk), which lets
+    # the anchor be refined at pop time from MARKER_POS.
+    pending = [(command, (), None)]
+    # {ALL_SUBS index: origin position of that substitution's marker}, kept
+    # by _register_marker_positions(); a later (deeper) registration
+    # replaces an earlier one.
+    marker_pos = {}
     budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
     # Relative scan-cost cap (TM-5): each chunk popped off PENDING below is
     # scanned a constant number of times (scan_structure() runs twice, plus
@@ -2688,7 +2889,9 @@ def statements(command):
     # substitution index-leak fix) — a chunk-local list would desync there.
     all_subs = []
     while pending:
-        chunk = pending.pop()
+        chunk, anchor, sub_index = pending.pop()
+        if sub_index is not None:
+            anchor = marker_pos.get(sub_index, anchor)
         scanned_chars += len(chunk)
         if scanned_chars > scan_budget:
             decide(
@@ -2724,6 +2927,14 @@ def statements(command):
             scan_structure(chunk, mode="shell", honor_single_quotes=False)
         )
         top_spans = _top_level_spans(legacy_spans, legacy_parent_of)
+        chunk_subs = [_span_inner(chunk, span)[0] for span in top_spans]
+        offset = len(all_subs)
+        # The chunk's one lexing: its statements are walked further down, and
+        # SEG_ENDS (where each statement's separator starts) lets a heredoc
+        # body queued below be anchored between the right two statements.
+        segments, seg_ends = _lex_segments_with_ends(
+            _mark_substitutions(chunk, top_spans, offset)
+        )
         if heredocs:
             # Component 2/3 (task0001): each heredoc is judged on its own
             # destination, not on whether a sink word appears ANYWHERE in
@@ -2740,14 +2951,27 @@ def statements(command):
             chunk_sink_fallback = bool(
                 SHELL_SINK.search(chunk) or SHELL_SINK.search(_strip_quote_chars(chunk))
             )
+            # Where each queued body sits among the chunk's statements, built
+            # once and only when some body is queued: every queued body is
+            # anchored by which statement starts after its operator's line.
+            heredoc_ended_by = None
             for index, record in enumerate(heredocs):
                 if not record.body.strip():
                     continue  # a blank body is never queued, as before this task
                 destination = destinations.get(index, "undetermined")
-                if destination == "sink" or (
+                queued_whole = destination == "sink" or (
                     destination == "undetermined" and chunk_sink_fallback
-                ):
-                    pending.append(record.body)
+                )
+                if queued_whole or not record.quoted:
+                    if heredoc_ended_by is None:
+                        heredoc_ended_by = _statements_ended_by(
+                            chunk, top_spans, offset, seg_ends, chunk_scan[3]
+                        )
+                    body_anchor = anchor + (
+                        _heredoc_body_step(chunk, heredoc_ended_by, record, index),
+                    )
+                if queued_whole:
+                    pending.append((record.body, body_anchor, None))
                 elif not record.quoted:
                     # An unquoted delimiter (`<<EOF`, not `<<'EOF'`/
                     # `<<"EOF"`) means the shell itself expands
@@ -2775,35 +2999,51 @@ def statements(command):
                     bodies, needs_whole_body = _extract_heredoc_body_substitutions(
                         record.body
                     )
+                    # BODIES holds (inner text, offset of the substitution
+                    # in the heredoc body), each anchored below at the
+                    # body's start plus that offset.
                     if needs_whole_body:
                         # An unbalanced/unclosed `$(`/`` ` `` could not be
                         # extracted as a discrete substitution; treat the
                         # whole body as the scan target rather than silently
                         # dropping it.
-                        pending.append(record.body)
+                        pending.append((record.body, body_anchor, None))
                     else:
-                        for body in bodies:
+                        for body, offset_in_body in bodies:
                             if body.strip():
-                                pending.append(body)
+                                pending.append(
+                                    (
+                                        body,
+                                        body_anchor + ((offset_in_body, 0, 0),),
+                                        None,
+                                    )
+                                )
         # TOP_SPANS (Component 1, computed once above) already reflects true
         # nesting, unlike SUBSTITUTION's own single-level, paren-free regex:
         # a chunk-local substitution several levels deep no longer needs a
         # second regex pass here to be marked at all. Each span's own inner
         # text is queued; a nested level inside it is found in turn once
         # that text is popped off PENDING and scanned as its own chunk.
-        chunk_subs = [_span_inner(chunk, span)[0] for span in top_spans]
-        for body in chunk_subs:
+        for i, body in enumerate(chunk_subs):
             if body.strip():
-                pending.append(body)
-        offset = len(all_subs)
+                # Anchored at its marker's position once the statements below
+                # (and any payload chunk derived from them) have registered
+                # it; the "after everything" step is only the answer for a
+                # marker that never reaches a token.
+                pending.append(
+                    (
+                        body,
+                        anchor + ((_AFTER_EVERYTHING, _AFTER_EVERYTHING, i),),
+                        offset + i,
+                    )
+                )
         all_subs.extend(chunk_subs)
         quoted_segments = lex_segments(_mark_quoted_substitutions(chunk, top_spans))
         # task0001: case-pattern/body state, scoped to this one chunk only.
         case_stack = []
-        for seg_index, (marked, lexed, sep) in enumerate(
-            lex_segments(_mark_substitutions(chunk, top_spans, offset))
-        ):
+        for seg_index, (marked, lexed, sep) in enumerate(segments):
             toks = _strip_unresolved_marks(marked, all_subs)
+            _register_marker_positions(marker_pos, marked, anchor, seg_index)
             if lexed:
                 fused = _split_fused_closer_redirects(toks)
                 words_only, redirects = split_redirects(fused, lexed)
@@ -2823,7 +3063,10 @@ def statements(command):
                 shaped_words = _shape_fallback(fallback_words)
 
             if toks:
-                yield " ".join(toks), toks, lexed, shaped_words, redirects
+                yield (
+                    " ".join(toks), toks, lexed, shaped_words, redirects,
+                    (anchor, seg_index),
+                )
                 if budget[0] > 0 and lexed:
                     quoted_marked = (
                         quoted_segments[seg_index][0]
@@ -2841,12 +3084,19 @@ def statements(command):
                         quoted_payload_toks = shaped_quoted_words + quoted_redirects
                     else:
                         quoted_payload_toks = None
-                    payload = extract_shell_payload(
+                    payload, payload_word = extract_shell_payload_anchored(
                         payload_toks, lexed, quoted_payload_toks
                     )
                     if payload and payload.strip():
                         budget[0] -= 1
-                        pending.append(payload)
+                        pending.append(
+                            (
+                                payload,
+                                anchor
+                                + ((seg_index, _token_index(marked, payload_word), 0),),
+                                None,
+                            )
+                        )
 
 
 def tokens(segment):
@@ -3429,30 +3679,43 @@ def read_command_name_evidence(raw_body):
     return name or None
 
 
-def route_substitution_headed_statement(remainder, raw_body, segment, next_rm_invocation):
+def route_substitution_headed_statement(
+    remainder, raw_body, segment, anchor, note_rm_invocation
+):
     """The single entry point for a statement whose command-word position
     held a substitution token that _skip_to_command_word() skipped
     (task0002 FR1/FR2/FR3/FR11/FR13 — supersedes task0001's shape-based
     pre-gates, both removed: the dash-leading pre-gate and the recursion-
     AND-force-AND-operand pre-screen _rm_route_candidate() used to apply).
 
-    NEXT_RM_INVOCATION is main()'s counter callback (task0001 FR4): called
-    exactly once, only on the branch that actually reaches check_rm(), so a
+    ANCHOR is the origin position of that substitution token — the token
+    whose body was read as command-name evidence — which is where this rm
+    invocation sits in the original command string (token_position()).
+    NOTE_RM_INVOCATION is main()'s registration callback: called once with
+    ANCHOR, only on the branch that actually reaches check_rm(), so a
     substitution-headed statement that evidences "git" or nothing readable
-    never consumes an invocation ordinal.
+    is never an rm invocation. The callback only RECORDS the invocation:
+    this function never assigns or consumes an ordinal, because ordinals are
+    assigned only after the whole command is scanned (main()). The rm
+    invocation this route establishes is the statement's one rm invocation:
+    when the statement's written command word is also `rm` (`$(printf rm)
+    rm -rf x`), main() does not run the plain route for it, so the statement
+    gets one ordinal across both routes. The written `rm` word, when there
+    is one, is the first operand of REMAINDER and is numbered and judged as
+    such.
 
     REMAINDER is the statement's own tokens from that skip point onward —
     exactly what would be `args` for the plain spelling of the read command
-    name (task0001 FR1/FR2, AS-3). RAW_BODY is the raw text of the
-    substitution that sat there (see read_command_name_evidence()). SEGMENT
-    is passed through to check_git() unchanged, matching its existing
-    signature.
+    name (task0001 FR1/FR2, AS-3), written command word included. RAW_BODY
+    is the raw text of the substitution that sat there (see
+    read_command_name_evidence()). SEGMENT is passed through to check_git()
+    unchanged, matching its existing signature.
 
-    Returns the rm shape matcher's own list of (tier, rule, target,
-    message) decisions for main() to pool (D6) when evidence reads as
-    "rm"; calls check_git() (which decide()s and exits directly, or returns
-    None) when evidence reads as "git"; returns [] — no route entered, no
-    decision — when evidence reads as anything else, or is unreadable (R4:
+    Returns check_rm()'s own list of records for main() to pool (D6) when
+    evidence reads as "rm"; calls check_git() (which decide()s and exits
+    directly, or returns None) when evidence reads as "git"; returns [] — no
+    route entered, no decision — when evidence reads as anything else, or is
+    unreadable (R4:
     falls open, never `ask`; a fallback `ask` would demote to `deny`
     unattended and halt normal operation, NFR3). Two forms are therefore
     left `allow` by design and declared as this hook's out-of-scope range
@@ -3474,7 +3737,8 @@ def route_substitution_headed_statement(remainder, raw_body, segment, next_rm_in
     """
     name = read_command_name_evidence(raw_body)
     if name == "rm":
-        return check_rm(remainder, next_rm_invocation())
+        note_rm_invocation(anchor)
+        return check_rm(remainder, anchor)
     if name == "git":
         check_git(remainder, segment)
     return []
@@ -3685,45 +3949,195 @@ DECISION_RANK = {"allow": 0, "ask": 1, "deny": 2}
 RM_ROOT_SHAPE = re.compile(r"/+|/\*|~|~/|\$HOME/?")
 
 
-def rm_target_designation(invocation_index, target_index, target):
-    """A hook-authored designation for TARGET, naming its POSITION instead of
-    its text (task0001 FR4, "Target designation" contract): the
-    INVOCATION_INDEXth `rm` invocation the hook encountered while analysing
-    this command (1-based, in the order main() reaches it — including one
-    found inside a command-substitution body via
-    route_substitution_headed_statement()), and the TARGET_INDEXth operand of
-    that invocation (1-based among TARGETS in check_rm(), options not
-    counted).
+def rm_target_designation(invocation_ordinal, target_number, substitution_only=False):
+    """A hook-authored designation naming a target's POSITION instead of its
+    text (task0001 FR4, "Target designation" contract): the
+    INVOCATION_ORDINALth `rm` invocation of the command (1-based) and the
+    TARGET_NUMBERth operand of that invocation (1-based). Both are positions
+    in the ORIGINAL command string read left to right, not the order the
+    hook happened to reach them:
 
-    Two different targets never receive the same designation: every target
-    check_rm() judges reaches this function with a distinct
-    (invocation_index, target_index) pair, because target_index is assigned
-    by enumerate() over that one invocation's own TARGETS list and
-    invocation_index is unique per check_rm() call (main() hands out a fresh
-    one per `rm` invocation, direct or substitution-headed). The pair is a
-    pure function of the command text — the same command always drives
-    main()'s loop the same way — so the same command always yields the same
-    designation for the same target (NFR2).
+    - The ordinal of an rm invocation is assigned only after the whole
+      command is scanned, by sorting every invocation's anchor token by its
+      origin position in the original command string (statements()): the
+      written `rm` command word for a plain invocation, the substitution
+      token for a substitution-headed one (route_substitution_headed_
+      statement()). A statement is one invocation however many routes judge
+      it — a statement reaching both the substitution route and the plain
+      route gets one ordinal — and an rm inside a substitution body, a
+      `-c` / eval / here-string payload or a heredoc body is ordered by
+      where that text was written. render_rm_decisions() calls this function
+      once the ordinals exist.
+    - The number of a target is its operand position in that invocation's
+      own operand list (check_rm()): before the first `--`, a word starting
+      with `-` is an option and is not counted; the first `--` itself is not
+      counted; after it every word is counted, `-`-leading words and further
+      `--` included. A dash-leading operand after `--` is numbered but never
+      judged. A word that is operator syntax is never counted.
 
-    Contains no character taken from TARGET, with one exception: a TARGET
-    built entirely from command substitution (`.substitution_only`) may show
-    the fixed stand-in the hook already writes for that case
+    Two different targets never receive the same designation: a target is
+    identified by (invocation, operand position), and each invocation has its
+    own ordinal. Both are pure functions of the command text, so the same
+    command always yields the same designation for the same target (NFR2).
+
+    Contains no character taken from the target, with one exception: a
+    target built entirely from command substitution (SUBSTITUTION_ONLY, the
+    token's `.substitution_only`) may show the fixed stand-in the hook
+    already writes for that case
     (SUBSTITUTION_STANDIN, SPEC.md a3) next to the position — that text is
     hook-authored and constant, never copied from the target. That suffix
     uses ASCII square brackets rather than the full-width parentheses every
     caller below wraps the whole designation in, so the two never nest into
     an unreadable "（…（…）…）" when both apply to the same target.
     """
-    designation = f"{invocation_index}番目のrmの{target_index}番目の対象"
-    if getattr(target, "substitution_only", False):
+    designation = f"{invocation_ordinal}番目のrmの{target_number}番目の対象"
+    if substitution_only:
         designation += f"[`{SUBSTITUTION_STANDIN}`]"
     return designation
 
 
-def check_rm(args, invocation_index):
+# Message forms of one judged rm target (_RmRecord.form).
+RM_FORM_ROOT = "root"
+RM_FORM_EXPANSION = "expansion"
+RM_FORM_GLOB_PARENT = "glob-parent"
+RM_FORM_GLOB = "glob"
+RM_FORM_LOST_EVIDENCE = "lost-evidence"
+RM_FORM_OUTSIDE_SCRATCH = "outside-scratch"
+
+
+class _RmRecord:
+    """One judged rm target's decision, before any numbering or rendering:
+    its TIER and RULE, the ANCHOR (origin position) of the rm invocation it
+    belongs to, its operand NUMBER within that invocation, and exactly what
+    its single-target message needs — FORM (which message applies), ROOT_
+    TOKEN (the raw token, `rm-root` only), SUBSTITUTION_ONLY (whether the
+    designation shows the fixed stand-in) and TEMPLATE (the deletion
+    alternative text of a plain rm-recursive target, else None). It holds no
+    ordinal and no rendered text: both exist only after the whole command is
+    scanned (render_rm_decisions())."""
+
+    __slots__ = (
+        "tier", "rule", "anchor", "number", "form", "root_token",
+        "substitution_only", "template",
+    )
+
+    def __init__(
+        self, tier, rule, anchor, number, form, root_token=None,
+        substitution_only=False, template=None,
+    ):
+        self.tier = tier
+        self.rule = rule
+        self.anchor = anchor
+        self.number = number
+        self.form = form
+        self.root_token = root_token
+        self.substitution_only = substitution_only
+        self.template = template
+
+
+def _number_rm_operands(args):
+    """[(operand number, token)] for ARGS, the operand basis of one rm
+    invocation, numbered left to right with the `--` rule: before the first
+    `--` a word starting with `-` is an option and is not counted (a lone `-`
+    included); the first `--` itself is not counted; after it every word is
+    counted — words starting with `-` and further `--` included. A word that
+    is operator syntax (`.is_operator`) is never counted, anywhere."""
+    numbered = []
+    count = 0
+    options_ended = False
+    for a in args:
+        if getattr(a, "is_operator", False):
+            continue
+        if not options_ended:
+            if a == "--":
+                options_ended = True
+                continue
+            if a.startswith("-"):
+                continue
+        count += 1
+        numbered.append((count, a))
+    return numbered
+
+
+def _rm_single_target_message(record, designation):
+    """The single-target reason text of RECORD, byte-for-byte what the hook
+    wrote for the same target when it named a position (A5)."""
+    form = record.form
+    if form == RM_FORM_ROOT:
+        return f"削除対象が `{record.root_token}` — ホーム/ルート全体に届く。"
+    if form == RM_FORM_EXPANSION:
+        return (
+            f"再帰削除の対象（{designation}）が変数/コマンド置換で、影響範囲を静的に確定できない。"
+            f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。"
+        )
+    if form == RM_FORM_GLOB_PARENT:
+        return (
+            f"再帰削除の対象（{designation}）はグロブと親参照(`..`)が混在し、"
+            f"グロブの展開結果によって実際の削除範囲が変わるため静的に確定できない。"
+            f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。"
+        )
+    if form == RM_FORM_GLOB:
+        return (
+            f"再帰削除の対象（{designation}）がグロブで、影響範囲を静的に確定できない。"
+            f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。"
+        )
+    if form == RM_FORM_LOST_EVIDENCE:
+        return (
+            f"`rm -r` の対象（{designation}）は一部がコマンド置換によるもので、"
+            f"実際の削除範囲を静的に確定できない。置換を展開した実パスを"
+            f"コマンドに直接書いて撃ち直す。"
+        )
+    return f"`rm -r` の対象（{designation}）はスクラッチ領域の外。{record.template}"
+
+
+def render_rm_decisions(invocations, records):
+    """Number and render the rm decisions of a fully scanned command: the
+    point where ordinals exist at all.
+
+    INVOCATIONS is the anchor (origin position) of every rm invocation main()
+    established — including one that produced no record — and RECORDS every
+    _RmRecord check_rm() collected. Every invocation gets an ordinal, 1..n in
+    ascending anchor order, i.e. in the order the anchor tokens stand in the
+    original command string. Records with the same (invocation, operand
+    number) are the same token judged the same way and collapse into one.
+    Returns [(tier, rule, name, message, template)], ascending by (ordinal,
+    operand number), for strongest_rm_decision(): NAME is the designation
+    (rm_target_designation()) — or the raw token for an `rm-root` record —
+    MESSAGE the single-target reason text, and TEMPLATE the deletion
+    alternative for a plain rm-recursive target (None for every other form).
+    """
+    ordinal_of = {
+        anchor: ordinal
+        for ordinal, anchor in enumerate(sorted(set(invocations)), start=1)
+    }
+    unique = {}
+    for record in records:
+        unique.setdefault((record.anchor, record.number), record)
+    rendered = []
+    for record in sorted(
+        unique.values(), key=lambda r: (ordinal_of[r.anchor], r.number)
+    ):
+        designation = rm_target_designation(
+            ordinal_of[record.anchor], record.number, record.substitution_only
+        )
+        name = record.root_token if record.form == RM_FORM_ROOT else designation
+        template = record.template if record.form == RM_FORM_OUTSIDE_SCRATCH else None
+        rendered.append(
+            (
+                record.tier,
+                record.rule,
+                name,
+                _rm_single_target_message(record, designation),
+                template,
+            )
+        )
+    return rendered
+
+
+def check_rm(args, anchor):
     """Return the decision every target of one `rm` invocation warrants, as
-    a list of (tier, rule, designation, message) tuples — never emits and
-    never exits. A check that emitted the first decision it reached let an
+    a list of _RmRecord — never emits, never exits, never assigns an
+    ordinal. A check that emitted the first decision it reached let an
     `ask` on an early target end the scan, so a later target — or, once the
     caller folds multiple calls together, a later segment — that warranted
     `deny` was approved along with it (D6). Collecting every target's
@@ -3731,14 +4145,23 @@ def check_rm(args, invocation_index):
     every target of every segment before picking the strongest one and
     emitting once.
 
-    INVOCATION_INDEX is this `rm` invocation's own 1-based ordinal among
-    every `rm` invocation main() hands to check_rm() for the command under
-    analysis (task0001 FR4) — passed straight through to
-    rm_target_designation() for every target below whose reason names a
-    position instead of its text. It plays no part in steps 1-2: the
-    `rm-root` decision keeps naming its RAW token verbatim (SPEC.md a2, fixed
-    RM_ROOT_SHAPE vocabulary only, never free text), unaffected by this
-    task.
+    ARGS is the invocation's operand basis: the REMAINDER of a
+    substitution-headed statement (its written `rm` word, when present, is
+    its first operand), or the ARGS of a plain `rm` command word. ANCHOR is
+    the invocation's origin position (token_position() of the written `rm`
+    word, or of the substitution token on the substitution route) and goes
+    into every record: it, not an ordinal, is what ties a target to its
+    invocation, because ordinals exist only after the whole command is
+    scanned (render_rm_decisions(), which also renders the designations and
+    messages). Each record carries its target's operand number, counted by
+    _number_rm_operands(): before the first `--` a word starting with `-` is
+    an option and is not counted, the first `--` is not counted, and after it
+    every word is counted, `-`-leading words and further `--` included. The
+    set of targets JUDGED is unchanged by the numbering — a target is judged
+    when it does not start with `-` and is not operator syntax — so a
+    dash-leading operand after `--` is numbered and never judged. The
+    `rm-root` decision keeps naming its RAW token verbatim (SPEC.md a2,
+    fixed RM_ROOT_SHAPE vocabulary only, never free text).
 
     Per target, in this order (IMPLEMENTATION.md "Recursive-delete check"),
     unchanged from before D6 except that each step now APPENDS instead of
@@ -3800,59 +4223,57 @@ def check_rm(args, invocation_index):
     # `(rm -rf $X)` with nothing after it) tokenizes as its own word and
     # lands in ARGS with no leading `-`, same shape as a real target —
     # `.is_operator` (Tok, set by the tracking lexer) is what tells the two
-    # apart; a quoted `")"` is a real word and never carries it. Evaluating
-    # every target now that D6 no longer exits on the first decision would
-    # otherwise let this artifact outvote a real target under it.
+    # apart; a quoted `")"` is a real word and never carries it, and
+    # _number_rm_operands() never counts it. Evaluating every target now that
+    # D6 no longer exits on the first decision would otherwise let this
+    # artifact outvote a real target under it. A target is a counted operand
+    # that does not start with `-`: a dash-leading operand after `--` is
+    # numbered (it still takes an operand position) but never judged.
     targets = [
-        a
-        for a in args
-        if not a.startswith("-") and not getattr(a, "is_operator", False)
+        (number, a)
+        for number, a in _number_rm_operands(args)
+        if not a.startswith("-")
     ]
 
     if not targets:
         return []
 
-    decisions = []
+    records = []
     root_hit = set()
-    for t in targets:
+    for number, t in targets:
         if RM_ROOT_SHAPE.fullmatch(t):
-            decisions.append(
-                ("deny", "rm-root", t, f"削除対象が `{t}` — ホーム/ルート全体に届く。")
+            records.append(
+                _RmRecord(
+                    "deny", "rm-root", anchor, number, RM_FORM_ROOT,
+                    root_token=str(t),
+                )
             )
             root_hit.add(t)
     if not recursive:
-        return decisions
+        return records
 
-    for target_index, t in enumerate(targets, start=1):
+    for number, t in targets:
         if t in root_hit:
             continue
-        designation = rm_target_designation(invocation_index, target_index, t)
+        substitution_only = getattr(t, "substitution_only", False)
         unresolved = getattr(t, "unresolved", False)
         if (
-            getattr(t, "substitution_only", False)
+            substitution_only
             or UNRESOLVED_EXPANSION.search(t)
             or UNRESOLVED_PARAM.search(t)
             or UNRESOLVED_TILDE.search(t)
         ):
-            decisions.append(
-                (
-                    "ask",
-                    "rm-unresolvable",
-                    designation,
-                    f"再帰削除の対象（{designation}）が変数/コマンド置換で、影響範囲を静的に確定できない。"
-                    f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+            records.append(
+                _RmRecord(
+                    "ask", "rm-unresolvable", anchor, number, RM_FORM_EXPANSION,
+                    substitution_only=substitution_only,
                 )
             )
             continue
         if GLOB_CHARS.search(t) and _has_parent_ref_component(t):
-            decisions.append(
-                (
-                    "ask",
-                    "rm-unresolvable",
-                    designation,
-                    f"再帰削除の対象（{designation}）はグロブと親参照(`..`)が混在し、"
-                    f"グロブの展開結果によって実際の削除範囲が変わるため静的に確定できない。"
-                    f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+            records.append(
+                _RmRecord(
+                    "ask", "rm-unresolvable", anchor, number, RM_FORM_GLOB_PARENT
                 )
             )
             continue
@@ -3860,14 +4281,8 @@ def check_rm(args, invocation_index):
         if not unresolved and safe_delete_target(normalized):
             continue
         if GLOB_CHARS.search(t):
-            decisions.append(
-                (
-                    "ask",
-                    "rm-unresolvable",
-                    designation,
-                    f"再帰削除の対象（{designation}）がグロブで、影響範囲を静的に確定できない。"
-                    f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
-                )
+            records.append(
+                _RmRecord("ask", "rm-unresolvable", anchor, number, RM_FORM_GLOB)
             )
             continue
         if unresolved:
@@ -3876,53 +4291,69 @@ def check_rm(args, invocation_index):
             # not because its real text is actually outside every safe root
             # — that may or may not be true, and the old wording below
             # asserted it regardless. State the fact that IS true instead.
-            message = (
-                f"`rm -r` の対象（{designation}）は一部がコマンド置換によるもので、"
-                f"実際の削除範囲を静的に確定できない。置換を展開した実パスを"
-                f"コマンドに直接書いて撃ち直す。"
+            records.append(
+                _RmRecord(
+                    "deny", "rm-recursive", anchor, number, RM_FORM_LOST_EVIDENCE
+                )
             )
         else:
-            message = f"`rm -r` の対象（{designation}）はスクラッチ領域の外。{deletion_alternative(t)}"
-        decisions.append(("deny", "rm-recursive", designation, message))
-    return decisions
+            records.append(
+                _RmRecord(
+                    "deny", "rm-recursive", anchor, number, RM_FORM_OUTSIDE_SCRATCH,
+                    template=deletion_alternative(t),
+                )
+            )
+    return records
 
 
 def strongest_rm_decision(decisions):
-    """Pick the strongest decision across every (tier, rule, designation,
-    message) tuple check_rm() returned — possibly pooled across several
-    `rm` invocations in different segments of one compound command — and
-    return (tier, rule, message) for main() to emit, or None when nothing
-    was collected (D6). Every target that reached the winning tier is named,
-    by its designation, in the combined reason text (task0001 FR4: the
-    joined reason, like each individual one, contains no target-derived
-    text — DESIGNATION is rm_target_designation()'s output for every winner
-    except an `rm-root` one, which keeps its fixed RM_ROOT_SHAPE token
-    verbatim, SPEC.md a2). Designations are already unique per
-    (invocation, operand) pair, so no two winners collapse into one entry
-    here — unlike the raw target strings before this task, which could
-    repeat when the same literal text appeared at two positions. When more
-    than one reason id shares the winning tier (`rm-root` alongside
-    `rm-recursive`, both `deny`), `rm-root` is reported — the same priority a
-    single target used to get from being checked first, before D6 separated
-    evaluation from emission.
+    """Pick the strongest decision across every (tier, rule, name, message,
+    template) tuple render_rm_decisions() produced — possibly pooled across
+    several `rm` invocations in different segments of one compound command,
+    already ascending by (ordinal, operand number) — and return (tier, rule,
+    message) for main() to emit, or None when nothing was collected (D6).
+    The winning tier is the highest rank; the rule is `rm-root` when any
+    winner is `rm-root` (the same priority a single target used to get from
+    being checked first, before D6 separated evaluation from emission), else
+    the winners' common rule.
+
+    One winner: its single-target message is the reason, unchanged (A5). Two
+    or more: the combined reason is a lead statement that several targets
+    reached the same decision strength, one entry per winner in the winners'
+    order, and a closing instruction to rewrite each target into a safe form
+    and retry. An entry starts with the winner's NAME — its designation
+    (rm_target_designation()), or the raw RM_ROOT_SHAPE token for `rm-root`
+    (SPEC.md a2), not repeated when an earlier entry already has that name —
+    and, for a plain rm-recursive winner (the one whose single-target message
+    carries a deletion template), is followed immediately by that same
+    template, so every plain rm-recursive designation is paired with its
+    template and the next entry's name follows it. `rm-root`,
+    `rm-unresolvable` and rm-recursive-with-lost-evidence winners have no
+    template and get none. Each designation appears exactly once (the
+    records were already collapsed per invocation and operand number), and no
+    character of any target's text reaches the reason (task0001 FR4):
+    templates carry the fixed placeholder, never the target.
     """
     if not decisions:
         return None
-    top_rank = max(DECISION_RANK[tier] for tier, _, _, _ in decisions)
+    top_rank = max(DECISION_RANK[d[0]] for d in decisions)
     winners = [d for d in decisions if DECISION_RANK[d[0]] == top_rank]
     tier = winners[0][0]
-    rule = next((r for _, r, _, _ in winners if r == "rm-root"), winners[0][1])
+    rule = next((d[1] for d in winners if d[1] == "rm-root"), winners[0][1])
     if len(winners) == 1:
         return tier, rule, winners[0][3]
-    names = []
-    for _, _, designation, _ in winners:
-        if designation not in names:
-            names.append(designation)
-    joined = "、".join(names)
+    entries = []
+    named = set()
+    for _, _, name, _, template in winners:
+        if name in named:
+            continue
+        named.add(name)
+        entries.append(f"{name} — {template}" if template else f"{name}。")
+    listing = " ".join(entries)
     return (
         tier,
         rule,
-        f"再帰削除の複数対象が同じ強さの判定に達した: {joined}。"
+        f"再帰削除の複数対象が同じ強さの判定に達した: {listing} "
         f"それぞれ個別に安全な経路へ書き換えて撃ち直すと確認不要になる。",
     )
 
@@ -4665,24 +5096,28 @@ def main():
     # later target, or a later segment's own `rm`, gets to contribute a
     # `deny` — so this loop only collects, and the strongest decision found
     # is emitted once, after every segment has been examined.
-    rm_decisions = []
+    rm_records = []
 
-    # task0001 FR4: hands out a fresh, 1-based ordinal each time an `rm`
-    # invocation is actually about to be analysed — direct spelling or
-    # substitution-headed — so rm_target_designation() can name which
-    # invocation a target belongs to. A mutable single-element list stands
-    # in for a nonlocal int (no counter object needed): both call sites
-    # below increment it exactly once per real `rm` invocation, in the same
-    # left-to-right order statements() yields segments, so the same command
-    # text always drives the same sequence of calls and the same ordinals
-    # (NFR2).
-    _rm_invocation_seq = [0]
+    # destructive-guard-rm-reason-positions: the anchor of every rm
+    # invocation the loop below establishes — the origin position (see
+    # statements()) of the invocation's anchor token: the written `rm`
+    # command word for a plain invocation, the substitution token for a
+    # substitution-headed one. No ordinal is handed out while the loop runs:
+    # statements() reaches chunks in a stack order unrelated to where they
+    # were written, so an ordinal given on arrival would not name the
+    # invocation's place in the original command string. Ordinals are
+    # assigned after the whole command is scanned, in ascending anchor order
+    # (render_rm_decisions()), which is the left-to-right order of the
+    # original command string; the same command text always yields the same
+    # anchors and so the same ordinals (NFR2). A statement is ONE invocation:
+    # a statement whose substitution evidence reads `rm` and whose written
+    # command word is also `rm` is judged once, on the substitution route,
+    # and gets one ordinal across both routes.
+    rm_invocations = []
 
-    def next_rm_invocation():
-        _rm_invocation_seq[0] += 1
-        return _rm_invocation_seq[0]
-
-    for segment, toks, lexed, shaped_words, shaped_redirects in statements(command):
+    for (
+        segment, toks, lexed, shaped_words, shaped_redirects, origin
+    ) in statements(command):
         check_bypass(segment, toks)
 
         # task0001 D1: every check below reads SHAPED_WORDS/SHAPED_REDIRECTS
@@ -4717,15 +5152,23 @@ def main():
         skip_index, saw_substitution, substitution_tok = _skip_to_command_word(
             shaped_words
         )
+        # Whether the substitution route established this statement's rm
+        # invocation (the evidence read `rm`): then the plain route below
+        # must not judge it a second time, whatever its written command
+        # word is.
+        substitution_headed_rm = False
         if saw_substitution:
-            rm_decisions.extend(
+            invocations_before = len(rm_invocations)
+            rm_records.extend(
                 route_substitution_headed_statement(
                     shaped_words[skip_index:],
                     getattr(substitution_tok, "raw_substitution_body", None),
                     segment,
-                    next_rm_invocation,
+                    token_position(origin, toks, substitution_tok),
+                    rm_invocations.append,
                 )
             )
+            substitution_headed_rm = len(rm_invocations) > invocations_before
 
         # The deferral is judged on the statement's REAL head — leading
         # grouping tokens (subshell `(`, brace group `{`, a function
@@ -4749,7 +5192,10 @@ def main():
         if word == "git":
             check_git(args, segment)
         elif word == "rm":
-            rm_decisions.extend(check_rm(args, next_rm_invocation()))
+            if not substitution_headed_rm:
+                rm_anchor = token_position(origin, toks, shaped_words[skip_index])
+                rm_invocations.append(rm_anchor)
+                rm_records.extend(check_rm(args, rm_anchor))
         else:
             check_file_destruction(word, args, segment)
             check_external(word, args, segment)
@@ -4759,7 +5205,7 @@ def main():
     # collected (D6) — an earlier deny from check_git()/check_file_
     # destruction()/etc. already exited the process before this line, so
     # reaching it means no OTHER check decided first.
-    top = strongest_rm_decision(rm_decisions)
+    top = strongest_rm_decision(render_rm_decisions(rm_invocations, rm_records))
     if top is not None:
         tier, rule, message = top
         decide(tier, rule, message)
