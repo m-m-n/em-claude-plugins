@@ -2,30 +2,52 @@ schema_version: 1
 feature: plan-version-bump-per-commit
 created: '2026-10-03'
 base_branch: main
-goal: |
-  # em-workflow の rework タスクで version を上げない計画（IMPLEMENTATION.md D3）が plugin-version-guard と衝突し、implement が中断する
+goal: '# em-workflow の rework タスクで version を上げない計画（IMPLEMENTATION.md D3）が plugin-version-guard と衝突し、implement が中断する
+
 
   ## 現象 (必須)
+
   em-workflow の rework タスク（task0002 / task0003）が em-workflow 配下のファイルを変更するのに、計画（`feature-docs/destructive-guard-heredoc-reset-hard/IMPLEMENTATION.md` の D3）は「rework タスクは version を上げない。guard に拒否されたら plan deviation として報告する」と定めている。
+
   一方、`~/.claude/hooks/plugin-version-guard.py` はコミット単位で「プラグイン配下を変えたのに `plugin.json` の version が上がっていない」コミットを拒否する。feature 全体で 1 回上げていても、各コミットの直前 HEAD との差分で判定するため通らない。
+
   結果:
+
   - task0002 の implementer は D3 に反して patch を上げてコミット・マージした（deviation として報告）
+
   - task0003 の implementer は D3 に従って上げず、`git commit` が拒否されて失敗した。batch の retry 1 回を使い切り、implement フェーズが中断した（`failed_kind: decision`）
+
   ## 再現手順 (必須)
+
   1. 同一 feature で em-workflow 配下を触るタスクを 2 つ以上計画し、計画で「version は最初のタスクだけが上げる」とする
+
   2. 後続タスクの implementer が version を上げずにコミットする
+
   3. plugin-version-guard に拒否される
+
   ## 期待する挙動 (必須)
+
   create-plan / rework-planner が plugin-version-guard の判定単位（コミットごと）を前提に version の扱いを計画する。並列タスクが同じ version 行で衝突しない方法（例: 各タスクが上げてマージ時に親側採用、または version 上げを専用の後続タスクに分ける）を計画段階で決め、implementer が guard と矛盾する指示を受けない。
+
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
   ## 該当箇所 (任意)
+
   - `em-workflow/skills/plan-writing/SKILL.md` / rework-planner の計画規則（version の扱い）
+
   - `feature-docs/destructive-guard-heredoc-reset-hard/IMPLEMENTATION.md` D3（integration ブランチ `em-workflow/destructive-guard-heredoc-reset-hard/integration`）
+
   - `~/.claude/hooks/plugin-version-guard.py`
+
   ## 実害・発生条件 (任意)
+
   em-workflow 自身を対象にした batch 実行で、同じプラグインを触るタスクが複数あると implement が止まる。destructive-guard-heredoc-reset-hard では task0003 の実装・テストは完成済み（worktree に staged のまま）だが未マージ。
+
+  '
 parent_branch: em-workflow/plan-version-bump-per-commit/integration
 tier: full
 tier_decision:
@@ -85,7 +107,91 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: plan-writing plugin version handling rules
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/skills/plan-writing/SKILL.md
+    - tests/test_plan_version_plan_writing.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+  task0002:
+    title: conflict-protocol version exception in worktree-task-workflow
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - tests/test_plan_version_worktree_conflict.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+  task0003:
+    title: plugin_versioning input for implementation-planner and the create-plan dispatch
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/contracts/planner-contract.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/agents/implementation-planner.md
+    - tests/test_plan_version_planner_dispatch.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR5
+    - FR7
+    - NFR1
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+  task0004:
+    title: rework-planner version rules reference and plugin_versioning input
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/agents/rework-planner.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_plan_version_rework.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR7
+    - NFR1
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -97,7 +203,8 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   FR2:
@@ -105,7 +212,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR3:
@@ -113,7 +221,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
   FR4:
@@ -121,7 +230,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
     tests:
     - TS-4
   FR5:
@@ -129,7 +239,9 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
+    - task0004
     tests:
     - TS-5
   FR6:
@@ -137,7 +249,8 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-6
   FR7:
@@ -145,7 +258,11 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
     tests:
     - TS-7
   NFR1:
@@ -153,21 +270,36 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-4
+    - TS-5
+    - TS-6
   NFR2:
     title: 計画にコードを書かない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-6
   NFR3:
     title: テストの依存
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
     tests:
     - TS-7
   NFR4:
@@ -175,8 +307,13 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-8
 batch:
   review_rework_count: 0
   verify_rework:
