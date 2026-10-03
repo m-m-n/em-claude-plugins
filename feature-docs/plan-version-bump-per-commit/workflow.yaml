@@ -1,0 +1,187 @@
+schema_version: 1
+feature: plan-version-bump-per-commit
+created: '2026-10-03'
+base_branch: main
+goal: |
+  # em-workflow の rework タスクで version を上げない計画（IMPLEMENTATION.md D3）が plugin-version-guard と衝突し、implement が中断する
+
+  ## 現象 (必須)
+  em-workflow の rework タスク（task0002 / task0003）が em-workflow 配下のファイルを変更するのに、計画（`feature-docs/destructive-guard-heredoc-reset-hard/IMPLEMENTATION.md` の D3）は「rework タスクは version を上げない。guard に拒否されたら plan deviation として報告する」と定めている。
+  一方、`~/.claude/hooks/plugin-version-guard.py` はコミット単位で「プラグイン配下を変えたのに `plugin.json` の version が上がっていない」コミットを拒否する。feature 全体で 1 回上げていても、各コミットの直前 HEAD との差分で判定するため通らない。
+  結果:
+  - task0002 の implementer は D3 に反して patch を上げてコミット・マージした（deviation として報告）
+  - task0003 の implementer は D3 に従って上げず、`git commit` が拒否されて失敗した。batch の retry 1 回を使い切り、implement フェーズが中断した（`failed_kind: decision`）
+  ## 再現手順 (必須)
+  1. 同一 feature で em-workflow 配下を触るタスクを 2 つ以上計画し、計画で「version は最初のタスクだけが上げる」とする
+  2. 後続タスクの implementer が version を上げずにコミットする
+  3. plugin-version-guard に拒否される
+  ## 期待する挙動 (必須)
+  create-plan / rework-planner が plugin-version-guard の判定単位（コミットごと）を前提に version の扱いを計画する。並列タスクが同じ version 行で衝突しない方法（例: 各タスクが上げてマージ時に親側採用、または version 上げを専用の後続タスクに分ける）を計画段階で決め、implementer が guard と矛盾する指示を受けない。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  ## 該当箇所 (任意)
+  - `em-workflow/skills/plan-writing/SKILL.md` / rework-planner の計画規則（version の扱い）
+  - `feature-docs/destructive-guard-heredoc-reset-hard/IMPLEMENTATION.md` D3（integration ブランチ `em-workflow/destructive-guard-heredoc-reset-hard/integration`）
+  - `~/.claude/hooks/plugin-version-guard.py`
+  ## 実害・発生条件 (任意)
+  em-workflow 自身を対象にした batch 実行で、同じプラグインを触るタスクが複数あると implement が止まる。destructive-guard-heredoc-reset-hard では task0003 の実装・テストは完成済み（worktree に staged のまま）だが未マージ。
+parent_branch: em-workflow/plan-version-bump-per-commit/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.8
+      '2': 0.17
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.82
+      '2': 0.18
+      '3': 0.0
+  at: '2026-10-03T20:12:43+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 70c49044302122807fc478e1e25f4762685867f2
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない文書・計画規則の変更のため（create-spec.design-step: decide_autonomously で推奨 skip を採用）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 9a3feb34c91b32d452a5c5a4540258a24c22fc7b
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 非免除リポジトリでのコミット単位の version 上げ規則
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: guard と矛盾する計画指示の禁止
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR3:
+    title: 免除リポジトリでの扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR4:
+    title: rework-planner への同一規則の適用
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR5:
+    title: 免除判定とプラグイン位置の dispatch 時解決
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR6:
+    title: 競合プロトコルでの version
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR7:
+    title: 再発検出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR1:
+    title: SSOT
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 計画にコードを書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストの依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR4:
+    title: 本リポジトリでの version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
