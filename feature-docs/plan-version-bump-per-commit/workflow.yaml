@@ -148,7 +148,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/plan-version-bump-per-commit/task0002
     notes: null
   task0003:
