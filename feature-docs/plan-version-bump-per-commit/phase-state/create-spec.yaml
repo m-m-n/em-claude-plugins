@@ -1,11 +1,11 @@
 schema_version: 1
 feature: plan-version-bump-per-commit
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 33856b281933c383aabbc321406e32aac6862072
 last_input_digest: sha256:b774cbb8f61c8ca64fbaeaa7d5d5d44954ffdec0e2097176261e993b093ef115
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -98,10 +98,16 @@ worker_runs:
   input_digest: sha256:564b3a0eccda2619897fb25e1df85835f19f0ce9afa3675430231293ce9f586c
   output_digest: sha256:b00254ed0cf25a527c8e8c98372cf6021cf80c7dab166ef3fc5911c5710fb5ad
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:b774cbb8f61c8ca64fbaeaa7d5d5d44954ffdec0e2097176261e993b093ef115
-  output_digest: null
-artifacts: []
+  output_digest: sha256:23c8e71dff028e2027577061f13282e6aae7a44041e1c0dbaacd959dc9632888
+artifacts:
+- path: feature-docs/plan-version-bump-per-commit/REQUIREMENTS.md
+  sha256: sha256:0f021c1c6d8e3b4c6678a217add0901eeb6636828c3286f9810987567ed71394
+  produced_by: create-spec-run-0003
+- path: feature-docs/plan-version-bump-per-commit/SPEC.md
+  sha256: sha256:7be03472699baf1b3f87fb1c3f0ac77513ace6ed44feca323362ae7bf4fbcbc1
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:720d0c9dc34156f7e867edb5ff5c2813c9a37341e2884599e20504b381473009
 stale_redispatch_count: 0
