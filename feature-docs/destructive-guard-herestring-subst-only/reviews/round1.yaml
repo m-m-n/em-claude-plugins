@@ -1,0 +1,41 @@
+round: 1
+executed_at: "2026-10-04T03:24:28+09:00"
+scope:
+  review_mode: diff
+  base_commit: 7ded2cfdf75aafb0b7bc76526bba0f190fe288e3
+  head_commit: b418c7af430600f34891fbd01f5ad4faedb0f51f
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-herestring-subst-only/task0001.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#1", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "Round 1（diff、cross_validation=true）。4 観点（comprehensive / security / architecture / spec）すべて指摘なし。評価者が独自に確認: here-string 分岐の j < len(words) 追加が _payload_index の契約と一致、run-destructive-guard.py 458/458 pass、修正前に IndexError（exit 1）だった後続 rm 付きの変種 27 件が修正後すべて deny。単独の bash <<< $(echo 'rm -rf /var/b') が allow になるのは SPEC の宣言済み対象外範囲で指摘にしない。plugin.json / marketplace.json の version 変更なし（NFR2）。観点ごとの確認: comprehensive=corroborated, security=corroborated, architecture=corroborated, spec=corroborated。"
+  recommended_action: complete
+  action_rationale: "どの実行にも指摘はなく、評価者自身でも 4 観点すべてで確認が取れた。SPEC の FR1〜FR3、NFR1、NFR2 との食い違いもない。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
