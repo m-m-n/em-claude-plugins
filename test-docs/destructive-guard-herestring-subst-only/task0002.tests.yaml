@@ -1,0 +1,54 @@
+task_id: task0002
+baseline_failures:             # 継承した状態（タスクブランチの HEAD を scratchpad に git archive で書き出したもの）で測定。python3 -m unittest discover -s tests は 6686 件、errors=2 の 2 件目はエクスポートに .git が無いための副産物（git ls-files が失敗）で、継承した worktree の状態ではない。run-destructive-guard.py は worktree 内で 458/458 passed、check-plugin-invariants は全 PASS
+  - "test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+final_failures: []             # 実装後に worktree 内で再実行: run-destructive-guard.py 458/458 passed、python3 -m unittest discover -s tests 6690 件 OK、check-plugin-invariants 全 PASS、python3 -m unittest tests.test_destructive_guard_command_substitution 38 件 OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestRunnerTimeoutDerivation.test_runner_invocation_receives_the_derived_finite_timeout"
+    red_confirmed: true
+    red_reason: >
+      実装前（呼び出しは固定 120 秒、導出関数は 120 を返す状態）に実行して失敗を観測した。
+      AssertionError: 120 not greater than or equal to 457。subprocess.run の代役に記録させた
+      timeout キーワード引数が、ケース数（457）を下回っていた。
+  AC-2:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestRunnerTimeoutDerivation.test_derived_timeout_is_finite_and_covers_every_case"
+    red_confirmed: true
+    red_reason: >
+      実装前（導出が固定 120 秒）に実行して失敗を観測した。
+      AssertionError: 120 not greater than or equal to 457 : 120 s cannot cover 457 cases at 1 s each。
+      導出を固定 120 秒に戻すとこのテストが落ちることは、この観測そのもの。
+  AC-3:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestRunnerTimeoutDerivation.test_runner_invocation_arguments_unchanged"
+      - "tests.test_destructive_guard_command_substitution.TestRunnerTimeoutDerivation.test_runner_test_still_fails_on_nonzero_exit_or_a_failing_case"
+    red_confirmed: false
+    red_reason: >
+      非終了状態・全ケース成功の表明とランナー引数は変更前から存在した振る舞いで、このタスクは
+      timeout の値だけを変える。2 つのテストは実装前の実行でも通った（赤の観測なし）。
+      変更前後で同じ振る舞いを保っていることを固定する目的のテスト。
+  AC-4:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+    red_confirmed: true
+    red_reason: >
+      継承した状態（修正前の HEAD の書き出し）で python3 -m unittest discover -s tests を実行し、
+      このテストが subprocess.TimeoutExpired: ... run-destructive-guard.py ... timed out after
+      120 seconds で落ちるのを観測した。
+  AC-5:
+    tests:
+      - "python3 -m unittest discover -s tests"
+    red_confirmed: true
+    red_reason: >
+      継承した状態の書き出しに対する実行で exit 1（errors=2）。うち 1 件が AC-4 の
+      TimeoutExpired。もう 1 件は書き出しに .git が無いための副産物で、赤の根拠には数えない。
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      変更範囲が tests/test_destructive_guard_command_substitution.py だけであることは
+      git diff --name-only の目視で確認する基準で、実行して失敗させられる検査が無い。
+      tests/ を相対パスと basename で検索したところ、このファイルを参照する既存テストは
+      他テストの docstring（test_implement_guard_compatible_git_ops_version_bump.py）のみで、
+      変更範囲を検査するものは無い。
