@@ -469,5 +469,8 @@
   ["allow", "-C と置換内 commit -m の組み込みサブコマンド宛てのヒアドキュメントは allow のまま", "bash scripts/check.sh && git -C /tmp/r commit -m \"$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)\""],
 
   ["deny", "--exec-path は未対応の global option なので git 宛てヒアドキュメントは deny(宛先不明、任意のサブコマンド前)", "bash x.sh; git --exec-path=/tmp commit -F - <<'EOF'\ngit reset --hard HEAD\nEOF"],
-  ["deny", "サブコマンドが変数展開の git 宛てヒアドキュメントは deny(静的に読めないサブコマンド)", "bash x.sh; git \"$sub\" <<'EOF'\ngit reset --hard HEAD\nEOF"]
+  ["deny", "サブコマンドが変数展開の git 宛てヒアドキュメントは deny(静的に読めないサブコマンド)", "bash x.sh; git \"$sub\" <<'EOF'\ngit reset --hard HEAD\nEOF"],
+
+  ["deny", "here-string 置換のみ + 後続 rm", "bash <<< $(echo hi); rm -rf /var/b"],
+  ["deny", "here-string バッククォート置換のみ + 後続 rm", "sh <<< `x`; rm -rf /var/b"]
 ]
