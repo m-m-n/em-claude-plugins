@@ -1,0 +1,63 @@
+task_id: task0003
+baseline_failures: []          # full suite before any edit: 6497 tests, OK
+final_failures: []             # full suite re-run after implementation: 6546 tests (6497 + 49 new), OK; must be a subset of baseline_failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractPlanningInputs
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac1_defines_every_field
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac1_resolution_rule_workflow_file_presence_at_worktree_root
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac1_resolution_rule_git_tracked_plugin_directories
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac1_resolution_rule_marketplace_entry_carrying_a_version
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac1_resolution_rule_ordering_by_dir_ascending
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac1_re_resolution_per_dispatch_and_on_return
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac1_workers_do_not_discover_the_state_themselves
+    red_confirmed: true
+    red_reason: "Before editing the documents the planning_inputs tests failed with \"0 != 1 : planning_inputs must list plugin_versioning once\" and \"expected exactly one heading line '### plugin_versioning (dispatch-resolved value)', found 0\"; TestPlannerContractSubsection ended in a setUpClass error with the same message, so its per-test assertions did not run individually in the red state."
+  AC-2:
+    tests:
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractDigestInputs
+    red_confirmed: true
+    red_reason: "Observed failing before the edit: \"'`plugin_versioning`' not found\" in the digest_inputs section, \"'worker-envelope.md' not found\", and test_ac2_old_no_value_inputs_statement_is_gone failed with \"Regex matched: 'no `value_inputs`'\" against the old statement. test_ac2_existing_file_inputs_remain_listed was green before the edit by design (it guards the unchanged file list)."
+  AC-3:
+    tests:
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac3_value_is_mandatory_and_absence_is_invalid_input
+    red_confirmed: true
+    red_reason: "Observed failing before the edit only through the TestPlannerContractSubsection setUpClass error (\"expected exactly one heading line '### plugin_versioning (dispatch-resolved value)', found 0\"): the subsection that must carry the mandatory / invalid_input statement did not exist, so the test could not run."
+  AC-4:
+    tests:
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac4_untrusted_classification_cites_envelope_section
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac4_untrusted_handling_is_cited_not_restated
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractSubsection.test_ac4_states_what_the_value_carries
+    red_confirmed: true
+    red_reason: "Observed failing before the edit only through the TestPlannerContractSubsection setUpClass error (subsection heading found 0 times); the not-restated check is a negative assertion that has no failing form independent of the subsection existing."
+  AC-5:
+    tests:
+      - tests.test_plan_version_planner_dispatch.TestCreatePlanPlannerDispatch.test_ac5_orchestrator_resolves_value_per_planner_contract
+      - tests.test_plan_version_planner_dispatch.TestCreatePlanPlannerDispatch.test_ac5_resolution_covers_every_dispatch_including_answer_redispatches
+      - tests.test_plan_version_planner_dispatch.TestCreatePlanPlannerDispatch.test_ac5_value_is_passed_in_planning_inputs
+      - tests.test_plan_version_planner_dispatch.TestCreatePlanPlannerDispatch.test_ac5_value_is_part_of_the_digest_value_inputs
+      - tests.test_plan_version_planner_dispatch.TestCreatePlanPlannerDispatch.test_ac5_value_is_re_resolved_for_the_return_time_digest
+      - tests.test_plan_version_planner_dispatch.TestCreatePlanPlannerDispatch.test_ac5_field_table_is_cited_not_restated
+      - tests.test_plan_version_planner_dispatch.TestCreatePlanPlannerDispatch.test_ac5_existing_dispatch_items_are_preserved
+    red_confirmed: true
+    red_reason: "Five tests failed before the edit: \"'`plugin_versioning`' not found\" in section 4, \"'`planning_inputs`' not found\", \"'`value_inputs`' not found\", and the regex misses for \"every ... dispatch\" and \"re-resolv\". The cited-not-restated and preserved-items tests are guards that were green before the edit by design."
+  AC-6:
+    tests:
+      - tests.test_plan_version_planner_dispatch.TestPlannerAgentPrompt.test_ac6_inputs_enumeration_names_plugin_versioning
+      - tests.test_plan_version_planner_dispatch.TestPlannerAgentPrompt.test_ac6_points_to_plan_writing_section_by_name
+      - tests.test_plan_version_planner_dispatch.TestPlannerAgentPrompt.test_ac6_pointer_covers_the_files_rule
+      - tests.test_plan_version_planner_dispatch.TestPlannerAgentPrompt.test_ac6_cites_the_contract_for_the_value_shape
+      - tests.test_plan_version_planner_dispatch.TestPlannerAgentPrompt.test_ac6_no_version_rule_statements
+      - tests.test_plan_version_planner_dispatch.TestPlannerAgentPrompt.test_fr7_agent_prompt_contains_no_permissive_statement
+      - tests.test_plan_version_planner_dispatch.TestPlannerAgentNegativeProof
+    red_confirmed: true
+    red_reason: "Four positive tests failed before the edit: \"'`plugin_versioning`' not found\" in the Inputs section, \"'Plugin Version Handling' not found\", the missing \"`files`\" pointer, and \"'plugin_versioning (dispatch-resolved value)' not found\". The negative half (no rule wording, no permissive statement) was green before the edit because the prompt held none, and stays green; its matcher is exercised in both directions by TestPlannerAgentNegativeProof and TestPermissiveMatcherProof."
+  AC-7:
+    tests:
+      - tests.test_plan_version_planner_dispatch.TestModuleDiscipline
+      - tests.test_plan_version_planner_dispatch.TestPermissiveMatcherProof
+      - tests.test_plan_version_planner_dispatch.TestSectionHelperProof
+      - tests.test_plan_version_planner_dispatch.TestPlannerContractNegativeProof
+    red_confirmed: false
+    red_reason: "The standard-library-only and repository-files-only checks assert properties of the new test module itself, so they were green on their first run; no executable check for the \"suite passes\" outcome could be made to fail before the module existed. The failures of AC-1 to AC-6 in the module's first run are the only red evidence for the module as a whole."
