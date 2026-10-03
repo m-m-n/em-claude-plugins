@@ -97,15 +97,15 @@ workflow:
   status: completed
   completed_at_commit: 229a6de6a34f96145043f7cac81939c145115e53
 - id: implement
-  status: completed
+  status: pending
   failed_kind: null
   base_commit: 7ded2cfdf75aafb0b7bc76526bba0f190fe288e3
   completed_at_commit: a242f5919514734c883635018e8e3ca3df06f21b
 - id: review
-  status: completed
+  status: pending
   completed_at_commit: b418c7af430600f34891fbd01f5ad4faedb0f51f
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: VF-1
@@ -133,6 +133,25 @@ tasks:
     - NFR2
     status: merged
     branch: em-workflow/destructive-guard-herestring-subst-only/task0001
+  task0002:
+    title: Derive the repo test's suite-runner timeout from the case count
+    plan: tasks/task0002.md
+    files:
+    - tests/test_destructive_guard_command_substitution.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR3
+    status: pending
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - VF-1
+      review_round: null
 review:
   status: completed
   rounds_completed: 1
@@ -179,10 +198,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
     - TS-4
+    - TS-7
   NFR1:
     title: here-string 分岐以外の挙動を変えない
     status: ok
