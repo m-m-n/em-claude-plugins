@@ -14,3 +14,9 @@ Q4 `--` の後ろの `-` 始まりのオペランド: 番号には入れるが�
 Q1 偽造マーカーで int() が ValueError を出す high（9d315d6486b00e4d）の直し方: rework（implementer が回帰ケース追加→失敗確認→修正）を採用。editor だけで直す案・editor を 2 本出してテストも足す案は不採用。理由: hook-tests ルールは修正前のケース追加を求めるが、review-editor は 1 ファイル・変更済みファイルだけしか触れず規約を満たせない。run-destructive-guard.py は JSON を標準入力で渡すので NUL を含むケースも書ける。
 Q2 codex レビュアー 2 本が「non-JSON output」の空結果を返した件: Claude 代替レビュアーを出した（実施済み）。Codex は「R2b の文言上はスキーマが妥当なら完了扱い」と指摘。ただし空結果は点検の証拠にならず、代替レビューが実際に指摘を見つけたので結果は保持し、監査記録に残した。
 Q3 評価者が範囲外として外した `rm -rf -- -/../../x` が allow になる穴: 別タスクとして起票する案を採用。範囲外は今回直さない理由であって安全という判断ではないため。
+
+# review round 2: Codex 相談記録
+
+[em-workflow batch] review round 2: 不明点を Codex に相談した結果（feature: destructive-guard-rm-reason-positions）
+Q1 here-string の後ろが置換だけのシェル呼び出し（`bash <<< $(echo hi); rm -rf /var/b`）で IndexError が起き、フックが落ちて後続の rm が拒否されない既存の穴（46effc0976b8d93e）: 別タスクに回す案を採用。この feature 内で直す案は不採用。理由: 1 行の修正でも後続 rm を拒否する方へ判定が変わり SPEC FR5 を超える。Codex は「既存という理由だけで危険性が低くなるわけではないので、別タスクで早急に扱うべき」と指摘。
+Q2 codex レビュアー 2 本が再び「non-JSON output」の空結果を返した件: Claude 代替レビュアーを出した（実施済み）。Codex は「スキーマが妥当なら完了とする明文規定があり、summary だけで失敗に分類し直したのは手順からの逸脱」と指摘。代替レビューが Q1 の穴を見つけたので結果は保持し、逸脱を監査記録に残した。

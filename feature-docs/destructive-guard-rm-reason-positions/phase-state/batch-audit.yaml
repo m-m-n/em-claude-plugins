@@ -50,3 +50,25 @@ records:
     options: 再 dispatch / 空セクションの ''- (none)'' 行だけ削除; chosen: 行の削除（内容の変更なし、最小の副作用）;
     rework-planner は TS-17 を cases.json ではなく機能自身の unittest モジュールに置いた（SPEC A6・VERIFICATION
     TS-7 が cases.json を変えないと定めるため）; codex_consulted: false; opus_escalation: false'
+- question_id: review.codex-nonjson-fallback-round2
+  packet_id: null
+  answered_at: '2026-10-04T00:25:00+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: codex レビュアー 2 本（comprehensive#0 / security#0）の non-JSON 空結果に対し Claude 代替レビュアーを出した
+  normalized_answer: Claude 代替レビュアーを出した（実施済み）
+  resolution_note: 'gate: review round 2 の codex non-JSON 結果の扱い; options: (a) スキーマ妥当なので完了・指摘なしとして受理 (b) 実行基盤の失敗として
+    Claude 代替を出す; chosen: (b)（実施済み）; key points: Codex は「R2b はスキーマ妥当なら完了とする明文規定があり、(b) は手順からの逸脱」と指摘。代替レビューは
+    here-string の既存 fail-open を新たに見つけたため結果は保持し、逸脱をここに記録する。round 1 と同じ扱い; codex_consulted: true; opus_escalation: false'
+- question_id: review.deferred-preexisting-failopen-round2
+  packet_id: null
+  answered_at: '2026-10-04T00:25:00+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Notion に別タスクとして起票する
+  normalized_answer: Notion に別タスクとして起票する
+  resolution_note: 'gate: 評価者が medium に下げた here-string IndexError の fail-open（46effc0976b8d93e、ベースから存在、SPEC FR5 で範囲外）; options:
+    (a) 別タスクに回す (b) この feature 内で 1 行の範囲確認と回帰ケースを足して直す; chosen: (a); key points: 直すと後続 rm を拒否する方へ判定が変わり FR5 を超える。
+    既存だからといって危険性が低いわけではないので早急に別タスクで扱う; codex_consulted: true; opus_escalation: false'
