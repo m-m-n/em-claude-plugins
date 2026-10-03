@@ -1,0 +1,27 @@
+schema_version: 1
+feature: destructive-guard-herestring-subst-only
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 011ee401c123805bfc0d74d3fb065f03901eb215
+last_input_digest: sha256:bc00acf4e58a65346c437fc24259db986aececbba26eef6a8589d937b4eaa124
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:bc00acf4e58a65346c437fc24259db986aececbba26eef6a8589d937b4eaa124
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - em-workflow/hooks/tests/run-destructive-guard.py
+      - .claude/rules/hook-tests.md
+last_error: null
