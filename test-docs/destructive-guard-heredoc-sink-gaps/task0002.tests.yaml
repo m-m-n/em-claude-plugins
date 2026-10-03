@@ -1,0 +1,78 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.1 2>&1 | tail の後の bash 宛てヒアドキュメントは deny(2>&1 の & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.2 &>/dev/null の後の bash 宛てヒアドキュメントは deny(&> は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.3 行継続(\\ + 改行)の後の bash 宛てヒアドキュメントは deny(行継続は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.4 \\; の後の bash 宛てヒアドキュメントは deny(エスケープした ; は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.5 >| の後の bash 宛てヒアドキュメントは deny(>| の | は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.6 ホスト文自身の 2>&1 の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.7 ホスト文自身の &>/dev/null の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.8 ホスト文自身の >|/tmp/log の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.9 \\& の後の bash 宛てヒアドキュメントは deny(エスケープした & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.10 >&2 の後の bash 宛てヒアドキュメントは deny(>& の & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.11 &>> の後の bash 宛てヒアドキュメントは deny(&>> の & は区切りでない)"
+    red_confirmed: true
+    red_reason: "Cases added to the case file before any guard change, then run with run-destructive-guard.py against the pre-change guard (the commit 27388290 version, passed as the runner's optional guard path): all 11 FAILed with 'got=allow', want deny (the host statement was read as the statement after the redirection or escape, so the bash heredoc body was judged data). With the final guard all 11 PASS."
+  AC-2:
+    tests:
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-2 2>&1 の後の cat > file 宛てヒアドキュメントは allow(後続の python3 を宛先と誤読しない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-2 追加: &>/dev/null の後の cat > file 宛てヒアドキュメントは allow(&> の & を区切りに数えない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-2 追加: >| の後の cat > file 宛てヒアドキュメントは allow(>| の | を区切りに数えない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-2 追加: \\; の後の cat > file 宛てヒアドキュメントは allow(エスケープした ; を区切りに数えない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-2 追加: 行継続(\\ + 改行)の後の cat > file 宛てヒアドキュメントは allow(行継続を区切りに数えない)"
+    red_confirmed: true
+    red_reason: "The AC-2 case and four further allow cases (one each for &>, >|, an escaped semicolon, a backslash-newline) were run against the pre-change guard: all 5 FAILed with 'got=deny' (git-reset-hard), want allow, because the host statement was read as the following 'python3 x.py' statement, a shell sink. With the final guard all 5 PASS."
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.1 \\' を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした ' は引用の開始でない)"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.2 AC-3.1 の後ろに ls を続けた形も deny"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.3 \\\" を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした \" は引用の開始でない)"
+    red_confirmed: true
+    red_reason: "Cases added before any guard change, run against the pre-change guard: all 3 FAILed with 'got=allow', want deny. With the final guard all 3 PASS. Two further allow cases (labels start '73a1d7b31734dd22 AC-3 追加', an escaped single quote before a command-substitution heredoc, plain and inside a case arm) were added after the own-operator check and the lexer-based host statement existed: they PASS against the pre-change guard (it allowed them), FAILed with 'got=deny' against the intermediate guard that had the own-operator check and FR1 but not the _word_at() fix, and PASS with the final guard. They are regression guards for the FR3 change and are not part of this criterion's red claim."
+  AC-4:
+    tests:
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.1 2>&1 | tail の後の bash 宛てヒアドキュメントは deny(2>&1 の & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.2 &>/dev/null の後の bash 宛てヒアドキュメントは deny(&> は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.3 行継続(\\ + 改行)の後の bash 宛てヒアドキュメントは deny(行継続は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.4 \\; の後の bash 宛てヒアドキュメントは deny(エスケープした ; は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.5 >| の後の bash 宛てヒアドキュメントは deny(>| の | は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.6 ホスト文自身の 2>&1 の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.7 ホスト文自身の &>/dev/null の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.8 ホスト文自身の >|/tmp/log の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.9 \\& の後の bash 宛てヒアドキュメントは deny(エスケープした & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.10 >&2 の後の bash 宛てヒアドキュメントは deny(>& の & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.11 &>> の後の bash 宛てヒアドキュメントは deny(&>> の & は区切りでない)"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.1 \\' を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした ' は引用の開始でない)"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.2 AC-3.1 の後ろに ls を続けた形も deny"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.3 \\\" を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした \" は引用の開始でない)"
+    red_confirmed: true
+    red_reason: "Staged run, same 14 deny cases as AC-1 and AC-3. Pre-change guard: all 14 FAIL (got=allow). Guard with only the own-operator check (host statement still chosen by the old separator counting; a scratch copy of the pre-change guard plus the lexer statement offsets plus the position check): 14 of 14 PASS - AC-1.1 to AC-1.11 and AC-3.1 to AC-3.3 - because the statement chosen by the old counting did not contain the heredoc's own operator, so the destination became undetermined and the existing fallback rescanned the body (the chunk holds a bash word). In that same intermediate state AC-2 (allow) still FAILed, as did the two AC-3 allow cases beyond the plan, which is what the later FR1 and FR3 steps fix."
+  AC-5:
+    tests:
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.1 2>&1 | tail の後の bash 宛てヒアドキュメントは deny(2>&1 の & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.2 &>/dev/null の後の bash 宛てヒアドキュメントは deny(&> は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.3 行継続(\\ + 改行)の後の bash 宛てヒアドキュメントは deny(行継続は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.4 \\; の後の bash 宛てヒアドキュメントは deny(エスケープした ; は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.5 >| の後の bash 宛てヒアドキュメントは deny(>| の | は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.6 ホスト文自身の 2>&1 の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.7 ホスト文自身の &>/dev/null の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.8 ホスト文自身の >|/tmp/log の後ろの bash 宛てヒアドキュメントは deny"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.9 \\& の後の bash 宛てヒアドキュメントは deny(エスケープした & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.10 >&2 の後の bash 宛てヒアドキュメントは deny(>& の & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-1.11 &>> の後の bash 宛てヒアドキュメントは deny(&>> の & は区切りでない)"
+      - "destructive-guard-cases.json::cdb8382d4bbb0b1d AC-2 2>&1 の後の cat > file 宛てヒアドキュメントは allow(後続の python3 を宛先と誤読しない)"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.1 \\' を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした ' は引用の開始でない)"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.2 AC-3.1 の後ろに ls を続けた形も deny"
+      - "destructive-guard-cases.json::73a1d7b31734dd22 AC-3.3 \\\" を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした \" は引用の開始でない)"
+    red_confirmed: true
+    red_reason: "All 15 AC-1, AC-2 and AC-3 cases were committed (commit b634abae) before any guard edit and run against the unmodified guard: 456/471 passed and all 15 added cases FAILed (AC-1.1 to AC-1.11 and AC-3.1 to AC-3.3: got=allow, want deny; AC-2: got=deny, want allow). Results of the same 15 cases after each later step: own-operator check alone 14 PASS / 1 FAIL (AC-2); plus FR1 host statement from lex_segments() offsets 15 PASS; plus FR3 15 PASS."
+  AC-6:
+    tests:
+      - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      - "python3 -m unittest discover -s tests"
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: before this task the 455 existing case entries and the 6497 repository tests all passed (baseline run, no failures), so no red state occurred for this criterion. The existing cases themselves (including allow cases 4, 36 and 416-419) are the tests; the new array was checked programmatically to have the old 455-entry array as an exact prefix. After the change the runner reports 477/477 passed and unittest discover reports 'Ran 6497 tests ... OK'."
