@@ -1,21 +1,101 @@
 schema_version: 1
 feature: plan-version-bump-per-commit
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 33856b281933c383aabbc321406e32aac6862072
 last_input_digest: sha256:55e57cece76bc565751dbecb623d1e3721dc1e9777536ea640be89b634df9bc7
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-03T20:21:09+09:00'
+    questions:
+    - question_id: requirement.version-strategy.non-exempt
+      status: answered
+    - question_id: requirement.conflict-protocol.scope
+      status: answered
+    - question_id: requirement.planner-input.exemption
+      status: answered
+    - question_id: requirement.scope.stalled-feature
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  requirement.version-strategy.non-exempt:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:21:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - per_commit_bump
+    freeform: null
+    normalized_answer: '各コミットで上げる: プラグイン配下を変える全コミットが、同じコミットで plugin.json（と marketplace.json）の
+      patch を上げる。1 タスク内に該当コミットが複数あれば version は複数回進む'
+    resolution_note: 'Codex consultation (harness: codex, 1 turn, converged); orchestrator
+      judged mapping onto option_id. Recorded as assumption per create-spec.requirement-clarification
+      policy. Codex reason: guard はコミットごとの差分を判定し、worktree-task-workflow は複数の小さなコミットを許容しているため、この方式が既存規約に合う
+      各対象コミットで plugin.json の版を上げ、version を持つ対応 marketplace 項目も同じ値に揃える'
+  requirement.conflict-protocol.scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:21:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - include_worktree_task_workflow
+    freeform: null
+    normalized_answer: 'スキルも直す: worktree-task-workflow の競合プロトコルに、非免除リポジトリでは採用コミット・再実装コミットで親の値より上に
+      version を上げることを加える'
+    resolution_note: 'Codex consultation (harness: codex, 1 turn, converged); orchestrator
+      judged mapping onto option_id. Recorded as assumption per create-spec.requirement-clarification
+      policy. Codex reason: 現行スキルは親側を丸ごと採用してコミットするため、計画だけの指示では手順が食い違う 採用時は親側とタスク側
+      HEAD の両方を上回る版にし、再実装時は採用後の HEAD から上げる例外をスキルにも明記する'
+  requirement.planner-input.exemption:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:21:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - orchestrator_resolves_per_dispatch
+    freeform: null
+    normalized_answer: 'dispatch時に解決: create-plan / rework の手順で orchestrator が判定し、planner
+      の入力（planning_inputs など）に値として渡す'
+    resolution_note: 'Codex consultation (harness: codex, 1 turn, converged); orchestrator
+      judged mapping onto option_id. Recorded as assumption per create-spec.requirement-clarification
+      policy. Codex reason: worker-envelope.md は planner 自身の探索を禁止しており、両 planner の現行入力には免除情報がない
+      呼び出しごとに対象 worktree の免除判定とプラグイン位置を親側で解決し、入力と input_digest の value_inputs に含める方式が適切'
+  requirement.scope.stalled-feature:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:21:09+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - out_of_scope
+    freeform: null
+    normalized_answer: '含めない: この feature は計画規則とテストに限る。中断中の feature は別途扱う'
+    resolution_note: 'Codex consultation (harness: codex, 1 turn, converged); orchestrator
+      judged mapping onto option_id. Recorded as assumption per create-spec.requirement-clarification
+      policy. Codex reason: D3 は別機能の既存計画で、その書き換えや実装再開は今回の計画規則の統一に必要ない 当該 workflow.yaml:172
+      では task0003 は merged と記録されており、質問の未マージという前提とも一致していない'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:21:09+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: '推奨を採用: 推奨（skip）をそのまま採用する'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+      (design step skip adopted)
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:55e57cece76bc565751dbecb623d1e3721dc1e9777536ea640be89b634df9bc7
-  output_digest: null
+  output_digest: sha256:e4627abf7821b2d88829d8daa4cd69095dc36aefbca355f8e7e3319aa2f00fa7
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:720d0c9dc34156f7e867edb5ff5c2813c9a37341e2884599e20504b381473009
 stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:
