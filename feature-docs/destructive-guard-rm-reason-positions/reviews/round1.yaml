@@ -1,0 +1,59 @@
+round: 1
+executed_at: "2026-10-03T23:32:17+09:00"
+scope:
+  review_mode: diff
+  base_commit: 94875785d992fd25ceb264a6ebb9e4b42bffaa30
+  head_commit: e007e385a043a7a8aa82b86ceac279a82a9ed4d4
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - test-docs/destructive-guard-rm-reason-positions/task0001.tests.yaml
+  - tests/test_destructive_guard_rm_reason_positions.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: failed, note: "codex returned non-JSON output (schema-valid empty wrapper); treated as harness failure"}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, status: failed, note: "codex returned non-JSON output (schema-valid empty wrapper); treated as harness failure"}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
+- {run_id: "security#fallback", perspective: security, role: fallback, source: claude, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 9d315d6486b00e4d
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2717
+  title: "_register_marker_positions() の int() が偽造マーカーで ValueError を出してフックがクラッシュする（fail-open への後退、FR5 違反）"
+  description: "今回の差分で新しく入った _register_marker_positions() は、マーカーを消す前のトークンに _MARK_RE を当て、int(m.group(1)) を例外処理なしで呼んでいる。\\x00 + 4301 桁以上の数字 + \\x02 の偽造マーカーで Python の整数文字列変換の桁数上限に当たり ValueError になり、例外は statements() から main() まで伝わってフックは exit 1 で終わる（判定が出ない＝fail-open）。ベース 94875785 は同じ入力を deny / rm-recursive と判定する。偽造マーカーを別の文に置いても同じコマンドの rm 判定がすべて出なくなる。既存の _strip_unresolved_marks() は同じ入力を try/except ValueError で防いでいる。既存スイートにも新しい unittest にも偽造マーカーのケースは無い。"
+  suggestion: "_register_marker_positions() の int() を _strip_unresolved_marks() と同じく try/except ValueError で囲み、解析できないマーカーは continue で飛ばす。.claude/rules/hook-tests.md に従い、直す前に deny の回帰ケース（rm -rf /var/x + NUL + '1'*5000 + STX、echo NUL + '9'*5000 + STX; rm -rf /var/x → いずれも deny / rm-recursive）を足す。"
+  sources: [claude:comprehensive]
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: "batch: auto-fix skipped (needs-judgment). hook-tests ルールが修正前の回帰ケース追加を求め、review-editor は 1 ファイルしか編集できないため、Codex 相談の結果テスト込みの rework に回した"
+evaluation:
+  round_summary: "Round 1（diff、cross_validation=true）。codex の主レビュー 2 本は JSON 以外を返して中身が無く、comprehensive と security は claude の代替レビューで評価した。評価者は run-destructive-guard.py 456/456 件成功、unittest 6682 件成功を確認。入れ子の形でも番号は元の文字列の出現順で、判定と rule id はベースと一致。持ち越しは偽造マーカーの int() による ValueError クラッシュ 1 件（今回の差分での後退、fail-open、FR5 違反のため high）。security#fallback の high（-- の後ろの - 始まりの対象が判定されず -/../.. で allow）はベースからある穴で SPEC FR3/A2 が範囲外としているため demoted。インジェクションの試みは無し。"
+  recommended_action: auto_fix
+  action_rationale: "残る指摘は 1 件で場所も直し方も決まっている。範囲外の -- の穴は別タスクとして起票する判断を人に委ねる。"
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 4232
+  run_id: "security#fallback"
+  reason: "demoted: ベース 94875785 から存在する穴で、SPEC FR3/A2 が判定対象の集合を変えないと範囲外にしている。別タスクとして Notion に起票する"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 1
+rework_required: true
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
