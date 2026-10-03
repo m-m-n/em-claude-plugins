@@ -70,7 +70,8 @@ workflow:
   completed_at_commit: 4ae6258f782d3e7617f6bcb7702f24054fd864e4
   base_commit: 94875785d992fd25ceb264a6ebb9e4b42bffaa30
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: bb6b42354a7f0cd2671a139199fdc690317e3dbc
 - id: verify
   status: pending
   result: null
@@ -128,8 +129,8 @@ tasks:
       - 9d315d6486b00e4d
       review_round: 1
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -143,8 +144,8 @@ review:
     security: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 1
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: 呼び出し番号は元のコマンド上の出現順
