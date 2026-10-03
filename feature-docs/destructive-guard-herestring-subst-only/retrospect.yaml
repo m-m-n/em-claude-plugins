@@ -1,0 +1,56 @@
+feature: destructive-guard-herestring-subst-only
+collected_at: "2026-10-04T05:36:00+09:00"
+session_ids:
+  - 01a10379-dae6-760f-b544-31f58787e633
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - id: VF-1
+      note: 'repo-tests (python3 -m unittest discover -s tests) exit 1 on 2 consecutive runs: tests/test_destructive_guard_command_substitution.py TestCaseTableDiscipline.test_runner_reports_every_case_passing raises subprocess.TimeoutExpired (run-destructive-guard.py exceeds the fixed 120s timeout; standalone 2:02 for 458 cases, base copy 2:44 for the same case file; host load avg 16-33). hooks suite 458/458, TS-1..TS-6 and plugin-invariants pass.'
+      category: unknown
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1 が 0.99、スコア 1.01 となり reduced に決まった"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.01
+          confidence: 0.99
+          probabilities: {'0': 0.0, '1': 0.99, '2': 0.01, '3': 0.0}
+        observed_at: "2026-10-04T02:29:49+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.01
+          confidence: 0.99
+          probabilities: {'0': 0.0, '1': 0.99, '2': 0.01, '3': 0.0}
+        observed_at: "2026-10-04T02:34:03+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/destructive-guard.py
+        - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 4
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 6
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "verify round 1 で repo-tests が固定 120 秒のタイムアウトで落ちた（VF-1）。ケース 458 件でホスト負荷が高いと 2 分を超える。rework の task0002 でタイムアウトをケース数から導く形にした"
+  - "事前調査の files_expected は 2 ファイルだったが、verify 由来の rework で tests/test_destructive_guard_command_substitution.py も変更した"
+  - "review round 2 の security 指摘 2 件を demoted で退けた。うち 1 つの呼び出しに <<< が複数ある形（bash <<< 'echo hi' <<< 'rm -rf /var/b'）は base から allow になる既存の穴で、別タスクの候補"
+  - "review の triage 起票は 2 ラウンドとも executed: false で、上記の別タスク候補は起票されていない"
