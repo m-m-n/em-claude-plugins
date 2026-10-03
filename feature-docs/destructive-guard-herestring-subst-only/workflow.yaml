@@ -145,7 +145,8 @@ tasks:
     complexity: low
     requirements:
     - FR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-herestring-subst-only/task0002
     notes: null
     provenance:
       source: verify
