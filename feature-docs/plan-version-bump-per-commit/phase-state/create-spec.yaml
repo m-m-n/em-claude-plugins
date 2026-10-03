@@ -1,0 +1,65 @@
+schema_version: 1
+feature: plan-version-bump-per-commit
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 33856b281933c383aabbc321406e32aac6862072
+last_input_digest: sha256:55e57cece76bc565751dbecb623d1e3721dc1e9777536ea640be89b634df9bc7
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:55e57cece76bc565751dbecb623d1e3721dc1e9777536ea640be89b634df9bc7
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:4ce95370e221ea0a3ef42ee0992d28ac44cbae9b311b7e310061d35b819bb093
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  reference_scan_targets:
+    generation_digest: null
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/skills/plan-writing/SKILL.md
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/agents/rework-planner.md
+    - em-workflow/agents/implementer.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/references/contracts/planner-contract.md
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - .claude/rules/core-plugin-version-bump.md
+    - .github/workflows/plugin-version-bump.yml
+    - tests/test_worker_contracts_planning.py
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_em_workflow_version.py
+    - /home/sakura/.claude/hooks/plugin-version-guard.py
+    - /home/sakura/.claude/rules/plugin-version-bump.md
+    digests:
+      .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
+      .github/workflows/plugin-version-bump.yml: sha256:fbbadfe2d4ea13de2793a5d7892e73660fdafc4dee8a615d54d9ba439c410a02
+      /home/sakura/.claude/hooks/plugin-version-guard.py: sha256:918cc84a60bb1db053580ea620a2a40cef76feec38891fcd2eeefce40467077e
+      /home/sakura/.claude/rules/plugin-version-bump.md: sha256:f46e7d752cac1b496769520d0942923c9e502d07b65a148caa6e0a67f7495e38
+      em-workflow/agents/implementation-planner.md: sha256:08357311e789ede3ecd3cbbc6b65d1afb5f7f3435150744f0bdd7f8d582b653b
+      em-workflow/agents/implementer.md: sha256:d0140fbdec9f323754df7b16491c0733d18638f7b597d6d507a1b356b838a76f
+      em-workflow/agents/rework-planner.md: sha256:5dffc04198fb4ca250848ab28e560bd7827e02b24daf6542a80c3cb701a4cd82
+      em-workflow/references/contracts/planner-contract.md: sha256:fb30d9b77824f2ea42f330c350edc3f4e75dda55509cfad2d3e043eb6d91eac2
+      em-workflow/references/contracts/rework-planner-contract.md: sha256:19e5c6abb7c4c2917f7ed12c3ad069e1bea2e7f86a3578e65eeeff7f14b95444
+      em-workflow/references/phases/create-plan-phase.md: sha256:77ee13494631baa301f6db28d612b673e80234600006147fc4676394a70600ac
+      em-workflow/references/rework-task-synthesis.md: sha256:1dc6b3e90e3a660cca479e667ad33afc6fbd05e2c67d43cc1f02ce1fd38a01d0
+      em-workflow/skills/plan-writing/SKILL.md: sha256:6a571c4169e987050a1564ccc53489b41650d2a24047c24e86e9efe34f90ebf7
+      em-workflow/skills/worktree-task-workflow/SKILL.md: sha256:b79eaaab4a089d980fad770929a53f32e8437df3066cbf953456821668a60b46
+      tests/test_em_workflow_version.py: sha256:67684df9abb3fb3da1a5487db537c3430ee84c91089fcd9efaa16c06506ead5a
+      tests/test_rework_synthesis_contract.py: sha256:96fc45998c5471153fcd4b5c2bd68d3174761a0f902efcef6e5fc9065bb724ac
+      tests/test_worker_contracts_planning.py: sha256:2202c60b652448c9d31dff00421daca243bc817aa4396aca61be978a27f0afc8
+    truncated: false
+last_error: null
