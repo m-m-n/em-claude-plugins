@@ -1,0 +1,30 @@
+feature: plan-version-bump-per-commit
+collected_at: "2026-10-03T21:17:18+09:00"
+session_ids: [01a101b1-c089-7169-8644-677063080cfd]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読み（score 1.18, confidence 0.82）を評価器が閾値表で full と判定した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.16, confidence: 0.8}
+        observed_at: "2026-10-03T20:12:31+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.18, confidence: 0.82}
+        observed_at: "2026-10-03T20:12:32+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 120
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      change_containment: multiple_modules
+      changes_external_contract: false
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round1 の medium 3 件（ab943d92543e9727 / 13a6af27f3c0da79 / 5ea8778906ee1777）は R4 の自動修正対象外のため unresolved のまま残った。うち 2 件は FR7 の再発検出テストの検出漏れ"
