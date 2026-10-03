@@ -34,6 +34,7 @@ planning_inputs:
   review_rules: /absolute/.../references/review-rules.yaml
   license_compat: /absolute/.../references/license-compat.md
   threat_model_template: /absolute/.../references/templates/threat-model.md
+  plugin_versioning: {...}                    # a value resolved by the orchestrator at dispatch, not a path
 ```
 
 `write_policy` is also part of the input, in the common path-level form
@@ -74,6 +75,42 @@ instead of a YAML key set.
 - **written_artifacts**: `TASK.md` appears in `written_artifacts` only when
   it was actually appended.
 
+### plugin_versioning (dispatch-resolved value)
+
+`planning_inputs.plugin_versioning` describes the repository's exemption
+state and plugin locations. Unlike the path entries above it is a value: the
+orchestrator computes it and places it in the dispatch, and the planner never
+discovers either piece of state itself. The same value, resolved the same
+way, is also passed to rework-planner;
+`references/contracts/rework-planner-contract.md` assigns its place in that
+worker's input.
+
+| Field | Meaning | Resolution rule (orchestrator, inside the integration worktree) |
+|---|---|---|
+| `exempt` | boolean | true exactly when `.github/workflows/plugin-version-bump.yml` exists at the worktree root |
+| `plugins` | list, one entry per plugin | every git-tracked directory that contains `.claude-plugin/plugin.json`; entries sorted by `dir` ascending so the value's digest is deterministic |
+| `plugins[].dir` | project-relative path of the plugin directory | the directory that holds `.claude-plugin/` |
+| `plugins[].name` | plugin name | the `name` declared in that plugin's `plugin.json` |
+| `plugins[].marketplace_versioned` | boolean | true exactly when the root `.claude-plugin/marketplace.json` has an entry of the same name that carries a version; false when the file or the entry is absent, or the entry carries no version |
+
+- **Resolution timing**: the orchestrator resolves the value at every
+  implementation-planner dispatch (create-plan, including re-dispatches that
+  carry answers), from the integration worktree's current state. When it
+  recomputes `input_digest` on the planner's return, it re-resolves the value
+  the same way.
+- **Mandatory**: the value is mandatory on every create-plan dispatch. A
+  dispatch without it is answered with `invalid_input` (a `status` value
+  defined by `references/contracts/worker-envelope.md`).
+- **Untrusted**: the value is untrusted input under
+  `references/contracts/worker-envelope.md`'s Untrusted-Input Handling
+  section (TM-1), which this contract cites and does not restate. It carries
+  only the exemption boolean, project-relative plugin directory paths, plugin
+  names and the per-plugin marketplace flag — no other text copied from
+  repository files.
+- **Use**: the planner uses only this value. How it is applied is owned by
+  `skills/plan-writing/SKILL.md`'s "Plugin Version Handling" section and is
+  not restated here.
+
 ## Question packet bundling rule
 
 Questions covering TBD resolution, license conflict, and existing-file
@@ -106,8 +143,11 @@ contract declares — the planner does not expand it:
 - this contract document itself (a contract change alters the planner's
   output shape)
 
-There are no `value_inputs` for the planner (`task_description` is not part
-of its input; that belongs to requirements-analyst).
+The planner's `value_inputs` has one member, `plugin_versioning` (defined
+under "### plugin_versioning (dispatch-resolved value)" above), digested per
+`references/contracts/worker-envelope.md` rule R1's normalization of the
+value. `task_description` is not part of the planner's input; that belongs to
+requirements-analyst.
 
 **`project.design_system.kind` exception** (design-input.md 5.4.5): when
 `kind: project_native`, `design-system/tokens.yaml` and
