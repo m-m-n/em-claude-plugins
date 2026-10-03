@@ -89,7 +89,7 @@ workflow:
   status: completed
   completed_at_commit: 6598b2e4f115f838e8b50d6308710eff623b0e7c
 - id: implement
-  status: completed
+  status: pending
   base_commit: 3efc2b9c17cc484967db2a57a71fadb5ee369ab0
   completed_at_commit: a5db3c27625715374d308690ec373bff06124f6e
 - id: review
@@ -196,6 +196,32 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/destructive-guard-heredoc-sink-gaps/task0004
+  task0005:
+    title: Own-operator check that can return undetermined
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR2
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - bc9a99dd0d07ffa5
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -235,9 +261,13 @@ requirements:
     excluded_reason: null
     tasks:
     - task0002
+    - task0005
     tests:
     - TS-1
     - TS-3
+    - TS-19
+    - TS-20
+    - TS-21
   FR3:
     title: エスケープされた引用符を引用の開始として扱わない
     status: ok
@@ -299,6 +329,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-1
     - TS-2
@@ -309,6 +340,7 @@ requirements:
     - TS-7
     - TS-8
     - TS-11
+    - TS-19
   FR9:
     title: 既存ケースを保つ
     status: ok
@@ -319,6 +351,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-9
     - TS-10
@@ -344,6 +377,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-18
   NFR2:
@@ -356,6 +390,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-18
   NFR3:
@@ -368,6 +403,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-4
     - TS-10
@@ -382,10 +418,11 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-18
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
