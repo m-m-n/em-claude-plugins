@@ -467,6 +467,7 @@ class _TrackingLexer(shlex.shlex):
     def __init__(self, *args, **kwargs):
         self.last_was_operator = False
         self.last_was_quoted = False
+        self.last_end = 0
         super().__init__(*args, **kwargs)
 
     @property
@@ -484,7 +485,14 @@ class _TrackingLexer(shlex.shlex):
     def read_token(self):
         self.last_was_operator = False
         self.last_was_quoted = False
-        return super().read_token()
+        token = super().read_token()
+        # How many characters of the input the lexer has taken in once this
+        # token is complete -- the token's own end, or one past it when the
+        # character that ended the token (whitespace, or the punctuation that
+        # was pushed back) was read as well. _lex_layout() turns this into
+        # offsets; nothing else reads it.
+        self.last_end = self.instream.tell()
+        return token
 
 
 _COMMENT_WORD_BOUNDARY = " \t\r\n;|&()<>"
@@ -591,10 +599,63 @@ def lex_segments(chunk):
     small, of the blanking pass itself disagreeing with shlex about where
     an unbalanced quote sits.
     """
+    return _lex_layout(chunk, False)[0]
+
+
+# `<<` as an operator of its own: not the tail of a longer run of `<`, which
+# is a here-string (`<<<`), and not followed by one either. strip_heredocs()'s
+# HEREDOC_OP recognises the same two characters; the lexer-side view of an
+# operator below is what a heredoc's host statement has to agree with.
+_HEREDOC_OPERATOR_RUN = re.compile(r"(?<!<)<<(?!<)")
+
+
+def _operator_token_start(text, tok, end):
+    """Where in TEXT the bare operator token TOK begins, or None when TEXT
+    does not show TOK where the lexer's position says it ended.
+
+    END is how many characters the lexer had taken in when it returned TOK.
+    An operator token is made of punctuation only, so its text is exactly the
+    characters it was read from; the character that ended it is either
+    whitespace (consumed, so END is one past the token) or other punctuation
+    pushed back (also read, so END is one past the token again) or the end of
+    the input (END is the token's own end). Telling these apart needs no
+    knowledge of the lexer's internals: the token's own text matches at
+    exactly one of the two candidates, because the character after it is
+    never one of the characters it is made of."""
+    n = len(tok)
+    for stop in (end, end - 1):
+        if n <= stop <= len(text) and text[stop - n : stop] == tok:
+            return stop - n
+    return None
+
+
+def _lex_layout(chunk, track):
+    """lex_segments()'s one lexing pass: (segments, layout). SEGMENTS is
+    lex_segments()'s own return value, unchanged.
+
+    With TRACK, LAYOUT says where the statements sit in the text that was
+    lexed -- the same offsets in CHUNK, since comment blanking keeps every
+    character's position -- as (STARTS, OPERATORS), or None when the chunk
+    does not lex or an offset could not be confirmed:
+
+    - STARTS: STARTS[k] is the offset where statement k begins, which is the
+      end of the separator before it (0 for the first). Statement k is
+      therefore everything from STARTS[k] up to STARTS[k + 1], its own
+      terminating separator included.
+    - OPERATORS: {offset of a heredoc operator `<<`: the index of the
+      statement it sits in}, for every bare `<<` the lexer read as an
+      operator. A `<<` inside quotes or a comment, or one that is part of a
+      here-string, is not in it.
+
+    Separators are recognised once, here. Whatever places a heredoc's host
+    statement reads these offsets rather than counting separator characters
+    on its own, so a redirection (`2>&1`, `&>`, `>|`) or an escape (an
+    escaped `;` or `&`, a backslash before a newline) that this pass does
+    not count as a separator can never be counted as one by a second
+    rule."""
     try:
-        lex = _TrackingLexer(
-            _blank_comments(chunk), posix=True, punctuation_chars=PUNCTUATION
-        )
+        text = _blank_comments(chunk)
+        lex = _TrackingLexer(text, posix=True, punctuation_chars=PUNCTUATION)
         lex.whitespace = " \t\r"
         lex.whitespace_split = True
         lex.commenters = ""
@@ -603,16 +664,21 @@ def lex_segments(chunk):
             raw = lex.get_token()
             if raw is None or raw == lex.eof:
                 break
-            toks.append(Tok(raw, lex.last_was_operator, quoted=lex.last_was_quoted))
+            toks.append(
+                (Tok(raw, lex.last_was_operator, quoted=lex.last_was_quoted), lex.last_end)
+            )
     except ValueError:
         return [
             (tokens(seg), False, None)
             for seg in SEGMENT_SPLIT.split(chunk)
             if seg.strip()
-        ]
+        ], None
 
     out, current = [], []
-    for t in toks:
+    starts = [0]
+    operators = {}
+    confirmed = track
+    for t, end in toks:
         # punctuation_chars makes shlex fuse adjacent punctuation into one
         # token, so a separator with no space before the next operator
         # (';>', '\n(') arrives as a single token that is neither a clean
@@ -641,7 +707,18 @@ def lex_segments(chunk):
             segs = [Tok(p, t.is_operator) for p in pieces]
         else:
             segs = [t]
+        # Only a bare operator token is the characters it was read from, so
+        # only its offsets can be taken from the lexer's position; every
+        # separator is one, and so is every `<<` that starts a heredoc.
+        base = None
+        if confirmed and t.is_operator:
+            base = _operator_token_start(text, t, end)
+            if base is None:
+                confirmed = False
+        offset = 0
         for seg in segs:
+            seg_start = None if base is None else base + offset
+            offset += len(seg)
             if (
                 seg
                 and all(c in SEGMENT_CHARS for c in seg)
@@ -649,10 +726,17 @@ def lex_segments(chunk):
             ):
                 out.append((current, True, seg))
                 current = []
+                if seg_start is not None:
+                    starts.append(seg_start + len(seg))
             else:
                 current.append(seg)
+                if seg_start is not None and getattr(seg, "is_operator", False):
+                    for m in _HEREDOC_OPERATOR_RUN.finditer(seg):
+                        operators[seg_start + m.start()] = len(out)
     out.append((current, True, None))
-    return out
+    if not confirmed or len(starts) != len(out):
+        return out, None
+    return out, (starts, operators)
 
 
 def split_redirects(toks, lexed=True):
@@ -1860,8 +1944,12 @@ def _build_statement_table(chunk, marked_chunk):
     condition -- _git_is_data() for a `git` command word, _git_alias_risk()
     for a `gh` one, task0003) -- built once per chunk and read by every
     heredoc's destination decision instead of each heredoc re-lexing the
-    chunk on its own."""
-    segments = lex_segments(marked_chunk)
+    chunk on its own.
+
+    Returns (TABLE, LAYOUT): LAYOUT is _lex_layout()'s offsets for the same
+    lexing pass (None when they are unavailable), in MARKED_CHUNK's own
+    coordinates."""
+    segments, layout = _lex_layout(marked_chunk, True)
     case_stack = []
     table = []
     for toks, lexed, sep in segments:
@@ -1910,7 +1998,7 @@ def _build_statement_table(chunk, marked_chunk):
                 is_assignment_only=False, opens_group=None, closes_group=None,
                 is_compound_keyword=False,
             ))
-    return table
+    return table, layout
 
 
 def _track_groups(table):
@@ -2114,11 +2202,31 @@ def _decide_destination(chain):
     return "data"
 
 
-def _statement_info_at(text, pos, memo_key, tables_cache):
+def _marked_offsets(top_spans):
+    """(ENDS, REMOVED) for turning an offset in a text into the offset of the
+    same character in _mark_substitutions(text, top_spans, 0): ENDS[k] is
+    where top span k ends in the text, and REMOVED[k] is how many characters
+    the first k spans lose when each is replaced by its marker (REMOVED has
+    one more entry than ENDS)."""
+    ends = []
+    removed = [0]
+    for k, (start, end) in enumerate(top_spans):
+        ends.append(end)
+        marker = len(f"{UNRESOLVED_MARK}{k}{_MARK_TERMINATOR}")
+        removed.append(removed[-1] + (end - start) - marker)
+    return ends, removed
+
+
+def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
     """The Component 3 table (built once per TEXT, cached in TABLES_CACHE
     keyed by MEMO_KEY) plus the statement index at POS in TEXT, plus that
     table's own group-tracking and pipeline memo -- shared by every level
-    of every heredoc's chain that resolves against this same TEXT."""
+    of every heredoc's chain that resolves against this same TEXT.
+
+    OPERATOR says POS is the start of a heredoc's own `<<` operator, which
+    the statement selected for it has to contain (FR2): when the lexer does
+    not show a heredoc operator at POS in that statement, None comes back,
+    which the callers read as an undetermined destination."""
     cached = tables_cache.get(memo_key)
     if cached is None:
         spans, parent_of, unmatched, opaque, _containing = scan_structure(
@@ -2126,7 +2234,7 @@ def _statement_info_at(text, pos, memo_key, tables_cache):
         )
         top_spans = _top_level_spans(spans, parent_of)
         marked = _mark_substitutions(text, top_spans, 0)
-        table = _build_statement_table(text, marked)
+        table, layout = _build_statement_table(text, marked)
         group_closer_of, open_groups_at, mismatched = _track_groups(table)
         # _segment_boundaries() is the one full-text pass every heredoc's
         # own _segment_index_at() query against THIS text shares (NFR3) --
@@ -2134,18 +2242,23 @@ def _statement_info_at(text, pos, memo_key, tables_cache):
         boundaries = _segment_boundaries(text, opaque)
         cached = (
             table, group_closer_of, open_groups_at, {}, unmatched, boundaries,
-            mismatched,
+            mismatched, layout, _marked_offsets(top_spans),
         )
         tables_cache[memo_key] = cached
     (
         table, group_closer_of, open_groups_at, pipe_memo, unmatched, boundaries,
-        mismatched,
+        mismatched, layout, offsets,
     ) = cached
     if any(p < pos for p in unmatched):
         return None
     idx = _segment_index_at(pos, boundaries)
     if idx >= len(table):
         return None
+    if operator:
+        ends, removed = offsets
+        marked_pos = pos - removed[bisect.bisect_right(ends, pos)]
+        if layout is None or layout[1].get(marked_pos) != idx:
+            return None
     if mismatched:
         # This table's own group tracking saw a closer that did not match
         # its stack (see _track_groups()'s own docstring) -- undetermined
@@ -2202,12 +2315,16 @@ def _heredoc_destinations(chunk, records, chunk_scan):
             continue
         containing = containing_span.get(record.op_start)
         if containing is None:
-            info = _statement_info_at(chunk, record.op_start, "chunk", tables_cache)
+            info = _statement_info_at(
+                chunk, record.op_start, "chunk", tables_cache, operator=True
+            )
             chain = [info if info is not None else _StmtInfo(parse_failed=True)]
         else:
             inner_text, inner_base = _span_inner(chunk, containing)
             local_start = record.op_start - inner_base
-            host = _statement_info_at(inner_text, local_start, containing, tables_cache)
+            host = _statement_info_at(
+                inner_text, local_start, containing, tables_cache, operator=True
+            )
             chain = [host if host is not None else _StmtInfo(parse_failed=True)]
             chain.extend(
                 _walk_enclosing_chain(chunk, containing, parent_of, tables_cache)
