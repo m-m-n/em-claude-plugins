@@ -1,0 +1,63 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 6497 tests, OK
+final_failures: []             # re-executed after implementation: Ran 6541 tests (6497 inherited + 44 new), OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plan_version_plan_writing.TestAc1PerCommitBumpRule.test_ac1_heading_is_pinned_level_two_exact_text
+      - tests.test_plan_version_plan_writing.TestAc1PerCommitBumpRule.test_ac1_section_has_distinct_non_exempt_and_exempt_subsections
+      - tests.test_plan_version_plan_writing.TestAc1PerCommitBumpRule.test_ac1_non_exempt_states_patch_bump_in_same_commit
+      - tests.test_plan_version_plan_writing.TestAc1PerCommitBumpRule.test_ac1_non_exempt_states_marketplace_alignment
+      - tests.test_plan_version_plan_writing.TestAc1PerCommitBumpRule.test_ac1_non_exempt_states_advance_on_each_commit
+      - tests.test_plan_version_plan_writing.TestAc1PerCommitBumpRule.test_ac1_non_exempt_states_strictly_greater_than_preceding_head
+    red_confirmed: true
+    red_reason: "all six failed before the section existed: AssertionError: expected exactly one heading line '## Plugin Version Handling', found 0"
+  AC-2:
+    tests:
+      - tests.test_plan_version_plan_writing.TestAc2OutsideTheRule.test_ac2_new_plugins_and_unversioned_entries_are_not_bumped
+    red_confirmed: true
+    red_reason: "AssertionError: expected exactly one heading line '## Plugin Version Handling', found 0"
+  AC-3:
+    tests:
+      - tests.test_plan_version_plan_writing.TestAc3ProhibitionFilesAndCarriage.test_ac3_prohibits_keep_unchanged_with_both_quoted_examples
+      - tests.test_plan_version_plan_writing.TestAc3ProhibitionFilesAndCarriage.test_ac3_files_rule_names_plugin_json_and_marketplace_json
+      - tests.test_plan_version_plan_writing.TestAc3ProhibitionFilesAndCarriage.test_ac3_each_task_plan_carries_the_per_commit_instruction_itself
+    red_confirmed: true
+    red_reason: "all three failed before the section existed: AssertionError: expected exactly one heading line '## Plugin Version Handling', found 0"
+  AC-4:
+    tests:
+      - tests.test_plan_version_plan_writing.TestAc4DefinitionsAndExempt.test_ac4_defines_exempt_and_non_exempt_by_workflow_file_at_root
+      - tests.test_plan_version_plan_writing.TestAc4DefinitionsAndExempt.test_ac4_defines_under_a_plugin_and_comparison_rule
+      - tests.test_plan_version_plan_writing.TestAc4DefinitionsAndExempt.test_ac4_exempt_subsection_instructs_no_version_change
+      - tests.test_plan_version_plan_writing.TestAc4DefinitionsAndExempt.test_ac4_exempt_subsection_names_only_where_for_minor_or_major
+    red_confirmed: true
+    red_reason: "all four failed before the section existed: AssertionError: expected exactly one heading line '## Plugin Version Handling', found 0"
+  AC-5:
+    tests:
+      - tests.test_plan_version_plan_writing.TestAc5InputAndCitations.test_ac5_input_comes_from_plugin_versioning_not_own_discovery
+      - tests.test_plan_version_plan_writing.TestAc5InputAndCitations.test_ac5_applies_to_both_planners
+      - tests.test_plan_version_plan_writing.TestAc5InputAndCitations.test_ac5_cites_parent_side_adoption_protocol_by_path_and_name
+      - tests.test_plan_version_plan_writing.TestAc5InputAndCitations.test_ac5_does_not_restate_the_conflict_time_rule
+    red_confirmed: true
+    red_reason: "all four failed before the section existed: AssertionError: expected exactly one heading line '## Plugin Version Handling', found 0"
+  AC-6:
+    tests:
+      - tests.test_plan_version_plan_writing.TestAc6ChecklistItems.test_ac6_checklist_has_files_and_per_commit_instruction_item
+      - tests.test_plan_version_plan_writing.TestAc6ChecklistItems.test_ac6_checklist_has_no_keep_unchanged_instruction_item
+      - tests.test_plan_version_plan_writing.TestAc6ChecklistItems.test_ac6_checklist_has_exempt_no_instruction_item
+    red_confirmed: true
+    red_reason: "all three failed before the checklist items existed: AssertionError: False is not true"
+  AC-7:
+    tests:
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_negative_check_rejects_each_permissive_sample
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_negative_check_accepts_prohibition_and_rule_wording
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_negative_check_ignores_permissive_text_in_exempt_subsection
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_negative_check_ignores_exempt_scoped_checklist_item
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_negative_check_rejects_permissive_text_outside_the_section
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_real_skill_md_has_no_permissive_statement
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_real_prohibited_example_sentences_are_accepted
+      - tests.test_plan_version_plan_writing.TestAc7NegativeCheck.test_ac7_real_exempt_subsection_is_accepted
+      - tests.test_plan_version_plan_writing.TestAc7SectionShape.test_ac7_section_has_no_fenced_code_block
+      - tests.test_plan_version_plan_writing.TestAc7SectionShape.test_ac7_section_has_no_concrete_version_value
+    red_confirmed: true
+    red_reason: "the five tests that read the real SKILL.md (real_skill_md_has_no_permissive_statement, real_prohibited_example_sentences_are_accepted, real_exempt_subsection_is_accepted, section_has_no_fenced_code_block, section_has_no_concrete_version_value) failed before the section existed with AssertionError: expected exactly one heading line '## Plugin Version Handling', found 0. The other tests in the list exercise the matcher against in-test sample text only and passed before the section existed; the full-suite pass is verified by running python3 -m unittest discover -s tests, which is not itself a test."
