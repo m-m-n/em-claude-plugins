@@ -168,7 +168,8 @@ applied).
 
 - `input_digest` (rule R1, `references/contracts/worker-envelope.md`;
   provenance: design-input.md 5.0 R1), computed from
-  `references/contracts/planner-contract.md`'s `digest_inputs`.
+  `references/contracts/planner-contract.md`'s `digest_inputs` and
+  `value_inputs`.
 - A `workflow.yaml` snapshot.
 - The source documents: SPEC.md, REQUIREMENTS.md, and DESIGN.md when
   present — the task document (`feature-docs/{feature}/TASK.md`) in their
@@ -184,6 +185,18 @@ applied).
   `references/templates/task-plan.md`,
   `references/templates/threat-model.md` (passed as
   `planning_inputs.threat_model_template`).
+- The `plugin_versioning` value, resolved by the orchestrator per
+  `references/contracts/planner-contract.md`'s "### plugin_versioning
+  (dispatch-resolved value)" subsection, which owns its shape and resolution
+  rules (not restated here). The orchestrator resolves it at every
+  `implementation-planner` dispatch — the first dispatch and every
+  re-dispatch that carries answers — from the integration worktree's current
+  state, passes it in `planning_inputs` (as
+  `planning_inputs.plugin_versioning`), and includes it in the
+  `input_digest`'s `value_inputs` under the key `plugin_versioning`. When it
+  recomputes `input_digest` on the planner's return, it re-resolves the value
+  from the worktree's current state the same way, so a change in exemption
+  state or plugin layout during the dispatch window makes the result stale.
 
 ## 5. Question loop
 
