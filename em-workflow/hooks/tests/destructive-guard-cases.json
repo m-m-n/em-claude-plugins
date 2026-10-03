@@ -469,5 +469,21 @@
   ["allow", "-C と置換内 commit -m の組み込みサブコマンド宛てのヒアドキュメントは allow のまま", "bash scripts/check.sh && git -C /tmp/r commit -m \"$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)\""],
 
   ["deny", "--exec-path は未対応の global option なので git 宛てヒアドキュメントは deny(宛先不明、任意のサブコマンド前)", "bash x.sh; git --exec-path=/tmp commit -F - <<'EOF'\ngit reset --hard HEAD\nEOF"],
-  ["deny", "サブコマンドが変数展開の git 宛てヒアドキュメントは deny(静的に読めないサブコマンド)", "bash x.sh; git \"$sub\" <<'EOF'\ngit reset --hard HEAD\nEOF"]
+  ["deny", "サブコマンドが変数展開の git 宛てヒアドキュメントは deny(静的に読めないサブコマンド)", "bash x.sh; git \"$sub\" <<'EOF'\ngit reset --hard HEAD\nEOF"],
+
+  ["deny", "cdb8382d4bbb0b1d AC-1.1 2>&1 | tail の後の bash 宛てヒアドキュメントは deny(2>&1 の & は区切りでない)", "make 2>&1 | tail -5\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.2 &>/dev/null の後の bash 宛てヒアドキュメントは deny(&> は区切りでない)", "ls &>/dev/null; bash <<'EOF'\ngit reset --hard HEAD\nEOF\ncat /dev/null"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.3 行継続(\\ + 改行)の後の bash 宛てヒアドキュメントは deny(行継続は区切りでない)", "docker ps \\\n  -a\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.4 \\; の後の bash 宛てヒアドキュメントは deny(エスケープした ; は区切りでない)", "find . -exec ls {} \\; -print\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.5 >| の後の bash 宛てヒアドキュメントは deny(>| の | は区切りでない)", "echo hi >| /tmp/x; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.6 ホスト文自身の 2>&1 の後ろの bash 宛てヒアドキュメントは deny", "bash 2>&1 <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.7 ホスト文自身の &>/dev/null の後ろの bash 宛てヒアドキュメントは deny", "bash &>/dev/null <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.8 ホスト文自身の >|/tmp/log の後ろの bash 宛てヒアドキュメントは deny", "bash >|/tmp/log <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.9 \\& の後の bash 宛てヒアドキュメントは deny(エスケープした & は区切りでない)", "echo a\\&b; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.10 >&2 の後の bash 宛てヒアドキュメントは deny(>& の & は区切りでない)", "echo x >&2\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.11 &>> の後の bash 宛てヒアドキュメントは deny(&>> の & は区切りでない)", "ls &>>/tmp/l\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 2>&1 の後の cat > file 宛てヒアドキュメントは allow(後続の python3 を宛先と誤読しない)", "ls 2>&1\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["deny", "73a1d7b31734dd22 AC-3.1 \\' を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした ' は引用の開始でない)", "echo it\\'s; bash <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["deny", "73a1d7b31734dd22 AC-3.2 AC-3.1 の後ろに ls を続けた形も deny", "echo it\\'s; bash <<'EOF'\ngit reset --hard HEAD\nEOF\nls"],
+  ["deny", "73a1d7b31734dd22 AC-3.3 \\\" を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした \" は引用の開始でない)", "echo a\\\"b; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"]
 ]
