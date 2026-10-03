@@ -25,6 +25,7 @@
 | TS-4 | Write the base revision's `em-workflow/hooks/destructive-guard.py` (the implement base commit) to a scratch file. Run the expectation suite with that file as the runner's path argument; the case file is the feature's updated one. | Exactly the TS-1 and TS-2 cases report FAIL with got `(exit 1)`, and the runner exits non-zero. This shows the new cases detect the defect on unfixed code. | Regression detection |
 | TS-5 | Inspect the feature's diff against the base revision. | Neither `em-workflow/.claude-plugin/plugin.json` nor `.claude-plugin/marketplace.json` is modified. | Inspection |
 | TS-6 | Inspect the diff to `em-workflow/hooks/destructive-guard.py` against the base revision. | Only the here-string branch's condition right after the payload-index helper call changes. The helper's body, the `-c` branch and the `eval` branch are unchanged. | Inspection |
+| TS-7 | Run `python3 -m unittest tests.test_destructive_guard_command_substitution`, then the repo-tests command `python3 -m unittest discover -s tests`. | Both exit 0. `TestCaseTableDiscipline.test_runner_reports_every_case_passing` passes without `subprocess.TimeoutExpired`. Its runner invocation has a finite timeout of at least 1 second per case in `em-workflow/hooks/tests/destructive-guard-cases.json`, and a test in the same module asserts that bound against the current case file. (VF-1) | Integration (repo test) |
 
 Edge case (FR1): the statement `bash <<< $(echo hi)` has a single-element word list. Its first statement takes the here-string target fallback instead of reading past the end of the list. TS-1 covers this.
 
@@ -45,7 +46,7 @@ Edge case (FR1): the statement `bash <<< $(echo hi)` has a single-element word l
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1, TS-2 |
 | FR2 | task0001 | TS-1, TS-2 |
-| FR3 | task0001 | TS-1, TS-2 (cases present and passing), TS-4 (cases fail on unfixed code) |
+| FR3 | task0001, task0002 | TS-1, TS-2 (cases present and passing), TS-4 (cases fail on unfixed code), TS-7 (the repo test that runs the whole suite finishes within its case-count-derived timeout) |
 | NFR1 | task0001 | TS-3 (existing cases unchanged), TS-6 (diff scope) |
 | NFR2 | task0001 | TS-5 |
 
@@ -59,7 +60,7 @@ Edge case (FR1): the statement `bash <<< $(echo hi)` has a single-element word l
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 to TS-6) | 6 | 4 | 0 | 2 |
+| Test scenarios (TS-1 to TS-7) | 7 | 5 | 0 | 2 |
 | Component test commands (hooks / repo-tests / plugin-invariants) | 3 | 3 | 0 | 0 |
 | Security (TM-1) | 1 | 1 | 0 | 0 |
-| Total | 10 | 8 | 0 | 2 |
+| Total | 11 | 9 | 0 | 2 |
