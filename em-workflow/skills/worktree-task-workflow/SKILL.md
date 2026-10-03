@@ -79,6 +79,28 @@ meant, so you re-express it on top of the parent's version:
 5. Commit (`{task_id}: re-implement on updated parent`), then retry
    merge-task.sh.
 
+**Version exception (non-exempt repository only).** In a non-exempt
+repository the adoption commit and the re-implementation commit must carry a
+plugin version that plugin-version-guard accepts. What "exempt" and
+"non-exempt" repository, "under a plugin" and "greater" mean is owned by
+`em-workflow/skills/plan-writing/SKILL.md`, section "Plugin Version
+Handling"; apply it as written there. Apply it when you commit at steps 3
+and 5:
+
+- Adoption commit (`{task_id}: resolve via parent-side adoption`): when the
+  commit changes files under a plugin, set that plugin's `plugin.json`
+  version greater than both the parent-side value and the task-side HEAD
+  value from before the adoption. Never keep the version unchanged and never
+  take the parent-side value as-is.
+- Re-implementation commit (`{task_id}: re-implement on updated parent`):
+  for each plugin whose files the commit changes, set the version greater
+  than the HEAD value after adoption. Never leave the version unchanged.
+- In each of these commits, set the same-named entry of
+  `.claude-plugin/marketplace.json`, when it carries a version, to the same
+  value.
+- An exempt repository performs no additional version step on these
+  commits.
+
 Never resolve by `--ours`, never hand-merge conflict markers, never skip the
 re-test. The invariant: after adoption, the parent's intent survives verbatim
 and yours is re-expressed on top.

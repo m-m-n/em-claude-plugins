@@ -1,0 +1,95 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any file was
+                                # touched: "Ran 6497 tests in 64.593s / OK" -- no failures inherited.
+final_failures: []             # same command, re-executed after the SKILL.md edit and the new test
+                                # module were in place: "Ran 6522 tests in 61.333s / OK" (+25 tests,
+                                # exactly this task's new module). The suite reads the edited
+                                # SKILL.md, so the re-run could not be skipped.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plan_version_worktree_conflict.TestAC1AdoptionCommit.test_adoption_commit_version_greater_than_both_sides
+      - tests.test_plan_version_worktree_conflict.TestAC1AdoptionCommit.test_matcher_rejects_forged_text
+    red_confirmed: true
+    red_reason: >
+      Ran `python3 -m unittest tests.test_plan_version_worktree_conflict` against the unedited
+      SKILL.md: test_adoption_commit_version_greater_than_both_sides failed with "False is not
+      true" (no block carrying the adoption commit template stated a version greater than both the
+      parent-side value and the task-side HEAD value). It passed after the exception text was
+      added to the parent-side adoption protocol.
+  AC-2:
+    tests:
+      - tests.test_plan_version_worktree_conflict.TestAC2ReimplementationCommit.test_reimplementation_commit_version_greater_than_post_adoption_head
+      - tests.test_plan_version_worktree_conflict.TestAC2ReimplementationCommit.test_matcher_rejects_forged_text
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: test_reimplementation_commit_version_greater_than_post_adoption_head
+      failed with "False is not true" (no re-implementation-commit block stated a version greater
+      than the HEAD value after adoption). Passed after the edit.
+  AC-3:
+    tests:
+      - tests.test_plan_version_worktree_conflict.TestAC3MarketplaceAlignment.test_marketplace_entry_set_to_same_value
+      - tests.test_plan_version_worktree_conflict.TestAC3MarketplaceAlignment.test_matcher_rejects_forged_text
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: test_marketplace_entry_set_to_same_value failed with "False is not true"
+      (nothing in the protocol mentioned the same-named .claude-plugin/marketplace.json entry).
+      Passed after the edit.
+  AC-4:
+    tests:
+      - tests.test_plan_version_worktree_conflict.TestAC4ExemptRepository.test_exempt_repository_has_no_additional_version_step
+      - tests.test_plan_version_worktree_conflict.TestAC4ExemptRepository.test_matcher_rejects_forged_text
+      - tests.test_plan_version_worktree_conflict.TestAC4ExemptRepository.test_non_exempt_wording_does_not_satisfy_the_matcher
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: test_exempt_repository_has_no_additional_version_step failed with "False
+      is not true" (no exempt-repository statement existed). Passed after the edit.
+  AC-5:
+    tests:
+      - tests.test_plan_version_worktree_conflict.TestAC5OwnerCitation.test_exception_cites_owner_path_and_heading_and_scope
+      - tests.test_plan_version_worktree_conflict.TestAC5OwnerCitation.test_owner_definitions_are_not_restated
+      - tests.test_plan_version_worktree_conflict.TestAC5OwnerCitation.test_matcher_rejects_forged_text
+      - tests.test_plan_version_worktree_conflict.TestAC5OwnerCitation.test_restatement_detector_flags_a_restating_sample
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: test_exception_cites_owner_path_and_heading_and_scope and
+      test_owner_definitions_are_not_restated both failed with "False is not true" (no block named
+      em-workflow/skills/plan-writing/SKILL.md together with "Plugin Version Handling" and the
+      non-exempt scope). Both passed after the edit.
+  AC-6:
+    tests:
+      - tests.test_plan_version_worktree_conflict.TestAC6NegativeCheck.test_permissive_samples_are_flagged
+      - tests.test_plan_version_worktree_conflict.TestAC6NegativeCheck.test_prohibition_samples_are_accepted
+      - tests.test_plan_version_worktree_conflict.TestAC6NegativeCheck.test_exempt_repository_samples_are_accepted
+      - tests.test_plan_version_worktree_conflict.TestAC6NegativeCheck.test_real_protocol_text_is_accepted
+      - tests.test_plan_version_worktree_conflict.TestAC6NegativeCheck.test_permissive_sentence_added_to_real_protocol_is_flagged
+      - tests.test_plan_version_worktree_conflict.TestAC6NegativeCheck.test_permissive_sentence_wrapped_across_lines_is_flagged
+      - tests.test_plan_version_worktree_conflict.TestAC6NegativeCheck.test_general_adopt_parent_side_wording_is_not_a_version_statement
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: test_real_protocol_text_is_accepted failed with "False is not true" (its
+      positive half asserts the exception text exists in the real protocol, which it did not yet).
+      The same run also showed test_permissive_samples_are_flagged and
+      test_permissive_sentence_added_to_real_protocol_is_flagged failing for the sample "Adopt the
+      parent-side value for plugin.json and commit.", because that sample lacked a version
+      mention and the checker did not flag it; the sample was corrected to say "version" and the
+      checker then flagged all permissive samples. The accept-direction tests
+      (prohibition, exempt, general adopt wording) passed from the start, as the checker is
+      defined in the test module itself. All passed after the SKILL.md edit.
+  AC-7:
+    tests:
+      - tests.test_plan_version_worktree_conflict.TestAC7WordingAndMechanics.test_protocol_section_has_no_concrete_version_value
+      - tests.test_plan_version_worktree_conflict.TestAC7WordingAndMechanics.test_version_value_detector_flags_a_concrete_value
+      - tests.test_plan_version_worktree_conflict.TestAC7WordingAndMechanics.test_protocol_section_has_no_fenced_code_block
+      - tests.test_plan_version_worktree_conflict.TestAC7WordingAndMechanics.test_this_module_imports_only_the_standard_library
+    red_confirmed: false
+    red_reason: >
+      These are constraints on the added text and on the test module's own imports; they held
+      before the edit (nothing had been added yet, and the module imported only the standard
+      library from the start), so no red state occurred. Non-vacuity of the version-value check
+      is shown by test_version_value_detector_flags_a_concrete_value. The "python3 -m unittest
+      discover -s tests passes" outcome is the suite run recorded in final_failures.
+notes: >
+  The Conflict protocol section is located by its existing heading "## Conflict protocol
+  (parent-side adoption)". The exception is placed as a lead-in paragraph plus a bullet list
+  between step 5 and the closing "Never resolve by --ours" paragraph, inside that section.
