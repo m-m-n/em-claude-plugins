@@ -90,6 +90,71 @@ there.
    (Evidence: braille-ar-overlay 2026-07-11 — MainActivity placeholder
    reached review unwired; high findings b1f3fbd049a5cb53 / b1d63678861295ba)
 
+## Plugin Version Handling
+
+Rules for the `version` of the plugins a plan touches. They apply to
+implementation-planner (create-plan) and rework-planner alike. This section is
+the single owner of the rule text; other documents cite it by path plus this
+heading and never restate it.
+
+### Definitions
+
+- **Exempt repository**: `.github/workflows/plugin-version-bump.yml` exists at
+  the repository root. **Non-exempt repository**: it does not.
+- **Under a plugin**: under a directory that contains
+  `.claude-plugin/plugin.json`.
+- **Greater**: strictly greater, by per-component numeric comparison of the
+  dotted version.
+
+### Input
+
+The planner takes the exemption state and the plugin locations from the
+dispatch's `plugin_versioning` value (contract:
+`em-workflow/references/contracts/planner-contract.md`, heading
+`plugin_versioning (dispatch-resolved value)`). The planner never discovers
+them itself: it does not look for the workflow file and does not scan for
+plugin directories.
+
+### Non-exempt repositories
+
+plugin-version-guard checks each commit, so every plugin-changing commit
+carries its own bump.
+
+- Every commit that changes a file under a plugin bumps the patch component of
+  that plugin's `plugin.json` version in the same commit.
+- When the root `.claude-plugin/marketplace.json` has an entry of the same name
+  that carries a version, that entry is set to the same value in that same
+  commit.
+- When one task makes several such commits, the version advances on each such
+  commit.
+- The bumped value is strictly greater (per-component numeric comparison, see
+  Definitions) than the value at the immediately preceding HEAD.
+- Outside this rule: a plugin newly added by the change (no `plugin.json` at
+  base) and a marketplace entry without a version are neither bumped nor
+  aligned.
+- Files rule: a task whose files fall under a plugin lists that plugin's
+  `plugin.json` among its files, and also `.claude-plugin/marketplace.json`
+  when that plugin's marketplace entry carries a version
+  (`marketplace_versioned` is true in the `plugin_versioning` value).
+- Carriage: every task plan whose files fall under a plugin states the
+  per-commit instruction for that plugin itself, so a task plan read on its
+  own, a rework task plan included, is consistent with the guard.
+  IMPLEMENTATION.md alone is not enough.
+- Plans must not state or imply that the version stays unchanged on a
+  plugin-changing commit. Prohibited instructions include "only the first task
+  bumps the version" and "subsequent tasks / rework tasks do not bump the
+  version".
+- Commits made while resolving a merge conflict follow the parent-side
+  adoption protocol in `em-workflow/skills/worktree-task-workflow/SKILL.md`;
+  this section does not restate it.
+
+### Exempt repositories
+
+Plans instruct no version change for any task: not in IMPLEMENTATION.md, not in
+a task plan, not in an Acceptance Criterion. Only when a minor or major bump is
+intended does the plan name where to bump (the plugin's `plugin.json` and the
+same-named marketplace entry), and it never names a concrete value.
+
 ## complexity criteria (low / medium / high)
 
 - **low**: localized change in one or few files following an existing
@@ -253,3 +318,12 @@ traceability checks compare these as literal strings.
 - [ ] Every `TM-n` appears in at least one task AC and in VERIFICATION.md
       (full / reduced) or in TASK.md's Expected Result (minimal).
 - [ ] No mitigation exists without a recorded threat.
+- [ ] Non-exempt repository: every task whose files fall under a plugin lists
+      that plugin's `plugin.json` (and `.claude-plugin/marketplace.json` when
+      `marketplace_versioned` is true) among its files and carries the
+      per-commit version instruction itself (Plugin Version Handling).
+- [ ] No plan text contains an instruction that keeps the version unchanged on
+      a plugin-changing commit, rework task plans included.
+- [ ] Exempt repository: no plan text instructs a version change and none
+      contains a concrete version value; a minor or major bump names only
+      where to bump.
