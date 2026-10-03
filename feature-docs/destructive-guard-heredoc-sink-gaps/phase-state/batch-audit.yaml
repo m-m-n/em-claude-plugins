@@ -1,0 +1,13 @@
+schema_version: 1
+feature: destructive-guard-heredoc-sink-gaps
+records:
+- question_id: review.rework-scope
+  packet_id: null
+  answered_at: '2026-10-03T22:52:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: option
+  selected_option_ids:
+  - A
+  freeform: null
+  normalized_answer: 'A: high 1 件（bc9a99dd0d07ffa5）だけで batch rework。medium 5 件は Notion に別タスクとして起票し、8ccf22c69c8bb295（退行）を最優先にする'
+  resolution_note: 'gate: review round 1 の batch rework に含める findings の範囲（gate_id 無し・ポリシー表に無い判断）; options: A=high のみ / B=high + 退行の 8ccf22c69c8bb295 / C=high + medium 5 件すべて; chosen: A; not chosen: B（FR6 のパス値照合は現 SPEC FR6 どおりで、対象を絞るには SPEC 変更が要り rework.spec-change に回るため通常 rework で扱う根拠が無い）、C（SPEC 対象外の形まで含み、上限 1 回の rework には広すぎる）; codex_consulted: true（Codex は基準 allow → HEAD deny の退行を自分で再現し、PR に既知の退行と再現条件を明記するよう勧めた）; opus_escalation: false'
