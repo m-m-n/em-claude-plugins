@@ -30,6 +30,17 @@ Covers task0001 Acceptance Criteria:
   above equal the values recorded from the hook before it was edited.
 - AC-7 (FR7): the docstrings and the comment that describe the numbering no
   longer carry the stale statements, and state the new rules.
+
+Covers task0002 Acceptance Criteria (a command carrying a forged internal
+marker whose index cannot be converted to an integer):
+
+- AC-1 (FR5): the verdict and rule id equal the values recorded from the base
+  hook (94875785) for every position a forged marker can sit in. Each
+  position is its own subtest.
+- AC-2 (FR5): no traceback on stderr, stdout is one parsable decision object.
+- AC-3 (NFR2): stdout carries no raw control character.
+- AC-4 (FR5, FR6): the rest of this module and the guard's own case suite
+  keep passing unchanged.
 """
 
 import ast
@@ -731,6 +742,91 @@ class TestNumberingDescriptionsAreCurrent(unittest.TestCase):
         text = self.docstring("strongest_rm_decision")
         self.assertIn("template", text)
         self.assertRegex(text, r"plain rm-recursive")
+
+
+# --- task0002: a forged marker whose index cannot be converted -------------
+
+# The hook marks substitutions internally as NUL, the substitution's number,
+# then STX. A command can carry the same bytes without the hook having
+# produced them. Python refuses to convert a digit string longer than its
+# integer-from-string limit (4300 digits by default), so a forged marker with
+# more digits than that is one whose index cannot be converted.
+NUL = "\x00"
+STX = "\x02"
+ANY_CONTROL_CHAR = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def forged_marker(count, digit):
+    """NUL, the digit DIGIT repeated COUNT times, STX."""
+    return NUL + digit * count + STX
+
+
+class TestForgedMarkerWithUnparsableIndex(unittest.TestCase):
+    """task0002 AC-1..AC-3 (FR5, NFR2). Every expected value below was
+    recorded by running the same command against the base hook (94875785)
+    before the hook was edited for this task: exit status 0, deny,
+    rm-recursive. One subtest per position of the forged marker, so a failure
+    names the position."""
+
+    EXPECTED = ("deny", "rm-recursive")
+
+    CASES = [
+        ("inside the rm target", "rm -rf /var/x" + forged_marker(5000, "1")),
+        (
+            "in an earlier, non-rm statement",
+            "echo " + forged_marker(5000, "9") + "; rm -rf /var/x",
+        ),
+        (
+            "in a later statement",
+            "rm -rf /var/x; echo " + forged_marker(5000, "9"),
+        ),
+        (
+            "inside a command-substitution body",
+            'echo "$(echo ' + forged_marker(5000, "9") + ')"; rm -rf /var/x',
+        ),
+        (
+            "inside a -c payload",
+            "bash -c 'echo " + forged_marker(5000, "9") + "'; rm -rf /var/x",
+        ),
+    ]
+
+    def test_ac1_verdict_and_rule_id_equal_the_values_recorded_from_the_base_hook(self):
+        for position, command in self.CASES:
+            with self.subTest(position=position):
+                result = run_guard(command)
+                self.assertEqual(result.returncode, 0, result.stderr[-400:])
+                tier, rule, _ = decision(command)
+                self.assertEqual((tier, rule), self.EXPECTED)
+
+    def test_ac2_no_traceback_and_stdout_is_one_parsable_decision_object(self):
+        for position, command in self.CASES:
+            with self.subTest(position=position):
+                result = run_guard(command)
+                self.assertNotIn("Traceback", result.stderr)
+                parsed = json.loads(result.stdout)
+                self.assertIsInstance(parsed, dict)
+                self.assertEqual(list(parsed), ["hookSpecificOutput"])
+
+    def test_ac3_stdout_carries_no_raw_control_character(self):
+        for position, command in self.CASES:
+            with self.subTest(position=position):
+                result = run_guard(command)
+                stdout = result.stdout
+                body = stdout[:-1] if stdout.endswith("\n") else stdout
+                self.assertTrue(body, "guard produced no output")
+                self.assertIsNone(ANY_CONTROL_CHAR.search(body), repr(body[:200]))
+
+    def test_the_digit_limit_is_the_boundary_and_both_sides_give_the_same_verdict(self):
+        """The longest index Python converts (4300 digits) and the shortest it
+        refuses (4301) both leave the verdict where the base hook left it."""
+        for count in (4300, 4301):
+            command = "rm -rf /var/x" + forged_marker(count, "1")
+            with self.subTest(digits=count):
+                result = run_guard(command)
+                self.assertEqual(result.returncode, 0, result.stderr[-400:])
+                self.assertNotIn("Traceback", result.stderr)
+                tier, rule, _ = decision(command)
+                self.assertEqual((tier, rule), self.EXPECTED)
 
 
 if __name__ == "__main__":
