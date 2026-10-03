@@ -1761,51 +1761,6 @@ def _span_inner(text, span):
     return text[start + 2 : end - 1], start + 2
 
 
-def _segment_boundaries(text, opaque):
-    """The START offset of every real (non-comment, non-quoted, non-
-    substitution) statement-separator run in TEXT, in ascending order,
-    using OPAQUE (scan_structure()'s top-level ranges) to skip inert
-    regions -- ONE forward pass over the whole of TEXT, built once per
-    TEXT/OPAQUE pair and shared by every _segment_index_at() query against
-    it (see that function), rather than each query re-scanning from
-    position 0 on its own. A chunk with K heredocs would otherwise cost
-    O(K) scans, each up to that heredoc's own (growing) offset -- O(n^2)
-    total on a chunk whose heredoc count grows with its own length
-    (NFR3/TM-5) -- where this one pass, plus a bisect per query, costs
-    O(n) once and O(log n) per query."""
-    boundaries = []
-    i = 0
-    n = len(text)
-    oi = 0
-    m = len(opaque)
-    while i < n:
-        while oi < m and opaque[oi][1] <= i:
-            oi += 1
-        if oi < m and opaque[oi][0] <= i < opaque[oi][1]:
-            i = min(opaque[oi][1], n)
-            continue
-        c = text[i]
-        if c in SEGMENT_CHARS:
-            boundaries.append(i)
-            j = i
-            while j < n and text[j] in SEGMENT_CHARS:
-                j += 1
-            i = j
-            continue
-        i += 1
-    return boundaries
-
-
-def _segment_index_at(pos, boundaries):
-    """Which lex_segments(marked_text) statement index contains character
-    POS in TEXT -- the count of separator runs in BOUNDARIES (see
-    _segment_boundaries()) that START strictly before POS, found by
-    bisecting the precomputed, sorted list rather than re-scanning TEXT
-    from position 0 (Component 3: position only, no marker ever inserted
-    into TEXT)."""
-    return bisect.bisect_left(boundaries, pos)
-
-
 # --- Component 5: substitutions in an unquoted-delimiter heredoc body ------
 
 
@@ -2223,42 +2178,49 @@ def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
     table's own group-tracking and pipeline memo -- shared by every level
     of every heredoc's chain that resolves against this same TEXT.
 
+    The statement at POS is the one lex_segments() yields for that position
+    (FR1): the table is built from that very lexing pass, and the offsets of
+    its statements come from the same pass (_lex_layout()), so a separator
+    is a separator here exactly where it is one to lex_segments().
+
     OPERATOR says POS is the start of a heredoc's own `<<` operator, which
     the statement selected for it has to contain (FR2): when the lexer does
     not show a heredoc operator at POS in that statement, None comes back,
-    which the callers read as an undetermined destination."""
+    which the callers read as an undetermined destination -- never data. A
+    text whose offsets are unavailable (it does not lex) also gives None."""
     cached = tables_cache.get(memo_key)
     if cached is None:
-        spans, parent_of, unmatched, opaque, _containing = scan_structure(
+        spans, parent_of, unmatched, _opaque, _containing = scan_structure(
             text, mode="shell"
         )
         top_spans = _top_level_spans(spans, parent_of)
         marked = _mark_substitutions(text, top_spans, 0)
         table, layout = _build_statement_table(text, marked)
         group_closer_of, open_groups_at, mismatched = _track_groups(table)
-        # _segment_boundaries() is the one full-text pass every heredoc's
-        # own _segment_index_at() query against THIS text shares (NFR3) --
-        # see that function's own docstring.
-        boundaries = _segment_boundaries(text, opaque)
         cached = (
-            table, group_closer_of, open_groups_at, {}, unmatched, boundaries,
-            mismatched, layout, _marked_offsets(top_spans),
+            table, group_closer_of, open_groups_at, {}, unmatched, layout,
+            _marked_offsets(top_spans), mismatched,
         )
         tables_cache[memo_key] = cached
     (
-        table, group_closer_of, open_groups_at, pipe_memo, unmatched, boundaries,
-        mismatched, layout, offsets,
+        table, group_closer_of, open_groups_at, pipe_memo, unmatched, layout,
+        offsets, mismatched,
     ) = cached
     if any(p < pos for p in unmatched):
         return None
-    idx = _segment_index_at(pos, boundaries)
+    if layout is None:
+        return None
+    # POS in the text the lexer actually saw (substitutions replaced by their
+    # markers), then a bisect over the statement starts: O(log n) per query
+    # against one O(n) pass shared by every heredoc in TEXT (NFR3).
+    ends, removed = offsets
+    marked_pos = pos - removed[bisect.bisect_right(ends, pos)]
+    starts, operators = layout
+    idx = bisect.bisect_right(starts, marked_pos) - 1
     if idx >= len(table):
         return None
-    if operator:
-        ends, removed = offsets
-        marked_pos = pos - removed[bisect.bisect_right(ends, pos)]
-        if layout is None or layout[1].get(marked_pos) != idx:
-            return None
+    if operator and operators.get(marked_pos) != idx:
+        return None
     if mismatched:
         # This table's own group tracking saw a closer that did not match
         # its stack (see _track_groups()'s own docstring) -- undetermined
