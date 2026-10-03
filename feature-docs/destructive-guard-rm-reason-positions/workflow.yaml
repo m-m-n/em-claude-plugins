@@ -78,7 +78,7 @@ workflow:
   failed_items: []
   completed_at_commit: b255759e4de6fd191403961f08d79b6b71021a19
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Original-position rm numbering and per-target alternatives in the combined rm reason
