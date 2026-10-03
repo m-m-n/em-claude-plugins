@@ -1,14 +1,18 @@
 schema_version: 1
 feature: destructive-guard-rm-reason-positions
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: 070e64151f825e6097820f81e59617da66cd5668
-last_input_digest: null
-active_request_id: null
+base_revision: 8c110bdcc113061ba2b536e099c5cfb89e087c01
+last_input_digest: sha256:350d988822b4ee758eaebf3b3259df59d6e41f11efa903b52ad6d1a586832607
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:350d988822b4ee758eaebf3b3259df59d6e41f11efa903b52ad6d1a586832607
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
