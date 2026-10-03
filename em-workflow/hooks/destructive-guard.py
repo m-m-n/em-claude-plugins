@@ -626,8 +626,8 @@ def _operator_token_start(text, tok, end):
 
 
 def _lex_layout(chunk, track):
-    """lex_segments()'s one lexing pass: (segments, layout). SEGMENTS is
-    lex_segments()'s own return value, unchanged.
+    """lex_segments()'s one lexing pass: (segments, layout, operators).
+    SEGMENTS is lex_segments()'s own return value, unchanged.
 
     With TRACK, LAYOUT says where the statements sit in the text that was
     lexed (the same offsets in CHUNK, since comment blanking keeps every
@@ -637,6 +637,15 @@ def _lex_layout(chunk, track):
     terminating separator included, or to the end of the text for the last
     one. LAYOUT is None when the chunk does not lex, or when a separator's
     offset could not be confirmed against the text.
+
+    OPERATORS, with TRACK, is the record of heredoc operator starts: {k: the
+    offsets in CHUNK, ascending, of every `<<` that statement k holds as bare,
+    unquoted operator syntax}. Only a token the lexer read from operator
+    syntax is searched, so a `<<` inside a quoted word never enters the
+    record; and a token fused with neighbouring punctuation (`;<<`, `(<<`)
+    is searched piece by piece, each piece attributed to the statement it
+    falls in. A statement holding no such `<<` has no entry. OPERATORS is
+    None exactly when LAYOUT is.
 
     Separators are recognised once, here. Whatever places a heredoc's host
     statement reads these offsets rather than counting separator characters
@@ -663,10 +672,11 @@ def _lex_layout(chunk, track):
             (tokens(seg), False, None)
             for seg in SEGMENT_SPLIT.split(chunk)
             if seg.strip()
-        ], None
+        ], None, None
 
     out, current = [], []
     starts = [0]
+    operators = {}
     confirmed = track
     for t, end in toks:
         # punctuation_chars makes shlex fuse adjacent punctuation into one
@@ -699,9 +709,13 @@ def _lex_layout(chunk, track):
             segs = [t]
         # Only a bare operator token is the characters it was read from, so
         # only its offsets can be taken from the lexer's position -- and a
-        # separator is always inside one.
+        # separator, like a heredoc operator's `<<`, is always inside one.
         base = None
-        if confirmed and t.is_operator and any(c in SEGMENT_CHARS for c in t):
+        if (
+            confirmed
+            and t.is_operator
+            and (any(c in SEGMENT_CHARS for c in t) or "<<" in t)
+        ):
             base = _operator_token_start(text, t, end)
             if base is None:
                 confirmed = False
@@ -720,10 +734,19 @@ def _lex_layout(chunk, track):
                     starts.append(seg_start + len(seg))
             else:
                 current.append(seg)
+                # The statement under construction is the next one to be
+                # appended to OUT. Every `<<` of the piece is recorded,
+                # overlapping ones included: each is `<<` in bare operator
+                # text, which is all the record says.
+                if seg_start is not None and getattr(seg, "is_operator", False):
+                    k = seg.find("<<")
+                    while k != -1:
+                        operators.setdefault(len(out), []).append(seg_start + k)
+                        k = seg.find("<<", k + 1)
     out.append((current, True, None))
     if not confirmed or len(starts) != len(out):
-        return out, None
-    return out, starts
+        return out, None, None
+    return out, starts, operators
 
 
 def split_redirects(toks, lexed=True):
@@ -2147,10 +2170,11 @@ def _build_statement_table(chunk, marked_chunk):
     heredoc's destination decision instead of each heredoc re-lexing the
     chunk on its own.
 
-    Returns (TABLE, STARTS): STARTS is _lex_layout()'s statement start
-    offsets for the same lexing pass (None when they are unavailable), in
-    MARKED_CHUNK's own coordinates."""
-    segments, starts = _lex_layout(marked_chunk, True)
+    Returns (TABLE, STARTS, OPERATORS): STARTS is _lex_layout()'s statement
+    start offsets for the same lexing pass and OPERATORS its record of the
+    heredoc operator starts each statement holds (both None when they are
+    unavailable), in MARKED_CHUNK's own coordinates."""
+    segments, starts, operators = _lex_layout(marked_chunk, True)
     case_stack = []
     table = []
     for toks, lexed, sep in segments:
@@ -2211,7 +2235,7 @@ def _build_statement_table(chunk, marked_chunk):
                 is_assignment_only=False, opens_group=None, closes_group=None,
                 is_compound_keyword=False,
             ))
-    return table, starts
+    return table, starts, operators
 
 
 def _track_groups(table):
@@ -2430,15 +2454,18 @@ def _marked_offsets(top_spans):
     return ends, removed
 
 
-def _statement_holds_operator(text, pos, marked_pos, starts, idx, total):
-    """Whether the lex_segments() statement IDX contains the heredoc operator
-    that starts at POS in TEXT (FR2): MARKED_POS, POS in the text the lexer
-    saw, lies within the statement's own span (STARTS[IDX] up to the next
-    statement's start, or TOTAL for the last one), and what sits at POS is
-    the `<<` of an operator. A plain position comparison: no re-lexing, one
-    check per heredoc (NFR3)."""
-    end = starts[idx + 1] if idx + 1 < len(starts) else total
-    return starts[idx] <= marked_pos < end and text.startswith("<<", pos)
+def _statement_holds_operator(operators, idx, marked_pos):
+    """Whether the lex_segments() statement IDX holds the heredoc operator
+    whose `<<` starts at MARKED_POS (FR2), MARKED_POS being the operator's
+    position in the text the lexer saw. It does only when OPERATORS -- the
+    record _lex_layout() builds in the same lexing pass -- lists that
+    position for the statement: a `<<` the lexer read from bare, unquoted
+    operator syntax. Anything else is False, which the caller reads as an
+    undetermined destination (never data): no recorded start matches, the
+    statement has no record, or the position is not one the record can
+    hold. One lookup per heredoc against one statement's record (NFR3)."""
+    held = operators.get(idx)
+    return held is not None and marked_pos in held
 
 
 def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
@@ -2453,7 +2480,7 @@ def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
     is a separator here exactly where it is one to lex_segments().
 
     OPERATOR says POS is the start of a heredoc's own `<<` operator, which
-    the statement selected for it has to contain (FR2,
+    the statement selected for it has to hold as bare operator syntax (FR2,
     _statement_holds_operator()). When it does not, or when the text does
     not lex so no statement offsets exist, None comes back, which the
     callers read as an undetermined destination -- never data."""
@@ -2464,16 +2491,16 @@ def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
         )
         top_spans = _top_level_spans(spans, parent_of)
         marked = _mark_substitutions(text, top_spans, 0)
-        table, starts = _build_statement_table(text, marked)
+        table, starts, operators = _build_statement_table(text, marked)
         group_closer_of, open_groups_at, mismatched = _track_groups(table)
         cached = (
             table, group_closer_of, open_groups_at, {}, unmatched, starts,
-            len(marked), _marked_offsets(top_spans), mismatched,
+            operators, _marked_offsets(top_spans), mismatched,
         )
         tables_cache[memo_key] = cached
     (
         table, group_closer_of, open_groups_at, pipe_memo, unmatched, starts,
-        marked_len, offsets, mismatched,
+        operators, offsets, mismatched,
     ) = cached
     if any(p < pos for p in unmatched):
         return None
@@ -2487,9 +2514,7 @@ def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
     idx = bisect.bisect_right(starts, marked_pos) - 1
     if idx >= len(table):
         return None
-    if operator and not _statement_holds_operator(
-        text, pos, marked_pos, starts, idx, marked_len
-    ):
+    if operator and not _statement_holds_operator(operators, idx, marked_pos):
         return None
     if mismatched:
         # This table's own group tracking saw a closer that did not match
