@@ -1,9 +1,9 @@
 schema_version: 1
 feature: destructive-guard-rm-reason-positions
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: a7c332630f9de3e7b6724e73f0bcbfb1cde0efd6
+base_revision: 6ae79498e79f75fd83c139d391808ff42f282920
 last_input_digest: sha256:905b6182cbafe5c21f0743b806e1bd8cc38c1997d063bd05cf2c7694295c4fed
 active_request_id: null
 packets: {}
