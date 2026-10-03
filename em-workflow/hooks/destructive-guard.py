@@ -2709,12 +2709,25 @@ def _register_marker_positions(marker_pos, marked, anchor, statement_index):
     marker sits in this chunk. A payload chunk repeats its parent's marker
     text, so its registration — made later — refines the parent's: the
     substitution body is then anchored where the substitution sits inside
-    the payload, not merely inside the payload word."""
+    the payload, not merely inside the payload word.
+
+    A token can hold any byte sequence, including one that looks like a
+    marker but was never produced by this module (NUL, digits, STX written
+    in the command itself). When such a marker's digit run is longer than
+    the interpreter's integer-from-string limit, its index cannot be
+    converted: that marker is skipped, not registered, exactly as
+    _strip_unresolved_marks() skips it. Registration therefore never raises
+    on any token content, and the skipped marker's text is left to the
+    downstream steps as it always was."""
     for token_index, tok in enumerate(marked):
         if UNRESOLVED_MARK not in tok:
             continue
         for occurrence, m in enumerate(_MARK_RE.finditer(tok)):
-            marker_pos[int(m.group(1))] = anchor + (
+            try:
+                index = int(m.group(1))
+            except ValueError:
+                continue
+            marker_pos[index] = anchor + (
                 (statement_index, token_index, occurrence + 1),
             )
 
