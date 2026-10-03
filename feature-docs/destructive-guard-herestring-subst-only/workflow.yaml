@@ -102,8 +102,8 @@ workflow:
   base_commit: 7ded2cfdf75aafb0b7bc76526bba0f190fe288e3
   completed_at_commit: 6cba86d0f7c43cb8062804f6224a371bd9f124f7
 - id: review
-  status: in_progress
-  completed_at_commit: b418c7af430600f34891fbd01f5ad4faedb0f51f
+  status: completed
+  completed_at_commit: 0cea0913aa8cdffac026258aee2cb58384faced8
 - id: verify
   status: pending
   result: fail
@@ -155,7 +155,7 @@ tasks:
       review_round: null
 review:
   status: completed
-  rounds_completed: 1
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -166,7 +166,7 @@ review:
     cross_validation: true
   perspectives:
     comprehensive: {source: codex, status: completed, findings: 0}
-    security: {source: codex, status: completed, findings: 0}
+    security: {source: codex, status: completed, findings: 2, dismissed: 2}
     architecture: {source: 'litellm:muse-spark-contributor', status: completed, findings: 0}
     spec: {source: 'litellm:muse-spark-contributor', status: completed, findings: 0}
   residual_critical_high: 0
