@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-sink-gaps
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 8d88a288871047cdcc238d3eff8fea6127df429a
 last_input_digest: sha256:d111670eaf6165936b7a17cb116cebf50f60cee7cf6958cb932477f666169a8f
