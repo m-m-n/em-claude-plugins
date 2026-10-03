@@ -1,0 +1,12 @@
+schema_version: 1
+feature: destructive-guard-rm-reason-positions
+rounds:
+- request_id: rework-run-0001
+  source: review
+  review_round: 1
+  status: completed
+  input_digest: sha256:233b509fdd5bcaf0ab396e8d5d786e88891c51bb034d9b8c65f439fc8f5e3235
+  patch_id: rework-round1-p0001
+  patch_status: applied
+  tasks_added: [task0002]
+  orchestrator_note: "tasks/task0002.md の Files to Create にあった '- (none)' の行を、validate-worker-output.py の task-plan-files 検査を通すため削除した（内容の変更なし）"
