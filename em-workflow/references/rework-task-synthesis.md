@@ -57,7 +57,10 @@ verification_path: /absolute/.../VERIFICATION.md
 
 The full input/output envelope (including the common worker envelope fields)
 is owned by `references/contracts/rework-planner-contract.md` (see
-Section 13); this section states only the rework-specific payload shape.
+Section 13); this section states only the rework-specific payload shape. The
+worker also receives the orchestrator-resolved `plugin_versioning` value,
+resolved at each dispatch (Section 10); its place in the input is stated in
+that contract, which cites the field's definition.
 
 ## 4. Grouping rules
 
@@ -84,6 +87,11 @@ Its Acceptance Criteria must be objective and test-translatable — the
 implementer's TDD contract is unchanged by the task's rework origin. The
 task plan records its origin as `provenance` (Section 11, Invariant 6).
 
+Every synthesized task also follows the "Plugin Version Handling" section of
+`em-workflow/skills/plan-writing/SKILL.md`, including its `files` rule; a
+task's rework origin makes no difference to how that section applies, and
+this document restates none of its rule text.
+
 ## 7. Metadata derivation
 
 `files` / `skills` / `domains` / `requirements` are derived from the
@@ -92,7 +100,9 @@ from inheriting the file set of whichever existing task happens to overlap
 on file path alone (Section 11, Invariant 4). `domains` values are drawn
 ONLY from the vocabulary in `references/review-rules.yaml` (the SSOT
 `references/workflow-schema.md` and `agents/implementation-planner.md`
-already point to); this document does not restate that vocabulary.
+already point to); this document does not restate that vocabulary. The
+`files` rule of the section cited in Section 6 applies on top of the
+meaning-derived `files`.
 
 ## 8. Verification coverage rules
 
@@ -203,6 +213,17 @@ reach the SPEC-change transition and, through it, the classification gate
 **Verify-sourced rework** skips step 1 entirely and starts at step 2:
 `review.needs_rework` is a review-specific field, so verify-sourced rework
 never sets it (Section 11, Invariant 11).
+
+**Dispatch input (step 2, all four routes)**: at every rework-planner
+dispatch the orchestrator resolves `plugin_versioning` per the
+`### plugin_versioning (dispatch-resolved value)` subsection of
+`em-workflow/references/contracts/planner-contract.md`, from the integration
+worktree's current state, passes it in rework-planner's input, includes it
+in the `value_inputs` of `input_digest`, and, when it recomputes
+`input_digest` on the worker's return, re-resolves it the same way. The
+field's place in the input and its mandatory and untrusted status are stated
+in `references/contracts/rework-planner-contract.md`; this document restates
+neither the field's definition nor its resolution rules.
 
 **When rework needs a SPEC.md change**: the synthesizing worker creates no
 task. Instead it returns `status: needs_user_input` with
