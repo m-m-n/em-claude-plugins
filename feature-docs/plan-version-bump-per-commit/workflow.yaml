@@ -111,7 +111,8 @@ workflow:
   completed_at_commit: a361030105566ca0e4b135ec98a5a98e42a464dd
   base_commit: 9a3feb34c91b32d452a5c5a4540258a24c22fc7b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: bc961377190caa88ad18184cc3c45ecfaa498748
 - id: verify
   status: pending
   result: null
@@ -209,8 +210,8 @@ tasks:
     branch: em-workflow/plan-version-bump-per-commit/task0004
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   residual_critical_high: 0
   needs_rework: false
   plan:
@@ -221,6 +222,11 @@ review:
     - spec
     discretionary: []
     cross_validation: true
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
 requirements:
   FR1:
     title: 非免除リポジトリでのコミット単位の version 上げ規則

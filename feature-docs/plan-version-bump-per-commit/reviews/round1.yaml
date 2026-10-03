@@ -1,0 +1,129 @@
+round: 1
+executed_at: '2026-10-03T21:10:59+09:00'
+scope:
+  review_mode: diff
+  base_commit: 9a3feb34c91b32d452a5c5a4540258a24c22fc7b
+  head_commit: bc961377190caa88ad18184cc3c45ecfaa498748
+  changed_files:
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/agents/rework-planner.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/skills/plan-writing/SKILL.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - test-docs/plan-version-bump-per-commit/task0001.tests.yaml
+  - test-docs/plan-version-bump-per-commit/task0002.tests.yaml
+  - test-docs/plan-version-bump-per-commit/task0003.tests.yaml
+  - test-docs/plan-version-bump-per-commit/task0004.tests.yaml
+  - tests/test_plan_version_plan_writing.py
+  - tests/test_plan_version_planner_dispatch.py
+  - tests/test_plan_version_rework.py
+  - tests/test_plan_version_worktree_conflict.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: ab943d92543e9727
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/worktree-task-workflow/SKILL.md
+  line: 86
+  title: 競合時の版ルールが参照する定義を、実装担当が読めない
+  description: Version exception は exempt / non-exempt・under a plugin・greater の定義を em-workflow/skills/plan-writing/SKILL.md に委ねるが、implementer.md の skills（7–9 行）は worktree-task-workflow と tdd-testing だけを事前読み込みし、Step 3（68–70 行付近）は worktree 外の読み取りを task_plan_path / implementation_md_path / lessons_path に限る。リポジトリ相対の em-workflow/... は対象プロジェクトがこのリポジトリのときしか存在しないため、他プロジェクトでの競合解消時に免除判定の基準を知る手段がない。
+  suggestion: '案1: implementer.md の skills: に plan-writing を追加し ${CLAUDE_PLUGIN_ROOT}/skills/plan-writing/SKILL.md で参照する。案2: 3 つの定義を worktree-task-workflow に直接書き、test_owner_definitions_are_not_restated を合わせて直す。'
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left open and filed as a follow-up task'
+- stable_id: 13a6af27f3c0da79
+  severity: medium
+  category: comprehensive
+  file: tests/test_plan_version_planner_dispatch.py
+  line: 126
+  title: FR7 の検出器が、正本の禁止例そのものを見逃す
+  description: _PERMISSIVE_RE / permissive_statements は plan-writing が名指しで禁止する「Only the first task bumps the version.」「Subsequent tasks / rework tasks do not bump the version.」を検出しない（評価者が python3 -B で再現）。do not が _PROHIBITION_RE の除外条件にも含まれるため、planner-contract.md / create-plan-phase.md / implementation-planner.md に禁止例が入っても FR7 の否定側テストが通ってしまう。
+  suggestion: 禁止例 2 文と do not bump 型の文を PERMISSIVE_SAMPLES に加え、除外は発話行為（state / write / instruct 等）を否定している場合だけにする。実文書の末尾に禁止例を足した場合に検出されることも確かめる。
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left open and filed as a follow-up task'
+- stable_id: 5ea8778906ee1777
+  severity: medium
+  category: comprehensive
+  file: tests/test_plan_version_worktree_conflict.py
+  line: 275
+  title: 競合時の検出器が『版を上げない』型の文を見逃す
+  description: find_permissive_version_statements は「The adoption commit does not bump the version.」「The re-implementation commit does not need a version bump.」を検出しない（評価者が python3 -B で再現）。_NO_BUMP は need not / does not need to と skip/omit 系しか拾わない。
+  suggestion: (adoption|re-implementation) commit does not (bump|change|update) the version 型と does not need a version bump 型を PERMISSIVE_SAMPLES に加え、_NO_BUMP を広げる。PROHIBITION_SAMPLES と実手順本文が引き続き受理されることを確かめる。
+  sources:
+  - claude:evaluator
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left open and filed as a follow-up task'
+evaluation:
+  round_summary: 'critical / high 0 件、medium 3 件（comprehensive#0 由来 2 件、評価者の独立検査 1 件）。evaluator の low 1 件（計画内で免除状態が変わる場合）は R3b step 2 で除外。architecture#0 の medium 2 件は SPEC NFR1 / FR5 が指定した構造のため demoted。注入の試みなし。python3 -B -m unittest discover -s tests は 6641 件成功。security: corroborated / comprehensive: findings / architecture: corroborated（demoted）/ spec: findings（FR1–FR6 と NFR4 を確認、FR7 否定側の検査の見逃しを comprehensive として報告）。'
+  recommended_action: auto_fix
+  action_rationale: medium 3 件は文書・テストの局所修正で済む。ただし severity が medium のため Phase R4 の候補条件に入らず、自動修正は行っていない。
+dismissed_sites:
+- file: em-workflow/skills/worktree-task-workflow/SKILL.md
+  line: 82
+  run_id: architecture#0
+  reason: demoted
+- file: em-workflow/references/contracts/rework-planner-contract.md
+  line: 58
+  run_id: architecture#0
+  reason: demoted
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+notes:
+- evaluator の confidence は文字列（high / medium）で返ったため、high→80・未ソースの評価者単独→60 に機械的に換算した
+- 'triage_filing: 未解決の vulnerability finding が 0 件のため file-tasks は対象なしで実行不要'
