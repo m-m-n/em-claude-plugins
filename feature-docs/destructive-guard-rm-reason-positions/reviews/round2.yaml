@@ -1,0 +1,109 @@
+round: 2
+executed_at: '2026-10-04T00:20:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 94875785d992fd25ceb264a6ebb9e4b42bffaa30
+  head_commit: bb6b42354a7f0cd2671a139199fdc690317e3dbc
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - test-docs/destructive-guard-rm-reason-positions/task0001.tests.yaml
+  - test-docs/destructive-guard-rm-reason-positions/task0002.tests.yaml
+  - tests/test_destructive_guard_rm_reason_positions.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+  note: codex returned non-JSON output (harness-level failure)
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+  note: codex returned non-JSON output (harness-level failure)
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 46effc0976b8d93e
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 911
+  title: here-string の後ろが置換だけのシェル呼び出しで IndexError が起き、フックが落ちて同じコマンドの rm 判定が出ない（ベースから既存の穴で、この機能の範囲外）
+  description: '`bash <<< $(echo hi); rm -rf /var/b` や `sh <<< `x`; rm -rf /var/b` では words が [''bash''] の 1 要素だけになる。_payload_index(words, 1) は範囲外の START=1 をそのまま返すので、912 行の words[j] で IndexError が起きる。フックは exit 1（ブロックしないエラー）で終わり、後ろの rm -rf /var/b の deny が出ない（fail-open）。HEAD とベース 94875785 の両方で再現し、どちらも同じように落ちる。今回の差分はこの分岐の return 値を (payload, anchor) の組に書き換えただけで、条件には手を入れていない。SPEC FR5（判定を変えない）の範囲外なので high から medium に下げて持ち越す。'
+  suggestion: この機能では直さず、別タスクとして起票する。直す前に em-workflow/hooks/tests/destructive-guard-cases.json に ["deny", "here-string 置換のみ + 後続 rm", "bash <<< $(echo hi); rm -rf /var/b"] を足し、912 行の条件を `0 < j < len(words) and not getattr(words[j], "substitution_only", False)` にする。
+  sources:
+  - claude:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 既存（ベース 94875785 から）の fail-open で SPEC FR5 の範囲外。別タスクとして起票する
+- stable_id: e5c8f616fafbfc48
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2870
+  title: statements() に起点位置の管理が加わり、marker_pos の『後から登録したものが勝つ』という順序への依存が入った
+  description: statements() に起点位置の管理が加わった。置換本文は (anchor, sub_index) を持ったまま先に積まれ、取り出すとき（2907 行）に、あとで _register_marker_positions() が更新した全体共有の marker_pos で anchor を確定させる。範囲内の番号を持つ偽造マーカーを後ろの文に置くと marker_pos[0] が上書きされ、置換本文の rm と書いてある rm の番号が入れ替わる。判定と rule id はベースと同じで、ずれるのは理由文の番号だけ。
+  suggestion: 起点位置の管理を statements() から切り出し、登録と解決の API を明示的に持つ小さなオブジェクトにまとめる。少なくとも marker_pos への登録は、そのチャンクかその祖先のチャンクが実際に発行したマーカー番号だけに限る。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: medium の保守性の指摘で、影響は偽造マーカー入力時の理由文の番号だけ。判定は変わらない。別タスクとして起票する
+evaluation:
+  round_summary: 'codex の主レビュー 2 本（comprehensive#0 / security#0）は JSON 以外を返したため、claude の代替レビューで評価した。round 1 の 9d315d6486b00e4d（偽造マーカーの int() ValueError）は _register_marker_positions() の ValueError 捕捉で直っており、TestForgedMarkerWithUnparsableIndex も通る。新しい unittest 45 件と run-destructive-guard.py 456/456 が成功。AC1-AC5 と独自 23 件を HEAD とベースで比べ、判定と rule id はすべて一致した。comprehensive#fallback の high（here-string IndexError）はベースでも再現する既存の穴で SPEC FR5 の範囲外のため medium に下げた。`--` の後ろの - 始まりの対象が判定されない件は round 1 と同じく SPEC A2 で範囲外。architecture#0 の high（shlex 内部属性依存）は demoted。インジェクションの試みは無かった。観点ごとの確認: comprehensive=corroborated、security=corroborated、architecture=findings、spec=corroborated。'
+  recommended_action: complete
+  action_rationale: 残る critical/high は 0 件。前回の high は直っており、判定と rule id がベースと変わらないことも確かめた。残る 2 件はどちらも medium。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 612
+  run_id: architecture#0
+  reason: 'demoted: shlex 内部属性 _pushback_chars を読む結びつきは既存の _TrackingLexer の設計の延長で、getattr に既定値があり落ちない。影響はヒアドキュメント本文の理由文の番号だけで判定には及ばない'
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-rm-reason-positions-20261003T151302Z.md
