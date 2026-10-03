@@ -571,5 +571,15 @@
   ["allow", "cdb8382d4bbb0b1d AC-2 追加: &>/dev/null の後の cat > file 宛てヒアドキュメントは allow(&> の & を区切りに数えない)", "ls &>/dev/null\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
   ["allow", "cdb8382d4bbb0b1d AC-2 追加: >| の後の cat > file 宛てヒアドキュメントは allow(>| の | を区切りに数えない)", "echo hi >| /tmp/x\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
   ["allow", "cdb8382d4bbb0b1d AC-2 追加: \\; の後の cat > file 宛てヒアドキュメントは allow(エスケープした ; を区切りに数えない)", "find . -exec ls {} \\; -print\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
-  ["allow", "cdb8382d4bbb0b1d AC-2 追加: 行継続(\\ + 改行)の後の cat > file 宛てヒアドキュメントは allow(行継続を区切りに数えない)", "docker ps \\\n  -a\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"]
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: 行継続(\\ + 改行)の後の cat > file 宛てヒアドキュメントは allow(行継続を区切りに数えない)", "docker ps \\\n  -a\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+
+  ["deny", "bc9a99dd0d07ffa5 task0005 AC-1(a) 再現形: $'a\\'b' を引用の読み違いで跨ぐ bash 宛てヒアドキュメントは deny(ホスト文が自身の演算子を持たない)", "echo $'a\\'b'; bash <<EOF\ngit reset --hard HEAD\nEOF\necho x\\'y"],
+  ["deny", "bc9a99dd0d07ffa5 task0005 AC-1(b) sink を sh、破壊的コマンドを rm -rf に変えた形も deny(引用の読み違いが演算子の手前の同じ行にある)", "echo $'a\\'b'; sh <<EOF\nrm -rf /home/sakura/x\nEOF\necho x\\'y"],
+  ["deny", "bc9a99dd0d07ffa5 task0005 AC-1(b) sink を bash -s にし、$'...' を前の行に置いた形も deny(引用の読み違いが演算子の前の行にある)", "echo $'it\\'s'\nbash -s <<EOF\nrm -rf /home/sakura/x\nEOF\necho x\\'y"],
+  ["deny", "bc9a99dd0d07ffa5 task0005 AC-1(b) 引用を閉じる ' が演算子と同じ行の後ろにある形も deny(読み違えた引用が演算子を跨いで同じ行で閉じる)", "echo $'a\\'b'; bash <<EOF; echo x\\'y\ngit reset --hard HEAD\nEOF"],
+  ["deny", "bc9a99dd0d07ffa5 task0005 AC-1(b) <<- と引用付き区切り語でも deny(区切り語の引用で読み違えた引用の範囲が変わる)", "echo $'a\\'b'; sh <<-'EOF'\n\trm -rf /home/sakura/x\nEOF\necho x\\'y"],
+  ["allow", "bc9a99dd0d07ffa5 task0005 AC-4 演算子がコマンド語に融合した cat<<EOF は allow(演算子を記録できる)", "cat<<EOF\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "bc9a99dd0d07ffa5 task0005 AC-4 <<- が融合した cat<<-EOF は allow(演算子を記録できる)", "cat<<-EOF\n\tgit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "bc9a99dd0d07ffa5 task0005 AC-4 引用付き区切り語が融合した cat<<'EOF' は allow(演算子を記録できる)", "cat<<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "bc9a99dd0d07ffa5 task0005 AC-4 リダイレクトの後ろに融合した cat >notes.txt<<EOF は allow(演算子を記録できる)", "cat >notes.txt<<EOF\ngit reset --hard HEAD\nEOF\npython3 x.py"]
 ]
