@@ -1,0 +1,71 @@
+schema_version: 2
+feature: plan-version-bump-per-commit
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.16
+    confidence: 0.8
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.8
+      '2': 0.17
+      '3': 0.01
+  observed_at: '2026-10-03T20:12:31+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.18
+    confidence: 0.82
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.82
+      '2': 0.18
+      '3': 0.0
+  observed_at: '2026-10-03T20:12:32+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/plan-writing/SKILL.md
+  - em-workflow/agents/rework-planner.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - tests/test_worker_contracts_planning.py
+  - tests/test_rework_synthesis_contract.py
+  changed_lines_approx: 120
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/agents/implementer.md
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 6
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 現行guardはworkflow保有repoを除外（~/.claude/hooks/plugin-version-guard.py:95-97）。それ以外は通常HEADを基準にコミットごとにversion不変を拒否し、marketplaceとの一致も確認する（同:99,123-144）。当repoのworkflowは2026-09-29追加（git
+    090a4f06）で、main push時にpatchを自動更新する（.github/workflows/plugin-version-bump.yml:3-5,89-103）。ローカル規則も実装時のpatch変更を禁止する（.claude/rules/core-plugin-version-bump.md:8-15）。したがって当repoでの旧拒否条件は現在除外されるが、汎用の計画規則は未整備。plan-writingの分割規則・保存前確認にはversion処理がない（em-workflow/skills/plan-writing/SKILL.md:60-91,239-255）。初回plannerは同skillを使用し（em-workflow/agents/implementation-planner.md:7-19）、reworkも同規則を使用する（em-workflow/references/rework-task-synthesis.md:64-71）。既存IMPLEMENTATION更新は新共有契約時だけに制限される（em-workflow/agents/rework-planner.md:83、em-workflow/references/contracts/rework-planner-contract.md:85、em-workflow/references/rework-task-synthesis.md:152）。実装者規則にもversion処理はない（em-workflow/skills/worktree-task-workflow/SKILL.md:28-38,64-84）。現行D3は既に各reworkの同一コミットでのpatch更新へ修正済みだが（feature-docs/destructive-guard-heredoc-reset-hard/IMPLEMENTATION.md:132-135）、個別計画は変更禁止を保持する（同ディレクトリ/tasks/task0002.md:263-264、tasks/task0003.md:157-158）。既存テストは一般の計画契約・rework契約を検査し、今回のversion計画を検査していない（tests/test_worker_contracts_planning.py:7-17、tests/test_rework_synthesis_contract.py:6-24）。対象ファイル・120行・6ケースは既存文書テストへ規則検査を追加する場合の概算で未確定。新規関数数は本体について数え、参照数6は共通計画規則の参照元5文書と実装者1文書を数えた。テストは実行していない
+decided_at: '2026-10-03T20:12:43+09:00'
