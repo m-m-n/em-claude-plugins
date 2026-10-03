@@ -39,6 +39,7 @@ Unless the scenario states otherwise, "HOME fixed" means every case passes HOME 
 | TS-14 | (FR3, assumptions A2 and A3) Three commands: `rm -rf -- -- /var/x`; `rm -rf - /var/x`; `rm -rf -- -x`. | Designations 1番目のrmの2番目の対象 and 1番目のrmの1番目の対象 respectively. The third command stays allow. | Unit |
 | TS-15 | (FR4, assumption A5, FR5) Three commands: `rm -rf / /var/a`; `rm -rf /var/a "$(pwd)/b"`; TS-5's command without gio. | `rm -rf / /var/a`: deny / rm-root, with exactly one template, after 1番目のrmの2番目の対象. `rm -rf /var/a "$(pwd)/b"`: deny / rm-recursive, with exactly one template, between 1番目のrmの1番目の対象 and 1番目のrmの2番目の対象. TS-5's command: the reason equals today's single-target text for 1番目のrmの3番目の対象 with the mv template. | Unit |
 | TS-16 | (NFR4) Diff of the feature branch against the implement base commit, restricted to `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`. | Neither file is modified. | Manual (git diff) |
+| TS-17 | (FR5, NFR2; review round 1 finding 9d315d6486b00e4d, task0002) HOME fixed. A forged marker (NUL, 5000 digits, STX) placed in each of: the rm target (`rm -rf /var/x` + marker); an earlier statement (`echo` + marker + `; rm -rf /var/x`); a later statement; a command-substitution body; a `bash -c` payload, each followed or preceded by `rm -rf /var/x`. | Each command gets the exit status, decision and rule id recorded from the base hook (94875785): deny / rm-recursive. stderr has no `Traceback`. stdout is one parsable decision object with no raw control character. | Unit |
 
 ## Code Quality Verification
 - Format: none configured (format_command is empty).
@@ -64,11 +65,11 @@ Unless the scenario states otherwise, "HOME fixed" means every case passes HOME 
 | FR2 | task0001 | TS-4, TS-13 |
 | FR3 | task0001 | TS-5, TS-14 |
 | FR4 | task0001 | TS-6, TS-15 |
-| FR5 | task0001 | TS-1 to TS-7, TS-12 to TS-15 (verdict and rule assertions) |
-| FR6 | task0001 | TS-8 |
+| FR5 | task0001, task0002 | TS-1 to TS-7, TS-12 to TS-15, TS-17 (verdict and rule assertions) |
+| FR6 | task0001, task0002 | TS-8 |
 | FR7 | task0001 | TS-10, manual review below |
 | NFR1 | task0001 | TS-9 |
-| NFR2 | task0001 | TS-6, TS-11 |
+| NFR2 | task0001, task0002 | TS-6, TS-11, TS-17 |
 | NFR3 | task0001 | TS-8 (new module uses unittest only; HOME and PATH set explicitly) |
 | NFR4 | task0001 | TS-16 |
 
@@ -82,10 +83,11 @@ Unless the scenario states otherwise, "HOME fixed" means every case passes HOME 
 - TM-2: Route merging, deduplication, deferred rendering and `--` renumbering never weaken or drop a decision. Checked in two parts:
   - TS-7: the full case suite, with the cases file unchanged.
   - The verdict and rule assertions of TS-1 to TS-6 and TS-12 to TS-15, pinned against the unmodified hook before editing.
+  - TS-17: a forged marker with an unparsable index anywhere in the command does not crash the hook (no fail-open).
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 to TS-16) | 16 | 15 | 0 | 1 |
+| Test scenarios (TS-1 to TS-17) | 17 | 16 | 0 | 1 |
 | Security verification (TM-1, TM-2) | 2 | 2 | 0 | 0 |
 | Additional manual checks (readability, FR7 wording) | 2 | 0 | 0 | 2 |
