@@ -1381,6 +1381,32 @@ def _statically_unknown_word(word):
     )
 
 
+def _git_global_options_end(args):
+    """The index in ARGS -- everything after the `git` command word -- where
+    `git`'s own global options end: `-C`/`-c`/`--git-dir`/`--work-tree`/
+    `--namespace`/`--config-env` with their value (a separate token, or
+    attached with `=`) and the value-less options in GIT_GLOBAL_BOOLEAN_FLAGS
+    are passed over left to right. Shared by _git_is_data(), which reads the
+    word at that index as the subcommand, and by the FR6 skipped-word sink
+    check, which reads ARGS[:index] as the words the resolution skipped.
+    """
+    i = 0
+    n = len(args)
+    while i < n:
+        a = args[i]
+        if a in GIT_GLOBAL_VALUE_FLAGS:
+            i += 2
+            continue
+        if any(a.startswith(f"{flag}=") for flag in GIT_GLOBAL_VALUE_FLAGS):
+            i += 1
+            continue
+        if a in GIT_GLOBAL_BOOLEAN_FLAGS:
+            i += 1
+            continue
+        break
+    return i
+
+
 def _git_is_data(args):
     """Whether a `git` statement counts as a data command (task0003 Change
     1 / task plan "Change 1: the git condition in statement classification
@@ -1406,20 +1432,8 @@ def _git_is_data(args):
     therefore need no special-case handling here — unlike gh's own
     condition (_git_alias_risk()), which still reads them.
     """
-    i = 0
+    i = _git_global_options_end(args)
     n = len(args)
-    while i < n:
-        a = args[i]
-        if a in GIT_GLOBAL_VALUE_FLAGS:
-            i += 2
-            continue
-        if any(a.startswith(f"{flag}=") for flag in GIT_GLOBAL_VALUE_FLAGS):
-            i += 1
-            continue
-        if a in GIT_GLOBAL_BOOLEAN_FLAGS:
-            i += 1
-            continue
-        break
     if i >= n or args[i].startswith("-"):
         return False
     sub = args[i]
@@ -2064,6 +2078,64 @@ def _leading_group_closer(toks, case_stack=None):
     return None
 
 
+# --- FR6: a sink among the words the command-word resolution skipped ------
+#
+# A statement's command word is found by passing over VAR=value assignments,
+# WRAPPERS with their options and option values, and `git`'s global options
+# with theirs. `GIT_EDITOR=bash git commit -e -F - <<'EOF'` therefore reads as
+# `git` -- a data command -- while the shell it hands the body to is named in
+# a word that was passed over. These helpers collect those words once per
+# statement and decide whether any of them names a sink.
+
+
+def _collect_skipped_words(words, end, skipped):
+    """Add to SKIPPED (a _SkippedWords) every assignment / wrapper word that
+    _skip_assignments_and_wrappers() passes over in WORDS[:END], walking the
+    prefix once left to right. Anything else in the prefix (a grouping
+    token, a reserved word, a case pattern) is stepped over without being
+    collected: only the three kinds of word FR6 names count as skipped.
+    """
+    i = 0
+    while i < end:
+        j = _skip_assignments_and_wrappers(words, i, end, skipped)
+        i = j if j > i else i + 1
+
+
+def _skipped_word_has_sink(word):
+    """Whether SHELL_SINK, applied exactly as it is applied to a chunk, finds
+    a sink in WORD as written, in the part after its first `=`, or in the
+    leading word of that part -- and in each of those with every quote and
+    backslash character removed (`core.editor=b'a'sh` is `bash` once the
+    shell that git hands it to has resolved the quoting)."""
+    forms = [word]
+    if "=" in word:
+        value = word.split("=", 1)[1]
+        forms.append(value)
+        leading = value.split(None, 1)
+        if leading:
+            forms.append(leading[0])
+    for form in forms:
+        if SHELL_SINK.search(form) or SHELL_SINK.search(_strip_quote_chars(form)):
+            return True
+    return False
+
+
+def _skipped_words_make_undetermined(words_only, lead, shaped_words, word, args):
+    """FR6: whether the words skipped before this statement's command WORD
+    make its destination undetermined -- an `env` -S/--split-string option
+    in any spelling, or a sink in any skipped word. WORDS_ONLY[:LEAD] is
+    what statement shaping passed over; SHAPED_WORDS may still start with
+    assignments/wrappers that head() skips; and for `git`, ARGS' leading
+    global options and their values count as skipped too."""
+    skipped = _SkippedWords()
+    _collect_skipped_words(words_only, lead, skipped)
+    skip_index, _, _ = _skip_to_command_word(shaped_words)
+    _collect_skipped_words(shaped_words, skip_index, skipped)
+    if word == "git":
+        skipped.words.extend(args[: _git_global_options_end(args)])
+    return skipped.env_split or any(_skipped_word_has_sink(w) for w in skipped.words)
+
+
 def _build_statement_table(chunk, marked_chunk):
     """Component 3. ONE lexing pass of MARKED_CHUNK (CHUNK with every
     top-level substitution already blanked by _mark_substitutions()),
@@ -2103,6 +2175,18 @@ def _build_statement_table(chunk, marked_chunk):
                 if not _git_is_data(args):
                     word = None
             elif _git_alias_risk(word, shaped_words, words_only[:lead]):
+                word = None
+            # FR6: a sink among the skipped words (or an `env` split-string)
+            # makes a would-be data word undetermined. A word that is itself
+            # a sink stays a sink -- only a non-sink command word is
+            # downgraded here.
+            if (
+                word is not None
+                and not SINK_WORD_RE.match(word)
+                and _skipped_words_make_undetermined(
+                    words_only, lead, shaped_words, word, args
+                )
+            ):
                 word = None
             raw_index = _skip_assignments_and_wrappers(stripped)
             is_compound_keyword = (
@@ -2810,6 +2894,102 @@ def _shape_fallback(words):
     return words
 
 
+# --- FR7: constructs that replace what a command name runs -----------------
+#
+# A function definition, an alias, `hash`, `enable` or a PATH assignment makes
+# a data command name (`cat`, `git`) run something else -- possibly a shell
+# that reads the heredoc body. No heredoc judged data in a command holding
+# one of these can be trusted, so statements() turns every data judgment in
+# that command into undetermined as soon as one is seen (once per hook
+# invocation, in the single traversal it already makes).
+
+# Builtins that change what a command name resolves to when they sit at
+# command position.
+OVERRIDE_BUILTINS = frozenset({"alias", "hash", "enable"})
+
+# An assignment to PATH, `PATH=` or `PATH+=`. (The latter is not an
+# ASSIGNMENT_PREFIX match, so it surfaces as the command word itself.)
+PATH_ASSIGNMENT = re.compile(r"^PATH\+?=")
+
+
+def _defines_function(words, lead):
+    """Whether WORDS -- a statement's non-redirect words -- define a shell
+    function at command position, in any spelling: `NAME()` and `NAME ()`
+    (the lexer gives a `()` token, or `(` then `)`), `function NAME` with or
+    without `()`, with any body form (`{ ... }`, `( ... )`, ...).
+
+    Statement shaping has already stepped LEAD words past command position,
+    and consumes the brace-bodied prefixes (`NAME() {`, `function NAME {`)
+    as part of that; the others leave NAME at WORDS[LEAD]. Windows are
+    therefore read from index 0 through LEAD, so every spelling shows up
+    exactly once. A name ending in `=` is an assignment (`arr=()`), not a
+    function name.
+    """
+    n = len(words)
+    for i in range(min(lead, n - 1) + 1):
+        t = words[i]
+        if t == "function" and not getattr(t, "quoted", False):
+            return True
+        if i + 1 < n and not getattr(t, "is_operator", False) and not t.endswith("="):
+            nxt = words[i + 1]
+            if getattr(nxt, "is_operator", False):
+                if nxt.startswith("()"):
+                    return True
+                if (
+                    nxt == "("
+                    and i + 2 < n
+                    and words[i + 2] == ")"
+                    and getattr(words[i + 2], "is_operator", False)
+                ):
+                    return True
+    return False
+
+
+def _overrides_command_name(words, lead, shaped_words):
+    """Whether one lexed statement holds a command-name override construct
+    (FR7): a function definition, `alias`/`hash`/`enable` as the command
+    word (also behind `builtin`), a PATH assignment -- as a prefix of a
+    command, as a statement of its own, or as an argument of `export`. WORDS
+    is the statement's non-redirect words, LEAD where command position
+    starts in them, SHAPED_WORDS what remains from there.
+
+    Reads only the statement's own words, so a quoted `alias` or `f()`, a
+    comment, or an argument-position `PATH=...` is not a match, and bodies
+    of data heredocs never reach it.
+    """
+    if _defines_function(words, lead):
+        return True
+    if any(PATH_ASSIGNMENT.match(w) for w in words[:lead]):
+        return True
+    if shaped_words and PATH_ASSIGNMENT.match(shaped_words[0]):
+        return True
+    word, args = head(shaped_words)
+    if word in OVERRIDE_BUILTINS:
+        return True
+    if word == "builtin" and args and args[0] in OVERRIDE_BUILTINS:
+        return True
+    if word == "export" and any(PATH_ASSIGNMENT.match(a) for a in args):
+        return True
+    return False
+
+
+def _overrides_command_name_unlexed(toks, shaped_words):
+    """_overrides_command_name() for a statement of a chunk that would not
+    lex (an unbalanced quote): no operator/quote provenance exists, so the
+    same constructs are read from plain words, and a PATH assignment
+    anywhere in the statement counts (the stricter reading)."""
+    word, args = head(shaped_words)
+    if word in OVERRIDE_BUILTINS:
+        return True
+    if word == "builtin" and args and args[0] in OVERRIDE_BUILTINS:
+        return True
+    if toks and toks[0] == "function":
+        return True
+    if any("()" in t for t in toks[:2]) or toks[1:3] == ["(", ")"]:
+        return True
+    return any(PATH_ASSIGNMENT.match(t) for t in toks)
+
+
 def statements(command):
     """Yield (text, tokens, lexed, shaped_words, redirects) per command
     segment, substitution bodies included.
@@ -2952,6 +3132,16 @@ def statements(command):
     # chunk pushed back onto PENDING (destructive-guard-command-name-
     # substitution index-leak fix) — a chunk-local list would desync there.
     all_subs = []
+    # FR7: set the first time any statement of any chunk holds a command-name
+    # override construct (_overrides_command_name()). From then on every
+    # heredoc judged data is treated as undetermined. A data heredoc seen
+    # BEFORE the first construct has already been passed over, so its body
+    # is parked in DEFERRED_DATA_BODIES -- only when its chunk holds a sink
+    # word, the one condition on which the fallback would scan it -- and
+    # queued the moment the flag turns on. The flag is raised at most once,
+    # so each parked body is queued at most once.
+    override_seen = False
+    deferred_data_bodies = []
     while pending:
         chunk = pending.pop()
         scanned_chars += len(chunk)
@@ -3009,6 +3199,11 @@ def statements(command):
                 if not record.body.strip():
                     continue  # a blank body is never queued, as before this task
                 destination = destinations.get(index, "undetermined")
+                if destination == "data":
+                    if override_seen:
+                        destination = "undetermined"
+                    elif chunk_sink_fallback:
+                        deferred_data_bodies.append(record.body)
                 if destination == "sink" or (
                     destination == "undetermined" and chunk_sink_fallback
                 ):
@@ -3074,6 +3269,9 @@ def statements(command):
                 words_only, redirects = split_redirects(fused, lexed)
                 lead = _shape_leading(words_only, case_stack)
                 shaped_words = _shaped_remainder(words_only, lead)
+                statement_overrides = not override_seen and _overrides_command_name(
+                    words_only, lead, shaped_words
+                )
                 # task0004 postcondition 2: evaluated for every statement,
                 # including one with zero tokens (an standalone
                 # `;;`/`;&`/`;|` line) — see this function's docstring.
@@ -3086,6 +3284,14 @@ def statements(command):
             else:
                 fallback_words, redirects = split_redirects(toks, lexed)
                 shaped_words = _shape_fallback(fallback_words)
+                statement_overrides = (
+                    not override_seen
+                    and _overrides_command_name_unlexed(toks, shaped_words)
+                )
+            if statement_overrides:
+                override_seen = True
+                pending.extend(deferred_data_bodies)
+                deferred_data_bodies = []
 
             if toks:
                 yield " ".join(toks), toks, lexed, shaped_words, redirects
@@ -3122,10 +3328,57 @@ def tokens(segment):
         return segment.split()
 
 
-def _skip_assignments_and_wrappers(toks):
+class _SkippedWords:
+    """What the command-word resolution passed over before a statement's
+    command word, as _skip_assignments_and_wrappers() collects it for the
+    heredoc destination decision (destructive-guard-heredoc-sink-gaps FR6).
+
+    WORDS holds the VAR=value assignments, the WRAPPERS' own names, their
+    options and the options' values -- in the order they were read. ENV_SPLIT
+    is True when an `env` option among them is -S/--split-string in any
+    spelling. mise/asdf `exec` words are not collected: they name tool
+    specs, not a program the heredoc could be handed to.
+    """
+
+    __slots__ = ("words", "env_split")
+
+    def __init__(self):
+        self.words = []
+        self.env_split = False
+
+
+def _env_split_option(opt):
+    """Whether OPT -- one option word read after `env` -- is `env`'s
+    -S/--split-string in any spelling (FR6): `-S`, `-Sbash`, `-S'sh -s'`,
+    `-iS` and `-iSbash` (a short-option cluster), `--split-string`,
+    `--split-string=...`, and an abbreviation of the long option (GNU env
+    accepts any unambiguous prefix). Inside a short-option cluster, `u` and
+    `C` take the rest of the word as their value, so a `S` after either is
+    that value, not the option.
+    """
+    if opt.startswith("--"):
+        name = opt[2:].split("=", 1)[0]
+        return bool(name) and "split-string".startswith(name)
+    for ch in opt[1:]:
+        if ch == "S":
+            return True
+        if ch in "uC":
+            return False
+    return False
+
+
+def _skip_assignments_and_wrappers(toks, start=0, end=None, skipped=None):
     """Advance past VAR=value assignments, WRAPPERS (and their value-taking
     options), and mise/asdf `exec` prefixes — the skip loop head() has
     always applied, minus its `.substitution_only` handling.
+
+    START and END bound the scan to TOKS[START:END] and the returned index
+    is then an index into TOKS itself (the default, START=0 / END=None,
+    scans all of TOKS exactly as before). SKIPPED, when given, is a
+    _SkippedWords this scan adds the words it passes over to (the
+    assignments, the wrapper names, their options and option values) --
+    the FR6 skipped-word sink check reads it. Collecting changes nothing
+    about where the scan stops.
 
     Factored out of _skip_to_command_word() (task0001) so that the
     grouping/case-aware scan in statements() (_shape_leading()) can
@@ -3139,18 +3392,22 @@ def _skip_assignments_and_wrappers(toks):
     statement() exactly as it does for an unwrapped statement (see
     _shape_leading()'s docstring).
 
-    Returns the index in TOKS where this stops — 0 when TOKS[0] itself
-    doesn't match anything here (including when it is `.substitution_only`,
-    which this function does not look at all).
+    Returns the index in TOKS where this stops — START (0 by default) when
+    TOKS[START] itself doesn't match anything here (including when it is
+    `.substitution_only`, which this function does not look at all).
     """
-    i = 0
-    n = len(toks)
+    i = start
+    n = len(toks) if end is None else min(end, len(toks))
     while i < n:
         t = toks[i]
         if re.match(r"^[A-Za-z_]\w*=", t):  # VAR=value prefix
+            if skipped is not None:
+                skipped.words.append(t)
             i += 1
             continue
         if t in WRAPPERS:
+            if skipped is not None:
+                skipped.words.append(t)
             i += 1
             value_flags = WRAPPER_VALUE_FLAGS.get(t, set())
             while i < n:
@@ -3161,8 +3418,14 @@ def _skip_assignments_and_wrappers(toks):
                 if a == "-" or not a.startswith("-"):
                     break
                 i += 1
+                if skipped is not None:
+                    skipped.words.append(a)
+                    if t == "env" and _env_split_option(a):
+                        skipped.env_split = True
                 if a in value_flags:
                     i += 1  # consume the option's value token
+                    if skipped is not None and i - 1 < n:
+                        skipped.words.append(toks[i - 1])
             continue
         if t in ("mise", "asdf") and i + 1 < n and toks[i + 1] == "exec":
             i += 2
