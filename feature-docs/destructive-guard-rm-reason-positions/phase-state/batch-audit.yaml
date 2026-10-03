@@ -1,0 +1,40 @@
+schema_version: 1
+feature: destructive-guard-rm-reason-positions
+records:
+- question_id: review.reviewer-non-json
+  packet_id: null
+  answered_at: '2026-10-03T23:32:36+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Claude 代替レビュアーを 1 本ずつ出す
+  normalized_answer: Claude 代替レビュアーを 1 本ずつ出す
+  resolution_note: 'gate: review R2b（codex レビュアー 2 本が ''codex returned non-JSON output''
+    の空 findings を返した）; options: (a) スキーマ上妥当なので完了扱い (b) ハーネス失敗とみなし Claude 代替を出す; chosen:
+    (b)（実施済み）; codex_consulted: true（事後）— Codex は R2b の文言上は (a) と指摘。ただし空結果は点検の証拠にならず、代替レビューが
+    high/medium を 1 件ずつ見つけたため結果は保持。opus_escalation: false'
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-10-03T23:32:36+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 自動修正せず rework（implementer がテスト込みで修正）に回す
+  normalized_answer: 自動修正せず rework（implementer がテスト込みで修正）に回す
+  resolution_note: 'gate: review.auto-fix-judgment（stable_id 9d315d6486b00e4d、prose
+    suggestion → needs-judgment）; options: (a) editor で destructive-guard.py だけ直しテストは別タスク
+    (b) 2 件目の editor でテストも足す (c) rework に回す; chosen: (c); not chosen: (a)(b); key
+    points: .claude/rules/hook-tests.md は修正前の回帰ケース追加を求めるが review-editor は 1 ファイルだけ・changed_files
+    内だけを編集でき規約を満たせない。run-destructive-guard.py は JSON を標準入力で渡すので NUL を含むケースも書ける; codex_consulted:
+    true（Codex は (c) を推奨）; opus_escalation: false'
+- question_id: review.dismissed-preexisting-hole
+  packet_id: null
+  answered_at: '2026-10-03T23:32:36+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Notion に別タスクとして起票する
+  normalized_answer: Notion に別タスクとして起票する
+  resolution_note: 'gate: 評価者が dismissed にした security high（rm -rf -- -/../../x が allow、ベースから存在、SPEC
+    FR3/A2 で範囲外）; options: (a) 記録だけ残す (b) 別タスク起票; chosen: (b); key points: 範囲外は今回直さない理由であって安全という判断ではない;
+    codex_consulted: true; opus_escalation: false'
