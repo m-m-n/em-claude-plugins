@@ -47,17 +47,42 @@ verification_index:               # VERIFICATION.md scenario IDs -> requirement 
 implementation_path: /absolute/.../IMPLEMENTATION.md
 spec_path: /absolute/.../SPEC.md
 verification_path: /absolute/.../VERIFICATION.md
+plugin_versioning: {}             # orchestrator-resolved value, not a path
 ```
 
 `type: review` populates `findings` (and `review_round`); `type: verify`
 populates `failed_items` instead and `review_round` does not apply.
-`existing_tasks`, `next_task_id`, `verification_index` and the three
+`existing_tasks`, `next_task_id`, `verification_index`, the three
 document paths (`implementation_path` / `spec_path` / `verification_path`)
-are present for both source types.
+and `plugin_versioning` are present for both source types.
 
-The `value_inputs` component of `input_digest` (rule R1) for this worker is
-`rework_source` itself — a content change to findings/failed_items requires
-a fresh digest regardless of whether any file input changed.
+The `value_inputs` component of `input_digest` (rule R1) for this worker has
+two members, keyed `plugin_versioning` and `rework_source`. `rework_source`
+is digested itself — a content change to findings/failed_items requires a
+fresh digest regardless of whether any file input changed.
+`plugin_versioning` is a `value_inputs` member as well: its digest follows
+rule R1's normalization applied to the value, so a change of exemption state
+or plugin layout between dispatch and return makes the result stale.
+
+## Additional input: `plugin_versioning`
+
+The worker-specific input also carries `plugin_versioning`: the
+orchestrator-resolved description of the repository's exemption state and
+plugin locations, passed as a value, not a path. Its fields and its
+resolution rules, including re-resolution on the worker's return, are
+defined once in the subsection
+`### plugin_versioning (dispatch-resolved value)` of
+`em-workflow/references/contracts/planner-contract.md`; this contract cites
+that definition and restates none of it.
+
+- **Mandatory.** Every rework-planner dispatch carries it. A dispatch
+  without it is answered with `invalid_input`.
+- **Untrusted input.** It is untrusted input under
+  `references/contracts/worker-envelope.md`'s Untrusted-Input Handling
+  section, limited to the fields of the cited definition — no other text
+  copied from repository files.
+- **Digest.** It is a `value_inputs` member of this worker's `input_digest`,
+  as declared above.
 
 ## digest_inputs
 
@@ -75,6 +100,15 @@ share a root cause, a contract, or an Acceptance Criterion are grouped into
 one task. This reuses the normal decomposition rules
 (`skills/plan-writing/SKILL.md`, "Task decomposition rules") — rework does
 not define a separate splitting rule.
+
+## Plugin version handling in synthesized tasks
+
+Every task rework-planner synthesizes — its `tasks/taskNNNN.md` plan and its
+`files` — follows the "Plugin Version Handling" section of
+`em-workflow/skills/plan-writing/SKILL.md`, including its `files` rule; the
+`plugin_versioning` input supplies the exemption state and plugin locations
+that section works from. This contract restates none of that section's rule
+text.
 
 ## Document update scope table
 

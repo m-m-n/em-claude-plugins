@@ -1,0 +1,64 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests before any change: Ran 6497 tests, OK
+final_failures: []             # re-executed after implementation: Ran 6523 tests, OK (6497 baseline + 26 new)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plan_version_rework.CitationTests.test_agent_cites_plan_writing_section_for_every_task
+      - tests.test_plan_version_rework.CitationTests.test_contract_cites_plan_writing_section_for_every_task
+      - tests.test_plan_version_rework.CitationTests.test_synthesis_cites_plan_writing_section_for_every_task
+    red_confirmed: true
+    red_reason: "all three failed before the documents changed: no paragraph cites em-workflow/skills/plan-writing/SKILL.md with the heading text 'Plugin Version Handling'"
+  AC-2:
+    tests:
+      - tests.test_plan_version_rework.NoRestatementAndNoPermissionTests.test_real_documents_do_not_restate_the_rule_text
+      - tests.test_plan_version_rework.NoRestatementAndNoPermissionTests.test_contract_does_not_restate_the_field_table
+      - tests.test_plan_version_rework.NoRestatementAndNoPermissionTests.test_real_documents_contain_no_permissive_statement
+      - tests.test_plan_version_rework.NoRestatementAndNoPermissionTests.test_check_rejects_permissive_samples
+      - tests.test_plan_version_rework.NoRestatementAndNoPermissionTests.test_check_accepts_prohibition_and_exempt_wording
+      - tests.test_plan_version_rework.NoRestatementAndNoPermissionTests.test_check_detects_a_permissive_sentence_injected_into_a_real_doc
+    red_confirmed: false
+    red_reason: "these tests guard against a property (no restated rule text, no permission to keep the version unchanged) that already held before implementation, so all of them passed on their first run and no red state occurred. Detection power was shown afterwards: a permissive sentence appended to rework-task-synthesis.md made test_real_documents_contain_no_permissive_statement and test_real_documents_do_not_restate_the_rule_text fail, and the file was restored from a copy; the in-test samples are exercised in both directions."
+  AC-3:
+    tests:
+      - tests.test_plan_version_rework.ContractInputTests.test_input_is_defined_by_citing_the_planner_contract_subsection
+      - tests.test_plan_version_rework.ContractInputTests.test_input_sits_in_the_worker_specific_input
+      - tests.test_plan_version_rework.ContractInputTests.test_input_is_mandatory_with_invalid_input_on_absence
+      - tests.test_plan_version_rework.ContractInputTests.test_value_inputs_membership_is_declared
+      - tests.test_plan_version_rework.ContractInputTests.test_old_single_member_statement_is_gone
+    red_confirmed: true
+    red_reason: "all five failed before the contract changed: heading not found: '## Additional input: `plugin_versioning`'; no paragraph declares plugin_versioning in value_inputs; the old statement 'for this worker is `rework_source` itself' was still present"
+  AC-4:
+    tests:
+      - tests.test_plan_version_rework.ContractInputTests.test_input_is_untrusted_under_the_envelope_section
+      - tests.test_plan_version_rework.ContractInputTests.test_input_is_limited_to_the_cited_definitions_fields
+    red_confirmed: true
+    red_reason: "both failed before the contract changed: heading not found: '## Additional input: `plugin_versioning`'"
+  AC-5:
+    tests:
+      - tests.test_plan_version_rework.DispatchProcedureTests.test_orchestrator_resolves_per_the_planner_contract_at_every_dispatch
+      - tests.test_plan_version_rework.DispatchProcedureTests.test_value_is_passed_in_the_worker_input
+      - tests.test_plan_version_rework.DispatchProcedureTests.test_value_is_included_in_value_inputs
+      - tests.test_plan_version_rework.DispatchProcedureTests.test_value_is_re_resolved_for_the_return_time_digest
+      - tests.test_plan_version_rework.DispatchProcedureTests.test_dispatch_statement_is_under_the_workflow_state_transition_section
+    red_confirmed: true
+    red_reason: "all five failed before rework-task-synthesis.md changed: no paragraph of the dispatch document states the resolve / pass / value_inputs / re-resolve obligations together; 'plugin_versioning' not found in Section 10"
+  AC-6:
+    tests:
+      - tests.test_plan_version_rework.AgentInputTests.test_agent_names_plugin_versioning_among_its_inputs
+      - tests.test_plan_version_rework.AgentInputTests.test_agent_points_at_the_contract_for_the_definition
+    red_confirmed: true
+    red_reason: "both failed before rework-planner.md changed: rework-planner.md does not name plugin_versioning"
+  AC-7:
+    tests:
+      - tests.test_plan_version_rework.ModuleHygieneTests.test_module_imports_only_the_standard_library
+      - tests.test_plan_version_rework.ModuleHygieneTests.test_module_never_touches_the_user_home
+      - tests.test_plan_version_rework.ModuleHygieneTests.test_module_reads_only_this_tasks_own_documents
+    red_confirmed: false
+    red_reason: "the criterion is satisfied by the module itself plus the suite passing; the hygiene checks passed on their first run (the module existed when they first ran), and no failing observation of an AC-7 check preceded the implementation. The suite-level outcome (python3 -m unittest discover -s tests, OK) was confirmed after implementation."
+notes: >-
+  The rework-planner dispatch procedure (AC-5) is asserted against
+  em-workflow/references/rework-task-synthesis.md Section 10, the fixed
+  dispatch ordering that review-phase.md (review routes) and
+  skills/develop/SKILL.md (verify routes) both cite. develop SKILL.md was
+  left unchanged.
