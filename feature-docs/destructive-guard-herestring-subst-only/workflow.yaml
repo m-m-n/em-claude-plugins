@@ -102,7 +102,8 @@ workflow:
   base_commit: 7ded2cfdf75aafb0b7bc76526bba0f190fe288e3
   completed_at_commit: a242f5919514734c883635018e8e3ca3df06f21b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: b418c7af430600f34891fbd01f5ad4faedb0f51f
 - id: verify
   status: pending
   result: null
@@ -130,8 +131,8 @@ tasks:
     status: merged
     branch: em-workflow/destructive-guard-herestring-subst-only/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -140,7 +141,11 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: {source: codex, status: completed, findings: 0}
+    security: {source: codex, status: completed, findings: 0}
+    architecture: {source: 'litellm:muse-spark-contributor', status: completed, findings: 0}
+    spec: {source: 'litellm:muse-spark-contributor', status: completed, findings: 0}
   residual_critical_high: 0
   needs_rework: false
 requirements:
