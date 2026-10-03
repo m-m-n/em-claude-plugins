@@ -485,5 +485,11 @@
   ["allow", "cdb8382d4bbb0b1d AC-2 2>&1 の後の cat > file 宛てヒアドキュメントは allow(後続の python3 を宛先と誤読しない)", "ls 2>&1\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
   ["deny", "73a1d7b31734dd22 AC-3.1 \\' を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした ' は引用の開始でない)", "echo it\\'s; bash <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["deny", "73a1d7b31734dd22 AC-3.2 AC-3.1 の後ろに ls を続けた形も deny", "echo it\\'s; bash <<'EOF'\ngit reset --hard HEAD\nEOF\nls"],
-  ["deny", "73a1d7b31734dd22 AC-3.3 \\\" を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした \" は引用の開始でない)", "echo a\\\"b; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"]
+  ["deny", "73a1d7b31734dd22 AC-3.3 \\\" を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした \" は引用の開始でない)", "echo a\\\"b; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["allow", "73a1d7b31734dd22 AC-3 追加: エスケープした ' の後の置換内 cat 宛てヒアドキュメントは allow(引用の開始と読んで宛先不明にしない)", "echo it\\'s; x=\"$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)\"\npython3 x.py"],
+  ["allow", "73a1d7b31734dd22 AC-3 追加: case の腕の中でエスケープした ' の後の置換内 cat 宛てヒアドキュメントは allow(case/esac の語の読み取りが ' を落とさない)", "case x in a) echo it\\'s;; esac; x=\"$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)\"\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: &>/dev/null の後の cat > file 宛てヒアドキュメントは allow(&> の & を区切りに数えない)", "ls &>/dev/null\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: >| の後の cat > file 宛てヒアドキュメントは allow(>| の | を区切りに数えない)", "echo hi >| /tmp/x\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: \\; の後の cat > file 宛てヒアドキュメントは allow(エスケープした ; を区切りに数えない)", "find . -exec ls {} \\; -print\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: 行継続(\\ + 改行)の後の cat > file 宛てヒアドキュメントは allow(行継続を区切りに数えない)", "docker ps \\\n  -a\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"]
 ]
