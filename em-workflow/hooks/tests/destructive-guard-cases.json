@@ -520,6 +520,7 @@
   ["deny", "b8fd289ca7750a04 task0004 AC-5 builtin alias でも deny", "builtin alias cat=bash; cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["deny", "b8fd289ca7750a04 task0004 AC-5 置換の中の NAME() { ... } の関数定義でも deny(外側のチャンクには閉じ括弧の不整合が出ない)", "x=$(cat() { bash; }); cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["deny", "b8fd289ca7750a04 task0004 AC-5 置換の中の function NAME { ... } の関数定義でも deny", "x=$(function cat { bash; }); cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["deny", "b8fd289ca7750a04 task0004 AC-5 置換の中の function NAME() { ... } の関数定義でも deny", "x=$(function cat() { bash; }); cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["deny", "b8fd289ca7750a04 task0004 AC-5 置換の中の alias でもコマンド全体のヒアドキュメントは deny(本文は後から走査される)", "cat <<'EOF'\ngit reset --hard HEAD\nEOF\necho \"$(alias cat=bash)\""],
   ["deny", "b8fd289ca7750a04 task0004 AC-5 bash -c の中の alias でもコマンド全体のヒアドキュメントは deny", "bash -c 'alias cat=bash'; cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["deny", "b8fd289ca7750a04 task0004 AC-5 sink 宛てヒアドキュメント本文の alias でも他のヒアドキュメントは deny", "bash scripts/x.sh <<'A'\nalias cat=bash\nA\ncat <<'B'\ngit reset --hard HEAD\nB"]
