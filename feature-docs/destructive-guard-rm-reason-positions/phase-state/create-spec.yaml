@@ -3,9 +3,9 @@ feature: destructive-guard-rm-reason-positions
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 8c110bdcc113061ba2b536e099c5cfb89e087c01
-last_input_digest: sha256:350d988822b4ee758eaebf3b3259df59d6e41f11efa903b52ad6d1a586832607
-active_request_id: null
+base_revision: a7c332630f9de3e7b6724e73f0bcbfb1cde0efd6
+last_input_digest: sha256:905b6182cbafe5c21f0743b806e1bd8cc38c1997d063bd05cf2c7694295c4fed
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -13,6 +13,10 @@ worker_runs:
   status: completed
   input_digest: sha256:350d988822b4ee758eaebf3b3259df59d6e41f11efa903b52ad6d1a586832607
   output_digest: sha256:d198d7b83bea9c4212374539e9efb61bec90d5b928d8dd61da75761a1b19efd3
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:905b6182cbafe5c21f0743b806e1bd8cc38c1997d063bd05cf2c7694295c4fed
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
