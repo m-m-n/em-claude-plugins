@@ -119,8 +119,8 @@ tasks:
     - FR5
     - FR6
     - NFR2
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-rm-reason-positions/task0002
     notes: null
     provenance:
       source: review
