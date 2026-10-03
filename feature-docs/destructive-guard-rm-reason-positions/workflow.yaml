@@ -2,9 +2,7 @@ schema_version: 1
 feature: destructive-guard-rm-reason-positions
 created: '2026-10-03'
 base_branch: main
-goal: "# destructive-guard: rm 理由文の位置表記が元のコマンド上の位置と対応しない（review medium 4 件）\n\n出典: https://www.notion.so/3e93509ec8ee81119b55e5ed85b1c136\n\n## 現象 (必須)\ndestructive-guard-rm-holes で rm の理由文から対象の生文字列を外し「N番目のrmのM番目の対象」という位置表記に置き換えたが、位置が元のコマンド上の位置と対応しないケースが残っている。em-workflow/destructive-guard-rm-holes の review round 1 で medium として検出された 4 件（stable_id は `feature-docs/destructive-guard-rm-holes/reviews/round1.yaml` のもの）。判定と rule id は変わらず、安全側には倒れている。\n1. c9d77d33b47dac08: rm の呼び出し番号が解析順で振られる。`statements()` は `bash -c '…'` や `$(…)` の本文を後続の文よりさらに後に返すため、本文内の rm が後ろの番号になる\n2. 3d4e1f64664a5d96: 置換で始まる文の rm が、置換経由の経路と通常の経路の両方で `check_rm()` に渡され、呼び出し番号を 2 つ消費する。置換経由では `rm` の語そのものが 1 番目の対象として数えられる\n3. a7026abc0ff69de7: `check_rm()` の targets が `-` 始まりの語を一律に除くため、`--` の後ろの `-` 始まりのオペランドが対象番号から抜ける\n4. c7bd2a13f6985975: 複数対象で rm-recursive が並ぶと `strongest_rm_decision()` が各対象の理由文を捨て、代替コマンド（gio trash / mv）の雛形が出ない（SPEC AC6）\n## 再現手順 (必須)\n1. ブランチ em-workflow/destructive-guard-rm-holes/integration を checkout する\n\
-  2. 次のコマンドを destructive-guard.py に PreToolUse の入力として渡す\n\t- `echo \"$(rm -rf /var/x)\"; rm -rf /tmp/y` → 理由文が「2番目のrmの1番目の対象」を指す（左から読むと許可対象の `/tmp/y`）\n\t- `$(printf rm) rm -rf /tmp/cache; rm -rf /var/valuable` → rm が 2 個なのに「3番目のrm」が現れる\n\t- `rm -rf -- -cache /tmp/scratch /var/valuable` → 拒否対象が「2番目の対象」と表示される（実際の 2 番目は `/tmp/scratch`）\n\t- `rm -rf /var/a /var/b` → 理由文に gio trash も mv も含まれない\n## 期待する挙動 (必須)\n- 呼び出し番号は元のコマンド文字列に rm が現れる順で振られる\n- 同じ rm を複数経路で判定しても呼び出し番号は 1 つだけ消費し、対象番号は元の引数位置に対応する\n- 対象番号は `--` を考慮した元のオペランド位置になる\n- 複数対象をまとめた rm-recursive の理由文にも、位置に対応した代替コマンドの雛形が入る。対象の生文字列は入れない\n- 判定と rule id は変えない\n## 完了の定義 (必須)\n- [ ] 再現手順で現象が起きない\n- [ ] 再発を検出するテストがある\n- [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` の既存ケースの判定が 1 件も変わらない\n## 該当箇所 (任意)\n行番号は em-workflow/destructive-guard-rm-holes/integration の 33fdaf16 時点。\n- `em-workflow/hooks/destructive-guard.py:3104`（呼び出し番号の採番）\n- `em-workflow/hooks/destructive-guard.py:3175`（置換で始まる文の二重判定）\n- `em-workflow/hooks/destructive-guard.py:2249`（対象番号の数え方）\n\
-  - `em-workflow/hooks/destructive-guard.py:2344`（複数対象の理由文の集約）\n## 実害・発生条件 (任意)\n拒否理由を読んだ agent が、許可対象の方を書き換えて撃ち直す。書き換え後も拒否されるので破壊は起きないが、無人実行で余計な往復が生じる。\n"
+goal: "# destructive-guard: rm 理由文の位置表記が元のコマンド上の位置と対応しない（review medium 4 件）\n\n出典: https://www.notion.so/3e93509ec8ee81119b55e5ed85b1c136\n\n## 現象 (必須)\ndestructive-guard-rm-holes で rm の理由文から対象の生文字列を外し「N番目のrmのM番目の対象」という位置表記に置き換えたが、位置が元のコマンド上の位置と対応しないケースが残っている。em-workflow/destructive-guard-rm-holes の review round 1 で medium として検出された 4 件（stable_id は `feature-docs/destructive-guard-rm-holes/reviews/round1.yaml` のもの）。判定と rule id は変わらず、安全側には倒れている。\n1. c9d77d33b47dac08: rm の呼び出し番号が解析順で振られる。`statements()` は `bash -c '…'` や `$(…)` の本文を後続の文よりさらに後に返すため、本文内の rm が後ろの番号になる\n2. 3d4e1f64664a5d96: 置換で始まる文の rm が、置換経由の経路と通常の経路の両方で `check_rm()` に渡され、呼び出し番号を 2 つ消費する。置換経由では `rm` の語そのものが 1 番目の対象として数えられる\n3. a7026abc0ff69de7: `check_rm()` の targets が `-` 始まりの語を一律に除くため、`--` の後ろの `-` 始まりのオペランドが対象番号から抜ける\n4. c7bd2a13f6985975: 複数対象で rm-recursive が並ぶと `strongest_rm_decision()` が各対象の理由文を捨て、代替コマンド（gio trash / mv）の雛形が出ない（SPEC AC6）\n## 再現手順 (必須)\n1. ブランチ em-workflow/destructive-guard-rm-holes/integration を checkout する\n2. 次のコマンドを destructive-guard.py に PreToolUse の入力として渡す\n\t- `echo \"$(rm -rf /var/x)\"; rm -rf /tmp/y` → 理由文が「2番目のrmの1番目の対象」を指す（左から読むと許可対象の `/tmp/y`）\n\t- `$(printf rm) rm -rf /tmp/cache; rm -rf /var/valuable` → rm が 2 個なのに「3番目のrm」が現れる\n\t- `rm -rf -- -cache /tmp/scratch /var/valuable` → 拒否対象が「2番目の対象」と表示される（実際の 2 番目は `/tmp/scratch`）\n\t- `rm -rf /var/a /var/b` → 理由文に gio trash も mv も含まれない\n## 期待する挙動 (必須)\n- 呼び出し番号は元のコマンド文字列に rm が現れる順で振られる\n- 同じ rm を複数経路で判定しても呼び出し番号は 1 つだけ消費し、対象番号は元の引数位置に対応する\n- 対象番号は `--` を考慮した元のオペランド位置になる\n- 複数対象をまとめた rm-recursive の理由文にも、位置に対応した代替コマンドの雛形が入る。対象の生文字列は入れない\n- 判定と rule id は変えない\n## 完了の定義 (必須)\n- [ ] 再現手順で現象が起きない\n- [ ] 再発を検出するテストがある\n- [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` の既存ケースの判定が 1 件も変わらない\n## 該当箇所 (任意)\n行番号は em-workflow/destructive-guard-rm-holes/integration の 33fdaf16 時点。\n- `em-workflow/hooks/destructive-guard.py:3104`（呼び出し番号の採番）\n- `em-workflow/hooks/destructive-guard.py:3175`（置換で始まる文の二重判定）\n- `em-workflow/hooks/destructive-guard.py:2249`（対象番号の数え方）\n- `em-workflow/hooks/destructive-guard.py:2344`（複数対象の理由文の集約）\n## 実害・発生条件 (任意)\n拒否理由を読んだ agent が、許可対象の方を書き換えて撃ち直す。書き換え後も拒否されるので破壊は起きないが、無人実行で余計な往復が生じる。\n"
 parent_branch: em-workflow/destructive-guard-rm-reason-positions/integration
 tier: full
 tier_decision:
@@ -77,7 +75,32 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Original-position rm numbering and per-target alternatives in the combined rm reason
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - tests/test_destructive_guard_rm_reason_positions.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -91,78 +114,117 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-12
   FR2:
     title: 複数の経路で判定しても呼び出し番号は 1 つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-13
   FR3:
     title: 対象番号は `--` を考慮した元のオペランド位置
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-14
   FR4:
     title: まとめた rm-recursive の理由文に代替コマンドの雛形を入れる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-15
   FR5:
     title: 判定・rule id・既存の文言を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
   FR6:
     title: 回帰テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   FR7:
     title: 番号の振り方を書いたコメント・docstring を実装に合わせる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR1:
     title: 同じコマンド文字列からは、いつも同じ位置表記と同じ理由文が出る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   NFR2:
     title: 理由文に rm 対象の生文字列を入れない。フックの stdout に制御文字を出さない（destructive-guard-rm-holes の FR4 / NFR3 を保つ）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-11
   NFR3:
     title: テストは Python 標準ライブラリの unittest だけを使う。HOME と PATH はテスト側で明示して渡す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   NFR4:
     title: プラグインの version は触らない（.claude/rules/core-plugin-version-bump.md）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-16
 batch:
   review_rework_count: 0
   verify_rework:
