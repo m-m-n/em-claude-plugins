@@ -912,40 +912,153 @@ def _delimiter_line_word(line):
     return m.group(1) if m else None
 
 
-def _line_comment_start(line):
-    """The offset of a `#`-comment's start in LINE (one operator line from
-    strip_heredocs(), never a heredoc body line), or None. Mirrors Component
-    1's own word-start/quote rules (scan_structure()'s `_at_word_start()`
-    and its quote handling) but scoped to one line, since an operator line
-    is examined here before any statement/substitution structure has been
-    resolved: a `#` outside quotes and at the start of a word starts a
-    comment that runs to the end of LINE, and an operator inside that
-    comment (`# <<X`) is not a real heredoc operator at all -- see this
-    function's call site.
+# Characters at which _OperatorContext has something to decide, per quote
+# state (single quotes are searched for their closing `'` directly). Anything
+# else is plain text and skipped in bulk, so a long line costs a handful of
+# regex searches rather than a Python-level step per character.
+_CONTEXT_SPECIAL_UNQUOTED = re.compile(r"[\\'\"$`()#<]")
+_CONTEXT_SPECIAL_DOUBLE = re.compile(r"[\\\"$`]")
+_CONTEXT_SPECIAL_ANSI = re.compile(r"[\\']")
+
+# The previous characters after which a `#` starts a comment -- the same set
+# _at_word_start() applies to scan_structure()'s own comment rule.
+_COMMENT_PREV_CHARS = frozenset(" \t\r\n;|&()<>")
+
+
+class _OperatorContext:
+    """Forward, line-by-line reader of the quote / comment / substitution
+    state a heredoc operator candidate sits in (task0003, FR5). Fed the
+    chunk's lines in order by strip_heredocs(); its state is advanced over
+    every line strip_heredocs() keeps and is NEVER advanced over a real
+    heredoc body (those lines are skipped by strip_heredocs() itself), so a
+    quote character or `#` written inside a body never opens a quote or
+    starts a comment for the command text. One forward pass, nothing
+    restarts from an earlier line (NFR3).
+
+    Quoting follows scan_structure()'s rule (IMPLEMENTATION.md C2): outside
+    single quotes a backslash makes the next character literal, so an escaped
+    quote opens nothing; inside single quotes everything up to the next `'`
+    is literal; a `#` starts a comment only at the start of a word outside
+    quotes and the comment ends with its line.
+
+    A `<<`/`<<-` is a heredoc operator only where the shell parses it as
+    one: outside single quotes, double quotes and comments, or inside a
+    command substitution (`$( )` or backticks) -- even one written inside a
+    double-quoted string, since the substitution opens a fresh unquoted
+    context of its own. The quoting of the delimiter word (`<<'EOF'`,
+    `<<"EOF"`) is part of the operator (HEREDOC_OP consumes it), never a
+    quote start. Inside single quotes every `<<` is literal, including one
+    written within a `$(`, because the `$(` itself is literal there.
+
+    A candidate that is not a real operator is simply never returned: it
+    records no heredoc and captures no body, and the lines after it stay in
+    the chunk for the later stages to read by their actual syntax.
     """
-    quote = None
-    i = 0
-    n = len(line)
-    while i < n:
-        c = line[i]
-        if quote:
-            if c == quote:
-                quote = None
-            elif c == "\\" and quote == '"' and i + 1 < n:
+
+    __slots__ = ("stack", "prev", "in_comment")
+
+    def __init__(self):
+        # Frames, innermost last: [kind, quote]. KIND is "top" (the chunk
+        # itself), "sub" (`$(`), "group" (`(`) or "tick" (a backtick pair);
+        # QUOTE is None, "'", '"' or "$'" (ANSI-C quoting) for that frame
+        # only -- a `$(` opened inside a double-quoted string starts with
+        # no quote of its own.
+        self.stack = [["top", None]]
+        # The last character of the previous line, so a `#` at the start of
+        # a line is judged by what really precedes it.
+        self.prev = "\n"
+        # A comment that has not reached its newline (the line ended with
+        # some other line terminator) continues on the next line.
+        self.in_comment = False
+
+    def real_operators(self, line):
+        """Advance over LINE (a whole line, its terminator included) and
+        return the HEREDOC_OP matches that are real operators, in order."""
+        if self.in_comment:
+            if line.endswith("\n"):
+                self.in_comment = False
+            self.prev = line[-1]
+            return []
+        found = []
+        stack = self.stack
+        n = len(line)
+        i = 0
+        while i < n:
+            frame = stack[-1]
+            quote = frame[1]
+            if quote == "'":
+                j = line.find("'", i)
+                if j == -1:
+                    break
+                frame[1] = None
+                i = j + 1
+                continue
+            if quote == "$'":
+                # `$'...'` (ANSI-C quoting): unlike plain single quotes a
+                # backslash escapes the next character, so `$'it\'s'` is
+                # one string and the `'` after the backslash closes nothing.
+                m = _CONTEXT_SPECIAL_ANSI.search(line, i)
+                if m is None:
+                    break
+                if m.group() == "\\":
+                    i = m.start() + 2
+                else:
+                    frame[1] = None
+                    i = m.end()
+                continue
+            m = (
+                _CONTEXT_SPECIAL_DOUBLE if quote == '"' else _CONTEXT_SPECIAL_UNQUOTED
+            ).search(line, i)
+            if m is None:
+                break
+            i = m.start()
+            c = line[i]
+            if c == "\\":
+                i += 2
+                continue
+            if c == "$":
+                if line.startswith("(", i + 1):
+                    stack.append(["sub", None])
+                    i += 2
+                elif quote is None and line.startswith("'", i + 1):
+                    frame[1] = "$'"
+                    i += 2
+                else:
+                    i += 1
+                continue
+            if c == "`":
+                if quote is None and frame[0] == "tick":
+                    stack.pop()
+                else:
+                    stack.append(["tick", None])
                 i += 1
+                continue
+            if quote == '"':
+                frame[1] = None  # c is the closing `"`
+                i += 1
+                continue
+            # Unquoted within this frame.
+            if c == "#":
+                before = line[i - 1] if i else self.prev
+                if before in _COMMENT_PREV_CHARS:
+                    self.in_comment = not line.endswith("\n")
+                    break
+            elif c == "'" or c == '"':
+                frame[1] = c
+            elif c == "(":
+                stack.append(["group", None])
+            elif c == ")":
+                if frame[0] in ("sub", "group"):
+                    stack.pop()
+            elif c == "<" and line.startswith("<<", i):
+                op = HEREDOC_OP.match(line, i)
+                if op:
+                    found.append(op)
+                    i = op.end()
+                    continue
             i += 1
-            continue
-        if c == "\\" and i + 1 < n:
-            i += 2
-            continue
-        if c in ("'", '"'):
-            quote = c
-            i += 1
-            continue
-        if c == "#" and (i == 0 or line[i - 1] in " \t\r\n;|&()<>"):
-            return i
-        i += 1
-    return None
+        self.prev = line[-1]
+        return found
 
 
 def strip_heredocs(chunk):
@@ -963,11 +1076,17 @@ def strip_heredocs(chunk):
       consumes nothing (its would-be body stays in the chunk, exactly as
       before this task), and does not stop a LATER operator on the same
       line from finding its own delimiter independently.
-    - An operator inside a `#`-comment on its own line (_line_comment_start()
-      above) is never collected, at any position on the line: the text
-      after `#` is never real syntax, so a `<<DELIM` written there opens no
-      heredoc and consumes no body -- it stays in the chunk as ordinary
-      (comment) text, exactly as a real shell would leave it.
+    - Only a REAL operator is collected (_OperatorContext above): a `<<WORD`
+      inside single quotes, double quotes or a `#`-comment is not syntax at
+      all, so it opens no heredoc and consumes no body -- it stays in the
+      chunk as ordinary text and the lines after it stay where they are, to
+      be read by their actual syntax (as the continuation of an open quote,
+      or as commands). The quote / comment state is carried across lines
+      and is advanced over every line this function keeps, but never over a
+      real heredoc body: those lines are skipped, so a quote character or
+      `#` inside one opens nothing in the command text. A real operator
+      inside a command substitution stays one, even when the substitution
+      sits in a double-quoted string.
 
     Delimiter-line CANDIDATES (every line that is nothing but a bare word,
     per _delimiter_line_word()) are indexed once, up front, into
@@ -992,13 +1111,11 @@ def strip_heredocs(chunk):
     out = []
     records = []
     out_len = 0
+    context = _OperatorContext()
     i = 0
     while i < n:
         line = lines[i]
-        matches = list(HEREDOC_OP.finditer(line))
-        comment_start = _line_comment_start(line)
-        if comment_start is not None:
-            matches = [m for m in matches if m.start() < comment_start]
+        matches = context.real_operators(line)
         if not matches:
             out.append(line)
             out_len += len(line)
