@@ -2,8 +2,38 @@ schema_version: 1
 feature: destructive-guard-herestring-subst-only
 created: '2026-10-04'
 base_branch: main
-goal: "# destructive-guard: here-string の後ろが置換だけのシェル呼び出しで IndexError が起き、後続の rm が判定されず素通りする\n\n出典: https://www.notion.so/3ee3509ec8ee8187906dc9215030bf6f\n\n種別: バグ\n\n## 現象\ndestructive-guard で、here-string（`<<<`）の後ろの語がコマンド置換だけのシェル呼び出しを含む複合コマンドを渡すと、`extract_shell_payload_anchored()` の here-string 分岐で `IndexError` が起き、フックが exit 1（ブロックしないエラー）で終わる。同じ複合コマンドの後続の `rm -rf /var/b` の deny が出ず、ガードが素通りになる（fail-open）。\nshell 語の後ろの語が here-string の置換トークンだけだと `words` は `['bash']` の 1 要素になる。`_payload_index(words, 1)` は START=1 が範囲外のときそのまま 1 を返すので、`words[j]` で `IndexError` になる。\nem-workflow/destructive-guard-rm-reason-positions の review round 2 で検出した（stable_id 46effc0976b8d93e）。ベース 94875785 でも同じ入力で落ちる既存の不具合。\n\n## 再現手順\n1. 次のコマンドを `em-workflow/hooks/destructive-guard.py` に PreToolUse の入力として渡す\n   - `bash <<< $(echo hi); rm -rf /var/b`\n   - ``sh <<< `x`; rm -rf /var/b``\n2. フックが traceback を出して exit 1 で終わり、deny が出ない\n\n## 期待する挙動\nフックが落ちず、後続の `rm -rf /var/b` が通常どおり deny される。\n\n## 完了の定義\n- 再現手順で現象が起きない\n- 再発を検出するテストがある\n\
-  - 直す前に `em-workflow/hooks/tests/destructive-guard-cases.json` に `[\"deny\", \"here-string 置換のみ + 後続 rm\", \"bash <<< $(echo hi); rm -rf /var/b\"]` を足している（`.claude/rules/hook-tests.md`）\n\n## 該当箇所\n- `em-workflow/hooks/destructive-guard.py:911` 付近（`j = _payload_index(words, 1)` の直後の `words[j]`）\n- 修正案: 条件を `0 < j < len(words) and not getattr(words[j], \"substitution_only\", False)` にする\n\n## 実害・発生条件\nhere-string の本文がコマンド置換だけのシェル呼び出しを先頭に置くと、同じコマンド列の破壊的コマンドがすべて判定されずに通る。\n"
+goal: |
+  # destructive-guard: here-string の後ろが置換だけのシェル呼び出しで IndexError が起き、後続の rm が判定されず素通りする
+
+  出典: https://www.notion.so/3ee3509ec8ee8187906dc9215030bf6f
+
+  種別: バグ
+
+  ## 現象
+  destructive-guard で、here-string（`<<<`）の後ろの語がコマンド置換だけのシェル呼び出しを含む複合コマンドを渡すと、`extract_shell_payload_anchored()` の here-string 分岐で `IndexError` が起き、フックが exit 1（ブロックしないエラー）で終わる。同じ複合コマンドの後続の `rm -rf /var/b` の deny が出ず、ガードが素通りになる（fail-open）。
+  shell 語の後ろの語が here-string の置換トークンだけだと `words` は `['bash']` の 1 要素になる。`_payload_index(words, 1)` は START=1 が範囲外のときそのまま 1 を返すので、`words[j]` で `IndexError` になる。
+  em-workflow/destructive-guard-rm-reason-positions の review round 2 で検出した（stable_id 46effc0976b8d93e）。ベース 94875785 でも同じ入力で落ちる既存の不具合。
+
+  ## 再現手順
+  1. 次のコマンドを `em-workflow/hooks/destructive-guard.py` に PreToolUse の入力として渡す
+     - `bash <<< $(echo hi); rm -rf /var/b`
+     - ``sh <<< `x`; rm -rf /var/b``
+  2. フックが traceback を出して exit 1 で終わり、deny が出ない
+
+  ## 期待する挙動
+  フックが落ちず、後続の `rm -rf /var/b` が通常どおり deny される。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+  - 直す前に `em-workflow/hooks/tests/destructive-guard-cases.json` に `["deny", "here-string 置換のみ + 後続 rm", "bash <<< $(echo hi); rm -rf /var/b"]` を足している（`.claude/rules/hook-tests.md`）
+
+  ## 該当箇所
+  - `em-workflow/hooks/destructive-guard.py:911` 付近（`j = _payload_index(words, 1)` の直後の `words[j]`）
+  - 修正案: 条件を `0 < j < len(words) and not getattr(words[j], "substitution_only", False)` にする
+
+  ## 実害・発生条件
+  here-string の本文がコマンド置換だけのシェル呼び出しを先頭に置くと、同じコマンド列の破壊的コマンドがすべて判定されずに通る。
 parent_branch: em-workflow/destructive-guard-herestring-subst-only/integration
 tier: reduced
 tier_decision:
@@ -64,7 +94,8 @@ workflow:
   artifacts:
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 229a6de6a34f96145043f7cac81939c145115e53
 - id: implement
   status: pending
   failed_kind: null
