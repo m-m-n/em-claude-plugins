@@ -1,0 +1,17 @@
+schema_version: 1
+feature: destructive-guard-rm-reason-positions
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 070e64151f825e6097820f81e59617da66cd5668
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
