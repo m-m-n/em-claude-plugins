@@ -1,0 +1,32 @@
+schema_version: 1
+feature: destructive-guard-heredoc-sink-gaps
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: b976056475f737c33f28afc4900d18e263f9c619
+last_input_digest: sha256:bf9622ce433533d1329b685ca3e3c455e93f5f3378388e4e25cbe52be5a2c573
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    answered_at: '2026-10-03T20:15:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: feature 名は destructive-guard-heredoc-sink-gaps
+    resolution_note: batch-policies.yaml create-spec.feature-identity = derive_from_task_description。タスク題名（destructive-guard のヒアドキュメント宛先判定の検知漏れ）から導出
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:bf9622ce433533d1329b685ca3e3c455e93f5f3378388e4e25cbe52be5a2c573
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
