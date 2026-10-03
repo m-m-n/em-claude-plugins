@@ -549,5 +549,27 @@
   ["deny", "b8fd289ca7750a04 task0004 AC-5 置換の中の function NAME() { ... } の関数定義でも deny", "x=$(function cat() { bash; }); cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["deny", "b8fd289ca7750a04 task0004 AC-5 置換の中の alias でもコマンド全体のヒアドキュメントは deny(本文は後から走査される)", "cat <<'EOF'\ngit reset --hard HEAD\nEOF\necho \"$(alias cat=bash)\""],
   ["deny", "b8fd289ca7750a04 task0004 AC-5 bash -c の中の alias でもコマンド全体のヒアドキュメントは deny", "bash -c 'alias cat=bash'; cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
-  ["deny", "b8fd289ca7750a04 task0004 AC-5 sink 宛てヒアドキュメント本文の alias でも他のヒアドキュメントは deny", "bash scripts/x.sh <<'A'\nalias cat=bash\nA\ncat <<'B'\ngit reset --hard HEAD\nB"]
+  ["deny", "b8fd289ca7750a04 task0004 AC-5 sink 宛てヒアドキュメント本文の alias でも他のヒアドキュメントは deny", "bash scripts/x.sh <<'A'\nalias cat=bash\nA\ncat <<'B'\ngit reset --hard HEAD\nB"],
+
+  ["deny", "cdb8382d4bbb0b1d AC-1.1 2>&1 | tail の後の bash 宛てヒアドキュメントは deny(2>&1 の & は区切りでない)", "make 2>&1 | tail -5\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.2 &>/dev/null の後の bash 宛てヒアドキュメントは deny(&> は区切りでない)", "ls &>/dev/null; bash <<'EOF'\ngit reset --hard HEAD\nEOF\ncat /dev/null"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.3 行継続(\\ + 改行)の後の bash 宛てヒアドキュメントは deny(行継続は区切りでない)", "docker ps \\\n  -a\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.4 \\; の後の bash 宛てヒアドキュメントは deny(エスケープした ; は区切りでない)", "find . -exec ls {} \\; -print\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.5 >| の後の bash 宛てヒアドキュメントは deny(>| の | は区切りでない)", "echo hi >| /tmp/x; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.6 ホスト文自身の 2>&1 の後ろの bash 宛てヒアドキュメントは deny", "bash 2>&1 <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.7 ホスト文自身の &>/dev/null の後ろの bash 宛てヒアドキュメントは deny", "bash &>/dev/null <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.8 ホスト文自身の >|/tmp/log の後ろの bash 宛てヒアドキュメントは deny", "bash >|/tmp/log <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.9 \\& の後の bash 宛てヒアドキュメントは deny(エスケープした & は区切りでない)", "echo a\\&b; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho hi"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.10 >&2 の後の bash 宛てヒアドキュメントは deny(>& の & は区切りでない)", "echo x >&2\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["deny", "cdb8382d4bbb0b1d AC-1.11 &>> の後の bash 宛てヒアドキュメントは deny(&>> の & は区切りでない)", "ls &>>/tmp/l\nbash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 2>&1 の後の cat > file 宛てヒアドキュメントは allow(後続の python3 を宛先と誤読しない)", "ls 2>&1\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["deny", "73a1d7b31734dd22 AC-3.1 \\' を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした ' は引用の開始でない)", "echo it\\'s; bash <<'EOF'\ngit reset --hard HEAD\nEOF"],
+  ["deny", "73a1d7b31734dd22 AC-3.2 AC-3.1 の後ろに ls を続けた形も deny", "echo it\\'s; bash <<'EOF'\ngit reset --hard HEAD\nEOF\nls"],
+  ["deny", "73a1d7b31734dd22 AC-3.3 \\\" を含む echo の後の bash 宛てヒアドキュメントは deny(エスケープした \" は引用の開始でない)", "echo a\\\"b; bash <<'EOF'\ngit reset --hard HEAD\nEOF\necho done"],
+  ["allow", "73a1d7b31734dd22 AC-3 追加: エスケープした ' の後の置換内 cat 宛てヒアドキュメントは allow(引用の開始と読んで宛先不明にしない)", "echo it\\'s; x=\"$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)\"\npython3 x.py"],
+  ["allow", "73a1d7b31734dd22 AC-3 追加: case の腕の中でエスケープした ' の後の置換内 cat 宛てヒアドキュメントは allow(case/esac の語の読み取りが ' を落とさない)", "case x in a) echo it\\'s;; esac; x=\"$(cat <<'EOF'\ngit reset --hard HEAD\nEOF\n)\"\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: &>/dev/null の後の cat > file 宛てヒアドキュメントは allow(&> の & を区切りに数えない)", "ls &>/dev/null\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: >| の後の cat > file 宛てヒアドキュメントは allow(>| の | を区切りに数えない)", "echo hi >| /tmp/x\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: \\; の後の cat > file 宛てヒアドキュメントは allow(エスケープした ; を区切りに数えない)", "find . -exec ls {} \\; -print\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
+  ["allow", "cdb8382d4bbb0b1d AC-2 追加: 行継続(\\ + 改行)の後の cat > file 宛てヒアドキュメントは allow(行継続を区切りに数えない)", "docker ps \\\n  -a\ncat > /tmp/p <<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"]
 ]
