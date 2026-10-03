@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-herestring-subst-only
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 011ee401c123805bfc0d74d3fb065f03901eb215
 last_input_digest: sha256:752715f9305ecd79deefece68a9f8e1cd12e3974c3c9d33c700f7bfc4b3c6959
