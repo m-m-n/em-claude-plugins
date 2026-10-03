@@ -488,9 +488,9 @@ class _TrackingLexer(shlex.shlex):
         token = super().read_token()
         # How many characters of the input the lexer has taken in once this
         # token is complete -- the token's own end, or one past it when the
-        # character that ended the token (whitespace, or the punctuation that
-        # was pushed back) was read as well. _lex_layout() turns this into
-        # offsets; nothing else reads it.
+        # character that ended the token (whitespace, or the next character,
+        # pushed back for the following token) was read as well.
+        # _lex_layout() turns this into offsets; nothing else reads it.
         self.last_end = self.instream.tell()
         return token
 
@@ -598,15 +598,11 @@ def lex_segments(chunk):
     changes; keeping it on the original text avoids any risk, however
     small, of the blanking pass itself disagreeing with shlex about where
     an unbalanced quote sits.
+
+    The lexing itself lives in _lex_layout(), which can also report where
+    each statement sits in CHUNK; this function is its segments only.
     """
     return _lex_layout(chunk, False)[0]
-
-
-# `<<` as an operator of its own: not the tail of a longer run of `<`, which
-# is a here-string (`<<<`), and not followed by one either. strip_heredocs()'s
-# HEREDOC_OP recognises the same two characters; the lexer-side view of an
-# operator below is what a heredoc's host statement has to agree with.
-_HEREDOC_OPERATOR_RUN = re.compile(r"(?<!<)<<(?!<)")
 
 
 def _operator_token_start(text, tok, end):
@@ -615,10 +611,10 @@ def _operator_token_start(text, tok, end):
 
     END is how many characters the lexer had taken in when it returned TOK.
     An operator token is made of punctuation only, so its text is exactly the
-    characters it was read from; the character that ended it is either
-    whitespace (consumed, so END is one past the token) or other punctuation
-    pushed back (also read, so END is one past the token again) or the end of
-    the input (END is the token's own end). Telling these apart needs no
+    characters it was read from. The character that ended it was read as
+    well -- whitespace that was consumed, or the next character, pushed back
+    for the following token -- so END is one past the token; only at the end
+    of the input is END the token's own end. Telling these apart needs no
     knowledge of the lexer's internals: the token's own text matches at
     exactly one of the two candidates, because the character after it is
     never one of the characters it is made of."""
@@ -634,18 +630,13 @@ def _lex_layout(chunk, track):
     lex_segments()'s own return value, unchanged.
 
     With TRACK, LAYOUT says where the statements sit in the text that was
-    lexed -- the same offsets in CHUNK, since comment blanking keeps every
-    character's position -- as (STARTS, OPERATORS), or None when the chunk
-    does not lex or an offset could not be confirmed:
-
-    - STARTS: STARTS[k] is the offset where statement k begins, which is the
-      end of the separator before it (0 for the first). Statement k is
-      therefore everything from STARTS[k] up to STARTS[k + 1], its own
-      terminating separator included.
-    - OPERATORS: {offset of a heredoc operator `<<`: the index of the
-      statement it sits in}, for every bare `<<` the lexer read as an
-      operator. A `<<` inside quotes or a comment, or one that is part of a
-      here-string, is not in it.
+    lexed (the same offsets in CHUNK, since comment blanking keeps every
+    character's position) as a list: LAYOUT[k] is the offset where statement
+    k begins, which is the end of the separator before it (0 for the first).
+    Statement k is everything from LAYOUT[k] up to LAYOUT[k + 1], its own
+    terminating separator included, or to the end of the text for the last
+    one. LAYOUT is None when the chunk does not lex, or when a separator's
+    offset could not be confirmed against the text.
 
     Separators are recognised once, here. Whatever places a heredoc's host
     statement reads these offsets rather than counting separator characters
@@ -676,7 +667,6 @@ def _lex_layout(chunk, track):
 
     out, current = [], []
     starts = [0]
-    operators = {}
     confirmed = track
     for t, end in toks:
         # punctuation_chars makes shlex fuse adjacent punctuation into one
@@ -708,10 +698,10 @@ def _lex_layout(chunk, track):
         else:
             segs = [t]
         # Only a bare operator token is the characters it was read from, so
-        # only its offsets can be taken from the lexer's position; every
-        # separator is one, and so is every `<<` that starts a heredoc.
+        # only its offsets can be taken from the lexer's position -- and a
+        # separator is always inside one.
         base = None
-        if confirmed and t.is_operator:
+        if confirmed and t.is_operator and any(c in SEGMENT_CHARS for c in t):
             base = _operator_token_start(text, t, end)
             if base is None:
                 confirmed = False
@@ -730,13 +720,10 @@ def _lex_layout(chunk, track):
                     starts.append(seg_start + len(seg))
             else:
                 current.append(seg)
-                if seg_start is not None and getattr(seg, "is_operator", False):
-                    for m in _HEREDOC_OPERATOR_RUN.finditer(seg):
-                        operators[seg_start + m.start()] = len(out)
     out.append((current, True, None))
     if not confirmed or len(starts) != len(out):
         return out, None
-    return out, (starts, operators)
+    return out, starts
 
 
 def split_redirects(toks, lexed=True):
@@ -1418,11 +1405,23 @@ def _word_at(text, i):
     """The maximal run of characters starting at I that are not whitespace,
     a statement separator/operator, a quote, `$`, or a backtick -- used only
     to recognise `case`/`esac` as WHOLE words, never as a substring of a
-    longer identifier (`case-sensitive` is one word, not the keyword)."""
+    longer identifier (`case-sensitive` is one word, not the keyword).
+
+    A backslash and the character it escapes stay inside the word, whatever
+    that character is (C2): an escaped quote is a literal part of the word,
+    never the end of it. Stopping at the quote would hand the quote back to
+    scan_structure()'s main loop as a quote start (`echo it\\'s`,
+    `echo a\\"b`), so the rest of the text would be read as quoted."""
     j = i
     n = len(text)
-    while j < n and text[j] not in _SUB_WORD_STOP:
-        j += 1
+    while j < n:
+        c = text[j]
+        if c == "\\" and j + 1 < n:
+            j += 2
+        elif c in _SUB_WORD_STOP:
+            break
+        else:
+            j += 1
     return text[i:j], j
 
 
@@ -1448,7 +1447,10 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
       quoted span, a comment span, or a top-level substitution span (mode
       `shell` only -- `heredoc-body` mode returns `[]` here, since quotes
       and comments are literal at that mode's own top level and no caller
-      needs separator counting over heredoc-body text).
+      needs separator counting over heredoc-body text). No caller counts
+      separators from these ranges any more: which statement a position
+      belongs to is read from lex_segments() itself (_lex_layout()), so
+      there is one separator rule, not two.
     - CONTAINING_SPAN: {checkpoint position: the innermost span enclosing
       it, or None} for every position in CHECKPOINTS, found for free while
       the scan passes each one -- the position-only way a heredoc operator
@@ -1470,6 +1472,9 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
        opens no span, in either mode.
     4. An unterminated span is reported as unterminated (in UNMATCHED) and
        extends to the end of the text; it is never truncated silently.
+    5. Outside quotes, a backslash-escaped `'` or `"` is a literal
+       character, never a quote start (C2) -- in the main loop and in the
+       word reading that tells `case` and `esac` apart (_word_at()) alike.
 
     HONOR_SINGLE_QUOTES defaults to True, which is postcondition 2 exactly
     (real shell semantics: single quotes suppress expansion, so a `$(`/
@@ -1901,10 +1906,10 @@ def _build_statement_table(chunk, marked_chunk):
     heredoc's destination decision instead of each heredoc re-lexing the
     chunk on its own.
 
-    Returns (TABLE, LAYOUT): LAYOUT is _lex_layout()'s offsets for the same
-    lexing pass (None when they are unavailable), in MARKED_CHUNK's own
-    coordinates."""
-    segments, layout = _lex_layout(marked_chunk, True)
+    Returns (TABLE, STARTS): STARTS is _lex_layout()'s statement start
+    offsets for the same lexing pass (None when they are unavailable), in
+    MARKED_CHUNK's own coordinates."""
+    segments, starts = _lex_layout(marked_chunk, True)
     case_stack = []
     table = []
     for toks, lexed, sep in segments:
@@ -1953,7 +1958,7 @@ def _build_statement_table(chunk, marked_chunk):
                 is_assignment_only=False, opens_group=None, closes_group=None,
                 is_compound_keyword=False,
             ))
-    return table, layout
+    return table, starts
 
 
 def _track_groups(table):
@@ -2172,6 +2177,17 @@ def _marked_offsets(top_spans):
     return ends, removed
 
 
+def _statement_holds_operator(text, pos, marked_pos, starts, idx, total):
+    """Whether the lex_segments() statement IDX contains the heredoc operator
+    that starts at POS in TEXT (FR2): MARKED_POS, POS in the text the lexer
+    saw, lies within the statement's own span (STARTS[IDX] up to the next
+    statement's start, or TOTAL for the last one), and what sits at POS is
+    the `<<` of an operator. A plain position comparison: no re-lexing, one
+    check per heredoc (NFR3)."""
+    end = starts[idx + 1] if idx + 1 < len(starts) else total
+    return starts[idx] <= marked_pos < end and text.startswith("<<", pos)
+
+
 def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
     """The Component 3 table (built once per TEXT, cached in TABLES_CACHE
     keyed by MEMO_KEY) plus the statement index at POS in TEXT, plus that
@@ -2184,10 +2200,10 @@ def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
     is a separator here exactly where it is one to lex_segments().
 
     OPERATOR says POS is the start of a heredoc's own `<<` operator, which
-    the statement selected for it has to contain (FR2): when the lexer does
-    not show a heredoc operator at POS in that statement, None comes back,
-    which the callers read as an undetermined destination -- never data. A
-    text whose offsets are unavailable (it does not lex) also gives None."""
+    the statement selected for it has to contain (FR2,
+    _statement_holds_operator()). When it does not, or when the text does
+    not lex so no statement offsets exist, None comes back, which the
+    callers read as an undetermined destination -- never data."""
     cached = tables_cache.get(memo_key)
     if cached is None:
         spans, parent_of, unmatched, _opaque, _containing = scan_structure(
@@ -2195,31 +2211,32 @@ def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
         )
         top_spans = _top_level_spans(spans, parent_of)
         marked = _mark_substitutions(text, top_spans, 0)
-        table, layout = _build_statement_table(text, marked)
+        table, starts = _build_statement_table(text, marked)
         group_closer_of, open_groups_at, mismatched = _track_groups(table)
         cached = (
-            table, group_closer_of, open_groups_at, {}, unmatched, layout,
-            _marked_offsets(top_spans), mismatched,
+            table, group_closer_of, open_groups_at, {}, unmatched, starts,
+            len(marked), _marked_offsets(top_spans), mismatched,
         )
         tables_cache[memo_key] = cached
     (
-        table, group_closer_of, open_groups_at, pipe_memo, unmatched, layout,
-        offsets, mismatched,
+        table, group_closer_of, open_groups_at, pipe_memo, unmatched, starts,
+        marked_len, offsets, mismatched,
     ) = cached
     if any(p < pos for p in unmatched):
         return None
-    if layout is None:
+    if starts is None:
         return None
     # POS in the text the lexer actually saw (substitutions replaced by their
     # markers), then a bisect over the statement starts: O(log n) per query
     # against one O(n) pass shared by every heredoc in TEXT (NFR3).
     ends, removed = offsets
     marked_pos = pos - removed[bisect.bisect_right(ends, pos)]
-    starts, operators = layout
     idx = bisect.bisect_right(starts, marked_pos) - 1
     if idx >= len(table):
         return None
-    if operator and operators.get(marked_pos) != idx:
+    if operator and not _statement_holds_operator(
+        text, pos, marked_pos, starts, idx, marked_len
+    ):
         return None
     if mismatched:
         # This table's own group tracking saw a closer that did not match
