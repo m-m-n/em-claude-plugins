@@ -24,6 +24,14 @@ Covers the task's Acceptance Criteria
   below); the full suite and the invariants checker are run by the
   implementer, not from inside this module.
 
+sca-scanner-project-config-isolation task0001 moves where npm and cargo run:
+their scanner no longer starts in the project directory but in a per-group
+isolation directory outside the project tree that holds copies of the group's
+inputs. The recording stub therefore also records the content of the copied
+input in its working directory, and the project a launch belonged to is read
+from that content (`launch_projects`) -- the project directory is still
+asserted for go and pip, whose cwd is unchanged.
+
 Per the task's Test Notes: no real scanner runs. Each tool is an executable
 stub on a PATH restricted to its own directory; on every launch it appends
 its working directory and argument vector to a record file outside the
@@ -124,11 +132,19 @@ import os
 import sys
 
 CONFIG = json.loads(__CONFIG__)
+project = None
+for input_name in ("package.json", "Cargo.lock"):
+    input_path = os.path.join(os.getcwd(), input_name)
+    if os.path.isfile(input_path):
+        with open(input_path, encoding="utf-8") as fh:
+            project = fh.read().strip()
+        break
 with open(CONFIG["record"], "a", encoding="utf-8") as rec:
     rec.write(json.dumps({
         "tool": CONFIG["tool"],
         "argv": sys.argv[1:],
         "cwd": os.getcwd(),
+        "project": project,
     }) + "\\n")
 if CONFIG["write_file"]:
     with open(CONFIG["write_file"], "w", encoding="utf-8") as out:
@@ -207,32 +223,69 @@ class TestBuildScanJobWorkingDirectoryAndPrecondition(unittest.TestCase):
         "pip": "/x/pip-audit",
     }
     MANIFESTS = {"npm": "package.json", "cargo": "Cargo.toml", "go": "go.mod"}
+    # sca-scanner-project-config-isolation: npm / cargo run from the
+    # isolation directory of their group, never from the project directory.
+    ISOLATED = {"npm", "cargo"}
+    ISO_DIRECTORIES = {"npm": "/iso/npm", "cargo": "/iso/cargo"}
+
+    @staticmethod
+    def prepared(name):
+        if name == "npm":
+            return SCAN.PreparedInputs(
+                directory="/iso/npm",
+                files={"manifest": "/iso/npm/package.json", "anchor": "/iso/npm/package-lock.json"},
+            )
+        if name == "cargo":
+            return SCAN.PreparedInputs(
+                directory="/iso/cargo", files={"lockfile": "/iso/cargo/Cargo.lock"}
+            )
+        return None
 
     def build(self, name, target, project_root="/proj", **kwargs):
+        if name in self.ISOLATED:
+            kwargs.setdefault("prepared_inputs", self.prepared(name))
         return SCAN.build_scan_job(
             self.by_name[name], target, project_root, self.EXECUTABLES[name], **kwargs
         )
 
-    def test_a_nested_target_runs_in_the_project_root_joined_with_its_directory(self):
+    def expected_cwd(self, name, project_directory):
+        return self.ISO_DIRECTORIES.get(name, project_directory)
+
+    def test_a_nested_target_runs_in_its_directory_and_keeps_its_label(self):
+        # go: the project root joined with the target's directory; npm and
+        # cargo: the isolation directory. The label is always the target.
         for name, manifest in self.MANIFESTS.items():
             with self.subTest(ecosystem=name):
                 job = self.build(name, f"services/api/{manifest}")
-                self.assertEqual(job["cwd"], "/proj/services/api")
+                self.assertEqual(job["cwd"], self.expected_cwd(name, "/proj/services/api"))
                 self.assertEqual(job["manifest"], f"services/api/{manifest}")
 
     def test_a_single_level_target_runs_in_that_directory(self):
-        self.assertEqual(self.build("npm", "svc/package.json")["cwd"], "/proj/svc")
+        self.assertEqual(self.build("go", "svc/go.mod")["cwd"], "/proj/svc")
+        self.assertEqual(self.build("npm", "svc/package.json")["cwd"], "/iso/npm")
 
     def test_a_root_target_runs_in_exactly_the_string_form_of_the_project_root(self):
         for name, manifest in self.MANIFESTS.items():
             with self.subTest(ecosystem=name):
-                self.assertEqual(self.build(name, manifest)["cwd"], "/proj")
-        self.assertEqual(self.build("npm", "package.json", project_root=Path("/proj"))["cwd"], "/proj")
-        self.assertEqual(self.build("npm", "package.json", project_root="/proj/")["cwd"], "/proj/")
-        self.assertEqual(self.build("npm", "package.json", project_root="rel/root")["cwd"], "rel/root")
+                self.assertEqual(self.build(name, manifest)["cwd"], self.expected_cwd(name, "/proj"))
+        self.assertEqual(self.build("go", "go.mod", project_root=Path("/proj"))["cwd"], "/proj")
+        self.assertEqual(self.build("go", "go.mod", project_root="/proj/")["cwd"], "/proj/")
+        self.assertEqual(self.build("go", "go.mod", project_root="rel/root")["cwd"], "rel/root")
 
-    def test_a_nested_target_under_a_path_object_root_joins_lexically(self):
-        job = self.build("cargo", "crates/a/Cargo.toml", project_root=Path("/proj"))
+    def test_an_npm_or_cargo_job_never_runs_in_the_project_root_or_a_project_directory(self):
+        for name in sorted(self.ISOLATED):
+            for target in (self.MANIFESTS[name], f"services/api/{self.MANIFESTS[name]}"):
+                with self.subTest(ecosystem=name, target=target):
+                    job = self.build(name, target, project_root=Path("/proj"))
+                    self.assertEqual(job["cwd"], self.ISO_DIRECTORIES[name])
+                    self.assertFalse(job["cwd"].startswith("/proj"))
+                    with self.assertRaises(SCAN.JobConstructionError):
+                        SCAN.build_scan_job(
+                            self.by_name[name], target, "/proj", self.EXECUTABLES[name]
+                        )
+
+    def test_a_nested_go_target_under_a_path_object_root_joins_lexically(self):
+        job = self.build("go", "crates/a/go.mod", project_root=Path("/proj"))
         self.assertEqual(job["cwd"], "/proj/crates/a")
 
     def test_every_pip_form_keeps_the_project_root_as_the_working_directory(self):
@@ -273,8 +326,9 @@ class TestBuildScanJobWorkingDirectoryAndPrecondition(unittest.TestCase):
             self.build("npm", "/abs/package.json")
 
     def test_a_directory_name_merely_containing_dots_is_not_a_dot_dot_segment(self):
-        job = self.build("npm", "a..b/..c/package.json")
+        job = self.build("go", "a..b/..c/go.mod")
         self.assertEqual(job["cwd"], "/proj/a..b/..c")
+        self.assertEqual(self.build("npm", "a..b/..c/package.json")["manifest"], "a..b/..c/package.json")
 
     def test_a_nested_job_is_built_without_opening_a_file_or_launching_a_process(self):
         with mock.patch("builtins.open", side_effect=AssertionError("file opened")), \
@@ -283,7 +337,7 @@ class TestBuildScanJobWorkingDirectoryAndPrecondition(unittest.TestCase):
                 mock.patch("subprocess.run", side_effect=AssertionError("process launched")):
             for name, manifest in self.MANIFESTS.items():
                 job = self.build(name, f"services/api/{manifest}")
-                self.assertEqual(job["cwd"], "/proj/services/api")
+                self.assertEqual(job["cwd"], self.expected_cwd(name, "/proj/services/api"))
                 self.assertEqual(job["argv"][0], self.EXECUTABLES[name])
 
 
@@ -311,9 +365,15 @@ class BindingCase(unittest.TestCase):
 
     # -- fixtures ---------------------------------------------------------
 
-    def write(self, rel, data="{}\n", base=None):
+    def write(self, rel, data=None, base=None):
+        """Writes `rel` below the project root (or `base`). Without `data`
+        the content names the file's directory, so the copy an npm / cargo
+        scanner finds in its isolation directory identifies the project it
+        was made from."""
         path = (base or self.root) / rel
         path.parent.mkdir(parents=True, exist_ok=True)
+        if data is None:
+            data = json.dumps({"project": os.path.dirname(rel) or "."}) + "\n"
         if isinstance(data, bytes):
             path.write_bytes(data)
         else:
@@ -328,7 +388,7 @@ class BindingCase(unittest.TestCase):
     def cargo_project(self, rel_dir=""):
         prefix = f"{rel_dir}/" if rel_dir else ""
         self.write(f"{prefix}Cargo.toml", "[dependencies]\n")
-        self.write(f"{prefix}Cargo.lock", "# lock\n")
+        self.write(f"{prefix}Cargo.lock", f"# lock {rel_dir or '.'}\n")
 
     def go_project(self, rel_dir=""):
         prefix = f"{rel_dir}/" if rel_dir else ""
@@ -373,6 +433,33 @@ class BindingCase(unittest.TestCase):
     def launch_cwds(self, tool=None):
         return [c["cwd"] for c in self.launches() if tool is None or c["tool"] == tool]
 
+    def launch_projects(self, tool=None):
+        """The project directory (relative to the project root, `.` for the
+        root) each launch belonged to, in launch order. go and pip start in
+        their project directory; an npm / cargo scanner starts in an
+        isolation directory OUTSIDE the project tree, so the project is read
+        from the copied input the stub recorded."""
+        projects = []
+        for call in self.launches():
+            if tool is not None and call["tool"] != tool:
+                continue
+            if call["tool"] == "npm":
+                self.assertOutsideTheProject(call["cwd"])
+                projects.append(json.loads(call["project"])["project"])
+            elif call["tool"] == "cargo-audit":
+                self.assertOutsideTheProject(call["cwd"])
+                projects.append(call["project"].split(" ", 2)[2])
+            else:
+                projects.append(os.path.relpath(call["cwd"], self.real()))
+        return projects
+
+    def assertOutsideTheProject(self, path):
+        real = Path(path).resolve()
+        self.assertFalse(
+            real == self.root.resolve() or self.root.resolve() in real.parents,
+            "an npm / cargo scanner started inside the project tree",
+        )
+
     def assertNotLaunched(self):
         self.assertEqual(self.launches(), [], "a scanner was launched")
 
@@ -394,7 +481,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         result = self.scan(["services/api/package.json"])
         calls = self.launches()
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0]["cwd"], self.real("services/api"))
+        self.assertEqual(self.launch_projects(), ["services/api"])
         self.assertEqual([f["file"] for f in result["findings"]], ["services/api/package.json"])
         self.assertFalse(result["skipped"], result)
         self.assertIsNone(result["skip_reason"])
@@ -405,9 +492,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.npm_project("services/web")
         self.install_npm()
         result = self.scan(["services/web/package.json", "services/api/package.json"])
-        self.assertEqual(
-            self.launch_cwds(), [self.real("services/api"), self.real("services/web")]
-        )
+        self.assertEqual(self.launch_projects(), ["services/api", "services/web"])
         self.assertEqual(
             [f["file"] for f in result["findings"]],
             ["services/api/package.json", "services/web/package.json"],
@@ -418,7 +503,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.npm_project("")
         self.install_npm()
         result = self.scan(["package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real()])
+        self.assertEqual(self.launch_projects(), ["."])
         self.assertEqual([f["file"] for f in result["findings"]], ["package.json"])
 
     def test_the_root_project_is_processed_before_a_nested_one(self):
@@ -426,7 +511,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.npm_project("a")
         self.install_npm()
         self.scan(["a/package.json", "package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real(), self.real("a")])
+        self.assertEqual(self.launch_projects(), [".", "a"])
 
     def test_groups_are_ordered_by_plain_string_comparison_of_the_directory(self):
         for directory in ("b", "a-b", "a/b", "a"):
@@ -434,10 +519,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.install_npm()
         self.scan(["b/package.json", "a/b/package.json", "a-b/package.json", "a/package.json"])
         # plain string order: "a" < "a-b" < "a/b" < "b"
-        self.assertEqual(
-            self.launch_cwds(),
-            [self.real("a"), self.real("a-b"), self.real("a/b"), self.real("b")],
-        )
+        self.assertEqual(self.launch_projects(), ["a", "a-b", "a/b", "b"])
 
     def test_cargo_projects_run_in_their_own_directories(self):
         self.cargo_project("crates/a")
@@ -445,7 +527,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.install_cargo()
         result = self.scan(["crates/b/Cargo.toml", "crates/a/Cargo.toml"])
         self.assertEqual(
-            self.launch_cwds("cargo-audit"), [self.real("crates/a"), self.real("crates/b")]
+            self.launch_projects("cargo-audit"), ["crates/a", "crates/b"]
         )
         self.assertFalse(result["skipped"], result)
 
@@ -463,7 +545,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.npm_project("a")
         self.install_npm()
         result = self.scan(["a/package.json", "a/./package-lock.json", "a/package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real("a")])
+        self.assertEqual(self.launch_projects(), ["a"])
         self.assertEqual([f["file"] for f in result["findings"]], ["a/package.json"])
 
     def test_dot_dot_that_stays_inside_the_root_is_one_more_spelling_of_the_directory(self):
@@ -471,7 +553,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.npm_project("b")
         self.install_npm()
         result = self.scan(["a/package.json", "b/../a/package.json", "./a/package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real("a")])
+        self.assertEqual(self.launch_projects(), ["a"])
         self.assertEqual([f["file"] for f in result["findings"]], ["a/package.json"])
 
     def test_a_symlinked_directory_alias_shares_the_group_of_the_real_directory(self):
@@ -479,7 +561,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.symlink("alias", self.root / "a")
         self.install_npm()
         result = self.scan(["alias/package.json", "a/package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real("a")])
+        self.assertEqual(self.launch_projects(), ["a"])
         self.assertEqual(len(result["findings"]), 1)
         self.assertEqual(result["findings"][0]["file"], "a/package.json")
 
@@ -493,7 +575,7 @@ class TestEachProjectIsAuditedInItsOwnDirectory(BindingCase):
         self.npm_project("a")
         self.install_npm()
         result = self.scan(["a/package-lock.json"])
-        self.assertEqual(self.launch_cwds(), [self.real("a")])
+        self.assertEqual(self.launch_projects(), ["a"])
         self.assertEqual([f["file"] for f in result["findings"]], ["a/package-lock.json"])
 
     def test_a_cargo_project_findings_keep_directness_from_its_own_manifest(self):
@@ -554,7 +636,7 @@ class TestAProjectWithoutItsAnchorIsNeverLaunched(BindingCase):
         self.write("svc/yarn.lock", "# yarn\n")
         self.install_npm()
         result = self.scan(["svc/yarn.lock"])
-        self.assertEqual(self.launch_cwds(), [self.real("svc")])
+        self.assertEqual(self.launch_projects(), ["svc"])
         self.assertEqual([f["file"] for f in result["findings"]], ["svc/yarn.lock"])
 
     def test_npm_lockfile_without_its_manifest_is_unbindable(self):
@@ -567,7 +649,7 @@ class TestAProjectWithoutItsAnchorIsNeverLaunched(BindingCase):
         self.write("npm-shrinkwrap.json")
         self.install_npm()
         result = self.scan(["package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real()])
+        self.assertEqual(self.launch_projects(), ["."])
         self.assertFalse(result["skipped"], result)
 
     def test_cargo_manifest_without_cargo_lock_at_the_root(self):
@@ -658,7 +740,7 @@ class TestEscapesAreUnbindableAndNeverFallBack(BindingCase):
     def assertBadProjectIsUnbindable(self, bad_changed):
         result = self.scan(list(bad_changed) + ["ok/package.json"])
         self.assertSkipped(result, NPM_UNBINDABLE)
-        self.assertEqual(self.launch_cwds(), [self.real("ok")])
+        self.assertEqual(self.launch_projects(), ["ok"])
         self.assertEqual([f["file"] for f in result["findings"]], ["ok/package.json"])
         return result
 
@@ -704,7 +786,7 @@ class TestEscapesAreUnbindableAndNeverFallBack(BindingCase):
         self.write("svc/good/real-lock.json")
         self.symlink("svc/good/package-lock.json", self.root / "svc/good/real-lock.json")
         result = self.scan(["svc/good/package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real("svc/good")])
+        self.assertEqual(self.launch_projects(), ["svc/good"])
         self.assertFalse(result["skipped"], result)
 
     def test_manifest_a_directory_is_unbindable(self):
@@ -770,7 +852,7 @@ class TestEscapesAreUnbindableAndNeverFallBack(BindingCase):
         # same, valid project is still audited
         result = self.scan([str(self.root / "ok/package.json"), "ok/package.json"])
         self.assertSkipped(result, NPM_UNBINDABLE)
-        self.assertEqual(self.launch_cwds(), [self.real("ok")])
+        self.assertEqual(self.launch_projects(), ["ok"])
         self.assertEqual([f["file"] for f in result["findings"]], ["ok/package.json"])
 
 
@@ -786,7 +868,7 @@ class TestAggregation(BindingCase):
         result = self.scan(["bad/package.json", "good/package.json"])
         self.assertSkipped(result, NPM_UNBINDABLE)
         self.assertEqual([f["file"] for f in result["findings"]], ["good/package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real("good")])
+        self.assertEqual(self.launch_projects(), ["good"])
         self.assertEqual(
             result["summary"],
             "Scanned npm; 1 finding(s) at or above threshold. "
@@ -838,7 +920,7 @@ class TestAggregation(BindingCase):
         result = self.scan(["a/package.json", "c/Cargo.toml", "g/go.sum"])
         self.assertSkipped(result, "cargo_project_unbindable+go_project_unbindable")
         self.assertEqual([f["file"] for f in result["findings"]], ["a/package.json"])
-        self.assertEqual(self.launch_cwds(), [self.real("a")])
+        self.assertEqual(self.launch_projects(), ["a"])
 
     def test_every_ecosystem_is_named_once_in_the_scanned_list_across_groups(self):
         self.npm_project("a")
@@ -1029,12 +1111,12 @@ class TestDeterminism(BindingCase):
     def test_reversing_the_changed_files_keeps_skip_reason_and_the_launch_order(self):
         changed = self.mixed_fixture()
         forward = self.scan(changed)
-        forward_cwds = self.launch_cwds()
+        forward_cwds = self.launch_projects()
         self.record_path.write_text("", encoding="utf-8")
         backward = self.scan(list(reversed(changed)))
-        backward_cwds = self.launch_cwds()
+        backward_cwds = self.launch_projects()
         self.assertEqual(forward["skip_reason"], backward["skip_reason"])
-        self.assertEqual(forward_cwds, [self.real("a"), self.real("b"), self.real("c")])
+        self.assertEqual(forward_cwds, ["a", "b", "c"])
         self.assertEqual(backward_cwds, forward_cwds)
 
     def test_the_result_does_not_depend_on_which_spelling_comes_first(self):

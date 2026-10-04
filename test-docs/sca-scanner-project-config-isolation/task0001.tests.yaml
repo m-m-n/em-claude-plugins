@@ -1,0 +1,161 @@
+# task0001 test record. baseline: python3 -m unittest discover -s tests (7088 tests, 0 failures) and check-plugin-invariants.py (all PASS) before any change.
+# final: the same two commands re-executed after the implementation (7154 tests, 0 failures; invariants all PASS).
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestNpmRunsFromAnIsolationDirectory.test_ac1_cwd_is_outside_the_project_and_free_of_project_configuration
+    - tests.test_sca_scanner_project_config_isolation.TestNpmRunsFromAnIsolationDirectory.test_ac1_the_copies_are_regular_files_not_links
+    - tests.test_sca_scanner_project_config_isolation.TestNpmRunsFromAnIsolationDirectory.test_ac1_a_nested_project_runs_from_an_isolation_directory_with_its_own_label
+    - tests.test_sca_scanner_project_config_isolation.TestNpmRunsFromAnIsolationDirectory.test_ac1_shrinkwrap_is_the_only_anchor_copied_when_both_anchors_exist
+    - tests.test_sca_scanner_project_config_isolation.TestNpmRunsFromAnIsolationDirectory.test_ac1_a_lockfile_only_change_is_labelled_with_that_lockfile
+    - tests.test_sca_scanner_project_config_isolation.TestNpmRunsFromAnIsolationDirectory.test_ac1_the_project_tree_is_left_untouched
+    red_confirmed: true
+    red_reason: 'Before the implementation the npm stub was started with the project root as its cwd.
+      Observed failures: ''AssertionError: True is not false : the cwd is inside the reviewed tree'' (cwd
+      test and nested-project test); ''Lists differ: [npm-shrinkwrap.json, package-lock.json, package.json]
+      != [npm-shrinkwrap.json, package.json]'' (the scanner saw the whole project directory); ''AssertionError:
+      False is not true : the cwd is not under the temp parent'' (copies-are-regular-files, lockfile-only
+      label and tree-untouched tests).'
+  AC-2:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestCargoRunsFromAnIsolationDirectoryWithTheCopiedLockfile.test_ac2_cwd_argv_and_copy_of_a_project_with_an_adversarial_audit_config
+    - tests.test_sca_scanner_project_config_isolation.TestCargoRunsFromAnIsolationDirectoryWithTheCopiedLockfile.test_ac2_a_vulnerability_in_a_crate_direct_in_the_original_cargo_toml_is_judged_direct
+    - tests.test_sca_scanner_project_config_isolation.TestCargoRunsFromAnIsolationDirectoryWithTheCopiedLockfile.test_ac2_the_registry_cargo_entry_declares_the_lockfile_target_flag
+    - tests.test_sca_scanner_project_config_isolation.TestCargoRunsFromAnIsolationDirectoryWithTheCopiedLockfile.test_ac2_job_assembly_places_the_declared_flag_right_after_audit
+    - tests.test_sca_scanner_project_config_isolation.TestCargoRunsFromAnIsolationDirectoryWithTheCopiedLockfile.test_ac2_job_assembly_reads_the_declaration_it_does_not_hard_code_the_flag
+    - tests.test_sca_scanner_project_config_isolation.TestCargoRunsFromAnIsolationDirectoryWithTheCopiedLockfile.test_ac2_a_cargo_entry_without_the_declaration_yields_no_job
+    - tests.test_sca_scanner_project_config_isolation.TestCargoRunsFromAnIsolationDirectoryWithTheCopiedLockfile.test_ac2_the_project_tree_is_left_untouched
+    - tests.test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_cargo_job_argv0_is_the_absolute_standalone_binary_path
+    - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_cargo_argv_carries_the_declared_target_flag_and_the_copy_right_after_audit
+    - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_directness_is_judged_from_the_original_cargo_toml_of_the_reviewed_tree
+    red_confirmed: true
+    red_reason: 'Observed before the implementation, in the new module: ''KeyError: target_flag'' (the
+      registry cargo entry declared no target flag); ''AssertionError: True is not false : the cwd is
+      inside the reviewed tree'' (cargo-audit started in the project root); ''AttributeError: module has
+      no attribute PreparedInputs'' (job-assembly tests, which could not even build a prepared-input value);
+      ''AssertionError: False is not true : the cwd is not under the temp parent'' (direct-judgment and
+      tree-untouched tests). Not observed red: the three existing tests from other modules at the end
+      of the list (the cargo argv expectation in test_sca_scan_invocation and test_sca_scan_job_grouping,
+      and the original-Cargo.toml directness test in test_sca_scan_normalization) were updated or added
+      after the implementation; the directness test passes with and without the change because directness
+      was always read from the original Cargo.toml.'
+  AC-3:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestEachGroupGetsItsOwnDirectoryAndItsOwnCopies.test_ac3_inputs_directories_order_and_labels_of_several_groups
+    - tests.test_sca_scanner_project_config_isolation.TestEachGroupGetsItsOwnDirectoryAndItsOwnCopies.test_ac3_an_allowed_same_directory_symlink_is_copied_as_a_regular_file
+    - tests.test_sca_scanner_project_config_isolation.TestEachGroupGetsItsOwnDirectoryAndItsOwnCopies.test_ac3_a_symlinked_cargo_lock_in_the_same_directory_is_copied_as_a_regular_file
+    - tests.test_sca_scanner_project_config_isolation.TestEachGroupGetsItsOwnDirectoryAndItsOwnCopies.test_ac3_groups_are_launched_in_the_order_they_were_before_the_change
+    - tests.test_sca_per_project_scan_binding.TestEachProjectIsAuditedInItsOwnDirectory.test_ts2_two_projects_run_once_each_in_ascending_path_order
+    - tests.test_sca_per_project_scan_binding.TestEachProjectIsAuditedInItsOwnDirectory.test_groups_are_ordered_by_plain_string_comparison_of_the_directory
+    - tests.test_sca_per_project_scan_binding.TestEachProjectIsAuditedInItsOwnDirectory.test_the_root_project_is_processed_before_a_nested_one
+    - tests.test_sca_per_project_scan_binding.TestDeterminism.test_reversing_the_changed_files_keeps_skip_reason_and_the_launch_order
+    red_confirmed: true
+    red_reason: 'Observed before the implementation, in the new module: ''IndexError: list index out of
+      range'' (the several-groups test read the copied lockfile path from the cargo argv, which had no
+      --file); ''AssertionError: False is not true'' (both symlink tests: the scanner saw the original
+      symlink in the project directory, not a regular-file copy); ''AssertionError: False is not true
+      : the cwd is not under the temp parent'' (order test, so the unchanged order is only meaningful
+      together with the new location). Not observed red: the four existing tests from test_sca_per_project_scan_binding
+      at the end of the list were rewritten after the implementation to read the project from the copied
+      input instead of the cwd.'
+  AC-4:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_tmpdir_pointing_into_the_tree
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_temp_pointing_into_the_tree
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_tmp_pointing_into_the_tree
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_the_process_wide_override_pointing_into_the_tree
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_a_temp_parent_that_resolves_through_a_symlink_into_the_tree
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_the_project_root_itself_as_the_temp_parent
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_a_sibling_whose_name_merely_starts_with_the_root_name_is_not_inside_it
+    - tests.test_sca_scanner_project_config_isolation.TestATempParentInsideTheReviewedTreeIsAnIsolationFailure.test_ac4_an_in_tree_environment_variable_is_ignored_while_the_override_names_a_valid_parent
+    red_confirmed: true
+    red_reason: 'Before the implementation the redirection was ignored and the scanners ran in the project
+      tree: "AssertionError: False is not true : {''findings'': [], ''summary'': ''Scanned cargo, npm;
+      0 finding(s) at or above threshold.'', ''skipped'': False, ''skip_reason'': None, ...}" for the
+      TMPDIR, TEMP, TMP, override, symlink and project-root cases; the two valid-parent cases failed with
+      ''the cwd is not under the temp parent''.'
+  AC-5:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestACopyFailureAffectsOnlyItsOwnGroup.test_ac5_a_failed_npm_copy_launches_nothing_for_that_group_and_scans_the_others
+    - tests.test_sca_scanner_project_config_isolation.TestACopyFailureAffectsOnlyItsOwnGroup.test_ac5_a_failed_cargo_copy_launches_nothing_for_that_group_and_scans_the_others
+    - tests.test_sca_scanner_project_config_isolation.TestACopyFailureAffectsOnlyItsOwnGroup.test_ac5_nothing_is_launched_when_every_group_fails
+    - tests.test_sca_scanner_project_config_isolation.TestACopyFailureAffectsOnlyItsOwnGroup.test_ac5_an_unreadable_input_is_an_isolation_failure_after_the_first_copy_succeeded
+    - tests.test_sca_scanner_project_config_isolation.TestACopyFailureAffectsOnlyItsOwnGroup.test_ac5_a_source_that_no_longer_passes_the_binding_rule_at_copy_time_is_not_copied
+    - tests.test_sca_scanner_project_config_isolation.TestACopyFailureAffectsOnlyItsOwnGroup.test_ac5_the_reason_never_falls_back_to_an_unbindable_or_execution_reason
+    red_confirmed: true
+    red_reason: 'Observed before the implementation: ''AttributeError: module has no attribute _copy_input''
+      (the four copy-failure tests inject their failure there); ''AssertionError: npm_empty_output !=
+      npm_isolation_failed'' (unreadable input: the scanner was launched in the tree and printed nothing);
+      ''AssertionError: Lists differ: [{tool: npm, ...}] != []'' (a source failing the binding rule at
+      copy time was still scanned).'
+  AC-6:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_nothing_remains_after_success
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_nothing_remains_after_a_tool_failure_without_output
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_nothing_remains_after_malformed_output
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_nothing_remains_after_an_undocumented_exit_status
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_nothing_remains_after_a_timeout
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_nothing_remains_after_a_failure_in_the_middle_of_copying
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_files_the_scanner_itself_left_behind_are_removed_too
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_the_cwd_grants_nothing_to_group_or_other
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_the_directory_is_owner_only_from_its_creation_not_by_the_umask
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationDirectoryIsOwnerOnlyAndAlwaysRemoved.test_ac6_no_group_after_the_first_sees_a_directory_left_by_an_earlier_one
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationWorkspaceItself.test_it_yields_a_directory_holding_exactly_the_inputs_and_removes_it_on_exit
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationWorkspaceItself.test_it_removes_the_directory_when_the_body_raises
+    - tests.test_sca_scanner_project_config_isolation.TestTheIsolationWorkspaceItself.test_a_failure_signal_carries_no_path
+    red_confirmed: true
+    red_reason: 'Before the implementation: ''AssertionError: False is not true : the cwd is not under
+      the temp parent'' (every removal test now first requires that the scanner ran from a directory under
+      the dedicated temp parent, so an empty temp parent cannot pass vacuously); ''AssertionError: 509
+      != 448'' (the umask-0 test: without isolation the cwd was the project directory, mode 0o775, not
+      0o700); ''AttributeError: module has no attribute SCAN_TIMEOUT_SECONDS'' (timeout test), ''_copy_input''
+      (mid-copy test), ''isolation_workspace'' and ''IsolationError'' (workspace tests).'
+  AC-7:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobIsPureWithPreparedInputs.test_ac7_npm_and_cargo_jobs_are_built_without_opening_a_file_or_starting_a_process
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobIsPureWithPreparedInputs.test_ac7_the_paths_of_the_prepared_inputs_need_not_exist
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobIsPureWithPreparedInputs.test_ac7_an_npm_or_cargo_job_never_has_the_project_root_as_its_cwd
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobIsPureWithPreparedInputs.test_ac7_a_prepared_value_for_the_wrong_shape_is_rejected
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobIsPureWithPreparedInputs.test_ac7_the_target_is_still_validated_as_a_plain_project_relative_path
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobIsPureWithPreparedInputs.test_ac7_pip_and_go_jobs_ignore_prepared_inputs
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobsNeedsThePreparedInputsOfNpmAndCargoGroups.test_jobs_of_npm_and_cargo_groups_run_in_the_prepared_directories
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobsNeedsThePreparedInputsOfNpmAndCargoGroups.test_a_group_without_prepared_inputs_yields_no_job_with_the_project_root_as_cwd
+    - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobsNeedsThePreparedInputsOfNpmAndCargoGroups.test_go_jobs_need_no_prepared_inputs
+    - tests.test_sca_scan_job_grouping.TestConstructionIsPure.test_build_scan_job_completes_for_root_and_nested_targets
+    - tests.test_sca_scan_job_grouping.TestConstructionIsPure.test_build_scan_jobs_completes_for_nested_alias_absolute_escaping_and_nul_inputs
+    - tests.test_sca_per_project_scan_binding.TestBuildScanJobWorkingDirectoryAndPrecondition.test_an_npm_or_cargo_job_never_runs_in_the_project_root_or_a_project_directory
+    red_confirmed: true
+    red_reason: 'Before the implementation: ''AttributeError: module has no attribute PreparedInputs''
+      (purity, nonexistent-path, wrong-shape, target-validation, pip/go-ignore and build_scan_jobs tests);
+      ''TypeError: build_scan_job() got an unexpected keyword argument prepared_inputs''; ''AssertionError:
+      JobConstructionError not raised'' (an npm / cargo job without prepared inputs was built with the
+      project root as cwd). test_go_jobs_need_no_prepared_inputs was already green (go behavior pre-existed).
+      Not observed red: the three existing tests at the end of the list were updated after the implementation
+      to pass prepared inputs.'
+  AC-8:
+    tests:
+    - tests.test_sca_scanner_project_config_isolation.TestEnvironmentsAndPinsAreUnchanged.test_ac8_child_environments_carry_no_added_or_overridden_variable_and_home_is_unchanged
+    - tests.test_sca_scanner_project_config_isolation.TestEnvironmentsAndPinsAreUnchanged.test_ac8_the_pin_table_holds_its_previous_values
+    - tests.test_sca_scanner_project_config_isolation.TestEnvironmentsAndPinsAreUnchanged.test_ac8_jobs_carry_the_runners_home_as_is
+    - tests.test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented.test_ac8_build_scan_job_describes_the_prepared_input_and_its_purity
+    - tests.test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented.test_ac8_run_ecosystem_command_describes_the_isolation_directory_cwd
+    - tests.test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented.test_ac8_scan_bound_group_describes_preparation_removal_and_failure_mapping
+    - tests.test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented.test_ac8_run_scan_names_both_isolation_reason_tokens
+    - tests.test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented.test_ac8_the_pin_comment_states_the_isolation_directory_and_the_trusted_scope
+    - tests.test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented.test_ac8_the_cargo_registry_comment_describes_isolation_directory_execution
+    - tests.test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented.test_ac8_none_of_them_still_describes_the_project_root_as_the_npm_or_cargo_cwd
+    - tests.test_sca_scanner_project_config_isolation.TestThisModuleUsesOnlyTheStandardLibrary.test_imports_are_standard_library_only
+    red_confirmed: true
+    red_reason: 'The documentation tests read the docstrings, the pin comment and the registry comment
+      and failed before the change: "AssertionError: ''isolation directory'' not found in ..." for build_scan_job,
+      run_ecosystem_command, _scan_bound_group, the ECOSYSTEM_ENV_PINS comment and the cargo registry
+      entry; "''npm_isolation_failed'' not found" for run_scan; the stale-description test matched ''npm,
+      cargo and go run in the project root'' and ''npm, cargo and go run INSIDE the project directory''.
+      test_ac8_jobs_carry_the_runners_home_as_is failed with AttributeError (PreparedInputs). Not observed
+      red, because the behavior pre-existed and this change must preserve it: test_ac8_child_environments_carry_no_added_or_overridden_variable_and_home_is_unchanged,
+      test_ac8_the_pin_table_holds_its_previous_values and the standard-library-imports test. The bullet
+      ''python3 -m unittest discover -s tests passes'' has no failing state to observe; it is verified
+      by the full-suite run recorded in final_failures.'
