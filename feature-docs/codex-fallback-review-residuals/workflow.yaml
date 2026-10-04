@@ -137,7 +137,8 @@ workflow:
   completed_at_commit: 0eec5b862c30b233132b5a8fe65abf4e97db799e
   base_commit: 6d15fb6142907aff9d799b1b60c15e3b9d19840e
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 74b5242d45b840b29a56ea0b47b03238d9147956
 - id: verify
   status: pending
   result: null
@@ -227,8 +228,8 @@ tasks:
     status: merged
     branch: em-workflow/codex-fallback-review-residuals/task0004
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -238,7 +239,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    performance: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
