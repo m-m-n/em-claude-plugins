@@ -2,54 +2,27 @@ schema_version: 1
 feature: codex-interactive-guard-hook
 created: '2026-10-05'
 base_branch: main
-goal: |
-  # Codex レビュアーの対話モード起動（python3 -i など）を PreToolUse hook で拒否する
-
-  Notion: https://www.notion.so/3ef3509ec8ee815aa6f5d65e6d909fea  (種別: 改善)
-
-  ## やりたいこと (必須)
-  `run_codex_exec.sh` から起動する `codex exec` に PreToolUse hook を渡し、Codex レビュアーが対話モードの処理系（`python3 -i` など）を起動するのを拒否する。
-
-  ## 背景・なぜ (必須)
-  Codex レビュアーが疑似端末付き（`tty:true`）で `python3 -i` を起動したまま終了し、孤児プロセスが CPU 100% で残り続けた（3 件、最長約 1 日）。
-  - サンドボックス内では疑似端末が制御端末にならず、端末が閉じても SIGHUP が届かない。
-  - Python 3.14 の対話モードは、閉じた端末からの読み込み失敗を再試行し続けて空回りする。
-  - bash の対話モードは同じ条件で自ら終了した。
-
-  ## 受け入れ条件 / 完了の定義 (必須)
-  - [ ] `em-workflow/scripts/run_codex_exec.sh` の既定の経路と `--litellm` の経路、`em-review/scripts/run_codex_exec.sh` が、`codex exec` に `-c "hooks.PreToolUse=[...]"` で hook を渡す
-  - [ ] 上記の起動に `--dangerously-bypass-hook-trust` を付ける
-  - [ ] hook のスクリプトを em-workflow と em-review の `scripts/` にそれぞれ置き、ファイル名を `codex-hook-` で始める（例: `scripts/codex-hook-interactive-guard.py`）
-  - [ ] matcher は `Bash`
-  - [ ] hook が次を拒否する
-    - [ ] `-i` を持つ処理系の起動（`python3 -i`、`python3 -B -i -c ...`、`bash -i` など）
-    - [ ] 引数なしの処理系の起動（`python3`、`node` など）
-  - [ ] hook が次を拒否しない
-    - [ ] `python3 -c '...'`
-    - [ ] `python3 script.py`
-    - [ ] `python3 - <<EOF`
-  - [ ] hook 自体が失敗したときは Codex の既定の挙動（コマンドを通す）に任せる
-  - [ ] レビュアーへの指示に、対話モードを使わず `python3 -c` などで確かめることを追記する
-
-  ## スコープ外 (任意)
-  - `codex exec` 終了後に残ったプロセスの後始末
-  - vertex-review / codex-harness（別リポジトリ）
-
-  ## 制約・前提 (任意)
-  `--ignore-user-config` は外さない。
-  Codex 0.160.0 で確認した事実:
-  - `-c` で渡した hook は `--ignore-user-config` と併用しても読まれる。
-  - `--dangerously-bypass-hook-trust` が無いと、hook は警告なしに実行されない。
-  - コードモード（`exec` ツール）の中から呼ばれた `tools.exec_command` にも hook が効き、拒否するとコードモード側では Promise が reject される。
-  - hook の入力の `tool_input` は `{"command": "..."}` のみで、`tty` は含まれない。
-  - hook が終了コード 1・コマンド不在・例外で失敗すると、Codex は `PreToolUse Failed` を出してコマンドを実行する。
-  - 拒否の出力形式: `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "..."}}`。終了コード 2 と stderr でも拒否になる。
-  - `write_stdin` には PreToolUse が効かない。
-
-  ## 追加指示（起動者）
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）。
-  - 不明点は Codex に相談し、相対的に良いと判断した案を採用する。
-  - その議論の内容を Notion に記録する。
+goal: "# Codex レビュアーの対話モード起動（python3 -i など）を PreToolUse hook で拒否する\n\nNotion: https://www.notion.so/3ef3509ec8ee815aa6f5d65e6d909fea\
+  \  (種別: 改善)\n\n## やりたいこと (必須)\n`run_codex_exec.sh` から起動する `codex exec` に PreToolUse hook を渡し、Codex レビュアーが対話モードの処理系（`python3\
+  \ -i` など）を起動するのを拒否する。\n\n## 背景・なぜ (必須)\nCodex レビュアーが疑似端末付き（`tty:true`）で `python3 -i` を起動したまま終了し、孤児プロセスが\
+  \ CPU 100% で残り続けた（3 件、最長約 1 日）。\n- サンドボックス内では疑似端末が制御端末にならず、端末が閉じても SIGHUP が届かない。\n- Python 3.14 の対話モードは、閉じた端末からの読み込み失敗を再試行し続けて空回りする。\n\
+  - bash の対話モードは同じ条件で自ら終了した。\n\n## 受け入れ条件 / 完了の定義 (必須)\n- [ ] `em-workflow/scripts/run_codex_exec.sh`\
+  \ の既定の経路と `--litellm` の経路、`em-review/scripts/run_codex_exec.sh` が、`codex exec` に `-c \"hooks.PreToolUse=[...]\"\
+  ` で hook を渡す\n- [ ] 上記の起動に `--dangerously-bypass-hook-trust` を付ける\n- [ ] hook のスクリプトを em-workflow と\
+  \ em-review の `scripts/` にそれぞれ置き、ファイル名を `codex-hook-` で始める（例: `scripts/codex-hook-interactive-guard.py`）\n\
+  - [ ] matcher は `Bash`\n- [ ] hook が次を拒否する\n  - [ ] `-i` を持つ処理系の起動（`python3 -i`、`python3 -B -i -c ...`、`bash\
+  \ -i` など）\n  - [ ] 引数なしの処理系の起動（`python3`、`node` など）\n- [ ] hook が次を拒否しない\n  - [ ] `python3 -c '...'`\n\
+  \  - [ ] `python3 script.py`\n  - [ ] `python3 - <<EOF`\n- [ ] hook 自体が失敗したときは Codex の既定の挙動（コマンドを通す）に任せる\n\
+  - [ ] レビュアーへの指示に、対話モードを使わず `python3 -c` などで確かめることを追記する\n\n## スコープ外 (任意)\n- `codex exec` 終了後に残ったプロセスの後始末\n\
+  - vertex-review / codex-harness（別リポジトリ）\n\n## 制約・前提 (任意)\n`--ignore-user-config` は外さない。\nCodex 0.160.0\
+  \ で確認した事実:\n- `-c` で渡した hook は `--ignore-user-config` と併用しても読まれる。\n- `--dangerously-bypass-hook-trust`\
+  \ が無いと、hook は警告なしに実行されない。\n- コードモード（`exec` ツール）の中から呼ばれた `tools.exec_command` にも hook が効き、拒否するとコードモード側では\
+  \ Promise が reject される。\n- hook の入力の `tool_input` は `{\"command\": \"...\"}` のみで、`tty` は含まれない。\n- hook\
+  \ が終了コード 1・コマンド不在・例外で失敗すると、Codex は `PreToolUse Failed` を出してコマンドを実行する。\n- 拒否の出力形式: `{\"hookSpecificOutput\"\
+  : {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\"\
+  : \"...\"}}`。終了コード 2 と stderr でも拒否になる。\n- `write_stdin` には PreToolUse が効かない。\n\n## 追加指示（起動者）\n- 実装完了後、integration\
+  \ ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch\
+  \ へ自動マージしない）。\n- 不明点は Codex に相談し、相対的に良いと判断した案を採用する。\n- その議論の内容を Notion に記録する。\n"
 parent_branch: em-workflow/codex-interactive-guard-hook/integration
 tier: full
 tier_decision:
@@ -114,7 +87,79 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Interactive-guard hook, case-table tests and hook-tests rule section
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    - .claude/rules/hook-tests.md
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR14
+    - NFR1
+    - NFR2
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: Register the interactive-guard hook on every codex exec launch
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/run_codex_exec.sh
+    - em-review/scripts/run_codex_exec.sh
+    - tests/test_codex_hook_wrapper_args.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - external-io
+    - auth
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR14
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: 'Reviewer guidance: verify without interactive mode'
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/agents/codex-reviewer.md
+    - em-review/agents/codex-reviewer.md
+    - tests/test_codex_reviewer_interactive_guidance.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR13
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -126,134 +171,189 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-6
+    - TS-10
+    - TS-12
   FR2:
     title: em-workflow --litellm 経路で hook を渡す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-6
+    - TS-12
   FR3:
     title: em-review で hook を渡す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-6
+    - TS-10
+    - TS-12
   FR4:
     title: 全起動に適用
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-6
   FR5:
     title: hook スクリプトの配置と同一性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-11
   FR6:
     title: -i 付き起動の拒否
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR7:
     title: 引数なし起動の拒否
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR8:
     title: 処理系名の判定
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR9:
     title: コマンドの解析範囲
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR10:
     title: 対話モードでない起動は通す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   FR11:
     title: fail-open
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
   FR12:
     title: 拒否の出力形式
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   FR13:
     title: レビュアーへの指示
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-7
   FR14:
     title: テストとルール
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-4
+    - TS-5
+    - TS-6
   NFR1:
     title: hook は標準ライブラリだけを使う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR2:
     title: 誤爆を避けることを優先する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-3
   NFR3:
     title: 既存テストの固定を壊さない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS-6
+    - TS-8
   NFR4:
     title: stub の codex と隔離した HOME でテストする
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-6
+    - TS-8
   NFR5:
     title: --ignore-user-config と --ignore-rules を外さない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-6
 batch:
   review_rework_count: 0
   verify_rework:

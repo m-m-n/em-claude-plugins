@@ -1,0 +1,17 @@
+schema_version: 1
+feature: codex-interactive-guard-hook
+records:
+- question_id: create-plan.fr7-option-only-allowlist
+  packet_id: null
+  answered_at: '2026-10-05T01:14:27+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - B
+  freeform: null
+  normalized_answer: 'B: FR7 の「オプションだけの起動」の拒否から、処理系ごとの非対話の情報表示・単発実行のオプション（node -v / --test / --check /
+    --run、perl -v、python -VV）を除外する。それ以外のオプションだけの起動は引き続き拒否する。'
+  resolution_note: 'gate: planner warning (FR7 が node -v / node --test / perl -v などの非対話起動まで拒否し NFR2 と食い違う)。options:
+    A=SPEC どおり --version/-V/-h/--help だけ通す, B=処理系ごとの小さな許可リスト, C=対話に影響しない既知オプションだけのときに拒否し他は通す。chosen: B。Codex（run_codex_exec.sh
+    readonly --litellm muse-spark）の理由: A は安全な確認まで止めてレビューの邪魔になる、C は未知のオプションを通して対話のまま残る恐れがある、B は拒否の向きを保ったまま誤爆を減らせる。tasks/task0001.md
+    の FR7 deny 条件と AC-3 にオーケストレーターが追記した。Opus escalation not run.'

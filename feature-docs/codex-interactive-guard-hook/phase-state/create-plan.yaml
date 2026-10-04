@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-interactive-guard-hook
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 57b643b4f79fc8cfd5c2b6946bb39eafbc125540
 last_input_digest: sha256:7bad3b31cd6a193b43c59bebc1888ee3206d76bb256ce69cc7857828fd1f25b7
@@ -10,11 +10,33 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:7bad3b31cd6a193b43c59bebc1888ee3206d76bb256ce69cc7857828fd1f25b7
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:b968f5a39c828efad562adb09367de05cacc0f7d429ab838a8ddb74fa1faa558
+artifacts:
+- path: feature-docs/codex-interactive-guard-hook/IMPLEMENTATION.md
+  sha256: sha256:78282b723b58f9fca8c120bc4bc1b80313e159d03108fee68140d30ad8227388
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-interactive-guard-hook/VERIFICATION.md
+  sha256: sha256:b4203113427ab108b7a8e5340a72e0b0fa962a87a136b0a2cdd31db00c82a0c3
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md
+  sha256: sha256:1a6d2e5a0135de51af3ef0c874eb9f9927841c4bb6949ea967cf9635717ce638
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-interactive-guard-hook/tasks/task0001.md
+  sha256: sha256:2c60bc94fb092184880b914744c8918ecf2f6e22e13111d0ff1ede5b15295c27
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-interactive-guard-hook/tasks/task0002.md
+  sha256: sha256:3c04fb06f646479ed3976c7aa212a718430d60578bc5985759c8a292cd0e82f5
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-interactive-guard-hook/tasks/task0003.md
+  sha256: sha256:499ef80b92b1240ffe53ae0828487323a12be24f15d6ea350d5459bb7d49c78e
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: codex-interactive-guard-hook-p0001
+  status: applied
+  base_input_digest: sha256:7bad3b31cd6a193b43c59bebc1888ee3206d76bb256ce69cc7857828fd1f25b7
+  base_workflow_blob: 38fa1155a10ad1e4c0f5174a7385bcc9914784d2
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
