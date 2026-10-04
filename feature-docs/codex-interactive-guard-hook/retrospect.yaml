@@ -1,0 +1,27 @@
+feature: codex-interactive-guard-hook
+collected_at: "2026-10-05T02:09:11+09:00"
+session_ids: [01a107e2-a056-74d5-a6fa-7308d3387dbb]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0002
+      files: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読みで score 2.45（バケット 2: 0.55 / 3: 0.45）となり、閾値表から full を採用した"
+    bases:
+      - basis: description_only
+        score: {"type": "score", "score": 2.09, "confidence": 0.73, "probabilities": {"0": 0.0, "1": 0.09, "2": 0.73, "3": 0.18}}
+        observed_at: "2026-10-05T00:28:40+09:00"
+      - basis: description_plus_code
+        score: {"type": "score", "score": 2.45, "confidence": 0.55, "probabilities": {"0": 0.0, "1": 0.0, "2": 0.55, "3": 0.45}}
+        observed_at: "2026-10-05T00:33:35+09:00"
+    pre_survey_estimate: {"changed_lines_approx": 400, "new_functions_needed": 6, "new_files_needed": ["em-workflow/scripts/codex-hook-interactive-guard.py", "em-review/scripts/codex-hook-interactive-guard.py", "tests/test_codex_interactive_guard.py"], "new_dependencies_needed": [], "covering_tests_exist": true, "work_still_required": true, "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 24, "body_change_kind": "new_logic", "change_containment": "multiple_modules", "changes_external_contract": true, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium 7 件が unresolved のまま残った（ガードの解析器 6 件、TB-3 の hook 信頼確認 1 件）。medium は自動修正の対象外のため、batch では未解決のまま完了まで流れる"
+  - "task0002 の deviation 2 件はパスを名指ししておらず、files への自動追加は行わなかった"
