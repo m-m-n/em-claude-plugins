@@ -1,0 +1,241 @@
+schema_version: 1
+feature: sca-scanner-project-config-isolation
+created: '2026-10-04'
+base_branch: main
+goal: |
+  # SCA 軸: スキャナが被レビュープロジェクトの設定（.npmrc / .cargo/audit.toml）を読み、結果を偽装できる
+
+  Notion タスク: https://www.notion.so/3d43509ec8ee813aa0f9d51dd6fe2cc9 （種別: バグ）
+
+  ## 現象
+  軸 2 のスキャナが、被レビュープロジェクト自身の設定ファイルを読んでしまう。PR の作者が設定ファイルを置くだけで、クリーンなスキャン結果を偽装できる。
+
+  1. `.npmrc` による audit トラフィックの迂回（finding de4c569f8b63818d, medium/security, scan-dependencies.py:762）
+  `ECOSYSTEM_ENV_PINS['npm']` がピン留めしているのは `npm_config_registry` と `npm_config_userconfig` だけで、`build_scan_job` は cwd を被レビュープロジェクトのルートに設定するため、npm はそのプロジェクトの `./.npmrc` を読む。registry のピンは効くが、`proxy` / `https-proxy` / `strict-ssl` / `cafile` / `noproxy` はピン留めされておらず、プロジェクトの `.npmrc` から無抵抗に読まれる。`https-proxy` と `strict-ssl=false` を設定すれば PR 作者が audit トラフィックに割り込み、クリーンな advisory 応答を返せる。`judge_scan_outcome` は well-formed な空の `vulnerabilities` オブジェクトを completed なスキャンとして受理する。
+
+  2. `.cargo/audit.toml` の読み込み（finding d5bca9d78798a428, medium/security, vuln-scanners.yaml:53）
+  `ECOSYSTEM_ENV_PINS['cargo']` は「cargo-audit を直接解決すれば `[alias]` ディスパッチが消える」という理由で意図的に空にしてある。それ自体は前進だが、cargo-audit は作業ディレクトリから `.cargo/audit.toml` を独立に読み込む。`build_scan_job` はその作業ディレクトリを被レビュープロジェクトのルートにしている。このファイルの `[advisories]` ignore リストと `[database]` の url / path 設定で、PR 作者が advisory を握りつぶしたり advisory データベースを差し替えたりできる。結果の空の `vulnerabilities.list` は `_has_success_structure` に completed なクリーンスキャンとして受理される。
+
+  ## 再現手順
+  1. 被レビュープロジェクトのルートに `.npmrc` を置き、`https-proxy=<攻撃者のプロキシ>` と `strict-ssl=false` を書く
+  2. `package.json` を変更した PR として軸 2 を走らせる
+  3. 攻撃者側のプロキシがクリーンな advisory 応答を返し、スキャンは `completed` / findings 0 件になる
+  4. cargo 側も同様に、`.cargo/audit.toml` の `[advisories] ignore` に対象 advisory を並べると findings 0 件になる
+
+  ## 期待する挙動
+  - npm: transport に影響する設定を env var の形でもピン留めする（`npm_config_proxy` / `npm_config_https_proxy` を空に、`npm_config_strict_ssl=true`、`npm_config_cafile` を unset）。あるいは、検証済みの manifest / lockfile のコピーを置いた隔離ディレクトリから npm を実行し、プロジェクトの `.npmrc` を探索経路に載せない
+  - cargo: 被レビューツリーの外のディレクトリから、明示的な `--file <検証済み Cargo.lock>` とピン留めした database 設定で cargo-audit を起動する。あるいは、クリーンな結果を受理する前にプロジェクト由来の audit 設定が探索経路に無いことを表明する
+
+  ## 完了の定義
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（プロジェクト由来の設定ファイルを置いた状態でスキャンし、その設定が効かないことを確認する）
+
+  ## 該当箇所
+  `em-workflow/scripts/scan-dependencies.py:762`（`ECOSYSTEM_ENV_PINS`, `build_scan_job`）、`em-workflow/references/vuln-scanners.yaml:53`
+
+  ## 実害・発生条件
+  untrusted な PR をレビューする構成でのみ問題になる。軸 2 の前提（被レビューコードは untrusted）が成り立つ場面では、SCA 軸そのものが無効化される。
+
+  出典: em-workflow レビュー round 2 の findings de4c569f8b63818d / d5bca9d78798a428（ともに medium / security）。
+  関連 PR: https://github.com/m-m-n/em-claude-plugins/pull/27
+
+  ## 追加の起動指示
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、相対的に良いと判断した案を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/sca-scanner-project-config-isolation/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.58
+      '2': 0.42
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.12
+      '2': 0.87
+      '3': 0.01
+  at: '2026-10-04T22:07:07+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: b1c523d8324413a94d9009097053fe56307d9d5b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI も見た目の成果物も無い。CLI スクリプトの内部処理とテストの変更だけ
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: npm スキャンを隔離ディレクトリで実行
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: cargo スキャンを隔離ディレクトリで --file 付きで実行
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: cargo の対象指定を明示
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 隔離準備は実行側で行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: コピー元の検証とコピーの形
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 隔離ディレクトリの置き場所の検証
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 隔離失敗時の扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 隔離ディレクトリの寿命
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: ラベルと既存の振る舞いを保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: pip と go は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: 信頼する設定の範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR12:
+    title: 再発検出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: 記述の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: build_scan_job の純粋性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 被レビューツリーへの書き込み禁止
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: パスを含まない理由
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: テストの前提
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
