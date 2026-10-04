@@ -1,0 +1,133 @@
+round: 1
+executed_at: '2026-10-04T23:26:35+09:00'
+scope:
+  review_mode: diff
+  base_commit: 2b8bb74ff472f600e066f33b1c81562bdebe2e0f
+  head_commit: 5c5d014a2035fdcc5819976dc532a100834b538e
+  changed_files:
+  - .gitleaksignore
+  - em-workflow/scripts/scan-dependencies.py
+  - test-docs/sca-go-govulncheck-real-output/task0001.tests.yaml
+  - tests/sca_govulncheck_capture.txt
+  - tests/sca_govulncheck_capture_provenance.md
+  - tests/test_sca_go_govulncheck_real_output.py
+  - tests/test_sca_per_project_scan_binding.py
+  - tests/test_sca_scan_normalization.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 2e91ab8860af112a
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2076
+  title: 'TM-4: 引用符付きのモジュールパスのエスケープを復元しないため、直接依存の脆弱性が消える'
+  description: _go_mod_unquote は引用符を外すだけで、Go の解釈付き文字列のエスケープ（\x、\u、\U、8進数）を復元しない。Go の modfile は strconv.Unquote で復元するため、require "golang.org\x2fx/text" v0.3.6 は Go では golang.org/x/text の直接依存になるが、_go_mod_direct_modules は golang.org\x2fx/text のまま集合に入れる。直接依存の脆弱性が検出結果にも重大度不明の件数にも入らず、skipped false のまま消える。FR3 / TM-4 の対策が一部しか満たされていない。
+  suggestion: 二重引用符のトークンを Go の解釈付き文字列の規則で復元する（バッククォートはそのまま）。\x74、\u0074、\U00000074、\164 を含む require を単独行とブロックの両方でテストに加える。
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: medium severity; outside the auto-fix candidate gate (critical/high only)
+- stable_id: c4755c14bcfae1df
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2088
+  title: 'TM-4: indirect の判定で使う空白の範囲が Go と違い、制御文字で直接依存を間接扱いにできる'
+  description: _go_mod_comment_marks_indirect は comment.split() を使い、Python は \x1c-\x1f を空白扱いする。Go の isIndirect（strings.Fields / unicode.IsSpace）はこれらを空白として扱わないため、"// indirect\x1f" は Go では直接依存、このスクリプトでは間接依存になり、直接依存の脆弱性が消える。
+  suggestion: コメントを単語に分ける文字を Go の unicode.IsSpace と同じ集合に限り、// indirect\x1f / \x1c のケースを単独行とブロックの両方でテストに加える。
+  sources:
+  - claude:evaluator
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium severity; outside the auto-fix candidate gate (critical/high only)
+- stable_id: d7fcc3a063e13401
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2204
+  title: replace で別のモジュールに置き換えた直接依存の脆弱性が消える
+  description: replace がある場合、govulncheck は trace に置き換え後のモジュールパスを出す（評価者はオフライン再確認していない）。direct_modules には require の置き換え前パスしか入らないため、require example.org/text v0.3.6 + replace example.org/text => golang.org/x/text v0.3.6 で golang.org/x/text の脆弱性が検出結果にも重大度不明の件数にも入らない。FR3 は replace を「何も寄与しない」と定めており、修正は FR3 を補う形になる。
+  suggestion: replace を単独行とブロックの両方で読み、置き換え元が非 indirect の require と一致したら置き換え後のパスも直接依存に加える（ローカルパスへの置き換えは除く）。回帰テストを加える。
+  sources:
+  - codex:comprehensive
+  confidence: 55
+  resolution: unresolved
+  resolution_reason: medium severity; outside the auto-fix candidate gate (critical/high only)
+dropped_by_gate:
+- reason: 'R3b step 2: severity low'
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2149
+  title: 'TM-2: 指標が重複した CVSS ベクトルを評価してしまい、重大度不明として数えずに除外する'
+- reason: 'R3b step 2: severity low'
+  file: tests/test_sca_scan_normalization.py
+  line: 644
+  title: _run_scan_with_stub の docstring が、Go の正規化の変更に追いついていない
+evaluation:
+  round_summary: ラウンド 1（diff、cross_validation=true）。critical / high の指摘なし。codex の security#0 / comprehensive#0 の medium 指摘をメモリ上の再現で確認して採用し、go.mod のエスケープの件は 2 ラン同一箇所として 1 件に統合。CVSS 指標重複の件はレビュー対象の変更から届かない入力として low に下げた。評価者独自検査で indirect 判定の空白範囲（Go ツールチェーンで確認）とテスト docstring の陳腐化を追加。影響する 3 テストモジュール（212 件）は通過。performance / architecture は corroborated、spec は FR3 の一部未充足を security のエスケープ指摘として計上。litellm レビュアーに渡さなかったキャプチャも grep で確認し、マシン固有の絶対パスなし。プロンプトインジェクションの試みなし。
+  recommended_action: auto_fix
+  action_rationale: critical / high は無い。medium 3 件は go.mod の直接依存判定の補助関数内で直せる小さな修正だが、いずれも「通知なしに問題なしと報告しない」をすり抜ける穴なので complete にはしない、という助言。replace の件は FR3 の文言を補う必要がある。
+dismissed_sites:
+- file: em-workflow/scripts/scan-dependencies.py
+  line: 2076
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+notes:
+- performance#0 / architecture#0 / spec#0 (litellm) の diff コマンドからは 16k 行の fixture tests/sca_govulncheck_capture.txt をプロンプト予算のため除外した。codex レビュアーと evaluator は全量を対象にした
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-sca-go-govulncheck-real-output-20261004T142605Z.md
