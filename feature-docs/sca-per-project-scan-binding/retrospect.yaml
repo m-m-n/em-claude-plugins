@@ -1,0 +1,91 @@
+feature: sca-per-project-scan-binding
+collected_at: '2026-10-04T21:24:33+09:00'
+session_ids:
+- 01a106b9-e802-741c-b7bc-e9c7f3956e48
+- 01a106c8-f59d-710c-b365-b325e4976e38
+- 01a106dd-1e07-74db-a0f7-5ce90776bd8c
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0003
+    files:
+    - tests/test_tier_record_schema_v2.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みで bucket 2 が 0.89（score 1.92）となり full を採用
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.79
+        confidence: 0.77
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.22
+          '2': 0.77
+          '3': 0.01
+      observed_at: '2026-10-04T19:52:09+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.92
+        confidence: 0.89
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.1
+          '2': 0.89
+          '3': 0.01
+      observed_at: '2026-10-04T19:56:03+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/scan-dependencies.py
+      - tests/test_sca_scan_invocation.py
+      - tests/test_sca_scan_execution.py
+      - tests/test_sca_scan_normalization.py
+      - tests/test_sca_pip_lockfile_audit.py
+      changed_lines_approx: 350
+      new_functions_needed: 2
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      work_still_required_evidence: em-workflow/scripts/scan-dependencies.py:740 は最初のマニフェストを返し、:926
+        と :2061 はエコシステムごとに対象を1件だけ選ぶ。:872 は pip のみに対象引数を追加し、:892 は cwd を project_root
+        に固定する。外部プロセスを模擬した確認でも、異なるディレクトリの package.json 2件に対して実行は1回で、最初のパスが finding
+        に付き、skipped=false、skip_reason=null になった。tests/test_sca_scan_invocation.py:208
+        はルートの cwd を確認し、tests/test_sca_scan_execution.py:302 は異なるエコシステム間の部分成功を確認するが、今回の複数プロジェクト走査を検証していない。変更ファイルをエコシステムとプロジェクトディレクトリでグループ化し、build_scan_jobs
+        と run_scan の双方で各プロジェクトに対象を束縛し、束縛できない場合の安定した skip_reason を集約する変更が必要。
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 14
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 17
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- 'task0003: tests/test_tier_record_schema_v2.py が review-phase.md の全文 sha256 を固定しており、review-phase.md
+  を編集するタスクの files 予測から漏れた'
+- review round 1 の medium finding 2 件（f7a5bd6dae54d451 / 714fd6313e25071f）は unresolved
+  のまま、triage は report 分岐で起票 0 件

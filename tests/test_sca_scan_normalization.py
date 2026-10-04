@@ -302,7 +302,7 @@ class TestEcosystemSelectionAndCommandAssembly(unittest.TestCase):
         ]
         selected = {e["ecosystem"]: e for e in SCAN.select_ecosystems(self.registry, changed)}
         expected_commands = {
-            "npm": ["npm", "audit", "--json"],
+            "npm": ["npm", "audit", "--json", "--workspaces=false"],
             "cargo": ["cargo-audit", "audit", "--json"],
             "pip": ["pip-audit", "--format", "json"],
             "go": ["govulncheck", "-json", "./..."],
@@ -589,15 +589,34 @@ def assert_conforms_to_schema(testcase, obj, schema):
         testcase.assertTrue(finding["line_end"] is None or isinstance(finding["line_end"], int))
 
 
+# sca-per-project-scan-binding (FR14): an npm / cargo / go project is launched
+# only when its directory holds the manifest AND the ecosystem's anchor
+# lockfile (go: go.mod alone), so a scan fixture that must reach its stub
+# creates both. Keyed by the stub's tool name.
+BINDING_FILES = {
+    "npm": {"package.json": "{}\n", "package-lock.json": "{}\n"},
+    "cargo-audit": {"Cargo.toml": "[dependencies]\n", "Cargo.lock": "# lock\n"},
+    "govulncheck": {"go.mod": "module example.invalid/demo\n"},
+}
+
+
+def _write_binding_files(project_root, tool_name):
+    for rel_path, content in BINDING_FILES.get(tool_name, {}).items():
+        (Path(project_root) / rel_path).write_text(content, encoding="utf-8")
+
+
 def _run_scan_with_stub(tool_name, fixture, changed_files, manifest_files=None):
     """`manifest_files`, when given, is a {project-relative path: content}
     mapping written into `project_root` before the scan runs -- needed for
     pip's normalizer, which (unlike the still-fixture-shortcut-carrying
     cargo/go fixtures below) resolves directness by actually reading the
-    reviewed manifest from disk (task0008 AC-6)."""
+    reviewed manifest from disk (task0008 AC-6). The npm / cargo / go
+    manifest and anchor files are created here for the stub's tool
+    (`_write_binding_files`)."""
     with tempfile.TemporaryDirectory() as tmp:
         project_root = Path(tmp) / "project"
         project_root.mkdir()
+        _write_binding_files(project_root, tool_name)
         for rel_path, content in (manifest_files or {}).items():
             manifest_path = project_root / rel_path
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -931,6 +950,7 @@ class TestDeterminismAndReadOnlyDiscipline(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
             project_root.mkdir()
+            _write_binding_files(project_root, "npm")
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", NPM_FIXTURE)
@@ -948,7 +968,7 @@ class TestDeterminismAndReadOnlyDiscipline(unittest.TestCase):
                 ["git", "config", "user.email", "t@example.com"], cwd=project_root, check=True
             )
             subprocess.run(["git", "config", "user.name", "t"], cwd=project_root, check=True)
-            (project_root / "package.json").write_text("{}\n", encoding="utf-8")
+            _write_binding_files(project_root, "npm")  # package.json and its anchor
             subprocess.run(["git", "add", "-A"], cwd=project_root, check=True)
             subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=project_root, check=True)
 
@@ -1040,6 +1060,7 @@ class TestScanCliProducesOneObjectExitZero(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project_root = Path(tmp) / "project"
             project_root.mkdir()
+            _write_binding_files(project_root, "npm")
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", NPM_FIXTURE)
