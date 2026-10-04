@@ -1,0 +1,40 @@
+feature: sca-go-govulncheck-real-output
+collected_at: "2026-10-04T23:40:00+09:00"
+session_ids: [01a10752-5075-7719-aaeb-28e67a81f60f]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "コード調査込みの最終判定でバケット 2（新規ロジック）の確率 0.74 となり、閾値表により full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.57, confidence: 0.57, probabilities: {'0': 0.0, '1': 0.43, '2': 0.57, '3': 0.0}}
+        observed_at: "2026-10-04T22:01:37+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.74, confidence: 0.74, probabilities: {'0': 0.0, '1': 0.26, '2': 0.74, '3': 0.0}}
+        observed_at: "2026-10-04T22:06:58+09:00"
+    pre_survey_estimate:
+      files_expected: [em-workflow/scripts/scan-dependencies.py, tests/test_sca_scan_normalization.py]
+      changed_lines_approx: 200
+      new_functions_needed: 2
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 6
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 5
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査の files_expected は 2 ファイルだったが、計画では実キャプチャ fixture・出典記録・新規テストを含む 6 ファイルに広がった"
+  - "review round 1 の medium 3 件（2e91ab8860af112a / c4755c14bcfae1df / d7fcc3a063e13401: go.mod 解析の引用符エスケープ・空白範囲・replace 指令）は unresolved のまま残った"
