@@ -44,7 +44,8 @@ ecosystems:
   - ecosystem: npm
     manifests: [package.json]
     executable: npm
-    args: [audit, --json]
+    # --workspaces=false: npm does not escape to an ancestor workspace root.
+    args: [audit, --json, --workspaces=false]
     severity_map: {critical: critical, high: high}
     threshold: {direct_only: true, min_severity: high}
 
