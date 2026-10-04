@@ -1,0 +1,71 @@
+schema_version: 2
+feature: sca-go-govulncheck-real-output
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.57
+    confidence: 0.57
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.57
+      '3': 0.0
+  observed_at: '2026-10-04T22:01:37+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.74
+    confidence: 0.74
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.74
+      '3': 0.0
+  observed_at: '2026-10-04T22:06:58+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_sca_scan_normalization.py
+  changed_lines_approx: 200
+  new_functions_needed: 2
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 未修正。em-workflow/scripts/scan-dependencies.py:1221
+    は database_specific.severity のみを読み、:1225 は trace の長さで直接依存を判定している。:2006 で重要度を変換し、:1246
+    と :2007 で未確定の重要度を除外する。:2303 は Go 正規化に project_root を渡さず、:2304 は findings が空でも完了扱いにする。:2400、:2419、:2435
+    の重要度未確定件数の集計・報告は pip 用で、正常結果は :2066、:2067 で skipped=false、skip_reason=null になる。tests/test_sca_scan_normalization.py:494
+    の GO_FIXTURE は :504、:505 に severity と is_direct を持ち、:544 で単一JSONに変換されるため、:705、:714
+    の既存Goテストはストリーム結合処理を通らない。:599 の go.mod に require 宣言もない。必要な変更は、重要度の導出と未確定件数の明示、go.mod
+    に基づく直接依存の判定、実出力キャプチャへのfixture差し替えと回帰テスト。既存のCVSS処理は scan-dependencies.py:1383、未確定件数を返す実装例は
+    :1995 にある。既存呼び出し元は :1130、:2303 の2件、Go正規化の既存依存は :2006、:2007、:2016 の3件。新しいファイルや依存ライブラリを必要とする構成ではなく、既存fixtureと
+    :43、:45、:51 の標準ライブラリを利用できる。出力構造は em-workflow/references/review-output-schema.json:4、:25
+    の既存項目で表現できる。行数・追加関数数・追加テスト数は変更箇所に基づく概算。実 govulncheck 出力の取得は行っていない。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 6
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-04T22:08:30+09:00'
