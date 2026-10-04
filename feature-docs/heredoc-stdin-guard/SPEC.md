@@ -7,7 +7,8 @@ stdin, so a child process that reads stdin (`codex exec`) blocks forever on the
 Unix socket to Claude Code. This feature adds a PreToolUse hook to the
 em-workflow plugin that detects such commands and rewrites them through
 `hookSpecificOutput.updatedInput`, prepending `exec < /dev/null` to the command.
-The hook never denies a call: when it cannot decide, it emits nothing and exits
+A command containing a `cat` / `tee` that reads the script's own stdin is
+rewritten the same way. The hook never denies a call: when it cannot decide, it emits nothing and exits
 0.
 
 Requirements source: `feature-docs/heredoc-stdin-guard/REQUIREMENTS.md`.
@@ -57,7 +58,8 @@ As an em-workflow user, I want the hook to stay out of the way for commands it
 does not target and for malformed payloads, so that it never stops a tool call.
 
 **Acceptance Criteria:**
-- [ ] AC5: A command without a heredoc, a command whose stdin is already
+- [ ] AC5: A command with neither a heredoc nor a bare stdin reader (FR2), a
+      command whose stdin is already
       redirected at the head, and a payload whose `tool_name` is not Bash each
       produce empty stdout and exit code 0.
 - [ ] AC6: Malformed JSON, a missing `command` key, and an empty `command` on
@@ -88,9 +90,17 @@ closing stdin.
   under the same contract as the existing hooks: it reads the PreToolUse event
   JSON from stdin, writes its decision to stdout, and exits 0.
 - **FR2 — Rewrite detection condition:** A payload is a rewrite target when
-  `tool_name` is `Bash`, `tool_input.command` contains a heredoc operator
-  (`<<` / `<<-`, excluding the here-string `<<<`), and stdin is not already
-  redirected at the head of the command.
+  `tool_name` is `Bash`, stdin is not already redirected at the head of the
+  command, and `tool_input.command` contains either of:
+  - a heredoc operator (`<<` / `<<-`, excluding the here-string `<<<`);
+  - a bare stdin reader: a `cat` or `tee` command that is not on the receiving
+    side of a pipe, has no stdin redirect of its own (`<`, heredoc or
+    here-string on fd 0), and, for `cat`, has no file operand other than `-`.
+    A command substitution or process substitution counts as an operand of
+    the outer command.
+
+  A redirect inside a command substitution or process substitution is not a
+  head-position stdin redirect of the command.
 - **FR3 — stdin cut-off inserted at the head of the command via updatedInput:**
   For a rewrite target, return a command with `exec < /dev/null` inserted at the
   head via `hookSpecificOutput.updatedInput`. The `hookSpecificOutput` object
@@ -178,6 +188,7 @@ em-workflow/hooks/heredoc-stdin-guard.py
   - decide : tool_name == Bash?  (FR2/FR6)
              command is a non-empty string?  (FR2/FR6)
              heredoc operator present, here-string excluded?  (FR2)
+             bare cat / tee stdin reader present?  (FR2)
              stdin already redirected at the head?  (FR2/FR4)
   - stdout : hookSpecificOutput { hookEventName: "PreToolUse", updatedInput },
              or nothing  (FR3/FR6)
@@ -317,10 +328,14 @@ path that never materializes is not a violation.
 - [ ] TS2 (FR2, FR3): A command where a heredoc and a following stdin-reading
       command coexist (a `cat`-style placeholder standing in for `codex exec …`)
       is rewritten the same way.
-- [ ] TS3 (FR2): A command with no heredoc (`ls -l`, `git status`) produces empty
-      stdout.
+- [ ] TS3 (FR2): A command with neither a heredoc nor a bare stdin reader
+      (`ls -l`, `git status`, `cat /tmp/in.txt`, `echo a | cat > /tmp/out.txt`,
+      `cat $(ls)`, `cat 0<<< x`) produces empty stdout.
 - [ ] TS4 (FR2): A command containing only a here-string `<<<` is not mistaken for
       a heredoc.
+- [ ] TS10 (FR2, FR3): A command with a bare stdin reader and no heredoc
+      (`cat > /tmp/out.txt`, `tee /tmp/out.txt`, `echo $(cat)`, `cat 3<<< x`,
+      `X=$(sort < /tmp/a)` followed by `cat > /tmp/out.txt`) is rewritten.
 - [ ] TS5 (FR4): A command already starting with `exec < /dev/null`, and a command
       of the form `cmd < /dev/null` whose stdin is closed from the head, both
       produce empty stdout (idempotency).
@@ -333,6 +348,9 @@ path that never materializes is not a violation.
 - [ ] TS7 (FR3): Actually run the rewritten command through `subprocess` and
       assert that the file written by the heredoc matches the original body
       exactly (using a temporary directory, never touching real project state).
+- [ ] TS11 (FR3): Run a rewritten `cat > <file>` command through `subprocess`
+      with stdin left open and never written to, and assert that it exits,
+      leaves `<file>` empty and runs the following line.
 
 ### E2E Tests
 

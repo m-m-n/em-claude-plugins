@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash) guard that closes standard input for a heredoc command.
+"""PreToolUse(Bash) guard that closes standard input for a heredoc command
+or a command with a bare `cat`/`tee` stdin reader.
 
 The Bash tool connects a command's standard input to the Claude Code
 socket. A command that contains a heredoc still works, because bash reads
@@ -29,7 +30,12 @@ Decision flow:
   4. Decide, by static reading of the command text alone, whether it
      contains a heredoc operator (`<<` or `<<-`, never a here-string
      `<<<`) outside quotes and outside any heredoc body already opened
-     earlier in the command.
+     earlier in the command -- or a `cat`/`tee` that would read the
+     script's own standard input: not on the receiving side of a pipe,
+     with no stdin redirect of its own, and (for `cat`) with no file
+     operand other than `-`. The reproduction for this second trigger: a
+     stray `cat > file` line with no input, left at the head of a prompt-
+     building command, blocked on the socket for good.
   5. Decide whether the FIRST command of the script already redirects
      standard input at its head -- a plain `<` (never a heredoc or
      here-string) with no explicit file-descriptor prefix, or an explicit
@@ -75,6 +81,12 @@ HOOK_EVENT_NAME = "PreToolUse"
 # plain stdin redirect -- including this one, fed back in -- is never
 # rewritten again.
 STDIN_CUTOFF = "exec < /dev/null"
+
+# Words that may precede a command name in the same simple command without
+# being the command itself (reserved words and `{`).
+_COMMAND_PREFIX_WORDS = frozenset(
+    {"!", "{", "then", "do", "else", "elif", "if", "while", "until", "time"}
+)
 
 
 class _Undecidable(Exception):
@@ -145,15 +157,60 @@ def _skip_heredoc_body(command, i, delim, dashed):
         i = end + 1
 
 
+class _SimpleCommand:
+    """The words and stdin facts of one simple command, collected while
+    `_analyze` walks the text. Only what the bare-stdin-reader decision
+    needs is kept: the words that are not redirect targets, whether the
+    command redirects its own stdin, and whether it receives a pipe."""
+
+    def __init__(self, pipe_receiver):
+        self.words = []
+        self.stdin_redirected = False
+        self.pipe_receiver = pipe_receiver
+
+
+def _is_assignment(word):
+    name, sep, _ = word.partition("=")
+    return bool(sep) and bool(name) and (name[0].isalpha() or name[0] == "_") and all(
+        c.isalnum() or c == "_" for c in name
+    )
+
+
+def _reads_stdin_bare(cmd):
+    """True iff `cmd` is a `cat` or `tee` that reads the script's own
+    standard input: it receives no pipe, redirects no stdin of its own, and
+    (for `cat`) names no file operand other than `-`."""
+    if cmd.pipe_receiver or cmd.stdin_redirected:
+        return False
+    words = list(cmd.words)
+    while words and (words[0] in _COMMAND_PREFIX_WORDS or _is_assignment(words[0])):
+        words.pop(0)
+    if not words:
+        return False
+    name = words[0].rsplit("/", 1)[-1]
+    if name == "tee":
+        return True
+    if name != "cat":
+        return False
+    operands = [w for w in words[1:] if w == "-" or not w.startswith("-")]
+    return all(w == "-" for w in operands)
+
+
 def _analyze(command):
     """One static-reading pass over `command`.
 
-    Returns (has_heredoc, head_has_stdin_redirect):
+    Returns (has_heredoc, has_bare_stdin_reader, head_has_stdin_redirect):
 
       has_heredoc             -- a heredoc operator (`<<`/`<<-`, never a
                                   here-string `<<<`) exists outside quotes
                                   and outside any heredoc body already
                                   opened earlier in the command.
+      has_bare_stdin_reader   -- some simple command is a `cat` or `tee`
+                                  that would read the script's own standard
+                                  input (see `_reads_stdin_bare`). The
+                                  reading of command boundaries is
+                                  approximate; over-detection only costs a
+                                  closed standard input.
       head_has_stdin_redirect -- the first command of the script (the span
                                   up to the first top-level statement
                                   separator: newline, `;`, `&`, `|`)
@@ -172,10 +229,45 @@ def _analyze(command):
     in_squote = False
     in_dquote = False
     has_heredoc = False
+    has_bare_reader = False
     head_has_redirect = False
     in_head = True
     pending = []  # [(delim, dashed), ...] awaiting their body at the next newline
-    fd_digits = ""
+
+    cmd = _SimpleCommand(pipe_receiver=False)
+    word = []  # characters of the word being read; quotes are dropped
+    in_word = False
+    skip_next_word = False  # the next word is a redirect target, not an operand
+    in_backtick = False  # inside a `...` command substitution
+
+    def end_word():
+        nonlocal word, in_word, skip_next_word
+        if in_word:
+            if skip_next_word:
+                skip_next_word = False
+            else:
+                cmd.words.append("".join(word))
+        word = []
+        in_word = False
+
+    def end_command(next_is_pipe_receiver):
+        nonlocal cmd, has_bare_reader
+        end_word()
+        if _reads_stdin_bare(cmd):
+            has_bare_reader = True
+        cmd = _SimpleCommand(pipe_receiver=next_is_pipe_receiver)
+
+    def take_fd_prefix():
+        """A word made only of digits right before `<`/`>` is the fd
+        number of that redirect, not an operand. Returns those digits."""
+        nonlocal word, in_word
+        if in_word and word and all(c.isdigit() for c in word):
+            digits = "".join(word)
+            word = []
+            in_word = False
+            return digits
+        end_word()
+        return ""
 
     while i < n:
         ch = command[i]
@@ -183,36 +275,53 @@ def _analyze(command):
         if in_squote:
             if ch == "'":
                 in_squote = False
+            else:
+                word.append(ch)
             i += 1
             continue
 
         if in_dquote:
             if ch == "\\" and i + 1 < n:
+                word.append(command[i + 1])
                 i += 2
                 continue
             if ch == '"':
                 in_dquote = False
+            else:
+                word.append(ch)
             i += 1
             continue
 
         if ch == "\\" and i + 1 < n:
-            fd_digits = ""
+            if command[i + 1] != "\n":
+                word.append(command[i + 1])
+                in_word = True
             i += 2
             continue
         if ch == "'":
             in_squote = True
-            fd_digits = ""
+            in_word = True
             i += 1
             continue
         if ch == '"':
             in_dquote = True
-            fd_digits = ""
+            in_word = True
             i += 1
             continue
 
-        if ch.isdigit():
-            fd_digits += ch
-            i += 1
+        if ch == "#" and not in_word:
+            newline = command.find("\n", i)
+            i = n if newline == -1 else newline
+            continue
+
+        if ch in "<>" and i + 1 < n and command[i + 1] == "(":
+            # Process substitution `<(...)` / `>(...)`: an operand, and its
+            # inner command runs separately.
+            end_word()
+            cmd.words.append(ch + "(")
+            end_command(next_is_pipe_receiver=False)
+            in_head = False
+            i += 2
             continue
 
         if ch == "<":
@@ -220,21 +329,33 @@ def _analyze(command):
             while j < n and command[j] == "<":
                 j += 1
             run_len = j - i
-            digits, fd_digits = fd_digits, ""
+            digits = take_fd_prefix()
 
             if run_len == 1:
-                if in_head and digits in ("", "0"):
-                    head_has_redirect = True
+                if digits in ("", "0"):
+                    cmd.stdin_redirected = True
+                    if in_head:
+                        head_has_redirect = True
+                if j < n and command[j] == "&":
+                    j += 1
+                skip_next_word = True
                 i = j
                 continue
 
             if run_len == 3:
-                # Here-string: never a heredoc, never a plain redirect.
+                # Here-string: never a heredoc, never a plain redirect of
+                # the whole script, but it does feed this one command --
+                # only when it targets fd 0.
+                if digits in ("", "0"):
+                    cmd.stdin_redirected = True
+                skip_next_word = True
                 i = j
                 continue
 
             if run_len == 2:
                 has_heredoc = True
+                if digits in ("", "0"):
+                    cmd.stdin_redirected = True
                 k = j
                 dashed = False
                 if k < n and command[k] == "-":
@@ -254,9 +375,21 @@ def _analyze(command):
             i = j
             continue
 
-        fd_digits = ""
+        if ch == ">" or (ch == "&" and i + 1 < n and command[i + 1] == ">"):
+            take_fd_prefix()
+            j = i + 1
+            while j < n and command[j] in ">|&":
+                j += 1
+            skip_next_word = True
+            i = j
+            continue
 
         if ch == "\n":
+            if cmd.pipe_receiver and not cmd.words and not in_word:
+                # `a |` <newline> `b`: the pipe continues onto the next line.
+                end_word()
+            else:
+                end_command(next_is_pipe_receiver=False)
             i += 1
             if pending:
                 for delim, dashed in pending:
@@ -265,11 +398,45 @@ def _analyze(command):
             in_head = False
             continue
 
-        if ch in ";&|":
+        if ch == "|":
+            is_or = i + 1 < n and command[i + 1] == "|"
+            end_command(next_is_pipe_receiver=not is_or)
+            in_head = False
+            i += 2 if is_or or (i + 1 < n and command[i + 1] == "&") else 1
+            continue
+
+        if (ch == "$" and i + 1 < n and command[i + 1] == "(") or (
+            ch == "`" and not in_backtick
+        ):
+            # Opening a command substitution: it is an operand of the outer
+            # command (like `<(...)` above), and its inner command runs
+            # separately.
+            end_word()
+            cmd.words.append("$(" if ch == "$" else "`")
+            end_command(next_is_pipe_receiver=False)
+            in_head = False
+            if ch == "`":
+                in_backtick = True
+                i += 1
+            else:
+                i += 2
+            continue
+
+        if ch in ";&()`":
+            if ch == "`":
+                in_backtick = False
+            end_command(next_is_pipe_receiver=False)
             in_head = False
             i += 1
             continue
 
+        if ch in " \t":
+            end_word()
+            i += 1
+            continue
+
+        word.append(ch)
+        in_word = True
         i += 1
 
     if in_squote or in_dquote:
@@ -277,18 +444,20 @@ def _analyze(command):
     if pending:
         raise _Undecidable("unterminated heredoc: no body found")
 
-    return has_heredoc, head_has_redirect
+    end_command(next_is_pipe_receiver=False)
+    return has_heredoc, has_bare_reader, head_has_redirect
 
 
 def _should_rewrite(command):
-    """True iff `command` contains a heredoc outside quotes/bodies and its
+    """True iff `command` contains a heredoc outside quotes/bodies, or a
+    `cat`/`tee` that would read the script's own standard input, and its
     first command does not already redirect standard input. An undecidable
     shell structure is treated as "do not rewrite" (Precision boundary)."""
     try:
-        has_heredoc, head_has_redirect = _analyze(command)
+        has_heredoc, has_bare_reader, head_has_redirect = _analyze(command)
     except _Undecidable:
         return False
-    return has_heredoc and not head_has_redirect
+    return (has_heredoc or has_bare_reader) and not head_has_redirect
 
 
 def _emit_rewrite(tool_input):
