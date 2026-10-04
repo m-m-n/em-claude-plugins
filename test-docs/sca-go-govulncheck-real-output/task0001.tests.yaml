@@ -1,0 +1,120 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 7088 tests OK; check-plugin-invariants.py: all 7 checks PASS, exit 0
+final_failures: []             # re-executed after implementation: 7172 tests OK (7088 + 84 new); check-plugin-invariants.py exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestCaptureAndProvenance
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before the capture and provenance note existed: the new test module run in
+      a tree holding neither file stops at import with "FileNotFoundError: [Errno 2] No such
+      file or directory: '.../tests/sca_govulncheck_capture.txt'". The capture was produced by
+      the pinned command (go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 -json ./... in a
+      scratch module requiring golang.org/x/text v0.3.6 directly) and committed unmodified; it
+      held no machine-local absolute path, so no placeholder was applied.
+  AC-2:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestGoStreamValidity
+      - tests.test_sca_per_project_scan_binding.TestEachProjectIsAuditedInItsOwnDirectory
+      - tests.test_sca_per_project_scan_binding.TestAProjectWithoutItsAnchorIsNeverLaunched
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script (new and rewritten tests copied onto it):
+      test_ts6_the_retired_single_object_vulns_payload_is_unparseable ("False is not true":
+      the synthetic payload completed with a finding), test_ts6_a_config_only_stream_completes_clean
+      ("skip_reason: go_unparseable_output" for the config-object text),
+      test_ts6_the_capture_without_its_config_object_is_unparseable,
+      test_ts6_a_stream_holding_a_non_object_top_level_value_is_unparseable,
+      test_ac2_the_capture_with_exit_status_3_completes and
+      test_ac2_the_validity_checks_run_in_the_documented_order. The three binding-module Go tests
+      (test_go_projects_run_in_their_own_directories and the two go.sum cases) failed once their
+      stubs printed the config-object text. The empty-output, undocumented-exit-status and
+      undecodable-stdout cases describe behavior that pre-existed and were green before the
+      change (regression guards).
+  AC-3:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestCaptureReplay
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script: test_ts1_the_capture_with_a_direct_requirement_is_never_silently_clean
+      ("'Scanned go; 0 finding(s) at or above threshold.' != '... 3 go advisories with
+      undetermined severity (go_severity_undetermined).'": the old script returned the silent
+      clean result), test_ts1_findings_zero_without_the_note_never_happens_for_a_direct_requirement,
+      test_ts1_a_valid_vector_on_the_capture_advisory_gives_a_finding and the rewritten
+      test_go_sample_normalizes_and_conforms ("AssertionError: 0 != 3"). The indirect and
+      absent-requirement cases (TS2) were green on the old script (it dropped every capture
+      advisory); they are regression guards for the new directness rule.
+  AC-4:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestSeverityBands
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script: test_ts3_high_plus_critical_v31_vectors_give_one_critical_finding,
+      test_ts3_a_v30_high_vector_gives_a_high_finding and
+      test_ts3_a_valid_high_vector_beside_a_malformed_one_gives_high ("0 != 1": no finding, the
+      old script read database_specific.severity only), test_ts3_unusable_severity_data_is_undetermined
+      and test_ts3_the_note_reads_advisory_for_one_and_advisories_for_two (the summary had no
+      go_severity_undetermined note), test_ts3_database_specific_severity_with_no_severity_list_is_undetermined.
+      The determinable-medium and not-direct cases were green on the old script (dropped
+      silently) and stay as regression guards.
+  AC-5:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestDirectness
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script: test_ts4_these_requirement_forms_are_direct (every
+      subTest: "0 != 1", directness came from the trace length and no go.mod was read),
+      test_ts4_a_go_sum_target_takes_directness_from_the_sibling_go_mod,
+      test_ts4_stdlib_and_toolchain_findings_are_direct_without_any_require,
+      test_ts4_trace_length_plays_no_part_for_a_directly_required_module, and
+      test_ts4_the_parser_returns_exactly_the_non_indirect_require_paths ("AttributeError: module
+      has no attribute '_go_mod_direct_modules'"). The not-direct go.mod forms were green on the
+      old script (nothing was a finding there) and stay as regression guards.
+  AC-6:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestCollapsing
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script: test_ts5_the_capture_levels_with_several_traces_give_one_finding
+      ("0 != 1"), test_ts5_the_capture_levels_with_several_traces_count_once,
+      test_ts5_the_same_osv_id_on_two_modules_gives_two_results,
+      test_ts5_two_bound_project_units_give_one_finding_each_with_their_own_file and
+      test_ts5_the_undetermined_count_is_summed_over_every_unit (no finding and no note was
+      produced by the old script).
+  AC-7:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestUnreadableGoMod
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script: test_ts7_invalid_utf8_beside_a_completing_npm_unit
+      ("False is not true": skipped was false, the old script never read go.mod),
+      test_ts7_the_reason_combines_with_other_reasons_sorted_and_deduplicated,
+      test_ts7_no_fallback_to_an_empty_direct_set, and the direct normalizer cases
+      ("TypeError: normalize_go() takes 3 positional arguments but 4 were given").
+  AC-8:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestFixedVersionIsScopedToTheFindingsModule
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script: test_ts8_the_matching_entry_wins_whatever_its_position
+      (both orders), test_ts8_with_no_matching_entry_the_finding_names_no_fixed_version and
+      test_ts8_among_the_matching_entries_the_last_fixed_event_wins all failed with
+      "AssertionError: 0 != 1" (the old script produced no finding from a CVSS vector, so no
+      fixed version could be read). A mutation of the new code that ignores package.name made
+      3 of these tests fail, which shows the module scoping itself is asserted.
+  AC-9:
+    tests:
+      - tests.test_sca_go_govulncheck_real_output.TestOutputSafetyAndHygiene
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the old script: test_ts10_over_long_advisory_details_are_truncated_with_the_marker
+      and test_ts10_the_hostile_text_reaches_the_finding_only_through_the_builder ("0 != 1": no
+      finding was produced), test_ts10_a_skip_reason_and_summary_carry_no_path_for_an_unreadable_go_mod.
+      Parts of this criterion have no red state: the summary and skip_reason carrying no
+      advisory text, the standard-library-only import check and the restricted-PATH check
+      describe properties that held before the change; the unchanged npm, cargo and pip
+      expectations and the two commands (python3 -m unittest discover -s tests,
+      python3 em-workflow/scripts/check-plugin-invariants.py .) are suite results that were
+      green at baseline and stay green.

@@ -1083,8 +1083,6 @@ def _has_success_structure(name, data):
         return isinstance(data.get("vulnerabilities"), dict) and "list" in data["vulnerabilities"]
     if name == "pip":
         return isinstance(data.get("dependencies"), list)
-    if name == "go":
-        return isinstance(data.get("vulns"), list)
     return False
 
 
@@ -1112,10 +1110,14 @@ def judge_scan_outcome(name, exit_code, stdout):
     but has no audit capability, and a scanner that dies before writing
     anything, both produce it, and both are not_completed. An error
     envelope is checked before the exit-status/success-structure rule
-    because it applies "regardless of exit status" (Design)."""
+    because it applies "regardless of exit status" (Design). Go has its own
+    validity rule over a stream of JSON objects (`_judge_go_outcome`)."""
     stripped = (stdout or "").strip()
     if not stripped:
         return OUTCOME_NOT_COMPLETED, f"{name}_empty_output"
+
+    if name == "go":
+        return _judge_go_outcome(exit_code, stripped)
 
     try:
         data = json.loads(stripped)
@@ -1126,9 +1128,7 @@ def judge_scan_outcome(name, exit_code, stdout):
             return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
         if not objs:
             return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
-        if name == "go":
-            data = {"vulns": _merge_govulncheck_stream(objs)}
-        elif len(objs) == 1:
+        if len(objs) == 1:
             data = objs[-1]
         else:
             return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
@@ -1144,6 +1144,39 @@ def judge_scan_outcome(name, exit_code, stdout):
         return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
 
     return OUTCOME_COMPLETED, data
+
+
+GO_UNPARSEABLE_OUTPUT = "go_unparseable_output"
+GO_UNDOCUMENTED_EXIT_STATUS = "go_undocumented_exit_status"
+GO_DIRECT_MANIFEST_UNREADABLE = "go_direct_manifest_unreadable"
+
+
+def _judge_go_outcome(exit_code, stripped):
+    """The Go branch of `judge_scan_outcome` (stdout already known to be
+    non-empty, so `go_empty_output` keeps its precedence). `govulncheck
+    -json` prints a stream of JSON objects, so stdout counts as a completed
+    scan only when ALL of these hold, checked in this order:
+
+    1. it decodes as a sequence of one or more JSON values (one document is
+       a sequence of one) and every top-level value is an object, else
+       `go_unparseable_output`;
+    2. the exit status is one of the documented ones, else
+       `go_undocumented_exit_status`;
+    3. at least one top-level object has a `config` key whose value is an
+       object (the scanner's own header), else `go_unparseable_output`.
+
+    The completed payload is the list of decoded top-level objects."""
+    try:
+        objs = _parse_json_stream(stripped)
+    except (ValueError, RecursionError):
+        return OUTCOME_NOT_COMPLETED, GO_UNPARSEABLE_OUTPUT
+    if not objs or not all(isinstance(obj, dict) for obj in objs):
+        return OUTCOME_NOT_COMPLETED, GO_UNPARSEABLE_OUTPUT
+    if exit_code not in DOCUMENTED_EXIT_STATUSES["go"]:
+        return OUTCOME_NOT_COMPLETED, GO_UNDOCUMENTED_EXIT_STATUS
+    if not any(isinstance(obj.get("config"), dict) for obj in objs):
+        return OUTCOME_NOT_COMPLETED, GO_UNPARSEABLE_OUTPUT
+    return OUTCOME_COMPLETED, objs
 
 
 def run_ecosystem_command(job):
@@ -1197,17 +1230,30 @@ def _parse_json_stream(stdout):
 
 
 def _merge_govulncheck_stream(objs):
-    """Reduces govulncheck -json's NDJSON stream (separate {"osv": ...} and
-    {"finding": ...} objects) to the same vulns-list shape normalize_go
-    already reads (one dict per vuln carrying "osv", "is_direct",
-    "severity", "package") -- keeps normalize_go itself unchanged so the
-    existing single-object GO_FIXTURE shape still works too."""
+    """Reduces the objects of one `govulncheck -json` stream to advisory
+    records, one per (OSV id, module) of the scan unit.
+
+    The stream holds separate top-level objects: `{"osv": ...}` (one per
+    advisory, indexed here by its `id`) and `{"finding": ...}` (one per
+    module-, package- or symbol-level hit, each with any number of traces).
+    A finding object yields an OSV id (its `osv` value) and a module (the
+    `module` of its first trace frame); one without a string of each
+    contributes nothing. Every finding object with the same (OSV id, module),
+    at any level and with any number of traces, collapses into ONE record
+    `{"id", "module", "osv"}`, in first-seen order; `osv` is the stream's OSV
+    object for that id, or `{"id": <id>}` when the stream holds none.
+
+    Reduction computes neither severity nor directness and never reads
+    `database_specific`."""
     osv_by_id = {}
     for obj in objs:
-        if isinstance(obj, dict) and isinstance(obj.get("osv"), dict) and "id" in obj["osv"]:
-            osv_by_id[obj["osv"]["id"]] = obj["osv"]
+        if not isinstance(obj, dict):
+            continue
+        osv = obj.get("osv")
+        if isinstance(osv, dict) and isinstance(osv.get("id"), str):
+            osv_by_id[osv["id"]] = osv
 
-    vulns = []
+    records = {}
     for obj in objs:
         if not isinstance(obj, dict):
             continue
@@ -1215,19 +1261,16 @@ def _merge_govulncheck_stream(objs):
         if not isinstance(finding, dict):
             continue
         osv_id = finding.get("osv")
-        osv = osv_by_id.get(osv_id) or {"id": osv_id}
-        trace = finding.get("trace") or []
-        package = trace[0].get("module") if trace and isinstance(trace[0], dict) else None
-        severity = osv.get("database_specific", {}).get("severity") if isinstance(osv.get("database_specific"), dict) else None
-        vulns.append(
-            {
-                "osv": osv,
-                "is_direct": len(trace) == 1,
-                "severity": severity,
-                "package": package or "unknown",
-            }
+        trace = finding.get("trace")
+        first_frame = trace[0] if isinstance(trace, list) and trace else None
+        module = first_frame.get("module") if isinstance(first_frame, dict) else None
+        if not isinstance(osv_id, str) or not isinstance(module, str):
+            continue
+        records.setdefault(
+            (osv_id, module),
+            {"id": osv_id, "module": module, "osv": osv_by_id.get(osv_id) or {"id": osv_id}},
         )
-    return vulns
+    return list(records.values())
 
 
 def _map_severity(ecosystem, raw_severity):
@@ -1996,35 +2039,191 @@ def normalize_pip(ecosystem, data, manifest_file, project_root=None):
     return findings, skip_info
 
 
-def normalize_go(ecosystem, data, manifest_file):
+# ---------------------------------------------------------------------------
+# Go normalization (sca-go-govulncheck-real-output). `govulncheck -json`
+# carries no per-finding directness and no severity string the registry can
+# map, so both are resolved here: directness from the unit's own go.mod
+# require entries (or the synthetic `stdlib` / `toolchain` modules), severity
+# only from the OSV object's top-level CVSS v3 vectors. An advisory whose
+# severity cannot be determined is counted, never treated as below threshold.
+# ---------------------------------------------------------------------------
+
+_GO_SYNTHETIC_DIRECT_MODULES = frozenset({"stdlib", "toolchain"})
+_GO_SEVERITY_BANDS_DESCENDING = ("critical", "high", "medium", "low", "none")
+_GO_CVSS_V3_PREFIXES = ("CVSS:3.0/", "CVSS:3.1/")
+_GO_MOD_TOKEN_RE = re.compile(r'"[^"\n]*"|`[^`\n]*`|[()]|[^\s()"`]+|["`]')
+
+
+def _go_mod_split_comment(line):
+    """Splits one go.mod line into `(code, comment)` at the first `//` that
+    is outside a double- or back-quoted string. `comment` is the text after
+    the `//` (None when the line holds no comment)."""
+    quote = None
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if quote is not None:
+            if char == quote:
+                quote = None
+        elif char in ('"', "`"):
+            quote = char
+        elif line.startswith("//", index):
+            return line[:index], line[index + 2:]
+        index += 1
+    return line, None
+
+
+def _go_mod_unquote(token):
+    if len(token) >= 2 and token[0] == token[-1] and token[0] in ('"', "`"):
+        return token[1:-1]
+    return token
+
+
+def _go_mod_comment_marks_indirect(comment):
+    """True only for the canonical indirect marker: the comment's words are
+    exactly `indirect`, or `indirect;` followed by more words. A comment
+    that merely contains the word leaves the entry direct."""
+    if comment is None:
+        return False
+    words = comment.split()
+    return words == ["indirect"] or (len(words) > 1 and words[0] == "indirect;")
+
+
+def _go_mod_direct_modules(content):
+    """The module paths of every `require` entry of go.mod `content` that is
+    not marked indirect. Only the single-line `require m v` and the
+    `require ( ... )` block forms contribute. Every other directive (single
+    line or block, known or unknown), every full-line comment and every
+    line that is not shaped like an entry contributes nothing -- malformed
+    content just yields fewer entries."""
+    direct = set()
+    block = None  # None outside a block; "require" or "other" inside one
+    for raw_line in content.split("\n"):
+        code, comment = _go_mod_split_comment(raw_line.rstrip("\r"))
+        tokens = _GO_MOD_TOKEN_RE.findall(code)
+        if block is not None:
+            if tokens == [")"]:
+                block = None
+            elif block == "require" and len(tokens) == 2:
+                if not _go_mod_comment_marks_indirect(comment):
+                    direct.add(_go_mod_unquote(tokens[0]))
+            continue
+        if not tokens:
+            continue
+        if len(tokens) == 2 and tokens[1] == "(":
+            block = "require" if tokens[0] == "require" else "other"
+        elif tokens[0] == "require" and len(tokens) == 3:
+            if not _go_mod_comment_marks_indirect(comment):
+                direct.add(_go_mod_unquote(tokens[1]))
+    return direct
+
+
+def _go_mod_relative_path(manifest_file):
+    """The project-relative go.mod that decides directness for a unit whose
+    target is `manifest_file`: the target itself when it is a go.mod, the
+    go.mod beside it when it is a go.sum, otherwise None."""
+    basename = os.path.basename(manifest_file)
+    if basename == "go.mod":
+        return manifest_file
+    if basename == "go.sum":
+        return os.path.join(os.path.dirname(manifest_file), "go.mod")
+    return None
+
+
+def _go_osv_severity_band(osv):
+    """The highest qualitative band over the OSV object's top-level
+    `severity` entries of type `CVSS_V3` whose score is a CVSS 3.0 / 3.1
+    vector `_cvss_severity_band` can rate; None when there is none. Other
+    types (CVSS_V4, ...), non-string scores and unparseable vectors are
+    ignored, and `database_specific` is never read."""
+    entries = osv.get("severity")
+    if not isinstance(entries, list):
+        return None
+    best = None
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("type") != "CVSS_V3":
+            continue
+        score = entry.get("score")
+        if not isinstance(score, str) or not score.startswith(_GO_CVSS_V3_PREFIXES):
+            continue
+        band = _cvss_severity_band(score)
+        if band is None:
+            continue
+        if best is None or (
+            _GO_SEVERITY_BANDS_DESCENDING.index(band)
+            < _GO_SEVERITY_BANDS_DESCENDING.index(best)
+        ):
+            best = band
+    return best
+
+
+def _go_fixed_version(osv, module):
+    """The fixed version from the OSV `affected` entries whose
+    `package.name` equals `module` (the last fixed event wins); None when no
+    such entry carries one. Other modules' entries are never consulted."""
+    fixed_version = None
+    affected_entries = osv.get("affected")
+    for affected in affected_entries if isinstance(affected_entries, list) else []:
+        package = affected.get("package") if isinstance(affected, dict) else None
+        if not isinstance(package, dict) or package.get("name") != module:
+            continue
+        ranges = affected.get("ranges")
+        for rng in ranges if isinstance(ranges, list) else []:
+            events = rng.get("events") if isinstance(rng, dict) else None
+            for event in events if isinstance(events, list) else []:
+                if isinstance(event, dict) and isinstance(event.get("fixed"), str):
+                    fixed_version = event["fixed"]
+    return fixed_version
+
+
+def normalize_go(ecosystem, data, manifest_file, project_root=None):
+    """Turns one completed Go unit payload (the object list
+    `judge_scan_outcome` hands on) into `(findings, undetermined, reason)`.
+
+    The unit's go.mod (the target itself, or the go.mod beside a go.sum
+    target) is read through the project-relative confinement as a regular
+    UTF-8 file; any failure returns `([], 0, "go_direct_manifest_unreadable")`
+    -- never a fallback to an empty direct set. Nothing is written.
+
+    The stream is reduced to one advisory per (OSV id, module). An advisory
+    is direct when its module is a non-indirect require entry of that go.mod
+    or the synthetic `stdlib` / `toolchain` module; a non-direct advisory is
+    neither a finding nor counted. A direct advisory with no CVSS v3 band is
+    undetermined: counted in `undetermined`, never a finding. A direct
+    advisory with a band is mapped through the registry and the threshold
+    rule, which drops it silently when below high."""
+    gomod_path = _go_mod_relative_path(manifest_file)
+    content = _read_project_text(project_root, gomod_path) if gomod_path else None
+    if content is None:
+        return [], 0, GO_DIRECT_MANIFEST_UNREADABLE
+    direct_modules = _go_mod_direct_modules(content)
     findings = []
-    for entry in data.get("vulns") or []:
-        if not isinstance(entry, dict):
+    undetermined = 0
+    for advisory in _merge_govulncheck_stream(data):
+        module = advisory["module"]
+        if module not in direct_modules and module not in _GO_SYNTHETIC_DIRECT_MODULES:
             continue
-        osv = entry.get("osv") or {}
-        is_direct = bool(entry.get("is_direct"))
-        mapped = _map_severity(ecosystem, entry.get("severity"))
-        if not _passes_threshold(ecosystem, is_direct, mapped):
+        osv = advisory["osv"]
+        band = _go_osv_severity_band(osv)
+        if band is None:
+            undetermined += 1
             continue
-        fixed_version = None
-        for affected in osv.get("affected") or []:
-            for rng in affected.get("ranges") or []:
-                for event in rng.get("events") or []:
-                    if isinstance(event, dict) and "fixed" in event:
-                        fixed_version = event["fixed"]
+        mapped = _map_severity(ecosystem, band)
+        if not _passes_threshold(ecosystem, True, mapped):
+            continue
         findings.append(
             _build_finding(
                 manifest_file=manifest_file,
-                package=entry.get("package") or "unknown",
-                advisory_id=osv.get("id", "UNKNOWN"),
-                title=osv.get("summary") or osv.get("id") or "vulnerability",
+                package=module,
+                advisory_id=advisory["id"],
+                title=osv.get("summary") or advisory["id"],
                 affected_range=None,
-                fixed_version=fixed_version,
+                fixed_version=_go_fixed_version(osv, module),
                 summary=osv.get("details"),
                 severity=mapped,
             )
         )
-    return findings
+    return findings, undetermined, None
 
 
 NORMALIZERS = {
@@ -2268,8 +2467,13 @@ def _binding_check(name, real_root, directory, target_basename):
         return False
 
 
-def _group_audit(reasons=(), findings=(), completed=False):
-    return {"reasons": list(reasons), "findings": list(findings), "completed": completed}
+def _group_audit(reasons=(), findings=(), completed=False, undetermined=0):
+    return {
+        "reasons": list(reasons),
+        "findings": list(findings),
+        "completed": completed,
+        "undetermined": undetermined,
+    }
 
 
 def _scan_bound_group(ecosystem, directory, files, project_root, real_root, executable_path):
@@ -2279,7 +2483,12 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
     manifest_file_for selects from the group, prefixed by D unless D is the
     root. A group that fails the binding check launches nothing and reports
     `<ecosystem>_project_unbindable`; otherwise the job runs in D, and its
-    outcome is judged and normalized as before. Returns `_group_audit`."""
+    outcome is judged and normalized as before. A Go unit's normalizer gets
+    the project root, like the cargo one, and may return a not-completed
+    reason (`go_direct_manifest_unreadable`): that becomes the unit's only
+    reason, with no findings and no undetermined count. Returns
+    `_group_audit` (its `undetermined` is the unit's Go undetermined-severity
+    count, 0 for every other ecosystem)."""
     name = ecosystem.get("ecosystem", "unknown")
     selected = manifest_file_for(ecosystem, files)
     basename = os.path.basename(selected)
@@ -2297,6 +2506,11 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
     normalizer = NORMALIZERS.get(name)
     if normalizer is None:
         return _group_audit(reasons=[f"{name}_no_normalizer"])
+    if name == "go":
+        findings, undetermined, reason = normalizer(ecosystem, payload, target, project_root)
+        if reason is not None:
+            return _group_audit(reasons=[reason])
+        return _group_audit(findings=findings, completed=True, undetermined=undetermined)
     if name == "cargo":
         findings = normalizer(ecosystem, payload, target, project_root)
     else:
@@ -2383,6 +2597,13 @@ def run_scan(project_root, changed_files, registry_path):
     - pip, when a group holds a poetry.lock / Pipfile.lock, audits that
       lockfile's own pins (`_scan_pip_lockfile`): its reasons travel the
       same path, and the findings carry the lockfile as `file`.
+    - go: the Go normalizer returns, per unit, its findings, an
+      undetermined-severity count and an optional not-completed reason
+      (`go_direct_manifest_unreadable`). The counts are summed over every
+      Go unit; a non-zero sum appends the counts-only note
+      `N go advisory|advisories with undetermined severity
+      (go_severity_undetermined).` after the pip notes. It is a note, never
+      a skip reason.
     """
     registry = load_registry(registry_path)
     selected = select_ecosystems(registry, changed_files)
@@ -2399,6 +2620,7 @@ def run_scan(project_root, changed_files, registry_path):
     ran_ecosystems = set()
     pip_severity_undetermined_total = 0
     pip_unpinnable_total = 0
+    go_severity_undetermined_total = 0
     for ecosystem in selected:
         name = ecosystem.get("ecosystem", "unknown")
         validation_error = validate_ecosystem_entry(ecosystem)
@@ -2422,6 +2644,8 @@ def run_scan(project_root, changed_files, registry_path):
                 audit = _scan_bound_group(
                     ecosystem, directory, files, project_root, real_root, executable_path
                 )
+                if name == "go":
+                    go_severity_undetermined_total += audit["undetermined"]
             all_findings.extend(audit["findings"])
             skip_reasons.update(audit["reasons"])
             if audit["completed"]:
@@ -2446,7 +2670,17 @@ def run_scan(project_root, changed_files, registry_path):
             f" {pip_unpinnable_total} pip lockfile entries not auditable "
             f"(pip_lockfile_entries_unpinnable)."
         )
-    summary_notes = undetermined_note + unpinnable_note
+    # Counts only, never advisory text; after the pip notes. A note, never a
+    # skip reason: `skipped` keeps meaning only "every selected unit
+    # completed".
+    go_undetermined_note = ""
+    if go_severity_undetermined_total:
+        noun = "advisory" if go_severity_undetermined_total == 1 else "advisories"
+        go_undetermined_note = (
+            f" {go_severity_undetermined_total} go {noun} with undetermined "
+            f"severity (go_severity_undetermined)."
+        )
+    summary_notes = undetermined_note + unpinnable_note + go_undetermined_note
 
     if skip_reasons:
         ordered_reasons = sorted(skip_reasons)
