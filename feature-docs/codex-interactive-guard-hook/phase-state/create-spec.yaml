@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 0d9d833c5aa516785352dcfd256d819c19ba9a87
 last_input_digest: sha256:84cc2776223c36d7fd65ea9834f5eafad9792523f8f6d8bc88ef3cc0b9e5c5de
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -155,10 +155,16 @@ worker_runs:
   input_digest: sha256:84cc2776223c36d7fd65ea9834f5eafad9792523f8f6d8bc88ef3cc0b9e5c5de
   output_digest: sha256:baa03e5b9076d2d41481c892054177694cf6a8576341dfd3424d3f93c1240ebb
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:697280b2606cba1ce8a3e6c9c05ee99682bab3639cd0ada7d3eca20b88271453
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-interactive-guard-hook/REQUIREMENTS.md
+  sha256: sha256:925c6afd8191c3201a5528e47fd1f7ba2b56a29eeafe2c6f1cc9922e62d47736
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-interactive-guard-hook/SPEC.md
+  sha256: sha256:cfc7dac2244b1cee0d9c9a955ecbb50c834983822ec34f41b6b2c5fac38a85e8
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:53779c1c59456f1725d722951059539462eb5564d8739ebfc3d81d6d51bac12d
 stale_redispatch_count: 0
