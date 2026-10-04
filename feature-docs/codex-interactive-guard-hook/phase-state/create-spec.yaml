@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-interactive-guard-hook
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: a804f74563f6183d38d07738f81931f9ced6d288
+last_input_digest: sha256:01b13b4ba1fb67cdedaf86cb59c3fdb8a84e281f33eb40562aca2528c071b635
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:01b13b4ba1fb67cdedaf86cb59c3fdb8a84e281f33eb40562aca2528c071b635
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
