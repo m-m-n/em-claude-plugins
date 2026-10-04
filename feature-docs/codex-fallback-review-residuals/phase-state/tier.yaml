@@ -20,7 +20,7 @@ bases:
       '1': 0.18
       '2': 0.8
       '3': 0.02
-  observed_at: '2026-10-04T15:25:00+09:00'
+  observed_at: '2026-10-04T15:24:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.3
       '2': 0.43
       '3': 0.01
-  observed_at: '2026-10-04T15:40:00+09:00'
+  observed_at: '2026-10-04T15:28:00+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/README.md
@@ -78,4 +78,4 @@ pre_survey_estimate:
       escalation 決定に対応する規則が残っていない'
     43504ede8ee2f609: 'resolved: commit e5a83962 が usage-limit/provider-error の認識関数と切替処理を削除しており、現在の
       run_codex_exec.sh:26-30 は出力内容による後続処理を行わない契約を明記している'
-decided_at: '2026-10-04T15:41:00+09:00'
+decided_at: '2026-10-04T15:29:00+09:00'
