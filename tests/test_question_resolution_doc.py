@@ -1234,12 +1234,28 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         )
 
     def test_opus_escalation_return_shape(self):
+        # The per-question return-shape sentence moved out of the section
+        # into the escalation contract (the one pinned sentence allowed to
+        # move). Coverage is kept in two halves: the section cites the
+        # contract for the return shape, and the contract carries the
+        # sentence with its wording intact.
         section = re.sub(r"\s+", " ", self._opus_escalation_section()).lower()
+        contract_rel = "references/opus-escalation-contract.md"
+        self.assertIn(contract_rel, section)
+        contract_path = os.path.join(
+            REPO_ROOT, "em-workflow", "references", "opus-escalation-contract.md"
+        )
+        self.assertTrue(
+            os.path.isfile(contract_path),
+            f"the contract the section cites does not exist: {contract_path}",
+        )
+        with open(contract_path, encoding="utf-8") as fh:
+            contract = re.sub(r"\s+", " ", fh.read()).lower()
         self.assertIn(
             "either a chosen `option_id` present in that question's own "
             "`options[].option_id` or an explicit no-decision, and in "
             "both cases its reasoning",
-            section,
+            contract,
         )
 
     def test_opus_escalation_output_untrusted(self):
