@@ -106,7 +106,12 @@ workflow:
   status: completed
   completed_at_commit: 7ffd375e5f95a791eab2178423c5f98c390a92c8
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded_requirements: []
+  summary: 'repo-tests (python3 -m unittest discover -s tests): 7179 tests OK. plugin-invariants: all PASS, exit 0. build / format / e2e: not configured. TS-1..TS-13 covered by the suite; TS-12 inspection: review-phase.md / scan-dependencies.py / vuln-scanners.yaml describe isolation-directory execution and --file, no stale project-root-cwd statement for npm / cargo.'
+  completed_at_commit: c0dc4131304b225bae21c0de1a215fb758b0c5de
 - id: retrospect
   status: pending
 tasks:
