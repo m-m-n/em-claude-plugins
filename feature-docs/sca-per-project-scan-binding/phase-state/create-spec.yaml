@@ -21,6 +21,7 @@ packets:
       status: answered
 answers:
   requirement.binding-precondition:
+    question_id: requirement.binding-precondition
     packet_id: create-spec-q0001
     source: batch-codex-consultation
     answer_mode: single_select
@@ -40,6 +41,7 @@ answers:
       not run.'
     answered_at: '2026-10-04T20:13:05+09:00'
   requirement.skip-reason-shape:
+    question_id: requirement.skip-reason-shape
     packet_id: create-spec-q0001
     source: batch-codex-consultation
     answer_mode: single_select
@@ -55,6 +57,7 @@ answers:
       Orchestrator adopted. Opus escalation not run.
     answered_at: '2026-10-04T20:13:05+09:00'
   requirement.pip-scope:
+    question_id: requirement.pip-scope
     packet_id: create-spec-q0001
     source: batch-codex-consultation
     answer_mode: single_select
@@ -69,6 +72,7 @@ answers:
       :378, :785). Orchestrator adopted. Opus escalation not run.
     answered_at: '2026-10-04T20:13:05+09:00'
   design-step.recommendation:
+    question_id: design-step.recommendation
     packet_id: create-spec-q0001
     source: batch-decision-table
     answer_mode: single_select
@@ -79,6 +83,7 @@ answers:
     resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously.
     answered_at: '2026-10-04T20:13:05+09:00'
   requirement.anchor-validation-strictness:
+    question_id: requirement.anchor-validation-strictness
     packet_id: null
     source: batch-codex-consultation
     answer_mode: freeform
@@ -103,6 +108,7 @@ answers:
       adopted. Opus escalation not run.'
     answered_at: '2026-10-04T20:13:05+09:00'
   requirement.workspace-escape:
+    question_id: requirement.workspace-escape
     packet_id: null
     source: batch-codex-consultation
     answer_mode: freeform
@@ -123,6 +129,7 @@ answers:
       adopted. Opus escalation not run.'
     answered_at: '2026-10-04T20:13:05+09:00'
   requirement.project-group-semantics:
+    question_id: requirement.project-group-semantics
     packet_id: null
     source: batch-codex-consultation
     answer_mode: freeform
