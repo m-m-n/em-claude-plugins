@@ -457,8 +457,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0004 of threat-model-stride (FR8): review-phase.md gained
 # Phase R0's threat_model_path resolution/validation and the Phase R2 /
 # R2b / R4 security-perspective carriage of that field.
+# Refreshed by task0003 of sca-per-project-scan-binding (FR13): Phase R2's
+# axis-2 text gained an appended passage on partial coverage across the
+# projects of one ecosystem.
 REVIEW_PHASE_SHA256 = (
-    "04b6f8e5968332c521f8db31e6caf2ca7382349faa78b2c1fcba567e31eb8261"
+    "ac63451803cc27208aabf0fd2749cb23c6a1d64554ebad3fa303bc6c92c46b80"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
