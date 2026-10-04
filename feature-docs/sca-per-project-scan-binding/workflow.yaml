@@ -119,7 +119,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/sca-per-project-scan-binding/task0001
   task0002:
