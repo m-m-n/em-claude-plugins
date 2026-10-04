@@ -635,11 +635,16 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # not write any file", and Step 5 limits the Bash call to the `PROMPT`
 # (and optional `SCHEMA`) assignment plus the wrapper line, with `PROMPT`
 # assigned through a quoted heredoc rather than a single-quoted string.
+#
+# Refreshed again by feature-docs/codex-interactive-guard-hook/tasks/task0003.md
+# (FR13): Step 4's `<grounding_rules>` prose gained one rule forbidding
+# interactive-mode interpreter and shell launches and naming the
+# non-interactive alternatives. Nothing else in Steps 0-6 changed.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "339528e61142a60ecd562df8d2612b956ca8f7782b58f2c9555179c8a9df27d4"
+    "47c190bc71b2f5b6ed87a9bd4d166a81e982faa021473906cdd799ea55cef7a0"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"
