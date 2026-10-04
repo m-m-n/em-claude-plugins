@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-python-lockfile-audit
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 0cd33133ded8d0775940011e744d20e3af7ff944
+last_input_digest: sha256:ee0bcf26b388b03ec20f1c851c1205b3ec1143dad8d32784467a2d3fb87f9d75
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:ee0bcf26b388b03ec20f1c851c1205b3ec1143dad8d32784467a2d3fb87f9d75
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
