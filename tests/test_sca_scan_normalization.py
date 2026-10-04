@@ -703,6 +703,26 @@ class TestNormalizationProducesSchemaConformantResult(unittest.TestCase):
         self.assertNotIn("bar:", titles)
         self.assertNotIn("baz:", titles)
 
+    def test_cargo_directness_is_judged_from_the_original_cargo_toml_of_the_reviewed_tree(self):
+        # sca-scanner-project-config-isolation FR9: cargo-audit runs from an
+        # isolation directory holding only a copy of Cargo.lock, yet a payload
+        # without a per-entry `is_direct` flag is still judged against the
+        # Cargo.toml of the reviewed project: `foo` is declared there, `bar`
+        # (critical, but not declared) is transitive.
+        fixture = json.loads(json.dumps(CARGO_FIXTURE))
+        for entry in fixture["vulnerabilities"]["list"]:
+            entry.pop("is_direct")
+        result = _run_scan_with_stub(
+            "cargo-audit",
+            fixture,
+            ["Cargo.toml"],
+            manifest_files={"Cargo.toml": '[dependencies]\nfoo = "1"\nbaz = "0.5"\n'},
+        )
+        self.assertEqual(
+            [f["title"].split(":")[0] for f in result["findings"]], ["foo"]
+        )
+        self.assertEqual([f["file"] for f in result["findings"]], ["Cargo.toml"])
+
     def test_pip_sample_normalizes_and_conforms(self):
         # django is declared in the reviewed requirements.txt (direct) and
         # its advisory's description embeds a determinable CVSS vector

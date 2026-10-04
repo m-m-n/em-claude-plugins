@@ -9,8 +9,9 @@
 # argument vector carries an audited target bound to the reviewed project;
 # em-workflow/scripts/scan-dependencies.py owns HOW TO RUN that tool
 # (resolving the trusted binary on PATH, filling in the target
-# `target_flag` carries, and building an explicit child environment) and
-# HOW TO NORMALIZE its machine-readable output into a
+# `target_flag` carries, building an explicit child environment, and
+# running npm and cargo-audit from a per-group isolation directory outside
+# the reviewed tree) and HOW TO NORMALIZE its machine-readable output into a
 # review-output-schema.json object. No conditional logic lives here -- this
 # file is data only.
 #
@@ -22,16 +23,19 @@
 #                    redefine (e.g. a Cargo [alias] entry). Never installed
 #                    when absent (FR3, FR8).
 #   args          -- appended to `executable` (after the target_flag's
-#                    value, when present), producing machine-readable
-#                    output while only READING the existing lockfile (no
-#                    install, no lockfile rewrite, no formatter run --
-#                    NFR2).
+#                    flag and value, when present), producing
+#                    machine-readable output while only READING the
+#                    existing lockfile (no install, no lockfile rewrite, no
+#                    formatter run -- NFR2).
 #   target_flag   -- OPTIONAL. The flag scan-dependencies.py places before
 #                    the audited target path it resolves, so the tool binds
 #                    to the REVIEWED project's own dependency set instead of
 #                    defaulting to the ambient environment. The registry
 #                    owns this flag's literal form; the script owns
-#                    resolving which path fills it in.
+#                    resolving which path fills it in. Where the flag and
+#                    its path go is the script's rule per ecosystem: pip's
+#                    come first; cargo's come immediately after the leading
+#                    `audit` subcommand in `args`.
 #   severity_map  -- maps the tool's own severity vocabulary onto the
 #                    schema's `critical` / `high`; a value absent from this
 #                    map is below threshold.
@@ -52,7 +56,14 @@ ecosystems:
   - ecosystem: cargo
     manifests: [Cargo.toml]
     executable: cargo-audit
+    # cargo-audit runs from a per-group isolation directory outside the
+    # reviewed tree, so the reviewed project's `.cargo/audit.toml` is not on
+    # its discovery path. The directory holds a copy of Cargo.lock only, and
+    # --file (target_flag) points at that copy: scan-dependencies.py puts
+    # `--file <copy>` immediately after `audit`. --url and --db are never
+    # passed (the advisory DB stays the reviewer's own configuration).
     args: [audit, --json]
+    target_flag: --file
     severity_map: {critical: critical, high: high}
     threshold: {direct_only: true, min_severity: high}
 
