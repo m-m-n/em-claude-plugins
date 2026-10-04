@@ -164,7 +164,7 @@ tasks:
     - FR11
     - FR13
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/sca-scanner-project-config-isolation/task0002
 review:
