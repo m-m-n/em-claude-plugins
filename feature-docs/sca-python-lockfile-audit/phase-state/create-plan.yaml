@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-python-lockfile-audit
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 0985b7157f34f60aa1d1ed70683c6f79244e8d38
 last_input_digest: sha256:e6a070d12f0730f47f91a5e16d2f72e91642eca059d00b696b14aa468e2567e4
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
