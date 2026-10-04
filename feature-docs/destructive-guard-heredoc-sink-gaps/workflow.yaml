@@ -93,7 +93,8 @@ workflow:
   base_commit: 3efc2b9c17cc484967db2a57a71fadb5ee369ab0
   completed_at_commit: e5dcd16f49d03298aaf8a9aa587c085ed6cca51c
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 2c77b5e57bb943d42e77f2e43529ea1a6dbda000
 - id: verify
   status: pending
   result: null
@@ -224,10 +225,10 @@ tasks:
       - bc9a99dd0d07ffa5
       review_round: 1
 review:
-  status: pending
-  rounds_completed: 1
-  residual_critical_high: 1
-  needs_rework: true
+  status: completed
+  rounds_completed: 2
+  residual_critical_high: 0
+  needs_rework: false
   perspectives:
   - security
   - comprehensive

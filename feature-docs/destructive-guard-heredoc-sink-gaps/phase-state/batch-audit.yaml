@@ -11,3 +11,23 @@ records:
   freeform: null
   normalized_answer: 'A: high 1 件（bc9a99dd0d07ffa5）だけで batch rework。medium 5 件は Notion に別タスクとして起票し、8ccf22c69c8bb295（退行）を最優先にする'
   resolution_note: 'gate: review round 1 の batch rework に含める findings の範囲（gate_id 無し・ポリシー表に無い判断）; options: A=high のみ / B=high + 退行の 8ccf22c69c8bb295 / C=high + medium 5 件すべて; chosen: A; not chosen: B（FR6 のパス値照合は現 SPEC FR6 どおりで、対象を絞るには SPEC 変更が要り rework.spec-change に回るため通常 rework で扱う根拠が無い）、C（SPEC 対象外の形まで含み、上限 1 回の rework には広すぎる）; codex_consulted: true（Codex は基準 allow → HEAD deny の退行を自分で再現し、PR に既知の退行と再現条件を明記するよう勧めた）; opus_escalation: false'
+- question_id: review.loop1-collateral-medium
+  packet_id: null
+  answered_at: '2026-10-04T21:00:26+09:00'
+  source: batch-codex-consultation
+  answer_mode: option
+  selected_option_ids:
+  - A
+  freeform: null
+  normalized_answer: 'A: loop 1 由来の medium 誤検知の退行 2 件は手順どおり auto-fix 対象外として記録する'
+  resolution_note: 'gate: review round 2 loop 1 再レビューで見つかった medium の誤検知退行 2 件（rm -rf /tmp/safe$''\t''、"${x:-a(b}" の後の本物のヒアドキュメント）を追加 loop で直すか（gate_id 無し・ポリシー表に無い判断）; options: A=手順どおり medium として記録し後続タスクへ / B=手順を外れて追加 loop で直す; chosen: A; not chosen: B（重大度条件を外す自動修正は手順の一貫性と監査性を損ない、解析への追加変更が新たな検知漏れを生む恐れがある。影響は deny 側で fail-closed）; codex_consulted: true; opus_escalation: false; 備考: 後続の判断（loop 2 の撤回）で原因の修正ごと戻ったため、2 件とも結果的に解消した'
+- question_id: review.loop1-regression-handling
+  packet_id: null
+  answered_at: '2026-10-04T21:00:26+09:00'
+  source: batch-codex-consultation
+  answer_mode: option
+  selected_option_ids:
+  - B
+  freeform: null
+  normalized_answer: 'B: loop 1 の F1（_blank_ansi_c）と F3（param/arith/bracket フレーム）を戻し、F2（<<< のスキップ）だけ残す。元の指摘と未対応の形は deferred の high として後続タスクへ'
+  resolution_note: 'gate: review round 2 loop 1 の修正が deny→allow の退行を入れたときの扱い（gate_id 無し・ポリシー表に無い判断）; options: A=loop 2 で新しい high 4 件を editor に当てる（手順の既定） / B=F1・F3 を戻し F2 だけ残す / C=$'' ${ $(( (( $[ がヒアドキュメント候補と同じチャンクにあれば判定不能に倒す fail-closed 設計に置き換える; chosen: B; not chosen: A（引用・コメント・展開を別々に解析する構造への継ぎ足しが続き、別の形で回帰する懸念が強い。${...} の終端には引用と入れ子の扱いも要る）、C（正常な展開とヒアドキュメントの組み合わせも無人実行では deny になり誤検知コストが大きい。ヒアドキュメント候補を含まない F1 の回避形も残り、undetermined が必ず ask になるわけではない）; key points: B でも撤回後の再レビューが要る、F1/F3 の deny ケースの期待値を allow に書き換えて通さない、元の指摘と未対応の形は deferred high として残す、修正候補が残る時点での打ち切りは通常の no-progress と区別して手順上の例外として記録する; codex_consulted: true; opus_escalation: false; 実施: commit 2c77b5e5。F1/F3 用に loop 1 で足したケース 10 件（このラウンドで追加したもの）は、修正の撤回に伴い取り除いた。round 2 より前からあるケースは 1 件も消していない。loop 1 の退行 5 形は回帰防止ケースとして追加した'
