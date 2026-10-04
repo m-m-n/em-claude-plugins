@@ -1,16 +1,16 @@
 schema_version: 1
 feature: codex-fallback-review-residuals
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: eec404e1a167d7bdbd9b436cd84e813c679b31b5
-last_input_digest: sha256:60d283a536c2a71308c21dcbd7e005a99725b3bd765c9e8e22578ba18bccd349
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:c56bd85c9014a66803942e423e9b1b7d595aa73fb40b5582518b3d53b3e5ffcf
+active_request_id: create-spec-run-0002
 packets: {}
 answers:
   requirement.opus-escalation-vehicle:
     packet_id: null
-    answered_at: '2026-10-04T15:50:00+09:00'
+    answered_at: '2026-10-04T15:38:00+09:00'
     source: batch-codex-consultation
     answer_mode: freeform
     selected_option_ids: []
@@ -43,7 +43,7 @@ answers:
       not run.'
   requirement.escalation-nonpacket-source:
     packet_id: null
-    answered_at: '2026-10-04T15:50:00+09:00'
+    answered_at: '2026-10-04T15:38:00+09:00'
     source: batch-codex-consultation
     answer_mode: freeform
     selected_option_ids: []
@@ -61,7 +61,7 @@ answers:
       not run.
   requirement.headline-bug-scope:
     packet_id: null
-    answered_at: '2026-10-04T15:50:00+09:00'
+    answered_at: '2026-10-04T15:38:00+09:00'
     source: batch-codex-consultation
     answer_mode: freeform
     selected_option_ids: []
@@ -81,7 +81,7 @@ answers:
       adopted. Opus escalation not run.
   requirement.escalation-contract-test-coverage:
     packet_id: null
-    answered_at: '2026-10-04T15:50:00+09:00'
+    answered_at: '2026-10-04T15:38:00+09:00'
     source: batch-codex-consultation
     answer_mode: freeform
     selected_option_ids: []
@@ -116,6 +116,10 @@ worker_runs:
   status: completed
   input_digest: sha256:60d283a536c2a71308c21dcbd7e005a99725b3bd765c9e8e22578ba18bccd349
   output_digest: sha256:8889cc460028b09bf6d0faefbd78b04fef38074fa8e1d82ca4e53187ca28bcfa
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:c56bd85c9014a66803942e423e9b1b7d595aa73fb40b5582518b3d53b3e5ffcf
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
