@@ -1,0 +1,98 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With neither hook copy on disk, every CASES entry for the ten AC-1
+      commands failed on both copies with "AssertionError: 2 != 0" (python3
+      could not open the missing script, exit status 2).
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With neither hook copy on disk, every CASES entry for the nine AC-2
+      commands failed on both copies with "AssertionError: 2 != 0" (python3
+      could not open the missing script).
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With neither hook copy on disk, the silent CASES entries (the AC-3
+      commands, the quote / comment / heredoc-body forms, and the second-level
+      shell literal) failed on both copies with "AssertionError: 2 != 0"
+      because the process exited 2 with an error on stderr.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_input_that_is_not_json_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_json_that_is_not_an_object_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_missing_tool_input_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_missing_command_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_non_string_command_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_an_unclosed_quote_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_an_unterminated_heredoc_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_env_with_an_option_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_a_very_long_command_still_gets_an_answer
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With neither hook copy on disk, each fail-open test failed on both
+      copies with a (2, "", "<python3: can't open file ...>") result against
+      the expected (0, "", "").
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestDenyOutput.test_deny_prints_exactly_one_json_object_of_the_expected_shape
+      - tests.test_codex_hook_interactive_guard.TestDenyOutput.test_reason_is_japanese_and_names_the_three_alternatives
+      - tests.test_codex_hook_interactive_guard.TestDenyOutput.test_output_is_utf8_whatever_the_locale
+      - tests.test_codex_hook_interactive_guard.TestDenyOutput.test_reason_does_not_echo_unreadable_text_from_the_command
+    red_confirmed: true
+    red_reason: >-
+      With neither hook copy on disk, the shape test failed with
+      "AssertionError: 2 != 0" and the reason tests errored with
+      json.JSONDecodeError on the empty stdout.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_both_copies_exist
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_the_checker_flags_a_module_outside_the_standard_library
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_the_checker_flags_network_and_process_modules
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_the_checker_flags_process_spawning_calls
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_the_checker_flags_writes
+      - tests.test_codex_hook_interactive_guard.TestWorkingDirectoryAndEnvironment.test_the_verdict_does_not_depend_on_the_working_directory
+      - tests.test_codex_hook_interactive_guard.TestWorkingDirectoryAndEnvironment.test_the_verdict_does_not_depend_on_environment_variables
+    red_confirmed: true
+    red_reason: >-
+      With neither hook copy on disk, test_both_copies_exist failed with
+      "False is not true : .../codex-hook-interactive-guard.py is missing",
+      the byte-identity and source-constraint tests raised
+      FileNotFoundError, and the working-directory / environment tests failed
+      with "'error' != 'deny'" style verdict mismatches. The four
+      test_the_checker_flags_* tests exercise the static checker itself on
+      synthetic sources and pass without the hook; they show the source
+      check is not vacuous and were not red.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_hold_both_a_deny_and_a_silent_case
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestRulesDocument.test_the_rules_file_has_a_section_for_this_hook
+      - tests.test_codex_hook_interactive_guard.TestRulesDocument.test_the_section_gives_the_test_command
+      - tests.test_codex_hook_interactive_guard.TestRulesDocument.test_the_section_gives_the_cases_format
+      - tests.test_codex_hook_interactive_guard.TestRulesDocument.test_the_section_says_the_same_table_runs_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestRulesDocument.test_the_section_says_the_copies_stay_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      The table-driven test failed on both copies with "AssertionError: 2 !=
+      0" while the hook copies were absent, and the five TestRulesDocument
+      tests failed ("'' == ''", "... not found in ''") against the original
+      .claude/rules/hook-tests.md before the section was added. The
+      non-vacuity assertion test_cases_hold_both_a_deny_and_a_silent_case
+      passed from the moment the table existed and was not observed red; the
+      two regression commands (python3 -m unittest discover -s tests and
+      python3 em-workflow/scripts/check-plugin-invariants.py .) were already
+      green at baseline and were not observed red.
