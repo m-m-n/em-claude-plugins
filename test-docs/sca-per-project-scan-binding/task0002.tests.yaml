@@ -1,0 +1,124 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 6937 tests OK; check-plugin-invariants.py: all PASS, exit 0
+final_failures: []             # re-executed after implementation: 7021 tests OK; check-plugin-invariants.py exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestBuildScanJobWorkingDirectoryAndPrecondition
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_a_nested_target_runs_in_the_project_root_joined_with_its_directory
+      ("AssertionError: '/proj' != '/proj/services/api'" for npm, cargo and go),
+      test_an_absolute_target_is_rejected / test_a_target_with_a_dot_dot_segment_is_rejected /
+      test_a_target_containing_nul_is_rejected ("AssertionError: JobConstructionError not
+      raised"). The root-target, pip-forms and purity (open / process launch patched to
+      fail) tests describe behavior that pre-existed for root targets; they were green
+      before the change and are regression guards, not reds.
+  AC-2:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestEachProjectIsAuditedInItsOwnDirectory
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ts1_a_nested_npm_project_runs_in_its_own_directory_with_its_own_label
+      ("AssertionError: '<tmp>/project' != '<tmp>/project/services/api'": npm ran at the
+      project root), test_ts2_two_projects_run_once_each_in_ascending_path_order
+      ("Lists differ: ['<tmp>/project'] != ['<tmp>/project/services/api',
+      '<tmp>/project/services/web']": one launch for two projects),
+      test_ts6_alternative_spellings_of_one_directory_make_one_group_and_one_launch
+      ("Lists differ: ['<tmp>/project'] != ['<tmp>/project/a']").
+  AC-3:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestAProjectWithoutItsAnchorIsNeverLaunched
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_npm_manifest_without_any_lockfile_at_the_root ("AssertionError: False is not
+      true": skipped was false, the anchorless project was launched and produced a
+      finding), test_cargo_manifest_without_cargo_lock_at_the_root and
+      test_a_go_sum_only_change_without_go_mod_is_unbindable (same),
+      test_a_go_sum_only_change_beside_go_mod_launches_in_that_directory
+      ("Lists differ: ['<tmp>/project'] != ['<tmp>/project/mods/x']"), and
+      test_ts10_a_cargo_project_without_cargo_lock_leaves_the_git_tree_unchanged
+      ("AssertionError: '' != '?? Cargo.lock\n'": the stub generated Cargo.lock).
+  AC-4:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestEscapesAreUnbindableAndNeverFallBack
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation: test_shrinkwrap_symlinked_elsewhere_beside_a_valid_package_lock,
+      test_anchor_symlinked_into_another_directory_inside_the_root,
+      test_manifest_symlinked_to_a_file_outside_the_root,
+      test_an_absolute_changed_path_is_unbindable_even_when_it_names_a_valid_project,
+      test_a_changed_path_with_nul_is_unbindable_and_never_raises,
+      test_a_deleted_selected_target_is_unbindable_beside_a_valid_project and
+      test_an_absent_project_directory_is_unbindable all failed with
+      "AssertionError: False is not true" (skipped was false: the bad project was
+      launched at the project root and its finding was returned).
+  AC-5:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestAggregation
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation: test_bindable_and_unbindable_projects_mixed,
+      test_two_unbindable_projects_report_the_reason_once,
+      test_nothing_in_skip_reason_or_summary_carries_a_directory_name and
+      test_reasons_of_different_ecosystems_are_sorted_and_joined_with_plus
+      ("AssertionError: False is not true": skipped was false because every project was
+      launched at the root), test_a_group_that_does_not_complete_adds_its_existing_reason
+      ("AssertionError: 1 != 2": one launch for two projects). The tool-absent
+      (npm_tool_not_found) and invalid-registry-entry tests describe the ecosystem gate
+      that already ran first; they were green before the change and guard that order.
+  AC-6:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestPipGroupsKeepTheirExistingBehavior
+      - tests.test_sca_pip_lockfile_audit
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_pip_is_audited_once_per_group_with_lockfile_first_selection
+      ("AssertionError: 1 != 2": the lockfile in one directory shadowed the
+      requirements.txt project of the other), test_every_pip_launch_runs_in_the_project_root
+      ("Lists differ: ['<tmp>/project'] != ['<tmp>/project', '<tmp>/project']"),
+      test_each_group_findings_carry_that_groups_raw_target (the requirements.txt
+      finding was missing). The pre-existing pip lockfile tests in
+      tests.test_sca_pip_lockfile_audit were green before and after the change (they
+      guard FR10); the remaining new pip tests pre-existed as behavior and were green
+      before the change.
+  AC-7:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestDeterminism
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_reversing_the_changed_files_keeps_skip_reason_and_the_launch_order
+      ("Lists differ: ['<tmp>/project'] != ['<tmp>/project/a', '<tmp>/project/b',
+      '<tmp>/project/c']": no per-project launch order existed). The byte-identical
+      repeat and spelling-order tests were green before the change (the old flow was
+      deterministic too) and are regression guards for the new grouping.
+  AC-8:
+    tests:
+      - tests.test_sca_per_project_scan_binding.TestThisModuleUsesOnlyTheStandardLibrary
+      - tests.test_sca_scan_execution.TestEmptyStdoutIsNotCompleted
+      - tests.test_sca_scan_execution.TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons
+      - tests.test_sca_scan_execution.TestDocumentedAdvisoryFoundExitIsCompleted
+      - tests.test_sca_scan_execution.TestPartialCoverageAcrossTwoEcosystems
+      - tests.test_sca_scan_execution.TestCombinedSkipReasonIsDeterministic
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult
+      - tests.test_sca_scan_normalization.TestUntrustedTextTruncation
+      - tests.test_sca_scan_normalization.TestDeterminismAndReadOnlyDiscipline
+      - tests.test_sca_scan_normalization.TestScanCliProducesOneObjectExitZero
+      - tests.test_sca_pip_lockfile_audit.TestUnconvertibleLockfiles
+      - tests.test_sca_pip_lockfile_audit.TestDependenciesAndModuleLoading
+    red_confirmed: false
+    red_reason: >-
+      The updated fixtures only add the manifest and the anchor and keep (or
+      strengthen) their assertions, so they were green before any implementation
+      existed; the new module's import check was green from the start. No red state
+      occurred for this criterion. What was observed: once run_scan's binding landed and
+      before the fixtures were updated, 13 existing tests failed (the npm / cargo / go
+      end-to-end cases of tests.test_sca_scan_execution, tests.test_sca_scan_normalization
+      and tests.test_sca_pip_lockfile_audit), and they went green after the fixtures were
+      updated -- that is not a red from an absent implementation. The two commands'
+      exit 0 results are recorded in final_failures.
