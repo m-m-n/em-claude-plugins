@@ -267,6 +267,15 @@ carries the combined machine-stable reasons, and the findings the other
 selected ecosystems did produce still enter Phase R3a's evaluator input
 unchanged.
 
+The same partial coverage also spans the projects of one selected ecosystem:
+when changed manifests or lockfiles sit in several project directories, each
+is scanned as a separate project in its own directory. A project that did not
+complete — including one that cannot be bound to its directory, reported
+with the path-free reason `<ecosystem>_project_unbindable` — makes the row
+skipped, with `skip_reason` carrying the combined machine-stable reasons,
+each reason once. The findings of the projects that did complete still enter
+Phase R3a's evaluator input unchanged.
+
 ### Contributor-tier pre-dispatch criteria (muse-spark read-mapping)
 
 When `muse-spark` is the chain entry the registry selected, dispatch it as
