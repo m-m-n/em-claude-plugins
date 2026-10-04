@@ -22,3 +22,15 @@ records:
     scan result and emitting a pathless fixed warning token in the summary, which
     needs a FR8/AC8 SPEC change. Adopted: planner choice (result unchanged, no path)
     to avoid reopening create-spec; the warning is carried as a follow-up task.'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-04T23:07:00+09:00'
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: 'task0002 deviation tests/test_tier_record_schema_v2.py not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; path: tests/test_tier_record_schema_v2.py
+    (sha256 pin of review-phase.md refreshed after the required axis 2 edit); declined:
+    the identifier part is missing (no AC-n of the task plan or registered requirement
+    id was named); path shape and control-path checks passed.'
