@@ -40,10 +40,12 @@ task0009 rework the `scan` half in disjoint regions of this same file
 
 import argparse
 import contextlib
+import dataclasses
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -772,17 +774,26 @@ CHILD_ENV_BASE_KEYS = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "U
 
 # Per-ecosystem pins, each through the tool's OWN documented environment
 # variable, keeping the reviewed project's configuration out of the set the
-# child process reads from:
-#   npm   -- npm_config_registry pins the package-registry endpoint ahead of
-#            a hostile `registry=` line in the reviewed project's own
-#            .npmrc (environment variables outrank a project .npmrc in
+# child process reads from. npm and cargo are protected a second way, by WHERE
+# they run (sca-scanner-project-config-isolation): each of their scan groups
+# runs from a per-group isolation directory outside the reviewed tree that
+# holds only copies of the validated scan inputs, so the reviewed project's
+# own `.npmrc` / `.cargo/audit.toml` are not on the scanners' discovery path
+# at all. No pin below was added or changed for that; a project-level file is
+# excluded by the isolation directory, not by a pin.
+#   npm   -- npm_config_registry pins the package-registry endpoint (an
+#            environment variable outranks a `registry=` line in any .npmrc in
 #            npm's own documented config precedence); npm_config_userconfig
 #            points the user-level config file outside the reviewed tree.
+#            npm itself runs from the isolation directory, where no project
+#            `.npmrc` exists on the cwd or any ancestor path.
 #   cargo -- cargo-audit is resolved and executed directly (never through
 #            the `cargo` front end -- see ALLOWED_EXECUTABLES), which
 #            already removes the [alias] dispatch the registry's OLD
-#            `cargo audit` form was vulnerable to; no further pin closes a
-#            vector for this ecosystem today.
+#            `cargo audit` form was vulnerable to. No pin is needed: it runs
+#            from the isolation directory with `--file` pointing at the copied
+#            Cargo.lock, so no project `.cargo/audit.toml` is read, and
+#            `--url` / `--db` are never passed.
 #   pip   -- PIP_CONFIG_FILE keeps a reviewed project's own pip.conf from
 #            being read; PIP_INDEX_URL pins the package index.
 #   go    -- GOENV=off disables reading any go env config file at all;
@@ -792,6 +803,11 @@ CHILD_ENV_BASE_KEYS = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "U
 #            inside the bound project instead of an ancestor workspace.
 #            GOFLAGS=-mod=readonly stops go from rewriting go.mod / go.sum
 #            (and replaces whatever flags the caller's GOFLAGS carried).
+# Trusted configuration scope (FR11): HOME, the npm globalconfig, the
+# Cargo-home `audit.toml` and the advisory DB are managed by the reviewer and
+# cannot be changed by the PR author. This module disables or overrides none
+# of them: HOME is passed to the child as is, and no pin for any of them is
+# added.
 ECOSYSTEM_ENV_PINS = {
     "npm": {
         "npm_config_registry": "https://registry.npmjs.org/",
@@ -852,9 +868,40 @@ def _pip_target(manifest_file):
     return False, (dirname if dirname else ".")
 
 
-# npm, cargo and go run INSIDE the project directory their job target names
-# (sca-per-project-scan-binding FR3); pip keeps the project root (FR10).
+# The job targets of npm, cargo and go name a project directory
+# (sca-per-project-scan-binding FR3). go's scanner starts inside that
+# directory; npm and cargo start from a per-group isolation directory outside
+# the reviewed tree instead (sca-scanner-project-config-isolation), which
+# holds copies of that project's validated scan inputs; pip keeps the project
+# root (FR10).
 PROJECT_BOUND_ECOSYSTEMS = frozenset({"npm", "cargo", "go"})
+
+# The ecosystems whose scanner runs from an isolation directory.
+ISOLATION_ECOSYSTEMS = frozenset({"npm", "cargo"})
+
+# The roles of a scan group's copied inputs, as keys of PreparedInputs.files.
+ROLE_MANIFEST = "manifest"
+ROLE_ANCHOR = "anchor"
+ROLE_LOCKFILE = "lockfile"
+
+# Per isolating ecosystem, the roles `build_scan_job` needs a copy of.
+_ISOLATION_ROLES = {
+    "npm": (ROLE_MANIFEST, ROLE_ANCHOR),
+    "cargo": (ROLE_LOCKFILE,),
+}
+
+
+@dataclasses.dataclass(frozen=True)
+class PreparedInputs:
+    """The prepared isolation paths of ONE npm / cargo scan group: the
+    isolation directory (`directory`, the scanner's cwd) and the path of each
+    copied input (`files`, keyed by role: npm `manifest` and `anchor`, cargo
+    `lockfile`). A plain value -- `build_scan_job` only composes argv / cwd
+    from it, so the paths need not exist there. Created and removed by
+    `isolation_workspace`."""
+
+    directory: str
+    files: dict
 
 
 def _bound_job_directory_parts(name, manifest_file):
@@ -882,7 +929,7 @@ def _bound_job_directory_parts(name, manifest_file):
 
 
 def build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ=None,
-                   prepared_file=None):
+                   prepared_file=None, prepared_inputs=None):
     """Builds ONE scan job from `ecosystem`'s ALREADY-RESOLVED absolute
     `executable_path` (never re-resolved here -- see build_scan_jobs).
     Carries: the ecosystem name; the project-relative `manifest_file`; the
@@ -893,34 +940,64 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
     Launches nothing -- every claim about the resulting command is
     assertable without running a scanner.
 
-    Working directory (FR3): npm, cargo and go run in the project root
-    joined LEXICALLY with the target's directory part -- exactly the string
-    form of `project_root` when that part is empty (a root target) -- so a
-    scanner started for `services/api/package.json` audits that project's
-    own dependency set. pip keeps the project root for every target form
-    (FR10). An npm / cargo / go target that is absolute, has a `..` segment
-    or contains NUL is rejected with JobConstructionError (TM-1): the caller
-    passes a verified project-relative target.
+    Working directory: npm and cargo run in the isolation directory the
+    run side prepared for the group (`prepared_inputs`, see below), outside
+    the reviewed tree, so the reviewed project's own `.npmrc` /
+    `.cargo/audit.toml` are not on the scanner's discovery path. go runs in
+    the project root joined LEXICALLY with the target's directory part --
+    exactly the string form of `project_root` when that part is empty (a
+    root target). pip keeps the project root for every target form (FR10).
+    An npm / cargo / go target that is absolute, has a `..` segment or
+    contains NUL is rejected with JobConstructionError (TM-1): the caller
+    passes a verified project-relative target. The job's manifest (the
+    label findings carry) stays that project-relative target for every
+    ecosystem.
 
-    Pure (NFR2): it reads and writes no file, so `prepared_file` need not
-    exist. For a pip lockfile `manifest_file` (poetry.lock / Pipfile.lock)
-    `prepared_file` is the path of the requirements file the preparation
-    stage wrote for ONE run (IMPLEMENTATION.md C5/C6); the argument vector is
-    then [executable, the registry's `target_flag`, prepared_file,
-    `--no-deps`, `--disable-pip`, then the registry `args`] and the job's
-    manifest stays the lockfile. A pip lockfile WITHOUT a prepared file is
-    rejected with JobConstructionError (also a ValueError): the directory
-    form is never produced for a lockfile. Every other manifest ignores
-    `prepared_file` and keeps its previous argument vector, with neither
-    `--no-deps` nor `--disable-pip`."""
+    `prepared_inputs` (npm / cargo only; pip and go ignore it and keep their
+    previous output) is a `PreparedInputs`: the isolation directory path and
+    the path of each copy keyed by input role. npm's argument vector is the
+    registry's `args` unchanged. cargo's is [executable, the registry's
+    first arg (the `audit` subcommand), the registry's `target_flag`, the
+    copied lockfile path, then the rest of the registry's `args`] -- the
+    flag is read from the registry's declaration, never hard-coded here, and
+    there is no `--url` / `--db`. An npm / cargo job WITHOUT `prepared_inputs`
+    (or without a copy for a role it needs, or, for cargo, without a
+    registry `target_flag`) is rejected with JobConstructionError: this
+    function never produces an npm / cargo job whose cwd is the project root.
+
+    Pure (NFR1): it reads and writes no file and starts no process, so the
+    prepared paths and `prepared_file` need not exist. For a pip lockfile
+    `manifest_file` (poetry.lock / Pipfile.lock) `prepared_file` is the path
+    of the requirements file the preparation stage wrote for ONE run
+    (IMPLEMENTATION.md C5/C6); the argument vector is then [executable, the
+    registry's `target_flag`, prepared_file, `--no-deps`, `--disable-pip`,
+    then the registry `args`] and the job's manifest stays the lockfile. A
+    pip lockfile WITHOUT a prepared file is rejected with
+    JobConstructionError (also a ValueError): the directory form is never
+    produced for a lockfile. Every other manifest ignores `prepared_file`
+    and keeps its previous argument vector, with neither `--no-deps` nor
+    `--disable-pip`."""
     name = ecosystem.get("ecosystem", "unknown")
     cwd = str(project_root)
     if name in PROJECT_BOUND_ECOSYSTEMS:
         directory_parts = _bound_job_directory_parts(name, manifest_file)
         if directory_parts:
             cwd = os.path.join(cwd, *directory_parts)
+    args = list(ecosystem.get("args") or [])
     argv = [executable_path]
-    if name == "pip":
+    if name in ISOLATION_ECOSYSTEMS:
+        copies = _prepared_copies(name, prepared_inputs)
+        cwd = str(prepared_inputs.directory)
+        if name == "cargo":
+            target_flag = ecosystem.get("target_flag")
+            if not isinstance(target_flag, str) or not target_flag:
+                raise JobConstructionError(
+                    "cargo job needs the registry's target_flag to point at the copied lockfile"
+                )
+            argv.extend(args[:1])
+            argv.extend([target_flag, copies[ROLE_LOCKFILE]])
+            args = args[1:]
+    elif name == "pip":
         if os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
             target_flag = ecosystem.get("target_flag")
             if not prepared_file or not target_flag:
@@ -935,7 +1012,7 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
             if flagged and target_flag:
                 argv.append(target_flag)
             argv.append(target)
-    argv.extend(ecosystem.get("args") or [])
+    argv.extend(args)
     return {
         "ecosystem": name,
         "manifest": manifest_file,
@@ -943,6 +1020,23 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
         "cwd": cwd,
         "env": build_child_env(ecosystem, environ),
     }
+
+
+def _prepared_copies(name, prepared_inputs):
+    """The copy path of every role `name`'s job needs, as a dict, taken from
+    `prepared_inputs`. Raises JobConstructionError (no path in the message)
+    when `prepared_inputs` is not a `PreparedInputs`, has no directory, or
+    lacks a copy for a needed role."""
+    if not isinstance(prepared_inputs, PreparedInputs) or not prepared_inputs.directory:
+        raise JobConstructionError(f"{name} job needs the prepared isolation inputs")
+    files = prepared_inputs.files if isinstance(prepared_inputs.files, dict) else {}
+    copies = {}
+    for role in _ISOLATION_ROLES[name]:
+        path = files.get(role)
+        if not isinstance(path, str) or not path:
+            raise JobConstructionError(f"{name} job needs a prepared copy for its {role}")
+        copies[role] = path
+    return copies
 
 
 def _lexical_project_directory(path):
@@ -974,7 +1068,7 @@ def _lexical_project_directory(path):
     return directory, ("\x00" in path or absolute or escaping)
 
 
-def build_scan_jobs(registry, changed_files, project_root, environ=None):
+def build_scan_jobs(registry, changed_files, project_root, environ=None, prepared_inputs=None):
     """Orchestrates job construction for every SELECTED ecosystem
     (select_ecosystems, unchanged): validates each entry
     (validate_ecosystem_entry), resolves its executable on PATH
@@ -1001,11 +1095,19 @@ def build_scan_jobs(registry, changed_files, project_root, environ=None):
     root), a pip job's target the raw selected file. Verified grouping on
     real paths and every binding check belong to `run_scan`, not here.
 
-    Performs no run-time preparation (no lockfile read, no prepared file).
-    A pip lockfile target is therefore OUTSIDE its contract: such a job needs
-    a prepared requirements file this function never creates, so
-    `build_scan_job` rejects it (JobConstructionError). `run_scan` audits a
-    pip lockfile through its own preparation stage instead."""
+    Performs no run-time preparation (no lockfile read, no prepared file, no
+    isolation directory). A pip lockfile target is therefore OUTSIDE its
+    contract: such a job needs a prepared requirements file this function
+    never creates, so `build_scan_job` rejects it (JobConstructionError).
+    `run_scan` audits a pip lockfile through its own preparation stage
+    instead. An npm / cargo job likewise needs the prepared isolation inputs
+    of its group, which only the run side can create: the caller supplies
+    them as `prepared_inputs`, a dict from a job's target (its manifest, as
+    described above) to a `PreparedInputs`. An npm / cargo group whose target
+    has no entry is rejected with JobConstructionError (never a job whose
+    cwd is the project root). go and pip groups need no entry. `run_scan`
+    does not use this function: it prepares each group's isolation directory
+    itself (`_scan_bound_group`)."""
     selected = select_ecosystems(registry, changed_files)
     jobs = []
     skip_reasons = []
@@ -1039,7 +1141,18 @@ def build_scan_jobs(registry, changed_files, project_root, environ=None):
             else:
                 basename = os.path.basename(selected_file)
                 target = f"{directory}/{basename}" if directory else basename
-            jobs.append(build_scan_job(ecosystem, target, project_root, executable_path, environ))
+            prepared = None
+            if name in ISOLATION_ECOSYSTEMS and prepared_inputs is not None:
+                try:
+                    prepared = prepared_inputs[target]
+                except KeyError:
+                    prepared = None
+            jobs.append(
+                build_scan_job(
+                    ecosystem, target, project_root, executable_path, environ,
+                    prepared_inputs=prepared,
+                )
+            )
     return jobs, skip_reasons
 
 
@@ -1179,13 +1292,21 @@ def _judge_go_outcome(exit_code, stripped):
     return OUTCOME_COMPLETED, objs
 
 
+# The time one scanner run may take before it is abandoned (seconds).
+SCAN_TIMEOUT_SECONDS = 300
+
+
 def run_ecosystem_command(job):
     """Runs `job`'s constructed argument vector (task0008's "Scan job"
     contract: `argv[0]` the absolute allowlisted executable, `cwd` the
-    project directory the job is bound to (the project root for pip),
-    `env` the explicit child environment --
-    never the calling process's environment inherited wholesale), reading
-    only -- nothing here writes inside the project root (NFR2). Returns
+    directory the job runs in, `env` the explicit child environment --
+    never the calling process's environment inherited wholesale) from
+    `job["cwd"]` exactly as given. For npm and cargo that is the group's
+    isolation directory, outside the reviewed tree (prepared before and
+    removed after this call by `_scan_bound_group`, which owns that
+    lifecycle -- this function neither creates nor removes it); for go it is
+    the project directory the job is bound to, for pip the project root.
+    Nothing here writes inside the project root (NFR2). Returns
     `(outcome, payload)`: `payload` is the parsed data dict when `outcome`
     is `OUTCOME_COMPLETED`, or the machine-stable reason string when
     `OUTCOME_NOT_COMPLETED` (see `judge_scan_outcome`, unchanged -- this
@@ -1201,7 +1322,7 @@ def run_ecosystem_command(job):
             env=job["env"],
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=SCAN_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.SubprocessError):
         return OUTCOME_NOT_COMPLETED, f"{name}_execution_failed"
@@ -2327,12 +2448,17 @@ def _scan_pip_lockfile(ecosystem, lockfile, project_root, executable_path):
 # Per-project grouping and binding (sca-per-project-scan-binding). One scan
 # unit per (ecosystem, project directory): the changed files of an ecosystem
 # are grouped by the REAL directory that holds them, and an npm / cargo / go
-# group is launched only inside a directory that passes the binding check.
-# Everything here reads path metadata only -- it never writes, never
-# launches, and never falls back to the project root or an ancestor
+# group is scanned only for a directory that passes the binding check.
+# The grouping and binding helpers read path metadata only -- they never
+# write, never launch, and never fall back to the project root or an ancestor
 # directory. An exception raised while resolving or inspecting a reviewed
 # path is contained and turned into that ecosystem's path-free reason
-# (`<ecosystem>_project_unbindable`); it never escapes `scan`.
+# (`<ecosystem>_project_unbindable`); it never escapes `scan`. A group that
+# passed the binding check is then scanned by `_scan_bound_group`: go from its
+# project directory, npm and cargo from a per-group isolation directory
+# (`isolation_workspace`, below) outside the reviewed tree. The workspace is
+# the one writer in this section, and it writes only under the system
+# temporary area.
 # ---------------------------------------------------------------------------
 
 # Per ecosystem: the anchor lockfile names in preference order (npm: an
@@ -2428,14 +2554,38 @@ def _verified_groups(name, ecosystem, changed_files, real_root):
     return [(key[0], grouped[key]) for key in sorted(grouped)], rejected
 
 
-def _binding_file_in_directory(project_dir, file_name):
-    """True when `file_name` inside `project_dir` (a real path) resolves to
-    a regular file whose real containing directory is `project_dir` itself:
-    a symlink to another file of the same directory is fine, one resolving
-    into any other directory is not, and neither is a directory, a dangling
-    link or a special file."""
+def _binding_source(project_dir, file_name):
+    """The real path of `file_name` inside `project_dir` (a real path) when it
+    resolves to a regular file whose real containing directory is
+    `project_dir` itself, otherwise None: a symlink to another file of the
+    same directory is fine, one resolving into any other directory is not,
+    and neither is a directory, a dangling link or a special file."""
     real = os.path.realpath(os.path.join(project_dir, file_name))
-    return os.path.dirname(real) == project_dir and os.path.isfile(real)
+    if os.path.dirname(real) == project_dir and os.path.isfile(real):
+        return real
+    return None
+
+
+def _binding_file_in_directory(project_dir, file_name):
+    """True when `_binding_source` accepts `file_name` inside `project_dir`."""
+    return _binding_source(project_dir, file_name) is not None
+
+
+def _binding_project_dir(real_root, directory):
+    """The real project directory of group key `directory` (D): the real
+    project root for the root group `""`, otherwise the real path of D below
+    it."""
+    return os.path.realpath(os.path.join(real_root, directory)) if directory else real_root
+
+
+def _binding_anchor_name(name, project_dir):
+    """The anchor lockfile name of an npm / cargo / go project in
+    `project_dir` (a real path): for npm an `npm-shrinkwrap.json` entry, when
+    present, wins and never falls back to `package-lock.json`."""
+    anchors = _BINDING_ANCHORS[name]
+    if name == "npm" and os.path.lexists(os.path.join(project_dir, anchors[0])):
+        return anchors[0]  # an invalid shrinkwrap never falls back to package-lock.json
+    return anchors[-1]
 
 
 def _binding_check(name, real_root, directory, target_basename):
@@ -2449,22 +2599,174 @@ def _binding_check(name, real_root, directory, target_basename):
     try:
         if real_root is None:
             return False
-        project_dir = (
-            os.path.realpath(os.path.join(real_root, directory)) if directory else real_root
-        )
+        project_dir = _binding_project_dir(real_root, directory)
         if not _verified_inside(real_root, project_dir) or not os.path.isdir(project_dir):
             return False
-        anchors = _BINDING_ANCHORS[name]
-        if name == "npm" and os.path.lexists(os.path.join(project_dir, anchors[0])):
-            anchor = anchors[0]  # an invalid shrinkwrap never falls back to package-lock.json
-        else:
-            anchor = anchors[-1]
+        anchor = _binding_anchor_name(name, project_dir)
         for file_name in (anchor, _BINDING_MANIFESTS[name], target_basename):
             if not _binding_file_in_directory(project_dir, file_name):
                 return False
         return True
     except Exception:
         return False
+
+
+# ---------------------------------------------------------------------------
+# Isolation workspace (sca-scanner-project-config-isolation). npm and cargo
+# find project-level configuration (`.npmrc`, `.cargo/audit.toml`) by walking
+# from their working directory, so a scan group that passed the binding check
+# is run from a newly created directory OUTSIDE the reviewed tree that holds
+# only copies of its validated inputs. The directory exists for exactly one
+# group and is removed on every exit path. Nothing is created or written
+# under the real project root (NFR2), and a failure of any step is an
+# isolation failure -- the scanner is never launched and never falls back to
+# running inside the tree. A failure carries no path (NFR3).
+# ---------------------------------------------------------------------------
+
+ISOLATION_DIRECTORY_PREFIX = "sca-isolation-"
+
+
+class IsolationError(Exception):
+    """Creating, validating or filling an isolation directory failed. A fixed
+    signal: it is raised with no argument and chains no cause, so neither a
+    path nor filesystem exception text can travel with it (NFR3)."""
+
+
+def _isolation_temp_parent(real_root):
+    """The real path of the temporary directory the standard selection
+    (`tempfile.gettempdir`: the process-wide `tempfile.tempdir`, else
+    `TMPDIR` / `TEMP` / `TMP`) uses in this process. Raises IsolationError
+    when it equals the real project root or lies under it (FR6).
+
+    The environment candidates are checked BEFORE the standard selection
+    runs: it probes a candidate by creating and removing a file there, which
+    must never happen inside the reviewed tree (NFR2). Candidates are
+    compared in the standard order and the first usable one ends the check,
+    as the selection itself would use it. Containment is decided on real
+    paths by path components."""
+    if tempfile.tempdir is None:
+        for key in ("TMPDIR", "TEMP", "TMP"):
+            candidate = os.environ.get(key)
+            if not candidate:
+                continue
+            real = os.path.realpath(candidate)
+            if _verified_inside(real_root, real):
+                raise IsolationError()
+            if os.path.isdir(real) and os.access(real, os.W_OK | os.X_OK):
+                break
+    parent = os.path.realpath(tempfile.gettempdir())
+    if _verified_inside(real_root, parent):
+        raise IsolationError()
+    return parent
+
+
+def _isolation_sources(name, project_dir):
+    """The inputs to copy for an npm / cargo group in `project_dir`, as
+    `(role, file name)` pairs in copy order: npm's manifest then its selected
+    anchor (`npm-shrinkwrap.json` preferred over `package-lock.json`), cargo's
+    `Cargo.lock`. The names are the binding check's own."""
+    anchor = _binding_anchor_name(name, project_dir)
+    if name == "npm":
+        return [(ROLE_MANIFEST, _BINDING_MANIFESTS["npm"]), (ROLE_ANCHOR, anchor)]
+    if name == "cargo":
+        return [(ROLE_LOCKFILE, anchor)]
+    raise IsolationError()
+
+
+def _copy_input(source, destination):
+    """Writes the content of the regular file `source` (a real path) as a NEW
+    regular file `destination`, owner-only (mode 0o600), failing when
+    `destination` already exists. Only content is copied: no mode, owner or
+    link. Raises OSError on any failure."""
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(source, os.O_RDONLY | nofollow | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as reader:
+        if not stat.S_ISREG(os.fstat(reader.fileno()).st_mode):
+            raise OSError("not a regular file")
+        content = reader.read()
+    fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL | nofollow, 0o600)
+    with os.fdopen(fd, "wb") as writer:
+        writer.write(content)
+
+
+def _remove_tree(path):
+    """Removes the directory tree at `path` recursively, including files a
+    scanner left in it. A tree a scanner made unwritable is made removable
+    and removed again. Never raises and never reports a path: a removal that
+    still fails leaves the scan's recorded outcome as it was."""
+    for attempt in range(2):
+        try:
+            shutil.rmtree(path)
+        except Exception:
+            pass
+        if not os.path.lexists(path):
+            return
+        if attempt == 0:
+            _make_tree_removable(path)
+
+
+def _make_tree_removable(path):
+    """Restores owner access on every directory below `path` (links are never
+    followed), so a second removal can delete what a scanner locked."""
+    try:
+        if not stat.S_ISDIR(os.lstat(path).st_mode):
+            return
+        os.chmod(path, 0o700)
+        names = os.listdir(path)
+    except OSError:
+        return
+    for entry in names:
+        _make_tree_removable(os.path.join(path, entry))
+
+
+@contextlib.contextmanager
+def isolation_workspace(name, real_root, project_dir):
+    """A scoped isolation directory for ONE npm / cargo scan group of the
+    project directory `project_dir` (a real path inside `real_root`, the real
+    project root). Yields a `PreparedInputs`. On entry:
+
+    1. the temp parent is resolved and must lie outside the real project root
+       (`_isolation_temp_parent`);
+    2. one new, uniquely named directory is created under that same parent,
+       owner-only from the moment of creation (`tempfile.mkdtemp` makes it
+       mode 0o700 -- no window for group or other);
+    3. its own real path must lie outside the real project root;
+    4. each input is re-validated with the binding check's own rule
+       (`_binding_source`) and copied by content as a new regular file under
+       its own file name (an allowed same-directory symlink contributes its
+       target's content); nothing else is copied.
+
+    Any failure removes what was created and raises IsolationError, with no
+    path. On exit -- normal, a failed or timed-out scan, an error in the body
+    or a KeyboardInterrupt -- the directory is removed recursively, scanner
+    leftovers included (`_remove_tree`)."""
+    created = None
+    try:
+        try:
+            parent = _isolation_temp_parent(real_root)
+            created = tempfile.mkdtemp(prefix=ISOLATION_DIRECTORY_PREFIX, dir=parent)
+            directory = os.path.realpath(created)
+            if _verified_inside(real_root, directory):
+                raise IsolationError()
+            if not _verified_inside(real_root, project_dir) or not os.path.isdir(project_dir):
+                raise IsolationError()
+            files = {}
+            for role, file_name in _isolation_sources(name, project_dir):
+                source = _binding_source(project_dir, file_name)
+                if source is None:
+                    raise IsolationError()
+                destination = os.path.join(directory, file_name)
+                _copy_input(source, destination)
+                files[role] = destination
+            prepared = PreparedInputs(directory=directory, files=files)
+        except IsolationError:
+            raise
+        except Exception:
+            raise IsolationError() from None
+        yield prepared
+    finally:
+        if created is not None:
+            _remove_tree(created)
 
 
 def _group_audit(reasons=(), findings=(), completed=False, undetermined=0):
@@ -2482,13 +2784,27 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
     label follow the Target convention -- the basename of the file
     manifest_file_for selects from the group, prefixed by D unless D is the
     root. A group that fails the binding check launches nothing and reports
-    `<ecosystem>_project_unbindable`; otherwise the job runs in D, and its
-    outcome is judged and normalized as before. A Go unit's normalizer gets
-    the project root, like the cargo one, and may return a not-completed
-    reason (`go_direct_manifest_unreadable`): that becomes the unit's only
-    reason, with no findings and no undetermined count. Returns
-    `_group_audit` (its `undetermined` is the unit's Go undetermined-severity
-    count, 0 for every other ecosystem)."""
+    `<ecosystem>_project_unbindable` (and no isolation directory is created
+    for it); otherwise its outcome is judged and normalized as before. A Go
+    unit's normalizer gets the project root, like the cargo one, and may
+    return a not-completed reason (`go_direct_manifest_unreadable`): that
+    becomes the unit's only reason, with no findings and no undetermined
+    count. Returns `_group_audit` (its `undetermined` is the unit's Go
+    undetermined-severity count, 0 for every other ecosystem).
+
+    go runs in D. npm and cargo run from a per-group isolation directory
+    outside the reviewed tree (`isolation_workspace`), which this function
+    owns end to end: it prepares the directory for the group's validated
+    inputs after the binding check, builds the job from the prepared paths,
+    runs it through run_ecosystem_command with the job's cwd, and removes the
+    directory on every path (success, tool failure, timeout, an error while
+    copying). When the isolation fails -- creating, validating or filling the
+    directory -- the scanner is NOT launched, nothing is retried inside the
+    tree, and the unit reports `npm_isolation_failed` /
+    `cargo_isolation_failed` (fixed tokens, no path, no exception text);
+    the caller goes on with the remaining groups. The cargo
+    direct-dependency judgment still reads the ORIGINAL Cargo.toml in the
+    reviewed tree."""
     name = ecosystem.get("ecosystem", "unknown")
     selected = manifest_file_for(ecosystem, files)
     basename = os.path.basename(selected)
@@ -2496,11 +2812,26 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
     if not _binding_check(name, real_root, directory, basename):
         return unbindable
     target = f"{directory}/{basename}" if directory else basename
-    try:
-        job = build_scan_job(ecosystem, target, project_root, executable_path)
-    except JobConstructionError:
-        return unbindable
-    outcome, payload = run_ecosystem_command(job)
+    if name in ISOLATION_ECOSYSTEMS:
+        project_dir = _binding_project_dir(real_root, directory)
+        try:
+            with isolation_workspace(name, real_root, project_dir) as prepared:
+                try:
+                    job = build_scan_job(
+                        ecosystem, target, project_root, executable_path,
+                        prepared_inputs=prepared,
+                    )
+                except JobConstructionError:
+                    return unbindable
+                outcome, payload = run_ecosystem_command(job)
+        except IsolationError:
+            return _group_audit(reasons=[f"{name}_isolation_failed"])
+    else:
+        try:
+            job = build_scan_job(ecosystem, target, project_root, executable_path)
+        except JobConstructionError:
+            return unbindable
+        outcome, payload = run_ecosystem_command(job)
     if outcome == OUTCOME_NOT_COMPLETED:
         return _group_audit(reasons=[payload])
     normalizer = NORMALIZERS.get(name)
@@ -2560,10 +2891,11 @@ def _scan_pip_group(ecosystem, files, project_root, executable_path):
 
 
 def run_scan(project_root, changed_files, registry_path):
-    """AC-1..AC-7 (task0001) plus this task's partial-coverage contract and
-    sca-per-project-scan-binding: select ecosystems, resolve each on PATH,
-    group each ecosystem's changed files by project directory, execute one
-    scan job per group and judge the ONE outcome that execution yields
+    """AC-1..AC-7 (task0001) plus this task's partial-coverage contract,
+    sca-per-project-scan-binding and sca-scanner-project-config-isolation:
+    select ecosystems, resolve each on PATH, group each ecosystem's changed
+    files by project directory, execute one scan job per group and judge the
+    ONE outcome that execution yields
     (`judge_scan_outcome`), normalize completed payloads with a threshold
     applied at normalization time, and emit exactly one
     review-output-schema.json-conformant object.
@@ -2574,13 +2906,25 @@ def run_scan(project_root, changed_files, registry_path):
       nothing below runs for it -- no path verification, no binding check,
       no launch, no fallback of any kind (FR9).
     - npm / cargo / go: one scan unit per verified project directory (FR1),
-      launched inside that directory and labelled with its own manifest
-      path (FR2, FR3). A project that cannot be bound -- no anchor
-      lockfile, no required manifest, a path or symlink escaping the
-      project root, a deleted target, an absent directory -- launches
-      nothing and reports `<ecosystem>_project_unbindable`; a changed file
-      that fails path verification joins no group and reports the same
-      reason (FR4, FR5, FR6). Nothing falls back to the root or an ancestor.
+      labelled with its own manifest path (FR2, FR3). go is launched inside
+      that directory. npm and cargo are launched from a per-group isolation
+      directory outside the reviewed tree that holds only copies of the
+      group's validated inputs, so the reviewed project's own `.npmrc` /
+      `.cargo/audit.toml` are not on the scanner's discovery path
+      (`_scan_bound_group` prepares and removes it). A project that cannot
+      be bound -- no anchor lockfile, no required manifest, a path or
+      symlink escaping the project root, a deleted target, an absent
+      directory -- launches nothing and reports
+      `<ecosystem>_project_unbindable`; a changed file that fails path
+      verification joins no group and reports the same reason (FR4, FR5,
+      FR6). Nothing falls back to the root or an ancestor.
+    - An npm / cargo group whose isolation directory cannot be created,
+      validated or filled -- including a temp parent that is, or resolves
+      into, the reviewed tree -- launches nothing, never falls back to
+      running inside the tree, and reports `npm_isolation_failed` /
+      `cargo_isolation_failed`: fixed tokens, never a path. The remaining
+      groups are still scanned and the completed groups' findings stay in
+      the result; the reason enters `skip_reason` like any other.
     - pip: grouped per project directory too, each group audited by the
       existing rules from the project root (FR10).
     - `skipped` is `true` exactly when ANY unit did not complete (tool

@@ -9,7 +9,7 @@ Covers task0003 Acceptance Criteria
   Cross-model fallback"), whitespace-normalized, a passage located after the
   existing partial-coverage paragraph states that (1) changed manifests /
   lockfiles in several project directories of one selected ecosystem are
-  scanned as separate projects, each in its own directory, (2) a project
+  scanned as separate projects, each bound to its own directory, (2) a project
   that did not complete -- including one that cannot be bound to its
   directory, reported with the path-free reason
   `<ecosystem>_project_unbindable` -- makes the axis-2 row skipped with
@@ -86,11 +86,14 @@ class _R2Fixture:
 
     @classmethod
     def appended_passage(cls):
-        """Normalized text between the existing paragraph's end and the
-        Contributor-tier heading: the place the appended passage lives."""
+        """Normalized text of the paragraph that follows the existing one:
+        the place the multi-project passage lives. Paragraphs after it (the
+        isolation directory text of sca-scanner-project-config-isolation) are
+        outside this passage."""
         r2 = cls.r2()
         after_existing = r2[r2.index(EXISTING_PARAGRAPH) + len(EXISTING_PARAGRAPH):]
-        return _norm(after_existing[: after_existing.index(CONTRIBUTOR_HEADING)])
+        paragraph = after_existing.lstrip("\n").split("\n\n", 1)[0]
+        return _norm(paragraph)
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +109,8 @@ class TestAC1AppendedPassageStatesMultiProjectCoverage(unittest.TestCase):
 
     def test_ac1_passage_sits_after_the_existing_paragraph_inside_r2(self):
         # The passage's key phrase comes after the existing paragraph's final
-        # sentence and before the Contributor-tier heading, all inside R2.
+        # sentence and before the Contributor-tier heading, all inside R2, and
+        # the passage is the paragraph that directly follows the existing one.
         final_pos = self.norm.index(EXISTING_FINAL_SENTENCE)
         key_pos = self.norm.index("`<ecosystem>_project_unbindable`")
         heading_pos = self.norm.index(CONTRIBUTOR_HEADING)
@@ -122,7 +126,13 @@ class TestAC1AppendedPassageStatesMultiProjectCoverage(unittest.TestCase):
         self.assertIn("several project directories", self.passage)
         self.assertIn("manifests or lockfiles", self.passage)
         self.assertIn("separate project", self.passage)
-        self.assertIn("its own directory", self.passage)
+        self.assertIn("bound to its own directory", self.passage)
+
+    def test_ac1_passage_does_not_say_the_scan_runs_in_the_project_directory(self):
+        # npm / cargo run in an isolation directory (sca-scanner-project-
+        # config-isolation); the passage binds a project to its directory
+        # without naming that directory as the scan's working location.
+        self.assertNotIn("in its own directory", self.passage)
 
     def test_ac1_fact2_unfinished_project_makes_the_row_skipped(self):
         self.assertIn("did not complete", self.passage)
