@@ -1,0 +1,113 @@
+schema_version: 1
+feature: destructive-guard-heredoc-sink-gaps
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 8d88a288871047cdcc238d3eff8fea6127df429a
+last_input_digest: sha256:d111670eaf6165936b7a17cb116cebf50f60cee7cf6958cb932477f666169a8f
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-03T20:27:00+09:00'
+    questions:
+    - question_id: requirement.perf-regression-test
+      status: answered
+    - question_id: requirement.fake-heredoc-operator
+      status: answered
+    - question_id: requirement.command-redefinition-scope
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    answered_at: '2026-10-03T20:15:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: feature 名は destructive-guard-heredoc-sink-gaps
+    resolution_note: batch-policies.yaml create-spec.feature-identity = derive_from_task_description。タスク題名（destructive-guard
+      のヒアドキュメント宛先判定の検知漏れ）から導出
+  requirement.perf-regression-test:
+    question_id: requirement.perf-regression-test
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:32:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - runner_timeout
+    freeform: null
+    normalized_answer: run-destructive-guard.py の各ケースに hooks.json と同じ 10 秒の制限時間を入れ、超過を
+      FAIL にする。cases.json に約 60KB の再現入力を deny ケースとして足す
+    resolution_note: 'Codex 相談 1 ターン（codex エントリ）で runner_timeout を推奨。根拠: 本番と同じ 10
+      秒の制限で、遅延しても pass になる問題を直接検出でき、通常のランナー実行で速度と deny を両方検査できる。オーケストレーター判断で採用し、record_as_assumption
+      に従い仮定として記録。不採用: unittest_timing（検査が 2 か所に分かれる）、cases_only（退行を検出できない）。Opus エスカレーションなし'
+  requirement.fake-heredoc-operator:
+    question_id: requirement.fake-heredoc-operator
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:32:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - not_a_heredoc
+    freeform: null
+    normalized_answer: 引用・コメント内の偽の <<WORD は本文を取り込まない。後続行は元の位置で実際の構文どおり（引用の続きなら引用として）字句解析する
+    resolution_note: 'Codex 相談 1 ターン（codex エントリ）で not_a_heredoc を推奨（worker 推奨の rescan_body
+      と異なる）。根拠: rescan_body は複数行の引用状態を失い、引用内の文章を実コマンドと誤認する。誤検知のコストは見逃しと同じ桁なので変更量より構文の正しさを優先する。Codex
+      の実測で echo ''<<EOF ... EOF'' の形は fallback_sink=false で本文が data のまま捨てられることも確認された。オーケストレーター判断で採用し仮定として記録。不採用:
+      rescan_body。Opus エスカレーションなし'
+  requirement.command-redefinition-scope:
+    question_id: requirement.command-redefinition-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:32:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - whole_command
+    freeform: null
+    normalized_answer: 差し替え構文（関数定義・alias・hash・enable・PATH 変更）がコマンド内に 1 つでもあれば、そのコマンドの
+      data 判定をすべて判定不能にする
+    resolution_note: 'Codex 相談 1 ターン（codex エントリ）で whole_command を推奨。根拠: 差し替えの影響はホスト語だけでなくパイプ先にも及ぶ（hash
+      -p /bin/bash tee; cat <<EOF | tee の形は name_targeted では cat が対象外で見逃す）。無関係な差し替えでの誤検知は欠点として残る。チャンクに
+      sink 語が無い場合の見逃しは残る。オーケストレーター判断で採用し仮定として記録。不採用: name_targeted。Opus エスカレーションなし'
+  design-step.recommendation:
+    question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-03T20:32:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design step を skip する
+    resolution_note: batch-policies.yaml create-spec.design-step = decide_autonomously（analyst
+      の design_step_recommendation をそのまま採用）。推奨は skip（UI を持たない PreToolUse フックのバグ修正）
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:bf9622ce433533d1329b685ca3e3c455e93f5f3378388e4e25cbe52be5a2c573
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:2019ecdf08c00ef688a365169cb2239868707b0d22d11a58861f9ba4b0d986f4
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:d111670eaf6165936b7a17cb116cebf50f60cee7cf6958cb932477f666169a8f
+  output_digest: null
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/REQUIREMENTS.md
+  sha256: sha256:f2d9ca337da8fc2f11b95f165ff3a00d7d07ab5b1f4bbe135708aead3be4c9d9
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/SPEC.md
+  sha256: sha256:0bfe4782bd3fbbd130cae37b8cd67c5fa7051cf61d2ccaa02f84152223f0973b
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

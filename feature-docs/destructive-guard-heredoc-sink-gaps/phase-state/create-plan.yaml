@@ -1,0 +1,46 @@
+schema_version: 1
+feature: destructive-guard-heredoc-sink-gaps
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 893ad2cbb2e47393c3d73f202765f3f3c9e92c07
+last_input_digest: sha256:d67fe827be56365ed647e9232b3532f26270d38771ce39fafa39118a09daf1c5
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:d67fe827be56365ed647e9232b3532f26270d38771ce39fafa39118a09daf1c5
+  output_digest: null
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/IMPLEMENTATION.md
+  sha256: sha256:7d18b3bfb35b2cdaa2688027f460e0a4da608c144bec8f1531b82abe7a4e8fb5
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/VERIFICATION.md
+  sha256: sha256:2da8022d58f9db2e03a772b5fa971c667a5c0c618362c98253823636a4d2fc0d
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/THREAT-MODEL.md
+  sha256: sha256:087974f2f7a8aed7638799504ef6cbe7d874300ddafc28d01cbaed87ad002e4f
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/tasks/task0001.md
+  sha256: sha256:d890250872e5bed3961f34ace48790d188afeedfb8f541755285f562eb88a970
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/tasks/task0002.md
+  sha256: sha256:aebd2c68e2c5a97260c40b0353b423206c922e93ca80e9f0b7d49277bb6604cc
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/tasks/task0003.md
+  sha256: sha256:1f179028f7666f86243f52479edce5731ff0f3449d60e938634e14de7e74f990
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-heredoc-sink-gaps/tasks/task0004.md
+  sha256: sha256:39a52b7ed0ff978ccaae87c907469a3bf9db0a119f8d9eabf792d130b6df53cf
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: destructive-guard-heredoc-sink-gaps-p0001
+  status: applied
+  base_input_digest: sha256:d67fe827be56365ed647e9232b3532f26270d38771ce39fafa39118a09daf1c5
+  base_workflow_blob: ea3269c11524ee66b32cc821106188dd548aebed
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
