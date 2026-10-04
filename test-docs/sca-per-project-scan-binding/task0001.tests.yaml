@@ -1,0 +1,77 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_npm_registry_args_carry_the_workspace_flag_as_third_element
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_npm_job_argv_is_exactly_executable_audit_json_workspaces_false
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_jobs_built_by_build_scan_jobs_carry_the_same_vectors
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_cargo_argv_is_unchanged
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_go_argv_is_unchanged
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_pip_vectors_are_unchanged
+    red_confirmed: true
+    red_reason: "npm vector tests failed before the registry change: Lists differ: ['/x/npm', 'audit', '--json'] != ['/x/npm', 'audit', '--json', '--workspaces=false']. The cargo / go / pip unchanged-vector tests were already green (their behavior pre-existed); the npm tests carry the red."
+  AC-2:
+    tests:
+      - tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_go_job_env_pins_workspace_off_readonly_modules_goenv_off_and_proxy
+      - tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_go_job_env_is_pinned_when_the_caller_sets_none_of_them
+      - tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_go_pin_table_holds_exactly_the_four_pins
+      - tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_go_job_env_does_not_inherit_caller_values_for_pinned_names
+      - tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_npm_cargo_and_pip_pins_equal_their_previous_values
+      - tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_non_go_job_envs_gain_no_go_variables
+    red_confirmed: true
+    red_reason: "go pin tests failed before the pin-table change: KeyError: 'GOWORK' (job env had no GOWORK) and the pin table still held GOFLAGS ''. The npm / cargo / pip pin-equality tests were already green (previous values kept)."
+  AC-3:
+    tests:
+      - tests.test_sca_scan_job_grouping.TestJobPerLexicalGroup.test_two_npm_directories_yield_two_jobs_in_ascending_directory_order
+      - tests.test_sca_scan_job_grouping.TestJobPerLexicalGroup.test_every_npm_job_precedes_every_cargo_job_whatever_the_input_order
+      - tests.test_sca_scan_job_grouping.TestJobPerLexicalGroup.test_root_group_comes_first
+      - tests.test_sca_scan_job_grouping.TestJobPerLexicalGroup.test_order_is_plain_string_order_of_the_directory
+      - tests.test_sca_scan_job_grouping.TestJobPerLexicalGroup.test_order_does_not_depend_on_input_order
+      - tests.test_sca_scan_job_grouping.TestJobPerLexicalGroup.test_ecosystems_follow_registry_order_across_all_four
+    red_confirmed: true
+    red_reason: "before the grouping change build_scan_jobs returned one job per ecosystem: Lists differ: ['services/web/package.json'] != ['services/api/package.json', 'services/web/package.json']"
+  AC-4:
+    tests:
+      - tests.test_sca_scan_job_grouping.TestLexicalAliasesJoinOneGroup.test_manifest_lockfile_alias_and_repeat_yield_one_job_with_the_manifest
+      - tests.test_sca_scan_job_grouping.TestLexicalAliasesJoinOneGroup.test_lockfile_only_change_with_a_dot_segment_keeps_the_lockfile_basename
+      - tests.test_sca_scan_job_grouping.TestLexicalAliasesJoinOneGroup.test_root_level_change_keeps_the_bare_basename
+      - tests.test_sca_scan_job_grouping.TestLexicalAliasesJoinOneGroup.test_root_aliases_keep_the_bare_basename
+      - tests.test_sca_scan_job_grouping.TestLexicalAliasesJoinOneGroup.test_dot_dot_segments_that_cancel_inside_the_tree_are_normalized
+    red_confirmed: true
+    red_reason: "the lockfile-only and alias spellings failed before normalization existed (the job manifest kept the raw 'a/./go.sum' / './package.json' spelling instead of the Target convention). The repeat / root-bare-basename cases were already green because the old one-job-per-ecosystem code returned the raw first manifest."
+  AC-5:
+    tests:
+      - tests.test_sca_scan_job_grouping.TestLexicallyUnbindablePaths.test_each_unbindable_kind_is_dropped_with_one_reason_and_a_valid_group_still_yields_its_job
+      - tests.test_sca_scan_job_grouping.TestLexicallyUnbindablePaths.test_unbindable_lockfile_paths_are_dropped_too
+      - tests.test_sca_scan_job_grouping.TestLexicallyUnbindablePaths.test_the_reason_appears_exactly_once_however_many_paths_were_dropped
+      - tests.test_sca_scan_job_grouping.TestLexicallyUnbindablePaths.test_only_unbindable_paths_yield_no_job_and_the_reason
+      - tests.test_sca_scan_job_grouping.TestLexicallyUnbindablePaths.test_reasons_follow_registry_order
+      - tests.test_sca_scan_job_grouping.TestLexicallyUnbindablePaths.test_pip_paths_of_the_same_three_kinds_are_not_filtered_and_add_no_reason
+      - tests.test_sca_scan_job_grouping.TestLexicallyUnbindablePaths.test_pip_pyproject_paths_of_the_same_kinds_are_not_filtered_either
+    red_confirmed: true
+    red_reason: "before the filter existed no project_unbindable reason was produced: AssertionError reasons [] != ['npm_project_unbindable'] (and the escaping / absolute paths were folded into one root-level job). The pip tests failed too, because pip paths were collapsed to a single job instead of one job per raw path."
+  AC-6:
+    tests:
+      - tests.test_sca_scan_job_grouping.TestEcosystemGateReasons.test_absent_executable_gives_exactly_one_tool_not_found_for_several_groups
+      - tests.test_sca_scan_job_grouping.TestEcosystemGateReasons.test_absent_executable_adds_no_unbindable_reason_for_unbindable_paths
+      - tests.test_sca_scan_job_grouping.TestEcosystemGateReasons.test_validation_failure_gives_its_reason_once_no_job_and_no_unbindable_reason
+      - tests.test_sca_scan_job_grouping.TestEcosystemGateReasons.test_a_failing_ecosystem_does_not_stop_its_neighbours
+      - tests.test_sca_scan_job_grouping.TestEcosystemGateReasons.test_reasons_from_different_ecosystems_follow_registry_order
+    red_confirmed: false
+    red_reason: "the criterion's behavior (the existing gate reason once, no job) pre-existed: the tool-absent, validation-failure and registry-order tests passed before any implementation; only test_a_failing_ecosystem_does_not_stop_its_neighbours failed (cargo with two directories produced one job), which is the grouping part, not the gate. After implementing, mutations that emit the gate reason twice or add project_unbindable for an absent tool were each caught by these tests."
+  AC-7:
+    tests:
+      - tests.test_sca_scan_job_grouping.TestConstructionIsPure.test_build_scan_job_completes_for_root_and_nested_targets
+      - tests.test_sca_scan_job_grouping.TestConstructionIsPure.test_build_scan_jobs_completes_for_nested_alias_absolute_escaping_and_nul_inputs
+      - tests.test_sca_scan_job_grouping.TestConstructionIsPure.test_the_project_root_is_never_touched
+    red_confirmed: false
+    red_reason: "purity pre-existed: build_scan_job and the old build_scan_jobs already opened nothing and launched nothing, so the purity assertion was green before implementing. The build_scan_jobs test did fail before implementing, but only on its grouping / reason assertions (reasons [] != ['npm_project_unbindable', ...]), not on purity. After implementing, mutations adding open(os.devnull) or subprocess.run to build_scan_jobs were each caught by it."
+  AC-8:
+    tests:
+      - tests.test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_npm_job_argv_pins_workspaces_off
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args
+      - tests.test_sca_scan_job_grouping.TestOwnImportsAreStandardLibraryOnly.test_only_standard_library_imports
+    red_confirmed: true
+    red_reason: "the two updated npm expectations failed before the registry change (['/usr/local/bin/npm', 'audit', '--json'] != [..., '--workspaces=false'] and the command-assembly subTest for npm). The standard-library-import assertion and the suite-wide exit-0 checks (python3 -m unittest discover -s tests; check-plugin-invariants.py) never had a red state: they hold both before and after."

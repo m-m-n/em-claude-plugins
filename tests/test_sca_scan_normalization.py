@@ -302,7 +302,7 @@ class TestEcosystemSelectionAndCommandAssembly(unittest.TestCase):
         ]
         selected = {e["ecosystem"]: e for e in SCAN.select_ecosystems(self.registry, changed)}
         expected_commands = {
-            "npm": ["npm", "audit", "--json"],
+            "npm": ["npm", "audit", "--json", "--workspaces=false"],
             "cargo": ["cargo-audit", "audit", "--json"],
             "pip": ["pip-audit", "--format", "json"],
             "go": ["govulncheck", "-json", "./..."],
