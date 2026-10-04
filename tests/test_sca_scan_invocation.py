@@ -34,6 +34,13 @@ and pyproject.toml jobs keep their previous vectors with neither new flag; and
 the registry pip entry, ALLOWED_EXECUTABLES, ECOSYSTEM_LOCKFILES and the pip
 child-environment pins hold their previous (literal) values.
 
+sca-scanner-project-config-isolation task0001 updates the npm / cargo job
+expectations to the isolation contract: an npm / cargo job is built from the
+prepared isolation paths of its group (`prepared_inputs`), its cwd is the
+isolation directory, and cargo's argument vector carries the registry-declared
+`--file <copy>` right after `audit`. The configuration-isolation cases (AC-4)
+keep proving that hostile project files change nothing about the job.
+
 Per Test Notes / IMPLEMENTATION.md Conventions: this module's own imports
 stay standard-library only (NFR7) -- the script under test is loaded by
 file path (its name contains a hyphen), following
@@ -72,6 +79,23 @@ def _load_module():
 
 
 SCAN = _load_module()
+
+ISO_DIR = {"npm": "/iso/npm", "cargo": "/iso/cargo"}
+
+
+def _prepared(name):
+    """The prepared isolation paths of an npm / cargo group (none for the
+    other ecosystems): plain values, `build_scan_job` never touches them."""
+    if name == "npm":
+        return SCAN.PreparedInputs(
+            directory=ISO_DIR["npm"],
+            files={"manifest": "/iso/npm/package.json", "anchor": "/iso/npm/package-lock.json"},
+        )
+    if name == "cargo":
+        return SCAN.PreparedInputs(
+            directory=ISO_DIR["cargo"], files={"lockfile": "/iso/cargo/Cargo.lock"}
+        )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -181,13 +205,25 @@ class TestBuildScanJobArgumentVectors(unittest.TestCase):
         cls.by_name = {e["ecosystem"]: e for e in registry["ecosystems"]}
 
     def test_cargo_job_argv0_is_the_absolute_standalone_binary_path(self):
-        job = SCAN.build_scan_job(self.by_name["cargo"], "Cargo.toml", "/proj", "/usr/local/bin/cargo-audit")
-        self.assertEqual(job["argv"], ["/usr/local/bin/cargo-audit", "audit", "--json"])
+        # sca-scanner-project-config-isolation FR2/FR3: the audited lockfile
+        # is the copy in the isolation directory, named through the
+        # registry-declared `--file` right after `audit`.
+        job = SCAN.build_scan_job(
+            self.by_name["cargo"], "Cargo.toml", "/proj", "/usr/local/bin/cargo-audit",
+            prepared_inputs=_prepared("cargo"),
+        )
+        self.assertEqual(
+            job["argv"],
+            ["/usr/local/bin/cargo-audit", "audit", "--file", "/iso/cargo/Cargo.lock", "--json"],
+        )
 
     def test_npm_job_argv_pins_workspaces_off(self):
         # sca-per-project-scan-binding FR11/FR14: the registry's npm args
         # gain `--workspaces=false` so npm audits the bound project only.
-        job = SCAN.build_scan_job(self.by_name["npm"], "package.json", "/proj", "/usr/local/bin/npm")
+        job = SCAN.build_scan_job(
+            self.by_name["npm"], "package.json", "/proj", "/usr/local/bin/npm",
+            prepared_inputs=_prepared("npm"),
+        )
         self.assertEqual(job["argv"], ["/usr/local/bin/npm", "audit", "--json", "--workspaces=false"])
 
     def test_go_job_argv_unaffected_by_this_task(self):
@@ -203,15 +239,22 @@ class TestBuildScanJobArgumentVectors(unittest.TestCase):
         ]
         for name, manifest, executable in cases:
             with self.subTest(ecosystem=name):
-                job = SCAN.build_scan_job(self.by_name[name], manifest, "/proj", executable)
+                job = SCAN.build_scan_job(
+                    self.by_name[name], manifest, "/proj", executable,
+                    prepared_inputs=_prepared(name),
+                )
                 self.assertTrue(os.path.isabs(job["argv"][0]))
                 self.assertEqual(job["argv"][0], executable)
 
     def test_job_carries_ecosystem_manifest_cwd_and_env(self):
-        job = SCAN.build_scan_job(self.by_name["npm"], "package.json", "/proj", "/x/npm")
+        # the label stays the project-relative manifest; an npm / cargo
+        # job's cwd is the isolation directory, never the project root.
+        job = SCAN.build_scan_job(
+            self.by_name["npm"], "package.json", "/proj", "/x/npm", prepared_inputs=_prepared("npm")
+        )
         self.assertEqual(job["ecosystem"], "npm")
         self.assertEqual(job["manifest"], "package.json")
-        self.assertEqual(job["cwd"], "/proj")
+        self.assertEqual(job["cwd"], ISO_DIR["npm"])
         self.assertIsInstance(job["env"], dict)
 
     def test_constructing_a_job_launches_nothing(self):
@@ -219,7 +262,8 @@ class TestBuildScanJobArgumentVectors(unittest.TestCase):
         # all is accepted without error -- build_scan_job never resolves
         # or invokes it.
         job = SCAN.build_scan_job(
-            self.by_name["npm"], "package.json", "/proj", "/definitely/not/a/real/path/npm"
+            self.by_name["npm"], "package.json", "/proj", "/definitely/not/a/real/path/npm",
+            prepared_inputs=_prepared("npm"),
         )
         self.assertEqual(job["argv"][0], "/definitely/not/a/real/path/npm")
 
@@ -360,7 +404,8 @@ class TestUnresolvableBinaryYieldsSkipNoJob(unittest.TestCase):
             empty_bin.mkdir()
             with mock.patch.dict(os.environ, {"PATH": str(empty_bin)}, clear=False):
                 jobs, skip_reasons = SCAN.build_scan_jobs(
-                    registry, ["Cargo.toml"], Path(tmp) / "proj"
+                    registry, ["Cargo.toml"], Path(tmp) / "proj",
+                    prepared_inputs={"Cargo.toml": _prepared("cargo")},
                 )
         self.assertEqual(jobs, [])
         self.assertEqual(skip_reasons, ["cargo_tool_not_found"])
@@ -375,7 +420,8 @@ class TestUnresolvableBinaryYieldsSkipNoJob(unittest.TestCase):
             stub.chmod(0o755)
             with mock.patch.dict(os.environ, {"PATH": str(bin_dir)}, clear=False):
                 jobs, skip_reasons = SCAN.build_scan_jobs(
-                    registry, ["Cargo.toml"], Path(tmp) / "proj"
+                    registry, ["Cargo.toml"], Path(tmp) / "proj",
+                    prepared_inputs={"Cargo.toml": _prepared("cargo")},
                 )
         self.assertEqual(skip_reasons, [])
         self.assertEqual(len(jobs), 1)
@@ -395,7 +441,11 @@ class TestUnresolvableBinaryYieldsSkipNoJob(unittest.TestCase):
             stub.chmod(0o755)
             with mock.patch.dict(os.environ, {"PATH": str(bin_dir)}, clear=False):
                 jobs, skip_reasons = SCAN.build_scan_jobs(
-                    registry, ["package.json", "Cargo.toml"], Path(tmp) / "proj"
+                    registry, ["package.json", "Cargo.toml"], Path(tmp) / "proj",
+                    prepared_inputs={
+                        "package.json": _prepared("npm"),
+                        "Cargo.toml": _prepared("cargo"),
+                    },
                 )
         self.assertEqual(skip_reasons, ["cargo_tool_not_found"])
         self.assertEqual([j["ecosystem"] for j in jobs], ["npm"])
@@ -429,15 +479,19 @@ class TestConfigurationIsolationIgnoresProjectFiles(unittest.TestCase):
             )
 
             clean_job = SCAN.build_scan_job(
-                self.by_name["cargo"], "Cargo.toml", clean_root, "/usr/local/bin/cargo-audit"
+                self.by_name["cargo"], "Cargo.toml", clean_root, "/usr/local/bin/cargo-audit",
+                prepared_inputs=_prepared("cargo"),
             )
             hostile_job = SCAN.build_scan_job(
-                self.by_name["cargo"], "Cargo.toml", hostile_root, "/usr/local/bin/cargo-audit"
+                self.by_name["cargo"], "Cargo.toml", hostile_root, "/usr/local/bin/cargo-audit",
+                prepared_inputs=_prepared("cargo"),
             )
 
         self.assertEqual(clean_job["argv"][0], hostile_job["argv"][0])
         self.assertEqual(clean_job["argv"], hostile_job["argv"])
         self.assertEqual(clean_job["env"], hostile_job["env"])
+        # the hostile project's directory is never the scanner's cwd
+        self.assertEqual(hostile_job["cwd"], ISO_DIR["cargo"])
 
     def test_hostile_npmrc_registry_line_does_not_change_the_job(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -453,14 +507,18 @@ class TestConfigurationIsolationIgnoresProjectFiles(unittest.TestCase):
             )
 
             clean_job = SCAN.build_scan_job(
-                self.by_name["npm"], "package.json", clean_root, "/usr/local/bin/npm"
+                self.by_name["npm"], "package.json", clean_root, "/usr/local/bin/npm",
+                prepared_inputs=_prepared("npm"),
             )
             hostile_job = SCAN.build_scan_job(
-                self.by_name["npm"], "package.json", hostile_root, "/usr/local/bin/npm"
+                self.by_name["npm"], "package.json", hostile_root, "/usr/local/bin/npm",
+                prepared_inputs=_prepared("npm"),
             )
 
         self.assertEqual(clean_job["argv"], hostile_job["argv"])
         self.assertEqual(clean_job["env"], hostile_job["env"])
+        # the hostile project's directory is never the scanner's cwd
+        self.assertEqual(hostile_job["cwd"], ISO_DIR["npm"])
         self.assertEqual(hostile_job["env"].get("npm_config_registry"), "https://registry.npmjs.org/")
         self.assertNotEqual(hostile_job["env"].get("npm_config_registry"), "http://evil.example.com/")
 
