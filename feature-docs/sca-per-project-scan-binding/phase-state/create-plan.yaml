@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-per-project-scan-binding
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: ab2985055f198dde6e6d06a04b16320f4742c93e
 last_input_digest: sha256:3f7758a9280f4f04018ad75eb2493a0a615b124e732adc1c96d6e35e03dc80d8
@@ -10,11 +10,33 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:3f7758a9280f4f04018ad75eb2493a0a615b124e732adc1c96d6e35e03dc80d8
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:255171f21345d934cd3bc14947ab0ae169cbcc1329929c1f72a789b393773fdf
+artifacts:
+- path: feature-docs/sca-per-project-scan-binding/IMPLEMENTATION.md
+  sha256: sha256:e01ab352194fc6b992988564fc3e47ffb87abf82de509dda6eae6393a232cc7e
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-per-project-scan-binding/VERIFICATION.md
+  sha256: sha256:4e291ba9f8581fcf495b2b1a5a11b89c6cbb344fe7694d07e28e45b686893074
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-per-project-scan-binding/THREAT-MODEL.md
+  sha256: sha256:75349b659b52b0a871f6f5a058773353169081769af2879ff378c720adb48de0
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-per-project-scan-binding/tasks/task0001.md
+  sha256: sha256:c3b2a343cc31ee39264a4fa1cb4fae9d7e81a1700528ec6c493eb59e4f52e689
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-per-project-scan-binding/tasks/task0002.md
+  sha256: sha256:767348d1e6ca78db04b0377b04aebce80605766f1e94a29dd76055a484e5d311
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-per-project-scan-binding/tasks/task0003.md
+  sha256: sha256:a413f0166e3ec0a2feb006cd038d12ed50cd4b61af9fc04e11266ee9ec832ab5
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:3f7758a9280f4f04018ad75eb2493a0a615b124e732adc1c96d6e35e03dc80d8
+  base_workflow_blob: f9ed9d240624893c48fa9d5950da812c7fed7965
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
