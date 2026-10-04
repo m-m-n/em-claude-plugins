@@ -74,11 +74,17 @@ itself inside its read-only sandbox.
 
 ## Temp-file discipline (only if writing a file to disk)
 
-This applies whenever an em-review `codex-reviewer` instance writes any
-file into the session scratchpad before invoking the wrapper — the
-assembled `$PROMPT`, a schema copy, or an intermediate output. Passing
-`$PROMPT` straight to `run_codex_exec.sh` as a shell variable, the way Step
-5 below does, touches no file and needs no temp file at all.
+Do not write any file. Step 5 passes `$PROMPT` straight to
+`run_codex_exec.sh` as a shell variable, which touches no file and needs
+no temp file at all. A command that writes a file without supplying its
+content (`cat > file` with no heredoc or input) reads the Bash tool's
+standard input, which is never closed, and blocks until the run is
+killed.
+
+The rest of this section applies only when an em-review `codex-reviewer`
+instance still writes a file into the session scratchpad before invoking
+the wrapper — the assembled `$PROMPT`, a schema copy, or an intermediate
+output.
 
 If you do write one: parallel `codex-reviewer` instances dispatched from the
 same message share the session scratchpad directory. A fixed name lets a
@@ -108,6 +114,31 @@ If `mktemp` allocation fails, return the standard skip object —
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" --output-schema "$SCHEMA" "$PROMPT"
 ```
+
+The Bash call contains only the `PROMPT` assignment (plus a `SCHEMA=`
+assignment if you keep the variable rather than the literal path) and this
+wrapper line. Nothing else goes before, between or after them — no `cd`,
+no file write, no placeholder command.
+
+Assign `$PROMPT` with a quoted heredoc, never a single-quoted string: the
+prompt embeds changed_files paths, the quoted diff command and
+perspective-skill text, any of which may contain `'`, which would close a
+single-quoted string and run the rest as shell. Use
+`PROMPT=$(cat <<'EOF_<random>'` … `EOF_<random>` followed by `)`, where
+`<random>` is a fresh random suffix chosen for each call (e.g. 8 hex
+digits) that does not occur in the prompt text. The delimiter is quoted, so
+the shell expands nothing in the body.
+
+```bash
+PROMPT=$(cat <<'EOF_3f9a1c7e'
+<prompt text, verbatim>
+EOF_3f9a1c7e
+)
+"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" --output-schema "$SCHEMA" "$PROMPT"
+```
+
+em-workflow's heredoc-stdin-guard is not relied on here; the heredoc only
+feeds `cat`.
 
 Always `readonly` mode. `-C {project_root}` so `git diff` resolves against
 the right tree. The wrapper redirects stdin and enforces the timeout. Run

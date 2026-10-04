@@ -12,8 +12,10 @@ Covers task0001 Acceptance Criteria:
   stdin redirection is rewritten -- the cut-off token, a newline, then the
   original command text unchanged; every other `tool_input` field is
   reproduced with its original value and type.
-- AC-2 (FR2): no heredoc operator, and a here-string-only candidate, both
-  produce empty stdout.
+- AC-2 (FR2): no heredoc operator and no bare `cat`/`tee` stdin reader, and
+  a here-string-only candidate, both produce empty stdout. A bare stdin
+  reader without a heredoc is rewritten (TS10), and its rewritten command
+  does not block on an open, never-written stdin (TS11).
 - AC-3 (FR4): a command whose stdin is already redirected at its head --
   including the guard's own cut-off token -- produces empty stdout, and
   feeding the guard its own output a second time never doubles the token.
@@ -180,6 +182,122 @@ class TestNoRewriteWithoutHeredoc(unittest.TestCase):
             {"tool_name": "Bash", "tool_input": {"command": "cat <<< 'just a string'"}}
         )
         assert_no_rewrite(self, result)
+
+
+# --- bare `cat` / `tee` stdin readers ----------------------------------
+
+
+# A `cat`/`tee` that reads the script's own standard input. The first case
+# is the reproduction: a stray `cat > file` line with no input at the head
+# of a prompt-building command, which blocked on the socket for good.
+BARE_READER_COMMANDS = [
+    "cd /tmp/work\n"
+    "cat > /tmp/scratchpad/dummy 2>/dev/null\n"
+    "PROMPT='<task>\nreview it\n</task>'\n"
+    '"/plugin/scripts/run_codex_exec.sh" readonly -C "$PWD" "$PROMPT"',
+    "cat",
+    "cat -",
+    "cat > /tmp/out.txt",
+    "cat -n",
+    "tee /tmp/out.txt",
+    "/usr/bin/cat > /tmp/out.txt",
+    "LC_ALL=C cat > /tmp/out.txt",
+    "echo a && cat > /tmp/out.txt",
+    "echo a; cat > /tmp/out.txt",
+    "if true; then cat > /tmp/out.txt; fi",
+    "echo a | cat /tmp/in.txt\ncat > /tmp/out.txt",
+    "echo $(cat)",
+    "cat 2>/dev/null >/tmp/out.txt",
+    # A `<` inside a substitution on the first line feeds only the inner
+    # command; it does not close the script's stdin.
+    "X=$(sort < /tmp/a)\ncat > /tmp/out.txt",
+    "X=`sort < /tmp/a`\ncat > /tmp/out.txt",
+    "diff <(sort < /tmp/a) /tmp/b\ncat > /tmp/out.txt",
+    "X=$(sort < /tmp/a)\ncat > /tmp/out.txt <<'EOF'\nhi\nEOF\n",
+    # A here-string or heredoc on a fd other than 0 leaves stdin open.
+    "cat 3<<< x",
+    "tee /tmp/out.txt 3<<< x",
+    "cat 3<<'EOF'\nhi\nEOF\n",
+]
+
+# Commands whose `cat`/`tee` has an input of its own, or that only mention
+# the words.
+NOT_BARE_READER_COMMANDS = [
+    "cat /tmp/in.txt",
+    "cat -n /tmp/in.txt",
+    "cat /tmp/in.txt > /tmp/out.txt 2>&1",
+    "cat > /tmp/out.txt < /tmp/in.txt",
+    "cat 0</tmp/in.txt",
+    "echo a | cat > /tmp/out.txt",
+    "echo a | tee /tmp/out.txt",
+    "echo a |& tee /tmp/out.txt",
+    "echo a |\ncat > /tmp/out.txt",
+    "git log | tee /tmp/a.txt | cat",
+    "cat <(echo a)",
+    "cat <<< 'just a string'",
+    "grep cat /tmp/in.txt",
+    "echo 'cat'",
+    "echo cat > /tmp/out.txt",
+    "ls # cat",
+    "echo $(cat /tmp/in.txt)",
+    "cat /tmp/a.txt || cat /tmp/b.txt",
+    "catalog --list",
+    "cat $(ls)",
+    "cat `ls`",
+    "cat -n $(ls *.py) | head",
+    "cat $(git rev-parse --show-toplevel)/README.md",
+    "X=$(cat /tmp/in.txt)",
+    "cat 0<<< x",
+]
+
+
+class TestRewritesBareStdinReader(unittest.TestCase):
+    def test_each_bare_reader_is_rewritten(self):
+        for command in BARE_READER_COMMANDS:
+            with self.subTest(command=command):
+                result = run_guard({"tool_name": "Bash", "tool_input": {"command": command}})
+                assert_rewrite(self, result, command)
+
+    def test_each_reader_with_its_own_input_is_not_rewritten(self):
+        for command in NOT_BARE_READER_COMMANDS:
+            with self.subTest(command=command):
+                result = run_guard({"tool_name": "Bash", "tool_input": {"command": command}})
+                assert_no_rewrite(self, result)
+
+    def test_already_closed_head_is_not_rewritten(self):
+        command = f"{CUTOFF}\ncat > /tmp/out.txt"
+        result = run_guard({"tool_name": "Bash", "tool_input": {"command": command}})
+        assert_no_rewrite(self, result)
+
+
+class TestExecutedRewriteOfBareReaderDoesNotBlock(unittest.TestCase):
+    """The rewritten command runs to the end with its stdin left open and
+    never written to -- the shape of the Bash tool's stdin socket."""
+
+    def test_stray_cat_gets_eof_and_the_script_continues(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "dummy"
+            after = Path(tmp) / "after"
+            command = f"cat > {target} 2>/dev/null\necho reached > {after}\n"
+
+            result = run_guard({"tool_name": "Bash", "tool_input": {"command": command}})
+            updated = assert_rewrite(self, result, command)
+
+            proc = subprocess.Popen(
+                ["bash", "-c", updated["command"]],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            try:
+                proc.wait(timeout=15)
+            finally:
+                proc.stdin.close()
+                proc.stdout.close()
+                proc.stderr.close()
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(target.read_text(), "")
+            self.assertEqual(after.read_text(), "reached\n")
 
 
 # --- AC-3: already redirected at the head / idempotency ----------------
