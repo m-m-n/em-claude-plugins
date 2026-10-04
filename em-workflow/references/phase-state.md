@@ -427,15 +427,38 @@ mapped onto an option and the minimum-side-effect default was taken,
 `batch-codex-consultation` when Codex's suggestion did map onto one, or
 `batch-decision-table` for a record whose gate resolves through
 `references/batch-policies.yaml`; the relaxed route's own bullet below
-states its complete three-way mapping instead. No field of the per-phase
-`answers` shape changes.
+states its complete three-way mapping instead. `batch-codex-consultation`
+also covers a non-packet gate whose decision the Opus escalation made,
+including when the availability probe found no harness and no Codex
+consultation turn ran; the value is read as naming the consultation route
+and never asserting that Codex itself was consulted. `batch-safe-default`
+stays the value when the minimum-side-effect option was taken. Both values
+come from `references/question-packet-schema.md`'s closed vocabulary; no
+value is added. No field of the per-phase `answers` shape changes.
+
+A non-packet gate the Opus escalation decided, with no harness available and
+no Codex consultation turn run, is recorded like this:
+
+```yaml
+records:
+  - question_id: review.diff-size-gate
+    packet_id: null
+    answered_at: "2026-01-30T12:05:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "continue the review on the full changed-file list"
+    normalized_answer: "continue the review on the full changed-file list"
+    resolution_note: "gate: review phase diff-size gate; Codex was not consulted (no harness was available); the Opus escalation ran; its reasoning: the review step only reads the changed files, so continuing on the full list leaves no side effect to undo"
+```
 
 Four writers append to this file, each at resolution time:
 
 - `references/batch-mode.md`'s Non-packet gates table: the review phase
   diff-size gate and the per-command approval fallback each append one
   entry, with `resolution_note` naming the gate site, the options
-  considered, the choice, and whether Codex was consulted. Inside a phase
+  considered, the choice, whether Codex was consulted, and whether the
+  Opus escalation ran, together with its reasoning. Inside a phase
   step, the entry is committed by the step's next existing
   `commit-docs.sh` call, the same reach-point every other in-step writer
   below uses. The per-command approval fallback can also fire outside any

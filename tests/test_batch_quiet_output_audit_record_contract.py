@@ -135,6 +135,62 @@ feature-docs/codex-wrapper-fallback-removal/tasks/task0003.md AC-3):
 "whether a fallback provider answered" -- the wrapper launches one process,
 so there is no fallback provider left to have answered. No other phrase in
 the tuple changes.
+
+Extended for task0003 (codex-fallback-review-residuals;
+feature-docs/codex-fallback-review-residuals/tasks/task0003.md): the section
+now states the `source` and the `resolution_note` content for a non-packet
+gate the Opus escalation decided, including when the availability probe
+found no harness and no Codex consultation turn ran, and shows that record
+as a second worked example. No existing test in this module changes.
+
+Covers task0003 Acceptance Criteria:
+
+- AC-1 (FR5, NFR1; TM-6): `TestEscalationGeneralMapping` -- the general
+  mapping (the paragraph tail from "For the other three writers below")
+  maps the escalation-decided non-packet gate to `batch-codex-consultation`
+  including the no-harness / no-Codex-turn case, read as naming the
+  consultation route and never as a claim that Codex was consulted, keeps
+  `batch-safe-default` for the minimum-side-effect option, and the section
+  names no `source` value outside `references/question-packet-schema.md`'s
+  closed vocabulary.
+- AC-2 (FR5; TM-6): `TestEscalationNonPacketWriterBullet` -- the first
+  writer bullet's `resolution_note` list names whether the Opus escalation
+  ran and its reasoning; its out-of-step commit reach-point still holds.
+- AC-3 (FR5; TM-6): `TestEscalationWorkedExample` -- a fenced YAML example
+  with a non-packet `question_id`, `packet_id: null`,
+  `source: batch-codex-consultation`, answer fields consistent with the
+  schema's answer consistency rules, and a `resolution_note` stating that
+  Codex was not consulted, that the Opus escalation ran, and its reasoning;
+  placed outside the first writer bullet and the relaxed-route bullet.
+- AC-4 (NFR1, NFR3): `TestEscalationRetainedWording` -- the existing YAML
+  example is unchanged; the retained lead-in, relaxed-route and singleton
+  pins are the module's pre-existing tests, left unchanged.
+- AC-5 (FR6, NFR5): this docstring's inventory below; every new negative
+  assertion carries a negative proof and a non-vacuity guard.
+
+Matcher -> negative-proof inventory for task0003:
+
+- `_general_mapping_covers_escalation_case` (general-mapping matcher):
+  negative proof `test_rejects_forged_mapping_missing_any_fragment` (one
+  forged copy per missing fragment, including the no-Codex-turn case and
+  the route-naming reading); non-vacuity guard
+  `test_forged_complete_mapping_is_well_formed_and_found`.
+- `_source_values_outside_vocabulary` (closed-vocabulary matcher): negative
+  proof `test_flags_forged_section_with_a_minted_source_value`; non-vacuity
+  guards `test_forged_clean_section_yields_literals_and_no_outsiders` and
+  `test_vocabulary_is_read_from_the_schema_document`.
+- `_first_writer_bullet_names_escalation_in_resolution_note` (writer-bullet
+  matcher): negative proof
+  `test_rejects_forged_bullet_without_the_escalation_clause`; non-vacuity
+  guard `test_forged_bullet_with_the_escalation_clause_is_well_formed_and_found`.
+- `_is_escalation_worked_example` (worked-example matcher): negative proof
+  `test_rejects_each_forged_example_missing_a_required_value` (escalation-ran
+  omission, wrong `source`, wrong `question_id`, non-null `packet_id`, bare
+  timestamp, inconsistent answer fields); non-vacuity guard
+  `test_forged_complete_example_is_well_formed_and_found`.
+- `_example_placement_ok` (placement matcher): negative proof
+  `test_rejects_forged_offsets_inside_a_bullet`; non-vacuity guard
+  `test_forged_offsets_between_the_bullets_are_accepted`.
 """
 
 import re
@@ -147,6 +203,9 @@ PLUGIN_ROOT = REPO_ROOT / "em-workflow"
 BATCH_MODE_PATH = PLUGIN_ROOT / "references" / "batch-mode.md"
 PHASE_STATE_PATH = PLUGIN_ROOT / "references" / "phase-state.md"
 QUESTION_RESOLUTION_PATH = PLUGIN_ROOT / "references" / "question-resolution.md"
+QUESTION_PACKET_SCHEMA_PATH = (
+    PLUGIN_ROOT / "references" / "question-packet-schema.md"
+)
 
 QUESTION_ID_PATTERN = re.compile(r"^[a-z][a-z0-9._-]*$")
 
@@ -923,6 +982,634 @@ class TestEscalationSourceAgreesAcrossDocuments(unittest.TestCase):
             "record the answer with `source: batch-codex-consultation`, "
             "exactly as a mapped consultation answer above",
             _normalize_ws(fake_step6),
+        )
+
+
+# ---------------------------------------------------------------------------
+# task0003 (codex-fallback-review-residuals): a non-packet gate the Opus
+# escalation decided -- the general `source` mapping (AC-1), the Non-packet
+# gates writer bullet's `resolution_note` list (AC-2), the second worked
+# example (AC-3) and the wording that must stay as it was (AC-4).
+# ---------------------------------------------------------------------------
+
+SECTION_START = "## Batch audit record file"
+SECTION_END = "## Legacy feature compatibility"
+
+NON_PACKET_QUESTION_IDS = (
+    "review.diff-size-gate",
+    "command-execution.per-command-approval-fallback",
+)
+
+
+def _batch_audit_section():
+    return _slice(_read(PHASE_STATE_PATH), SECTION_START, SECTION_END)
+
+
+# --- Matcher: general mapping covers the escalation case (AC-1) -------------
+
+GENERAL_MAPPING_ESCALATION_FRAGMENTS = (
+    "`batch-codex-consultation` also covers a non-packet gate whose "
+    "decision the Opus escalation made",
+    "the availability probe found no harness",
+    "no Codex consultation turn ran",
+    "naming the consultation route and never asserting that Codex itself "
+    "was consulted",
+    "`batch-safe-default` stays the value when the minimum-side-effect "
+    "option was taken",
+    "Both values come from `references/question-packet-schema.md`'s closed "
+    "vocabulary; no value is added",
+)
+
+
+GENERAL_MAPPING_LEAD_IN_RE = re.compile(r"For\s+the\s+other\s+three\s+writers\s+below")
+
+
+def _general_mapping_paragraph(subsection_text):
+    """The tail of the long paragraph that starts at the section's `source`
+    mapping for the other three writers, up to the blank line that ends the
+    paragraph. A worked example placed after the paragraph is not part of
+    it."""
+    # The lead-in wraps across a source line, so it is located by a
+    # whitespace-tolerant pattern rather than by the literal string.
+    start = GENERAL_MAPPING_LEAD_IN_RE.search(subsection_text).start()
+    end = subsection_text.find("\n\n", start)
+    return subsection_text[start : len(subsection_text) if end == -1 else end]
+
+
+def _general_mapping_covers_escalation_case(paragraph_text):
+    normalized = _normalize_ws(paragraph_text)
+    return all(fragment in normalized for fragment in GENERAL_MAPPING_ESCALATION_FRAGMENTS)
+
+
+FORGED_GENERAL_MAPPING_COMPLETE = (
+    "For the other three writers below, `source` is drawn from the closed "
+    "vocabulary: `batch-safe-default`, `batch-codex-consultation` or "
+    "`batch-decision-table`; the relaxed route's own bullet below states its "
+    "complete three-way mapping instead. "
+    + " ".join(f + "." for f in GENERAL_MAPPING_ESCALATION_FRAGMENTS)
+)
+
+
+class TestGeneralMappingMatcherNegativeProof(unittest.TestCase):
+    """Negative proof + non-vacuity guard for
+    `_general_mapping_covers_escalation_case`."""
+
+    def test_forged_complete_mapping_is_well_formed_and_found(self):
+        for fragment in GENERAL_MAPPING_ESCALATION_FRAGMENTS:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, FORGED_GENERAL_MAPPING_COMPLETE)
+        self.assertTrue(
+            _general_mapping_covers_escalation_case(FORGED_GENERAL_MAPPING_COMPLETE)
+        )
+
+    def test_rejects_forged_mapping_missing_any_fragment(self):
+        # One forged copy per fragment, each lacking exactly that fragment:
+        # the no-Codex-turn case and the route-naming reading are two of
+        # the six.
+        for fragment in GENERAL_MAPPING_ESCALATION_FRAGMENTS:
+            with self.subTest(missing=fragment):
+                forged = FORGED_GENERAL_MAPPING_COMPLETE.replace(fragment, "")
+                self.assertNotIn(fragment, forged)
+                self.assertFalse(_general_mapping_covers_escalation_case(forged))
+
+    def test_paragraph_helper_stops_at_the_blank_line(self):
+        text = "x For the other three writers below, a.\n\nafter the paragraph"
+        self.assertEqual(
+            _general_mapping_paragraph(text),
+            "For the other three writers below, a.",
+        )
+
+
+# --- Matcher: `source` values outside the closed vocabulary (AC-1) ----------
+
+SOURCE_LITERAL_RE = re.compile(r"`(batch-[a-z0-9-]+)`|\bsource: ([a-z][a-z0-9-]*)")
+
+
+def _schema_source_vocabulary():
+    schema = _read(QUESTION_PACKET_SCHEMA_PATH)
+    heading = "### `source` vocabulary"
+    block = _slice(schema, heading, "### Consistency rules")[len(heading) :]
+    return set(re.findall(r"`([a-z][a-z0-9-]*)`", block))
+
+
+def _source_values_outside_vocabulary(text, vocabulary):
+    """Returns (literals found, those found that are not in `vocabulary`).
+    A literal is a backticked `batch-...` token or a `source: <value>`
+    line."""
+    found = set()
+    for match in SOURCE_LITERAL_RE.finditer(text):
+        found.add(match.group(1) or match.group(2))
+    return found, sorted(found - set(vocabulary))
+
+
+FORGED_SECTION_CLEAN_SOURCES = (
+    "`batch-codex-consultation` or `batch-safe-default`; "
+    "`references/batch-policies.yaml` is a file name, not a value.\n"
+    "    source: batch-codex-consultation\n"
+)
+
+FORGED_SECTION_WITH_MINTED_SOURCE = (
+    "`batch-codex-consultation` or `batch-opus-escalation`.\n"
+    "    source: batch-codex-consultation\n"
+)
+
+
+class TestSourceVocabularyMatcherNegativeProof(unittest.TestCase):
+    """Negative proof + non-vacuity guards for
+    `_source_values_outside_vocabulary`."""
+
+    def test_vocabulary_is_read_from_the_schema_document(self):
+        vocabulary = _schema_source_vocabulary()
+        self.assertEqual(
+            vocabulary,
+            {
+                "user",
+                "batch-decision-table",
+                "batch-codex-consultation",
+                "batch-safe-default",
+                "batch-classification-gate",
+            },
+        )
+
+    def test_forged_clean_section_yields_literals_and_no_outsiders(self):
+        found, outside = _source_values_outside_vocabulary(
+            FORGED_SECTION_CLEAN_SOURCES, _schema_source_vocabulary()
+        )
+        self.assertEqual(found, {"batch-codex-consultation", "batch-safe-default"})
+        self.assertEqual(outside, [])
+
+    def test_flags_forged_section_with_a_minted_source_value(self):
+        found, outside = _source_values_outside_vocabulary(
+            FORGED_SECTION_WITH_MINTED_SOURCE, _schema_source_vocabulary()
+        )
+        self.assertIn("batch-opus-escalation", found)
+        self.assertEqual(outside, ["batch-opus-escalation"])
+
+
+# --- Matcher: the first writer bullet's resolution_note list (AC-2) ---------
+
+
+def _first_writer_bullet_names_escalation_in_resolution_note(bullet_text):
+    """True when the sentence that lists what `resolution_note` names also
+    names whether the Opus escalation ran and its reasoning."""
+    normalized = _normalize_ws(bullet_text)
+    idx = normalized.find("`resolution_note` naming")
+    if idx == -1:
+        return False
+    end = normalized.find(". ", idx)
+    sentence = normalized[idx : len(normalized) if end == -1 else end]
+    return (
+        "whether Codex was consulted" in sentence
+        and "whether the Opus escalation ran" in sentence
+        and "its reasoning" in sentence
+    )
+
+
+FORGED_BULLET_WITHOUT_ESCALATION_CLAUSE = (
+    "- `references/batch-mode.md`'s Non-packet gates table: the review "
+    "phase diff-size gate and the per-command approval fallback each "
+    "append one entry, with `resolution_note` naming the gate site, the "
+    "options considered, the choice, and whether Codex was consulted. "
+    "The Opus escalation is mentioned only here, outside the list.\n"
+)
+
+FORGED_BULLET_WITH_ESCALATION_CLAUSE = (
+    "- `references/batch-mode.md`'s Non-packet gates table: the review "
+    "phase diff-size gate and the per-command approval fallback each "
+    "append one entry, with `resolution_note` naming the gate site, the "
+    "options considered, the choice, whether Codex was consulted, and "
+    "whether the Opus escalation ran, together with its reasoning. "
+    "Inside a phase step, the entry is committed by the next call.\n"
+)
+
+
+class TestWriterBulletMatcherNegativeProof(unittest.TestCase):
+    """Negative proof + non-vacuity guard for
+    `_first_writer_bullet_names_escalation_in_resolution_note`."""
+
+    def test_forged_bullet_with_the_escalation_clause_is_well_formed_and_found(
+        self,
+    ):
+        self.assertIn("`resolution_note` naming", FORGED_BULLET_WITH_ESCALATION_CLAUSE)
+        self.assertTrue(
+            _first_writer_bullet_names_escalation_in_resolution_note(
+                FORGED_BULLET_WITH_ESCALATION_CLAUSE
+            )
+        )
+
+    def test_rejects_forged_bullet_without_the_escalation_clause(self):
+        # The words "Opus escalation" occur in the forged bullet, so only
+        # the scoping to the resolution_note sentence rejects it.
+        self.assertIn("Opus escalation", FORGED_BULLET_WITHOUT_ESCALATION_CLAUSE)
+        self.assertFalse(
+            _first_writer_bullet_names_escalation_in_resolution_note(
+                FORGED_BULLET_WITHOUT_ESCALATION_CLAUSE
+            )
+        )
+
+
+# --- Matcher: the second worked example (AC-3) ------------------------------
+
+FENCED_YAML_RE = re.compile(r"```yaml\n(.*?)```", re.DOTALL)
+FIELD_LINE_RE = re.compile(r"^\s*(?:-\s+)?([a-z_]+):\s*(.*)$")
+RFC3339_WITH_OFFSET_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$"
+)
+
+
+def _fenced_yaml_blocks(section_text):
+    """(start offset, end offset, body) of every fenced YAML block."""
+    return [
+        (m.start(), m.end(), m.group(1)) for m in FENCED_YAML_RE.finditer(section_text)
+    ]
+
+
+def _unquote(value):
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        return value[1:-1]
+    return value
+
+
+def _flat_fields(block_body):
+    """First occurrence of each `key: value` line, values unquoted."""
+    fields = {}
+    for line in block_body.splitlines():
+        match = FIELD_LINE_RE.match(line)
+        if match:
+            fields.setdefault(match.group(1), _unquote(match.group(2).strip()))
+    return fields
+
+
+def _selected_ids(raw):
+    raw = raw.strip()
+    if not (raw.startswith("[") and raw.endswith("]")):
+        return None
+    inner = raw[1:-1].strip()
+    return [] if not inner else [part.strip() for part in inner.split(",")]
+
+
+def _answer_fields_consistent(fields):
+    """`references/question-packet-schema.md`'s consistency rules 1-4 over
+    the record's answer fields."""
+    ids = _selected_ids(fields.get("selected_option_ids", ""))
+    if ids is None or not fields.get("normalized_answer"):
+        return False
+    has_freeform = fields.get("freeform", "null") not in ("", "null")
+    mode = fields.get("answer_mode")
+    if mode == "single_select":
+        return len(ids) == 1 and not has_freeform
+    if mode == "multi_select":
+        return len(ids) >= 1
+    if mode == "freeform":
+        return ids == [] and has_freeform
+    if mode == "select_or_freeform":
+        return len(ids) >= 1 or has_freeform
+    return False
+
+
+def _is_escalation_worked_example(block_body):
+    fields = _flat_fields(block_body)
+    if fields.get("question_id") not in NON_PACKET_QUESTION_IDS:
+        return False
+    if fields.get("packet_id") != "null":
+        return False
+    if fields.get("source") != "batch-codex-consultation":
+        return False
+    if not RFC3339_WITH_OFFSET_RE.match(fields.get("answered_at", "")):
+        return False
+    if not _answer_fields_consistent(fields):
+        return False
+    note = _normalize_ws(fields.get("resolution_note", ""))
+    return (
+        "Codex was not consulted" in note
+        and "the Opus escalation ran" in note
+        and re.search(r"its reasoning[:,]? \S+", note) is not None
+    )
+
+
+def _example_block(**overrides):
+    fields = {
+        "question_id": "review.diff-size-gate",
+        "packet_id": "null",
+        "answered_at": '"2026-01-30T12:05:00+09:00"',
+        "source": "batch-codex-consultation",
+        "answer_mode": "freeform",
+        "selected_option_ids": "[]",
+        "freeform": '"continue the review on the full changed-file list"',
+        "normalized_answer": '"continue the review on the full changed-file list"',
+        "resolution_note": (
+            '"gate: review phase diff-size gate; Codex was not consulted '
+            "(no harness was available); the Opus escalation ran; its "
+            'reasoning: continuing is reversible"'
+        ),
+    }
+    fields.update(overrides)
+    lines = ["records:"]
+    first = True
+    for key, value in fields.items():
+        lines.append(("  - " if first else "    ") + f"{key}: {value}")
+        first = False
+    return "\n".join(lines) + "\n"
+
+
+class TestWorkedExampleMatcherNegativeProof(unittest.TestCase):
+    """Negative proof + non-vacuity guard for `_is_escalation_worked_example`."""
+
+    def test_forged_complete_example_is_well_formed_and_found(self):
+        block = _example_block()
+        fields = _flat_fields(block)
+        self.assertEqual(fields["question_id"], "review.diff-size-gate")
+        self.assertEqual(fields["packet_id"], "null")
+        self.assertTrue(_is_escalation_worked_example(block))
+        # The other non-packet gate identifying name is accepted as well.
+        self.assertTrue(
+            _is_escalation_worked_example(
+                _example_block(
+                    question_id="command-execution.per-command-approval-fallback"
+                )
+            )
+        )
+
+    def test_rejects_each_forged_example_missing_a_required_value(self):
+        forged = {
+            "escalation-ran omitted": _example_block(
+                resolution_note=(
+                    '"gate: review phase diff-size gate; Codex was not '
+                    "consulted (no harness was available); its reasoning: "
+                    'continuing is reversible"'
+                )
+            ),
+            "Codex-not-consulted omitted": _example_block(
+                resolution_note=(
+                    '"gate: review phase diff-size gate; the Opus escalation '
+                    'ran; its reasoning: continuing is reversible"'
+                )
+            ),
+            "reasoning omitted": _example_block(
+                resolution_note=(
+                    '"gate: review phase diff-size gate; Codex was not '
+                    'consulted; the Opus escalation ran"'
+                )
+            ),
+            "source batch-safe-default": _example_block(source="batch-safe-default"),
+            "question_id outside the two": _example_block(
+                question_id="implement.wake-decline"
+            ),
+            "packet_id not null": _example_block(packet_id="pkt-0001"),
+            "answered_at without offset": _example_block(
+                answered_at='"2026-01-30T12:05:00"'
+            ),
+            "freeform answer with a selection": _example_block(
+                selected_option_ids="[proceed]"
+            ),
+            "freeform answer without text": _example_block(freeform="null"),
+            "single_select with two selections": _example_block(
+                answer_mode="single_select",
+                selected_option_ids="[a, b]",
+                freeform="null",
+            ),
+        }
+        for label, block in forged.items():
+            with self.subTest(forged=label):
+                self.assertFalse(_is_escalation_worked_example(block))
+
+    def test_answer_consistency_accepts_the_valid_shape_of_each_mode(self):
+        for overrides in (
+            {},
+            {
+                "answer_mode": "single_select",
+                "selected_option_ids": "[proceed]",
+                "freeform": "null",
+            },
+            {
+                "answer_mode": "multi_select",
+                "selected_option_ids": "[a, b]",
+                "freeform": "null",
+            },
+            {
+                "answer_mode": "select_or_freeform",
+                "selected_option_ids": "[]",
+            },
+        ):
+            with self.subTest(overrides=overrides):
+                self.assertTrue(
+                    _is_escalation_worked_example(_example_block(**overrides))
+                )
+
+
+# --- Matcher: the example lies outside the helper-bounded bullets (AC-3) ----
+
+
+def _bullet_spans(subsection_text):
+    """Offsets of the first writer bullet and the relaxed-route bullet,
+    bounded the way this module's own helpers bound them."""
+    writers_idx = subsection_text.index("Four writers append to this file")
+    first_start = writers_idx + subsection_text[writers_idx:].index("\n- ") + 1
+    first_end = subsection_text.index("\n- ", first_start + 1)
+    relaxed_marker = (
+        "\n- `references/question-resolution.md`'s batch resolution sequence"
+    )
+    relaxed_start = subsection_text.index(relaxed_marker) + 1
+    relaxed_end = subsection_text.index("\n\nRecords are append-only:", relaxed_start)
+    return (first_start, first_end), (relaxed_start, relaxed_end)
+
+
+def _example_placement_ok(subsection_text, offset):
+    """True when `offset` lies outside both bullets and either between the
+    general-mapping paragraph and "Four writers append to this file", or
+    after the append-only paragraph."""
+    first, relaxed = _bullet_spans(subsection_text)
+    if first[0] <= offset < first[1] or relaxed[0] <= offset < relaxed[1]:
+        return False
+    general_idx = GENERAL_MAPPING_LEAD_IN_RE.search(subsection_text).start()
+    writers_idx = subsection_text.index("Four writers append to this file")
+    append_only_idx = subsection_text.index("Records are append-only:")
+    paragraph_end = subsection_text.find("\n\n", append_only_idx)
+    paragraph_end = len(subsection_text) if paragraph_end == -1 else paragraph_end
+    return general_idx < offset < writers_idx or offset >= paragraph_end
+
+
+FORGED_SECTION_FOR_PLACEMENT = (
+    "intro\n\nFor the other three writers below, general mapping.\n\n"
+    "BETWEEN-GENERAL-AND-WRITERS\n\n"
+    "Four writers append to this file, each at resolution time:\n\n"
+    "- first bullet line\n  FIRST-BULLET-CONTINUATION\n"
+    "- second bullet\n"
+    "- `references/question-resolution.md`'s batch resolution sequence: "
+    "relaxed\n  RELAXED-CONTINUATION\n\n"
+    "Records are append-only: never rewritten.\n\n"
+    "AFTER-APPEND-ONLY\n"
+)
+
+
+class TestExamplePlacementMatcherNegativeProof(unittest.TestCase):
+    """Negative proof + non-vacuity guard for `_example_placement_ok`."""
+
+    def _offset(self, marker):
+        return FORGED_SECTION_FOR_PLACEMENT.index(marker)
+
+    def test_forged_offsets_between_the_bullets_are_accepted(self):
+        for marker in ("BETWEEN-GENERAL-AND-WRITERS", "AFTER-APPEND-ONLY"):
+            with self.subTest(marker=marker):
+                self.assertTrue(
+                    _example_placement_ok(
+                        FORGED_SECTION_FOR_PLACEMENT, self._offset(marker)
+                    )
+                )
+
+    def test_rejects_forged_offsets_inside_a_bullet(self):
+        for marker in ("FIRST-BULLET-CONTINUATION", "RELAXED-CONTINUATION"):
+            with self.subTest(marker=marker):
+                self.assertFalse(
+                    _example_placement_ok(
+                        FORGED_SECTION_FOR_PLACEMENT, self._offset(marker)
+                    )
+                )
+
+    def test_rejects_forged_offsets_before_the_general_mapping(self):
+        self.assertFalse(
+            _example_placement_ok(FORGED_SECTION_FOR_PLACEMENT, self._offset("intro"))
+        )
+
+
+# --- AC-1: the real general mapping ------------------------------------------
+
+
+class TestEscalationGeneralMapping(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.subsection = _batch_audit_section()
+        cls.paragraph = _general_mapping_paragraph(cls.subsection)
+
+    def test_general_mapping_covers_the_escalation_decided_non_packet_gate(self):
+        self.assertTrue(_general_mapping_covers_escalation_case(self.paragraph))
+
+    def test_no_codex_turn_case_is_stated_in_the_general_mapping(self):
+        normalized = _normalize_ws(self.paragraph)
+        self.assertIn("the availability probe found no harness", normalized)
+        self.assertIn("no Codex consultation turn ran", normalized)
+
+    def test_route_naming_reading_is_stated_in_the_general_mapping(self):
+        # Pinned here, not in the relaxed-route bullet (whose own pin is
+        # `TestFourthWriterRelaxedRoute`).
+        normalized = _normalize_ws(self.paragraph)
+        self.assertIn(
+            "naming the consultation route and never asserting that Codex "
+            "itself was consulted",
+            normalized,
+        )
+
+    def test_section_names_no_source_value_outside_the_closed_vocabulary(self):
+        found, outside = _source_values_outside_vocabulary(
+            self.subsection, _schema_source_vocabulary()
+        )
+        # Non-vacuity on the real section: the scan sees the values the
+        # section does name.
+        self.assertTrue(
+            {"batch-codex-consultation", "batch-safe-default"} <= found, found
+        )
+        self.assertEqual(outside, [])
+
+
+# --- AC-2: the real first writer bullet --------------------------------------
+
+
+class TestEscalationNonPacketWriterBullet(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.subsection = _batch_audit_section()
+        cls.bullet = _first_writer_bullet(cls.subsection)
+
+    def test_resolution_note_list_names_escalation_and_its_reasoning(self):
+        self.assertTrue(
+            _first_writer_bullet_names_escalation_in_resolution_note(self.bullet)
+        )
+
+    def test_bullet_still_states_the_out_of_step_commit_reach_point(self):
+        self.assertTrue(
+            _first_writer_bullet_states_out_of_step_reach_point(self.bullet)
+        )
+
+
+# --- AC-3: the real second worked example ------------------------------------
+
+
+class TestEscalationWorkedExample(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.subsection = _batch_audit_section()
+        cls.examples = [
+            block
+            for block in _fenced_yaml_blocks(cls.subsection)
+            if _is_escalation_worked_example(block[2])
+        ]
+
+    def test_section_has_exactly_one_escalation_worked_example(self):
+        self.assertEqual(len(self.examples), 1)
+
+    def test_example_lies_outside_the_first_and_relaxed_route_bullets(self):
+        self.assertEqual(len(self.examples), 1)
+        start, _end, _body = self.examples[0]
+        self.assertTrue(_example_placement_ok(self.subsection, start))
+
+    def test_the_two_bullets_the_helpers_read_hold_no_fenced_block(self):
+        for bullet in (
+            _first_writer_bullet(self.subsection),
+            _relaxed_route_bullet(self.subsection),
+        ):
+            self.assertNotIn("```", bullet)
+
+    def test_example_resolution_note_names_the_three_statements(self):
+        self.assertEqual(len(self.examples), 1)
+        note = _normalize_ws(_flat_fields(self.examples[0][2])["resolution_note"])
+        self.assertIn("Codex was not consulted", note)
+        self.assertIn("the Opus escalation ran", note)
+        self.assertRegex(note, r"its reasoning[:,]? \S+")
+
+
+# --- AC-4: wording that must stay as it was ----------------------------------
+
+EXISTING_YAML_EXAMPLE = '''schema_version: 1
+feature: example-feature
+records:
+  - question_id: review.diff-size-gate
+    packet_id: null
+    answered_at: "2026-01-30T12:00:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "smallest / most reversible side effect option"
+    normalized_answer: "smallest / most reversible side effect option"
+    resolution_note: "gate: review phase diff-size gate; codex_consulted: true; no Codex suggestion mapped, fell through to the minimum-side-effect default"
+'''
+
+
+class TestEscalationRetainedWording(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.subsection = _batch_audit_section()
+
+    def test_existing_yaml_example_is_unchanged(self):
+        bodies = [body for _s, _e, body in _fenced_yaml_blocks(self.subsection)]
+        self.assertIn(EXISTING_YAML_EXAMPLE, bodies)
+
+    def test_existing_yaml_example_still_precedes_the_new_one(self):
+        blocks = _fenced_yaml_blocks(self.subsection)
+        self.assertEqual(blocks[0][2], EXISTING_YAML_EXAMPLE)
+
+    def test_the_general_mapping_lead_in_and_relaxed_route_pointer_stay(self):
+        normalized = _normalize_ws(_general_mapping_paragraph(self.subsection))
+        self.assertTrue(normalized.startswith("For the other three writers below"))
+        self.assertIn(
+            "the relaxed route's own bullet below states its complete "
+            "three-way mapping instead",
+            normalized,
+        )
+
+    def test_single_scoped_step7_and_single_four_writers_sentence_stay(self):
+        self.assertTrue(_step7_citation_scope_ok(self.subsection))
+        self.assertEqual(
+            self.subsection.count("Four writers append to this file"), 1
         )
 
 
