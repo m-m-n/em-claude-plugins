@@ -1,0 +1,266 @@
+schema_version: 1
+feature: sca-per-project-scan-binding
+created: '2026-10-04'
+base_branch: main
+goal: |
+  # SCA 軸: npm / cargo / go のスキャンがリポジトリルート固定で、エコシステムごとに 1 プロジェクトしか見ない
+
+  ## 現象 (必須)
+  `build_scan_job` はターゲットを追加するのが `name == 'pip'` のときだけで、npm / cargo / go では argv が `[executable] + args`、cwd が `project_root` 固定になる。`manifest_file` は finding のファイルラベルを変えるだけで、実際に何が走査されるかには影響しない。
+  `services/api/package.json` の変更に対して `npm audit` がリポジトリルートで走り、まったく別の依存集合を監査した結果に、ネストしたパスのラベルが付く。
+  さらに `manifest_file_for` は最初にマッチした変更ファイルだけを返し、エコシステムごとに 1 ジョブしか作らないため、別ディレクトリにある 2 つ目の `package.json` の変更はまったく走査されない。`skip_reason` も出ず `skipped: false` になる。
+  round 1 の未解決 finding `9a56747dc5389bdb` / `6e8a02d94f7b3c15`（ターゲット束縛）の残件。
+  ## 再現手順 (必須)
+  1. モノレポで `services/api/package.json` を変更する
+  2. その変更ファイルを `changed_files` として `scan-dependencies.py scan` を実行する
+  3. `npm audit` がリポジトリルートで実行され、`services/api` の依存集合は監査されない
+  4. さらに `services/web/package.json` も同時に変更すると、そちらは走査対象にすらならず skip_reason も出ない
+  ## 期待する挙動 (必須)
+  変更されたマニフェスト / lockfile をそれを含むプロジェクトディレクトリごとにグループ化し、distinct なプロジェクト 1 つにつき 1 ジョブを作って、各スキャナをそのプロジェクトに束縛する。束縛できないプロジェクトは、ルートレベルのスキャンに畳み込まず、機械可読で安定した `skip_reason` を返す。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  ## 該当箇所 (任意)
+  `em-workflow/scripts/scan-dependencies.py:1648`（`build_scan_job`）、`manifest_file_for`
+  ## 実害・発生条件 (任意)
+  モノレポおよびネストしたプロジェクトを持つリポジトリで、SCA 軸の結果が「別のプロジェクトを監査した結果」になる。ラベルが正しいパスを指すため、誤りに気づけない。
+  ---
+  出典: em-workflow レビュー round 2 の finding `20f7f988c9400af6`（severity: high, category: comprehensive, confidence: 90, source: codex:comprehensive）。無人実行の rework cap 到達により `deferred` になった残件。
+  関連 PR: https://github.com/m-m-n/em-claude-plugins/pull/27
+parent_branch: em-workflow/sca-per-project-scan-binding/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.22
+      '2': 0.77
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.1
+      '2': 0.89
+      '3': 0.01
+  at: '2026-10-04T19:56:14+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: c50d9c6dec8efa49fd7f6ac6e2f1db1b9ed2f05a
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない CLI スクリプトとテストの変更
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: プロジェクト単位のグループ化
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-6
+  FR2:
+    title: グループ内のターゲット選択
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR3:
+    title: 1 プロジェクトにつき 1 スキャン単位
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+  FR4:
+    title: 束縛可能条件（アンカーファイル）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-3
+  FR5:
+    title: npm / cargo / go の厳格なパス検証
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR6:
+    title: 束縛できないプロジェクトの扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+    - TS-5
+  FR7:
+    title: skip_reason の集約形式
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+    - TS-9
+  FR8:
+    title: プロジェクトをまたいだ部分カバレッジ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR9:
+    title: エコシステムレベルの検査順
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-9
+  FR10:
+    title: pip のグループ化
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  FR11:
+    title: 祖先ワークスペースへの脱出防止
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR12:
+    title: build_scan_job / build_scan_jobs の純粋性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR13:
+    title: review-phase.md の axis-2 段落の拡張
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-11
+  FR14:
+    title: 既存テストフィクスチャの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-12
+  NFR1:
+    title: 読み取り専用
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  NFR2:
+    title: 決定性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  NFR3:
+    title: パスを含まない理由文字列
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+    - TS-4
+  NFR4:
+    title: テストの依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-12
+  NFR5:
+    title: 出力スキーマ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
