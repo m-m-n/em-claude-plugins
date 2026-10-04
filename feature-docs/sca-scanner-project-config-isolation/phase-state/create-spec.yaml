@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 03707853fc9b7ad499843536f6606f5b54fcad53
 last_input_digest: sha256:dd36d1ea6e8c3a0b3ead8c64786473d69f4fafef9b0e23d97364eeaffa176c26
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -220,7 +220,17 @@ worker_runs:
   status: completed
   input_digest: sha256:dd36d1ea6e8c3a0b3ead8c64786473d69f4fafef9b0e23d97364eeaffa176c26
   output_digest: sha256:f709817515e7617e87e8ec3bdfcd07cb6a88b6f52586f4a257104455e7a90ded
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:691ffe2f5ab6d03b9f2ef546bd82346337b9b63541d07c2b4c513b8ce95c41df
+  output_digest: null
+artifacts:
+- path: feature-docs/sca-scanner-project-config-isolation/REQUIREMENTS.md
+  sha256: sha256:aab253c1a0f7f7748c696fb3ad9614a9c74bb7e4b4c06dee8f0662c34324e26e
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-scanner-project-config-isolation/SPEC.md
+  sha256: sha256:e8834ac92b0a50e732b7c708d4e88ef98930c6824f5c6acb5fa0786c8612e6a1
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
