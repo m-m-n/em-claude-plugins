@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-interactive-guard-hook
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 0d9d833c5aa516785352dcfd256d819c19ba9a87
 last_input_digest: sha256:84cc2776223c36d7fd65ea9834f5eafad9792523f8f6d8bc88ef3cc0b9e5c5de
