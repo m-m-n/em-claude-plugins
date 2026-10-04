@@ -148,6 +148,61 @@ if [[ -n "${CODEX_OTLP_ENDPOINT:-}" ]]; then
   )
 fi
 
+# --- Interactive-guard hook ---
+# Every launch registers scripts/codex-hook-interactive-guard.py (the copy next
+# to this wrapper) as a PreToolUse hook for Bash tool calls. A hook given by
+# -c has no persisted trust (Codex reports it as untrusted), so
+# --dangerously-bypass-hook-trust is what lets it run; the config-isolation
+# flags on the launch below stay exactly as they were.
+# The path is derived from this script's own location, never from the caller's
+# working directory. The wrapper does not check that the file exists: when it
+# is missing, Codex runs the Bash call unguarded (fail-open by design).
+#
+# Codex 0.160.0 runs the hook command through a POSIX shell, so the absolute
+# path is single-quoted for the shell first, and the resulting command is then
+# written as a TOML basic string. Both layers round-trip any path, including
+# one with spaces, quotes, backslashes or other shell metacharacters.
+
+# Prints $1 single-quoted for a POSIX shell.
+shell_single_quote() {
+  local rest="$1" out="'" q="'"
+  while [[ "$rest" == *"$q"* ]]; do
+    out+="${rest%%"$q"*}'\\''"
+    rest="${rest#*"$q"}"
+  done
+  out+="${rest}'"
+  printf '%s' "$out"
+}
+
+# Prints $1 as a TOML basic string, surrounding double quotes included.
+# Backslash and double quote are escaped; control characters become \uXXXX.
+toml_basic_string() {
+  local s="$1" out="" c code i
+  local LC_ALL=C
+  for (( i = 0; i < ${#s}; i++ )); do
+    c="${s:i:1}"
+    case "$c" in
+      '\') out+='\\' ;;
+      '"') out+='\"' ;;
+      *)
+        printf -v code '%d' "'$c"
+        if (( code < 32 || code == 127 )); then
+          printf -v c '\\u%04X' "$code"
+        fi
+        out+="$c"
+        ;;
+    esac
+  done
+  printf '"%s"' "$out"
+}
+
+HOOK_SCRIPT="${SCRIPT_DIR}/codex-hook-interactive-guard.py"
+HOOK_COMMAND="python3 $(shell_single_quote "$HOOK_SCRIPT")"
+HOOK_FLAG=(
+  -c "hooks.PreToolUse=[{matcher=\"Bash\", hooks=[{type=\"command\", command=$(toml_basic_string "$HOOK_COMMAND")}]}]"
+  --dangerously-bypass-hook-trust
+)
+
 OUTFILE="$(mktemp)"
 ERRFILE="$(mktemp)"
 trap 'rm -f "$OUTFILE" "$ERRFILE"' EXIT
@@ -183,6 +238,7 @@ timeout "$TIMEOUT" codex exec \
   "${PROFILE_FLAG[@]}" \
   "${USER_CONFIG_FLAG[@]}" \
   "${OTEL_FLAG[@]}" \
+  "${HOOK_FLAG[@]}" \
   "$FULL_PROMPT" </dev/null > "$OUTFILE" 2> "$ERRFILE" || exit_code=$?
 
 if [[ $exit_code -eq 124 ]]; then
