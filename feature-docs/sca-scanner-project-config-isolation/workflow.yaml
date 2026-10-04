@@ -145,9 +145,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-scanner-project-config-isolation/task0001
   task0002:
     title: Document isolation-directory execution and guard the unchanged scan surfaces
     plan: tasks/task0002.md
@@ -164,9 +164,9 @@ tasks:
     - FR11
     - FR13
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-scanner-project-config-isolation/task0002
 review:
   status: pending
   rounds_completed: 0
