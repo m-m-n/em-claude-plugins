@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-scanner-project-config-isolation
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 03707853fc9b7ad499843536f6606f5b54fcad53
 last_input_digest: sha256:dd36d1ea6e8c3a0b3ead8c64786473d69f4fafef9b0e23d97364eeaffa176c26
