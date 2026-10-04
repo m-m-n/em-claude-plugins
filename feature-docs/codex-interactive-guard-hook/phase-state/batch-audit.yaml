@@ -15,3 +15,13 @@ records:
     A=SPEC どおり --version/-V/-h/--help だけ通す, B=処理系ごとの小さな許可リスト, C=対話に影響しない既知オプションだけのときに拒否し他は通す。chosen: B。Codex（run_codex_exec.sh
     readonly --litellm muse-spark）の理由: A は安全な確認まで止めてレビューの邪魔になる、C は未知のオプションを通して対話のまま残る恐れがある、B は拒否の向きを保ったまま誤爆を減らせる。tasks/task0001.md
     の FR7 deny 条件と AC-3 にオーケストレーターが追記した。Opus escalation not run.'
+- question_id: implement.deviation-decline.task0002
+  packet_id: null
+  answered_at: '2026-10-05T01:33:00+09:00'
+  source: batch-orchestrator
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: 'task0002 の deviations 2 件は files への自動追加を行わない。'
+  resolution_note: 'task_id: task0002。deviation 1（em-review 側 run_codex_exec.sh の既存 2>&1 を残し、AC-6 の検査を em-workflow 側に限定）と deviation 2（テスト用一時コピーに references/codex-cli.yaml を含める）は、どちらも追加するパスを名指ししていない（evidence part 1: path が欠落）。宣言外ファイルの変更は無く、通常の deviation として review に回す。deviation 1 は計画文言の不備の疑いとして review で確認する。'
