@@ -1,14 +1,18 @@
 schema_version: 1
 feature: codex-interactive-guard-hook
 phase: create-plan
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 57b643b4f79fc8cfd5c2b6946bb39eafbc125540
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:7bad3b31cd6a193b43c59bebc1888ee3206d76bb256ce69cc7857828fd1f25b7
+active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:7bad3b31cd6a193b43c59bebc1888ee3206d76bb256ce69cc7857828fd1f25b7
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
