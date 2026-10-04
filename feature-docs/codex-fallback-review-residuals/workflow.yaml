@@ -209,7 +209,7 @@ tasks:
     - NFR3
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-fallback-review-residuals/task0003
   task0004:
     title: 'Regression test: --litellm MODEL passed verbatim'
