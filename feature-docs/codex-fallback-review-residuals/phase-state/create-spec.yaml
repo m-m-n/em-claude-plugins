@@ -1,18 +1,121 @@
 schema_version: 1
 feature: codex-fallback-review-residuals
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: eec404e1a167d7bdbd9b436cd84e813c679b31b5
 last_input_digest: sha256:60d283a536c2a71308c21dcbd7e005a99725b3bd765c9e8e22578ba18bccd349
 active_request_id: create-spec-run-0001
 packets: {}
-answers: {}
+answers:
+  requirement.opus-escalation-vehicle:
+    packet_id: null
+    answered_at: '2026-10-04T15:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'Adopt option (a): a dedicated agent em-workflow/agents/<name>.md (model:
+      opus, effort: xhigh, read-only tools) plus a dedicated contract doc under em-workflow/references/,
+      mirroring review-evaluator + review-evaluation-contract.md. question-resolution.md
+      must reference it in the Task(subagent_type="em-workflow:<name>") form that
+      scripts/check-plugin-invariants.py inspects (an unreferenced agent definition
+      fails tests/test_check_plugin_invariants.py; the ''# Task assignment'' heading
+      is forbidden). Correct A-1''s basis: batch-codex-autonomous-decisions SPEC A4
+      left the vehicle to planning, so the inline alternative would not contradict
+      the SPEC; (a) is chosen because it keeps the review-evaluator''s role and contract
+      separate.'
+    normalized_answer: 'Adopt option (a): a dedicated agent em-workflow/agents/<name>.md
+      (model: opus, effort: xhigh, read-only tools) plus a dedicated contract doc
+      under em-workflow/references/, mirroring review-evaluator + review-evaluation-contract.md.
+      question-resolution.md must reference it in the Task(subagent_type="em-workflow:<name>")
+      form that scripts/check-plugin-invariants.py inspects (an unreferenced agent
+      definition fails tests/test_check_plugin_invariants.py; the ''# Task assignment''
+      heading is forbidden). Correct A-1''s basis: batch-codex-autonomous-decisions
+      SPEC A4 left the vehicle to planning, so the inline alternative would not contradict
+      the SPEC; (a) is chosen because it keeps the review-evaluator''s role and contract
+      separate.'
+    resolution_note: 'Orchestrator-raised clarification on analyst assumption A-1.
+      Options: (a) dedicated agent + contract doc; (b) existing agent type with model
+      override + inline contract. Codex (run_codex_exec.sh readonly, entry codex)
+      chose (a) citing review-evaluator.md:4,11,29, check-plugin-invariants.py:168,231,265,
+      tests/test_check_plugin_invariants.py:115,522, and noted A-1''s ''contradicts
+      SPEC'' basis is wrong (SPEC.md:49). Orchestrator adopted (a). Opus escalation
+      not run.'
+  requirement.escalation-nonpacket-source:
+    packet_id: null
+    answered_at: '2026-10-04T15:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'Agree: an escalation-decided non-packet gate records source batch-codex-consultation
+      under the route-naming reading. The worked example uses packet_id: null and
+      a resolution_note stating Codex was not consulted, the Opus escalation ran,
+      and its reasoning.'
+    normalized_answer: 'Agree: an escalation-decided non-packet gate records source
+      batch-codex-consultation under the route-naming reading. The worked example
+      uses packet_id: null and a resolution_note stating Codex was not consulted,
+      the Opus escalation ran, and its reasoning.'
+    resolution_note: Orchestrator-raised clarification on analyst assumption A-2.
+      Codex agreed (question-packet-schema.md:140, phase-state.md:425,470; batch-safe-default
+      / batch-decision-table / batch-classification-gate do not fit). Opus escalation
+      not run.
+  requirement.headline-bug-scope:
+    packet_id: null
+    answered_at: '2026-10-04T15:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'Agree: exclude the headline wrapper defect, 7e1c5176f1992a47 and 43504ede8ee2f609
+      as already resolved (no wrapper code change). Add a regression check that an
+      arbitrary --litellm MODEL value is passed verbatim to codex as -p litellm -m
+      MODEL, since the existing argv check in tests/test_codex_wrapper_single_invocation.py
+      does not pass --litellm.'
+    normalized_answer: 'Agree: exclude the headline wrapper defect, 7e1c5176f1992a47
+      and 43504ede8ee2f609 as already resolved (no wrapper code change). Add a regression
+      check that an arbitrary --litellm MODEL value is passed verbatim to codex as
+      -p litellm -m MODEL, since the existing argv check in tests/test_codex_wrapper_single_invocation.py
+      does not pass --litellm.'
+    resolution_note: Orchestrator-raised clarification on excluded items X-1..X-4.
+      Codex agreed (run_codex_exec.sh:26,102,175,186,194; tests/test_codex_wrapper_single_invocation.py:279,353,369,491,516)
+      and flagged the missing --litellm verbatim-passthrough regression check. Orchestrator
+      adopted. Opus escalation not run.
+  requirement.escalation-contract-test-coverage:
+    packet_id: null
+    answered_at: '2026-10-04T15:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'Add to the requirements: (1) when the return shape moves to the contract
+      doc, tests/test_question_resolution_doc.py''s pins on the Opus escalation section''s
+      return-shape text are updated to check the reference plus the contract''s content,
+      without losing coverage; (2) tests also check the agent has no write tool and
+      the contract states the delimited untrusted-input boundary and the per-question
+      return contract (option_id from the question''s own options or explicit no-decision,
+      with reasoning); (3) for non-packet gates (batch-mode.md Non-packet gates, which
+      carry no question packet), the contract/section defines how the gate''s options
+      and option_ids are presented to the escalation so the return-condition ''option_id
+      in options[].option_id'' is satisfiable.'
+    normalized_answer: 'Add to the requirements: (1) when the return shape moves to
+      the contract doc, tests/test_question_resolution_doc.py''s pins on the Opus
+      escalation section''s return-shape text are updated to check the reference plus
+      the contract''s content, without losing coverage; (2) tests also check the agent
+      has no write tool and the contract states the delimited untrusted-input boundary
+      and the per-question return contract (option_id from the question''s own options
+      or explicit no-decision, with reasoning); (3) for non-packet gates (batch-mode.md
+      Non-packet gates, which carry no question packet), the contract/section defines
+      how the gate''s options and option_ids are presented to the escalation so the
+      return-condition ''option_id in options[].option_id'' is satisfiable.'
+    resolution_note: 'Orchestrator-raised clarification from Codex''s other_risks
+      in the same consultation (tests/test_question_resolution_doc.py:1236, tests/test_review_phase_llm_led.py:412,
+      batch-mode.md:66, question-resolution.md:525). Orchestrator adopted all three.
+      Note: this may change previously pinned return-shape phrases, which overrides
+      analyst NFR-3 for those phrases only where they move to the contract doc. Opus
+      escalation not run.'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:60d283a536c2a71308c21dcbd7e005a99725b3bd765c9e8e22578ba18bccd349
-  output_digest: null
+  output_digest: sha256:8889cc460028b09bf6d0faefbd78b04fef38074fa8e1d82ca4e53187ca28bcfa
 artifacts: []
 patches: []
 progress_fingerprint: null
