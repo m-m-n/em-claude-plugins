@@ -1,0 +1,51 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 7263 tests OK; check-plugin-invariants.py: all PASS (run before any edit)
+final_failures: []             # re-executed after implementation: 7301 tests OK (7263 + 38 new); check-plugin-invariants.py: all PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_ac1_workflow_default_path_readonly
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_ac1_workflow_default_path_readwrite
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_hook_path_does_not_depend_on_the_callers_working_directory
+      - test_codex_hook_wrapper_args.TestCheckerDetectsRegressions
+    red_confirmed: true
+    red_reason: "AssertionError: --dangerously-bypass-hook-trust must appear exactly once in ['exec', '--color', 'never', '--skip-git-repo-check', '--ignore-rules', '-s', 'read-only', '-c', 'model_reasoning_effort=\"xhigh\"', '--ignore-user-config', ...] (observed before the wrappers were edited)"
+  AC-2:
+    tests:
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_ac2_workflow_litellm_path_readonly
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_ac2_workflow_litellm_path_readwrite
+      - test_codex_hook_wrapper_args.TestConfigIsolationIsPreserved.test_litellm_profile_words_stay_adjacent_with_every_extra_flag
+    red_confirmed: true
+    red_reason: "AssertionError: --dangerously-bypass-hook-trust must appear exactly once in [..., '-p', 'litellm', '-m', 'test-model-xyz', ...] (observed before the wrappers were edited)"
+  AC-3:
+    tests:
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_ac3_review_readonly
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_ac3_review_readwrite
+      - test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch.test_each_plugin_references_only_its_own_hook_copy
+    red_confirmed: true
+    red_reason: "AssertionError: --dangerously-bypass-hook-trust must appear exactly once in [... em-review argv ...]; the per-plugin test raised IndexError on the absent hooks.PreToolUse value before it was tightened to an assertion (observed before the wrappers were edited)"
+  AC-4:
+    tests:
+      - test_codex_hook_wrapper_args.TestHookPathSurvivesHostilePlugins.test_space_and_single_quote_in_path_for_every_launch_path
+      - test_codex_hook_wrapper_args.TestHookPathSurvivesHostilePlugins.test_every_shell_and_toml_metacharacter_in_path
+    red_confirmed: true
+    red_reason: "AssertionError: --dangerously-bypass-hook-trust must appear exactly once in the argv recorded from the wrapper copy under the path with a space and a single quote (observed before the wrappers were edited)"
+  AC-5:
+    tests:
+      - test_codex_hook_wrapper_args.TestConfigIsolationIsPreserved.test_bypass_flag_only_alongside_the_launchs_isolation_flags
+      - test_codex_hook_wrapper_args.TestConfigIsolationIsPreserved.test_reasoning_effort_override_is_still_present_in_readonly
+      - test_codex_hook_wrapper_args.TestConfigIsolationIsPreserved.test_otel_overrides_are_still_present_next_to_the_hook
+    red_confirmed: true
+    red_reason: "AssertionError: '--dangerously-bypass-hook-trust' not found in [...] for test_bypass_flag_only_alongside_the_launchs_isolation_flags and test_otel_overrides_are_still_present_next_to_the_hook (observed before the wrappers were edited); test_reasoning_effort_override_is_still_present_in_readonly passed from the start because that override pre-exists"
+  AC-6:
+    tests:
+      - test_codex_hook_wrapper_args.TestWrapperContractIsUnchanged
+      - test_codex_wrapper_single_invocation
+      - test_codex_wrapper_timeout_alignment.TestEmReviewWrapperUntouched
+    red_confirmed: false
+    red_reason: "The properties in this criterion pre-exist, and the module's AC-6 tests passed on their first run, before the wrappers were edited; the existing test_codex_wrapper_single_invocation (launch count, no 2>&1, usage text, accepted flags on em-workflow's wrapper) and test_codex_wrapper_timeout_alignment.TestEmReviewWrapperUntouched (codex exec once in em-review's non-comment lines) detect the same properties; no red state occurred for this change. em-review's wrapper has always carried one 2>&1 on its launch, so the 'neither wrapper' wording could not be pinned literally; the module pins em-workflow's absence and em-review's unchanged single occurrence."
+  AC-7:
+    tests:
+      - test_codex_hook_wrapper_args.TestHarnessNeverReachesRealCodex
+    red_confirmed: false
+    red_reason: "The isolation properties (stub codex first on PATH, isolated HOME, standard-library-only imports) are properties of the module's harness and held from its first run, so no executable red exists for them; the suite-level outcome (unittest discover and check-plugin-invariants.py both pass) is a run result, not a check that was made to fail for this criterion."
