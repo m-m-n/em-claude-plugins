@@ -1,16 +1,200 @@
 schema_version: 1
 feature: sca-go-govulncheck-real-output
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 7ddf0dcb2574c5c12d048956c4cc96a5b408dcb5
 last_input_digest: sha256:9039e80fb6e7d0623cf6f4e02a645e83c2f51c61380a5aaa8ff83dfe3eaaa709
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-04T22:35:00+09:00'
+    questions:
+    - question_id: requirement.go-severity-undetermined
+      status: answered
+    - question_id: requirement.go-stdlib-directness
+      status: answered
+    - question_id: requirement.go-finding-granularity
+      status: answered
+    - question_id: requirement.go-real-capture-source
+      status: answered
+    - question_id: requirement.go-synthetic-shape-retention
+      status: answered
+    - question_id: requirement.go-mod-unreadable
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.go-severity-undetermined:
+    question_id: requirement.go-severity-undetermined
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - cvss_then_count
+    freeform: null
+    normalized_answer: 'cvss_then_count: severity band from a CVSS v3 vector when present; otherwise the
+      advisory is left out of findings and direct ones are counted in a counts-only summary note (go_severity_undetermined),
+      pip-aligned; skipped/skip_reason stay completion-only.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose cvss_then_count: skip
+      would violate the completion-only meaning of skipped, and report-as-high asserts an unsourced severity
+      (scan-dependencies.py:2333, vuln-scanners.yaml:71). Matches analyst recommendation. Orchestrator
+      adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-stdlib-directness:
+    question_id: requirement.go-stdlib-directness
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - treat_as_direct
+    freeform: null
+    normalized_answer: 'treat_as_direct: stdlib/toolchain findings pass direct_only, subject to the same
+      severity rule.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose treat_as_direct: transitive
+      would drop even determined high+ stdlib advisories; separate count bypasses the normal finding route
+      (scan-dependencies.py:1244, vuln-scanners.yaml:72). Orchestrator adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-finding-granularity:
+    question_id: requirement.go-finding-granularity
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - dedupe_per_osv_module
+    freeform: null
+    normalized_answer: 'dedupe_per_osv_module: all finding objects for the same OSV id and module within
+      one scan unit collapse into one scan finding; reachability judgment stays with R3a. Dedupe and undetermined
+      counts are per project unit; findings across projects are kept.'
+    resolution_note: Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose dedupe_per_osv_module
+      (scan-dependencies.py:1222, review-phase.md:241); turn-1 GAPS added per-project dedupe scope (scan-dependencies.py:2416).
+      Orchestrator adopted. Opus escalation not run.
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-real-capture-source:
+    question_id: requirement.go-real-capture-source
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - capture_during_implementation
+    freeform: null
+    normalized_answer: 'capture_during_implementation: during implementation, run real govulncheck -json
+      (go run golang.org/x/vuln/cmd/govulncheck@<pinned version>) against a minimal Go module requiring
+      a known-vulnerable dependency version; save stdout verbatim (machine-local absolute paths replaced
+      by placeholders) under tests/; tests replay it offline. If capture is impossible the task reports
+      blocked rather than hand-crafting.'
+    resolution_note: Orchestrator verified go 1.27.1 installed, govulncheck not on PATH, proxy.golang.org
+      and vuln.go.dev reachable. Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose capture_during_implementation
+      over upstream testdata (licensing/attribution) and handmade fallback (re-introduces invented fields)
+      (feature-docs/review-sca-axis/tasks/task0008.md:122, tests/test_sca_per_project_scan_binding.py:27).
+      Orchestrator adopted. Opus escalation not run.
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-synthetic-shape-retention:
+    question_id: requirement.go-synthetic-shape-retention
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - drop_synthetic_shape
+    freeform: null
+    normalized_answer: 'drop_synthetic_shape: the go path accepts only the govulncheck stream; a single-object
+      {vulns} payload becomes go_unparseable_output; GO_PAYLOAD and go stubs in test_sca_per_project_scan_binding.py
+      switch to a real no-vulnerability stream.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose drop_synthetic_shape:
+      the test-only shape is how the defect stayed hidden (scan-dependencies.py:1204, tests/test_sca_scan_normalization.py:504).
+      Orchestrator adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-mod-unreadable:
+    question_id: requirement.go-mod-unreadable
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - not_completed_reason
+    freeform: null
+    normalized_answer: 'not_completed_reason: an unreadable/undecodable go.mod at normalization makes
+      the Go unit report the path-free not-completed reason go_direct_manifest_unreadable; other units
+      findings are kept.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose not_completed_reason:
+      empty direct set would silently drop advisories again (scan-dependencies.py:1244, :2372). Orchestrator
+      adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_design
+    freeform: null
+    normalized_answer: 'skip_design: no UI; design step skipped.'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously (accept analyst
+      recommendation), mapped to the packet option skip_design that carries the recommendation.
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-stream-validity:
+    question_id: requirement.go-stream-validity
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: require_config_object
+    normalized_answer: 'require_config_object: stdout is a valid completed stream iff it parses as a JSON
+      object stream and contains at least one top-level {"config": {...}} object; otherwise go_unparseable_output.
+      A valid stream with no finding objects is clean (completed). The existing empty-output check (go_empty_output)
+      keeps precedence, unchanged.'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn-1 GAPS. Options: require_config_object
+      / any_object_stream / parse_only. Codex (run_codex_exec.sh readonly, entry codex, turn 2) chose
+      require_config_object (scan-dependencies.py:1129; govulncheck protocol makes config mandatory).
+      Turn-2 GAP on precedence vs go_empty_output resolved by the orchestrator as preserving the existing
+      order (scan-dependencies.py:1117). Opus escalation not run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-cvss-vector-selection:
+    question_id: requirement.go-cvss-vector-selection
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: max_valid_v3
+    normalized_answer: 'max_valid_v3: consider every OSV top-level severity[] entry of type CVSS_V3 whose
+      vector starts with CVSS:3.0/ or CVSS:3.1/ and is parsed by _cvss_severity_band; take the highest
+      band. CVSS_V4 and other types are ignored (undetermined if none).'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn-1 GAPS. Options: max_valid_v3
+      / first_valid_v3. Codex (run_codex_exec.sh readonly, entry codex, turn 2) chose max_valid_v3: first-only
+      depends on array order and can miss high+ (scan-dependencies.py:1383, :1246). Opus escalation not
+      run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-fixed-version-scope:
+    question_id: requirement.go-fixed-version-scope
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: fix_in_scope
+    normalized_answer: 'fix_in_scope: fixed_version is taken only from the osv.affected entry whose package.name
+      matches the finding module.'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn-1 GAPS. Options: fix_in_scope
+      / leave_out_of_scope. Codex (run_codex_exec.sh readonly, entry codex, turn 2) chose fix_in_scope:
+      otherwise another module''s fixed version is recommended (scan-dependencies.py:2010, :1270). Opus
+      escalation not run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
+  requirement.go-capture-provenance:
+    question_id: requirement.go-capture-provenance
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: provenance_alongside
+    normalized_answer: 'provenance_alongside: the raw stream is stored as a text file under tests/ with
+      an adjacent provenance note (govulncheck version, go version, command, minimal module go.mod, capture
+      date); tests replay it verbatim through a stub that prints raw text (not json.dumps).'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn-1 GAPS. Options: provenance_alongside
+      / provenance_in_test_docstring. Codex (run_codex_exec.sh readonly, entry codex, turn 2) chose provenance_alongside
+      (tests/test_sca_scan_normalization.py:494, :544). Opus escalation not run.'
+    answered_at: '2026-10-04T22:35:00+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:9039e80fb6e7d0623cf6f4e02a645e83c2f51c61380a5aaa8ff83dfe3eaaa709
   output_digest: null
 artifacts: []
