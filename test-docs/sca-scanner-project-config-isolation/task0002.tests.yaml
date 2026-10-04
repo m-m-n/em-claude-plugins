@@ -1,0 +1,51 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1GoJobIsUnchanged.test_ac1_go_at_the_root_runs_in_the_project_root_with_its_literal_argv
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1GoJobIsUnchanged.test_ac1_go_in_a_nested_project_runs_in_that_directory
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1GoJobIsUnchanged.test_ac1_go_environment_is_the_runners_with_the_existing_go_pins
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_requirements_file_runs_in_the_project_root_with_its_literal_argv
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_requirements_file_at_the_root
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_pyproject_audits_its_directory_as_a_bare_target
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_pyproject_at_the_root_audits_the_current_directory
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_lockfile_audits_a_prepared_file_from_the_project_root
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_environment_is_the_runners_with_the_existing_pip_pins
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_lockfile_environment_is_the_runners_with_the_existing_pip_pins
+    red_confirmed: false
+    red_reason: "Characterization tests of pip / go job behavior that pre-existed in the base code (this feature leaves those jobs unchanged), so they passed on first run, before any other change; no red state occurred for this change. After the fact, mutations applied to a scratch copy of scan-dependencies.py (pip cwd, pip lockfile flag, go cwd, go pin, an extra pass-through key) each made these tests fail, and a simulated isolation change to the npm / cargo cwd and cargo argv left them green. The existing tests.test_sca_per_project_scan_binding tests record the pip and go cwd through run_scan, and tests.test_sca_scan_invocation compares job environments, but no existing test records the environment a pip or go stub actually receives through run_scan."
+  AC-2:
+    tests:
+      - tests.test_sca_scan_unchanged_surfaces.TestAC2EnvPinsKeepEveryEcosystemValue.test_ac2_pins_equal_the_literal_snapshot
+      - tests.test_sca_scan_unchanged_surfaces.TestAC2EnvPinsKeepEveryEcosystemValue.test_ac2_no_ecosystem_key_is_added_or_removed
+      - tests.test_sca_scan_unchanged_surfaces.TestAC2EnvPinsKeepEveryEcosystemValue.test_ac2_each_ecosystem_keeps_exactly_its_own_variables_and_values
+      - tests.test_sca_scan_unchanged_surfaces.TestAC2EnvPinsKeepEveryEcosystemValue.test_ac2_the_child_environment_is_the_pass_through_keys_plus_the_pins
+    red_confirmed: false
+    red_reason: "Characterization of ECOSYSTEM_ENV_PINS content that pre-existed in the base code; the tests passed on first run and no red state occurred for this change. Mutations on a scratch copy (a changed pip value, a pin added to cargo, a removed go pin) each made them fail. The existing tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_npm_cargo_and_pip_pins_equal_their_previous_values covers part of the same pins."
+  AC-3:
+    tests:
+      - tests.test_sca_scan_unchanged_surfaces.TestAC3HomeIsPassedThrough.test_ac3_each_child_receives_the_runners_home
+      - tests.test_sca_scan_unchanged_surfaces.TestAC3HomeIsPassedThrough.test_ac3_the_child_home_is_not_one_of_the_ecosystem_pins
+      - tests.test_sca_scan_unchanged_surfaces.TestAC3HomeIsPassedThrough.test_ac3_build_child_env_passes_home_through_for_every_ecosystem
+    red_confirmed: false
+    red_reason: "Characterization of HOME pass-through that pre-existed in the base code; the tests passed on first run and no red state occurred for this change. A mutation on a scratch copy that overrides HOME for npm made them fail. They record HOME only for the npm and cargo-audit launches, never their cwd or the cargo argv."
+  AC-4:
+    tests:
+      - tests.test_sca_scan_unchanged_surfaces.TestAC4Axis2DocumentsTheIsolationDirectory.test_ac4_both_isolation_tokens_and_the_file_flag_appear
+      - tests.test_sca_scan_unchanged_surfaces.TestAC4Axis2DocumentsTheIsolationDirectory.test_ac4a_the_isolation_directory_outside_the_reviewed_tree_is_the_npm_cargo_cwd
+      - tests.test_sca_scan_unchanged_surfaces.TestAC4Axis2DocumentsTheIsolationDirectory.test_ac4b_cargo_audit_receives_the_copy_via_file_with_no_url_or_db
+      - tests.test_sca_scan_unchanged_surfaces.TestAC4Axis2DocumentsTheIsolationDirectory.test_ac4c_failure_is_not_completed_with_no_in_tree_fallback_and_other_groups_continue
+      - tests.test_sca_scan_unchanged_surfaces.TestAC4Axis2DocumentsTheIsolationDirectory.test_ac4d_the_trusted_configuration_scope_is_stated
+      - tests.test_sca_scan_unchanged_surfaces.TestAC4Axis2DocumentsTheIsolationDirectory.test_ac4_no_statement_that_npm_or_cargo_run_in_the_reviewed_projects_directory
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact1_several_project_directories_scanned_as_separate_projects
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_passage_does_not_say_the_scan_runs_in_the_project_directory
+    red_confirmed: true
+    red_reason: "Run before review-phase.md was edited: the axis 2 tests failed with 'the axis 2 section does not contain npm_isolation_failed' (likewise cargo_isolation_failed, --file, per-group isolation directory, outside the reviewed tree, managed by the reviewer) and 'in its own directory' was still matched by the no-run-in-the-project-directory pattern; the updated multi-project tests failed with \"'bound to its own directory' not found\" and \"'in its own directory' unexpectedly found\"."
+  AC-5:
+    tests:
+      - tests.test_sca_scan_unchanged_surfaces.TestAC5OwnModuleStdlibOnly.test_ac5_only_standard_library_imports
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC3OwnModuleStdlibOnly.test_ac3_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "The stdlib-only import checks were created together with the modules they inspect and passed on first run; no red state occurred. The suite and invariants outcomes of this criterion are verified by running python3 -m unittest discover -s tests and python3 em-workflow/scripts/check-plugin-invariants.py ., both of which exited 0 at baseline and after the change; no executable check of those two outcomes can be made to fail beforehand because both already passed."

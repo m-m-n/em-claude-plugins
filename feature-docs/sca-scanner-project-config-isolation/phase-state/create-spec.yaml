@@ -1,0 +1,240 @@
+schema_version: 1
+feature: sca-scanner-project-config-isolation
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 03707853fc9b7ad499843536f6606f5b54fcad53
+last_input_digest: sha256:dd36d1ea6e8c3a0b3ead8c64786473d69f4fafef9b0e23d97364eeaffa176c26
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-04T22:20:53+09:00'
+    questions:
+    - question_id: requirement.npm-isolation-method
+      status: answered
+    - question_id: requirement.cargo-isolation-method
+      status: answered
+    - question_id: requirement.isolation-failure-handling
+      status: answered
+    - question_id: requirement.regression-test-strategy
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.npm-isolation-method:
+    question_id: requirement.npm-isolation-method
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - isolated_copy
+    freeform: null
+    normalized_answer: 'isolated_copy: copy the binding-checked package.json and the selected anchor lockfile
+      (npm-shrinkwrap.json preferred over package-lock.json) into a fresh isolation directory outside
+      the reviewed tree and run npm audit with that directory as cwd; ECOSYSTEM_ENV_PINS npm values unchanged.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose isolated_copy: 検証済みの
+      package.json と選択されたアンカーロックファイルだけを隔離先へコピーし、そこで npm audit を実行する。プロジェクトの設定全体を読み込み対象から除外でき、レビュー担当者の
+      globalconfig にある接続設定を維持できる。環境変数の追加固定だけでは、列挙していない設定が残る。 Evidence: em-workflow/scripts/scan-dependencies.py:795
+      — npm の固定値は registry と userconfig だけで、proxy や strict-ssl は固定していない。; em-workflow/scripts/scan-dependencies.py:918、1165
+      — 現在は対象プロジェクトのディレクトリを cwd として subprocess.run に渡している。; em-workflow/scripts/scan-dependencies.py:2259
+      — npm-shrinkwrap.json が存在すれば優先し、不正な場合も package-lock.json へ切り替えない。; npm は localPrefix/.npmrc を読む。localPrefix
+      は CLI の --prefix、または cwd から探索した package.json／node_modules のあるディレクトリで決まる。コピーした package.json と既存の
+      --workspaces=false により、探索を隔離先で止められる。[npm の設定読み込み実装](https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js)
+      Options not chosen: env_pins, isolated_copy_and_env_pins. Orchestrator adopted (maps to declared
+      option_id; comparatively better). Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.cargo-isolation-method:
+    question_id: requirement.cargo-isolation-method
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - isolated_copy_with_file
+    freeform: null
+    normalized_answer: 'isolated_copy_with_file: copy the verified Cargo.lock into a fresh isolation directory
+      outside the reviewed tree, run cargo-audit with that directory as cwd and argv [cargo-audit, audit,
+      --file, <copy>, --json] (--file after the audit subcommand); advisory DB settings remain the reviewer''s
+      defaults (no --url/--db pin).'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose isolated_copy_with_file:
+      検証済みの Cargo.lock を隔離先へコピーし、cargo-audit audit --file <コピー先> --json を実行する。プロジェクト設定を除外し、実行時の入力もコピーに固定できる。レビュー担当者の設定を信頼する範囲では、DB
+      の URL・保存先の追加固定による既存設定への影響を避けられる。 Evidence: em-workflow/references/vuln-scanners.yaml:54、55 — 実行対象は
+      cargo-audit 本体で、現在の引数は audit --json のみになっている。; em-workflow/scripts/scan-dependencies.py:2242、2287
+      — Cargo.lock と Cargo.toml の束縛確認後に実行する構造になっている。; cargo-audit は cwd の ./.cargo/audit.toml を優先し、存在しなければ
+      Cargo home の audit.toml を読む。この探索は --file のパスを基準にしていない。[cargo-audit の設定探索実装](https://docs.rs/cargo-audit/latest/src/cargo_audit/commands.rs.html);
+      --file／-f は実在する AuditCommand のオプションで、Cargo.lock のパスを指定できる。[cargo-audit の引数定義](https://docs.rs/cargo-audit/latest/src/cargo_audit/commands/audit.rs.html)
+      Options not chosen: isolated_copy_with_file_and_db_pin, outside_cwd_original_lock, assert_absent.
+      Orchestrator adopted (maps to declared option_id; comparatively better). Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.isolation-failure-handling:
+    question_id: requirement.isolation-failure-handling
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - new_isolation_reason
+    freeform: null
+    normalized_answer: 'new_isolation_reason: on any failure creating/copying/validating the isolation
+      directory the scanner is not launched and the scan unit is not_completed with the path-free reason
+      <ecosystem>_isolation_failed (npm_isolation_failed / cargo_isolation_failed); never fall back to
+      running inside the project directory.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose new_isolation_reason:
+      隔離の作成・コピー・検証に失敗した場合は起動せず、npm_isolation_failed または cargo_isolation_failed を返す。プロジェクト内での実行へ戻さない。入力の束縛失敗とプロセス実行失敗を区別できる。
+      Evidence: em-workflow/scripts/scan-dependencies.py:2286 — project_unbindable は既存の束縛確認とジョブ構築の失敗に使用している。;
+      em-workflow/scripts/scan-dependencies.py:1173 — execution_failed は subprocess.run の OSError／SubprocessError
+      に使用している。; em-workflow/scripts/scan-dependencies.py:2271 — _group_audit は既定で completed=False になるため、新しい隔離失敗理由を既存の未完了処理へ渡せる。;
+      em-workflow/scripts/scan-dependencies.py:2425、2451 — 群ごとの findings を保持し、理由を重複除去・ソートして連結する仕組みをそのまま利用できる。
+      Options not chosen: reuse_unbindable, reuse_execution_failed. Orchestrator adopted (maps to declared
+      option_id; comparatively better). Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.regression-test-strategy:
+    question_id: requirement.regression-test-strategy
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - stub_only
+    freeform: null
+    normalized_answer: 'stub_only: offline recording stubs on PATH; hostile .npmrc (https-proxy, strict-ssl=false,
+      registry, cafile) and .cargo/audit.toml ([advisories] ignore, [database] url/path) placed in the
+      project; assert stub cwd is outside the real project root, no .npmrc / .cargo/audit.toml in cwd
+      or its ancestors, copied inputs equal the originals (recorded by the stub before cleanup), cargo
+      --file points at the copy.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose stub_only: 記録用の代替実行ファイルを使い、実行中の
+      cwd、コピー内容、設定ファイルの不在、cargo の --file を確認する。ネットワークや実ツールの有無に依存せず再現できる。既存のプロジェクト識別テストは、cwd の一致からコピー内容の一致へ更新する必要がある。
+      Evidence: tests/test_sca_per_project_scan_binding.py:121 — 既存の代替実行ファイルは argv と cwd を記録している。; tests/test_sca_per_project_scan_binding.py:403、442
+      — 複数の npm／cargo プロジェクトを cwd の並びで識別しているため、隔離後は各コピーの内容を記録して識別する必要がある。; tests/test_sca_pip_lockfile_audit.py:1377、1401、1447
+      — 一時入力の場所・権限・削除・途中作成失敗を検証する既存テストがある。; npm のプロジェクト設定は localPrefix/.npmrc、cargo-audit のプロジェクト設定は cwd/.cargo/audit.toml
+      から読む。祖先の不在確認に加え、コピーした package.json と --workspaces=false で npm の localPrefix が隔離先に留まる条件を検証する。[npm
+      の実装](https://github.com/npm/cli/blob/latest/workspaces/config/lib/index.js)、[cargo-audit の実装](https://docs.rs/cargo-audit/latest/src/cargo_audit/commands.rs.html)
+      Options not chosen: stub_plus_real_tool. Orchestrator adopted (maps to declared option_id; comparatively
+      better). Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  design-step.recommendation:
+    question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'decide_autonomously: accept the analyst''s recommendation (skip the design step).'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously.
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.isolation-tempdir-confinement:
+    question_id: requirement.isolation-tempdir-confinement
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: '一時領域がレビュー対象外にあることを実パスで保証する: 作成前に一時領域の親を、作成後に隔離ディレクトリを realpath で検証し、レビュー対象ルート自身または配下なら隔離失敗として起動しない。TMPDIR・TEMP・TMP・tempfile.tempdir
+      やシンボリックリンクによる対象内への誘導も試験する。'
+    normalized_answer: '一時領域がレビュー対象外にあることを実パスで保証する: 作成前に一時領域の親を、作成後に隔離ディレクトリを realpath で検証し、レビュー対象ルート自身または配下なら隔離失敗として起動しない。TMPDIR・TEMP・TMP・tempfile.tempdir
+      やシンボリックリンクによる対象内への誘導も試験する。'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements. Evidence:
+      em-workflow/scripts/scan-dependencies.py:771 — TMPDIR・TEMP・TMP を子環境へ保持している。; em-workflow/scripts/scan-dependencies.py:1879
+      — 既存の pip 一時入力は tempfile の既定保存先を使用している。; tempfile の既定保存先は環境変数で変更でき、最終候補には cwd も含まれるため、対象外であることは自動的には保証されない。[Python
+      公式資料](https://docs.python.org/3/library/tempfile.html#tempfile.gettempdir) Orchestrator adopted
+      Codex''s proposal as-is (consistent with the four selected options; no conflicting alternative).
+      Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.isolation-copy-provenance:
+    question_id: requirement.isolation-copy-provenance
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'コピー対象と元プロジェクトへの対応を維持する: コピー元は束縛確認と同じ規則で検証し、npm は package.json と優先アンカー、cargo は Cargo.lock
+      の内容を変更せず通常ファイルとしてコピーする。同一ディレクトリ内を指す許可済みリンクも内容をコピーする。ジョブの manifest と findings.file は元の相対パスを保持し、cargo
+      の直接依存判定には元の Cargo.toml を使用する。複数群では各入力内容の対応を試験する。'
+    normalized_answer: 'コピー対象と元プロジェクトへの対応を維持する: コピー元は束縛確認と同じ規則で検証し、npm は package.json と優先アンカー、cargo は
+      Cargo.lock の内容を変更せず通常ファイルとしてコピーする。同一ディレクトリ内を指す許可済みリンクも内容をコピーする。ジョブの manifest と findings.file は元の相対パスを保持し、cargo
+      の直接依存判定には元の Cargo.toml を使用する。複数群では各入力内容の対応を試験する。'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements. Evidence:
+      em-workflow/scripts/scan-dependencies.py:2232 — 同一ディレクトリ内へ解決するシンボリックリンクは許可している。; em-workflow/scripts/scan-dependencies.py:2259
+      — shrinkwrap の優先規則を定義している。; em-workflow/scripts/scan-dependencies.py:2300、1470 — cargo の正規化は元の target
+      と project_root から Cargo.toml を取得する。; tests/test_sca_per_project_scan_binding.py:492、499 — ロックファイルのラベルと元マニフェストによる直接依存判定を検証している。
+      Orchestrator adopted Codex''s proposal as-is (consistent with the four selected options; no conflicting
+      alternative). Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.isolation-prep-separation:
+    question_id: requirement.isolation-prep-separation
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: '隔離の準備と純粋なジョブ構築を分け、cargo の引数順を定義する: 一時領域の作成・コピー・検証は束縛確認後の実行側で行い、build_scan_job は準備済みパスを受け取るだけにする。cargo
+      の対象指定を registry と構築処理へ明示し、--file は audit サブコマンドの後に置く。registry に target_flag を追加するだけで完了としない。'
+    normalized_answer: '隔離の準備と純粋なジョブ構築を分け、cargo の引数順を定義する: 一時領域の作成・コピー・検証は束縛確認後の実行側で行い、build_scan_job
+      は準備済みパスを受け取るだけにする。cargo の対象指定を registry と構築処理へ明示し、--file は audit サブコマンドの後に置く。registry に target_flag
+      を追加するだけで完了としない。'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements. Evidence:
+      em-workflow/scripts/scan-dependencies.py:905 — build_scan_job はファイルを読み書きしない契約になっている。; tests/test_sca_scan_job_grouping.py:520
+      — ファイルの読み込みやプロセス起動を禁止して構築処理を試験している。; em-workflow/scripts/scan-dependencies.py:923、938 — 現在 target_flag
+      を処理するのは pip 分岐だけで、cargo では registry の args をそのまま追加している。; em-workflow/references/vuln-scanners.yaml:24、29
+      — 現在の説明では対象指定を args より前に配置するため、cargo のサブコマンド形式に合わせて説明も更新する必要がある。; --file は AuditCommand に定義されている。[cargo-audit
+      の引数定義](https://docs.rs/cargo-audit/latest/src/cargo_audit/commands/audit.rs.html) Orchestrator adopted
+      Codex''s proposal as-is (consistent with the four selected options; no conflicting alternative).
+      Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.isolation-lifecycle-aggregation:
+    question_id: requirement.isolation-lifecycle-aggregation
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: '隔離領域の権限・削除・失敗時の集約を試験する: 隔離領域は群ごとに一意に作成し、所有者だけがアクセスできる権限を設定する。正常終了、ツール失敗、タイムアウト、途中コピー失敗でも作成済み領域を削除する。隔離失敗した群は起動せず、他の群の検査を続け、完了した
+      findings とパスを含まない失敗理由を保持する。コピー内容は削除前の代替実行ファイル内で記録する。'
+    normalized_answer: '隔離領域の権限・削除・失敗時の集約を試験する: 隔離領域は群ごとに一意に作成し、所有者だけがアクセスできる権限を設定する。正常終了、ツール失敗、タイムアウト、途中コピー失敗でも作成済み領域を削除する。隔離失敗した群は起動せず、他の群の検査を続け、完了した
+      findings とパスを含まない失敗理由を保持する。コピー内容は削除前の代替実行ファイル内で記録する。'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements. Evidence:
+      em-workflow/scripts/scan-dependencies.py:1865 — 既存の pip 準備処理は contextmanager と finally で一時入力を削除する。;
+      em-workflow/scripts/scan-dependencies.py:1171 — ツール実行にはタイムアウトがある。; em-workflow/scripts/scan-dependencies.py:2425、2463
+      — 未完了の群があっても完了した findings を返す。; em-workflow/scripts/scan-dependencies.py:1116、1080 — 空の標準出力は既に未完了になる。一方、正しい構造の空の
+      vulnerabilities／list は完了扱いになるため、隔離失敗をその正常結果へ流してはいけない。 Orchestrator adopted Codex''s proposal as-is
+      (consistent with the four selected options; no conflicting alternative). Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+  requirement.trusted-config-scope:
+    question_id: requirement.trusted-config-scope
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: '信頼する設定の範囲を明文化する: HOME、npm の globalconfig、Cargo home の audit.toml と advisory DB はレビュー担当者が管理し、PR
+      作者が変更できないことを前提として明記する。既存の環境変数固定は維持し、レビュー担当者の設定を追加で無効化・上書きしないことも受け入れ条件に含める。'
+    normalized_answer: '信頼する設定の範囲を明文化する: HOME、npm の globalconfig、Cargo home の audit.toml と advisory DB
+      はレビュー担当者が管理し、PR 作者が変更できないことを前提として明記する。既存の環境変数固定は維持し、レビュー担当者の設定を追加で無効化・上書きしないことも受け入れ条件に含める。'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements. Evidence:
+      em-workflow/scripts/scan-dependencies.py:771、795 — HOME を保持し、npm の userconfig は既に無効化している。; cwd の隔離後も
+      npm の globalconfig と cargo-audit の Cargo home 設定は読み込まれるため、選択した方式の保証には信頼範囲の定義が必要になる。[npmrc 公式資料](https://docs.npmjs.com/cli/v11/configuring-npm/npmrc/)、[cargo-audit
+      の設定探索実装](https://docs.rs/cargo-audit/latest/src/cargo_audit/commands.rs.html) Orchestrator adopted
+      Codex''s proposal as-is (consistent with the four selected options; no conflicting alternative).
+      Opus escalation not run.'
+    answered_at: '2026-10-04T22:20:53+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:28744567516e7ae4f3c20d460202dc109c780256079e400f4279a54082a78a49
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:dd36d1ea6e8c3a0b3ead8c64786473d69f4fafef9b0e23d97364eeaffa176c26
+  output_digest: sha256:f709817515e7617e87e8ec3bdfcd07cb6a88b6f52586f4a257104455e7a90ded
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:691ffe2f5ab6d03b9f2ef546bd82346337b9b63541d07c2b4c513b8ce95c41df
+  output_digest: null
+artifacts:
+- path: feature-docs/sca-scanner-project-config-isolation/REQUIREMENTS.md
+  sha256: sha256:aab253c1a0f7f7748c696fb3ad9614a9c74bb7e4b4c06dee8f0662c34324e26e
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-scanner-project-config-isolation/SPEC.md
+  sha256: sha256:e8834ac92b0a50e732b7c708d4e88ef98930c6824f5c6acb5fa0786c8612e6a1
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: 'analyst run-0002 warning: build_scan_job behavior when called for npm/cargo without a prepared
+  path is not fixed by the answers (affects pure build_scan_jobs and tests/test_sca_scan_job_grouping.py);
+  deferred to create-plan as an implementation decision.'

@@ -1,0 +1,54 @@
+schema_version: 1
+feature: sca-scanner-project-config-isolation
+records:
+- question_id: create-plan.open-items-consult
+  packet_id: null
+  answered_at: '2026-10-04T22:49:00+09:00'
+  source: codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 計画どおり進める（SPEC は変更しない）
+  normalized_answer: keep plan as written; no SPEC change
+  resolution_note: 'gate: none (orchestrator consultation on planner open items, per
+    launch instruction); codex_consulted: true; opus_escalation: false. Item1 (config
+    planted in an ancestor of the system temp dir by another local account): Codex
+    found npm reads only the isolation-dir .npmrc (prefix = dir with copied package.json,
+    --workspaces=false) and cargo-audit reads only cwd .cargo/audit.toml then Cargo
+    home, no ancestor walk; recommended no runtime ancestor check and no extra trust
+    assumption, plus narrowing the SPEC AC1/AC3/FR12 ancestor-absence wording. Adopted:
+    no runtime ancestor check (already the plan); SPEC wording left as is because
+    the test-side ancestor assertion is satisfiable under a test-controlled temp dir.
+    Item2 (removal of the isolation dir itself fails): Codex recommended keeping the
+    scan result and emitting a pathless fixed warning token in the summary, which
+    needs a FR8/AC8 SPEC change. Adopted: planner choice (result unchanged, no path)
+    to avoid reopening create-spec; the warning is carried as a follow-up task.'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-04T23:07:00+09:00'
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: 'task0002 deviation tests/test_tier_record_schema_v2.py not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; path: tests/test_tier_record_schema_v2.py
+    (sha256 pin of review-phase.md refreshed after the required axis 2 edit); declined:
+    the identifier part is missing (no AC-n of the task plan or registered requirement
+    id was named); path shape and control-path checks passed.'
+- question_id: review.harness-output-malformed
+  packet_id: null
+  answered_at: '2026-10-04T23:36:13+09:00'
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: treat as failed and dispatch one Claude fallback
+  normalized_answer: 'comprehensive#0 recorded status failed; comprehensive#fallback dispatched'
+  resolution_note: 'gate: none (review-phase.md Phase R2b malformed / harness-failure rule); options: (a) accept the codex run as a completed empty review, (b) treat as failed and dispatch one Claude fallback; chosen: (b), because the run summary stated codex returned non-JSON output, so no review content existed; codex_consulted: false; opus_escalation: false.'
+- question_id: review.low-severity-finding-dropped
+  packet_id: null
+  answered_at: '2026-10-04T23:36:13+09:00'
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: dropped from round record by R3b step 2; carried as a follow-up task
+  normalized_answer: 'comprehensive finding at em-workflow/scripts/scan-dependencies.py:2616 demoted to low by the evaluator'
+  resolution_note: 'gate: none (review-phase.md Phase R3b step 2 drops severity outside critical/high/medium); finding: validate_ecosystem_entry does not check cargo target_flag, so an override --registry without it makes bindable cargo projects report cargo_project_unbindable instead of a registry-config reason (scan stays fail-closed); evaluator demoted medium to low (default registry has target_flag, no --registry caller in em-workflow); suggested fix: validate target_flag as a non-empty string in validate_ecosystem_entry and return a fixed token such as cargo_target_flag_invalid, with a test; codex_consulted: false; opus_escalation: false.'
