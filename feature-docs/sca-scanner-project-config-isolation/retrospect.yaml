@@ -1,0 +1,107 @@
+feature: sca-scanner-project-config-isolation
+collected_at: '2026-10-04T23:41:27+09:00'
+session_ids:
+- 01a1075b-d7f8-7120-b550-61ec40c1143e
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0002
+    files:
+    - tests/test_tier_record_schema_v2.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みで bucket 2（新規ロジック・複数モジュール）が確率 0.87 となり full
+      を採用
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.43
+        confidence: 0.57
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.58
+          '2': 0.42
+          '3': 0.0
+      observed_at: '2026-10-04T22:07:07+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.89
+        confidence: 0.87
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.12
+          '2': 0.87
+          '3': 0.01
+      observed_at: '2026-10-04T22:07:07+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/scan-dependencies.py
+      - em-workflow/references/vuln-scanners.yaml
+      - tests/test_sca_scan_invocation.py
+      - tests/test_sca_scan_job_grouping.py
+      - tests/test_sca_per_project_scan_binding.py
+      - tests/test_sca_scan_execution.py
+      changed_lines_approx: 250
+      new_functions_needed: 1
+      new_files_needed: []
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 8
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 11
+      changes_external_contract: false
+      changes_behavior: true
+      evidence:
+      - 'em-workflow/scripts/scan-dependencies.py:795: npm の固定値は registry と userconfig
+        のみで、cargo は空辞書になっている'
+      - 'em-workflow/scripts/scan-dependencies.py:822: 子環境は許可した環境変数と固定値から構築するが、プロジェクト設定ファイルの探索を無効化する処理はない'
+      - 'em-workflow/scripts/scan-dependencies.py:917,1167: npm と cargo の cwd は対象ファイルのある被レビューディレクトリになり、その
+        cwd で実行する'
+      - 'em-workflow/references/vuln-scanners.yaml:29,54: cargo は cargo-audit audit
+        --json を指定し、明示的な対象ファイルやデータベース設定を指定していない'
+      - 'em-workflow/scripts/scan-dependencies.py:1080,1140,1292,1469: 許可された終了コードなら空の
+        vulnerabilities 辞書や vulnerabilities.list を completed として受理し、指摘は0件になる'
+      - 'tests/test_sca_scan_invocation.py:416,442: 既存の設定隔離テストは Cargo の alias と npm
+        の registry を置いて起動引数・環境変数を比較するだけで、スキャナを実行しない'
+      - 'tests/test_sca_scan_job_grouping.py:122,214; tests/test_sca_per_project_scan_binding.py:216,442:
+        現在の cargo 引数、npm 固定値、被レビューディレクトリでの起動を固定する既存テストがあり、変更に合わせた更新が必要になる'
+      - 'tests/test_sca_scan_execution.py:108,213,303: 実行結果判定は既存テストで覆われているが、実行用の代替プログラムは固定した出力を返すだけで、設定ファイルの影響を検証しない'
+      - 'em-workflow/scripts/scan-dependencies.py:905,2275; em-workflow/references/vuln-scanners.yaml:29:
+        純粋なジョブ構築を維持し、実行準備で設定探索経路を隔離して cargo の対象を明示する案を見積もりの前提とした。250行・新規補助関数1個・追加テスト8件は未確定の概算で、npm
+        の設定と cargo の ignore・database 設定、入れ子のプロジェクト、準備処理の後始末を検証する'
+      - 'em-workflow/scripts/scan-dependencies.py:42,49,1866: 一時領域の準備と後始末に使える標準ライブラリを既に利用しており、既存テストへ追加できるため、新規依存・新規ファイル・別の本体モジュールへの波及は現時点で見込まない'
+      - 'em-workflow/scripts/scan-dependencies.py:919,933,944,1042,1124,1130,1136,1175,2108,2291,2324:
+        指定された3関数について、本体内の直接の呼び出し元と依存関数を重複排除し、当該3関数を除くと11個になる'
+      - 'em-workflow/references/review-output-schema.json:4; em-workflow/scripts/scan-dependencies.py:2499:
+        既存の出力形式と公開起動引数を維持する案を前提とした。調査は読み取りのみで、実スキャナによる再現とテスト実行はしていない'
+follow_up_drafts: []
+lessons_candidates:
+- review round 1 で findings 0 件・rework 0 回で完了
+- Codex 事前調査の見積り changed_lines_approx 250 に対し、実際は task0001 が +2118/-149、task0002 が
+  +655/-13（テスト込み）。行数見積りが大きく下振れした

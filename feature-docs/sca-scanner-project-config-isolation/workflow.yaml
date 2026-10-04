@@ -113,7 +113,8 @@ workflow:
   summary: 'repo-tests (python3 -m unittest discover -s tests): 7179 tests OK. plugin-invariants: all PASS, exit 0. build / format / e2e: not configured. TS-1..TS-13 covered by the suite; TS-12 inspection: review-phase.md / scan-dependencies.py / vuln-scanners.yaml describe isolation-directory execution and --file, no stale project-root-cwd statement for npm / cargo.'
   completed_at_commit: c0dc4131304b225bae21c0de1a215fb758b0c5de
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 2fc8a595fe631fb208cbed273cc104f01689c93d
 tasks:
   task0001:
     title: Run npm / cargo scans from a per-group isolation directory
