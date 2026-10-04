@@ -190,7 +190,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-fallback-review-residuals/task0002
   task0003:
     title: Batch audit source mapping for escalation-decided non-packet gates
