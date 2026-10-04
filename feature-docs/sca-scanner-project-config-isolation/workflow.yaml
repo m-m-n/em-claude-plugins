@@ -169,7 +169,11 @@ tasks:
     notes: null
     branch: em-workflow/sca-scanner-project-config-isolation/task0002
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
