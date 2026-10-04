@@ -1,0 +1,148 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 6821 tests OK; check-plugin-invariants.py: all PASS, exit 0
+final_failures: []             # re-executed after implementation: 6933 tests OK; check-plugin-invariants.py exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestPipTargetSelection
+      - tests.test_sca_pip_lockfile_audit.TestLockfileFormIsTheOnlyLaunch
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      TestPipTargetSelection.test_the_first_lockfile_in_list_order_is_chosen
+      ("AssertionError: 'pyproject.toml' != 'b/poetry.lock'"),
+      test_a_lockfile_is_preferred_over_an_earlier_pyproject_or_requirements
+      ("'pyproject.toml' not found in ('poetry.lock', 'Pipfile.lock')") and
+      TestLockfileFormIsTheOnlyLaunch.test_pyproject_and_poetry_lock_launch_pip_audit_once_in_the_lockfile_form
+      ("'-r' not found in [.../pip-audit, '.', '--format', 'json']").
+      The bullets "without a pip lockfile the target is unchanged", "npm/cargo/go
+      targets unchanged" and "uv.lock/pdm.lock/pylock.toml select no ecosystem"
+      describe behavior that pre-existed; their tests were green before the change
+      and are regression guards, not reds.
+  AC-2:
+    tests:
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject
+      - tests.test_sca_scan_invocation.TestPipInvariantsUnchanged
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation: test_a_changed_lockfile_gets_the_lockfile_job_form
+      ("TypeError: build_scan_job() got an unexpected keyword argument 'prepared_file'"),
+      test_a_lockfile_manifest_without_a_prepared_file_is_rejected
+      ("AssertionError: ValueError not raised"),
+      test_the_directory_form_is_never_produced_for_a_lockfile
+      ("AssertionError: ValueError not raised").
+      The invariant tests in TestPipInvariantsUnchanged (registry pip entry,
+      ALLOWED_EXECUTABLES, ECOSYSTEM_LOCKFILES, pip child-environment pins) and
+      the previous requirements.txt / pyproject.toml vectors guard values that
+      must stay as they were; they were green before the change.
+  AC-3:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestEndToEndFindings
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_poetry_lock_pin_yields_a_finding_for_the_package
+      ("AssertionError: 0 not greater than or equal to 1": the directory form
+      audited nothing), test_pipfile_lock_pin_with_a_pipfile_packages_declaration
+      (same), test_prepared_file_holds_every_pin_of_every_poetry_group_without_hashes
+      ("Lists differ: [] != ['django==3.2.0', 'extra-lib==1.2.3', ...]": no
+      prepared file existed).
+  AC-4:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestSplitRuns
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_one_name_at_two_versions_launches_twice_with_the_name_once_per_file
+      ("AssertionError: 1 != 2": one launch), test_one_result_holds_the_findings_of_both_versions_in_launch_order
+      ("Lists differ: [] != ['PYSEC-foo-1.0', 'PYSEC-foo-2.0']"),
+      test_two_launches_failing_with_the_same_reason_list_it_once
+      (skipped was false). Determinism and the no-path-in-result checks were
+      already green for the old single launch; the two-launch variants fail first.
+  AC-5:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestUnconvertibleLockfiles
+      - tests.test_sca_pip_lockfile_audit.TestConversionUnit
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_every_unconvertible_poetry_lock_yields_the_fixed_reason_without_a_launch and
+      test_every_unconvertible_pipfile_lock_yields_the_fixed_reason_without_a_launch
+      (every case: "AssertionError: False is not true" -- the scan returned
+      skipped false with 'Scanned pip; 0 finding(s)'),
+      test_a_lockfile_symlinked_outside_the_project_root_is_unconvertible (same),
+      test_with_cargo_absent_and_npm_completing_the_reasons_combine_and_npm_findings_stay
+      ("'cargo_tool_not_found' != 'cargo_tool_not_found+pip_lockfile_unconvertible'"),
+      TestConversionUnit.test_conversion_never_raises_for_any_content
+      ("AttributeError: ... has no attribute 'convert_pip_lockfile'").
+  AC-6:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestExcludedEntries
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_poetry_source_types_other_than_the_registry_are_excluded_and_counted
+      ("AssertionError: 0 != 1": no finding, nothing converted),
+      test_one_excluded_entry_uses_the_singular_note
+      ("False is not true : Scanned pip; 0 finding(s) at or above threshold."),
+      test_poetry_entries_with_missing_or_invalid_names_and_versions_are_excluded
+      (same). test_no_note_when_nothing_is_excluded and
+      test_the_note_carries_counts_only_never_lockfile_text were green before.
+  AC-7:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestDeclarationFile
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_candidate_for_pipfile_lock_is_the_sibling_pipfile
+      ("'.../project/pyproject.toml' != '.../project/Pipfile'"),
+      test_an_invalid_toml_declaration_file_is_not_found,
+      test_a_declaration_file_symlinked_outside_the_project_root_is_not_found and
+      test_a_pipfile_symlinked_outside_the_project_root_is_not_found
+      (skipped was false, no pip_direct_manifest_not_found),
+      test_with_a_valid_pipfile_the_direct_names_are_the_keys_of_both_tables
+      ("Items in the second set but not the first"). The poetry.lock candidate
+      mapping and the pyproject.toml name extraction pre-existed and were green.
+  AC-8:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestCanonicalDirectness
+      - tests.test_sca_scan_normalization
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_a_declared_mixed_separator_name_matches_the_reported_canonical_name
+      ("AssertionError: 0 != 1"),
+      test_pyproject_toml_declarations_are_compared_canonically_too ("0 != 1"),
+      test_declared_Django_matches_lockfile_and_output_django_end_to_end ("0 != 1").
+      The existing tests/test_sca_scan_normalization.py (requirements.txt and
+      pyproject.toml normalization, unmodified) detects any regression of the
+      unchanged behavior; no red state occurred for that part.
+  AC-9:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestTemporaryFiles
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_each_prepared_file_is_owner_only_and_outside_the_project_root
+      ("AssertionError: 1 != 2": no prepared files, the old form launched once),
+      test_an_exception_on_the_second_launch_leaves_no_file
+      ("AssertionError: RuntimeError not raised"),
+      test_prepared_files_have_unique_unpredictable_names ("2 != 4").
+      The no-leftover-file checks, the git status --porcelain comparison and the
+      byte-identical project tree check were green before the change (the old
+      code created no file at all) and guard that it stays so.
+  AC-10:
+    tests:
+      - tests.test_sca_pip_lockfile_audit.TestDependenciesAndModuleLoading
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_a_poetry_lock_target_is_unconvertible_without_the_toml_parser and
+      test_a_toml_declaration_file_is_not_found_without_the_toml_parser
+      ("AssertionError: False is not true" -- scan returned skipped false) and
+      test_the_script_imports_only_the_standard_library_beyond_its_optional_yaml
+      ("'tomllib' not found in {...}"). The import check of the test modules and
+      the still-loads check were green before the change. The bullets that the
+      two suite commands succeed and that no file under .claude-plugin/ is edited
+      have no test that can fail first; they were checked by running both commands
+      (exit 0) and by git diff --name-only (no .claude-plugin path).

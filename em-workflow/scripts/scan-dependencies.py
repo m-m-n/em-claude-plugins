@@ -39,6 +39,7 @@ task0009 rework the `scan` half in disjoint regions of this same file
 """
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -53,6 +54,14 @@ try:
     import yaml
 except ImportError:
     yaml = None
+
+# The standard-library TOML parser (Python 3.11+). Guarded like the optional
+# YAML dependency above: an interpreter without it still loads this module,
+# and any TOML input is then treated as unparseable (see `_parse_toml`).
+try:
+    import tomllib
+except ImportError:
+    tomllib = None
 
 EXIT_OK = 0
 EXIT_EXECUTION_ERROR = 2
@@ -73,6 +82,12 @@ class EntryPointError(ExecutionError):
 class FindingTitleError(ExecutionError):
     """A finding's `title` does not match the Finding text-encoding
     contract -- raised rather than silently guessed at."""
+
+
+class JobConstructionError(ExecutionError, ValueError):
+    """`build_scan_job` was asked for a job it must never build (a pip
+    lockfile without a prepared requirements file). A ValueError as well, so
+    a caller can reject on either type."""
 
 
 # ---------------------------------------------------------------------------
@@ -708,9 +723,20 @@ def manifest_file_for(ecosystem, changed_files):
     manifests -- a project-relative path, so R3b step 1's existence check
     passes. Falls back to the registry's own first manifest name (never
     reached in practice, since an ecosystem is only selected when a
-    matching changed file exists -- see select_ecosystems)."""
+    matching changed file exists -- see select_ecosystems).
+
+    pip is the one ecosystem that prefers a lockfile (sca-python-lockfile-
+    audit C2): when the change holds a pip lockfile (poetry.lock /
+    Pipfile.lock) the target is the FIRST such lockfile in `changed_files`
+    order, even when a pyproject.toml / requirements.txt appears earlier.
+    Without a pip lockfile the target is what it always was. npm, cargo and
+    go keep their manifest-first order."""
     manifests = set(ecosystem.get("manifests") or [])
     lockfiles = ECOSYSTEM_LOCKFILES.get(ecosystem.get("ecosystem", "unknown"), set())
+    if ecosystem.get("ecosystem") == "pip":
+        for f in changed_files:
+            if os.path.basename(f) in lockfiles:
+                return f
     for f in changed_files:
         if os.path.basename(f) in manifests:
             return f
@@ -792,22 +818,33 @@ def build_child_env(ecosystem, environ=None):
 def _pip_target(manifest_file):
     """task0008 Design, "The pip job audits the reviewed project, not the
     ambient environment": a changed requirements file IS the audited
-    input, paired with the registry's `target_flag`. Anything else
-    selected for pip (a changed pyproject.toml, or a changed poetry.lock /
-    Pipfile.lock) audits that project's OWN DIRECTORY instead, as a bare
-    positional argument with no flag -- pip-audit's `-r` flag parses pip's
-    own requirements format, not a TOML/JSON lock format, so a lockfile or
-    a manifest that only declares version ranges is never passed to it
-    directly. Returns (flagged, target): `flagged` is True when the
-    registry's `target_flag` belongs immediately before `target` in the
-    argument vector."""
+    input, paired with the registry's `target_flag`. A changed
+    pyproject.toml audits that project's OWN DIRECTORY instead, as a bare
+    positional argument with no flag -- a manifest that only declares
+    version ranges is never passed to `-r`. Returns (flagged, target):
+    `flagged` is True when the registry's `target_flag` belongs immediately
+    before `target` in the argument vector.
+
+    A pip lockfile (poetry.lock / Pipfile.lock) has NO target of this kind:
+    it is neither a pip-format requirements file (`-r` would misparse it)
+    nor audited through its directory (that would audit the ambient
+    environment's view of the project, not the lockfile's pins). Its job is
+    built from a prepared requirements file in `build_scan_job`; asking
+    for its target here is rejected, so the directory form can never be
+    produced for a lockfile."""
+    if os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
+        raise JobConstructionError(
+            f"pip lockfile {manifest_file!r} has no direct audit target; "
+            "it is audited through a prepared requirements file"
+        )
     if os.path.basename(manifest_file) == "requirements.txt":
         return True, manifest_file
     dirname = os.path.dirname(manifest_file)
     return False, (dirname if dirname else ".")
 
 
-def build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ=None):
+def build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ=None,
+                   prepared_file=None):
     """Builds ONE scan job from `ecosystem`'s ALREADY-RESOLVED absolute
     `executable_path` (never re-resolved here -- see build_scan_jobs).
     Carries: the ecosystem name; the project-relative `manifest_file`; the
@@ -817,15 +854,36 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
     directory (the reviewed project's own root -- still the thing being
     audited, NFR2's read-only discipline unchanged); and the explicit
     child environment (build_child_env). Launches nothing -- every claim
-    about the resulting command is assertable without running a scanner."""
+    about the resulting command is assertable without running a scanner.
+
+    Pure (NFR2): it reads and writes no file, so `prepared_file` need not
+    exist. For a pip lockfile `manifest_file` (poetry.lock / Pipfile.lock)
+    `prepared_file` is the path of the requirements file the preparation
+    stage wrote for ONE run (IMPLEMENTATION.md C5/C6); the argument vector is
+    then [executable, the registry's `target_flag`, prepared_file,
+    `--no-deps`, `--disable-pip`, then the registry `args`] and the job's
+    manifest stays the lockfile. A pip lockfile WITHOUT a prepared file is
+    rejected with JobConstructionError (also a ValueError): the directory
+    form is never produced for a lockfile. Every other manifest ignores
+    `prepared_file` and keeps its previous argument vector, with neither
+    `--no-deps` nor `--disable-pip`."""
     name = ecosystem.get("ecosystem", "unknown")
     argv = [executable_path]
     if name == "pip":
-        flagged, target = _pip_target(manifest_file)
-        target_flag = ecosystem.get("target_flag")
-        if flagged and target_flag:
-            argv.append(target_flag)
-        argv.append(target)
+        if os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
+            target_flag = ecosystem.get("target_flag")
+            if not prepared_file or not target_flag:
+                raise JobConstructionError(
+                    f"pip lockfile job for {manifest_file!r} needs a prepared "
+                    "requirements file and the registry's target_flag"
+                )
+            argv.extend([target_flag, str(prepared_file), "--no-deps", "--disable-pip"])
+        else:
+            flagged, target = _pip_target(manifest_file)
+            target_flag = ecosystem.get("target_flag")
+            if flagged and target_flag:
+                argv.append(target_flag)
+            argv.append(target)
     argv.extend(ecosystem.get("args") or [])
     return {
         "ecosystem": name,
@@ -845,7 +903,13 @@ def build_scan_jobs(registry, changed_files, project_root, environ=None):
     machine-stable skip reason and NO job -- no fallback command form is
     ever attempted for it. Returns (jobs, skip_reasons); executing a job
     (judging its exit status and payload together) is the sibling rework
-    task's contract, not this function's."""
+    task's contract, not this function's.
+
+    Performs no run-time preparation (no lockfile read, no prepared file).
+    A pip lockfile target is therefore OUTSIDE its contract: such a job needs
+    a prepared requirements file this function never creates, so
+    `build_scan_job` rejects it (JobConstructionError). `run_scan` audits a
+    pip lockfile through its own preparation stage instead."""
     selected = select_ecosystems(registry, changed_files)
     jobs = []
     skip_reasons = []
@@ -1404,19 +1468,46 @@ def _pip_pyproject_direct_names(content):
     return names
 
 
+# The file declaring a pip lockfile's DIRECT dependencies (a lockfile carries
+# no direct/transitive distinction of its own), as a sibling of the lockfile.
+_PIP_LOCKFILE_DECLARATIONS = {"poetry.lock": "pyproject.toml", "Pipfile.lock": "Pipfile"}
+
+
 def _pip_manifest_candidate(project_root, manifest_file):
     """Resolves the manifest to scan for direct-dependency names. When
     manifest_file is itself a lockfile (poetry.lock / Pipfile.lock --
-    selected by manifest_file_for when only the lockfile changed), looks
-    for pyproject.toml alongside it instead, mirroring
-    _cargo_manifest_candidate's resolution -- a lockfile carries no
-    dependency TABLE to scan. Never returns a lockfile path. Returns None
-    when unresolvable/unsafe (see _resolve_project_relative)."""
-    if os.path.basename(manifest_file) in {"poetry.lock", "Pipfile.lock"}:
-        candidate_rel = os.path.join(os.path.dirname(manifest_file), "pyproject.toml")
+    selected by manifest_file_for when a lockfile changed), looks alongside
+    it instead, mirroring _cargo_manifest_candidate's resolution -- a
+    lockfile carries no dependency TABLE to scan: pyproject.toml for
+    poetry.lock, Pipfile for Pipfile.lock. Every other manifest maps to
+    itself. Never returns a lockfile path. Returns None when
+    unresolvable/unsafe (see _resolve_project_relative: a path outside the
+    project root, including through a symlink)."""
+    basename = os.path.basename(manifest_file)
+    if basename in _PIP_LOCKFILE_DECLARATIONS:
+        candidate_rel = os.path.join(
+            os.path.dirname(manifest_file), _PIP_LOCKFILE_DECLARATIONS[basename]
+        )
+    elif basename in ECOSYSTEM_LOCKFILES["pip"]:
+        return None
     else:
         candidate_rel = manifest_file
     return _resolve_project_relative(project_root, candidate_rel)
+
+
+def _pip_pipfile_direct_names(content):
+    """The direct names a Pipfile declares: the keys of its `[packages]` and
+    `[dev-packages]` tables (each only when it is a table). Content that is
+    not valid TOML declares nothing."""
+    data = _parse_toml(content)
+    if data is None:
+        return set()
+    names = set()
+    for table_name in ("packages", "dev-packages"):
+        table = data.get(table_name)
+        if isinstance(table, dict):
+            names.update(table)
+    return names
 
 
 def _pip_direct_dependency_names(project_root, manifest_file):
@@ -1426,11 +1517,260 @@ def _pip_direct_dependency_names(project_root, manifest_file):
     try:
         with open(manifest_path, "r", encoding="utf-8") as f:
             content = f.read()
-    except OSError:
+    except (OSError, ValueError):
         return set()
-    if os.path.basename(manifest_path) == "pyproject.toml":
+    basename = os.path.basename(manifest_path)
+    if basename == "pyproject.toml":
         return _pip_pyproject_direct_names(content)
+    if basename == "Pipfile":
+        return _pip_pipfile_direct_names(content)
     return _pip_requirements_direct_names(content)
+
+
+# ---------------------------------------------------------------------------
+# pip lockfile audit (sca-python-lockfile-audit; IMPLEMENTATION.md C1, C3,
+# C4, C5): a changed poetry.lock / Pipfile.lock is audited by turning its
+# pins into exact `name==version` requirement lines handed to pip-audit, in
+# a prepared file OUTSIDE the project root. The lockfile and its declaration
+# file are authored by the change under review, so every read, parse or
+# shape failure maps to a fixed skip reason or an entry exclusion -- nothing
+# in this section raises for any file content (TM-4), and no text taken from
+# either file enters the scan result.
+# ---------------------------------------------------------------------------
+
+PIP_LOCKFILE_UNCONVERTIBLE = "pip_lockfile_unconvertible"
+PIP_DIRECT_MANIFEST_NOT_FOUND = "pip_direct_manifest_not_found"
+
+_PEP503_SEPARATORS_RE = re.compile(r"[-_.]+")
+
+
+def canonical_pip_name(name):
+    """C1: the PEP 503 form of a package name, for comparison,
+    de-duplication and grouping -- lower-cased, every run of `-`, `_` and
+    `.` replaced by a single `-`. Pure; tolerates any value (a non-string is
+    compared through its text form, never raised on)."""
+    return _PEP503_SEPARATORS_RE.sub("-", str(name)).lower()
+
+
+def _parse_toml(text):
+    """The parsed TOML table for `text`, or None when it cannot be parsed
+    for ANY reason (no TOML parser on this interpreter, a syntax error,
+    nesting beyond the parser's limit, ...)."""
+    if tomllib is None:
+        return None
+    try:
+        data = tomllib.loads(text)
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _read_resolved_text(path):
+    """The UTF-8 text of the regular file at `path` (an already-confined,
+    fully resolved path), or None when it is not a regular file, cannot be
+    read, or is not valid UTF-8."""
+    try:
+        if not os.path.isfile(path):
+            return None
+        with open(path, "rb") as f:
+            raw = f.read()
+        return raw.decode("utf-8")
+    except (OSError, ValueError):
+        return None
+
+
+def _read_project_text(project_root, rel_path):
+    """The UTF-8 text of the project-relative file `rel_path`, read only
+    when its resolved real path lies inside the project root (TM-3);
+    otherwise, or on any read failure, None."""
+    try:
+        path = _resolve_project_relative(project_root, rel_path)
+    except (OSError, ValueError):
+        return None
+    if path is None:
+        return None
+    return _read_resolved_text(path)
+
+
+_PIP_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+_PIP_NON_REGISTRY_SOURCE_TYPES = frozenset({"git", "directory", "file", "url"})
+_PIPFILE_NON_REGISTRY_KEYS = ("git", "path", "file", "editable")
+
+
+def _pip_pin_is_valid(name, version):
+    """FR11: the only (name, version) pairs allowed into a prepared
+    requirements file, each written as exactly ONE `name==version` line. The
+    name must fully match the name pattern (`fullmatch`: a trailing line
+    break does not slip through a `$`). The version must be non-empty,
+    contain no whitespace of any kind (a line break would start a new line),
+    no `;` (environment marker) and no `#` (comment), and not begin with `-`
+    (an option). Beyond those rules, a version holding a backslash (a line
+    continuation that would join the next line) or any non-printable
+    character is not a version and is rejected the same way."""
+    if not isinstance(name, str) or not isinstance(version, str):
+        return False
+    if _PIP_NAME_RE.fullmatch(name) is None:
+        return False
+    if not version or version.startswith("-"):
+        return False
+    return not any(
+        ch.isspace() or not ch.isprintable() or ch in ";#\\" for ch in version
+    )
+
+
+def _pip_poetry_lock_pins(data):
+    """(pins, excluded_count) for a parsed poetry.lock, or None when it has
+    no top-level `package` array. Every array element is considered whatever
+    its group or category (A3); an element that is not a table, whose
+    `source` table names git / directory / file / url, or whose name or
+    version fails FR11, is excluded and counted."""
+    packages = data.get("package")
+    if not isinstance(packages, list):
+        return None
+    pins = set()
+    excluded = 0
+    for entry in packages:
+        if not isinstance(entry, dict):
+            excluded += 1
+            continue
+        source = entry.get("source")
+        source_type = source.get("type") if isinstance(source, dict) else None
+        if isinstance(source_type, str) and source_type in _PIP_NON_REGISTRY_SOURCE_TYPES:
+            excluded += 1
+            continue
+        name, version = entry.get("name"), entry.get("version")
+        if not _pip_pin_is_valid(name, version):
+            excluded += 1
+            continue
+        pins.add((canonical_pip_name(name), version))
+    return pins, excluded
+
+
+def _pip_pipfile_lock_pins(data):
+    """(pins, excluded_count) for a parsed Pipfile.lock, or None when
+    neither `default` nor `develop` is an object. Every entry of both is
+    considered (A3), keyed by name; an entry that is not an object, carries
+    git / path / file / editable, has a version that is not `==` followed by
+    a non-empty remainder, or whose name or remainder fails FR11, is
+    excluded and counted. The pin's version is the remainder after `==`.
+    Other top-level keys (such as `_meta`) are ignored."""
+    sections = [data[key] for key in ("default", "develop") if isinstance(data.get(key), dict)]
+    if not sections:
+        return None
+    pins = set()
+    excluded = 0
+    for section in sections:
+        for name, entry in section.items():
+            if not isinstance(entry, dict) or any(k in entry for k in _PIPFILE_NON_REGISTRY_KEYS):
+                excluded += 1
+                continue
+            spec = entry.get("version")
+            version = spec[2:] if isinstance(spec, str) and spec.startswith("==") else None
+            if not _pip_pin_is_valid(name, version):
+                excluded += 1
+                continue
+            pins.add((canonical_pip_name(name), version))
+    return pins, excluded
+
+
+def _group_pip_pins(pins):
+    """A5/D4: for each canonical name, its distinct versions in plain string
+    order; the k-th version goes to group k, so no group holds a name twice.
+    Groups are ordered 1..K and the lines inside a group are sorted."""
+    versions_by_name = {}
+    for name, version in pins:
+        versions_by_name.setdefault(name, set()).add(version)
+    groups = []
+    for name in sorted(versions_by_name):
+        for index, version in enumerate(sorted(versions_by_name[name])):
+            if index == len(groups):
+                groups.append([])
+            groups[index].append(f"{name}=={version}")
+    return [sorted(group) for group in groups]
+
+
+def convert_pip_lockfile(project_root, lockfile):
+    """C3: the lockfile's pins as auditable requirement groups. `lockfile` is
+    a project-relative path whose basename is poetry.lock or Pipfile.lock.
+    Returns exactly one of: None (unconvertible), or `(groups, excluded)` --
+    an ordered list of one or more groups, each a sorted list of
+    `canonical-name==version` lines in which each canonical name appears at
+    most once, plus the number of excluded entries.
+
+    Unconvertible: the file is absent, not a regular file, unreadable, not
+    valid UTF-8, not valid TOML / JSON, parses in any other failing way
+    (TM-4), resolves outside the project root (TM-3), lacks the expected
+    structure, or leaves zero lines. Reads only that file; writes nothing;
+    never raises for any file content; the same input gives the same
+    output."""
+    text = _read_project_text(project_root, lockfile)
+    if text is None:
+        return None
+    basename = os.path.basename(lockfile)
+    try:
+        if basename == "poetry.lock":
+            data = _parse_toml(text)
+            collected = _pip_poetry_lock_pins(data) if data is not None else None
+        elif basename == "Pipfile.lock":
+            data = json.loads(text)
+            collected = _pip_pipfile_lock_pins(data) if isinstance(data, dict) else None
+        else:
+            collected = None
+    except Exception:
+        # Untrusted content never raises out of `scan` (a JSON document
+        # nested beyond the parser's limit raises RecursionError, an oversize
+        # integer literal ValueError, ...): it is simply unconvertible.
+        return None
+    if collected is None:
+        return None
+    pins, excluded = collected
+    if not pins:
+        return None
+    return _group_pip_pins(pins), excluded
+
+
+def pip_declaration_found(project_root, lockfile):
+    """C4: True when the lockfile's direct-dependency declaration file (the
+    sibling pyproject.toml for poetry.lock, the sibling Pipfile for
+    Pipfile.lock -- `_pip_manifest_candidate`) is present, a readable
+    regular file inside the project root, valid UTF-8 and valid TOML.
+    False ("not found") otherwise. Reads only; never raises. The
+    pyproject.toml NAME extraction itself stays the existing parser."""
+    try:
+        candidate = _pip_manifest_candidate(project_root, lockfile)
+    except (OSError, ValueError):
+        return False
+    if candidate is None:
+        return False
+    text = _read_resolved_text(candidate)
+    return text is not None and _parse_toml(text) is not None
+
+
+@contextlib.contextmanager
+def prepared_requirements_files(groups):
+    """C5: inside the scope there is one requirements file per group, in
+    group order, holding exactly that group's lines, one per line. Each file
+    is created exclusively by `tempfile.mkstemp` -- a unique, unpredictable
+    name with owner-only access -- in the system temporary directory, which
+    lies outside the project root (TM-6, A1). Yields the list of file paths.
+    On scope exit, normal or exceptional, EVERY file created so far is
+    removed (NFR1), including when creating a later file fails. The paths
+    exist only for the pip-audit launch; none of them enters the scan
+    result (NFR3)."""
+    paths = []
+    try:
+        for group in groups:
+            fd, path = tempfile.mkstemp(prefix="pip-lockfile-", suffix=".txt")
+            paths.append(path)
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+                f.write("".join(f"{line}\n" for line in group))
+        yield list(paths)
+    finally:
+        for path in paths:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -1490,15 +1830,28 @@ def normalize_pip(ecosystem, data, manifest_file, project_root=None):
     since a transitive one is dropped regardless of severity) and returned
     as `skip_info` for the caller to fold into the summary's affected count
     (NFR4: counts only, no advisory-sourced text). Returns
-    (findings, skip_info); skip_info is None when nothing was undetermined."""
+    (findings, skip_info); skip_info is None when nothing was undetermined.
+
+    For a pip lockfile `manifest_file` (sca-python-lockfile-audit FR10) the
+    findings' `file` is the lockfile's project-relative path, directness is
+    resolved from its sibling declaration file (`_pip_manifest_candidate`),
+    and `affected_range` is the pinned version pip-audit reported."""
     findings = []
-    direct_names = _pip_direct_dependency_names(project_root, manifest_file) if project_root else set()
+    # FR9: directness is decided on PEP 503 canonical names on BOTH sides, so
+    # a declared `Django` / `Foo_Bar.baz` matches a reported `django` /
+    # `foo-bar-baz` (every pip job, whatever its manifest).
+    direct_names = {
+        canonical_pip_name(declared)
+        for declared in (
+            _pip_direct_dependency_names(project_root, manifest_file) if project_root else set()
+        )
+    }
     undetermined_count = 0
     for dep in data.get("dependencies") or []:
         if not isinstance(dep, dict):
             continue
         package = dep.get("name", "unknown")
-        is_direct = package in direct_names
+        is_direct = canonical_pip_name(package) in direct_names
         for vuln in dep.get("vulns") or []:
             if not isinstance(vuln, dict):
                 continue
@@ -1600,6 +1953,61 @@ def _findings_result(findings, summary):
     }
 
 
+def _scan_pip_lockfile(ecosystem, lockfile, project_root, executable_path):
+    """The pip axis for a changed poetry.lock / Pipfile.lock
+    (sca-python-lockfile-audit "Scan flow for pip", steps 3-7). The tool is
+    already validated and resolved. Returns a dict:
+
+    - `reasons`: the not-completed reasons, de-duplicated, in first-seen
+      order (an unconvertible lockfile, a declaration file that cannot be
+      resolved, or the reasons of runs that did not complete -- D5).
+    - `findings`: the completed runs' findings, in run order.
+    - `undetermined`: the undetermined-severity count summed over runs.
+    - `excluded`: the number of lockfile entries left out of conversion --
+      0 unless at least one run was launched (D3).
+    - `completed`: True when at least one run completed.
+
+    Conversion comes first, then the declaration check, and pip-audit is
+    launched only after both pass (A4): a lockfile that cannot be converted
+    or whose declaration file cannot be resolved launches nothing and never
+    falls back to a manifest or directory audit (FR5, FR8, TM-2). One run
+    per group of the prepared-file scope (FR4); the scope removes every
+    prepared file on exit, normal or exceptional (NFR1). An exception from
+    the execution step propagates -- only untrusted FILE CONTENT is
+    contained."""
+    audit = {"reasons": [], "findings": [], "undetermined": 0, "excluded": 0, "completed": False}
+    converted = convert_pip_lockfile(project_root, lockfile)
+    if converted is None:
+        audit["reasons"].append(PIP_LOCKFILE_UNCONVERTIBLE)
+        return audit
+    groups, excluded = converted
+    if not pip_declaration_found(project_root, lockfile):
+        audit["reasons"].append(PIP_DIRECT_MANIFEST_NOT_FOUND)
+        return audit
+
+    audit["excluded"] = excluded
+    normalizer = NORMALIZERS.get("pip")
+    with prepared_requirements_files(groups) as prepared_files:
+        for prepared_file in prepared_files:
+            job = build_scan_job(
+                ecosystem, lockfile, project_root, executable_path, prepared_file=prepared_file
+            )
+            outcome, payload = run_ecosystem_command(job)
+            reason = payload if outcome == OUTCOME_NOT_COMPLETED else None
+            if reason is None and normalizer is None:
+                reason = "pip_no_normalizer"
+            if reason is not None:
+                if reason not in audit["reasons"]:
+                    audit["reasons"].append(reason)
+                continue
+            findings, skip_info = normalizer(ecosystem, payload, lockfile, project_root)
+            audit["findings"].extend(findings)
+            if skip_info:
+                audit["undetermined"] += skip_info["count"]
+            audit["completed"] = True
+    return audit
+
+
 def run_scan(project_root, changed_files, registry_path):
     """AC-1..AC-7 (task0001) plus this task's partial-coverage contract:
     select ecosystems, resolve each on PATH, execute its scan job and judge
@@ -1620,6 +2028,10 @@ def run_scan(project_root, changed_files, registry_path):
       "Partial coverage is machine-readable, not prose"). `skipped: false`
       with `skip_reason: null` therefore means, and only means, that every
       selected ecosystem completed.
+    - pip, when the change holds a poetry.lock / Pipfile.lock, audits that
+      lockfile's own pins (`_scan_pip_lockfile`): its reasons travel the
+      same `skip_reasons` path, and the findings carry the lockfile as
+      `file`.
     """
     registry = load_registry(registry_path)
     selected = select_ecosystems(registry, changed_files)
@@ -1635,6 +2047,7 @@ def run_scan(project_root, changed_files, registry_path):
     skip_reasons = []
     ran_ecosystems = []
     pip_severity_undetermined_total = 0
+    pip_unpinnable_total = 0
     for ecosystem in selected:
         name = ecosystem.get("ecosystem", "unknown")
         validation_error = validate_ecosystem_entry(ecosystem)
@@ -1646,6 +2059,15 @@ def run_scan(project_root, changed_files, registry_path):
             skip_reasons.append(f"{name}_tool_not_found")
             continue
         manifest_file = manifest_file_for(ecosystem, changed_files)
+        if name == "pip" and os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
+            audit = _scan_pip_lockfile(ecosystem, manifest_file, project_root, executable_path)
+            all_findings.extend(audit["findings"])
+            skip_reasons.extend(audit["reasons"])
+            pip_severity_undetermined_total += audit["undetermined"]
+            pip_unpinnable_total += audit["excluded"]
+            if audit["completed"]:
+                ran_ecosystems.append(name)
+            continue
         job = build_scan_job(ecosystem, manifest_file, project_root, executable_path)
         outcome, payload = run_ecosystem_command(job)
         if outcome == OUTCOME_NOT_COMPLETED:
@@ -1684,6 +2106,19 @@ def run_scan(project_root, changed_files, registry_path):
             f"severity (pip_severity_undetermined)."
         )
 
+    # D3: counts only, never lockfile text; after the undetermined-severity
+    # note. Present only when a pip run was launched for the lockfile and
+    # at least one entry was excluded from conversion.
+    unpinnable_note = ""
+    if pip_unpinnable_total == 1:
+        unpinnable_note = " 1 pip lockfile entry not auditable (pip_lockfile_entries_unpinnable)."
+    elif pip_unpinnable_total > 1:
+        unpinnable_note = (
+            f" {pip_unpinnable_total} pip lockfile entries not auditable "
+            f"(pip_lockfile_entries_unpinnable)."
+        )
+    summary_notes = undetermined_note + unpinnable_note
+
     if skip_reasons:
         combined_reason = "+".join(sorted(skip_reasons))
         if ran_ecosystems:
@@ -1694,11 +2129,11 @@ def run_scan(project_root, changed_files, registry_path):
             )
         else:
             summary = "Scan skipped: " + "; ".join(sorted(skip_reasons))
-        summary += undetermined_note
+        summary += summary_notes
         return _skip_result(combined_reason, summary, findings=all_findings)
 
     summary = f"Scanned {', '.join(sorted(ran_ecosystems))}; {len(all_findings)} finding(s) at or above threshold."
-    summary += undetermined_note
+    summary += summary_notes
     return _findings_result(all_findings, summary)
 
 
