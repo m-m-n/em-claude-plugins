@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-python-lockfile-audit
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 0cd33133ded8d0775940011e744d20e3af7ff944
 last_input_digest: sha256:8297c09fb3c63a36769b15de3413dc64537e4c17b484a7597d6ef19fd0cc18e1
