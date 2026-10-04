@@ -1,0 +1,93 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 6690 tests OK; check-plugin-invariants.py: 7/7 PASS, run before any edit
+final_failures: []             # re-executed after implementation: 6745 tests OK (6690 + 55 new); check-plugin-invariants.py: 7/7 PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_section_names_the_agent_and_the_file_exists
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_frontmatter_name_equals_file_stem
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_model_is_opus_and_effort_is_xhigh
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_tools_are_read_glob_grep_only
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_no_task_assignment_heading
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_tools_matcher_rejects_forged_write
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_tools_matcher_rejects_forged_bash
+      - tests.test_opus_escalation_agent_contract.TestAgentDefinition.test_ac1_heading_matcher_flags_forged_heading
+    red_confirmed: true
+    red_reason: "Before the agent file and the section's dispatch literal existed, test_ac1_section_names_the_agent_and_the_file_exists, test_ac1_frontmatter_name_equals_file_stem, test_ac1_model_is_opus_and_effort_is_xhigh, test_ac1_tools_are_read_glob_grep_only and test_ac1_no_task_assignment_heading were observed failing (no dispatch literal in the section, no agent definition or frontmatter). The three forged-sample matcher proofs pass by construction."
+  AC-2:
+    tests:
+      - tests.test_opus_escalation_agent_contract.TestAgentBody.test_ac2_contract_resolved_from_the_dispatcher_supplied_path
+      - tests.test_opus_escalation_agent_contract.TestAgentBody.test_ac2_stops_rather_than_guessing_when_unresolved
+      - tests.test_opus_escalation_agent_contract.TestAgentBody.test_ac2_names_the_contract_as_the_single_source_of_truth
+      - tests.test_opus_escalation_agent_contract.TestAgentBody.test_ac2_carries_no_return_shape_statement
+      - tests.test_opus_escalation_agent_contract.TestAgentBody.test_ac2_return_shape_matchers_are_not_vacuous
+      - tests.test_opus_escalation_agent_contract.TestAgentBody.test_ac2_treats_the_whole_input_as_data
+      - tests.test_opus_escalation_agent_contract.TestAgentBody.test_ac2_is_read_only
+    red_confirmed: true
+    red_reason: "Observed failing before the agent file existed: every assertIn on the agent text ran against an empty string, and test_ac2_carries_no_return_shape_statement failed on its 'agent definition not found' guard. The matcher non-vacuity proof (forged agent text restating the return shape) passes by construction."
+  AC-3:
+    tests:
+      - tests.test_opus_escalation_agent_contract.TestContractInput.test_ac3_contract_exists_at_the_path_the_section_names
+      - tests.test_opus_escalation_agent_contract.TestContractInput.test_ac3_input_carries_every_item_field
+      - tests.test_opus_escalation_agent_contract.TestContractInput.test_ac3_input_scope_packet_versus_non_packet
+      - tests.test_opus_escalation_agent_contract.TestContractInput.test_ac3_input_carries_the_contract_path
+      - tests.test_opus_escalation_agent_contract.TestContractInput.test_ac3_boundary_names_both_delimiters
+      - tests.test_opus_escalation_agent_contract.TestContractInput.test_ac3_boundary_states_everything_between_is_data
+      - tests.test_opus_escalation_agent_contract.TestContractInput.test_ac3_boundary_requires_closing_delimiter_neutralisation
+    red_confirmed: true
+    red_reason: "Observed failing before the contract document existed: the section cited no references/<name>-contract.md, so the contract path was unresolved, and the Input Block and Untrusted-Data Boundary chunks were empty."
+  AC-4:
+    tests:
+      - tests.test_opus_escalation_agent_contract.TestContractReturn.test_ac4_return_shape_sentence_lives_in_the_contract
+      - tests.test_opus_escalation_agent_contract.TestContractReturn.test_ac4_return_object_section_states_the_return
+      - tests.test_opus_escalation_agent_contract.TestContractReturn.test_ac4_degradation_counts_unusable_returns_as_no_decision
+      - tests.test_opus_escalation_agent_contract.TestContractReturn.test_ac4_degradation_defers_the_consequence_to_the_resolution_document
+    red_confirmed: true
+    red_reason: "Observed failing before the contract document existed: the return-shape sentence was not found in the (empty) contract text and the Return Object and Validity and Degradation chunks were empty."
+  AC-5:
+    tests:
+      - tests.test_opus_escalation_agent_contract.TestContractReadConstraint.test_ac5_writes_are_forbidden
+      - tests.test_opus_escalation_agent_contract.TestContractReadConstraint.test_ac5_reads_are_bounded_to_the_contract_and_named_evidence
+    red_confirmed: true
+    red_reason: "Observed failing before the contract document existed: the Read Constraint chunk was empty, so no 'no writes of any kind' or evidence-bounded read statement was found."
+  AC-6:
+    tests:
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_dispatch_literal_is_in_fr2_form_and_names_the_agent
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_section_cites_the_contract_path
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_dispatch_carries_the_contract_path
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_section_cites_the_contract_for_input_and_return_shape
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_binding_token_and_its_location
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_binding_origin_is_named
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_section_no_longer_carries_the_return_shape_sentence
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_return_shape_matcher_is_not_vacuous
+      - tests.test_opus_escalation_agent_contract.TestSectionWiring.test_ac6_section_is_last_in_the_document
+    red_confirmed: true
+    red_reason: "Observed failing on the unedited section: no Task(...) dispatch literal, no contract path, no Opus/xhigh binding location, and test_ac6_section_no_longer_carries_the_return_shape_sentence failed because the section still carried the return-shape sentence. test_ac6_return_shape_matcher_is_not_vacuous and test_ac6_section_is_last_in_the_document passed before the edit (a forged-sample proof and a structural guard)."
+  AC-7:
+    tests:
+      - tests.test_opus_escalation_agent_contract.TestNonPacketPresentationInContract.test_ac7_gate_decision_is_one_question
+      - tests.test_opus_escalation_agent_contract.TestNonPacketPresentationInContract.test_ac7_question_id_is_the_gate_identifying_name_cited_from_phase_state
+      - tests.test_opus_escalation_agent_contract.TestNonPacketPresentationInContract.test_ac7_options_carry_option_ids_including_the_minimum_side_effect_option
+      - tests.test_opus_escalation_agent_contract.TestNonPacketPresentationInContract.test_ac7_orchestrator_composes_the_rest_inside_the_untrusted_block
+      - tests.test_opus_escalation_agent_contract.TestNonPacketPresentationInContract.test_ac7_per_command_fallback_carries_the_literal_command_string
+      - tests.test_opus_escalation_agent_contract.TestNonPacketPresentationInContract.test_ac7_rule_makes_the_return_condition_satisfiable
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_scope_names_the_non_packet_gates_of_batch_mode
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_one_dispatch_per_non_packet_gate_resolution
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_per_command_fallback_is_bounded_per_literal_string
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_per_command_bound_matcher_is_not_vacuous
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_no_decision_falls_to_the_minimum_side_effect_option
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_escalation_still_runs_when_no_harness_is_available
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_audit_record_cites_phase_state
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_section_cites_the_contract_presentation_rule
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_section_does_not_restate_the_presentation_rule
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_restatement_matcher_is_not_vacuous
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_section_names_no_source_literal
+      - tests.test_opus_escalation_agent_contract.TestNonPacketScopeInSection.test_ac7_source_literal_matcher_is_not_vacuous
+    red_confirmed: true
+    red_reason: "Observed failing before the contract and the section's non-packet paragraph existed: the Non-packet Presentation chunk was empty and the section carried no non-packet scope, per-command bound, minimum-side-effect fallthrough or phase-state citation. The two absence pins (test_ac7_section_does_not_restate_the_presentation_rule, test_ac7_section_names_no_source_literal) passed before the edit because nothing yet existed to restate or to carry a source value; they are guarded by the forged-sample non-vacuity proofs."
+  AC-8:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_opus_escalation_return_shape
+      - tests.test_opus_escalation_agent_contract
+    red_confirmed: true
+    red_reason: "The updated return-shape pin was observed failing on the unedited tree: AssertionError, 'references/opus-escalation-contract.md' not found in the section text. The new module was observed failing (44 of 55 tests) before any implementation existed. The clause that the full suite and check-plugin-invariants.py exit 0 is a regression guard that was already green at baseline, so that clause has no red state; both were re-run after implementation and exit 0."
