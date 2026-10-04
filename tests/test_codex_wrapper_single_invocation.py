@@ -37,6 +37,20 @@ Covers task0001 Acceptance Criteria:
   no network, no real provider, and no location outside its own temporary
   directories; both project test commands must pass.
 
+Also covers codex-fallback-review-residuals task0004
+(feature-docs/codex-fallback-review-residuals/tasks/task0004.md):
+
+- AC-1 / AC-2 / AC-3 (FR7, NFR2): `readonly --litellm MODEL "prompt"` is
+  exactly one launch with exit 0, whose argv carries `-p litellm -m MODEL`
+  as four adjacent elements with MODEL byte-identical to the value passed;
+  MODEL occurs in neither the wrapper's text nor
+  em-workflow/references/reviewers.yaml
+  (TestLitellmModelPassesThroughVerbatim).
+- AC-4 (FR7): the consecutive-subsequence matcher rejects a forged argv
+  with the model value replaced, dropped, scattered or out of order, and
+  accepts a well-formed one
+  (TestNonVacuousConsecutiveSubsequenceMatcher).
+
 Test Notes' TDD-awkward point (Configured-timeout read rule,
 IMPLEMENTATION.md Shared Components): the timeout case runs an isolated
 copy of the wrapper paired with a reduced configured value and asserts the
@@ -67,6 +81,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "em-workflow" / "scripts" / "run_codex_exec.sh"
+REVIEWERS_REGISTRY_PATH = REPO_ROOT / "em-workflow" / "references" / "reviewers.yaml"
 
 # Fallback marker prefixes the chain used to emit (AC-3). Both must be
 # permanently gone: from every stub behaviour's output AND from the
@@ -153,6 +168,31 @@ def _assert_exactly_one_launch(log_lines):
         raise AssertionError(
             f"expected exactly one launch, got {len(log_lines)} records: {log_lines}"
         )
+
+
+def _litellm_launch_elements(model):
+    """The adjacent argv elements `--litellm MODEL` must expand to (task0004
+    AC-2)."""
+    return ["-p", "litellm", "-m", model]
+
+
+def _assert_consecutive_subsequence(argv, expected):
+    """The consecutive-subsequence matcher (task0004 AC-2 / AC-4): holds
+    exactly when `expected` occurs in `argv` as adjacent elements in order.
+    The same elements present only scattered, or in another order, do not
+    satisfy it. Raises with a descriptive message rather than returning a
+    bool, like `_assert_exactly_one_launch`. An empty `expected` is refused
+    (every list contains the empty sequence, so it would pass vacuously)."""
+    expected = list(expected)
+    if not expected:
+        raise ValueError("expected sequence must not be empty")
+    width = len(expected)
+    for start in range(len(argv) - width + 1):
+        if list(argv[start:start + width]) == expected:
+            return
+    raise AssertionError(
+        f"{expected!r} does not occur as consecutive elements of argv: {argv!r}"
+    )
 
 
 def _lines_starting_with_marker(text):
@@ -506,6 +546,92 @@ class TestArgumentHandlingSurfaceUnchanged(unittest.TestCase):
             "-C", workdir, "--output-schema", "schema.json", "--ignore-user-config",
         ):
             self.assertIn(expected, argv, f"{expected!r} missing from launch argv: {argv}")
+
+
+class TestNonVacuousConsecutiveSubsequenceMatcher(unittest.TestCase):
+    """Non-vacuity for TestLitellmModelPassesThroughVerbatim (task0004
+    AC-4): the consecutive-subsequence matcher the real assertion uses
+    must be shown to reject a forged argv whose model value was replaced,
+    one whose model value was dropped, and one carrying the four elements
+    only scattered -- and to accept a well-formed forged argv. Each sample
+    runs through the very function the real case calls."""
+
+    FORGED_MODEL = "Forged-Model_k4p8.v1"
+    FORGED_PREFIX = ["--color", "never", "--skip-git-repo-check", "-s", "read-only"]
+
+    def _forged_argv(self, litellm_elements):
+        return [*self.FORGED_PREFIX, *litellm_elements, "forged prompt"]
+
+    def test_matcher_accepts_a_well_formed_forged_argv(self):
+        argv = self._forged_argv(["-p", "litellm", "-m", self.FORGED_MODEL])
+        _assert_consecutive_subsequence(argv, _litellm_launch_elements(self.FORGED_MODEL))
+
+    def test_matcher_rejects_a_forged_argv_with_the_model_value_replaced(self):
+        argv = self._forged_argv(["-p", "litellm", "-m", "some-other-model"])
+        with self.assertRaises(AssertionError):
+            _assert_consecutive_subsequence(argv, _litellm_launch_elements(self.FORGED_MODEL))
+
+    def test_matcher_rejects_a_forged_argv_with_the_model_value_dropped(self):
+        argv = self._forged_argv(["-p", "litellm", "-m"])
+        with self.assertRaises(AssertionError):
+            _assert_consecutive_subsequence(argv, _litellm_launch_elements(self.FORGED_MODEL))
+
+    def test_matcher_rejects_a_forged_argv_with_the_model_flag_and_value_dropped(self):
+        argv = self._forged_argv(["-p", "litellm"])
+        with self.assertRaises(AssertionError):
+            _assert_consecutive_subsequence(argv, _litellm_launch_elements(self.FORGED_MODEL))
+
+    def test_matcher_rejects_a_forged_argv_carrying_the_elements_only_scattered(self):
+        argv = self._forged_argv(["-p", "x", "litellm", "-m", self.FORGED_MODEL])
+        self.assertIn("-p", argv)
+        self.assertIn("litellm", argv)
+        self.assertIn("-m", argv)
+        self.assertIn(self.FORGED_MODEL, argv)
+        with self.assertRaises(AssertionError):
+            _assert_consecutive_subsequence(argv, _litellm_launch_elements(self.FORGED_MODEL))
+
+    def test_matcher_rejects_a_forged_argv_with_the_four_elements_out_of_order(self):
+        argv = self._forged_argv(["-m", self.FORGED_MODEL, "-p", "litellm"])
+        with self.assertRaises(AssertionError):
+            _assert_consecutive_subsequence(argv, _litellm_launch_elements(self.FORGED_MODEL))
+
+    def test_matcher_refuses_an_empty_expected_sequence(self):
+        # An empty sequence is a subsequence of everything; accepting it
+        # would let a mistyped expectation pass vacuously.
+        with self.assertRaises(ValueError):
+            _assert_consecutive_subsequence(["-p", "litellm"], [])
+
+
+class TestLitellmModelPassesThroughVerbatim(unittest.TestCase):
+    """task0004 AC-1 / AC-2 / AC-3 (FR7, NFR2): `readonly --litellm MODEL
+    "prompt"` is one launch, exit 0, whose argv carries `-p litellm -m
+    MODEL` as four adjacent elements with MODEL byte-identical to the
+    value passed. MODEL is a fictional identifier found neither in the
+    wrapper's text nor in the reviewers registry, so the case cannot pass
+    through a name hard-coded anywhere. Adjacency is the point:
+    test_accepted_flag_set_on_the_launch_is_unchanged only checks
+    membership and never passes --litellm."""
+
+    # Mixed case, dot and underscore: a lower-casing, trimming or
+    # tier-mapping wrapper would change it.
+    MODEL = "Fictional-Model_x7q3k.v9"
+
+    def test_model_value_is_absent_from_the_wrapper_and_the_reviewers_registry(self):
+        for path in (SCRIPT_PATH, REVIEWERS_REGISTRY_PATH):
+            with self.subTest(path=path.name):
+                text = path.read_text(encoding="utf-8")
+                self.assertTrue(text.strip(), f"{path} is empty; the absence check would be vacuous")
+                self.assertNotIn(self.MODEL, text)
+
+    def test_litellm_model_is_one_launch_with_the_model_passed_verbatim(self):
+        proc, log_lines = _run_wrapper(
+            "success", wrapper_args=["readonly", "--litellm", self.MODEL, "do the thing"]
+        )
+
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        _assert_exactly_one_launch(log_lines)
+        argv = log_lines[0]["argv"]
+        _assert_consecutive_subsequence(argv, _litellm_launch_elements(self.MODEL))
 
 
 class TestSupersededModuleRemoved(unittest.TestCase):
