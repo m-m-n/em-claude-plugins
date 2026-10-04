@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 0cd33133ded8d0775940011e744d20e3af7ff944
 last_input_digest: sha256:8297c09fb3c63a36769b15de3413dc64537e4c17b484a7597d6ef19fd0cc18e1
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -125,10 +125,16 @@ worker_runs:
   input_digest: sha256:c80c6b66d80755df09fc47d52be03526cab95465d18c07082fd7e10b5c61153d
   output_digest: sha256:e52b740daf661418e95eae7d1e703385061559a9e2af2dd138997beb794677cc
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:8297c09fb3c63a36769b15de3413dc64537e4c17b484a7597d6ef19fd0cc18e1
-  output_digest: null
-artifacts: []
+  output_digest: sha256:769f7a0641339a16189289145621aa5b4fbdf19602d6e6529111778f9bcb33ee
+artifacts:
+- path: feature-docs/sca-python-lockfile-audit/REQUIREMENTS.md
+  sha256: sha256:7c882f032362e262093130319537b6940da487c64f1dca45addbcfad61cb57e5
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-python-lockfile-audit/SPEC.md
+  sha256: sha256:3f11658f8c7be4c55461ba5bf9f64808db9ca37cde4945bd92cb564673f35de4
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
