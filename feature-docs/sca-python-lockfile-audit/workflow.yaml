@@ -88,7 +88,7 @@ workflow:
   status: completed
   completed_at_commit: 2bef049ec63f758c435ca1a15a80a7e2ba120fc0
 - id: verify
-  status: pending
+  status: in_progress
   result: null
   failed_items: []
 - id: retrospect
@@ -326,6 +326,14 @@ requirements:
     - task0001
     tests:
     - TS15
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
 batch:
   review_rework_count: 0
   verify_rework:
