@@ -147,7 +147,7 @@ workflow:
   excluded_scenarios: []
   summary: 'repo-tests (6821 tests) and plugin-invariants exit 0; TS1-TS8 pass (TS8: no forbidden path in diff, provider-fallback module absent). Manual checks not executed in batch.'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Opus escalation agent, contract and dispatch wiring
