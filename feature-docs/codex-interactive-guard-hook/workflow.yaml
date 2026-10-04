@@ -3,26 +3,31 @@ feature: codex-interactive-guard-hook
 created: '2026-10-05'
 base_branch: main
 goal: "# Codex レビュアーの対話モード起動（python3 -i など）を PreToolUse hook で拒否する\n\nNotion: https://www.notion.so/3ef3509ec8ee815aa6f5d65e6d909fea\
-  \  (種別: 改善)\n\n## やりたいこと (必須)\n`run_codex_exec.sh` から起動する `codex exec` に PreToolUse hook を渡し、Codex レビュアーが対話モードの処理系（`python3\
-  \ -i` など）を起動するのを拒否する。\n\n## 背景・なぜ (必須)\nCodex レビュアーが疑似端末付き（`tty:true`）で `python3 -i` を起動したまま終了し、孤児プロセスが\
-  \ CPU 100% で残り続けた（3 件、最長約 1 日）。\n- サンドボックス内では疑似端末が制御端末にならず、端末が閉じても SIGHUP が届かない。\n- Python 3.14 の対話モードは、閉じた端末からの読み込み失敗を再試行し続けて空回りする。\n\
+  \  (種別: 改善)\n\n## やりたいこと (必須)\n`run_codex_exec.sh` から起動する `codex exec` に PreToolUse\
+  \ hook を渡し、Codex レビュアーが対話モードの処理系（`python3 -i` など）を起動するのを拒否する。\n\n## 背景・なぜ (必須)\n\
+  Codex レビュアーが疑似端末付き（`tty:true`）で `python3 -i` を起動したまま終了し、孤児プロセスが CPU 100% で残り続けた（3\
+  \ 件、最長約 1 日）。\n- サンドボックス内では疑似端末が制御端末にならず、端末が閉じても SIGHUP が届かない。\n- Python 3.14 の対話モードは、閉じた端末からの読み込み失敗を再試行し続けて空回りする。\n\
   - bash の対話モードは同じ条件で自ら終了した。\n\n## 受け入れ条件 / 完了の定義 (必須)\n- [ ] `em-workflow/scripts/run_codex_exec.sh`\
-  \ の既定の経路と `--litellm` の経路、`em-review/scripts/run_codex_exec.sh` が、`codex exec` に `-c \"hooks.PreToolUse=[...]\"\
-  ` で hook を渡す\n- [ ] 上記の起動に `--dangerously-bypass-hook-trust` を付ける\n- [ ] hook のスクリプトを em-workflow と\
-  \ em-review の `scripts/` にそれぞれ置き、ファイル名を `codex-hook-` で始める（例: `scripts/codex-hook-interactive-guard.py`）\n\
-  - [ ] matcher は `Bash`\n- [ ] hook が次を拒否する\n  - [ ] `-i` を持つ処理系の起動（`python3 -i`、`python3 -B -i -c ...`、`bash\
-  \ -i` など）\n  - [ ] 引数なしの処理系の起動（`python3`、`node` など）\n- [ ] hook が次を拒否しない\n  - [ ] `python3 -c '...'`\n\
-  \  - [ ] `python3 script.py`\n  - [ ] `python3 - <<EOF`\n- [ ] hook 自体が失敗したときは Codex の既定の挙動（コマンドを通す）に任せる\n\
-  - [ ] レビュアーへの指示に、対話モードを使わず `python3 -c` などで確かめることを追記する\n\n## スコープ外 (任意)\n- `codex exec` 終了後に残ったプロセスの後始末\n\
-  - vertex-review / codex-harness（別リポジトリ）\n\n## 制約・前提 (任意)\n`--ignore-user-config` は外さない。\nCodex 0.160.0\
-  \ で確認した事実:\n- `-c` で渡した hook は `--ignore-user-config` と併用しても読まれる。\n- `--dangerously-bypass-hook-trust`\
-  \ が無いと、hook は警告なしに実行されない。\n- コードモード（`exec` ツール）の中から呼ばれた `tools.exec_command` にも hook が効き、拒否するとコードモード側では\
-  \ Promise が reject される。\n- hook の入力の `tool_input` は `{\"command\": \"...\"}` のみで、`tty` は含まれない。\n- hook\
-  \ が終了コード 1・コマンド不在・例外で失敗すると、Codex は `PreToolUse Failed` を出してコマンドを実行する。\n- 拒否の出力形式: `{\"hookSpecificOutput\"\
-  : {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\"\
-  : \"...\"}}`。終了コード 2 と stderr でも拒否になる。\n- `write_stdin` には PreToolUse が効かない。\n\n## 追加指示（起動者）\n- 実装完了後、integration\
-  \ ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch\
-  \ へ自動マージしない）。\n- 不明点は Codex に相談し、相対的に良いと判断した案を採用する。\n- その議論の内容を Notion に記録する。\n"
+  \ の既定の経路と `--litellm` の経路、`em-review/scripts/run_codex_exec.sh` が、`codex exec` に\
+  \ `-c \"hooks.PreToolUse=[...]\"` で hook を渡す\n- [ ] 上記の起動に `--dangerously-bypass-hook-trust`\
+  \ を付ける\n- [ ] hook のスクリプトを em-workflow と em-review の `scripts/` にそれぞれ置き、ファイル名を `codex-hook-`\
+  \ で始める（例: `scripts/codex-hook-interactive-guard.py`）\n- [ ] matcher は `Bash`\n-\
+  \ [ ] hook が次を拒否する\n  - [ ] `-i` を持つ処理系の起動（`python3 -i`、`python3 -B -i -c ...`、`bash\
+  \ -i` など）\n  - [ ] 引数なしの処理系の起動（`python3`、`node` など）\n- [ ] hook が次を拒否しない\n  - [\
+  \ ] `python3 -c '...'`\n  - [ ] `python3 script.py`\n  - [ ] `python3 - <<EOF`\n\
+  - [ ] hook 自体が失敗したときは Codex の既定の挙動（コマンドを通す）に任せる\n- [ ] レビュアーへの指示に、対話モードを使わず `python3\
+  \ -c` などで確かめることを追記する\n\n## スコープ外 (任意)\n- `codex exec` 終了後に残ったプロセスの後始末\n- vertex-review\
+  \ / codex-harness（別リポジトリ）\n\n## 制約・前提 (任意)\n`--ignore-user-config` は外さない。\nCodex\
+  \ 0.160.0 で確認した事実:\n- `-c` で渡した hook は `--ignore-user-config` と併用しても読まれる。\n- `--dangerously-bypass-hook-trust`\
+  \ が無いと、hook は警告なしに実行されない。\n- コードモード（`exec` ツール）の中から呼ばれた `tools.exec_command` にも\
+  \ hook が効き、拒否するとコードモード側では Promise が reject される。\n- hook の入力の `tool_input` は `{\"\
+  command\": \"...\"}` のみで、`tty` は含まれない。\n- hook が終了コード 1・コマンド不在・例外で失敗すると、Codex は\
+  \ `PreToolUse Failed` を出してコマンドを実行する。\n- 拒否の出力形式: `{\"hookSpecificOutput\": {\"hookEventName\"\
+  : \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\"\
+  : \"...\"}}`。終了コード 2 と stderr でも拒否になる。\n- `write_stdin` には PreToolUse が効かない。\n\n\
+  ## 追加指示（起動者）\n- 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch\
+  \ への PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）。\n- 不明点は Codex\
+  \ に相談し、相対的に良いと判断した案を採用する。\n- その議論の内容を Notion に記録する。\n"
 parent_branch: em-workflow/codex-interactive-guard-hook/integration
 tier: full
 tier_decision:
@@ -83,7 +88,7 @@ workflow:
   completed_at_commit: 8bcd12eed9096fe016767afe5e36cedbb8a685a2
   base_commit: 4473d652cf2164bfc160468af16cf25f354c9582
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -169,6 +174,15 @@ review:
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - performance
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: em-workflow 既定経路で hook を渡す
