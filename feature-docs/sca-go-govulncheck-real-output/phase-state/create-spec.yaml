@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 7ddf0dcb2574c5c12d048956c4cc96a5b408dcb5
 last_input_digest: sha256:3248dd0de4c9de2d5dcaabcf97cf24a448246b1ab0979b89fd21ca655afc6e49
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -202,10 +202,16 @@ worker_runs:
   input_digest: sha256:9c432bad80039e3d5206fa241da2b10edb8c02a86a58faf75b2bc0bf6a228035
   output_digest: sha256:fca06bc733cd962192668013227a8ab20445a9d1370f42be765dd346fdb5f059
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:3248dd0de4c9de2d5dcaabcf97cf24a448246b1ab0979b89fd21ca655afc6e49
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/sca-go-govulncheck-real-output/REQUIREMENTS.md
+  sha256: sha256:517abfa8adc65edaea24e660a58db6da02f31b9098c8d9afe74dccec1d8ff26a
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-go-govulncheck-real-output/SPEC.md
+  sha256: sha256:a4773a6a8241a474fe9b4b842b8654cd2f66cdb9acc7ddccd5caf7188fa03f1e
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
