@@ -1,16 +1,123 @@
 schema_version: 1
 feature: sca-python-lockfile-audit
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 0cd33133ded8d0775940011e744d20e3af7ff944
 last_input_digest: sha256:ee0bcf26b388b03ec20f1c851c1205b3ec1143dad8d32784467a2d3fb87f9d75
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-04T17:24:00+09:00'
+    questions:
+    - question_id: create-spec.lockfile-audit-invocation
+      status: answered
+    - question_id: create-spec.lockfile-format-scope
+      status: answered
+    - question_id: create-spec.lockfile-unpinnable-entries
+      status: answered
+    - question_id: create-spec.lockfile-direct-manifest-missing
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  create-spec.lockfile-audit-invocation:
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - pinned_no_deps
+    freeform: null
+    normalized_answer: 'pinned_no_deps: lockfile-derived pip jobs run `pip-audit -r <tmp outside project
+      root> --no-deps --disable-pip --format json`; the two flags are added by the script for lockfile
+      jobs only; registry args unchanged; the forbidden-token test is revised for lockfile jobs only.'
+    resolution_note: Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose pinned_no_deps citing
+      scan-dependencies.py:804, vuln-scanners.yaml:61, test_sca_scan_invocation.py:259 and pip-audit requirement.py
+      (no re-resolution with --no-deps --disable-pip). Orchestrator adopted. Opus escalation not run.
+    answered_at: '2026-10-04T17:32:00+09:00'
+  create-spec.lockfile-format-scope:
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - poetry_pipfile_only
+    freeform: null
+    normalized_answer: 'poetry_pipfile_only: convert poetry.lock and Pipfile.lock only; parse failure
+      / missing structure / zero convertible entries -> skipped:true with a fixed skip_reason, never a
+      manifest or directory fallback; uv.lock etc. stay unselected.'
+    resolution_note: Codex turn 1 chose poetry_pipfile_only (scan-dependencies.py:608, :1579). Orchestrator
+      adopted. Opus escalation not run.
+    answered_at: '2026-10-04T17:32:00+09:00'
+  create-spec.lockfile-unpinnable-entries:
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - audit_rest_count_note
+    freeform: null
+    normalized_answer: 'audit_rest_count_note: audit convertible pins; excluded entries are reported as
+      a counts-only fixed summary note; skipped stays false.'
+    resolution_note: Codex turn 1 chose audit_rest_count_note (scan-dependencies.py:1614, :1662). Orchestrator
+      adopted. Opus escalation not run.
+    answered_at: '2026-10-04T17:32:00+09:00'
+  create-spec.lockfile-direct-manifest-missing:
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - explicit_skip_reason
+    freeform: null
+    normalized_answer: 'explicit_skip_reason: missing/unreadable sibling declaration file (pyproject.toml
+      for poetry.lock, Pipfile for Pipfile.lock) -> skipped:true with a fixed skip_reason; Pipfile parsing
+      is added for Pipfile.lock.'
+    resolution_note: Codex turn 1 chose explicit_skip_reason (scan-dependencies.py:1424, :1064, :1415;
+      vuln-scanners.yaml:64). Orchestrator adopted. Opus escalation not run.
+    answered_at: '2026-10-04T17:32:00+09:00'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously: accept the analyst''s recommendation (skip the design step).'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously.
+    answered_at: '2026-10-04T17:32:00+09:00'
+  requirement.pip-target-selection-priority:
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'lockfile_priority_single: when any pip lockfile is among the changed files, select the
+      lockfile (first in the existing deterministic order) over pip manifests; still one pip job per scan.
+      Multiple changed pip projects remain out of scope and are filed as a follow-up task.'
+    normalized_answer: 'lockfile_priority_single: when any pip lockfile is among the changed files, select
+      the lockfile (first in the existing deterministic order) over pip manifests; still one pip job per
+      scan. Multiple changed pip projects remain out of scope and are filed as a follow-up task.'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements (scan-dependencies.py:714).
+      Options: lockfile_priority_single / audit_all_lockfiles. Codex turn 2 chose lockfile_priority_single
+      (scan-dependencies.py:714, :1648). Orchestrator adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T17:32:00+09:00'
+  requirement.duplicate-name-distinct-pins:
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'dedupe_and_split: write identical name==version once; when one package name has several
+      distinct pinned versions in the selected lockfile, split them across multiple temp requirement files
+      / pip-audit invocations so every distinct pin is audited, and merge the findings.'
+    normalized_answer: 'dedupe_and_split: write identical name==version once; when one package name has
+      several distinct pinned versions in the selected lockfile, split them across multiple temp requirement
+      files / pip-audit invocations so every distinct pin is audited, and merge the findings.'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements (pip-audit
+      requirement.py rejects conflicting duplicate pins in one file). Options: dedupe_and_split / dedupe_and_count
+      / dedupe_and_skip. Codex turn 2 chose dedupe_and_split (pip-audit requirement.py L339-350; scan-dependencies.py:1520,
+      :1672). Orchestrator adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T17:32:00+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:ee0bcf26b388b03ec20f1c851c1205b3ec1143dad8d32784467a2d3fb87f9d75
   output_digest: null
 artifacts: []
