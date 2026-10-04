@@ -1,0 +1,24 @@
+schema_version: 1
+feature: sca-scanner-project-config-isolation
+records:
+- question_id: create-plan.open-items-consult
+  packet_id: null
+  answered_at: '2026-10-04T22:58:00+09:00'
+  source: codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 計画どおり進める（SPEC は変更しない）
+  normalized_answer: keep plan as written; no SPEC change
+  resolution_note: 'gate: none (orchestrator consultation on planner open items, per
+    launch instruction); codex_consulted: true; opus_escalation: false. Item1 (config
+    planted in an ancestor of the system temp dir by another local account): Codex
+    found npm reads only the isolation-dir .npmrc (prefix = dir with copied package.json,
+    --workspaces=false) and cargo-audit reads only cwd .cargo/audit.toml then Cargo
+    home, no ancestor walk; recommended no runtime ancestor check and no extra trust
+    assumption, plus narrowing the SPEC AC1/AC3/FR12 ancestor-absence wording. Adopted:
+    no runtime ancestor check (already the plan); SPEC wording left as is because
+    the test-side ancestor assertion is satisfiable under a test-controlled temp dir.
+    Item2 (removal of the isolation dir itself fails): Codex recommended keeping the
+    scan result and emitting a pathless fixed warning token in the summary, which
+    needs a FR8/AC8 SPEC change. Adopted: planner choice (result unchanged, no path)
+    to avoid reopening create-spec; the warning is carried as a follow-up task.'
