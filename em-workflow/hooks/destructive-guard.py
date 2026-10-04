@@ -558,6 +558,58 @@ def _blank_comments(text):
     return "".join(out)
 
 
+def _blank_ansi_c(text):
+    """TEXT with the body of every unquoted `$'...'` that holds a backslash
+    replaced by `_`, length and positions unchanged, `$'` and the closing `'`
+    kept. Python's shlex reads `$'a\\'b'` as plain single quotes (the `\\'`
+    closes the span), so its quote boundaries drift from bash's and a
+    following `;` or newline can be swallowed or exposed wrongly. Escapes
+    follow _OperatorContext: inside `$'...'` a backslash escapes the next
+    character. A body without a backslash is read identically by both, so it
+    is left untouched. An unterminated `$'` is left as is."""
+    out = list(text)
+    n = len(text)
+    q = None
+    i = 0
+    while i < n:
+        c = text[i]
+        if q:
+            if c == q:
+                q = None
+            elif c == "\\" and q == '"' and i + 1 < n:
+                i += 1
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            i += 2
+            continue
+        if c == "$" and text.startswith("'", i + 1):
+            j = i + 2
+            has_backslash = False
+            closed = False
+            while j < n:
+                if text[j] == "\\":
+                    has_backslash = True
+                    j += 2
+                    continue
+                if text[j] == "'":
+                    closed = True
+                    break
+                j += 1
+            if closed:
+                if has_backslash:
+                    for k in range(i + 2, j):
+                        out[k] = "_"
+                i = j + 1
+                continue
+            i += 2
+            continue
+        if c in ("'", '"'):
+            q = c
+        i += 1
+    return "".join(out)
+
+
 def lex_segments(chunk):
     """Split a chunk into statements, each returned as (tokens, lexed, sep).
 
@@ -654,8 +706,8 @@ def _lex_layout(chunk, track):
     not count as a separator can never be counted as one by a second
     rule."""
     try:
-        text = _blank_comments(chunk)
-        lex = _TrackingLexer(text, posix=True, punctuation_chars=PUNCTUATION)
+        text = _blank_ansi_c(_blank_comments(chunk))
+        lex =_TrackingLexer(text, posix=True, punctuation_chars=PUNCTUATION)
         lex.whitespace = " \t\r"
         lex.whitespace_split = True
         lex.commenters = ""
@@ -1010,7 +1062,7 @@ def _delimiter_line_word(line):
 # state (single quotes are searched for their closing `'` directly). Anything
 # else is plain text and skipped in bulk, so a long line costs a handful of
 # regex searches rather than a Python-level step per character.
-_CONTEXT_SPECIAL_UNQUOTED = re.compile(r"[\\'\"$`()#<]")
+_CONTEXT_SPECIAL_UNQUOTED = re.compile(r"[\\'\"$`()#<}\]]")
 _CONTEXT_SPECIAL_DOUBLE = re.compile(r"[\\\"$`]")
 _CONTEXT_SPECIAL_ANSI = re.compile(r"[\\']")
 
@@ -1111,8 +1163,20 @@ class _OperatorContext:
                 i += 2
                 continue
             if c == "$":
-                if line.startswith("(", i + 1):
+                if line.startswith("((", i + 1):
+                    # `$((...))` arithmetic: a `<<` inside is a shift.
+                    stack.append(["arith", None, 2])
+                    i += 3
+                elif line.startswith("(", i + 1):
                     stack.append(["sub", None])
+                    i += 2
+                elif line.startswith("{", i + 1):
+                    # `${...}`: a `<<` inside is part of the word.
+                    stack.append(["param", None])
+                    i += 2
+                elif line.startswith("[", i + 1):
+                    # `$[...]` legacy arithmetic.
+                    stack.append(["bracket", None])
                     i += 2
                 elif quote is None and line.startswith("'", i + 1):
                     frame[1] = "$'"
@@ -1140,10 +1204,38 @@ class _OperatorContext:
             elif c == "'" or c == '"':
                 frame[1] = c
             elif c == "(":
-                stack.append(["group", None])
+                if frame[0] == "arith":
+                    frame[2] += 1
+                elif line.startswith("((", i) and (
+                    not line[:i].rstrip(" \t") or line[:i].rstrip(" \t")[-1] in ";&|("
+                ):
+                    # `((expr))` at command position: arithmetic command.
+                    stack.append(["arith", None, 2])
+                    i += 2
+                    continue
+                else:
+                    stack.append(["group", None])
             elif c == ")":
-                if frame[0] in ("sub", "group"):
+                if frame[0] == "arith":
+                    frame[2] -= 1
+                    if frame[2] <= 0:
+                        stack.pop()
+                elif frame[0] in ("sub", "group"):
                     stack.pop()
+            elif c == "}":
+                if frame[0] == "param":
+                    stack.pop()
+            elif c == "]":
+                if frame[0] == "bracket":
+                    stack.pop()
+            elif c == "<" and frame[0] in ("param", "arith", "bracket"):
+                if line.startswith("<<", i):
+                    i += 2
+                    continue
+            elif c == "<" and line.startswith("<<<", i):
+                # here-string: takes no body, skip all three characters
+                i += 3
+                continue
             elif c == "<" and line.startswith("<<", i):
                 op = HEREDOC_OP.match(line, i)
                 if op:
