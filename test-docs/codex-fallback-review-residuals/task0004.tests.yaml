@@ -1,0 +1,85 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests: Ran 6690 tests, OK; python3 em-workflow/scripts/check-plugin-invariants.py .: 7/7 PASS (both before any edit)
+final_failures: []             # re-executed after implementation: python3 -m unittest discover -s tests: Ran 6699 tests, OK (+9 new methods); python3 em-workflow/scripts/check-plugin-invariants.py .: 7/7 PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestLitellmModelPassesThroughVerbatim.test_litellm_model_is_one_launch_with_the_model_passed_verbatim
+    red_confirmed: false
+    red_reason: >-
+      The wrapper already turns `--litellm MODEL` into one launch with exit
+      0, so the case is green as soon as its helpers exist; no red state
+      occurred for this behavior. Run before the helper
+      `_assert_consecutive_subsequence` was defined, the case errored with
+      "NameError: name '_assert_consecutive_subsequence' is not defined",
+      which fails for a missing helper and not for the criterion, so it is
+      not recorded as a red. Supplementary observation, outside the
+      recorded red: against throw-away copies of the wrapper whose
+      `--litellm` branch was mutated (model lower-cased, model replaced by
+      a hard-coded name, model dropped), the same case failed with
+      "does not occur as consecutive elements of argv"; the production
+      wrapper was never edited. The launch-count half reuses the existing
+      `_assert_exactly_one_launch` matcher, whose own non-vacuity proof is
+      TestNonVacuousLaunchCountMatcher.
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestLitellmModelPassesThroughVerbatim.test_litellm_model_is_one_launch_with_the_model_passed_verbatim
+    red_confirmed: false
+    red_reason: >-
+      The wrapper already emits `-p litellm -m MODEL` with MODEL unchanged;
+      no red state occurred for this behavior (same case as AC-1; the
+      adjacency assertion is its last line). The proof that this assertion
+      can fail is AC-4's forged-argv tests, which call the same
+      `_assert_consecutive_subsequence`, plus the supplementary mutation
+      observation described under AC-1. The existing
+      tests.test_consultation_harness_chain.TestWrapperLitellmFlag.test_model_value_passes_through_verbatim
+      checks the `-m` value only and tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_accepted_flag_set_on_the_launch_is_unchanged
+      checks flag membership only and never passes `--litellm`; neither
+      checks adjacency.
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestLitellmModelPassesThroughVerbatim.test_model_value_is_absent_from_the_wrapper_and_the_reviewers_registry
+    red_confirmed: false
+    red_reason: >-
+      MODEL is chosen so that it occurs in neither file, so the check is
+      green on arrival and no red state occurred. Run before the
+      `REVIEWERS_REGISTRY_PATH` constant existed it errored with
+      "NameError: name 'REVIEWERS_REGISTRY_PATH' is not defined", which is a
+      missing constant and not a failure of the criterion, so it is not
+      recorded as a red. The test refuses an empty file (the absence check
+      would otherwise be vacuous) and runs one subTest per file.
+  AC-4:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousConsecutiveSubsequenceMatcher.test_matcher_accepts_a_well_formed_forged_argv
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousConsecutiveSubsequenceMatcher.test_matcher_rejects_a_forged_argv_with_the_model_value_replaced
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousConsecutiveSubsequenceMatcher.test_matcher_rejects_a_forged_argv_with_the_model_value_dropped
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousConsecutiveSubsequenceMatcher.test_matcher_rejects_a_forged_argv_with_the_model_flag_and_value_dropped
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousConsecutiveSubsequenceMatcher.test_matcher_rejects_a_forged_argv_carrying_the_elements_only_scattered
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousConsecutiveSubsequenceMatcher.test_matcher_rejects_a_forged_argv_with_the_four_elements_out_of_order
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousConsecutiveSubsequenceMatcher.test_matcher_refuses_an_empty_expected_sequence
+    red_confirmed: true
+    red_reason: >-
+      Observed before the matcher existed: all seven tests errored with
+      "NameError: name '_assert_consecutive_subsequence' is not defined"
+      (the matcher is the code under test for this criterion). After it was
+      added all seven passed. The accept test and the reject tests run the
+      same function the real case calls.
+  AC-5:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestSupersededModuleRemoved.test_provider_fallback_test_module_no_longer_exists
+      - tests.test_codex_wrapper_single_invocation.TestHermeticAndStdlibOnly.test_module_imports_are_all_stdlib
+      - tests.test_codex_wrapper_single_invocation.TestUsageLimitNoLongerSwitches
+      - tests.test_codex_wrapper_single_invocation.TestNoFallbackMarkerSurvives
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged
+      - tests.test_consultation_harness_chain
+    red_confirmed: false
+    red_reason: >-
+      A preservation criterion: the wrapper and the pre-existing cases are
+      not edited, so nothing could go red. A dedicated new module is out of
+      scope; the existing modules above detect the behaviors this
+      criterion keeps (the wrapper's single launch and argument surface,
+      the absence of tests/test_codex_wrapper_provider_fallback.py, the
+      standard-library-only import guard); no red state occurred for this
+      change. `git diff` shows only tests/test_codex_wrapper_single_invocation.py
+      modified (additions only), and both project test commands pass in
+      full.
