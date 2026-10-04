@@ -99,7 +99,7 @@ workflow:
   base_commit: 2b8bb74ff472f600e066f33b1c81562bdebe2e0f
   completed_at_commit: 10b9ece6c16571dba3635b5a1f0c57f6975e2b3a
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -144,7 +144,16 @@ tasks:
     branch: em-workflow/sca-go-govulncheck-real-output/task0001
     notes: null
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
