@@ -850,6 +850,7 @@ class TestUnconvertibleLockfiles(LockfileScanCase):
         write_json_stub(self.bin_dir, "npm", npm_payload, exit_code=1)
         self.install_pip_audit()
         self.write("package.json", "{}\n")
+        self.write("package-lock.json", "{}\n")  # the npm project's anchor (binding)
         self.write("Cargo.toml", "[dependencies]\n")
         self.write("poetry.lock", b"package = [")
         self.write("pyproject.toml", PYPROJECT_DJANGO)
@@ -870,6 +871,7 @@ class TestUnconvertibleLockfiles(LockfileScanCase):
         self.install_pip_audit()
         write_json_stub(self.bin_dir, "npm", {"vulnerabilities": {}}, exit_code=0)
         self.write("package.json", "{}\n")
+        self.write("package-lock.json", "{}\n")  # the npm project's anchor (binding)
         self.write("poetry.lock", poetry_lock_text([{"name": "django", "version": "3.2.0"}]))
         result = self.scan(["package.json", "poetry.lock"])
         # no sibling pyproject.toml -> pip_direct_manifest_not_found
@@ -1555,6 +1557,7 @@ class TestDependenciesAndModuleLoading(LockfileScanCase):
             module = _load_script("scan_dependencies_without_tomllib_npm")
         write_json_stub(self.bin_dir, "npm", {"vulnerabilities": {}}, exit_code=0)
         self.write("package.json", "{}\n")
+        self.write("package-lock.json", "{}\n")  # the npm project's anchor (binding)
         result = self.scan(["package.json"], module=module)
         self.assertFalse(result["skipped"], result)
 

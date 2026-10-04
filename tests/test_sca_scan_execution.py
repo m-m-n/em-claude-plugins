@@ -178,6 +178,25 @@ CARGO_SUCCESS_FIXTURE = {
 }
 
 
+# sca-per-project-scan-binding (FR14): an npm / cargo / go project is launched
+# only when its directory holds the manifest AND the ecosystem's anchor
+# lockfile (go: go.mod alone). The end-to-end cases below that must reach their
+# stub create those files, so the scan still runs the original launch path
+# instead of reporting `<ecosystem>_project_unbindable`.
+_PROJECT_FILE_TEXT = {"Cargo.toml": "[dependencies]\n"}
+
+
+def _write_project_files(project_root, *names):
+    for name in names:
+        path = Path(project_root) / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_PROJECT_FILE_TEXT.get(name, "{}\n"), encoding="utf-8")
+
+
+NPM_PROJECT_FILES = ("package.json", "package-lock.json")
+CARGO_PROJECT_FILES = ("Cargo.toml", "Cargo.lock")
+
+
 def _run_scan_with_path(bin_dir, project_root, changed_files, registry_path=None):
     with mock.patch.dict(os.environ, {"PATH": str(bin_dir)}, clear=False):
         return SCAN.run_scan(
@@ -208,9 +227,11 @@ class TestEmptyStdoutIsNotCompleted(unittest.TestCase):
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", "", exit_code=0)
+            _write_project_files(project_root, *NPM_PROJECT_FILES)
             result = _run_scan_with_path(bin_dir, project_root, ["package.json"])
         self.assertTrue(result["skipped"])
         self.assertIsInstance(result["skip_reason"], str)
+        self.assertEqual(result["skip_reason"], "npm_empty_output")  # the stub was reached
         self.assertEqual(result["findings"], [])
         self.assertEqual(result["source"], "tool")
 
@@ -251,10 +272,12 @@ class TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons(unittest.TestCase):
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", json.dumps(NPM_ERROR_ENVELOPE), exit_code=1)
+            _write_project_files(project_root, *NPM_PROJECT_FILES)
             result = _run_scan_with_path(bin_dir, project_root, ["package.json"])
         self.assertTrue(result["skipped"])
         self.assertEqual(result["findings"], [])
         self.assertIn("npm", result["skip_reason"])
+        self.assertEqual(result["skip_reason"], "npm_error_envelope")  # the stub was reached
 
     def test_undocumented_exit_end_to_end_via_run_scan(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -263,9 +286,11 @@ class TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons(unittest.TestCase):
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", json.dumps(NPM_SUCCESS_FIXTURE), exit_code=2)
+            _write_project_files(project_root, *NPM_PROJECT_FILES)
             result = _run_scan_with_path(bin_dir, project_root, ["package.json"])
         self.assertTrue(result["skipped"])
         self.assertEqual(result["findings"], [])
+        self.assertEqual(result["skip_reason"], "npm_undocumented_exit_status")  # the stub was reached
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +312,7 @@ class TestDocumentedAdvisoryFoundExitIsCompleted(unittest.TestCase):
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", json.dumps(NPM_SUCCESS_FIXTURE), exit_code=1)
+            _write_project_files(project_root, *NPM_PROJECT_FILES)
             result = _run_scan_with_path(bin_dir, project_root, ["package.json"])
         self.assertFalse(result["skipped"])
         self.assertIsNone(result["skip_reason"])
@@ -311,11 +337,13 @@ class TestPartialCoverageAcrossTwoEcosystems(unittest.TestCase):
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", json.dumps(NPM_SUCCESS_FIXTURE), exit_code=0)
+            _write_project_files(project_root, *NPM_PROJECT_FILES, *CARGO_PROJECT_FILES)
             # cargo is never placed on PATH -> tool_not_found for cargo.
             result = _run_scan_with_path(bin_dir, project_root, ["package.json", "Cargo.toml"])
         assert_conforms_to_schema(self, result, self.schema)
         self.assertTrue(result["skipped"])
         self.assertIn("cargo", result["skip_reason"])
+        self.assertEqual(result["skip_reason"], "cargo_tool_not_found")
         self.assertEqual(len(result["findings"]), 1)
         self.assertTrue(result["findings"][0]["title"].startswith("lodash"))
 
@@ -330,6 +358,7 @@ class TestPartialCoverageAcrossTwoEcosystems(unittest.TestCase):
             # executable, not the cargo front end -- see vuln-scanners.yaml
             # and scan-dependencies.py's ALLOWED_EXECUTABLES.
             _write_stub(bin_dir, "cargo-audit", json.dumps(CARGO_SUCCESS_FIXTURE), exit_code=0)
+            _write_project_files(project_root, *NPM_PROJECT_FILES, *CARGO_PROJECT_FILES)
             result = _run_scan_with_path(bin_dir, project_root, ["package.json", "Cargo.toml"])
         assert_conforms_to_schema(self, result, self.schema)
         self.assertFalse(result["skipped"])
@@ -389,8 +418,10 @@ class TestCombinedSkipReasonIsDeterministic(unittest.TestCase):
         bin_dir = Path(tmp) / "bin"
         bin_dir.mkdir(exist_ok=True)
         # Only npm resolves on PATH -- cargo and pip-audit both contribute
-        # a not_completed (tool_not_found) reason.
+        # a not_completed reason (the registry's `executable: cargo` fails
+        # validation; pip-audit is not found).
         _write_stub(bin_dir, "npm", json.dumps(NPM_SUCCESS_FIXTURE), exit_code=0)
+        _write_project_files(project_root, *NPM_PROJECT_FILES)
         with mock.patch.dict(os.environ, {"PATH": str(bin_dir)}, clear=False):
             return SCAN.run_scan(
                 project_root,
