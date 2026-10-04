@@ -152,6 +152,7 @@ tasks:
     - em-workflow/agents/codex-reviewer.md
     - em-review/agents/codex-reviewer.md
     - tests/test_codex_reviewer_interactive_guidance.py
+    - tests/test_reviewer_roles_protocol.py
     skills: []
     domains:
     - config-infra
@@ -159,7 +160,7 @@ tasks:
     requirements:
     - FR13
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-interactive-guard-hook/task0003
 review:
