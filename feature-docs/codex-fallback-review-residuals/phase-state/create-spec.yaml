@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: eec404e1a167d7bdbd9b436cd84e813c679b31b5
-last_input_digest: sha256:c56bd85c9014a66803942e423e9b1b7d595aa73fb40b5582518b3d53b3e5ffcf
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:7615e1dfde2a5c3f23b798d84cc1f6a91954a47f5357daf1db7dea3304b13e49
+active_request_id: create-spec-run-0003
 packets: {}
 answers:
   requirement.opus-escalation-vehicle:
@@ -117,8 +117,12 @@ worker_runs:
   input_digest: sha256:60d283a536c2a71308c21dcbd7e005a99725b3bd765c9e8e22578ba18bccd349
   output_digest: sha256:8889cc460028b09bf6d0faefbd78b04fef38074fa8e1d82ca4e53187ca28bcfa
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:c56bd85c9014a66803942e423e9b1b7d595aa73fb40b5582518b3d53b3e5ffcf
+  output_digest: sha256:2d431ea6f2428b44590c309fa866397a3025c94b137c1ad16fcb76a53ff6254e
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:7615e1dfde2a5c3f23b798d84cc1f6a91954a47f5357daf1db7dea3304b13e49
   output_digest: null
 artifacts: []
 patches: []
