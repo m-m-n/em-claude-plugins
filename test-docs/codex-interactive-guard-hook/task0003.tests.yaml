@@ -1,0 +1,75 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_reviewer_interactive_guidance.TestEmWorkflowCodexReviewerInteractiveGuidance.test_grounding_rules_forbid_interactive_mode_launch
+      - tests.test_codex_reviewer_interactive_guidance.TestEmWorkflowCodexReviewerInteractiveGuidance.test_grounding_rules_name_python3_dash_c_as_the_way_to_check
+      - tests.test_codex_reviewer_interactive_guidance.TestEmWorkflowCodexReviewerInteractiveGuidance.test_grounding_rules_name_all_three_alternatives
+      - tests.test_codex_reviewer_interactive_guidance.TestEmWorkflowCodexReviewerInteractiveGuidance.test_grounding_rules_give_interactive_launch_examples
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -B -m unittest tests.test_codex_reviewer_interactive_guidance`
+      before editing either agent file. All four checks failed for
+      em-workflow with `AssertionError: grounding rules do not forbid
+      launching an interpreter or shell in interactive mode`, `grounding rules
+      do not name `python3 -c``, `grounding rules do not name alternative(s)
+      ['python3 -c', 'script file', 'python3 - <<eof']` and `grounding rules
+      do not give interactive launch example(s) ['python3 -i', 'bash -i']`,
+      because the Step 4 grounding-rules bullet had no such rule. They went
+      green after the rule was added.
+  AC-2:
+    tests:
+      - tests.test_codex_reviewer_interactive_guidance.TestEmReviewCodexReviewerInteractiveGuidance.test_grounding_rules_forbid_interactive_mode_launch
+      - tests.test_codex_reviewer_interactive_guidance.TestEmReviewCodexReviewerInteractiveGuidance.test_grounding_rules_name_python3_dash_c_as_the_way_to_check
+      - tests.test_codex_reviewer_interactive_guidance.TestEmReviewCodexReviewerInteractiveGuidance.test_grounding_rules_name_all_three_alternatives
+      - tests.test_codex_reviewer_interactive_guidance.TestEmReviewCodexReviewerInteractiveGuidance.test_grounding_rules_give_interactive_launch_examples
+    red_confirmed: true
+    red_reason: >-
+      Same pre-implementation run as AC-1: the four em-review checks failed
+      with the same four AssertionError messages (no interactive-mode
+      prohibition, no `python3 -c`, alternatives and examples missing in the
+      Step 4 grounding-rules bullet of em-review/agents/codex-reviewer.md),
+      then went green after the rule was added.
+  AC-3:
+    tests:
+      - tests.test_codex_reviewer_temp_file_isolation.TestWrapperInvocationUnchanged.test_wrapper_invocation_line_is_unchanged_in_both_files
+      - tests.test_codex_wrapper_timeout_alignment.TestBashToolTimeoutDeclaredAtEachInvocationSite.test_em_workflow_step5_declares_600000ms
+      - tests.test_codex_wrapper_timeout_alignment.TestBashToolTimeoutDeclaredAtEachInvocationSite.test_em_review_step5_declares_600000ms
+      - tests.test_codex_wrapper_timeout_alignment.TestFencedInvocationLinesUnchanged.test_em_workflow_invocation_line_present
+      - tests.test_codex_wrapper_timeout_alignment.TestFencedInvocationLinesUnchanged.test_em_review_invocation_line_present
+      - tests.test_threat_model_reviewer_inputs.TestCodexGroundingRulesTreatThreatModelAsUntrusted.test_states_untrusted_no_suppression_missing_mitigation_finding
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_steps_including_scratchpad_discipline_section_verbatim
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests listed
+      detect changes to the Step 5 launch line, the 600000 millisecond
+      timeout declaration and the Step 4 grounding-rules content; no red
+      state occurred for this change, because the criterion states an
+      invariant that held before the implementation. Headings (text, level,
+      order), the Step 5 launch line and the timeout text were additionally
+      compared against `git show HEAD:<file>` for both agent files with an
+      ad hoc script (not committed): all three identical. One of the listed
+      tests, test_reviewer_roles_protocol...test_steps_including_scratchpad_discipline_section_verbatim,
+      pins the sha256 of the whole of Steps 0-6 of
+      em-workflow/agents/codex-reviewer.md, so it went red AFTER the Step 4
+      edit (an unavoidable consequence of AC-1, not an observation made
+      before implementation) and its pinned digest was refreshed per that
+      module's own DIGEST_SOURCE_DOCUMENTS_RULE; recorded as a deviation.
+  AC-4:
+    tests:
+      - tests.test_codex_reviewer_interactive_guidance.TestEmWorkflowCodexReviewerInteractiveGuidance
+      - tests.test_codex_reviewer_interactive_guidance.TestEmReviewCodexReviewerInteractiveGuidance
+      - tests.test_codex_reviewer_interactive_guidance.TestCheckersRejectForgedDocuments
+    red_confirmed: true
+    red_reason: >-
+      The new module checks AC-1 and AC-2 (above): before the implementation
+      `python3 -B -m unittest tests.test_codex_reviewer_interactive_guidance`
+      reported FAILED (failures=8) of 19 tests. The remaining 11 (the
+      forged-document non-vacuity checks and the check that the existing
+      untrusted-data rule stays in the same bullet) passed before the
+      implementation by design. The second half of the criterion (full suite
+      and check-plugin-invariants.py pass) is a post-implementation outcome:
+      after the final change `python3 -m unittest discover -s tests` ran 7282
+      tests OK and check-plugin-invariants.py printed seven PASS lines.
