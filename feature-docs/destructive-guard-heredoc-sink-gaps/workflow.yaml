@@ -109,7 +109,8 @@ workflow:
     TS-18: base..HEAD の変更は対象 3 ファイルのみ、標準ライブラリ外 import・ファイルアクセス・評価の追加なし。
     TS-21: (a) TS-19 の 5 件すべて FAIL、(b) TS-20 の融合 4 形すべて allow 以外、未改変版は全 PASS。
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 0fd63a014937699fe62e6cb5bdf3321738e02986
 tasks:
   task0001:
     title: Linear single-quoted $( matching and per-case runner time limit
