@@ -1,0 +1,12 @@
+schema_version: 1
+feature: sca-go-govulncheck-real-output
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-10-04T23:09:25+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "deviation not auto-added: .gitleaksignore"
+    normalized_answer: "deviation not auto-added: .gitleaksignore"
+    resolution_note: "task_id: task0001; path: .gitleaksignore (new, repo root, 63 gitleaks fingerprints for public go.googlesource.com fix URLs inside tests/sca_govulncheck_capture.txt); declined: the identifier part is missing (no AC-n of task0001's plan or registered requirement id is named) and the failure is stated as a pre-commit hook block rather than a named test that cannot be written or pass; the path stays an ordinary deviation for the review phase's containment check"
