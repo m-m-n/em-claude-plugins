@@ -730,7 +730,11 @@ def manifest_file_for(ecosystem, changed_files):
     Pipfile.lock) the target is the FIRST such lockfile in `changed_files`
     order, even when a pyproject.toml / requirements.txt appears earlier.
     Without a pip lockfile the target is what it always was. npm, cargo and
-    go keep their manifest-first order."""
+    go keep their manifest-first order.
+
+    The selection rule is unchanged by per-project binding: `run_scan` calls
+    this once per (ecosystem, project directory) group, with ONLY that
+    group's changed files, in their original input order (FR2)."""
     manifests = set(ecosystem.get("manifests") or [])
     lockfiles = ECOSYSTEM_LOCKFILES.get(ecosystem.get("ecosystem", "unknown"), set())
     if ecosystem.get("ecosystem") == "pip":
@@ -848,6 +852,35 @@ def _pip_target(manifest_file):
     return False, (dirname if dirname else ".")
 
 
+# npm, cargo and go run INSIDE the project directory their job target names
+# (sca-per-project-scan-binding FR3); pip keeps the project root (FR10).
+PROJECT_BOUND_ECOSYSTEMS = frozenset({"npm", "cargo", "go"})
+
+
+def _bound_job_directory_parts(name, manifest_file):
+    """The directory segments of an npm / cargo / go job target, in order,
+    with empty and `.` segments dropped (an empty list for a root target).
+    Purely lexical: no file is opened and no path is resolved on disk.
+
+    Raises JobConstructionError for a target that is not a string, is
+    absolute, has a `..` segment or contains NUL -- such a target can never
+    be bound to a directory inside the project root (TM-1), so no job is
+    produced for it. The message never carries the target text."""
+    if not isinstance(manifest_file, str) or "\x00" in manifest_file:
+        raise JobConstructionError(
+            f"{name} job target is not a plain project-relative path"
+        )
+    normalized = manifest_file.replace(os.sep, "/")
+    if os.altsep:
+        normalized = normalized.replace(os.altsep, "/")
+    if os.path.isabs(manifest_file) or normalized.startswith("/"):
+        raise JobConstructionError(f"{name} job target must not be absolute")
+    segments = normalized.split("/")
+    if ".." in segments:
+        raise JobConstructionError(f"{name} job target must not contain a '..' segment")
+    return [segment for segment in segments[:-1] if segment not in ("", ".")]
+
+
 def build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ=None,
                    prepared_file=None):
     """Builds ONE scan job from `ecosystem`'s ALREADY-RESOLVED absolute
@@ -856,10 +889,18 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
     full argument vector (`argv[0]` is the absolute, allowlisted executable
     path -- never a package-manager front end resolving a subcommand
     through the reviewed project's own configuration); the working
-    directory (the reviewed project's own root -- still the thing being
-    audited, NFR2's read-only discipline unchanged); and the explicit
-    child environment (build_child_env). Launches nothing -- every claim
-    about the resulting command is assertable without running a scanner.
+    directory; and the explicit child environment (build_child_env).
+    Launches nothing -- every claim about the resulting command is
+    assertable without running a scanner.
+
+    Working directory (FR3): npm, cargo and go run in the project root
+    joined LEXICALLY with the target's directory part -- exactly the string
+    form of `project_root` when that part is empty (a root target) -- so a
+    scanner started for `services/api/package.json` audits that project's
+    own dependency set. pip keeps the project root for every target form
+    (FR10). An npm / cargo / go target that is absolute, has a `..` segment
+    or contains NUL is rejected with JobConstructionError (TM-1): the caller
+    passes a verified project-relative target.
 
     Pure (NFR2): it reads and writes no file, so `prepared_file` need not
     exist. For a pip lockfile `manifest_file` (poetry.lock / Pipfile.lock)
@@ -873,6 +914,11 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
     `prepared_file` and keeps its previous argument vector, with neither
     `--no-deps` nor `--disable-pip`."""
     name = ecosystem.get("ecosystem", "unknown")
+    cwd = str(project_root)
+    if name in PROJECT_BOUND_ECOSYSTEMS:
+        directory_parts = _bound_job_directory_parts(name, manifest_file)
+        if directory_parts:
+            cwd = os.path.join(cwd, *directory_parts)
     argv = [executable_path]
     if name == "pip":
         if os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
@@ -894,7 +940,7 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
         "ecosystem": name,
         "manifest": manifest_file,
         "argv": argv,
-        "cwd": str(project_root),
+        "cwd": cwd,
         "env": build_child_env(ecosystem, environ),
     }
 
@@ -1103,7 +1149,8 @@ def judge_scan_outcome(name, exit_code, stdout):
 def run_ecosystem_command(job):
     """Runs `job`'s constructed argument vector (task0008's "Scan job"
     contract: `argv[0]` the absolute allowlisted executable, `cwd` the
-    reviewed project's own root, `env` the explicit child environment --
+    project directory the job is bound to (the project root for pip),
+    `env` the explicit child environment --
     never the calling process's environment inherited wholesale), reading
     only -- nothing here writes inside the project root (NFR2). Returns
     `(outcome, payload)`: `payload` is the parsed data dict when `outcome`
@@ -2077,30 +2124,265 @@ def _scan_pip_lockfile(ecosystem, lockfile, project_root, executable_path):
     return audit
 
 
+# ---------------------------------------------------------------------------
+# Per-project grouping and binding (sca-per-project-scan-binding). One scan
+# unit per (ecosystem, project directory): the changed files of an ecosystem
+# are grouped by the REAL directory that holds them, and an npm / cargo / go
+# group is launched only inside a directory that passes the binding check.
+# Everything here reads path metadata only -- it never writes, never
+# launches, and never falls back to the project root or an ancestor
+# directory. An exception raised while resolving or inspecting a reviewed
+# path is contained and turned into that ecosystem's path-free reason
+# (`<ecosystem>_project_unbindable`); it never escapes `scan`.
+# ---------------------------------------------------------------------------
+
+# Per ecosystem: the anchor lockfile names in preference order (npm: an
+# npm-shrinkwrap.json entry, when present, wins and never falls back to
+# package-lock.json) and the manifest the project must hold beside it.
+# yarn.lock and pnpm-lock.yaml still SELECT npm but never serve as an anchor.
+_BINDING_ANCHORS = {
+    "npm": ("npm-shrinkwrap.json", "package-lock.json"),
+    "cargo": ("Cargo.lock",),
+    "go": ("go.mod",),
+}
+_BINDING_MANIFESTS = {"npm": "package.json", "cargo": "Cargo.toml", "go": "go.mod"}
+
+
+def _verified_real_root(project_root):
+    """The real path of the project root, or None when it cannot be
+    resolved (every verification then fails)."""
+    try:
+        return os.path.realpath(str(project_root))
+    except Exception:
+        return None
+
+
+def _verified_inside(real_root, real_path):
+    """True when `real_path` equals `real_root` or lies under it (both
+    already real paths)."""
+    prefix = real_root.rstrip(os.sep) + os.sep
+    return real_path == real_root or real_path.startswith(prefix)
+
+
+def _verified_directory(real_root, changed_file, confine_file):
+    """The group key D of one changed file: its containing directory's real
+    path relative to the real project root, `/`-separated, `""` for the
+    root -- so every spelling of one directory (duplicate segments, `.`, an
+    inside `..`, a symlinked alias) yields the same D. None when the file
+    cannot be verified: it is not a non-empty string, is absolute, contains
+    NUL, resolving it raises, or a real path leaves the project root.
+
+    `confine_file` (npm / cargo / go, FR5) also requires the file's OWN real
+    path to lie inside the root; pip (D3) resolves only the containing
+    directory, because pip keeps its own existing validation and no pip path
+    is ever rejected -- an unverifiable pip path just keeps its raw
+    directory part as its key."""
+    try:
+        if real_root is None or not isinstance(changed_file, str) or not changed_file:
+            return None
+        if "\x00" in changed_file or os.path.isabs(changed_file):
+            return None
+        directory_real = os.path.realpath(
+            os.path.join(real_root, os.path.dirname(changed_file) or ".")
+        )
+        if not _verified_inside(real_root, directory_real):
+            return None
+        if confine_file:
+            file_real = os.path.realpath(os.path.join(real_root, changed_file))
+            if not _verified_inside(real_root, file_real):
+                return None
+        relative = os.path.relpath(directory_real, real_root)
+        if relative == os.curdir:
+            return ""
+        return relative.replace(os.sep, "/")
+    except Exception:
+        return None
+
+
+def _verified_groups(name, ecosystem, changed_files, real_root):
+    """Groups one ecosystem's changed files (basename among its manifests or
+    its lockfiles, input order kept inside each group) by project directory
+    (FR1, FR10). Returns `(groups, rejected)`: `groups` is a list of
+    `(directory, files)` in Group order -- ascending plain-string order of
+    the directory, the root `""` first -- and `rejected` is True when an
+    npm / cargo / go changed file failed verification (it joins no group,
+    A-10). pip never rejects: a file whose directory cannot be verified is
+    grouped under its raw directory part, kept apart from every verified
+    key."""
+    manifests = set(ecosystem.get("manifests") or [])
+    relevant = manifests | ECOSYSTEM_LOCKFILES.get(name, set())
+    pip = name == "pip"
+    grouped = {}
+    rejected = False
+    for changed in changed_files:
+        if os.path.basename(changed) not in relevant:
+            continue
+        directory = _verified_directory(real_root, changed, confine_file=not pip)
+        if directory is not None:
+            key = (directory, 1)
+        elif pip:
+            key = (os.path.dirname(changed), 0)
+        else:
+            rejected = True
+            continue
+        grouped.setdefault(key, []).append(changed)
+    return [(key[0], grouped[key]) for key in sorted(grouped)], rejected
+
+
+def _binding_file_in_directory(project_dir, file_name):
+    """True when `file_name` inside `project_dir` (a real path) resolves to
+    a regular file whose real containing directory is `project_dir` itself:
+    a symlink to another file of the same directory is fine, one resolving
+    into any other directory is not, and neither is a directory, a dangling
+    link or a special file."""
+    real = os.path.realpath(os.path.join(project_dir, file_name))
+    return os.path.dirname(real) == project_dir and os.path.isfile(real)
+
+
+def _binding_check(name, real_root, directory, target_basename):
+    """True when the npm / cargo / go group in `directory` (D) can be bound
+    (FR4, FR5): the real project directory exists, is a directory and lies
+    inside the real project root; its anchor and its required manifest are
+    each a regular file of that very directory; and the selected target
+    (`target_basename`) is one too -- a deleted target is unbindable. Any
+    exception means unbindable. There is no fallback to the root or an
+    ancestor directory."""
+    try:
+        if real_root is None:
+            return False
+        project_dir = (
+            os.path.realpath(os.path.join(real_root, directory)) if directory else real_root
+        )
+        if not _verified_inside(real_root, project_dir) or not os.path.isdir(project_dir):
+            return False
+        anchors = _BINDING_ANCHORS[name]
+        if name == "npm" and os.path.lexists(os.path.join(project_dir, anchors[0])):
+            anchor = anchors[0]  # an invalid shrinkwrap never falls back to package-lock.json
+        else:
+            anchor = anchors[-1]
+        for file_name in (anchor, _BINDING_MANIFESTS[name], target_basename):
+            if not _binding_file_in_directory(project_dir, file_name):
+                return False
+        return True
+    except Exception:
+        return False
+
+
+def _group_audit(reasons=(), findings=(), completed=False):
+    return {"reasons": list(reasons), "findings": list(findings), "completed": completed}
+
+
+def _scan_bound_group(ecosystem, directory, files, project_root, real_root, executable_path):
+    """One npm / cargo / go scan unit: the group of changed `files` in
+    project directory `directory` (D). The target and the findings' `file`
+    label follow the Target convention -- the basename of the file
+    manifest_file_for selects from the group, prefixed by D unless D is the
+    root. A group that fails the binding check launches nothing and reports
+    `<ecosystem>_project_unbindable`; otherwise the job runs in D, and its
+    outcome is judged and normalized as before. Returns `_group_audit`."""
+    name = ecosystem.get("ecosystem", "unknown")
+    selected = manifest_file_for(ecosystem, files)
+    basename = os.path.basename(selected)
+    unbindable = _group_audit(reasons=[f"{name}_project_unbindable"])
+    if not _binding_check(name, real_root, directory, basename):
+        return unbindable
+    target = f"{directory}/{basename}" if directory else basename
+    try:
+        job = build_scan_job(ecosystem, target, project_root, executable_path)
+    except JobConstructionError:
+        return unbindable
+    outcome, payload = run_ecosystem_command(job)
+    if outcome == OUTCOME_NOT_COMPLETED:
+        return _group_audit(reasons=[payload])
+    normalizer = NORMALIZERS.get(name)
+    if normalizer is None:
+        return _group_audit(reasons=[f"{name}_no_normalizer"])
+    if name == "cargo":
+        findings = normalizer(ecosystem, payload, target, project_root)
+    else:
+        findings = normalizer(ecosystem, payload, target)
+    return _group_audit(findings=findings, completed=True)
+
+
+def _scan_pip_group(ecosystem, files, project_root, executable_path):
+    """One pip scan unit (FR10): the group's target is manifest_file_for
+    over the group's raw files, lockfile first. A lockfile target goes
+    through the existing lockfile audit; any other target through the
+    existing job (cwd = the project root) and normalizer. Returns
+    `_group_audit` plus `undetermined` and `excluded` counts."""
+    name = ecosystem.get("ecosystem", "unknown")
+    manifest_file = manifest_file_for(ecosystem, files)
+    if os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
+        audit = _scan_pip_lockfile(ecosystem, manifest_file, project_root, executable_path)
+        result = _group_audit(audit["reasons"], audit["findings"], audit["completed"])
+        result["undetermined"] = audit["undetermined"]
+        result["excluded"] = audit["excluded"]
+        return result
+    result = _group_audit()
+    result["undetermined"] = 0
+    result["excluded"] = 0
+    job = build_scan_job(ecosystem, manifest_file, project_root, executable_path)
+    outcome, payload = run_ecosystem_command(job)
+    if outcome == OUTCOME_NOT_COMPLETED:
+        result["reasons"].append(payload)
+        return result
+    normalizer = NORMALIZERS.get(name)
+    if normalizer is None:
+        result["reasons"].append(f"{name}_no_normalizer")
+        return result
+    # task0008 AC-7: an advisory whose severity cannot be determined from
+    # pip-audit's own output is never silently treated as below threshold.
+    # It is deliberately NOT folded into the reasons -- they drive the whole
+    # object's `skipped` boolean, which run_scan's contract defines as
+    # meaning ONLY "did every selected ecosystem complete"; pip DID complete
+    # here, so this normalization-time ambiguity is surfaced as a counts-only
+    # summary note instead (no advisory-sourced text -- NFR4).
+    pip_findings, pip_skip = normalizer(ecosystem, payload, manifest_file, project_root)
+    result["findings"].extend(pip_findings)
+    if pip_skip:
+        result["undetermined"] += pip_skip["count"]
+    result["completed"] = True
+    return result
+
+
 def run_scan(project_root, changed_files, registry_path):
-    """AC-1..AC-7 (task0001) plus this task's partial-coverage contract:
-    select ecosystems, resolve each on PATH, execute its scan job and judge
-    the ONE outcome that execution yields (`judge_scan_outcome`), normalize
-    completed payloads with a threshold applied at normalization time, and
-    emit exactly one review-output-schema.json-conformant object.
+    """AC-1..AC-7 (task0001) plus this task's partial-coverage contract and
+    sca-per-project-scan-binding: select ecosystems, resolve each on PATH,
+    group each ecosystem's changed files by project directory, execute one
+    scan job per group and judge the ONE outcome that execution yields
+    (`judge_scan_outcome`), normalize completed payloads with a threshold
+    applied at normalization time, and emit exactly one
+    review-output-schema.json-conformant object.
 
     - No manifest in the change: an empty, non-skipped result.
-    - A selected ecosystem's executable is not resolvable on PATH: that
-      ecosystem contributes a `not_completed` reason (no fallback of any
-      kind) -- the same accounting as an execution `not_completed` outcome.
-    - `skipped` is `true` whenever ANY selected ecosystem did not complete
-      (tool absent, validation failure, or an execution outcome of
-      `not_completed`), with `skip_reason` carrying every such reason
-      combined in a deterministic (sorted) order. `findings` still carries
-      everything the COMPLETED ecosystems produced -- a skip about one
-      ecosystem never suppresses another's advisories (task plan Design,
-      "Partial coverage is machine-readable, not prose"). `skipped: false`
-      with `skip_reason: null` therefore means, and only means, that every
-      selected ecosystem completed.
-    - pip, when the change holds a poetry.lock / Pipfile.lock, audits that
+    - A selected ecosystem's validation fails or its executable is not
+      resolvable on PATH: that ecosystem contributes its reason ONCE and
+      nothing below runs for it -- no path verification, no binding check,
+      no launch, no fallback of any kind (FR9).
+    - npm / cargo / go: one scan unit per verified project directory (FR1),
+      launched inside that directory and labelled with its own manifest
+      path (FR2, FR3). A project that cannot be bound -- no anchor
+      lockfile, no required manifest, a path or symlink escaping the
+      project root, a deleted target, an absent directory -- launches
+      nothing and reports `<ecosystem>_project_unbindable`; a changed file
+      that fails path verification joins no group and reports the same
+      reason (FR4, FR5, FR6). Nothing falls back to the root or an ancestor.
+    - pip: grouped per project directory too, each group audited by the
+      existing rules from the project root (FR10).
+    - `skipped` is `true` exactly when ANY unit did not complete (tool
+      absent, validation failure, unbindable project, or an execution
+      outcome of `not_completed`), with `skip_reason` carrying every such
+      reason de-duplicated, sorted and joined with "+" (FR7, FR8) -- fixed
+      tokens only, never path text (NFR3). `findings` still carries
+      everything the COMPLETED groups produced, in processing order -- a
+      skip about one group never suppresses another's advisories (task plan
+      Design, "Partial coverage is machine-readable, not prose").
+      `skipped: false` with `skip_reason: null` therefore means, and only
+      means, that every selected unit completed. The summary names each
+      scanned ecosystem once.
+    - pip, when a group holds a poetry.lock / Pipfile.lock, audits that
       lockfile's own pins (`_scan_pip_lockfile`): its reasons travel the
-      same `skip_reasons` path, and the findings carry the lockfile as
-      `file`.
+      same path, and the findings carry the lockfile as `file`.
     """
     registry = load_registry(registry_path)
     selected = select_ecosystems(registry, changed_files)
@@ -2113,59 +2395,37 @@ def run_scan(project_root, changed_files, registry_path):
         return _empty_result()
 
     all_findings = []
-    skip_reasons = []
-    ran_ecosystems = []
+    skip_reasons = set()
+    ran_ecosystems = set()
     pip_severity_undetermined_total = 0
     pip_unpinnable_total = 0
     for ecosystem in selected:
         name = ecosystem.get("ecosystem", "unknown")
         validation_error = validate_ecosystem_entry(ecosystem)
         if validation_error is not None:
-            skip_reasons.append(validation_error)
+            skip_reasons.add(validation_error)
             continue
         executable_path = resolve_executable(ecosystem.get("executable"))
         if executable_path is None:
-            skip_reasons.append(f"{name}_tool_not_found")
+            skip_reasons.add(f"{name}_tool_not_found")
             continue
-        manifest_file = manifest_file_for(ecosystem, changed_files)
-        if name == "pip" and os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
-            audit = _scan_pip_lockfile(ecosystem, manifest_file, project_root, executable_path)
+        real_root = _verified_real_root(project_root)
+        groups, rejected = _verified_groups(name, ecosystem, changed_files, real_root)
+        if rejected:
+            skip_reasons.add(f"{name}_project_unbindable")
+        for directory, files in groups:
+            if name == "pip":
+                audit = _scan_pip_group(ecosystem, files, project_root, executable_path)
+                pip_severity_undetermined_total += audit["undetermined"]
+                pip_unpinnable_total += audit["excluded"]
+            else:
+                audit = _scan_bound_group(
+                    ecosystem, directory, files, project_root, real_root, executable_path
+                )
             all_findings.extend(audit["findings"])
-            skip_reasons.extend(audit["reasons"])
-            pip_severity_undetermined_total += audit["undetermined"]
-            pip_unpinnable_total += audit["excluded"]
+            skip_reasons.update(audit["reasons"])
             if audit["completed"]:
-                ran_ecosystems.append(name)
-            continue
-        job = build_scan_job(ecosystem, manifest_file, project_root, executable_path)
-        outcome, payload = run_ecosystem_command(job)
-        if outcome == OUTCOME_NOT_COMPLETED:
-            skip_reasons.append(payload)
-            continue
-        data = payload
-        normalizer = NORMALIZERS.get(name)
-        if normalizer is None:
-            skip_reasons.append(f"{name}_no_normalizer")
-            continue
-        if name == "cargo":
-            all_findings.extend(normalizer(ecosystem, data, manifest_file, project_root))
-        elif name == "pip":
-            # task0008 AC-7: an advisory whose severity cannot be
-            # determined from pip-audit's own output is never silently
-            # treated as below threshold. It is deliberately NOT folded
-            # into `skip_reasons` -- that list drives the whole object's
-            # `skipped` boolean, which this function's own contract
-            # (above) defines as meaning ONLY "did every selected
-            # ecosystem complete"; pip DID complete here, so this
-            # normalization-time ambiguity is surfaced as a counts-only
-            # summary note instead (no advisory-sourced text -- NFR4).
-            pip_findings, pip_skip = normalizer(ecosystem, data, manifest_file, project_root)
-            all_findings.extend(pip_findings)
-            if pip_skip:
-                pip_severity_undetermined_total += pip_skip["count"]
-        else:
-            all_findings.extend(normalizer(ecosystem, data, manifest_file))
-        ran_ecosystems.append(name)
+                ran_ecosystems.add(name)
 
     undetermined_note = ""
     if pip_severity_undetermined_total:
@@ -2189,15 +2449,16 @@ def run_scan(project_root, changed_files, registry_path):
     summary_notes = undetermined_note + unpinnable_note
 
     if skip_reasons:
-        combined_reason = "+".join(sorted(skip_reasons))
+        ordered_reasons = sorted(skip_reasons)
+        combined_reason = "+".join(ordered_reasons)
         if ran_ecosystems:
             summary = (
                 f"Scanned {', '.join(sorted(ran_ecosystems))}; "
                 f"{len(all_findings)} finding(s) at or above threshold. "
-                f"Not completed: {', '.join(sorted(skip_reasons))}."
+                f"Not completed: {', '.join(ordered_reasons)}."
             )
         else:
-            summary = "Scan skipped: " + "; ".join(sorted(skip_reasons))
+            summary = "Scan skipped: " + "; ".join(ordered_reasons)
         summary += summary_notes
         return _skip_result(combined_reason, summary, findings=all_findings)
 
