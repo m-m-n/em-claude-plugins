@@ -1,0 +1,238 @@
+schema_version: 1
+feature: sca-go-govulncheck-real-output
+created: '2026-10-04'
+base_branch: main
+goal: |
+  # SCA 軸: Go の経路が合成 fixture でしか検証されておらず、実 govulncheck 出力では findings が 0 件になる
+
+  Notion タスク: https://www.notion.so/3d43509ec8ee812987b2c77da7cfc1e9 (種別: バグ)
+
+  ## 現象
+  `_merge_govulncheck_stream` は severity を `osv['database_specific']['severity']` から読んでいる。これは GitHub Advisory Database の慣習で、govulncheck が唯一出力元とする Go vulnerability database のエントリは `database_specific: {'url': ...}` を持ち、CVSS の severity を公開していない。
+  結果、実際の finding すべてで severity が `None` になり、`_map_severity` が `None` を返し、`_passes_threshold` が `False` を返して、Go の advisory は全件破棄される。それでも `run_scan` は `skipped: false` / `skip_reason: null` を報告する。
+  directness も同様に不健全で、`is_direct = len(trace) == 1` はモジュールレベルの finding に対して `go.mod` の内容と無関係に真になる。
+  テストスイートからは見えない。`GO_FIXTURE` が合成オブジェクトで、最初から `severity: 'high'` と `is_direct: true` を持っているため。
+
+  ## 再現手順
+  1. 実際に脆弱性を持つ Go プロジェクトに対して `govulncheck -json` を実行し、その出力を `scan-dependencies.py` の Go 正規化に流す
+  2. findings が 0 件、`skipped: false`、`skip_reason: null` で返る
+
+  ## 期待する挙動
+  - severity は govulncheck が実際に出力するもの（OSV のトップレベル `severity` 配列の CVSS ベクタを `_cvss_severity_band` に通す）から導出する。または pip の経路と同様に `go_severity_undetermined` のカウントを明示的に出す
+  - severity が確定できないことを「閾値未満」として扱わない
+  - directness は trace の長さではなく `go.mod` の require ブロックに対して解決する
+  - `GO_FIXTURE` を実際の `govulncheck -json` ストリームのキャプチャに差し替える
+
+  ## 完了の定義
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（実 govulncheck 出力のキャプチャを fixture に使う）
+
+  ## 該当箇所
+  `em-workflow/scripts/scan-dependencies.py:1019`（`_merge_govulncheck_stream`）、`GO_FIXTURE`
+
+  ## 実害・発生条件
+  Go プロジェクトに対する SCA 軸が常に「脆弱性なし」を返す。skip としても報告されないため、軸が機能していないことに気づけない。
+
+  出典: em-workflow レビュー round 2 の finding `7de239a2d3ce0706`（severity: high）。無人実行の rework cap 到達により deferred になった残件。関連 PR: https://github.com/m-m-n/em-claude-plugins/pull/27
+
+  ## 追加指示（起動時）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモート双方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較してより良いと判断した選択肢を採用する
+  - その議論の内容を Notion に記録する
+parent_branch: em-workflow/sca-go-govulncheck-real-output/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.57
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.74
+      '3': 0.0
+  at: '2026-10-04T22:08:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 5efed31e36a2288b883291409d93e2dd8ad3cf20
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たないスクリプトの正規化処理とテストの変更
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Severity from emitted CVSS v3 vectors
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS3
+  FR2:
+    title: Undetermined severity is counted, not treated as below threshold
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR3:
+    title: Directness from go.mod require entries
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+  FR4:
+    title: stdlib/toolchain treated as direct
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  FR5:
+    title: One finding per (OSV id, module) per scan unit
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+  FR6:
+    title: Real govulncheck capture fixture with provenance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS9
+  FR7:
+    title: Synthetic single-object shape dropped
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR8:
+    title: Unreadable go.mod is a not-completed unit
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR9:
+    title: Go stream validity
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR10:
+    title: fixed_version scoped to the finding's module
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+  NFR1:
+    title: Testing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Fixture Hygiene
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Output Safety
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Security
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Compatibility
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
