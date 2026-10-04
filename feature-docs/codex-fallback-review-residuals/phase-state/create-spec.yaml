@@ -121,10 +121,16 @@ worker_runs:
   input_digest: sha256:c56bd85c9014a66803942e423e9b1b7d595aa73fb40b5582518b3d53b3e5ffcf
   output_digest: sha256:2d431ea6f2428b44590c309fa866397a3025c94b137c1ad16fcb76a53ff6254e
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:7615e1dfde2a5c3f23b798d84cc1f6a91954a47f5357daf1db7dea3304b13e49
-  output_digest: null
-artifacts: []
+  output_digest: sha256:62e1a11792d90240cb49b169dac3b25388070be8bb189ef9a9842ed35151deab
+artifacts:
+- path: feature-docs/codex-fallback-review-residuals/REQUIREMENTS.md
+  sha256: sha256:4af77ff701dc0d24e7d11f453a411fede03904c79b0480f40447705f371ad654
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-fallback-review-residuals/SPEC.md
+  sha256: sha256:a36728260ad42ebbd1cc6dea011aaa514838e42035b2755d743a63a93b25e44a
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
