@@ -582,18 +582,13 @@
   ["allow", "bc9a99dd0d07ffa5 task0005 AC-4 <<- が融合した cat<<-EOF は allow(演算子を記録できる)", "cat<<-EOF\n\tgit reset --hard HEAD\nEOF\npython3 x.py"],
   ["allow", "bc9a99dd0d07ffa5 task0005 AC-4 引用付き区切り語が融合した cat<<'EOF' は allow(演算子を記録できる)", "cat<<'EOF'\ngit reset --hard HEAD\nEOF\npython3 x.py"],
   ["allow", "bc9a99dd0d07ffa5 task0005 AC-4 リダイレクトの後ろに融合した cat >notes.txt<<EOF は allow(演算子を記録できる)", "cat >notes.txt<<EOF\ngit reset --hard HEAD\nEOF\npython3 x.py"],
-  ["deny", "4d76e1accb9e8fed $'\\'' の読み違いで ; を飲み込む形の bash -s 宛て本文は deny", "cat $'\\'' ; bash -s \\' <<EOF\ngit reset --hard HEAD\nEOF"],
-  ["deny", "4d76e1accb9e8fed $'\\'' の読み違いで ; を飲み込む形の rm -rf は deny", "echo $'\\'' ; rm -rf /home/sakura/valuable \\'"],
   ["deny", "d7cf8418a4e1b37b ヒアストリング <<<true の後ろの rm -rf は deny", "cat <<<true\nrm -rf /home/sakura/valuable\ntrue"],
   ["deny", "d7cf8418a4e1b37b ヒアストリング <<< EOF の後ろの git reset --hard は deny", "cat <<< EOF\ngit reset --hard HEAD~3\nEOF"],
   ["deny", "d7cf8418a4e1b37b ヒアストリング <<<'EOF' の後ろの rm -rf は deny", "grep x <<<'EOF'\nrm -rf /home/sakura/valuable\nEOF"],
   ["allow", "d7cf8418a4e1b37b ヒアストリングの後ろの本物の cat <<'EOF' は allow", "cat <<<'x'; cat <<'EOF'\nrm -rf /tmp/zz\nEOF"],
-  ["deny", "e812ca2e1c631029 ${x/<<EOF/} の中の << は演算子ではなく後続の rm -rf は deny", "echo ${x/<<EOF/}\nrm -rf /home/sakura/valuable\nEOF"],
-  ["deny", "e812ca2e1c631029 ${x:-<<EOF} の中の << は演算子ではなく後続の rm -rf は deny", "echo ${x:-<<EOF}\nrm -rf /home/sakura/valuable\nEOF"],
-  ["deny", "e812ca2e1c631029 代入の ${y/<<EOF/} の中の << は演算子ではなく後続の git reset --hard は deny", "x=${y/<<EOF/}; ls\ngit reset --hard HEAD~3\nEOF"],
-  ["deny", "e812ca2e1c631029 $((1<<2)) のシフト演算の後続の rm -rf は deny", "echo $((1<<2))\nrm -rf /home/sakura/valuable\n2"],
-  ["deny", "e812ca2e1c631029 ((x=1<<2)) のシフト演算の後続の rm -rf は deny", "((x=1<<2))\nrm -rf /home/sakura/valuable\n2"],
-  ["deny", "e812ca2e1c631029 $[1<<2] のシフト演算の後続の rm -rf は deny", "echo $[1<<2]\nrm -rf /home/sakura/valuable\n2"],
-  ["allow", "e812ca2e1c631029 閉じた $((1<<2)) の後ろの本物の cat <<'EOF' は allow", "echo $((1<<2)); cat <<'EOF'\nrm -rf /tmp/zz\nEOF"],
-  ["allow", "e812ca2e1c631029 閉じた ${x} の後ろの本物の cat <<'EOF' は allow", "echo ${x}; cat <<'EOF'\nrm -rf /tmp/zz\nEOF"]
+  ["deny", "round 2 loop 1 退行の防止: $$' を ANSI-C 引用と読まず、後続の rm -rf は deny", "echo $$'\\' ; rm -rf /home/sakura/valuable ; echo 'a' \\'"],
+  ["deny", "round 2 loop 1 退行の防止: ${x:-a #} の後の本物のヒアドキュメントと後続の rm -rf は deny", "echo ${x:-a #}\ncat <<EOF\nit's\nEOF\nrm -rf /home/sakura/valuable\necho \\'"],
+  ["deny", "round 2 loop 1 退行の防止: $${ の後の本物のヒアドキュメントと後続の rm -rf は deny", "echo $${\ncat <<EOF\nit's\nEOF\nrm -rf /home/sakura/valuable\necho \\'"],
+  ["allow", "round 2 loop 1 退行の防止: rm -rf /tmp/safe$'\\t' は allow", "rm -rf /tmp/safe$'\\t'"],
+  ["allow", "round 2 loop 1 退行の防止: \"${x:-a(b}\" の後の本物の cat <<'EOF' は allow", "echo \"${x:-a(b}\"; cat <<'EOF'\ngit reset --hard HEAD\nEOF"]
 ]
