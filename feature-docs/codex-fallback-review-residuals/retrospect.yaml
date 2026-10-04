@@ -1,0 +1,98 @@
+feature: codex-fallback-review-residuals
+collected_at: '2026-10-04T16:44:24+09:00'
+session_ids:
+- 01a105de-04d3-7110-846e-fa6f804e2c71
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: Final description_plus_code reading (score 1.2, confidence 0.17) mapped to full by the
+      threshold rows; no fallback taken.
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.83
+        confidence: 0.8
+        legend:
+          '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+          '1': '1: A rule addition combined with a test addition, or a small change spread across a few
+            files together with a small test change.'
+          '2': '2: New logic, a change reaching across several modules, or a change to an external contract.'
+          '3': '3: A broad cross-cutting change: new files, new modules, a new dependency, or a change
+            to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.18
+          '2': 0.8
+          '3': 0.02
+      observed_at: '2026-10-04T15:24:00+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.2
+        confidence: 0.17
+        legend:
+          '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+          '1': '1: A rule addition combined with a test addition, or a small change spread across a few
+            files together with a small test change.'
+          '2': '2: New logic, a change reaching across several modules, or a change to an external contract.'
+          '3': '3: A broad cross-cutting change: new files, new modules, a new dependency, or a change
+            to the architecture.'
+        probabilities:
+          '0': 0.26
+          '1': 0.3
+          '2': 0.43
+          '3': 0.01
+      observed_at: '2026-10-04T15:28:00+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/README.md
+      - em-workflow/references/question-resolution.md
+      - em-workflow/references/phase-state.md
+      - tests/test_question_resolution_doc.py
+      - tests/test_batch_quiet_output_audit_record_contract.py
+      changed_lines_approx: 70
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/question-packet-schema.md
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 2
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 3
+      changes_external_contract: true
+      changes_behavior: true
+      evidence:
+        main_bug: 'resolved: commit e5a83962 がフォールバック連鎖と旧テストを削除し、現在の run_codex_exec.sh:26-30,175-195 は単一起動と出力転送を定め、置換先の
+          tests/test_codex_wrapper_single_invocation.py:279-285 は起動が1回で usage limit の診断が残ることを検査している'
+        21fcec3b529ebbd1: 'open: em-workflow/README.md:40 は batch のセキュリティ・ライセンス・不可逆判断について未収載なら中断すると記載しており、references/batch-policies.yaml:27-30
+          の batch では緩和経路へ進む規則と矛盾している'
+        7e1c5176f1992a47: 'resolved: commit e5a83962 がモデル名を固定した後続エントリを削除しており、現在の run_codex_exec.sh:107
+          は --litellm の引数をそのままモデル名として渡している'
+        ad385249e099e34b: 'open: references/question-resolution.md:512-540 の escalation は依然としてパケット単位で
+          Opus とだけ指定し、Task の具体的な起動先・契約文書・モデル束縛の台帳・xhigh・非パケット呼び出しの範囲を定めていない'
+        f16ba900e23a5497: 'open: references/phase-state.md:423-430 の一般 writer マッピングは batch-codex-consultation
+          を Codex が選択肢へ対応付けた場合に限定し、同文書:470-475 の escalation を含む解釈は緩和経路だけに適用され、非パケットゲートの escalation 決定に対応する規則が残っていない'
+        43504ede8ee2f609: 'resolved: commit e5a83962 が usage-limit/provider-error の認識関数と切替処理を削除しており、現在の
+          run_codex_exec.sh:26-30 は出力内容による後続処理を行わない契約を明記している'
+follow_up_drafts: []
+lessons_candidates:
+- Pre-survey found the main bug and residuals 7e1c5176f1992a47 / 43504ede8ee2f609 already resolved by
+  commit e5a83962 (fallback chain removal); the task description was stale relative to main and scope
+  shrank to the three open residuals plus a regression test.
+- create-plan worker run create-plan-run-0001 returned invalid_output; run 0002 completed.
+- Review round 1 evaluator exhausted its 10-file read budget and left tests/test_question_resolution_doc.py,
+  tests/test_batch_quiet_output_audit_record_contract.py, tests/test_readme_batch_relaxed_route.py and
+  test-docs task0001-0004 unverified; it also noted two low-severity wording gaps (opus-escalation-contract.md:130
+  project_root not in Input Block; phase-state.md:434 batch-safe-default overlap with batch-codex-consultation).
