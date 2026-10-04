@@ -116,9 +116,9 @@ tasks:
     - FR14
     - NFR1
     - NFR2
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-interactive-guard-hook/task0001
   task0002:
     title: Register the interactive-guard hook on every codex exec launch
     plan: tasks/task0002.md
@@ -142,9 +142,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-interactive-guard-hook/task0002
   task0003:
     title: 'Reviewer guidance: verify without interactive mode'
     plan: tasks/task0003.md
@@ -159,9 +159,9 @@ tasks:
     requirements:
     - FR13
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-interactive-guard-hook/task0003
 review:
   status: pending
   rounds_completed: 0
