@@ -1,0 +1,288 @@
+schema_version: 1
+feature: codex-fallback-review-residuals
+created: '2026-10-04'
+base_branch: main
+goal: |
+  # em-workflow: run_codex_exec.sh のフォールバック連鎖が前試行の出力を切り捨て、rate_limited 判定が失われる
+
+
+  ## 現象（必須）
+  `em-workflow/scripts/run_codex_exec.sh` のプロバイダフォールバック連鎖が、試行ごとに
+  `> "$OUTFILE" 2> "$ERRFILE"` で切り捨て書き込みするため、entry 2/3 が走った時点で entry 1 の
+  診断が失われる。最終の `cat "$OUTFILE" "$ERRFILE"` が caller に渡すのは最後の試行の出力だけ。
+  entry 1 が `usage limit` で落ち、entry 2 が `provider error` 以外の理由（認証エラー・
+  モデル名不正・404 等）で落ちると、wrapper の最終出力からレート制限の文字列が消える。
+  consumer である `em-workflow/agents/codex-reviewer.md` Step 6 は「stdout+stderr combined」に
+  含まれるレート制限文字列だけを根拠に `skip_reason: "rate_limited"` を返す設計なので、
+  文字列が消えると \`\{"findings": \[\], "summary": "codex returned non-JSON output", "skipped": false,
+  "skip_reason": null\}` を返す。`em-workflow/references/review-phase.md\` Phase R2b はこの
+  schema-valid な空結果を「substantive completed result」として扱うため、chain walk は進まず
+  Claude フォールバックもディスパッチされない。
+  結果として、プロバイダ障害が「findings 0 件の完了したレビュー」として静かに記録される。
+  変更前の wrapper は単一呼び出し（`2>&1`）だったので entry 1 の usage limit 文字列は必ず
+  caller に届いていた。この feature が入れた退行。
+  ## 再現手順（必須）
+  1. `codex` をスタブに差し替え、entry 1 が stderr に `usage limit reached for this account.` を
+  出して非ゼロ終了するようにする
+  1. entry 2（`-p litellm -m vertex-glm-5.2`）が `provider error` を含まない任意のエラー
+  （例: `Error: something unrelated broke.`）で非ゼロ終了するようにする
+  1. `run_codex_exec.sh` を呼ぶ
+  2. 出力に `usage limit` の文字列が含まれないことを確認する
+  ## 期待する挙動（必須）
+  失敗経路（連鎖が尽きた・非ゼロ終了）では、連鎖全体の stderr を entry 順で出力し、
+  最初の試行のレート制限文字列が caller に届くこと。成功経路では従来どおり、応答した
+  entry の出力だけを出すこと（素朴な `>>` 追記だと entry 1 の部分 stdout が entry 2 の JSON の
+  前に付き、codex-reviewer.md Step 6 の「parse Codex's JSON FIRST」規則を壊す）。
+  switch 判定に使う `is_usage_limit_response` / `is_provider_error_response` は試行ごとの
+  ファイルを見るようスコープを分け、前の entry の文字列が次の判定に混入しないようにすること。
+  ## 完了の定義（必須）
+  - [ ] 再現手順で現象が起きない（entry 1 のレート制限文字列が最終出力に残る）
+  - [ ] 再発を検出するテストがある（entry 1 が usage limit、entry 2 が無関係な理由で失敗する回帰ケース）
+  - [ ] `tests/test_codex_wrapper_provider_fallback.py` の既存 3 ケースを新しい合成規則に合わせて更新する
+  （`test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success`、
+  `test_usage_limit_shaped_response_from_entry_two_does_not_advance`、
+  `test_provider_error_phrase_in_reply_text_does_not_advance_from_entry_two` — いずれも
+  wrapper の stdout が最後の entry のテキストと完全一致することを assert しており、
+  連鎖全体を出す合成規則とは両立しない）
+  - [ ] header コメントの「On entry 1 the wrapper's output is byte-identical」節に、後続 entry が
+  走った場合の出力合成規則を明記する
+  ## 該当箇所（任意）
+  - `em-workflow/scripts/run_codex_exec.sh:207`（`run_attempt` の切り捨て書き込み）
+  - `em-workflow/scripts/run_codex_exec.sh:264` 付近（最終の `cat`）
+  - `em-workflow/agents/codex-reviewer.md` Step 6（唯一の consumer）
+  - `em-workflow/references/review-phase.md` Phase R2b（retryable 判定）
+  - `tests/test_codex_wrapper_provider_fallback.py`
+  ## 実害・発生条件（任意）
+  プロバイダ障害時にレビュー観点が「0 件で完了」に化けるため、レビューを通った実装が
+  実際には 1 観点も見られていない状態になり得る。無人実行（`--batch`）では人が気づく
+  確認面が run 報告しかないため実害が大きい。
+  なお本 feature の review round 2 で実際にこの条件が発生した: architecture 観点は
+  architecture#0 が `harness_unavailable`、architecture#2 が `rate_limited` を返し、
+  Claude フォールバックまで歩いてようやくレビューできた。
+  ## 併せて残っている review round 2 の未解決 medium（同じ feature 由来）
+  `feature-docs/batch-codex-autonomous-decisions/reviews/round2.yaml` に全文がある。
+  1. `21fcec3b529ebbd1` — `em-workflow/README.md:40` が、batch で緩和した 3 カテゴリ
+  （security / license / 不可逆）について今も fail-closed 中断すると書いており、
+  `references/batch-policies.yaml` ヘッダ・`references/question-resolution.md` と矛盾する
+  1. `7e1c5176f1992a47` — `run_codex_exec.sh:156` で litellm のモデル名
+  （`vertex-glm-5.2` / `muse-spark`）をハードコードしており、`references/reviewers.yaml`
+  のモデル台帳と二重管理。retire 時に静かにフォールバックが死ぬ
+  1. `ad385249e099e34b` — `references/question-resolution.md:486` の Opus escalation 節が
+  dispatch 先・契約ドキュメント・モデル束縛のレジストリを 1 つも指定しておらず、
+  SPEC FR8/A4 が定める「Opus/xhigh の Task dispatch」も落ちている。非パケットゲートからの
+  呼び出しに対するスコープも未定義
+  1. `f16ba900e23a5497` — `references/phase-state.md:417` の一般 writer マッピングに、
+  Opus escalation が非パケットゲートを非既定の選択肢で決めた場合の `source` 値が無い
+  1. `43504ede8ee2f609` — `run_codex_exec.sh:216` の switch 判定が「codex の stderr には
+  攻撃者影響下のテキストが乗らない」という未検証の前提に依存しており、その前提を
+  固定するテストが無い
+parent_branch: em-workflow/codex-fallback-review-residuals/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.18
+      '2': 0.8
+      '3': 0.02
+    description_plus_code:
+      '0': 0.26
+      '1': 0.3
+      '2': 0.43
+      '3': 0.01
+  at: '2026-10-04T15:29:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 510d6628f4a33e3cdeb3799b98c6e30847dbf9ce
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: Documentation, agent-definition, and test changes only; no user interface or visual design surface.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 6d15fb6142907aff9d799b1b60c15e3b9d19840e
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: README batch clause states the interactive/batch split
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR2:
+    title: Opus escalation names its dispatch route, contract, and model binding
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+    - TS7
+  FR3:
+    title: Opus escalation agent definition and contract document
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+    - TS3
+    - TS7
+  FR4:
+    title: Opus escalation scope and option presentation for non-packet-gate callers
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  FR5:
+    title: Batch audit `source` for an escalation-decided non-packet gate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+  FR6:
+    title: Tests pin FR1 through FR5
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS7
+  FR7:
+    title: 'Regression check: --litellm MODEL is passed verbatim'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  NFR1:
+    title: No new gate, policy entry, or source value
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Wrapper unchanged, provider-fallback test module not recreated
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+    - TS7
+  NFR3:
+    title: Existing pinned phrases preserved
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+    - TS7
+  NFR4:
+    title: SSOT discipline
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Full suite passes, stdlib-only tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  NFR6:
+    title: No manual version change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: Plugin invariants hold
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+    - TS7
+  NFR8:
+    title: review-evaluator pair unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
