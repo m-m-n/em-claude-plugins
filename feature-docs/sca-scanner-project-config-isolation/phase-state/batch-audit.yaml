@@ -34,3 +34,21 @@ records:
     (sha256 pin of review-phase.md refreshed after the required axis 2 edit); declined:
     the identifier part is missing (no AC-n of the task plan or registered requirement
     id was named); path shape and control-path checks passed.'
+- question_id: review.harness-output-malformed
+  packet_id: null
+  answered_at: '2026-10-04T23:36:13+09:00'
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: treat as failed and dispatch one Claude fallback
+  normalized_answer: 'comprehensive#0 recorded status failed; comprehensive#fallback dispatched'
+  resolution_note: 'gate: none (review-phase.md Phase R2b malformed / harness-failure rule); options: (a) accept the codex run as a completed empty review, (b) treat as failed and dispatch one Claude fallback; chosen: (b), because the run summary stated codex returned non-JSON output, so no review content existed; codex_consulted: false; opus_escalation: false.'
+- question_id: review.low-severity-finding-dropped
+  packet_id: null
+  answered_at: '2026-10-04T23:36:13+09:00'
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: dropped from round record by R3b step 2; carried as a follow-up task
+  normalized_answer: 'comprehensive finding at em-workflow/scripts/scan-dependencies.py:2616 demoted to low by the evaluator'
+  resolution_note: 'gate: none (review-phase.md Phase R3b step 2 drops severity outside critical/high/medium); finding: validate_ecosystem_entry does not check cargo target_flag, so an override --registry without it makes bindable cargo projects report cargo_project_unbindable instead of a registry-config reason (scan stays fail-closed); evaluator demoted medium to low (default registry has target_flag, no --registry caller in em-workflow); suggested fix: validate target_flag as a non-empty string in validate_ecosystem_entry and return a fixed token such as cargo_target_flag_invalid, with a test; codex_consulted: false; opus_escalation: false.'
