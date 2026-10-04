@@ -184,9 +184,11 @@ class TestBuildScanJobArgumentVectors(unittest.TestCase):
         job = SCAN.build_scan_job(self.by_name["cargo"], "Cargo.toml", "/proj", "/usr/local/bin/cargo-audit")
         self.assertEqual(job["argv"], ["/usr/local/bin/cargo-audit", "audit", "--json"])
 
-    def test_npm_job_argv_unaffected_by_this_task(self):
+    def test_npm_job_argv_pins_workspaces_off(self):
+        # sca-per-project-scan-binding FR11/FR14: the registry's npm args
+        # gain `--workspaces=false` so npm audits the bound project only.
         job = SCAN.build_scan_job(self.by_name["npm"], "package.json", "/proj", "/usr/local/bin/npm")
-        self.assertEqual(job["argv"], ["/usr/local/bin/npm", "audit", "--json"])
+        self.assertEqual(job["argv"], ["/usr/local/bin/npm", "audit", "--json", "--workspaces=false"])
 
     def test_go_job_argv_unaffected_by_this_task(self):
         job = SCAN.build_scan_job(self.by_name["go"], "go.mod", "/proj", "/usr/local/bin/govulncheck")
