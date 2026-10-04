@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-fallback-review-residuals
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: acc168ab2aed9a52973148c9bfc4e7b1c3f252d7
 last_input_digest: sha256:0ef3c1bb68eb94a675581615212223bcb965e3312ad70cbae78456fd45b01197
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,12 +14,37 @@ worker_runs:
   input_digest: sha256:048900510af0450f5c780da401cd4945c379598724fd900665ef21f5bee6ce79
   output_digest: null
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:0ef3c1bb68eb94a675581615212223bcb965e3312ad70cbae78456fd45b01197
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:3d44caf4faef9f59fdd4ae3eda96a6db0febb77a9f14101748e099455534201c
+artifacts:
+- path: feature-docs/codex-fallback-review-residuals/IMPLEMENTATION.md
+  sha256: sha256:387f9798e3d98cb957678403a83d3ddabc42caa5914b863ae04d5d820ce93aa0
+  produced_by: create-plan-run-0002
+- path: feature-docs/codex-fallback-review-residuals/VERIFICATION.md
+  sha256: sha256:02b0f0fefc701189e21f8c5d93f3ca5c17471761e91acc8e83fc62ec6570666a
+  produced_by: create-plan-run-0002
+- path: feature-docs/codex-fallback-review-residuals/THREAT-MODEL.md
+  sha256: sha256:0f3a442c6921d9b648f0f206ca8a09a5d80bdcbfdbaca4d3187793539945c160
+  produced_by: create-plan-run-0002
+- path: feature-docs/codex-fallback-review-residuals/tasks/task0001.md
+  sha256: sha256:1de09302311f060c01ea36385217c2b22273fd85273f7b717be2cecf415d5757
+  produced_by: create-plan-run-0002
+- path: feature-docs/codex-fallback-review-residuals/tasks/task0002.md
+  sha256: sha256:e717bc8a45e9d342815655792f015eac7dafff83df47ee29dd7e0a9fd0ce43f6
+  produced_by: create-plan-run-0002
+- path: feature-docs/codex-fallback-review-residuals/tasks/task0003.md
+  sha256: sha256:5e74c5e7da185359fc39cf7146fe28f9a553276019d29b91c036b4451f6b90cb
+  produced_by: create-plan-run-0002
+- path: feature-docs/codex-fallback-review-residuals/tasks/task0004.md
+  sha256: sha256:ec88af6a3fb3a5e5c855e8ab6e50ade3f7b32f12732945e509a86b6f01661b99
+  produced_by: create-plan-run-0002
+patches:
+- patch_id: create-plan-p0001
+  status: pending
+  base_input_digest: sha256:0ef3c1bb68eb94a675581615212223bcb965e3312ad70cbae78456fd45b01197
+  base_workflow_blob: 8a48dc99abb406bde1b54a5d5e9e287fcad3822b
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: "run-0001 failed validation: task plan Files bullets carried more than one backtick token (files union mismatch in all 4 tasks); dispatch write_policy used absolute paths (orchestrator error, corrected to project-relative in run-0002)"
+last_error: null
