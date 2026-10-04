@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 03707853fc9b7ad499843536f6606f5b54fcad53
-last_input_digest: null
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:dd36d1ea6e8c3a0b3ead8c64786473d69f4fafef9b0e23d97364eeaffa176c26
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -216,9 +216,15 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:28744567516e7ae4f3c20d460202dc109c780256079e400f4279a54082a78a49
   output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:dd36d1ea6e8c3a0b3ead8c64786473d69f4fafef9b0e23d97364eeaffa176c26
+  output_digest: sha256:f709817515e7617e87e8ec3bdfcd07cb6a88b6f52586f4a257104455e7a90ded
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'analyst run-0002 warning: build_scan_job behavior when called for npm/cargo without a prepared
+  path is not fixed by the answers (affects pure build_scan_jobs and tests/test_sca_scan_job_grouping.py);
+  deferred to create-plan as an implementation decision.'
