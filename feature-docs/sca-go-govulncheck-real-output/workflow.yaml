@@ -107,7 +107,8 @@ workflow:
   failed_items: []
   completed_at_commit: 9c03365d3c13652f94110cb92876af682b8da2ac
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 3c00f2a11f411b5cb1f725d3af51c3b9f624b96a
 tasks:
   task0001:
     title: Go SCA normalization against real govulncheck output
