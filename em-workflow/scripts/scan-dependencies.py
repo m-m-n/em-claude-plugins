@@ -782,8 +782,12 @@ CHILD_ENV_BASE_KEYS = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "U
 #   pip   -- PIP_CONFIG_FILE keeps a reviewed project's own pip.conf from
 #            being read; PIP_INDEX_URL pins the package index.
 #   go    -- GOENV=off disables reading any go env config file at all;
-#            GOFLAGS is pinned empty and GOPROXY pinned to the public
-#            module proxy so neither can be redirected by one.
+#            GOPROXY is pinned to the public module proxy so it cannot be
+#            redirected by one. GOWORK=off stops go from discovering a
+#            go.work file above the project directory, so the scan stays
+#            inside the bound project instead of an ancestor workspace.
+#            GOFLAGS=-mod=readonly stops go from rewriting go.mod / go.sum
+#            (and replaces whatever flags the caller's GOFLAGS carried).
 ECOSYSTEM_ENV_PINS = {
     "npm": {
         "npm_config_registry": "https://registry.npmjs.org/",
@@ -796,7 +800,8 @@ ECOSYSTEM_ENV_PINS = {
     },
     "go": {
         "GOENV": "off",
-        "GOFLAGS": "",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=readonly",
         "GOPROXY": "https://proxy.golang.org,direct",
     },
 }
@@ -894,16 +899,61 @@ def build_scan_job(ecosystem, manifest_file, project_root, executable_path, envi
     }
 
 
+def _lexical_project_directory(path):
+    """The project directory of ONE changed path, worked out from the text of
+    the path alone: repeated separators collapse, `.` segments drop, and each
+    `name/..` pair cancels; the directory part of the result is returned
+    `/`-separated, `""` for the root. Touches no file and never raises, for
+    any string (a NUL included).
+
+    Returns `(directory, unbindable)`. `unbindable` is True when the path
+    cannot belong to any project directory below the project root: it is
+    absolute, it still starts with a `..` segment after normalization, or it
+    contains NUL. An absolute path keeps its leading `/` in `directory`, and
+    an escaping one keeps its leading `..` segments, so that two different
+    locations never share a key; the key is only ever used to partition."""
+    absolute = path.startswith("/") or os.path.isabs(path)
+    parts = []
+    for segment in path.split("/"):
+        if segment in ("", "."):
+            continue
+        if segment == ".." and parts and parts[-1] != "..":
+            parts.pop()
+        else:
+            parts.append(segment)
+    escaping = bool(parts) and parts[0] == ".."
+    directory = "/".join(parts[:-1])
+    if absolute:
+        directory = "/" + directory
+    return directory, ("\x00" in path or absolute or escaping)
+
+
 def build_scan_jobs(registry, changed_files, project_root, environ=None):
     """Orchestrates job construction for every SELECTED ecosystem
     (select_ecosystems, unchanged): validates each entry
     (validate_ecosystem_entry), resolves its executable on PATH
-    (resolve_executable), and builds a job for it (build_scan_job). An
-    invalid entry or an unresolvable binary contributes its existing
-    machine-stable skip reason and NO job -- no fallback command form is
-    ever attempted for it. Returns (jobs, skip_reasons); executing a job
-    (judging its exit status and payload together) is the sibling rework
-    task's contract, not this function's.
+    (resolve_executable), then builds ONE job per (ecosystem, project
+    directory) group (build_scan_job). An invalid entry or an unresolvable
+    binary contributes its existing machine-stable skip reason once and NO
+    job -- no fallback command form is ever attempted for it, and nothing
+    below the gate runs for it. Returns (jobs, skip_reasons): ecosystems in
+    registry order, each ecosystem's groups in ascending plain-string order
+    of the directory (the root first), each reason at most once per
+    ecosystem; executing a job (judging its exit status and payload
+    together) is the sibling rework task's contract, not this function's.
+
+    Grouping is LEXICAL (pure, FR12): a changed file belongs to the group of
+    its textually normalized directory (_lexical_project_directory), so
+    `a/package.json` and `a/./package-lock.json` share one group. For npm,
+    cargo and go a path that is absolute, escapes through `..` or contains
+    NUL can belong to no project directory: it is dropped, and the
+    ecosystem gains `<ecosystem>_project_unbindable` once. pip paths are
+    only partitioned, never dropped (its validation is unchanged). Each
+    group's file is chosen by manifest_file_for over that group's files in
+    input order; an npm / cargo / go job's target (its manifest) is the
+    group directory, `/`, and that file's basename (the bare basename at the
+    root), a pip job's target the raw selected file. Verified grouping on
+    real paths and every binding check belong to `run_scan`, not here.
 
     Performs no run-time preparation (no lockfile read, no prepared file).
     A pip lockfile target is therefore OUTSIDE its contract: such a job needs
@@ -923,8 +973,27 @@ def build_scan_jobs(registry, changed_files, project_root, environ=None):
         if executable_path is None:
             skip_reasons.append(f"{name}_tool_not_found")
             continue
-        manifest_file = manifest_file_for(ecosystem, changed_files)
-        jobs.append(build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ))
+        recognised = set(ecosystem.get("manifests") or []) | ECOSYSTEM_LOCKFILES.get(name, set())
+        groups = {}
+        dropped = False
+        for changed in changed_files:
+            if os.path.basename(changed) not in recognised:
+                continue
+            directory, unbindable = _lexical_project_directory(changed)
+            if unbindable and name != "pip":
+                dropped = True
+                continue
+            groups.setdefault(directory, []).append(changed)
+        if dropped:
+            skip_reasons.append(f"{name}_project_unbindable")
+        for directory in sorted(groups):
+            selected_file = manifest_file_for(ecosystem, groups[directory])
+            if name == "pip":
+                target = selected_file
+            else:
+                basename = os.path.basename(selected_file)
+                target = f"{directory}/{basename}" if directory else basename
+            jobs.append(build_scan_job(ecosystem, target, project_root, executable_path, environ))
     return jobs, skip_reasons
 
 
