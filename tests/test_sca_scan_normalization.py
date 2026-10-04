@@ -68,6 +68,7 @@ AC-4/AC-6/AC-7.
 """
 
 import argparse
+import copy
 import importlib.util
 import json
 import os
@@ -491,62 +492,94 @@ PIP_FIXTURE = {
     ]
 }
 
-GO_FIXTURE = {
-    "vulns": [
-        {
-            "osv": {
-                "id": "GO-2023-1234",
-                "summary": "Improper validation in golang.org/x/net",
-                "details": "A crafted header can bypass validation.",
-                "affected": [{"ranges": [{"events": [{"introduced": "0"}, {"fixed": "0.10.0"}]}]}],
-            },
-            "package": "golang.org/x/net",
-            "severity": "high",
-            "is_direct": True,
-        },
-        {
-            "osv": {
-                "id": "GO-2023-5678",
-                "summary": "Panic in golang.org/x/text",
-                "details": "A transitive dependency can panic on malformed input.",
-                "affected": [{"ranges": [{"events": [{"introduced": "0"}, {"fixed": "0.5.0"}]}]}],
-            },
-            "package": "golang.org/x/text",
-            "severity": "critical",
-            "is_direct": False,
-        },
-        {
-            "osv": {
-                "id": "GO-2023-9012",
-                "summary": "Minor info leak in golang.org/x/sys",
-                "details": "A direct dependency leaks minor info at medium severity.",
-                "affected": [{"ranges": [{"events": [{"introduced": "0"}, {"fixed": "0.3.0"}]}]}],
-            },
-            "package": "golang.org/x/sys",
-            "severity": "medium",
-            "is_direct": True,
-        },
-    ]
-}
+# The Go fixture is a REAL `govulncheck -json` capture (sca-go-govulncheck-
+# real-output FR6), replayed as raw text -- never a hand-written object. Its
+# provenance sits beside it (tests/sca_govulncheck_capture_provenance.md).
+# The go.mod variants below are the provenance go.mod (the vulnerable module
+# required directly), the same with that requirement marked `// indirect`,
+# and the same without it.
+GO_CAPTURE_PATH = REPO_ROOT / "tests" / "sca_govulncheck_capture.txt"
+GO_CAPTURE_TEXT = GO_CAPTURE_PATH.read_text(encoding="utf-8")
+GO_VULNERABLE_MODULE = "golang.org/x/text"
+GO_MOD_DIRECT = "module example.com/vulnprobe\n\ngo 1.20\n\nrequire golang.org/x/text v0.3.6\n"
+GO_MOD_INDIRECT = GO_MOD_DIRECT.replace("v0.3.6\n", "v0.3.6 // indirect\n")
+GO_MOD_WITHOUT_REQUIREMENT = "module example.com/vulnprobe\n\ngo 1.20\n"
+GO_MEDIUM_VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"  # 5.3, medium
+
+
+def _go_capture_objects(text=GO_CAPTURE_TEXT):
+    """The top-level JSON objects of a govulncheck stream, in order."""
+    decoder = json.JSONDecoder()
+    objs = []
+    index = 0
+    while True:
+        while index < len(text) and text[index].isspace():
+            index += 1
+        if index >= len(text):
+            return objs
+        obj, index = decoder.raw_decode(text, index)
+        objs.append(obj)
+
+
+def _go_capture_advisory_ids(module):
+    """The OSV ids the capture reports findings for on `module`."""
+    ids = []
+    for obj in _go_capture_objects():
+        finding = obj.get("finding") if isinstance(obj, dict) else None
+        if isinstance(finding, dict) and finding["trace"][0]["module"] == module:
+            if finding["osv"] not in ids:
+                ids.append(finding["osv"])
+    return ids
+
+
+def _go_derived_stream(osv_id, severity):
+    """A multi-object stream cut from the capture's own objects: its config
+    object, the OSV object for `osv_id` with its top-level `severity` list
+    replaced by `severity`, and that id's module-level finding object."""
+    objs = _go_capture_objects()
+    config = next(o for o in objs if isinstance(o.get("config"), dict))
+    osv = copy.deepcopy(next(o for o in objs if o.get("osv", {}).get("id") == osv_id))
+    osv["osv"]["severity"] = severity
+    finding = next(
+        o for o in objs
+        if o.get("finding", {}).get("osv") == osv_id and len(o["finding"]["trace"]) == 1
+        and "package" not in o["finding"]["trace"][0]
+    )
+    return "".join(json.dumps(o, indent=2) + "\n" for o in (config, osv, finding))
+
+
+def _go_undetermined_count(summary):
+    """The count in the summary's go undetermined-severity note (0 when the
+    note is absent)."""
+    match = re.search(
+        r" (\d+) go advisor(?:y|ies) with undetermined severity \(go_severity_undetermined\)\.",
+        summary,
+    )
+    return int(match.group(1)) if match else 0
 
 
 def _write_stub(bin_dir, name, fixture):
     """Writes an executable named `name` into `bin_dir` that always prints
-    `fixture` (already JSON-encoded once here, in this module's own stdlib
-    `json` import) verbatim to stdout, ignoring argv -- a stand-in for the
-    real SCA tool (Test Notes: "a stand-in executable that prints a
-    fixture")."""
+    `fixture` verbatim to stdout, ignoring argv -- a stand-in for the real
+    SCA tool (Test Notes: "a stand-in executable that prints a fixture").
+    `fixture` is either text, printed byte-for-byte (the raw-text mode every
+    Go stub uses), or a JSON-serializable value, JSON-encoded once here (in
+    this module's own stdlib `json` import) as npm, cargo and pip callers
+    pass it."""
     # The shebang uses sys.executable's absolute path rather than
     # `/usr/bin/env python3` -- these tests deliberately restrict PATH to
     # `bin_dir` alone (so only the stub resolves as the ecosystem's tool),
     # and `env` would otherwise fail to find `python3` under that
     # restricted PATH when the OS invokes the shebang interpreter.
-    payload = json.dumps(fixture)
+    if isinstance(fixture, str):
+        body = f"sys.stdout.buffer.write({fixture.encode('utf-8')!r})\n"
+    else:
+        body = f"sys.stdout.write({json.dumps(fixture)!r})\n"
     script = bin_dir / name
     script.write_text(
         f"#!{sys.executable}\n"
         "import sys\n"
-        f"sys.stdout.write({payload!r})\n",
+        f"{body}",
         encoding="utf-8",
     )
     script.chmod(0o755)
@@ -702,19 +735,49 @@ class TestNormalizationProducesSchemaConformantResult(unittest.TestCase):
         self.assertNotIn("requests", titles)
 
     def test_go_sample_normalizes_and_conforms(self):
-        result = _run_scan_with_stub("govulncheck", GO_FIXTURE, ["go.mod"])
+        # Replays the real capture with the provenance go.mod (the
+        # vulnerable module required directly). The capture's real severity
+        # data decides between a finding and the undetermined note, but an
+        # advisory on the directly required module is never silently clean.
+        result = _run_scan_with_stub(
+            "govulncheck", GO_CAPTURE_TEXT, ["go.mod"], manifest_files={"go.mod": GO_MOD_DIRECT}
+        )
         assert_conforms_to_schema(self, result, self.schema)
-        self.assertEqual(len(result["findings"]), 1)
-        finding = result["findings"][0]
-        self.assertEqual(finding["severity"], "high")
-        self.assertTrue(finding["title"].startswith("golang.org/x/net: GO-2023-1234"))
-        self.assertEqual(finding["file"], "go.mod")
+        self.assertEqual(result["source"], "tool")
+        self.assertFalse(result["skipped"])
+        self.assertIsNone(result["skip_reason"])
+        advisories = _go_capture_advisory_ids(GO_VULNERABLE_MODULE)
+        self.assertTrue(advisories, "the capture holds no finding on the vulnerable module")
+        undetermined = _go_undetermined_count(result["summary"])
+        self.assertEqual(len(result["findings"]) + undetermined, len(advisories))
+        for finding in result["findings"]:
+            self.assertIn(finding["severity"], ("critical", "high"))
+            self.assertTrue(finding["title"].startswith(f"{GO_VULNERABLE_MODULE}: GO-"))
+            self.assertEqual(finding["file"], "go.mod")
 
     def test_go_transitive_and_below_threshold_dropped(self):
-        result = _run_scan_with_stub("govulncheck", GO_FIXTURE, ["go.mod"])
-        titles = " ".join(f["title"] for f in result["findings"])
-        self.assertNotIn("x/text", titles)
-        self.assertNotIn("x/sys", titles)
+        # Marked indirect, or absent from require: not direct, so neither a
+        # finding nor counted.
+        for label, go_mod in (("indirect", GO_MOD_INDIRECT), ("absent", GO_MOD_WITHOUT_REQUIREMENT)):
+            with self.subTest(requirement=label):
+                result = _run_scan_with_stub(
+                    "govulncheck", GO_CAPTURE_TEXT, ["go.mod"], manifest_files={"go.mod": go_mod}
+                )
+                self.assertEqual(result["findings"], [])
+                self.assertEqual(_go_undetermined_count(result["summary"]), 0)
+                self.assertFalse(result["skipped"])
+        # A direct advisory with a determinable band below high is dropped
+        # too, and is not counted as undetermined.
+        stream = _go_derived_stream(
+            _go_capture_advisory_ids(GO_VULNERABLE_MODULE)[0],
+            [{"type": "CVSS_V3", "score": GO_MEDIUM_VECTOR}],
+        )
+        result = _run_scan_with_stub(
+            "govulncheck", stream, ["go.mod"], manifest_files={"go.mod": GO_MOD_DIRECT}
+        )
+        self.assertEqual(result["findings"], [])
+        self.assertEqual(_go_undetermined_count(result["summary"]), 0)
+        self.assertFalse(result["skipped"])
 
 
 # ---------------------------------------------------------------------------

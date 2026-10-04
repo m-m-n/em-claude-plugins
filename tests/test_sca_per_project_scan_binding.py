@@ -48,6 +48,24 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "em-workflow" / "scripts" / "scan-dependencies.py"
 SCHEMA_PATH = REPO_ROOT / "em-workflow" / "references" / "review-output-schema.json"
+CAPTURE_PATH = REPO_ROOT / "tests" / "sca_govulncheck_capture.txt"
+
+
+def _capture_config_object_text(capture_text):
+    """The verbatim text of the real capture's config object, cut from the
+    capture text (never re-serialized): the first top-level object whose
+    `config` value is an object. It is a complete, valid, vulnerability-free
+    `govulncheck -json` stream."""
+    decoder = json.JSONDecoder()
+    index = 0
+    while index < len(capture_text):
+        while capture_text[index].isspace():
+            index += 1
+        obj, end = decoder.raw_decode(capture_text, index)
+        if isinstance(obj, dict) and isinstance(obj.get("config"), dict):
+            return capture_text[index:end]
+        index = end
+    raise AssertionError("the capture holds no config object")
 
 
 def _load_script(name="scan_dependencies_per_project_binding"):
@@ -84,7 +102,9 @@ NPM_PAYLOAD = {
     }
 }
 CARGO_PAYLOAD = {"vulnerabilities": {"found": False, "list": []}}
-GO_PAYLOAD = {"vulns": []}
+# FR7: the Go stub prints raw text -- the capture's config object, a real
+# stream with a config object and no finding.
+GO_PAYLOAD = _capture_config_object_text(CAPTURE_PATH.read_text(encoding="utf-8"))
 PIP_PAYLOAD = {
     "dependencies": [
         {
@@ -142,13 +162,15 @@ def write_recording_stub(bin_dir, name, record_path, payload, exit_code=0, write
     """An executable `name` in `bin_dir`: on every launch it appends its tool
     name, argument vector and working directory to `record_path`, optionally
     writes `write_file` (relative to its working directory -- the way
-    cargo-audit would generate a missing Cargo.lock), prints `payload` as
-    JSON and exits with `exit_code`. The shebang is the absolute interpreter
-    because PATH holds the stub directory only."""
+    cargo-audit would generate a missing Cargo.lock), prints `payload` and
+    exits with `exit_code`. `payload` is either text, printed verbatim (the
+    raw-text mode every Go stub uses), or a JSON-serializable value, printed
+    JSON-encoded. The shebang is the absolute interpreter because PATH holds
+    the stub directory only."""
     config = {
         "tool": name,
         "record": str(record_path),
-        "payload": json.dumps(payload),
+        "payload": payload if isinstance(payload, str) else json.dumps(payload),
         "exit_code": exit_code,
         "write_file": write_file,
     }
