@@ -2,56 +2,29 @@ schema_version: 1
 feature: sca-python-lockfile-audit
 created: '2026-10-04'
 base_branch: main
-goal: '# SCA 軸: 変更された Python lockfile が監査されない
-
+goal: |
+  # SCA 軸: 変更された Python lockfile が監査されない
 
   ## 現象 (必須)
-
-  `em-workflow/scripts/scan-dependencies.py` の `_pip_target` は `requirements.txt`
-  だけを特別扱いしており、`poetry.lock` / `Pipfile.lock` はディレクトリ分岐に落ちて `pip-audit <dir> --format
-  json` になる。変更された lockfile はスキャナに渡されず、読まれもしない。
-
-  結果として、マニフェストのバージョン範囲が修正済みバージョンも許容している場合（lockfile の変更こそが浮かび上がらせるべき、まさにそのケース）に、lockfile
-  でピン留めされた脆弱なバージョンを見逃す。スキャンは `completed` / `skipped: false` / findings 0 件として正常終了する。
-
+  `em-workflow/scripts/scan-dependencies.py` の `_pip_target` は `requirements.txt` だけを特別扱いしており、`poetry.lock` / `Pipfile.lock` はディレクトリ分岐に落ちて `pip-audit <dir> --format json` になる。変更された lockfile はスキャナに渡されず、読まれもしない。
+  結果として、マニフェストのバージョン範囲が修正済みバージョンも許容している場合（lockfile の変更こそが浮かび上がらせるべき、まさにそのケース）に、lockfile でピン留めされた脆弱なバージョンを見逃す。スキャンは `completed` / `skipped: false` / findings 0 件として正常終了する。
   `_pip_manifest_candidate` も lockfile を `pyproject.toml` へリダイレクトしており、直接依存判定でも同じ方向にずれている。
-
   ## 再現手順 (必須)
-
   1. `poetry.lock`（または `Pipfile.lock`）を変更し、脆弱なバージョンをピン留めする。マニフェスト側のバージョン範囲は修正済みバージョンも許容する形にしておく
-
   2. その変更ファイルを `changed_files` として `scan-dependencies.py scan` を実行する
-
   3. findings が 0 件、`skipped: false`、`skip_reason: null` で返る
-
   ## 期待する挙動 (必須)
-
-  変更された lockfile のピン留め内容そのものが監査され、脆弱なピンが finding として出る。変換できない lockfile 形式については、マニフェスト解決で黙って代替するのではなく、機械可読で安定した
-  `skip_reason` を明示的に返す。
-
+  変更された lockfile のピン留め内容そのものが監査され、脆弱なピンが finding として出る。変換できない lockfile 形式については、マニフェスト解決で黙って代替するのではなく、機械可読で安定した `skip_reason` を明示的に返す。
   ## 完了の定義 (必須)
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
   ## 該当箇所 (任意)
-
   `em-workflow/scripts/scan-dependencies.py:804`（`_pip_target`）、および `_pip_manifest_candidate`
-
   ## 実害・発生条件 (任意)
-
   Python プロジェクトで lockfile を更新した PR に対し、SCA 軸が「脆弱性なし」と報告する。マニフェストの範囲が修正済みバージョンを許容していると必ず踏む。
-
   ---
-
-  出典: em-workflow レビュー round 2 の finding `16029fae0ed6921a`（severity: high, category:
-  comprehensive, confidence: 85, source: codex:comprehensive）。無人実行の rework cap 到達により
-  `deferred` になった残件。
-
+  出典: em-workflow レビュー round 2 の finding `16029fae0ed6921a`（severity: high, category: comprehensive, confidence: 85, source: codex:comprehensive）。無人実行の rework cap 到達により `deferred` になった残件。
   関連 PR: https://github.com/m-m-n/em-claude-plugins/pull/27
-
-  '
 parent_branch: em-workflow/sca-python-lockfile-audit/integration
 tier: full
 tier_decision:
@@ -105,7 +78,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 12e338cea7dad0b519d5185d0f15bd08bd714954
 - id: implement
   status: pending
   base_commit: 9e7fedca76a2105b3397da2dd0cb84678951e78a
