@@ -6,11 +6,153 @@ generation: 1
 base_revision: 14e24038fb7e333d38be6739650b69c6dd0211aa
 last_input_digest: sha256:7eab98a02904d864e6b28ba5e41a2ccca99d7a3804a1e4339a296164298995bb
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-04T20:13:05+09:00'
+    questions:
+    - question_id: requirement.binding-precondition
+      status: answered
+    - question_id: requirement.skip-reason-shape
+      status: answered
+    - question_id: requirement.pip-scope
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.binding-precondition:
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - require_anchor_file
+    freeform: null
+    normalized_answer: 'require_anchor_file: a project is bindable only when its directory is confined
+      under project_root (realpath) AND holds the ecosystem anchor: npm package-lock.json or npm-shrinkwrap.json
+      (shrinkwrap preferred when both), cargo Cargo.lock, go go.mod. Missing anchor -> scanner not launched,
+      skip_reason <ecosystem>_project_unbindable. Applies to the root project too. Checks live in run_scan;
+      build_scan_job / build_scan_jobs stay pure. Existing run_scan fixtures that launch npm/cargo without
+      a lockfile are updated to create the manifest + anchor.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose require_anchor_file
+      over the analyst-recommended confined_existing_dir: cargo-audit generates Cargo.lock when only Cargo.toml
+      exists (rustsec cargo-audit/src/lockfile.rs), which breaks the read-only promise (vuln-scanners.yaml:24).
+      Orchestrator adopted Codex choice (comparatively better: keeps the read-only invariant). Opus escalation
+      not run.'
+    answered_at: '2026-10-04T20:13:05+09:00'
+  requirement.skip-reason-shape:
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - dedup_path_free
+    freeform: null
+    normalized_answer: 'dedup_path_free: new path-free reason <ecosystem>_project_unbindable; the aggregated
+      skip_reason is the de-duplicated, sorted set of path-free reasons joined by "+"; ecosystem-level
+      reasons (e.g. <ecosystem>_tool_not_found) appear once.'
+    resolution_note: Codex turn 1 chose dedup_path_free (scan-dependencies.py:2122, :1999; tests/test_sca_scan_execution.py:401).
+      Codex noted review-output-schema.json:27 only requires string|null, so the analyst claim of a schema
+      violation for path-qualified reasons was wrong; choice rests on compatibility and stable identifiers.
+      Orchestrator adopted. Opus escalation not run.
+    answered_at: '2026-10-04T20:13:05+09:00'
+  requirement.pip-scope:
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_pip_grouping
+    freeform: null
+    normalized_answer: 'include_pip_grouping: pip changed files are grouped per project directory too;
+      each group selects its target with the existing rule (lockfile first); pip argv/target form and
+      cwd (project_root) are unchanged; existing lockfile conversion, fixed skip reasons, in-project symlink
+      allowance and same-name multi-version split runs are preserved.'
+    resolution_note: Codex turn 1 chose include_pip_grouping (scan-dependencies.py:736, :2061; tests/test_sca_pip_lockfile_audit.py:322,
+      :378, :785). Orchestrator adopted. Opus escalation not run.
+    answered_at: '2026-10-04T20:13:05+09:00'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously: accept the analyst''s recommendation (skip the design step).'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously.
+    answered_at: '2026-10-04T20:13:05+09:00'
+  requirement.anchor-validation-strictness:
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'strict_all_paths: for npm/cargo/go, run_scan validates (realpath confinement under project_root,
+      no absolute path, no ".." escape, no resolution exception) every changed file of the group, the
+      project directory, the anchor and the required sibling manifest (npm package.json, cargo Cargo.toml,
+      go go.mod). Anchor and manifest must be regular files resolving inside the SAME project directory;
+      a symlink resolving to another directory -> unbindable. A deleted selected target or missing directory
+      -> unbindable; never fall back to an ancestor directory. pip keeps its existing validation and in-project
+      symlink allowance.'
+    normalized_answer: 'strict_all_paths: for npm/cargo/go, run_scan validates (realpath confinement under
+      project_root, no absolute path, no ".." escape, no resolution exception) every changed file of the
+      group, the project directory, the anchor and the required sibling manifest (npm package.json, cargo
+      Cargo.toml, go go.mod). Anchor and manifest must be regular files resolving inside the SAME project
+      directory; a symlink resolving to another directory -> unbindable. A deleted selected target or
+      missing directory -> unbindable; never fall back to an ancestor directory. pip keeps its existing
+      validation and in-project symlink allowance.'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements. Options:
+      strict_all_paths / dir_and_anchor_only. Codex turn 2 chose strict_all_paths (scan-dependencies.py:1317,
+      :1288, :1351; tests/test_sca_scan_execution.py:283; tests/test_sca_pip_lockfile_audit.py:785). Orchestrator
+      adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T20:13:05+09:00'
+  requirement.workspace-escape:
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'npm_flag_and_go_env_pin: add the argv flag --workspaces=false to the npm registry args
+      (vuln-scanners.yaml) so npm stops ancestor workspace-root detection at the project dir; add GOWORK=off
+      and GOFLAGS=-mod=readonly to the go child-env pin. cargo needs nothing extra (cargo-audit reads
+      ./Cargo.lock).'
+    normalized_answer: 'npm_flag_and_go_env_pin: add the argv flag --workspaces=false to the npm registry
+      args (vuln-scanners.yaml) so npm stops ancestor workspace-root detection at the project dir; add
+      GOWORK=off and GOFLAGS=-mod=readonly to the go child-env pin. cargo needs nothing extra (cargo-audit
+      reads ./Cargo.lock).'
+    resolution_note: 'Orchestrator-raised clarification from Codex turn 1 missing_requirements (npm loadLocalPrefix
+      switches to an ancestor workspace root; go searches ancestor go.work). Options: npm_ancestor_workspace_unbindable_go_env_pin
+      / go_env_pin_only / npm_flag_and_go_env_pin. Codex turn 2 chose npm_flag_and_go_env_pin citing npm
+      audit docs (#workspaces), npm v11.6.0 workspaces/config/lib/index.js L637-661, go.dev/ref/mod#workspaces,
+      and confirmed --workspaces=false passes validate_ecosystem_entry (scan-dependencies.py:699). Orchestrator
+      adopted. Opus escalation not run.'
+    answered_at: '2026-10-04T20:13:05+09:00'
+  requirement.project-group-semantics:
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'group identity is (ecosystem, validated project-relative directory; root = ""); duplicate/aliased
+      spellings of the same directory collapse into one group; groups are processed in project-relative
+      path order; within a group the existing manifest_file_for input-order selection rule picks the one
+      target/label; no whole-input permutation invariance is required beyond the aggregated skip_reason;
+      "one job per project" means one per-project scan unit (pip lockfile same-name split runs stay multiple
+      subprocesses); partial coverage applies across projects within one ecosystem: any incomplete project
+      -> skipped:true with aggregated skip_reason while completed projects keep findings; summary ecosystem
+      names are not duplicated; review-phase.md axis-2 paragraph is extended (append only) to cover multiple
+      projects and keeps the term "partial coverage".'
+    normalized_answer: 'group identity is (ecosystem, validated project-relative directory; root = "");
+      duplicate/aliased spellings of the same directory collapse into one group; groups are processed
+      in project-relative path order; within a group the existing manifest_file_for input-order selection
+      rule picks the one target/label; no whole-input permutation invariance is required beyond the aggregated
+      skip_reason; "one job per project" means one per-project scan unit (pip lockfile same-name split
+      runs stay multiple subprocesses); partial coverage applies across projects within one ecosystem:
+      any incomplete project -> skipped:true with aggregated skip_reason while completed projects keep
+      findings; summary ecosystem names are not duplicated; review-phase.md axis-2 paragraph is extended
+      (append only) to cover multiple projects and keeps the term "partial coverage".'
+    resolution_note: 'Orchestrator-raised from Codex turn 1 missing_requirements (scan-dependencies.py:2022,
+      :2122, :1990; review-phase.md:264; tests/test_sca_pip_lockfile_audit.py:322, :538; tests/test_sca_scan_execution.py:429).
+      Presented to Codex turn 2 as tentative acceptances; Codex: no objections. Orchestrator adopted.
+      Opus escalation not run.'
+    answered_at: '2026-10-04T20:13:05+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:7eab98a02904d864e6b28ba5e41a2ccca99d7a3804a1e4339a296164298995bb
   output_digest: null
 artifacts: []
