@@ -119,9 +119,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-per-project-scan-binding/task0001
   task0002:
     title: run_scan per-project grouping, binding and aggregation
     plan: tasks/task0002.md
@@ -156,9 +156,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-per-project-scan-binding/task0002
   task0003:
     title: 'review-phase.md: partial coverage across the projects of one ecosystem'
     plan: tasks/task0003.md
@@ -172,9 +172,9 @@ tasks:
     requirements:
     - FR13
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-per-project-scan-binding/task0003
 review:
   status: pending
   rounds_completed: 0
