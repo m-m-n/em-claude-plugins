@@ -3,9 +3,9 @@ feature: codex-interactive-guard-hook
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: ce38b34e357835b74b8811dca073e10f181c36cb
+base_revision: 0d9d833c5aa516785352dcfd256d819c19ba9a87
 last_input_digest: sha256:84cc2776223c36d7fd65ea9834f5eafad9792523f8f6d8bc88ef3cc0b9e5c5de
-active_request_id: create-spec-run-0002
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -151,8 +151,12 @@ worker_runs:
   input_digest: sha256:01b13b4ba1fb67cdedaf86cb59c3fdb8a84e281f33eb40562aca2528c071b635
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:84cc2776223c36d7fd65ea9834f5eafad9792523f8f6d8bc88ef3cc0b9e5c5de
+  output_digest: sha256:baa03e5b9076d2d41481c892054177694cf6a8576341dfd3424d3f93c1240ebb
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:697280b2606cba1ce8a3e6c9c05ee99682bab3639cd0ada7d3eca20b88271453
   output_digest: null
 artifacts: []
 patches: []
