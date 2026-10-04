@@ -1,0 +1,46 @@
+task_id: task0003
+baseline_failures: []          # 4a: `python3 -m unittest discover -s tests` ran 6690 tests, OK; check-plugin-invariants.py: all 7 checks PASS
+final_failures: []             # re-executed after implementation: 6718 tests (6690 + 28 new), OK; check-plugin-invariants.py: all 7 checks PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationGeneralMapping.test_general_mapping_covers_the_escalation_decided_non_packet_gate
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationGeneralMapping.test_no_codex_turn_case_is_stated_in_the_general_mapping
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationGeneralMapping.test_route_naming_reading_is_stated_in_the_general_mapping
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationGeneralMapping.test_section_names_no_source_value_outside_the_closed_vocabulary
+      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralMappingMatcherNegativeProof
+      - tests.test_batch_quiet_output_audit_record_contract.TestSourceVocabularyMatcherNegativeProof
+    red_confirmed: true
+    red_reason: "test_no_codex_turn_case_is_stated_in_the_general_mapping failed: AssertionError: 'the availability probe found no harness' not found in the general-mapping paragraph; test_general_mapping_covers_the_escalation_decided_non_packet_gate failed: False is not true; test_route_naming_reading_is_stated_in_the_general_mapping failed. test_section_names_no_source_value_outside_the_closed_vocabulary passed before the edit (the vocabulary was already closed): it is the guard that the new wording mints no value."
+  AC-2:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationNonPacketWriterBullet.test_resolution_note_list_names_escalation_and_its_reasoning
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationNonPacketWriterBullet.test_bullet_still_states_the_out_of_step_commit_reach_point
+      - tests.test_batch_quiet_output_audit_record_contract.TestWriterBulletMatcherNegativeProof
+    red_confirmed: true
+    red_reason: "test_resolution_note_list_names_escalation_and_its_reasoning failed: AssertionError: False is not true (the resolution_note list ended at 'whether Codex was consulted'). The reach-point test passed before and after: the existing TestAC6FirstWriterBulletAndAppendOnlyException pin covers that wording and no red state occurred for it."
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationWorkedExample.test_section_has_exactly_one_escalation_worked_example
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationWorkedExample.test_example_lies_outside_the_first_and_relaxed_route_bullets
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationWorkedExample.test_the_two_bullets_the_helpers_read_hold_no_fenced_block
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationWorkedExample.test_example_resolution_note_names_the_three_statements
+      - tests.test_batch_quiet_output_audit_record_contract.TestWorkedExampleMatcherNegativeProof
+      - tests.test_batch_quiet_output_audit_record_contract.TestExamplePlacementMatcherNegativeProof
+    red_confirmed: true
+    red_reason: "test_section_has_exactly_one_escalation_worked_example failed: AssertionError: 0 != 1 (the section held only the batch-safe-default example); test_example_lies_outside_the_first_and_relaxed_route_bullets and test_example_resolution_note_names_the_three_statements failed the same way (0 != 1). test_the_two_bullets_the_helpers_read_hold_no_fenced_block passed before the edit: it guards the placement against changing what the module's helpers read."
+  AC-4:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationRetainedWording
+      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralSourceDefinitionStatesWhichWritersItGoverns
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_vocabulary_stays_closed_no_new_value_minted
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC4QuestionIdRuleCitationScope
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_four_writers_sentence_occurs_exactly_once
+      - tests.test_wrapper_fallback_doc_realignment.TestAC6NoProviderOrUsageLimitLanguage
+    red_confirmed: false
+    red_reason: "Every item of this criterion is retained wording that the edit must leave unchanged; the existing pins (this module's pre-existing classes and tests/test_wrapper_fallback_doc_realignment.py's phase-state provider/usage-limit guard) and the new TestEscalationRetainedWording detect a regression in it. They passed before the edit and after it; no red state occurred for this change."
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract
+    red_confirmed: false
+    red_reason: "The criterion is the test module itself plus the full-suite run. The AC-1 to AC-3 pins in it were observed failing before the document edit (see those entries). The negative-proof and non-vacuity tests run over forged samples that do not read the document, so they passed on their first run and have no red state."
