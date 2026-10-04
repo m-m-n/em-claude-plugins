@@ -27,6 +27,15 @@ Covers task0001 Acceptance Criteria
   process (patched to fail).
 - AC-8: this module imports the standard library only.
 
+sca-scanner-project-config-isolation task0001: an npm / cargo job is built
+from the prepared isolation paths of its group (`prepared_inputs`), so every
+npm / cargo construction below passes one -- a nominal value, because
+construction is pure and never touches those paths. `build_scan_jobs` takes
+them as a dict keyed by job target; this module supplies a dict that answers
+every target (`_Prepared`). cargo's argument vector now carries the
+registry-declared `--file <copy>` right after `audit`; npm's, go's and pip's
+are unchanged.
+
 Test Notes: the script is loaded by file path (its name contains a hyphen),
 following the sibling `tests/test_sca_scan_*.py` modules. No real scanner is
 ever executed: executables are stubs on a temporary PATH, or nothing at all.
@@ -66,6 +75,27 @@ def _registry():
     return SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
 
 
+def _nominal_prepared(target):
+    """Prepared isolation paths for the group whose job target is `target`:
+    one directory per target, and a copy path for every role."""
+    directory = "/iso/" + target.replace("/", "~")
+    return SCAN.PreparedInputs(
+        directory=directory,
+        files={
+            "manifest": directory + "/package.json",
+            "anchor": directory + "/package-lock.json",
+            "lockfile": directory + "/Cargo.lock",
+        },
+    )
+
+
+class _Prepared(dict):
+    """A `prepared_inputs` dict that has an entry for every target."""
+
+    def __missing__(self, target):
+        return _nominal_prepared(target)
+
+
 def _entries():
     return {e["ecosystem"]: e for e in _registry()["ecosystems"]}
 
@@ -95,7 +125,9 @@ def _manifests(jobs, ecosystem=None):
 
 def _build(changed, *stubs, registry=None):
     with scanner_path(*stubs) as root:
-        return SCAN.build_scan_jobs(registry or _registry(), changed, root)
+        return SCAN.build_scan_jobs(
+            registry or _registry(), changed, root, prepared_inputs=_Prepared()
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -113,15 +145,24 @@ class TestArgumentVectorsFromTheRealRegistry(unittest.TestCase):
         self.assertEqual(self.entries["npm"]["args"], ["audit", "--json", "--workspaces=false"])
 
     def test_npm_job_argv_is_exactly_executable_audit_json_workspaces_false(self):
-        job = SCAN.build_scan_job(self.entries["npm"], "package.json", "/proj", "/x/npm")
+        job = SCAN.build_scan_job(
+            self.entries["npm"], "package.json", "/proj", "/x/npm",
+            prepared_inputs=_nominal_prepared("package.json"),
+        )
         self.assertEqual(job["argv"], ["/x/npm", "audit", "--json", "--workspaces=false"])
 
     def test_npm_entry_still_passes_validation(self):
         self.assertIsNone(SCAN.validate_ecosystem_entry(self.entries["npm"]))
 
-    def test_cargo_argv_is_unchanged(self):
-        job = SCAN.build_scan_job(self.entries["cargo"], "Cargo.toml", "/proj", "/x/cargo-audit")
-        self.assertEqual(job["argv"], ["/x/cargo-audit", "audit", "--json"])
+    def test_cargo_argv_carries_the_declared_target_flag_and_the_copy_right_after_audit(self):
+        prepared = _nominal_prepared("Cargo.toml")
+        job = SCAN.build_scan_job(
+            self.entries["cargo"], "Cargo.toml", "/proj", "/x/cargo-audit", prepared_inputs=prepared
+        )
+        self.assertEqual(
+            job["argv"],
+            ["/x/cargo-audit", "audit", "--file", prepared.files["lockfile"], "--json"],
+        )
 
     def test_go_argv_is_unchanged(self):
         job = SCAN.build_scan_job(self.entries["go"], "go.mod", "/proj", "/x/govulncheck")
@@ -148,7 +189,10 @@ class TestArgumentVectorsFromTheRealRegistry(unittest.TestCase):
         self.assertEqual(reasons, [])
         by_ecosystem = {j["ecosystem"]: j["argv"][1:] for j in jobs}
         self.assertEqual(by_ecosystem["npm"], ["audit", "--json", "--workspaces=false"])
-        self.assertEqual(by_ecosystem["cargo"], ["audit", "--json"])
+        self.assertEqual(
+            by_ecosystem["cargo"],
+            ["audit", "--file", _nominal_prepared("Cargo.toml").files["lockfile"], "--json"],
+        )
         self.assertEqual(by_ecosystem["go"], ["-json", "./..."])
 
 
@@ -229,7 +273,8 @@ class TestChildEnvironmentPins(unittest.TestCase):
         for name, manifest in (("npm", "package.json"), ("cargo", "Cargo.toml"), ("pip", "requirements.txt")):
             with self.subTest(ecosystem=name):
                 job = SCAN.build_scan_job(
-                    self.entries[name], manifest, "/proj", f"/x/{name}", environ=self.HOSTILE
+                    self.entries[name], manifest, "/proj", f"/x/{name}", environ=self.HOSTILE,
+                    prepared_inputs=_nominal_prepared(manifest),
                 )
                 self.assertFalse([k for k in job["env"] if k.startswith("GO")])
 
@@ -554,7 +599,10 @@ class TestConstructionIsPure(unittest.TestCase):
         )
         with self.forbidden_entry_points():
             for name, target in cases:
-                job = SCAN.build_scan_job(entries[name], target, "/definitely/not/there", f"/x/{name}")
+                job = SCAN.build_scan_job(
+                    entries[name], target, "/definitely/not/there", f"/x/{name}",
+                    prepared_inputs=_nominal_prepared(target),
+                )
                 self.assertEqual(job["manifest"], target)
 
     def test_build_scan_jobs_completes_for_nested_alias_absolute_escaping_and_nul_inputs(self):
@@ -576,7 +624,9 @@ class TestConstructionIsPure(unittest.TestCase):
         registry = _registry()
         with scanner_path(*ALL_STUBS) as root:
             with self.forbidden_entry_points():
-                jobs, reasons = SCAN.build_scan_jobs(registry, changed, root)
+                jobs, reasons = SCAN.build_scan_jobs(
+                    registry, changed, root, prepared_inputs=_Prepared()
+                )
         self.assertEqual(
             reasons, ["npm_project_unbindable", "cargo_project_unbindable", "go_project_unbindable"]
         )
@@ -588,7 +638,9 @@ class TestConstructionIsPure(unittest.TestCase):
     def test_the_project_root_is_never_touched(self):
         with scanner_path("npm") as root:
             self.assertFalse(root.exists())
-            SCAN.build_scan_jobs(_registry(), ["a/package.json", "b/package.json"], root)
+            SCAN.build_scan_jobs(
+                _registry(), ["a/package.json", "b/package.json"], root, prepared_inputs=_Prepared()
+            )
             self.assertFalse(root.exists())
 
 
