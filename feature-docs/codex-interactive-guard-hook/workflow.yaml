@@ -116,7 +116,7 @@ tasks:
     - FR14
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-interactive-guard-hook/task0001
   task0002:
