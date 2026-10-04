@@ -460,8 +460,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0003 of sca-per-project-scan-binding (FR13): Phase R2's
 # axis-2 text gained an appended passage on partial coverage across the
 # projects of one ecosystem.
+# Refreshed by task0002 of sca-scanner-project-config-isolation (FR13):
+# Phase R2's axis-2 text now describes the npm / cargo isolation directory,
+# the isolation failure tokens and the trusted configuration scope.
 REVIEW_PHASE_SHA256 = (
-    "ac63451803cc27208aabf0fd2749cb23c6a1d64554ebad3fa303bc6c92c46b80"
+    "4b2deaba214fcee339cb5d7fb9e50294adefca68789a3791aa41d6d97c96bc6b"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
