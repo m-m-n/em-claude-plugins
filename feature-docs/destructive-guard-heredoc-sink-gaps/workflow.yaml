@@ -96,9 +96,18 @@ workflow:
   status: completed
   completed_at_commit: 2c77b5e57bb943d42e77f2e43529ea1a6dbda000
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  completed_at_commit: 06ef6d1bdfd6382253e3e39ada4a1d0c0522d46b
+  summary: >-
+    unittest 6497 件 OK、ケース表 573/573 PASS（TS-1〜TS-10、TS-15〜TS-17、TS-19、TS-20）。
+    TS-11: base guard で 6 finding すべてに FAIL ケースあり（既に PASS する追加 deny ケースは 20 件）。
+    TS-12: base のケース配列 455 件が統合版の完全な前置部分。
+    TS-13: TS-4 ケースが TIMEOUT 10s の FAIL として報告され、残りも評価し traceback なし。
+    TS-14: (a) 30000→60000 で 0.12s→0.28s（2.37 倍）、(b) 約 60KB→120KB で 0.16s→0.26s（1.62 倍）。
+    TS-18: base..HEAD の変更は対象 3 ファイルのみ、標準ライブラリ外 import・ファイルアクセス・評価の追加なし。
+    TS-21: (a) TS-19 の 5 件すべて FAIL、(b) TS-20 の融合 4 形すべて allow 以外、未改変版は全 PASS。
 - id: retrospect
   status: pending
 tasks:
