@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-scanner-project-config-isolation
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: c803cfd072cf150036f18d3da23a3a9fac452068
+last_input_digest: sha256:e891cb24af56eb41581f203f714317e35467fa4c7bdd325af719dd4b74fa2e76
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:e891cb24af56eb41581f203f714317e35467fa4c7bdd325af719dd4b74fa2e76
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
