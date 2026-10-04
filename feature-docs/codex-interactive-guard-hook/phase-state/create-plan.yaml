@@ -1,0 +1,17 @@
+schema_version: 1
+feature: codex-interactive-guard-hook
+phase: create-plan
+status: initialized
+generation: 1
+base_revision: 57b643b4f79fc8cfd5c2b6946bb39eafbc125540
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
