@@ -85,7 +85,8 @@ workflow:
   base_commit: 9e7fedca76a2105b3397da2dd0cb84678951e78a
   completed_at_commit: 0d1a7d482753943e9d1785d6ed646dcda7f9d5d0
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 2bef049ec63f758c435ca1a15a80a7e2ba120fc0
 - id: verify
   status: pending
   result: null
@@ -130,8 +131,8 @@ tasks:
     status: merged
     branch: em-workflow/sca-python-lockfile-audit/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -141,7 +142,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    security: completed
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
