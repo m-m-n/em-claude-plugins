@@ -56,3 +56,17 @@ python3 -m unittest tests.test_loop_command_guard
 
 - ケースは `tests/test_loop_command_guard.py` の `CASES` に
   `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `deny` か `silent`。
+
+## codex-hook-interactive-guard
+
+`em-workflow/scripts/codex-hook-interactive-guard.py` と
+`em-review/scripts/codex-hook-interactive-guard.py` を変更したら、同じ変更の中で次を走らせる。
+
+```
+python3 -m unittest tests.test_codex_hook_interactive_guard
+```
+
+- ケースは `tests/test_codex_hook_interactive_guard.py` の `CASES` に
+  `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `deny` か `silent`。
+- 同じ表を 2 つのコピーの両方に流す。
+- 2 つのコピーは同じ変更の中で一緒に直し、バイト単位で同一に保つ。
