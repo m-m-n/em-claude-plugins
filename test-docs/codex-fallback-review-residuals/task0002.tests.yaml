@@ -1,0 +1,39 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 6690 tests, OK, before any edit
+final_failures: []             # re-executed after implementation: 6729 tests, OK; check-plugin-invariants all PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_readme_batch_relaxed_route.TestOldClauseAbsent.test_readme_no_longer_carries_the_old_clause
+      - tests.test_readme_batch_relaxed_route.TestOldClauseAbsent.test_matcher_catches_a_forged_bullet_carrying_the_old_clause
+      - tests.test_readme_batch_relaxed_route.TestOldClauseAbsent.test_matcher_catches_the_old_clause_rewrapped_across_lines
+    red_confirmed: true
+    red_reason: "test_readme_no_longer_carries_the_old_clause failed against the unedited README: 'True is not false : the README still carries the retired fail-closed clause'"
+  AC-2:
+    tests:
+      - tests.test_readme_batch_relaxed_route.TestBatchBulletRelaxedRoute.test_bullet_states_interactive_aborts_and_batch_takes_relaxed_route
+      - tests.test_readme_batch_relaxed_route.TestBatchBulletRelaxedRoute.test_matcher_rejects_a_bullet_with_the_route_steps_out_of_order
+      - tests.test_readme_batch_relaxed_route.TestBatchBulletRelaxedRoute.test_matcher_rejects_a_bullet_where_batch_still_aborts
+    red_confirmed: true
+    red_reason: "test_bullet_states_interactive_aborts_and_batch_takes_relaxed_route failed against the unedited README: no interactive-aborts / batch-does-not-abort split in the sentence"
+  AC-3:
+    tests:
+      - tests.test_readme_batch_relaxed_route.TestBatchBulletCitations.test_bullet_cites_path_and_both_section_names
+      - tests.test_readme_batch_relaxed_route.TestBatchBulletCitations.test_one_sentence_states_the_surviving_aborts_are_the_only_stops
+      - tests.test_readme_batch_relaxed_route.TestBatchBulletCitations.test_bullet_restates_no_trigger_literal
+    red_confirmed: true
+    red_reason: "test_bullet_cites_path_and_both_section_names failed against the unedited README (bullet does not cite 'The batch relaxation' / 'The surviving aborts'); test_one_sentence_states_the_surviving_aborts_are_the_only_stops failed with 'False is not true'. test_bullet_restates_no_trigger_literal was already green (the old bullet carried none of the four literals) and is the non-restatement guard, not part of the observed red."
+  AC-4:
+    tests:
+      - tests.test_readme_batch_relaxed_route.TestAgentTableRow.test_exactly_one_row_in_the_contiguous_block_directly_after_review_evaluator
+      - tests.test_readme_batch_relaxed_route.TestAgentTableRow.test_every_pre_existing_row_is_still_present_exactly_once
+      - tests.test_readme_batch_relaxed_route.TestAgentTableRow.test_role_text_names_the_opus_subagent_and_uses_no_forbidden_phrase
+      - tests.test_readme_batch_relaxed_route.TestAgentTableRow.test_contiguity_check_rejects_the_row_placed_after_a_non_table_line
+      - tests.test_llm_led_review_user_docs.TestReadmeAgentTable
+    red_confirmed: true
+    red_reason: "test_exactly_one_row_in_the_contiguous_block_directly_after_review_evaluator failed against the unedited README: expected exactly one 'opus-escalation' row, found 0. The pre-existing-row test and tests.test_llm_led_review_user_docs.TestReadmeAgentTable were green before and after (they are the still-holds guards)."
+  AC-5:
+    tests:
+      - tests.test_readme_batch_relaxed_route
+    red_confirmed: false
+    red_reason: "The criterion is about the module itself (standard library only, a non-vacuity proof per negative assertion) and the full-suite run. The module's AC-1..AC-4 tests were observed red against the unedited README (6 failures), but the module was written before any run, so no failing run of a not-yet-existing module was observed; the non-vacuity proofs pass by construction over forged in-memory samples."
