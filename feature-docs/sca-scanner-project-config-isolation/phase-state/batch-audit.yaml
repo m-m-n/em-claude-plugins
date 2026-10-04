@@ -3,7 +3,7 @@ feature: sca-scanner-project-config-isolation
 records:
 - question_id: create-plan.open-items-consult
   packet_id: null
-  answered_at: '2026-10-04T22:58:00+09:00'
+  answered_at: '2026-10-04T22:49:00+09:00'
   source: codex-consultation
   answer_mode: freeform
   selected_option_ids: []
