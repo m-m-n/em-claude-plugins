@@ -140,9 +140,12 @@ workflow:
   status: completed
   completed_at_commit: 74b5242d45b840b29a56ea0b47b03238d9147956
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  completed_at_commit: 5b1176fe25996b4dccb526e62fafc4d5644f5593
+  result: pass
   failed_items: []
+  excluded_scenarios: []
+  summary: 'repo-tests (6821 tests) and plugin-invariants exit 0; TS1-TS8 pass (TS8: no forbidden path in diff, provider-fallback module absent). Manual checks not executed in batch.'
 - id: retrospect
   status: pending
 tasks:
