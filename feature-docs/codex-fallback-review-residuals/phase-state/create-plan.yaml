@@ -4,18 +4,22 @@ phase: create-plan
 status: dispatching
 generation: 1
 base_revision: acc168ab2aed9a52973148c9bfc4e7b1c3f252d7
-last_input_digest: sha256:048900510af0450f5c780da401cd4945c379598724fd900665ef21f5bee6ce79
-active_request_id: create-plan-run-0001
+last_input_digest: sha256:0ef3c1bb68eb94a675581615212223bcb965e3312ad70cbae78456fd45b01197
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: invalid_output
   input_digest: sha256:048900510af0450f5c780da401cd4945c379598724fd900665ef21f5bee6ce79
+  output_digest: null
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:0ef3c1bb68eb94a675581615212223bcb965e3312ad70cbae78456fd45b01197
   output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: "run-0001 failed validation: task plan Files bullets carried more than one backtick token (files union mismatch in all 4 tasks); dispatch write_policy used absolute paths (orchestrator error, corrected to project-relative in run-0002)"
