@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-interactive-guard-hook
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 57b643b4f79fc8cfd5c2b6946bb39eafbc125540
 last_input_digest: sha256:7bad3b31cd6a193b43c59bebc1888ee3206d76bb256ce69cc7857828fd1f25b7
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
