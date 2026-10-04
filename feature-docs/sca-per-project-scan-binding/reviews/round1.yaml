@@ -1,0 +1,77 @@
+round: 1
+executed_at: "2026-10-04T21:17:18+09:00"
+scope:
+  review_mode: diff
+  base_commit: 2fd4080f4319886e2ebd686397b7dc25b9ef1684
+  head_commit: fca7000d69ea9e4906d148905bfbec6314c32b13
+  changed_files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/vuln-scanners.yaml
+    - em-workflow/scripts/scan-dependencies.py
+    - test-docs/sca-per-project-scan-binding/task0001.tests.yaml
+    - test-docs/sca-per-project-scan-binding/task0002.tests.yaml
+    - test-docs/sca-per-project-scan-binding/task0003.tests.yaml
+    - tests/test_sca_per_project_scan_binding.py
+    - tests/test_sca_pip_lockfile_audit.py
+    - tests/test_sca_review_phase_multi_project_coverage.py
+    - tests/test_sca_scan_execution.py
+    - tests/test_sca_scan_invocation.py
+    - tests/test_sca_scan_job_grouping.py
+    - tests/test_sca_scan_normalization.py
+    - tests/test_tier_record_schema_v2.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: f7a5bd6dae54d451
+    severity: medium
+    category: security
+    file: em-workflow/scripts/scan-dependencies.py
+    line: 919
+    title: "相対パスで解決された実行ファイルが、入れ子のプロジェクトを基準に解決し直される"
+    description: "resolve_executable()（717-718 行）は shutil.which() の結果をそのまま返す。PATH に相対の項目（例: tools、./node_modules/.bin）があると、argv[0] が相対パスになる。今回の変更で npm / cargo / go の cwd が入れ子のプロジェクトに移った。subprocess.run は相対の argv[0] を新しい cwd を基準に解決するため、which が確認した <起動時の cwd>/tools/npm ではなく <root>/services/api/tools/npm が実行される。この状態では SPEC FR3 の「argv[0] は実行ファイルの絶対パス」も満たさない。子プロセスの PATH にも相対の項目がそのまま渡る。発生には利用者の PATH に相対の項目があることが前提で、ルートのプロジェクトでは変更前から同じ種類の露出があったため、evaluator が high から medium に下げた。"
+    suggestion: "resolve_executable() の結果を os.path.abspath() で絶対パスに固定する。build_child_env() では PATH の相対の項目を除くか、絶対パスに直す。cwd が入れ子のジョブでも argv[0] が絶対パスになることを確かめるテストを足す。"
+    sources: [codex:security]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため Phase R4 の自動修正候補外。Codex 相談の結果、別タスクとして起票する"
+  - stable_id: 714fd6313e25071f
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    line: 808
+    title: "GOFLAGS=-mod=readonly の固定で Go の vendor モードが使えなくなる"
+    description: "Go は go.mod の go の値が 1.14 以上で vendor ディレクトリがあると自動で -mod=vendor を選ぶ。それ以外の既定はすでに -mod=readonly なので、固定値が実際に変えるのは vendor モードを止めることだけになる。vendor を使うプロジェクトでは go.sum がない場合・オフライン・非公開モジュールで読み込みに失敗し、変更前に完了していた走査が not_completed の skip になる。値は SPEC FR11 / AC-10 が指定したもので、直すには仕様判断が要る。"
+    suggestion: "(a) 束縛したディレクトリに vendor/modules.txt があれば run_scan 側で -mod=vendor、それ以外は -mod=readonly にする。(b) GOFLAGS を空の固定値に戻す。どちらでも FR11 / AC-10、固定値の表のテスト、task0001 のテスト記録を合わせて更新する。"
+    sources: [codex:comprehensive]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "medium のため Phase R4 の自動修正候補外。SPEC FR11/AC-10 の判断が要るため、別タスクとして起票する"
+evaluation:
+  round_summary: "ラウンド 1（diff、cross_validation あり）。security#0 の high 1 件は、shutil.which が相対パスを返すと入れ子の cwd を基準に解決し直される動作をスクラッチ領域で再現した。前提が利用者の PATH の相対項目で、ルートでは変更前から同種の露出があるため medium に下げた。comprehensive#0 の Go vendor 指摘は Go の -mod 既定動作と一致し、SPEC FR11/AC-10 由来のトレードオフとして medium で残した。注入の試みはなかった。security / comprehensive / performance / architecture は corroborated。spec は FR3 の argv[0] 絶対パス要件が PATH の相対項目で崩れる点を security の指摘にまとめた。変更対象のテスト 8 モジュール 398 件が成功した。"
+  recommended_action: "auto_fix"
+  action_rationale: "critical / high は残っていない。security の指摘は限られた範囲で直せる。Go の指摘は SPEC FR11/AC-10 の値を変えるかの判断が要る。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "/home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-sca-per-project-scan-binding-20261004T121723Z.md"
