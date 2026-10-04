@@ -171,8 +171,8 @@ tasks:
     - NFR6
     - NFR7
     - NFR8
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-fallback-review-residuals/task0001
   task0002:
     title: README batch clause and agent table row
     plan: tasks/task0002.md
@@ -190,8 +190,8 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-fallback-review-residuals/task0002
   task0003:
     title: Batch audit source mapping for escalation-decided non-packet gates
     plan: tasks/task0003.md
@@ -209,8 +209,8 @@ tasks:
     - NFR3
     - NFR5
     - NFR6
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-fallback-review-residuals/task0003
   task0004:
     title: 'Regression test: --litellm MODEL passed verbatim'
     plan: tasks/task0004.md
@@ -223,8 +223,8 @@ tasks:
     - FR7
     - NFR2
     - NFR5
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-fallback-review-residuals/task0004
 review:
   status: pending
   rounds_completed: 0
