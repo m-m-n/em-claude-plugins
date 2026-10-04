@@ -1,0 +1,145 @@
+round: 1
+executed_at: "2026-10-05T02:00:37+09:00"
+scope:
+  review_mode: diff
+  base_commit: 4473d652cf2164bfc160468af16cf25f354c9582
+  head_commit: 8b63d24198b2cbe20411e5ca4af8474ed806793c
+  changed_files:
+    - .claude/rules/hook-tests.md
+    - em-review/agents/codex-reviewer.md
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/run_codex_exec.sh
+    - em-workflow/agents/codex-reviewer.md
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-workflow/scripts/run_codex_exec.sh
+    - test-docs/codex-interactive-guard-hook/task0001.tests.yaml
+    - test-docs/codex-interactive-guard-hook/task0002.tests.yaml
+    - test-docs/codex-interactive-guard-hook/task0003.tests.yaml
+    - tests/test_codex_hook_interactive_guard.py
+    - tests/test_codex_hook_wrapper_args.py
+    - tests/test_codex_reviewer_interactive_guidance.py
+    - tests/test_reviewer_roles_protocol.py
+plan:
+  floor: [comprehensive, security, architecture, performance, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 8145e7b41df8bd41
+    severity: medium
+    category: security
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 517
+    title: "TM-1: シェルの束ねたオプションと -- で -c の文字列判定を回避できる"
+    description: "_read_options はシェルの -c を python の -c と同じく「束の残りが値」として扱い、束に後続の文字があると code_string を None のまま返す。Bash の -c は値を取らないフラグで、束の残りもオプションとして処理し、最初のオペランドを文字列として実行する。`bash -cx 'python3 -i'`、`bash -ce 'python3 -i'`、`bash -c -- 'python3 -i'` はいずれも判定なしで通り、`bash -ci 'python3'` も束の中の -i と内側の引数なし起動の両方を見落とす。FR9 と THREAT-MODEL.md の TM-1 に反する。tests/test_codex_hook_interactive_guard.py:281 が `bash -cx` を silent として固定している。em-review のコピーも同じ。"
+    suggestion: "シェル系では -c を値を取らないフラグとして扱い、同じ束の残りの文字と後続のオプション（`--` を含む）を読み終えてから、最初のオペランドを -c の文字列として 1 段判定する。束の中の i も検知する。281 行目の期待値を deny に変え、`bash -ce`、`bash -c --`、`bash -ci` のケースを足して両コピーで流す。"
+    sources: [codex:security]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外"
+  - stable_id: 101256e4667a9ec6
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 517
+    title: "シェルの -c の解析で対話起動を見落としている"
+    description: "8145e7b41df8bd41 と同じ箇所。シェルの -c を値を取るオプションとして扱うため、`bash -cx 'python3 -i'` と `bash -c -- 'python3 -i'` が通り、`bash -ci '...'` の束の中の -i も読まれない。tests/test_codex_hook_interactive_guard.py:281 が誤った期待値で固定している。em-review のコピーにも同じ不具合がある。"
+    suggestion: "シェル系では束全体と後続のオプションを解析してからコマンド文字列を取り出す。281 行目の silent ケースを deny に直し、両コピーで検証する。"
+    sources: [codex:comprehensive]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外"
+  - stable_id: 71168f778ca98eb1
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 530
+    title: "Bash の -h を情報表示用として扱っている"
+    description: "INFO_LETTERS = \"Vh\" が全処理系に効くため、`bash -h` と `sh -h` は informational として通る。Bash の -h はコマンドのハッシュ化のオプションでヘルプ表示ではなく、疑似端末上ではそのまま対話シェルになる。SPEC FR7 と処理系表の注記が -h を全処理系共通で除外しているのが原因で、実装は SPEC どおりだが US1 の目的に反する。両コピーに同じ問題がある。"
+    suggestion: "情報表示用の短いオプションを処理系ごとに定義し、シェル系から h を外す。SPEC FR7 の共通扱いも直し、`bash -h` の deny ケースを両コピーで足す。"
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外"
+  - stable_id: b151c1b9643b68b4
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 267
+    title: "コマンド置換内の引用符で外側の二重引用符を閉じている"
+    description: "_double_quoted は二重引用符の中の $( ... ) を読み飛ばさず、最初に現れた \" で引用を閉じる。`echo \"$(echo \"; python3 -i\")\"` が python3 の対話起動として拒否される。NFR2 の誤爆回避に反する。両コピーに同じ問題がある。"
+    suggestion: "二重引用符の中の $( と ` を _skip_parens と同じ要領で読み飛ばし、読み切れない場合は判定不能として通す。再現ケースを silent として両コピーで足す。"
+    sources: [codex:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外"
+  - stable_id: ad51d256afb757aa
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 406
+    title: "括弧のグループへ標準入力の接続を引き継いでいない"
+    description: "( と ) を単なる区切りとして扱うため、`(python3) < /dev/null` と `printf 'print(1)\\n' | (echo ignored; python3)` がどちらも python3 の引数なし起動として拒否される。FR7 の除外に反する誤爆。両コピーに同じ問題がある。"
+    suggestion: "グループ単位で標準入力の接続を持ち、内部の全コマンドに伝える。読み切れない場合は判定不能として通す。両ケースを silent として両コピーで足す。"
+    sources: [codex:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外"
+  - stable_id: a1b1320c32b41256
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 212
+    title: "パイプ直後の改行で接続情報を消している"
+    description: "_separator は `|` の直後の改行でも pipe_pending を False に戻すため、複数行のパイプの右側の python3 が標準入力未接続として拒否される。FR7 と NFR2 に反する誤爆。両コピーに同じ問題がある。"
+    suggestion: "パイプの右側を待つ間は、空のコマンドしか生まない改行やコメントでは pipe_pending を保持する。複数行のパイプを silent として両コピーで足す。"
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外"
+  - stable_id: 4f3a287a7676c073
+    severity: medium
+    category: security
+    file: em-workflow/scripts/run_codex_exec.sh
+    line: 203
+    title: "TB-3: リポジトリ側の Codex 設定の hook が信頼確認なしで動くかが未確認のまま"
+    description: "評価者の独自検査。THREAT-MODEL.md は --dangerously-bypass-hook-trust の下で Codex 0.160.0 がリポジトリ側の設定を読むかを TB-3 の未解決事項とするが、確認の記録も緩和策も無い。--litellm 経路はユーザー設定を読むため、レビュー対象が信頼済みのプロジェクトなら、そのリポジトリが持ち込んだ hook が信頼確認なしに動く可能性がある。em-review のラッパーも同じ構成。"
+    suggestion: "Codex 0.160.0 で、既定経路と --litellm 経路のそれぞれについて作業ディレクトリ側の hook 定義が実行されるかを確かめ、実行されるならその層を読まない起動に変え、されないなら THREAT-MODEL.md の TB-3 に記録する。"
+    sources: [claude:evaluator]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外。評価者起点で実挙動の確認が要る"
+evaluation:
+  round_summary: "cross_validation 下のラウンド 1。security#0 と comprehensive#0 の指摘 6 件は評価者が判定関数を実行してすべて再現した（em-review のコピーはバイト単位で同一）。architecture#0 の 2 件は SPEC FR5/AC3/A8 が両プラグインへの同一コピーを要求し、プラグインは個別にキャッシュへコピーされるため共有できないことから誤検知として除外した。評価者の独自検査で TB-3 の未解決事項を security の指摘として追加した。注入の試みは見つからなかった。観点ごと: security=findings／comprehensive=corroborated／architecture=報告は裏付けられず／performance=corroborated／spec=空の結果は裏付けられない（FR9・FR7 からの逸脱は security/comprehensive と同じ箇所）。評価者の import で生成された em-workflow/scripts/__pycache__ はオーケストレーターがゴミ箱へ移した。"
+  recommended_action: auto_fix
+  action_rationale: "ガード本体の medium 6 件は解析器に閉じた修正で自動修正の範囲に収まる。TB-3 の件は Codex の実挙動の確認と人の判断が要る。（助言のみ。自動修正の候補は critical/high に限られるため、このラウンドでは適用していない）"
+dismissed_sites:
+  - file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 1
+    run_id: "architecture#0"
+    reason: "false positive"
+  - file: em-workflow/scripts/run_codex_exec.sh
+    line: 148
+    run_id: "architecture#0"
+    reason: "false positive"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
