@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-go-govulncheck-real-output
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 7ddf0dcb2574c5c12d048956c4cc96a5b408dcb5
+last_input_digest: sha256:9039e80fb6e7d0623cf6f4e02a645e83c2f51c61380a5aaa8ff83dfe3eaaa709
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:9039e80fb6e7d0623cf6f4e02a645e83c2f51c61380a5aaa8ff83dfe3eaaa709
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
