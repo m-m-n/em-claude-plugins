@@ -3,19 +3,160 @@ feature: codex-interactive-guard-hook
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: a804f74563f6183d38d07738f81931f9ced6d288
-last_input_digest: sha256:01b13b4ba1fb67cdedaf86cb59c3fdb8a84e281f33eb40562aca2528c071b635
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: ce38b34e357835b74b8811dca073e10f181c36cb
+last_input_digest: sha256:84cc2776223c36d7fd65ea9834f5eafad9792523f8f6d8bc88ef3cc0b9e5c5de
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-05T00:41:00+09:00'
+    questions:
+    - question_id: q.interpreter-set
+      status: answered
+    - question_id: q.no-arg-definition
+      status: answered
+    - question_id: q.command-parsing-depth
+      status: answered
+    - question_id: q.reviewer-instruction-placement
+      status: answered
+    - question_id: q.em-review-copy-identity
+      status: answered
+    - question_id: q.design-step
+      status: answered
+answers:
+  q.interpreter-set:
+    question_id: q.interpreter-set
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - core_repl_set
+    freeform: null
+    normalized_answer: 'core_repl_set: deny -i for python/python3/python3.N, node, bash/sh/zsh/dash/ksh,
+      lua; deny no-arg launch for those plus ruby, perl, deno, irb, ipython. Never deny perl -i / ruby
+      -i / php -i / sed -i.'
+    resolution_note: 'Codex chose core_repl_set: perl -i / ruby -i は非対話の置換なので止めない。既存ガードの語彙（interpreter-mismatch-guard.py:43
+      SHELLS、:55 INTERPRETER_PREFIXES）と合う。minimal は ruby/perl/deno の素の起動を取り逃がし、broad は未検証の対象（sqlite3/psql
+      等）が増えて誤爆と保守の負担が増える。Options not chosen: minimal_set, broad_set. Consultation: entry codex (run_codex_exec.sh
+      readonly) turn 1 exited 124 (timeout); advanced to entry litellm (muse-spark) turn 2, which answered.
+      Orchestrator mapped the suggestion to the declared option_id (comparatively better). Opus escalation
+      not run.'
+    answered_at: '2026-10-05T00:52:00+09:00'
+  q.no-arg-definition:
+    question_id: q.no-arg-definition
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - no_operand_and_tty_stdin
+    freeform: null
+    normalized_answer: 'no_operand_and_tty_stdin: deny when there is no script operand, no -c/-m/-e, no
+      ''-'', and stdin is not redirected (<, <<, <<<) and not on the right of a pipe; option-only launches
+      (python3 -B) are denied; --version/-V/-h/--help are allowed.'
+    resolution_note: 'Codex chose no_operand_and_tty_stdin: literal_no_args は python3 -B のようなオプションだけの起動を取り逃がす。no_operand_any_stdin
+      は仕様で通すべき python3 - <<EOF 系まで止める。heredoc 除去（interpreter-mismatch-guard.py:92）とリダイレクトの扱い（:204）が先例。Options
+      not chosen: literal_no_args, no_operand_any_stdin. Consultation: entry codex (run_codex_exec.sh
+      readonly) turn 1 exited 124 (timeout); advanced to entry litellm (muse-spark) turn 2, which answered.
+      Orchestrator mapped the suggestion to the declared option_id (comparatively better). Opus escalation
+      not run.'
+    answered_at: '2026-10-05T00:52:00+09:00'
+  q.command-parsing-depth:
+    question_id: q.command-parsing-depth
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - split_plus_one_level_shell_c
+    freeform: null
+    normalized_answer: 'split_plus_one_level_shell_c: strip heredoc bodies, split on ; && || | newline,
+      skip env assignments, option-less wrappers (env/nohup/nice/exec/command/time/sudo) and ''timeout
+      DURATION'', basename match; descend one level into a literal string passed to bash -c / bash -lc
+      / sh -c; anything unparseable is allowed silently.'
+    resolution_note: 'Codex chose split_plus_one_level_shell_c: first_word_only は cd /x && python3 -i
+      を取り逃がす。分割（interpreter-mismatch-guard.py:174）とラッパー読み飛ばし（:238）に sh -c を 1 段だけ潜る分を足すと bash -c ''python3
+      -i'' も止められる。解析できないときに黙って通すのは既存方針（:356）と仕様の fail-open に一致。Options not chosen: split_only, first_word_only.
+      Consultation: entry codex (run_codex_exec.sh readonly) turn 1 exited 124 (timeout); advanced to
+      entry litellm (muse-spark) turn 2, which answered. Orchestrator mapped the suggestion to the declared
+      option_id (comparatively better). Opus escalation not run.'
+    answered_at: '2026-10-05T00:52:00+09:00'
+  q.reviewer-instruction-placement:
+    question_id: q.reviewer-instruction-placement
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - reviewer_agent_step4
+    freeform: null
+    normalized_answer: 'reviewer_agent_step4: add the instruction to the <grounding_rules> content composed
+      in Step 4 of both agents/codex-reviewer.md; Step 5 line and headings unchanged.'
+    resolution_note: 'Codex chose reviewer_agent_step4: ラッパーに足す案は codex-prompting SKILL.md:73 の役割分担（サンドボックス文言はラッパーが前置）を崩す。SKILL.md:67
+      は重複を避けるよう定めており both は重複になる。Step 4（codex-reviewer.md:50）に足し Step 5（:119）と見出しを変えない案がテストの固定を壊さない。Options
+      not chosen: wrapper_prompt_prefix, both. Consultation: entry codex (run_codex_exec.sh readonly)
+      turn 1 exited 124 (timeout); advanced to entry litellm (muse-spark) turn 2, which answered. Orchestrator
+      mapped the suggestion to the declared option_id (comparatively better). Opus escalation not run.'
+    answered_at: '2026-10-05T00:52:00+09:00'
+  q.em-review-copy-identity:
+    question_id: q.em-review-copy-identity
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - byte_identical_shared_cases
+    freeform: null
+    normalized_answer: 'byte_identical_shared_cases: both hook copies are byte-identical, a test asserts
+      equality, and one CASES table is run against both copies.'
+    resolution_note: 'Codex chose byte_identical_shared_cases: muse_guard の前例（tests/test_consultation_harness_chain.py:62
+      GUARD_PATHS）どおり 1 つの表を両コピーに流す。今回の hook はプラグイン固有の差分が要らないので完全一致にでき、直し忘れを防げる。Options not chosen: shared_cases_only.
+      Consultation: entry codex (run_codex_exec.sh readonly) turn 1 exited 124 (timeout); advanced to
+      entry litellm (muse-spark) turn 2, which answered. Orchestrator mapped the suggestion to the declared
+      option_id (comparatively better). Opus escalation not run.'
+    answered_at: '2026-10-05T00:52:00+09:00'
+  q.design-step:
+    question_id: q.design-step
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'decide_autonomously: accept the analyst''s recommendation (skip the design step).'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously.
+    answered_at: '2026-10-05T00:52:00+09:00'
+  requirement.codex-missing-points:
+    question_id: requirement.codex-missing-points
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: 'Codex が挙げた未決事項への回答: (1) 拒否の出力形式と理由文は FR10/A8 のとおり（hookSpecificOutput の deny、理由文に python3
+      -c・スクリプトファイル・python3 - <<EOF への切り替えを書く）。(2) ラッパーは既存の -c 上書き（推論 effort 等）と --litellm の -p/-m を一切消さず、hook
+      の -c と --dangerously-bypass-hook-trust を追加するだけにする。順序は既存テストが固定する並び（--litellm 経路の -p litellm -m MODEL
+      の連続、既定経路の --ignore-user-config）を崩さない位置に置く。(3) 版付きの名前は basename が python、python3、pythonN.N、python3.N、ipython、ipython3
+      のように『既知の名前＋数字と点だけの接尾』のときに同じ処理系とみなす。それ以外の接尾は対象外。(4) hook は readonly / readwrite、既定経路 / --litellm
+      経路、em-review の全起動に渡す（A6）。'
+    normalized_answer: 'Codex が挙げた未決事項への回答: (1) 拒否の出力形式と理由文は FR10/A8 のとおり（hookSpecificOutput の deny、理由文に
+      python3 -c・スクリプトファイル・python3 - <<EOF への切り替えを書く）。(2) ラッパーは既存の -c 上書き（推論 effort 等）と --litellm の -p/-m
+      を一切消さず、hook の -c と --dangerously-bypass-hook-trust を追加するだけにする。順序は既存テストが固定する並び（--litellm 経路の -p litellm
+      -m MODEL の連続、既定経路の --ignore-user-config）を崩さない位置に置く。(3) 版付きの名前は basename が python、python3、pythonN.N、python3.N、ipython、ipython3
+      のように『既知の名前＋数字と点だけの接尾』のときに同じ処理系とみなす。それ以外の接尾は対象外。(4) hook は readonly / readwrite、既定経路 / --litellm
+      経路、em-review の全起動に渡す（A6）。'
+    resolution_note: Orchestrator-raised clarification from the litellm (muse-spark) turn-2 missing_requirements
+      list (deny format, -c merge order, versioned names, mode coverage). Orchestrator adopted the answers
+      consistent with the analyst's assumptions A6/A8 and the selected options; no conflicting alternative.
+      Opus escalation not run.
+    answered_at: '2026-10-05T00:52:00+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:01b13b4ba1fb67cdedaf86cb59c3fdb8a84e281f33eb40562aca2528c071b635
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:84cc2776223c36d7fd65ea9834f5eafad9792523f8f6d8bc88ef3cc0b9e5c5de
   output_digest: null
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:53779c1c59456f1725d722951059539462eb5564d8739ebfc3d81d6d51bac12d
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
