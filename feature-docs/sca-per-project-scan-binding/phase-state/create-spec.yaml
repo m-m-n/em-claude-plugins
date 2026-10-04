@@ -160,12 +160,21 @@ worker_runs:
   input_digest: sha256:3ffc213b789730706955855aeab0876353580aab35e556684284a84697994553
   output_digest: sha256:44652c9eec87251e62ebc839e76e08fd3ab7777741136b7e5a3962046bd3b287
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:653ddd0e2d997f7de27c36e2188e3b0a57c4c09996a41f9abebd7f06961c260b
-  output_digest: null
-artifacts: []
+  output_digest: sha256:64dcf2939bf5374f18a0f8aebc94443abc39dfe26d85a2f004a44ba1aabc7b28
+artifacts:
+- path: feature-docs/sca-per-project-scan-binding/REQUIREMENTS.md
+  sha256: sha256:7a3d80d09027565ecb7b09984d331a44eb591da20f6275ba0509c01ec3e457c7
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-per-project-scan-binding/SPEC.md
+  sha256: sha256:065c2864eb1f703fdf692f8b62373b256f1bf4d44c4646edbad1f2fc1fa0929a
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'orchestrator correction after scope verification: SPEC.md File Structure listed vuln-scanners.yaml
+  at repo root; corrected to em-workflow/references/vuln-scanners.yaml (spec-writer warning; path verified
+  in worktree). Requirement IDs FR-n/NFR-n from the analyst were mechanically normalized to FRn/NFRn before
+  spec-writer dispatch.'
