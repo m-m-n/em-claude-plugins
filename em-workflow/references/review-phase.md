@@ -269,12 +269,32 @@ unchanged.
 
 The same partial coverage also spans the projects of one selected ecosystem:
 when changed manifests or lockfiles sit in several project directories, each
-is scanned as a separate project in its own directory. A project that did not
-complete — including one that cannot be bound to its directory, reported
-with the path-free reason `<ecosystem>_project_unbindable` — makes the row
-skipped, with `skip_reason` carrying the combined machine-stable reasons,
-each reason once. The findings of the projects that did complete still enter
-Phase R3a's evaluator input unchanged.
+is scanned as a separate project, bound to its own directory. A project that
+did not complete — including one that cannot be bound to its directory,
+reported with the path-free reason `<ecosystem>_project_unbindable` — makes
+the row skipped, with `skip_reason` carrying the combined machine-stable
+reasons, each reason once. The findings of the projects that did complete
+still enter Phase R3a's evaluator input unchanged.
+
+The npm and cargo scans of each project run in a per-group isolation
+directory created outside the reviewed tree. That directory is the scanner's
+working directory (cwd) and holds only copies of the validated scan inputs.
+For npm the copies are `package.json` and the selected anchor lockfile
+(`npm-shrinkwrap.json` preferred over `package-lock.json`). For cargo the
+copy is `Cargo.lock`, and cargo-audit receives it through `--file`, with no
+`--url` and no `--db`. The isolation directory is removed on every outcome.
+pip and go scans are unchanged.
+
+When the isolation directory cannot be created, populated or validated, the
+scanner is not launched and nothing falls back to the reviewed tree: that
+scan unit is `not_completed` with the path-free reason `npm_isolation_failed`
+or `cargo_isolation_failed`, which joins the row's `skip_reason` with the
+other combined reasons. The other groups continue to be scanned, and the
+findings of the groups that did complete are kept.
+
+HOME, the npm globalconfig, the Cargo-home `audit.toml` and the advisory DB
+are managed by the reviewer and cannot be changed by the PR author. The scan
+disables or overrides none of them.
 
 ### Contributor-tier pre-dispatch criteria (muse-spark read-mapping)
 
