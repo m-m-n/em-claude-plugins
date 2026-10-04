@@ -165,6 +165,7 @@ tasks:
     files:
     - em-workflow/references/review-phase.md
     - tests/test_sca_review_phase_multi_project_coverage.py
+    - tests/test_tier_record_schema_v2.py
     skills: []
     domains:
     - api-contract
@@ -172,7 +173,7 @@ tasks:
     requirements:
     - FR13
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/sca-per-project-scan-binding/task0003
 review:
