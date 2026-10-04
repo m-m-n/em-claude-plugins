@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-per-project-scan-binding
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 14e24038fb7e333d38be6739650b69c6dd0211aa
 last_input_digest: sha256:653ddd0e2d997f7de27c36e2188e3b0a57c4c09996a41f9abebd7f06961c260b
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
