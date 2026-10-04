@@ -87,7 +87,8 @@ workflow:
   completed_at_commit: f475bf9b00d17749346b051d935f22d5a12554ca
   base_commit: 2fd4080f4319886e2ebd686397b7dc25b9ef1684
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: fca7000d69ea9e4906d148905bfbec6314c32b13
 - id: verify
   status: pending
   result: null
@@ -178,8 +179,8 @@ tasks:
     notes: null
     branch: em-workflow/sca-per-project-scan-binding/task0003
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   residual_critical_high: 0
   needs_rework: false
   plan:
@@ -191,6 +192,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
 requirements:
   FR1:
     title: プロジェクト単位のグループ化
