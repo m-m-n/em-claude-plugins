@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-go-govulncheck-real-output
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: c21fb5b034b295f8064ec214b8715a6582062754
 last_input_digest: sha256:a3f9836c054192c90191aa662d4092a9549a64f5f9425922953fcf7066e6ebd6
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
