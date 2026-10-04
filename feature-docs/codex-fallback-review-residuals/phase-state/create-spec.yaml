@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-fallback-review-residuals
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: eec404e1a167d7bdbd9b436cd84e813c679b31b5
 last_input_digest: sha256:7615e1dfde2a5c3f23b798d84cc1f6a91954a47f5357daf1db7dea3304b13e49
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers:
   requirement.opus-escalation-vehicle:
