@@ -1,0 +1,137 @@
+task_id: task0003
+baseline_failures: []
+# Re-executed after the implementation (python3 -m unittest discover -s tests: 6497 tests OK;
+# python3 em-workflow/hooks/tests/run-destructive-guard.py: 476/476 passed).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.1: 単一引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.2: 二重引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.3: 複数行の二重引用符が閉じた後のコメント内 <<EOF は演算子ではなく、続く rm -rf 行は deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.4: 単一引用符内の <<EOF は演算子ではなく、続く git reset --hard 行は実コマンドとして deny"
+    red_confirmed: true
+    red_reason: "Run against the pre-change guard before any guard edit (cases appended first): each of the four AC-5 forms FAILed with expected deny, got allow ([destructive-guard] 破壊的なパターンに一致しない。)"
+  AC-2:
+    tests:
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-6: 複数行の二重引用符の中の偽の <<EOF は演算子ではなく、引用の続きの行は引用のまま allow"
+    red_confirmed: false
+    red_reason: "The AC-6 form already returned allow with the pre-change guard, so no red state occurred for this case. It is the over-correction guard: the criterion is that the quoted lines stay allow after the change, which holds because the quote state carries across lines."
+  AC-3:
+    tests:
+      - "run-destructive-guard.py case: bash -c への置換内ヒアドキュメントは deny"
+      - "run-destructive-guard.py case: 外側の文のパイプ先が bash なら置換内ヒアドキュメントも deny"
+      - "run-destructive-guard.py case: 外側の文にパイプ先の sink が無ければ置換内ヒアドキュメントは allow(TS-23 の対照)"
+      - "run-destructive-guard.py case: 2 つ目の演算子はコメント内にあるため、A の区切り後の reset 行は実コマンドとして deny"
+      - "run-destructive-guard.py case: 制御文字 U+0003/U+0004 を挟んでも bash 宛てヒアドキュメントは deny"
+      - "run-destructive-guard.py case: 制御文字を挟んでも bash -c 経由の置換内ヒアドキュメントは deny"
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing run-destructive-guard.py cases (case-file lines 428, 434, 435, 455, 456, 457) detect real operators inside command substitutions staying heredocs and a second operator inside a comment capturing nothing; no red state occurred for this change (they PASS before and after)."
+  AC-4:
+    tests:
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4a: 単一引用符の区切り語 <<'EOF' は引用開始ではなく、終端行の後の rm -rf は deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4a: 二重引用符の区切り語 <<\"EOF\" は引用開始ではなく、終端行の後の rm -rf は deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4b: コメント内の対にならない ' は引用開始ではなく、次行の rm -rf は deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4c: 本物のヒアドキュメント本文内の対にならない ' は引用開始ではなく、終端行の後の rm -rf は deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4c: 本物のヒアドキュメント本文内の対にならない \" は引用開始ではなく、終端行の後の rm -rf は deny"
+    red_confirmed: false
+    red_reason: "As the task plan anticipates, all five AC-4 cases (single-quoted and double-quoted delimiter, comment with an unpaired single quote, heredoc body with an unpaired single quote and with an unpaired double quote) already PASSed against the pre-change guard, which never read delimiter quotes, comments or bodies as quote starts. They guard the new cross-line tracking against doing so; no red state occurred."
+  AC-5:
+    tests:
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.1: 単一引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.2: 二重引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.3: 複数行の二重引用符が閉じた後のコメント内 <<EOF は演算子ではなく、続く rm -rf 行は deny"
+      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.4: 単一引用符内の <<EOF は演算子ではなく、続く git reset --hard 行は実コマンドとして deny"
+    red_confirmed: true
+    red_reason: "The AC-1 cases were appended to the case file before any guard edit; running run-destructive-guard.py against the unmodified guard showed AC-5.1-5.4 FAIL (468/474 passed, 6 FAIL). The result of every added case is listed under added_cases."
+  AC-6:
+    tests:
+      - "python3 em-workflow/hooks/tests/run-destructive-guard.py (all 455 pre-task cases plus the runner's own unattended-demotion check)"
+      - "python3 -m unittest discover -s tests"
+    red_confirmed: false
+    red_reason: "Regression criterion, not a behavior change: the pre-task array is an exact prefix of the new array (verified against git HEAD, 455 entries unchanged) and every pre-task case plus both commands PASS before and after; no red state occurred."
+added_cases:
+  # Every case appended to destructive-guard-cases.json by this task, in file order.
+  # pre_change = result against the unmodified guard (run before the guard edit,
+  # except the two $'...' cases, which were added after the ANSI-C gap was found and
+  # checked against the unmodified guard copy).
+  - label: "18b99bd71e74c8dc AC-5.1: 単一引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc AC-5.2: 二重引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc AC-5.3: 複数行の二重引用符が閉じた後のコメント内 <<EOF は演算子ではなく、続く rm -rf 行は deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc AC-5.4: 単一引用符内の <<EOF は演算子ではなく、続く git reset --hard 行は実コマンドとして deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc AC-6: 複数行の二重引用符の中の偽の <<EOF は演算子ではなく、引用の続きの行は引用のまま allow"
+    expected: allow
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 AC-4a: 単一引用符の区切り語 <<'EOF' は引用開始ではなく、終端行の後の rm -rf は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 AC-4a: 二重引用符の区切り語 <<\"EOF\" は引用開始ではなく、終端行の後の rm -rf は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 AC-4b: コメント内の対にならない ' は引用開始ではなく、次行の rm -rf は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 AC-4c: 本物のヒアドキュメント本文内の対にならない ' は引用開始ではなく、終端行の後の rm -rf は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 AC-4c: 本物のヒアドキュメント本文内の対にならない \" は引用開始ではなく、終端行の後の rm -rf は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Operator context: 置換内の単一引用符の中の <<EOF は偽で、続く rm -rf 行は deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Cross-line state: 複数行の単一引用符の中の行にある <<EOF は偽で、引用の後の rm -rf は deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Cross-line state: 複数行の単一引用符の中の <<EOF は偽で、引用の続きの rm -rf 文字列は allow"
+    expected: allow
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Operator context: コメント内の <<EOF は演算子ではなく、次行の rm -rf は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Operator context: 閉じた引用符の後の本物の <<'EOF' は演算子のままで、bash 宛て本文は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Operator context: エスケープした \\\" は引用開始ではなく、後ろの本物の <<'EOF' は bash 宛て本文として deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Behavior kept: 二重引用符内の置換にある本物の <<'EOF' の本文に ' があっても、置換の後の rm -rf は deny"
+    expected: deny
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Behavior kept: 二重引用符内の置換にある本物の <<'EOF' は本文を取り込み、本文の中の reset 行は allow"
+    expected: allow
+    pre_change: "PASS"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Operator context: $'...' 内のバックスラッシュ付き ' は引用を閉じず、後ろの単一引用符内の <<EOF は偽で rm -rf は deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS
+  - label: "18b99bd71e74c8dc task0003 Operator context: $'...' 内の <<EOF は演算子ではなく、引用が閉じた後の git reset --hard は deny"
+    expected: deny
+    pre_change: "FAIL (got allow)"
+    post_change: PASS

@@ -1,0 +1,359 @@
+round: 2
+executed_at: '2026-10-04T21:00:03+09:00'
+scope:
+  review_mode: diff
+  base_commit: 3efc2b9c17cc484967db2a57a71fadb5ee369ab0
+  head_commit: 5cd9fc376163c38d5642e4743c27dc8f345ab03e
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0003.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0004.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0005.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: task0001 は単一引用符内 $( の二次計算量を線形化する性能修正（FR4 / NFR3）で、差分に計算量とタイムアウトの変更が含まれるため
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+  note: codex returned non-JSON output
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+  note: codex returned non-JSON output
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: skipped
+  skip_reason: review_incomplete
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+  note: codex returned non-JSON output; Claude fallback dispatched
+- run_id: security#loop1-fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+findings:
+- stable_id: d7cf8418a4e1b37b
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1147
+  title: 'TM-3: ヒアストリング `<<<WORD` の中の `<<WORD` を演算子と誤認し、後続の実コマンド行を本文として隠す'
+  description: '_OperatorContext.real_operators() は `<<<` の先頭で HEREDOC_OP.match() に失敗すると 1 文字だけ進み、次の `<` から `<<WORD` として一致させる。bash ではこれはヒアストリングで本文を取らず、後続行はそのまま実行される。評価者が再現した: `cat <<<true\nrm -rf /home/sakura/valuable\ntrue`、`cat <<< EOF\ngit reset --hard HEAD~3\nEOF`、`grep x <<<''EOF''\nrm -rf /home/sakura/valuable\nEOF` は HEAD・基準コミットとも allow（退行ではない）。bash で `cat <<<true\necho RAN1\ntrue` は RAN1 を出力した。区切り語に一致する行が後ろに無い形（`cat <<<"$x"\nrm -rf ...`）は deny なので、成立には区切り行を仕込む必要がある。THREAT-MODEL.md TB-1 / TM-3 の緩和策「演算子は演算子文脈でのみ認識する」を満たしていない。特殊な引用なしで `rm -rf` が素通りする。'
+  suggestion: real_operators() で、HEREDOC_OP を試す前に `line.startswith("<<<", i)` なら 3 文字まとめて読み飛ばす（`<<<` は本文を取らない）。上の 3 形を deny ケース、`cat <<<'x'; cat <<'EOF'\nrm -rf /tmp/zz\nEOF` を allow ケースとして cases.json に足す。
+  sources:
+  - claude:security
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 1（dccd6773）、loop 2 でも維持。再現 3 形を deny ケースとして追加
+- stable_id: e812ca2e1c631029
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1113
+  title: 'TM-3: `${...}` と算術式（`$((`・`((`・`$[`）の中の `<<` を演算子と誤認し、後続の実コマンド行を本文として隠す'
+  description: 'real_operators() は `$` の後ろを `$(` と `$''` しか区別せず、`${`・`$((`・コマンド位置の `((`・`$[` を文脈として積まない（`$((` は sub と group の枠になり、中の `<<2` が裸の演算子扱いになる）。bash では `${x/<<EOF/}` は 1 語、`$((1<<2))` はシフト演算で、ヒアドキュメントは開かれない。評価者が再現した: `echo ${x/<<EOF/}\nrm -rf /home/sakura/valuable\nEOF`、`echo ${x:-<<EOF}\n...\nEOF`、`x=${y/<<EOF/}; ls\ngit reset --hard HEAD~3\nEOF`、`echo $((1<<2))\nrm -rf /home/sakura/valuable\n2`、`((x=1<<2))\n...\n2`、`echo $[1<<2]\n...\n2` はすべて HEAD・基準コミットとも allow。bash で後続行が実行されることも echo 置換で確認した。THREAT-MODEL.md TM-3 の緩和策を満たしていない。なお SPEC FR5 が名指しするのは引用とコメントだけなので、SPEC の文面からは外れた形でもある。'
+  suggestion: real_operators() に枠を 2 種類足す。(1) 引用の外の `${` で param 枠を積み、対応する `}` で降ろす。中の引用状態は追うが `<<` は演算子として拾わない。(2) `$((`・`$[`・コマンド位置の `((` で arith 枠を積み、`))` / `]` で降ろし、中の `<<` を拾わない。より保守的な代案は、こうした文脈にある候補の `<<` では本文を取り込まないこと。再現形を deny ケース、`echo $((1<<2)); cat <<'EOF'\nrm -rf /tmp/zz\nEOF`（現在 allow）を allow ケースとして足す。
+  sources:
+  - claude:security
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached。loop 1 で修正したが、in-loop 再レビューで deny→allow の退行（${x:-a #}・$${ でフレームが開いたまま）と誤検知の退行（"${x:-a(b}"）、未対応の形（予約語の後ろの ((...))、入れ子の $[...]）が見つかり、Codex 相談のうえ loop 2 で修正を戻した。基準コミットからある穴'
+- stable_id: 4d76e1accb9e8fed
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 657
+  title: 'bc9a99dd0d07ffa5 の修正が不完全: shlex が `$''...''` を読み違えて文の区切りを飲み込むと、bash 宛て本文が data 判定で通る'
+  description: 'task0005 で round 1 の再現形 `echo $''a\''b''; bash <<EOF\ngit reset --hard HEAD\nEOF\necho x\''y` は HEAD で deny になった（基準コミットは allow）。しかし _statement_holds_operator() が見るのは「shlex がその文に裸の `<<` を記録したか」だけで、shlex 自身が `$''...''` を誤読して文の境界が bash とずれる形は塞げない。評価者が再現した: `cat $''\'''' ; bash -s \'' <<EOF\ngit reset --hard HEAD\nEOF` は HEAD・基準コミットとも allow。bash はこれを `cat $''\''''` と `bash -s \'' <<EOF` の 2 文として読み、本文を bash -s が実行する（echo 置換で確認）。shlex は `$''\''''` の 2 つ目の `''` から引用を開いて `;` を飲み込むので、`<<` が cat 文の裸の演算子として記録され、宛先が data になる。同じ読み違いでヒアドキュメントの無い `echo $''\'''' ; rm -rf /home/sakura/valuable \''` も HEAD・基準とも allow で、bash では rm が実行される（lex_segments() 全般にある既存の穴）。THREAT-MODEL.md TB-1 / TM-1。'
+  suggestion: (a) _lex_layout() で shlex に渡す text を作るとき（657 行の _blank_comments() と同じく文字位置を保ったまま）、引用の外の `$'...'` を _OperatorContext と同じエスケープ規則で読み、`$'` と閉じの `'` を残して中身を `_` で埋める。これで shlex の引用境界が bash と揃い、lex_segments() 全体の読み違いも閉じる。(b) 代案として、引用の外に `$'` を含むチャンクでは starts / operators を None にし、そのチャンクのヒアドキュメントをすべて判定不能にする。(b) はヒアドキュメント以外の文の読み違いを直さないので (a) を推す。上の 2 形を deny ケースとして足す。
+  sources:
+  - claude:security
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached。loop 1 で修正したが、in-loop 再レビューで deny→allow の退行（$$'' の誤読）と未対応の形（_blank_comments 側の $''\'''' 誤読）が見つかり、Codex 相談のうえ loop 2 で修正を戻した。基準コミットからある穴'
+- stable_id: 7e700e9f9906edc7
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1006
+  title: シェルの引用・コメント・置換の読み取りが _OperatorContext・scan_structure()・shlex（_lex_layout()）の 3 か所に分かれている
+  description: '今回 _OperatorContext が独自の引用スタック・バックスラッシュ・`$''`・コメント開始の規則を持つようになり、既存の scan_structure() と shlex ベースの _lex_layout() と並ぶ 3 つ目の読み取りになった（_COMMENT_PREV_CHARS は _at_word_start() の複製、ANSI-C 引用の扱いは scan_structure() C2 の複製）。実害も出ている: round 1 の bc9a99dd0d07ffa5 と、今回の `$''\''''` による素通り（同じ round の high、657 行）は、どちらも _OperatorContext と shlex の `$''...''` の読みの食い違いが原因。評価者判断で high から medium に下げた: 構造上の保守性の指摘であり、具体的な素通りは security の high として別に持っている。3 つの読み取りの一本化は SPEC の範囲を超える。'
+  suggestion: 前の文字集合・ANSI-C エスケープの読み方・区切り語の引用の消費を共有の表や関数にまとめ、3 つの読み取りが同じ定義を参照する形にする。一本化までの間は、cases.json の全コマンドについて 3 つの読み取りが引用の範囲で一致することを確かめるテストを置く。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: 0fb4a67c477e8034
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2996
+  title: （round 1 aa10c4f0bfc7f194 が未解決）PATH 代入を declare / typeset / readonly / local や builtin export で書くと、FR7 の差し替え構文に数えられない
+  description: '_overrides_command_name() が PATH 代入を拾うのは、前置きの代入・単独の文・export の引数だけ。評価者が再現した: `declare PATH=/tmp/bash-bin:$PATH; cat <<''EOF''\ngit reset --hard HEAD\nEOF`、`typeset -x PATH=/tmp/bash-bin:$PATH; ...`、`readonly PATH=/tmp/bash-bin:$PATH; ...`、`builtin export PATH=/tmp/bash-bin:$PATH; ...` は HEAD で allow、同じパスの `export PATH=/tmp/bash-bin:$PATH; ...` は deny。なお reviewer が挙げた `builtin export PATH=/tmp/p` 形は、素の export でも allow になる SPEC A6（差し替え先に sink 名が無い）の受け入れ済みの残存リスクに当たるので、再現形としては sink 名を含むパスを使う。SPEC FR7 が名指しする PATH 代入は前置き・単独・export だけなので、THREAT-MODEL.md TM-5 の「どの差し替え構文も」との差になっている。'
+  suggestion: word が builtin のときは args[0] を実際のコマンド語として扱う。export / declare / typeset / readonly / local のどれかの引数に PATH_ASSIGNMENT が一致すれば True を返す。各書き方を sink 名入りのパスで deny ケースとして足す。塞がない場合は SPEC の Accepted residual risk に明記する。
+  sources:
+  - claude:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: 54b0115faf5bc202
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3230
+  title: （round 1 43c217cd485a5854 が未解決）差し替え構文が別のチャンクにあると、ヒアドキュメント自身のチャンクに sink 名が無い限り本文が走査されない
+  description: 'override_seen はコマンド全体のフラグだが、判定不能に落とした data 本文を再走査するか・deferred_data_bodies に積むかは、そのヒアドキュメント自身のチャンクの chunk_sink_fallback で決まる。評価者が再現した: `cat() { bash; }; eval "cat <<''EOF''\ngit reset --hard HEAD\nEOF"` は HEAD・基準とも allow、同じチャンクの `cat() { bash; }; cat <<''EOF''\n...\nEOF` は deny。差し替え先は sink 名（bash）を含むので SPEC A6 には当たらない。THREAT-MODEL.md TB-1 / TM-5。'
+  suggestion: コマンド全体で SHELL_SINK に一致したチャンクが 1 つでもあったかを別のフラグ（command_sink_seen）として持ち、差し替え構文が原因で判定不能になったヒアドキュメントでは `chunk_sink_fallback or command_sink_seen` で再走査を決める。deferred_data_bodies の条件も同じにする。eval の形を deny ケースとして足す。
+  sources:
+  - claude:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: 80dc2417b7e6670b
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2127
+  title: （round 1 8ccf22c69c8bb295 が未解決）FR6 がパス値（git -C、env -C など）の中の sink 語にも一致し、コミットメッセージのヒアドキュメントを誤爆する
+  description: '今回 comprehensive の reviewer が完了しなかったため、評価者が round 1 の再現形を HEAD で再実行した。`git -C /home/u/src/python-tools commit -F - <<''EOF''\nfix\n\ngit reset --hard HEAD\nEOF` と `env -C /home/u/node-app git commit -F - <<''EOF''\n...\nEOF` は HEAD で deny、基準コミットで allow のままで、退行が残っている。_skipped_word_has_sink() が読み飛ばした語全体に SHELL_SINK（`\b` 区切り）をかけるため、python-tools・node-app のようなパス成分に一致する。em-workflow は worktree パスで git -C を使い、機能名に python などを含むこともある（例: sca-python-lockfile-audit）。無人実行では deny のまま止まる（THREAT-MODEL.md TM-7）。SPEC FR6 の文言（git のグローバルオプションの値を含める）どおりではある。'
+  suggestion: 照合対象をプログラムを名指しできる値に絞る（git は -c / --config-env の値と VAR=value 代入だけにし、-C / --git-dir / --work-tree / --namespace と env -C / --chdir の値は外す）。`git -C /tmp/node-app commit -F - <<'EOF'` 形の allow ケースを足し、SPEC FR6 の対象範囲もあわせて直す。
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: 9f48c2f446a190b2
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2181
+  title: （round 1 a8df1e7ccbb3a0e9 が未解決）FR6 が読み飛ばした語の中の置換を見ないため、GIT_EDITOR=$(command -v bash) が allow になる
+  description: 今回 comprehensive の reviewer が完了しなかったため、評価者が round 1 の再現形を HEAD で再実行した。`GIT_EDITOR=$(command -v bash) git commit -e -F - <<'EOF'\ngit reset --hard HEAD\nEOF` とバッククォート版は HEAD で allow のまま（`GIT_EDITOR=bash` 形は deny）。_build_statement_table() が _strip_unresolved_marks(toks) を通した後のトークンで FR6 を判定するため、置換の中身が見えない。
+  suggestion: (a) 読み飛ばした語が未解決マーカーを含むなら判定不能にする、または (b) 置換の元テキストを復元した語に _skipped_word_has_sink() をかける。2 形を deny ケースとして足す。
+  sources:
+  - claude:evaluator
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: 548598739d198748
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2973
+  title: （round 1 8b504c8c24108c71 が未解決）editor を sink にする設定を前の文に移すと、FR6 も FR7 も効かない
+  description: 今回 comprehensive の reviewer が完了しなかったため、評価者が round 1 の再現形を HEAD で再実行した。`export GIT_EDITOR=bash; git commit -e -F - <<'EOF'\ngit reset --hard HEAD\nEOF` と `git config core.editor sh && git commit -e -F - <<'EOF'\n...\nEOF` は HEAD・基準とも allow のまま。SPEC FR6 / FR7 の対象外の形で、塞ぐか残存リスクとして SPEC に明記するかの判断が round 1 から残っている。
+  suggestion: _overrides_command_name() の差し替え構文に、GIT_EDITOR / GIT_SEQUENCE_EDITOR / VISUAL / EDITOR への sink 値の代入・export と、git config による core.editor / sequence.editor の設定を加える。塞がない場合は SPEC の Accepted residual risk に明記する。
+  sources:
+  - claude:evaluator
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: bbb1321e2f3375d0
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 586
+  title: _blank_ansi_c が $$' を ANSI-C クォートと読み、区切りを隠す（loop 1 で入った退行）
+  description: '`echo $$''\'' ; rm -rf X ; echo ''a'' \''` が loop 1 後に allow（loop 1 前は deny）。_blank_ansi_c が 2 文字目の $ から $'' を検出する。'
+  suggestion: 4d76e1accb9e8fed / e812ca2e1c631029 と合わせ、引用・コメント・展開の状態を 1 回のパスで追う字句解析に作り直す（後続タスク）
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2（2c77b5e5）で _blank_ansi_c を戻して解消。deny ケースを追加
+- stable_id: 7357c6a8618d8556
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 709
+  title: '4d76e1accb9e8fed の修正が不完全: _blank_comments が $''\'''' を読み違え、本物の文をコメントとして消す'
+  description: '`echo $''\'''' '' #'' ; rm -rf X\necho \''` が allow（loop 1 前も allow）。_blank_comments が $'' を普通の '' と読み、後ろの # をコメント開始と判定する。'
+  suggestion: 4d76e1accb9e8fed / e812ca2e1c631029 と合わせ、引用・コメント・展開の状態を 1 回のパスで追う字句解析に作り直す（後続タスク）
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached。4d76e1accb9e8fed と同じ根（$''...'' の読み違い）の別形。基準コミットからある穴'
+- stable_id: b676896888ebc79c
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1173
+  title: 新設の ${ / $[ フレームが bash より長く開いたままになり、後続の本物のヒアドキュメントをすべて無視する（退行）
+  description: '`echo ${x:-a #}\ncat <<EOF\nit''s\nEOF\nrm -rf X\necho \''` と `echo $${ ...` が loop 1 後に allow（loop 1 前は deny）。'
+  suggestion: 4d76e1accb9e8fed / e812ca2e1c631029 と合わせ、引用・コメント・展開の状態を 1 回のパスで追う字句解析に作り直す（後続タスク）
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2（2c77b5e5）で param/arith/bracket フレームを戻して解消。deny ケースを追加
+- stable_id: 09f237155908ac2f
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1209
+  title: 'e812ca2e1c631029 の修正が不完全: 予約語の後ろの ((...)) と入れ子の $[...] がまだ偽ヒアドキュメントを作る'
+  description: '`if ((1<<2)); then :; fi\nrm -rf X\n2` と `echo $[a[1]<<2]\nrm -rf X\n2` が allow（loop 1 前も allow）。'
+  suggestion: 4d76e1accb9e8fed / e812ca2e1c631029 と合わせ、引用・コメント・展開の状態を 1 回のパスで追う字句解析に作り直す（後続タスク）
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached。e812ca2e1c631029 と同じ根の別形。基準コミットからある穴'
+- stable_id: e123911d3f8703a9
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 600
+  title: ANSI C引用の伏字が安全な削除対象を未解決変数に変える
+  description: 伏字が位置追跡だけでなく、検査用のトークンにも渡される。`rm -rf /tmp/safe$'\t'` は修正前にはallowだったが、修正後は対象が `/tmp/safe$__` になり、rm-unresolvableによるaskになる。CLAUDE_BATCHではdenyになる。実際の対象はタブを含む固定の/tmp内パスで、変数展開ではないため、安全な処理を誤って止める回帰を確認した。
+  suggestion: 位置追跡用の伏字と検査用の値を分離し、検査にはANSI C引用を解釈した値を渡す。この安全な/tmp内パスの回帰試験を追加するよう勧めるよ
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2（2c77b5e5）で原因の loop 1 修正を戻して解消。allow ケースを追加
+- stable_id: 81e725e9ac6b2a6c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1173
+  title: パラメータ展開内の括弧で後続ヒアドキュメントを見落とす
+  description: 追加されたparam状態では、展開の値に含まれる通常の `(` でもgroup状態を積むため、閉じる `}` で展開を終了できなくなる。`echo "${x:-a(b}"; cat <<'EOF'\ngit reset --hard HEAD\nEOF` はBashでは本文を表示するだけだが、修正後はヒアドキュメントを記録せず、本文を実行文として検査してdenyになる。修正前のallowからの回帰を確認した。
+  suggestion: パラメータ展開の値では通常の括弧を文字として扱い、実際の入れ子の展開だけを別状態にする。この入力がallowを保つ回帰試験を追加するよう勧めるよ
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2（2c77b5e5）で原因の loop 1 修正を戻して解消。allow ケースを追加
+evaluation:
+  round_summary: 'Round 2（diff、cross_validation=true）。security#0 と comprehensive#0（codex）は JSON 以外を返して失敗。security#fallback は完了、comprehensive#fallback は途中停止で skipped（review_incomplete）となり、R2/R3a 時点で comprehensive は未レビュー（loop 1・loop 2 の再レビューでは codex の comprehensive が完了）。round 1 の high bc9a99dd0d07ffa5 の再現形は HEAD で deny（基準は allow）。新しい high 3 件（`<<<`、`${}` / 算術式、`$''...''` による shlex の境界ずれ）はどれも基準コミットからある穴。architecture#0 の high は medium に、medium は low に評価者が下げた。round 1 で unresolved の comprehensive 3 件は評価者が HEAD で再現し、evaluator 由来として持ち越した（8ccf22c69c8bb295 は allow から deny への退行）。観点ごとの確認状況: security / architecture / spec / performance = corroborated、comprehensive = unreviewed。'
+  recommended_action: auto_fix
+  action_rationale: high 3 件はどれも destructive-guard.py と cases.json の中で直せる。`<<<` は real_operators() の数行、`${}` / 算術式は real_operators() の枠の追加、`$'...'` は _lex_layout() の前処理で、それぞれ箇所が限られている。round 1 の bc9a99dd0d07ffa5 のように 1 回の編集に収まらなければ rework に回す。`${}` / 算術式と PATH 代入の書き方、前の文での editor 設定は SPEC の名指しの範囲外なので、塞ぐか Accepted residual risk に書くかの判断が要る。comprehensive は今回未レビューなので、修正後の round で再実行する。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives:
+- comprehensive
+auto_fix:
+  loops_run: 2
+  applied_total: 3
+  termination: no-progress
+  termination_note: '手順上の例外: loop 1 の 3 件のうち 2 件（4d76e1accb9e8fed、e812ca2e1c631029）が deny→allow の退行を入れたため、Codex 相談（選択肢 B）のうえ loop 2 で戻した。修正候補は残っていたが、loop 3 に進まず打ち切った'
+  commits:
+  - dccd6773
+  - a3a59539
+  - 2c77b5e5
+  reverted_stable_ids:
+  - 4d76e1accb9e8fed
+  - e812ca2e1c631029
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  note: vulnerability 観点は選ばれておらず、対象の指摘が無い

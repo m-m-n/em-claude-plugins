@@ -467,6 +467,7 @@ class _TrackingLexer(shlex.shlex):
     def __init__(self, *args, **kwargs):
         self.last_was_operator = False
         self.last_was_quoted = False
+        self.last_end = 0
         super().__init__(*args, **kwargs)
 
     @property
@@ -484,7 +485,14 @@ class _TrackingLexer(shlex.shlex):
     def read_token(self):
         self.last_was_operator = False
         self.last_was_quoted = False
-        return super().read_token()
+        token = super().read_token()
+        # How many characters of the input the lexer has taken in once this
+        # token is complete -- the token's own end, or one past it when the
+        # character that ended the token (whitespace, or the next character,
+        # pushed back for the following token) was read as well.
+        # _lex_layout() turns this into offsets; nothing else reads it.
+        self.last_end = self.instream.tell()
+        return token
 
 
 _COMMENT_WORD_BOUNDARY = " \t\r\n;|&()<>"
@@ -590,8 +598,11 @@ def lex_segments(chunk):
     changes; keeping it on the original text avoids any risk, however
     small, of the blanking pass itself disagreeing with shlex about where
     an unbalanced quote sits.
+
+    The lexing itself lives in _lex_layout(), which can also report where
+    each statement sits in CHUNK; this function is its segments only.
     """
-    return _lex_segments_with_ends(chunk)[0]
+    return _lex_layout(chunk, False)[0]
 
 
 def _lex_segments_with_ends(chunk):
@@ -603,8 +614,69 @@ def _lex_segments_with_ends(chunk):
     "how many statements end at or before it" by bisecting SEG_ENDS
     (statements() uses that to place a heredoc body between statements).
     SEG_ENDS is None on the parse-failure fallback, whose statements carry
-    no offsets. Everything lex_segments() documents applies here unchanged;
-    reading offsets does not change which statements or tokens come out."""
+    no offsets, and whenever _lex_layout() reports no LAYOUT. It is read off
+    LAYOUT: a statement's separator is the bare operator text that ends just
+    where the next statement begins. Everything lex_segments() documents
+    applies here unchanged; reading offsets does not change which statements
+    or tokens come out."""
+    segments, starts, _operators = _lex_layout(chunk, True)
+    if starts is None:
+        return segments, None
+    seg_ends = [
+        starts[k + 1] - len(sep) for k, (_, _, sep) in enumerate(segments[:-1])
+    ]
+    seg_ends.append(len(chunk))
+    return segments, seg_ends
+
+
+def _operator_token_start(text, tok, end):
+    """Where in TEXT the bare operator token TOK begins, or None when TEXT
+    does not show TOK where the lexer's position says it ended.
+
+    END is how many characters the lexer had taken in when it returned TOK.
+    An operator token is made of punctuation only, so its text is exactly the
+    characters it was read from. The character that ended it was read as
+    well -- whitespace that was consumed, or the next character, pushed back
+    for the following token -- so END is one past the token; only at the end
+    of the input is END the token's own end. Telling these apart needs no
+    knowledge of the lexer's internals: the token's own text matches at
+    exactly one of the two candidates, because the character after it is
+    never one of the characters it is made of."""
+    n = len(tok)
+    for stop in (end, end - 1):
+        if n <= stop <= len(text) and text[stop - n : stop] == tok:
+            return stop - n
+    return None
+
+
+def _lex_layout(chunk, track):
+    """lex_segments()'s one lexing pass: (segments, layout, operators).
+    SEGMENTS is lex_segments()'s own return value, unchanged.
+
+    With TRACK, LAYOUT says where the statements sit in the text that was
+    lexed (the same offsets in CHUNK, since comment blanking keeps every
+    character's position) as a list: LAYOUT[k] is the offset where statement
+    k begins, which is the end of the separator before it (0 for the first).
+    Statement k is everything from LAYOUT[k] up to LAYOUT[k + 1], its own
+    terminating separator included, or to the end of the text for the last
+    one. LAYOUT is None when the chunk does not lex, or when a separator's
+    offset could not be confirmed against the text.
+
+    OPERATORS, with TRACK, is the record of heredoc operator starts: {k: the
+    offsets in CHUNK, ascending, of every `<<` that statement k holds as bare,
+    unquoted operator syntax}. Only a token the lexer read from operator
+    syntax is searched, so a `<<` inside a quoted word never enters the
+    record; and a token fused with neighbouring punctuation (`;<<`, `(<<`)
+    is searched piece by piece, each piece attributed to the statement it
+    falls in. A statement holding no such `<<` has no entry. OPERATORS is
+    None exactly when LAYOUT is.
+
+    Separators are recognised once, here. Whatever places a heredoc's host
+    statement reads these offsets rather than counting separator characters
+    on its own, so a redirection (`2>&1`, `&>`, `>|`) or an escape (an
+    escaped `;` or `&`, a backslash before a newline) that this pass does
+    not count as a separator can never be counted as one by a second
+    rule."""
     try:
         text = _blank_comments(chunk)
         lex = _TrackingLexer(text, posix=True, punctuation_chars=PUNCTUATION)
@@ -612,37 +684,25 @@ def _lex_segments_with_ends(chunk):
         lex.whitespace_split = True
         lex.commenters = ""
         toks = []
-        token_ends = []
         while True:
             raw = lex.get_token()
             if raw is None or raw == lex.eof:
                 break
-            toks.append(Tok(raw, lex.last_was_operator, quoted=lex.last_was_quoted))
-            # Where the lexer stands once this token is complete: what it
-            # has read from the text, less a character it read ahead and
-            # pushed back. It may stand one character past the token — a
-            # whitespace character that ended the token is consumed, not
-            # pushed back — so this bounds the token's end from above only.
-            token_ends.append(
-                lex.instream.tell() - len(getattr(lex, "_pushback_chars", ()))
+            toks.append(
+                (Tok(raw, lex.last_was_operator, quoted=lex.last_was_quoted), lex.last_end)
             )
     except ValueError:
-        return (
-            [
-                (tokens(seg), False, None)
-                for seg in SEGMENT_SPLIT.split(chunk)
-                if seg.strip()
-            ],
-            None,
-        )
+        return [
+            (tokens(seg), False, None)
+            for seg in SEGMENT_SPLIT.split(chunk)
+            if seg.strip()
+        ], None, None
 
-    out, current, seg_ends = [], [], []
-    for t, t_end in zip(toks, token_ends):
-        # Only an operator token's own start is ever read (a separator is
-        # one), and an operator token's text is the source text verbatim —
-        # so its start is where that text last occurs before the lexer's
-        # position. (-1 for any other token, whose start is never read.)
-        piece_start = text.rfind(t, 0, t_end) if getattr(t, "is_operator", False) else -1
+    out, current = [], []
+    starts = [0]
+    operators = {}
+    confirmed = track
+    for t, end in toks:
         # punctuation_chars makes shlex fuse adjacent punctuation into one
         # token, so a separator with no space before the next operator
         # (';>', '\n(') arrives as a single token that is neither a clean
@@ -671,21 +731,46 @@ def _lex_segments_with_ends(chunk):
             segs = [Tok(p, t.is_operator) for p in pieces]
         else:
             segs = [t]
+        # Only a bare operator token is the characters it was read from, so
+        # only its offsets can be taken from the lexer's position -- and a
+        # separator, like a heredoc operator's `<<`, is always inside one.
+        base = None
+        if (
+            confirmed
+            and t.is_operator
+            and (any(c in SEGMENT_CHARS for c in t) or "<<" in t)
+        ):
+            base = _operator_token_start(text, t, end)
+            if base is None:
+                confirmed = False
+        offset = 0
         for seg in segs:
+            seg_start = None if base is None else base + offset
+            offset += len(seg)
             if (
                 seg
                 and all(c in SEGMENT_CHARS for c in seg)
                 and getattr(seg, "is_operator", False)
             ):
                 out.append((current, True, seg))
-                seg_ends.append(piece_start)
                 current = []
+                if seg_start is not None:
+                    starts.append(seg_start + len(seg))
             else:
                 current.append(seg)
-            piece_start += len(seg)
+                # The statement under construction is the next one to be
+                # appended to OUT. Every `<<` of the piece is recorded,
+                # overlapping ones included: each is `<<` in bare operator
+                # text, which is all the record says.
+                if seg_start is not None and getattr(seg, "is_operator", False):
+                    k = seg.find("<<")
+                    while k != -1:
+                        operators.setdefault(len(out), []).append(seg_start + k)
+                        k = seg.find("<<", k + 1)
     out.append((current, True, None))
-    seg_ends.append(len(chunk))
-    return out, seg_ends
+    if not confirmed or len(starts) != len(out):
+        return out, None, None
+    return out, starts, operators
 
 
 def split_redirects(toks, lexed=True):
@@ -964,40 +1049,157 @@ def _delimiter_line_word(line):
     return m.group(1) if m else None
 
 
-def _line_comment_start(line):
-    """The offset of a `#`-comment's start in LINE (one operator line from
-    strip_heredocs(), never a heredoc body line), or None. Mirrors Component
-    1's own word-start/quote rules (scan_structure()'s `_at_word_start()`
-    and its quote handling) but scoped to one line, since an operator line
-    is examined here before any statement/substitution structure has been
-    resolved: a `#` outside quotes and at the start of a word starts a
-    comment that runs to the end of LINE, and an operator inside that
-    comment (`# <<X`) is not a real heredoc operator at all -- see this
-    function's call site.
+# Characters at which _OperatorContext has something to decide, per quote
+# state (single quotes are searched for their closing `'` directly). Anything
+# else is plain text and skipped in bulk, so a long line costs a handful of
+# regex searches rather than a Python-level step per character.
+_CONTEXT_SPECIAL_UNQUOTED = re.compile(r"[\\'\"$`()#<]")
+_CONTEXT_SPECIAL_DOUBLE = re.compile(r"[\\\"$`]")
+_CONTEXT_SPECIAL_ANSI = re.compile(r"[\\']")
+
+# The previous characters after which a `#` starts a comment -- the same set
+# _at_word_start() applies to scan_structure()'s own comment rule.
+_COMMENT_PREV_CHARS = frozenset(" \t\r\n;|&()<>")
+
+
+class _OperatorContext:
+    """Forward, line-by-line reader of the quote / comment / substitution
+    state a heredoc operator candidate sits in (task0003, FR5). Fed the
+    chunk's lines in order by strip_heredocs(); its state is advanced over
+    every line strip_heredocs() keeps and is NEVER advanced over a real
+    heredoc body (those lines are skipped by strip_heredocs() itself), so a
+    quote character or `#` written inside a body never opens a quote or
+    starts a comment for the command text. One forward pass, nothing
+    restarts from an earlier line (NFR3).
+
+    Quoting follows scan_structure()'s rule (IMPLEMENTATION.md C2): outside
+    single quotes a backslash makes the next character literal, so an escaped
+    quote opens nothing; inside single quotes everything up to the next `'`
+    is literal; a `#` starts a comment only at the start of a word outside
+    quotes and the comment ends with its line.
+
+    A `<<`/`<<-` is a heredoc operator only where the shell parses it as
+    one: outside single quotes, double quotes and comments, or inside a
+    command substitution (`$( )` or backticks) -- even one written inside a
+    double-quoted string, since the substitution opens a fresh unquoted
+    context of its own. The quoting of the delimiter word (`<<'EOF'`,
+    `<<"EOF"`) is part of the operator (HEREDOC_OP consumes it), never a
+    quote start. Inside single quotes every `<<` is literal, including one
+    written within a `$(`, because the `$(` itself is literal there.
+
+    A candidate that is not a real operator is simply never returned: it
+    records no heredoc and captures no body, and the lines after it stay in
+    the chunk for the later stages to read by their actual syntax.
     """
-    quote = None
-    i = 0
-    n = len(line)
-    while i < n:
-        c = line[i]
-        if quote:
-            if c == quote:
-                quote = None
-            elif c == "\\" and quote == '"' and i + 1 < n:
+
+    __slots__ = ("stack", "prev", "in_comment")
+
+    def __init__(self):
+        # Frames, innermost last: [kind, quote]. KIND is "top" (the chunk
+        # itself), "sub" (`$(`), "group" (`(`) or "tick" (a backtick pair);
+        # QUOTE is None, "'", '"' or "$'" (ANSI-C quoting) for that frame
+        # only -- a `$(` opened inside a double-quoted string starts with
+        # no quote of its own.
+        self.stack = [["top", None]]
+        # The last character of the previous line, so a `#` at the start of
+        # a line is judged by what really precedes it.
+        self.prev = "\n"
+        # A comment that has not reached its newline (the line ended with
+        # some other line terminator) continues on the next line.
+        self.in_comment = False
+
+    def real_operators(self, line):
+        """Advance over LINE (a whole line, its terminator included) and
+        return the HEREDOC_OP matches that are real operators, in order."""
+        if self.in_comment:
+            if line.endswith("\n"):
+                self.in_comment = False
+            self.prev = line[-1]
+            return []
+        found = []
+        stack = self.stack
+        n = len(line)
+        i = 0
+        while i < n:
+            frame = stack[-1]
+            quote = frame[1]
+            if quote == "'":
+                j = line.find("'", i)
+                if j == -1:
+                    break
+                frame[1] = None
+                i = j + 1
+                continue
+            if quote == "$'":
+                # `$'...'` (ANSI-C quoting): unlike plain single quotes a
+                # backslash escapes the next character, so `$'it\'s'` is
+                # one string and the `'` after the backslash closes nothing.
+                m = _CONTEXT_SPECIAL_ANSI.search(line, i)
+                if m is None:
+                    break
+                if m.group() == "\\":
+                    i = m.start() + 2
+                else:
+                    frame[1] = None
+                    i = m.end()
+                continue
+            m = (
+                _CONTEXT_SPECIAL_DOUBLE if quote == '"' else _CONTEXT_SPECIAL_UNQUOTED
+            ).search(line, i)
+            if m is None:
+                break
+            i = m.start()
+            c = line[i]
+            if c == "\\":
+                i += 2
+                continue
+            if c == "$":
+                if line.startswith("(", i + 1):
+                    stack.append(["sub", None])
+                    i += 2
+                elif quote is None and line.startswith("'", i + 1):
+                    frame[1] = "$'"
+                    i += 2
+                else:
+                    i += 1
+                continue
+            if c == "`":
+                if quote is None and frame[0] == "tick":
+                    stack.pop()
+                else:
+                    stack.append(["tick", None])
                 i += 1
+                continue
+            if quote == '"':
+                frame[1] = None  # c is the closing `"`
+                i += 1
+                continue
+            # Unquoted within this frame.
+            if c == "#":
+                before = line[i - 1] if i else self.prev
+                if before in _COMMENT_PREV_CHARS:
+                    self.in_comment = not line.endswith("\n")
+                    break
+            elif c == "'" or c == '"':
+                frame[1] = c
+            elif c == "(":
+                stack.append(["group", None])
+            elif c == ")":
+                if frame[0] in ("sub", "group"):
+                    stack.pop()
+            elif c == "<" and line.startswith("<<<", i):
+                # here-string: takes no body, skip all three characters
+                i += 3
+                continue
+            elif c == "<" and line.startswith("<<", i):
+                op = HEREDOC_OP.match(line, i)
+                if op:
+                    found.append(op)
+                    i = op.end()
+                    continue
             i += 1
-            continue
-        if c == "\\" and i + 1 < n:
-            i += 2
-            continue
-        if c in ("'", '"'):
-            quote = c
-            i += 1
-            continue
-        if c == "#" and (i == 0 or line[i - 1] in " \t\r\n;|&()<>"):
-            return i
-        i += 1
-    return None
+        self.prev = line[-1]
+        return found
 
 
 def strip_heredocs(chunk):
@@ -1015,11 +1217,17 @@ def strip_heredocs(chunk):
       consumes nothing (its would-be body stays in the chunk, exactly as
       before this task), and does not stop a LATER operator on the same
       line from finding its own delimiter independently.
-    - An operator inside a `#`-comment on its own line (_line_comment_start()
-      above) is never collected, at any position on the line: the text
-      after `#` is never real syntax, so a `<<DELIM` written there opens no
-      heredoc and consumes no body -- it stays in the chunk as ordinary
-      (comment) text, exactly as a real shell would leave it.
+    - Only a REAL operator is collected (_OperatorContext above): a `<<WORD`
+      inside single quotes, double quotes or a `#`-comment is not syntax at
+      all, so it opens no heredoc and consumes no body -- it stays in the
+      chunk as ordinary text and the lines after it stay where they are, to
+      be read by their actual syntax (as the continuation of an open quote,
+      or as commands). The quote / comment state is carried across lines
+      and is advanced over every line this function keeps, but never over a
+      real heredoc body: those lines are skipped, so a quote character or
+      `#` inside one opens nothing in the command text. A real operator
+      inside a command substitution stays one, even when the substitution
+      sits in a double-quoted string.
 
     Delimiter-line CANDIDATES (every line that is nothing but a bare word,
     per _delimiter_line_word()) are indexed once, up front, into
@@ -1044,13 +1252,11 @@ def strip_heredocs(chunk):
     out = []
     records = []
     out_len = 0
+    context = _OperatorContext()
     i = 0
     while i < n:
         line = lines[i]
-        matches = list(HEREDOC_OP.finditer(line))
-        comment_start = _line_comment_start(line)
-        if comment_start is not None:
-            matches = [m for m in matches if m.start() < comment_start]
+        matches = context.real_operators(line)
         if not matches:
             out.append(line)
             out_len += len(line)
@@ -1245,6 +1451,32 @@ def _statically_unknown_word(word):
     )
 
 
+def _git_global_options_end(args):
+    """The index in ARGS -- everything after the `git` command word -- where
+    `git`'s own global options end: `-C`/`-c`/`--git-dir`/`--work-tree`/
+    `--namespace`/`--config-env` with their value (a separate token, or
+    attached with `=`) and the value-less options in GIT_GLOBAL_BOOLEAN_FLAGS
+    are passed over left to right. Shared by _git_is_data(), which reads the
+    word at that index as the subcommand, and by the FR6 skipped-word sink
+    check, which reads ARGS[:index] as the words the resolution skipped.
+    """
+    i = 0
+    n = len(args)
+    while i < n:
+        a = args[i]
+        if a in GIT_GLOBAL_VALUE_FLAGS:
+            i += 2
+            continue
+        if any(a.startswith(f"{flag}=") for flag in GIT_GLOBAL_VALUE_FLAGS):
+            i += 1
+            continue
+        if a in GIT_GLOBAL_BOOLEAN_FLAGS:
+            i += 1
+            continue
+        break
+    return i
+
+
 def _git_is_data(args):
     """Whether a `git` statement counts as a data command (task0003 Change
     1 / task plan "Change 1: the git condition in statement classification
@@ -1270,20 +1502,8 @@ def _git_is_data(args):
     therefore need no special-case handling here — unlike gh's own
     condition (_git_alias_risk()), which still reads them.
     """
-    i = 0
+    i = _git_global_options_end(args)
     n = len(args)
-    while i < n:
-        a = args[i]
-        if a in GIT_GLOBAL_VALUE_FLAGS:
-            i += 2
-            continue
-        if any(a.startswith(f"{flag}=") for flag in GIT_GLOBAL_VALUE_FLAGS):
-            i += 1
-            continue
-        if a in GIT_GLOBAL_BOOLEAN_FLAGS:
-            i += 1
-            continue
-        break
     if i >= n or args[i].startswith("-"):
         return False
     sub = args[i]
@@ -1386,11 +1606,23 @@ def _word_at(text, i):
     """The maximal run of characters starting at I that are not whitespace,
     a statement separator/operator, a quote, `$`, or a backtick -- used only
     to recognise `case`/`esac` as WHOLE words, never as a substring of a
-    longer identifier (`case-sensitive` is one word, not the keyword)."""
+    longer identifier (`case-sensitive` is one word, not the keyword).
+
+    A backslash and the character it escapes stay inside the word, whatever
+    that character is (C2): an escaped quote is a literal part of the word,
+    never the end of it. Stopping at the quote would hand the quote back to
+    scan_structure()'s main loop as a quote start (`echo it\\'s`,
+    `echo a\\"b`), so the rest of the text would be read as quoted."""
     j = i
     n = len(text)
-    while j < n and text[j] not in _SUB_WORD_STOP:
-        j += 1
+    while j < n:
+        c = text[j]
+        if c == "\\" and j + 1 < n:
+            j += 2
+        elif c in _SUB_WORD_STOP:
+            break
+        else:
+            j += 1
     return text[i:j], j
 
 
@@ -1401,6 +1633,58 @@ def _at_word_start(text, i):
     if i == 0:
         return True
     return text[i - 1] in ' \t\r\n;|&()<>'
+
+
+_SQ_PAREN_TOKEN = re.compile(r"\$\(|[()]")
+
+
+def _single_quoted_sub_closes(text, start, limit):
+    """Closing parenthesis of every `$(` in TEXT[START:LIMIT], found in ONE
+    forward pass -- the rest of one single-quoted span for the
+    honor_single_quotes=False scan in scan_structure(), LIMIT being its
+    closing quote (or the end of TEXT when the quote is never closed).
+    Returns {offset of the `$`: offset of its `)`}; a `$(` absent from the
+    result stays unmatched. Each character in the range is examined a
+    bounded number of times however many `$(` it holds, so the total cost
+    is linear in the range.
+
+    Each `$(` gets what a search started at that `$(` alone would find.
+    Every `(` and `)` after it up to LIMIT counts alike (no quote, escape
+    or nested-`$(` rule), and
+    1. the `)` that balances the `$(`'s own `(` is its close; failing that,
+    2. the first `)` after the `$(` is its close; with none in the range,
+    3. the `$(` is unmatched.
+    A `$(` the caller skips over (inside an earlier span) is resolved too and
+    simply never asked for.
+    """
+    closes = {}
+    first_close = {}
+    # One entry per `(` still waiting for its `)`: the offset of the `$` for
+    # a `$(`'s own `(`, -1 for a plain `(`.
+    open_stack = []
+    # `$(` offsets that have not seen any `)` after them yet; the next `)`
+    # is the first one for all of them, and each is settled exactly once.
+    waiting = []
+    for m in _SQ_PAREN_TOKEN.finditer(text, start, limit):
+        tok = m.group()
+        if tok == ")":
+            k = m.start()
+            for d in waiting:
+                first_close[d] = k
+            waiting.clear()
+            if open_stack:
+                d = open_stack.pop()
+                if d >= 0:
+                    closes[d] = k
+        elif tok == "(":
+            open_stack.append(-1)
+        else:
+            d = m.start()
+            open_stack.append(d)
+            waiting.append(d)
+    for d, k in first_close.items():
+        closes.setdefault(d, k)
+    return closes
 
 
 def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=True):
@@ -1416,7 +1700,10 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
       quoted span, a comment span, or a top-level substitution span (mode
       `shell` only -- `heredoc-body` mode returns `[]` here, since quotes
       and comments are literal at that mode's own top level and no caller
-      needs separator counting over heredoc-body text).
+      needs separator counting over heredoc-body text). No caller counts
+      separators from these ranges any more: which statement a position
+      belongs to is read from lex_segments() itself (_lex_layout()), so
+      there is one separator rule, not two.
     - CONTAINING_SPAN: {checkpoint position: the innermost span enclosing
       it, or None} for every position in CHECKPOINTS, found for free while
       the scan passes each one -- the position-only way a heredoc operator
@@ -1438,6 +1725,9 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
        opens no span, in either mode.
     4. An unterminated span is reported as unterminated (in UNMATCHED) and
        extends to the end of the text; it is never truncated silently.
+    5. Outside quotes, a backslash-escaped `'` or `"` is a literal
+       character, never a quote start (C2) -- in the main loop and in the
+       word reading that tells `case` and `esac` apart (_word_at()) alike.
 
     HONOR_SINGLE_QUOTES defaults to True, which is postcondition 2 exactly
     (real shell semantics: single quotes suppress expansion, so a `$(`/
@@ -1478,6 +1768,10 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
     stack = [[None, False, None, []]]
     sub_open_stack = []
     top_opaque_start = [None]
+    # Closes of the `$(` in the single-quoted span being scanned (only for
+    # honor_single_quotes=False): None until the span's first `$(`, then
+    # {offset of `$`: offset of `)`}. Reset at every single-quote opener.
+    sq_closes = None
 
     def close_top_opaque(end):
         if top_opaque_start[0] is not None:
@@ -1507,23 +1801,18 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
                 i += 1
                 continue
             if not honor_single_quotes and c == "$" and i + 1 < n and text[i + 1] == "(":
-                quote_end = text.find("'", i + 1)
-                # Balanced close inside the single-quoted range only (it
-                # holds no `'`, so the span can never leak past the quote).
-                limit = quote_end if quote_end != -1 else n
-                close_pos = -1
-                pdepth = 1
-                for k in range(i + 2, limit):
-                    if text[k] == "(":
-                        pdepth += 1
-                    elif text[k] == ")":
-                        pdepth -= 1
-                        if pdepth == 0:
-                            close_pos = k
-                            break
-                if close_pos == -1:
-                    close_pos = text.find(")", i + 2)
-                if close_pos != -1 and (quote_end == -1 or close_pos < quote_end):
+                if sq_closes is None:
+                    # First `$(` of this single-quoted span: resolve every
+                    # `$(` left in the span in one pass instead of searching
+                    # from each one (that was quadratic). The close is inside
+                    # the single-quoted range only (it holds no `'`, so the
+                    # span can never leak past the quote).
+                    quote_end = text.find("'", i + 1)
+                    sq_closes = _single_quoted_sub_closes(
+                        text, i, quote_end if quote_end != -1 else n
+                    )
+                close_pos = sq_closes.get(i, -1)
+                if close_pos != -1:
                     spans.append((i, close_pos + 1))
                     parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
                     i = close_pos + 1
@@ -1595,6 +1884,7 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
 
         if not literal and c == "'":
             frame[2] = "'"
+            sq_closes = None
             if depth == 0 and top_opaque_start[0] is None:
                 top_opaque_start[0] = i
             i += 1
@@ -1727,51 +2017,6 @@ def _span_inner(text, span):
     if text[start] == "`":
         return text[start + 1 : end - 1], start + 1
     return text[start + 2 : end - 1], start + 2
-
-
-def _segment_boundaries(text, opaque):
-    """The START offset of every real (non-comment, non-quoted, non-
-    substitution) statement-separator run in TEXT, in ascending order,
-    using OPAQUE (scan_structure()'s top-level ranges) to skip inert
-    regions -- ONE forward pass over the whole of TEXT, built once per
-    TEXT/OPAQUE pair and shared by every _segment_index_at() query against
-    it (see that function), rather than each query re-scanning from
-    position 0 on its own. A chunk with K heredocs would otherwise cost
-    O(K) scans, each up to that heredoc's own (growing) offset -- O(n^2)
-    total on a chunk whose heredoc count grows with its own length
-    (NFR3/TM-5) -- where this one pass, plus a bisect per query, costs
-    O(n) once and O(log n) per query."""
-    boundaries = []
-    i = 0
-    n = len(text)
-    oi = 0
-    m = len(opaque)
-    while i < n:
-        while oi < m and opaque[oi][1] <= i:
-            oi += 1
-        if oi < m and opaque[oi][0] <= i < opaque[oi][1]:
-            i = min(opaque[oi][1], n)
-            continue
-        c = text[i]
-        if c in SEGMENT_CHARS:
-            boundaries.append(i)
-            j = i
-            while j < n and text[j] in SEGMENT_CHARS:
-                j += 1
-            i = j
-            continue
-        i += 1
-    return boundaries
-
-
-def _segment_index_at(pos, boundaries):
-    """Which lex_segments(marked_text) statement index contains character
-    POS in TEXT -- the count of separator runs in BOUNDARIES (see
-    _segment_boundaries()) that START strictly before POS, found by
-    bisecting the precomputed, sorted list rather than re-scanning TEXT
-    from position 0 (Component 3: position only, no marker ever inserted
-    into TEXT)."""
-    return bisect.bisect_left(boundaries, pos)
 
 
 # --- Component 5: substitutions in an unquoted-delimiter heredoc body ------
@@ -1908,6 +2153,64 @@ def _leading_group_closer(toks, case_stack=None):
     return None
 
 
+# --- FR6: a sink among the words the command-word resolution skipped ------
+#
+# A statement's command word is found by passing over VAR=value assignments,
+# WRAPPERS with their options and option values, and `git`'s global options
+# with theirs. `GIT_EDITOR=bash git commit -e -F - <<'EOF'` therefore reads as
+# `git` -- a data command -- while the shell it hands the body to is named in
+# a word that was passed over. These helpers collect those words once per
+# statement and decide whether any of them names a sink.
+
+
+def _collect_skipped_words(words, end, skipped):
+    """Add to SKIPPED (a _SkippedWords) every assignment / wrapper word that
+    _skip_assignments_and_wrappers() passes over in WORDS[:END], walking the
+    prefix once left to right. Anything else in the prefix (a grouping
+    token, a reserved word, a case pattern) is stepped over without being
+    collected: only the three kinds of word FR6 names count as skipped.
+    """
+    i = 0
+    while i < end:
+        j = _skip_assignments_and_wrappers(words, i, end, skipped)
+        i = j if j > i else i + 1
+
+
+def _skipped_word_has_sink(word):
+    """Whether SHELL_SINK, applied exactly as it is applied to a chunk, finds
+    a sink in WORD as written, in the part after its first `=`, or in the
+    leading word of that part -- and in each of those with every quote and
+    backslash character removed (`core.editor=b'a'sh` is `bash` once the
+    shell that git hands it to has resolved the quoting)."""
+    forms = [word]
+    if "=" in word:
+        value = word.split("=", 1)[1]
+        forms.append(value)
+        leading = value.split(None, 1)
+        if leading:
+            forms.append(leading[0])
+    for form in forms:
+        if SHELL_SINK.search(form) or SHELL_SINK.search(_strip_quote_chars(form)):
+            return True
+    return False
+
+
+def _skipped_words_make_undetermined(words_only, lead, shaped_words, word, args):
+    """FR6: whether the words skipped before this statement's command WORD
+    make its destination undetermined -- an `env` -S/--split-string option
+    in any spelling, or a sink in any skipped word. WORDS_ONLY[:LEAD] is
+    what statement shaping passed over; SHAPED_WORDS may still start with
+    assignments/wrappers that head() skips; and for `git`, ARGS' leading
+    global options and their values count as skipped too."""
+    skipped = _SkippedWords()
+    _collect_skipped_words(words_only, lead, skipped)
+    skip_index, _, _ = _skip_to_command_word(shaped_words)
+    _collect_skipped_words(shaped_words, skip_index, skipped)
+    if word == "git":
+        skipped.words.extend(args[: _git_global_options_end(args)])
+    return skipped.env_split or any(_skipped_word_has_sink(w) for w in skipped.words)
+
+
 def _build_statement_table(chunk, marked_chunk):
     """Component 3. ONE lexing pass of MARKED_CHUNK (CHUNK with every
     top-level substitution already blanked by _mark_substitutions()),
@@ -1917,8 +2220,13 @@ def _build_statement_table(chunk, marked_chunk):
     condition -- _git_is_data() for a `git` command word, _git_alias_risk()
     for a `gh` one, task0003) -- built once per chunk and read by every
     heredoc's destination decision instead of each heredoc re-lexing the
-    chunk on its own."""
-    segments = lex_segments(marked_chunk)
+    chunk on its own.
+
+    Returns (TABLE, STARTS, OPERATORS): STARTS is _lex_layout()'s statement
+    start offsets for the same lexing pass and OPERATORS its record of the
+    heredoc operator starts each statement holds (both None when they are
+    unavailable), in MARKED_CHUNK's own coordinates."""
+    segments, starts, operators = _lex_layout(marked_chunk, True)
     case_stack = []
     table = []
     for toks, lexed, sep in segments:
@@ -1944,6 +2252,18 @@ def _build_statement_table(chunk, marked_chunk):
                     word = None
             elif _git_alias_risk(word, shaped_words, words_only[:lead]):
                 word = None
+            # FR6: a sink among the skipped words (or an `env` split-string)
+            # makes a would-be data word undetermined. A word that is itself
+            # a sink stays a sink -- only a non-sink command word is
+            # downgraded here.
+            if (
+                word is not None
+                and not SINK_WORD_RE.match(word)
+                and _skipped_words_make_undetermined(
+                    words_only, lead, shaped_words, word, args
+                )
+            ):
+                word = None
             raw_index = _skip_assignments_and_wrappers(stripped)
             is_compound_keyword = (
                 raw_index < len(stripped)
@@ -1967,7 +2287,7 @@ def _build_statement_table(chunk, marked_chunk):
                 is_assignment_only=False, opens_group=None, closes_group=None,
                 is_compound_keyword=False,
             ))
-    return table
+    return table, starts, operators
 
 
 def _track_groups(table):
@@ -2171,37 +2491,82 @@ def _decide_destination(chain):
     return "data"
 
 
-def _statement_info_at(text, pos, memo_key, tables_cache):
+def _marked_offsets(top_spans):
+    """(ENDS, REMOVED) for turning an offset in a text into the offset of the
+    same character in _mark_substitutions(text, top_spans, 0): ENDS[k] is
+    where top span k ends in the text, and REMOVED[k] is how many characters
+    the first k spans lose when each is replaced by its marker (REMOVED has
+    one more entry than ENDS)."""
+    ends = []
+    removed = [0]
+    for k, (start, end) in enumerate(top_spans):
+        ends.append(end)
+        marker = len(f"{UNRESOLVED_MARK}{k}{_MARK_TERMINATOR}")
+        removed.append(removed[-1] + (end - start) - marker)
+    return ends, removed
+
+
+def _statement_holds_operator(operators, idx, marked_pos):
+    """Whether the lex_segments() statement IDX holds the heredoc operator
+    whose `<<` starts at MARKED_POS (FR2), MARKED_POS being the operator's
+    position in the text the lexer saw. It does only when OPERATORS -- the
+    record _lex_layout() builds in the same lexing pass -- lists that
+    position for the statement: a `<<` the lexer read from bare, unquoted
+    operator syntax. Anything else is False, which the caller reads as an
+    undetermined destination (never data): no recorded start matches, the
+    statement has no record, or the position is not one the record can
+    hold. One lookup per heredoc against one statement's record (NFR3)."""
+    held = operators.get(idx)
+    return held is not None and marked_pos in held
+
+
+def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
     """The Component 3 table (built once per TEXT, cached in TABLES_CACHE
     keyed by MEMO_KEY) plus the statement index at POS in TEXT, plus that
     table's own group-tracking and pipeline memo -- shared by every level
-    of every heredoc's chain that resolves against this same TEXT."""
+    of every heredoc's chain that resolves against this same TEXT.
+
+    The statement at POS is the one lex_segments() yields for that position
+    (FR1): the table is built from that very lexing pass, and the offsets of
+    its statements come from the same pass (_lex_layout()), so a separator
+    is a separator here exactly where it is one to lex_segments().
+
+    OPERATOR says POS is the start of a heredoc's own `<<` operator, which
+    the statement selected for it has to hold as bare operator syntax (FR2,
+    _statement_holds_operator()). When it does not, or when the text does
+    not lex so no statement offsets exist, None comes back, which the
+    callers read as an undetermined destination -- never data."""
     cached = tables_cache.get(memo_key)
     if cached is None:
-        spans, parent_of, unmatched, opaque, _containing = scan_structure(
+        spans, parent_of, unmatched, _opaque, _containing = scan_structure(
             text, mode="shell"
         )
         top_spans = _top_level_spans(spans, parent_of)
         marked = _mark_substitutions(text, top_spans, 0)
-        table = _build_statement_table(text, marked)
+        table, starts, operators = _build_statement_table(text, marked)
         group_closer_of, open_groups_at, mismatched = _track_groups(table)
-        # _segment_boundaries() is the one full-text pass every heredoc's
-        # own _segment_index_at() query against THIS text shares (NFR3) --
-        # see that function's own docstring.
-        boundaries = _segment_boundaries(text, opaque)
         cached = (
-            table, group_closer_of, open_groups_at, {}, unmatched, boundaries,
-            mismatched,
+            table, group_closer_of, open_groups_at, {}, unmatched, starts,
+            operators, _marked_offsets(top_spans), mismatched,
         )
         tables_cache[memo_key] = cached
     (
-        table, group_closer_of, open_groups_at, pipe_memo, unmatched, boundaries,
-        mismatched,
+        table, group_closer_of, open_groups_at, pipe_memo, unmatched, starts,
+        operators, offsets, mismatched,
     ) = cached
     if any(p < pos for p in unmatched):
         return None
-    idx = _segment_index_at(pos, boundaries)
+    if starts is None:
+        return None
+    # POS in the text the lexer actually saw (substitutions replaced by their
+    # markers), then a bisect over the statement starts: O(log n) per query
+    # against one O(n) pass shared by every heredoc in TEXT (NFR3).
+    ends, removed = offsets
+    marked_pos = pos - removed[bisect.bisect_right(ends, pos)]
+    idx = bisect.bisect_right(starts, marked_pos) - 1
     if idx >= len(table):
+        return None
+    if operator and not _statement_holds_operator(operators, idx, marked_pos):
         return None
     if mismatched:
         # This table's own group tracking saw a closer that did not match
@@ -2259,12 +2624,16 @@ def _heredoc_destinations(chunk, records, chunk_scan):
             continue
         containing = containing_span.get(record.op_start)
         if containing is None:
-            info = _statement_info_at(chunk, record.op_start, "chunk", tables_cache)
+            info = _statement_info_at(
+                chunk, record.op_start, "chunk", tables_cache, operator=True
+            )
             chain = [info if info is not None else _StmtInfo(parse_failed=True)]
         else:
             inner_text, inner_base = _span_inner(chunk, containing)
             local_start = record.op_start - inner_base
-            host = _statement_info_at(inner_text, local_start, containing, tables_cache)
+            host = _statement_info_at(
+                inner_text, local_start, containing, tables_cache, operator=True
+            )
             chain = [host if host is not None else _StmtInfo(parse_failed=True)]
             chain.extend(
                 _walk_enclosing_chain(chunk, containing, parent_of, tables_cache)
@@ -2654,6 +3023,36 @@ def token_position(origin, toks, tok):
     return anchor + ((statement_index, _token_index(toks, tok), 0),)
 
 
+def _segment_boundaries(text, opaque):
+    """The START offset of every real (non-comment, non-quoted, non-
+    substitution) statement-separator run in TEXT, in ascending order,
+    using OPAQUE (scan_structure()'s top-level ranges) to skip inert
+    regions -- ONE forward pass over the whole of TEXT. Only
+    _statements_ended_by() reads it, for a chunk whose lexing fell back to
+    the regex split and so has no lexer offsets."""
+    boundaries = []
+    i = 0
+    n = len(text)
+    oi = 0
+    m = len(opaque)
+    while i < n:
+        while oi < m and opaque[oi][1] <= i:
+            oi += 1
+        if oi < m and opaque[oi][0] <= i < opaque[oi][1]:
+            i = min(opaque[oi][1], n)
+            continue
+        c = text[i]
+        if c in SEGMENT_CHARS:
+            boundaries.append(i)
+            j = i
+            while j < n and text[j] in SEGMENT_CHARS:
+                j += 1
+            i = j
+            continue
+        i += 1
+    return boundaries
+
+
 def _statements_ended_by(chunk, top_spans, offset_, seg_ends, opaque):
     """A function mapping a character position in CHUNK to the number of
     statements of the lexed chunk that END at or before it (their separator
@@ -2734,6 +3133,102 @@ def _register_marker_positions(marker_pos, marked, anchor, statement_index):
             marker_pos[index] = anchor + (
                 (statement_index, token_index, occurrence + 1),
             )
+
+
+# --- FR7: constructs that replace what a command name runs -----------------
+#
+# A function definition, an alias, `hash`, `enable` or a PATH assignment makes
+# a data command name (`cat`, `git`) run something else -- possibly a shell
+# that reads the heredoc body. No heredoc judged data in a command holding
+# one of these can be trusted, so statements() turns every data judgment in
+# that command into undetermined as soon as one is seen (once per hook
+# invocation, in the single traversal it already makes).
+
+# Builtins that change what a command name resolves to when they sit at
+# command position.
+OVERRIDE_BUILTINS = frozenset({"alias", "hash", "enable"})
+
+# An assignment to PATH, `PATH=` or `PATH+=`. (The latter is not an
+# ASSIGNMENT_PREFIX match, so it surfaces as the command word itself.)
+PATH_ASSIGNMENT = re.compile(r"^PATH\+?=")
+
+
+def _defines_function(words, lead):
+    """Whether WORDS -- a statement's non-redirect words -- define a shell
+    function at command position, in any spelling: `NAME()` and `NAME ()`
+    (the lexer gives a `()` token, or `(` then `)`), `function NAME` with or
+    without `()`, with any body form (`{ ... }`, `( ... )`, ...).
+
+    Statement shaping has already stepped LEAD words past command position,
+    and consumes the brace-bodied prefixes (`NAME() {`, `function NAME {`)
+    as part of that; the others leave NAME at WORDS[LEAD]. Windows are
+    therefore read from index 0 through LEAD, so every spelling shows up
+    exactly once. A name ending in `=` is an assignment (`arr=()`), not a
+    function name.
+    """
+    n = len(words)
+    for i in range(min(lead, n - 1) + 1):
+        t = words[i]
+        if t == "function" and not getattr(t, "quoted", False):
+            return True
+        if i + 1 < n and not getattr(t, "is_operator", False) and not t.endswith("="):
+            nxt = words[i + 1]
+            if getattr(nxt, "is_operator", False):
+                if nxt.startswith("()"):
+                    return True
+                if (
+                    nxt == "("
+                    and i + 2 < n
+                    and words[i + 2] == ")"
+                    and getattr(words[i + 2], "is_operator", False)
+                ):
+                    return True
+    return False
+
+
+def _overrides_command_name(words, lead, shaped_words):
+    """Whether one lexed statement holds a command-name override construct
+    (FR7): a function definition, `alias`/`hash`/`enable` as the command
+    word (also behind `builtin`), a PATH assignment -- as a prefix of a
+    command, as a statement of its own, or as an argument of `export`. WORDS
+    is the statement's non-redirect words, LEAD where command position
+    starts in them, SHAPED_WORDS what remains from there.
+
+    Reads only the statement's own words, so a quoted `alias` or `f()`, a
+    comment, or an argument-position `PATH=...` is not a match, and bodies
+    of data heredocs never reach it.
+    """
+    if _defines_function(words, lead):
+        return True
+    if any(PATH_ASSIGNMENT.match(w) for w in words[:lead]):
+        return True
+    if shaped_words and PATH_ASSIGNMENT.match(shaped_words[0]):
+        return True
+    word, args = head(shaped_words)
+    if word in OVERRIDE_BUILTINS:
+        return True
+    if word == "builtin" and args and args[0] in OVERRIDE_BUILTINS:
+        return True
+    if word == "export" and any(PATH_ASSIGNMENT.match(a) for a in args):
+        return True
+    return False
+
+
+def _overrides_command_name_unlexed(toks, shaped_words):
+    """_overrides_command_name() for a statement of a chunk that would not
+    lex (an unbalanced quote): no operator/quote provenance exists, so the
+    same constructs are read from plain words, and a PATH assignment
+    anywhere in the statement counts (the stricter reading)."""
+    word, args = head(shaped_words)
+    if word in OVERRIDE_BUILTINS:
+        return True
+    if word == "builtin" and args and args[0] in OVERRIDE_BUILTINS:
+        return True
+    if toks and toks[0] == "function":
+        return True
+    if any("()" in t for t in toks[:2]) or toks[1:3] == ["(", ")"]:
+        return True
+    return any(PATH_ASSIGNMENT.match(t) for t in toks)
 
 
 def statements(command):
@@ -2905,6 +3400,16 @@ def statements(command):
     # chunk pushed back onto PENDING (destructive-guard-command-name-
     # substitution index-leak fix) — a chunk-local list would desync there.
     all_subs = []
+    # FR7: set the first time any statement of any chunk holds a command-name
+    # override construct (_overrides_command_name()). From then on every
+    # heredoc judged data is treated as undetermined. A data heredoc seen
+    # BEFORE the first construct has already been passed over, so its body
+    # is parked in DEFERRED_DATA_BODIES -- only when its chunk holds a sink
+    # word, the one condition on which the fallback would scan it -- and
+    # queued the moment the flag turns on. The flag is raised at most once,
+    # so each parked body is queued at most once.
+    override_seen = False
+    deferred_data_bodies = []
     while pending:
         chunk, anchor, sub_index = pending.pop()
         if sub_index is not None:
@@ -2976,10 +3481,16 @@ def statements(command):
                 if not record.body.strip():
                     continue  # a blank body is never queued, as before this task
                 destination = destinations.get(index, "undetermined")
+                defer_data = False
+                if destination == "data":
+                    if override_seen:
+                        destination = "undetermined"
+                    elif chunk_sink_fallback:
+                        defer_data = True
                 queued_whole = destination == "sink" or (
                     destination == "undetermined" and chunk_sink_fallback
                 )
-                if queued_whole or not record.quoted:
+                if queued_whole or defer_data or not record.quoted:
                     if heredoc_ended_by is None:
                         heredoc_ended_by = _statements_ended_by(
                             chunk, top_spans, offset, seg_ends, chunk_scan[3]
@@ -2987,6 +3498,8 @@ def statements(command):
                     body_anchor = anchor + (
                         _heredoc_body_step(chunk, heredoc_ended_by, record, index),
                     )
+                if defer_data:
+                    deferred_data_bodies.append((record.body, body_anchor, None))
                 if queued_whole:
                     pending.append((record.body, body_anchor, None))
                 elif not record.quoted:
@@ -3066,6 +3579,9 @@ def statements(command):
                 words_only, redirects = split_redirects(fused, lexed)
                 lead = _shape_leading(words_only, case_stack)
                 shaped_words = _shaped_remainder(words_only, lead)
+                statement_overrides = not override_seen and _overrides_command_name(
+                    words_only, lead, shaped_words
+                )
                 # task0004 postcondition 2: evaluated for every statement,
                 # including one with zero tokens (an standalone
                 # `;;`/`;&`/`;|` line) — see this function's docstring.
@@ -3078,6 +3594,14 @@ def statements(command):
             else:
                 fallback_words, redirects = split_redirects(toks, lexed)
                 shaped_words = _shape_fallback(fallback_words)
+                statement_overrides = (
+                    not override_seen
+                    and _overrides_command_name_unlexed(toks, shaped_words)
+                )
+            if statement_overrides:
+                override_seen = True
+                pending.extend(deferred_data_bodies)
+                deferred_data_bodies = []
 
             if toks:
                 yield (
@@ -3124,10 +3648,57 @@ def tokens(segment):
         return segment.split()
 
 
-def _skip_assignments_and_wrappers(toks):
+class _SkippedWords:
+    """What the command-word resolution passed over before a statement's
+    command word, as _skip_assignments_and_wrappers() collects it for the
+    heredoc destination decision (destructive-guard-heredoc-sink-gaps FR6).
+
+    WORDS holds the VAR=value assignments, the WRAPPERS' own names, their
+    options and the options' values -- in the order they were read. ENV_SPLIT
+    is True when an `env` option among them is -S/--split-string in any
+    spelling. mise/asdf `exec` words are not collected: they name tool
+    specs, not a program the heredoc could be handed to.
+    """
+
+    __slots__ = ("words", "env_split")
+
+    def __init__(self):
+        self.words = []
+        self.env_split = False
+
+
+def _env_split_option(opt):
+    """Whether OPT -- one option word read after `env` -- is `env`'s
+    -S/--split-string in any spelling (FR6): `-S`, `-Sbash`, `-S'sh -s'`,
+    `-iS` and `-iSbash` (a short-option cluster), `--split-string`,
+    `--split-string=...`, and an abbreviation of the long option (GNU env
+    accepts any unambiguous prefix). Inside a short-option cluster, `u` and
+    `C` take the rest of the word as their value, so a `S` after either is
+    that value, not the option.
+    """
+    if opt.startswith("--"):
+        name = opt[2:].split("=", 1)[0]
+        return bool(name) and "split-string".startswith(name)
+    for ch in opt[1:]:
+        if ch == "S":
+            return True
+        if ch in "uC":
+            return False
+    return False
+
+
+def _skip_assignments_and_wrappers(toks, start=0, end=None, skipped=None):
     """Advance past VAR=value assignments, WRAPPERS (and their value-taking
     options), and mise/asdf `exec` prefixes — the skip loop head() has
     always applied, minus its `.substitution_only` handling.
+
+    START and END bound the scan to TOKS[START:END] and the returned index
+    is then an index into TOKS itself (the default, START=0 / END=None,
+    scans all of TOKS exactly as before). SKIPPED, when given, is a
+    _SkippedWords this scan adds the words it passes over to (the
+    assignments, the wrapper names, their options and option values) --
+    the FR6 skipped-word sink check reads it. Collecting changes nothing
+    about where the scan stops.
 
     Factored out of _skip_to_command_word() (task0001) so that the
     grouping/case-aware scan in statements() (_shape_leading()) can
@@ -3141,18 +3712,22 @@ def _skip_assignments_and_wrappers(toks):
     statement() exactly as it does for an unwrapped statement (see
     _shape_leading()'s docstring).
 
-    Returns the index in TOKS where this stops — 0 when TOKS[0] itself
-    doesn't match anything here (including when it is `.substitution_only`,
-    which this function does not look at all).
+    Returns the index in TOKS where this stops — START (0 by default) when
+    TOKS[START] itself doesn't match anything here (including when it is
+    `.substitution_only`, which this function does not look at all).
     """
-    i = 0
-    n = len(toks)
+    i = start
+    n = len(toks) if end is None else min(end, len(toks))
     while i < n:
         t = toks[i]
         if re.match(r"^[A-Za-z_]\w*=", t):  # VAR=value prefix
+            if skipped is not None:
+                skipped.words.append(t)
             i += 1
             continue
         if t in WRAPPERS:
+            if skipped is not None:
+                skipped.words.append(t)
             i += 1
             value_flags = WRAPPER_VALUE_FLAGS.get(t, set())
             while i < n:
@@ -3163,8 +3738,14 @@ def _skip_assignments_and_wrappers(toks):
                 if a == "-" or not a.startswith("-"):
                     break
                 i += 1
+                if skipped is not None:
+                    skipped.words.append(a)
+                    if t == "env" and _env_split_option(a):
+                        skipped.env_split = True
                 if a in value_flags:
                     i += 1  # consume the option's value token
+                    if skipped is not None and i - 1 < n:
+                        skipped.words.append(toks[i - 1])
             continue
         if t in ("mise", "asdf") and i + 1 < n and toks[i + 1] == "exec":
             i += 2

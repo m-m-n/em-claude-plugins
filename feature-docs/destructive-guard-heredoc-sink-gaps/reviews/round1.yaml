@@ -1,0 +1,171 @@
+round: 1
+executed_at: '2026-10-03T22:39:03+09:00'
+scope:
+  review_mode: diff
+  base_commit: 3efc2b9c17cc484967db2a57a71fadb5ee369ab0
+  head_commit: 5eadee8fb96e13a00502ec22c7b0706119a24912
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0003.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0004.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: task0001 は単一引用符内 $( の二次計算量を線形化する性能修正（FR4 / NFR3）で、差分に計算量とタイムアウトの変更が含まれるため
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+  note: codex returned non-JSON output
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+  note: codex returned non-JSON output
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: bc9a99dd0d07ffa5
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2433
+  title: FR2 のホスト文の演算子チェックが常に真で、引用の読み違いがあると bash 宛て本文が data として素通りする
+  description: '_statement_holds_operator() の 2 条件はどちらも常に真になる。idx は同じ starts への bisect_right で求めているので、starts[idx] <= marked_pos < end は必ず成り立つ。pos は HEREDOC_OP の一致位置なので、text.startswith(''<<'', pos) も必ず成り立つ。FR1 で選択とチェックが同じ starts を使うようになってからは一度も False を返さず、FR2 は実質未実装。_OperatorContext（$''...'' を解釈する）と shlex（解釈しない）の読みが食い違うと害が出る。評価者が実行して確認: `echo $''a\''b''; bash <<EOF\ngit reset --hard HEAD\nEOF\necho x\''y` は HEAD で allow（基準コミットでも allow で退行ではないが、TM-1 の穴が残る）。comprehensive#fallback も同じ箇所を medium で独立に報告。'
+  suggestion: _lex_layout(track=True) で、引用されていない裸の演算子トークンのうち `<<` を含むものの開始位置（marked 座標）を _operator_token_start() で確定して文ごとに記録する。融合トークンは既存の pieces/offset 処理で base + 位置として求める。_statement_holds_operator() は marked_pos がその文に記録した `<<` の開始位置と一致するときだけ真を返し、一致しない・確定できないときは None（判定不能）を返す。再現形を deny ケースとして cases.json に足し、FR2 だけで判定が決まるケースも足す。
+  sources:
+  - claude:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'auto-fix loop 1: review-editor skipped（_lex_layout / _build_statement_table / _statement_info_at にまたがる改修で単一編集に収まらない）。batch rework へ'
+- stable_id: 8ccf22c69c8bb295
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2104
+  title: FR6 がパス値（git -C、env -C など）の中の sink 語にも一致し、コミットメッセージのヒアドキュメントを誤爆する
+  description: _skipped_word_has_sink() は読み飛ばした語全体に SHELL_SINK.search() をかけ、\b 区切りなので python-tools・node-app・bash-completion のようなパス成分にも一致する。`git -C /home/u/src/python-tools commit -F - <<'EOF'\nfix\n\ngit reset --hard HEAD\nEOF` と `env -C /home/u/node-app git commit -F - ...` は基準コミットで allow、HEAD で deny（評価者が実行して確認、退行）。SPEC FR6 の文言どおりではあるが、em-workflow 自身が worktree パスで git -C を多用するため無人実行を止める誤爆になりうる。
+  suggestion: 照合対象をプログラムを名指しできる値に絞る（git は -c / --config-env の値と VAR=value 代入のみ。-C/--git-dir/--work-tree/--namespace と env -C/--chdir の値は外す）。`git -C /tmp/node-app commit -F - <<'EOF'` 形の allow ケースを足し、SPEC FR6 の対象範囲もあわせて直す。
+  sources:
+  - claude:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: a8df1e7ccbb3a0e9
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2179
+  title: FR6 が読み飛ばした語の中の置換を見ないため、GIT_EDITOR=$(command -v bash) が allow になる
+  description: _build_statement_table() は _strip_unresolved_marks(toks) を通した後のトークンで FR6 を判定するため、$(...) とバッククォートの中身が見えない。`GIT_EDITOR=$(command -v bash) git commit -e -F - <<'EOF'\ngit reset --hard HEAD\nEOF` とバッククォート版は HEAD で allow（`GIT_EDITOR=bash` 形は deny）。評価者が実行して確認。
+  suggestion: (a) 読み飛ばした語が未解決マーカーを含むなら判定不能にする、または (b) 置換の元テキストを復元した語に _skipped_word_has_sink() をかける。2 形を deny ケースとして足す。
+  sources:
+  - claude:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 8b504c8c24108c71
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2948
+  title: editor を sink にする設定を前の文に移すと、FR6 も FR7 も効かない
+  description: '`export GIT_EDITOR=bash; git commit -e -F - <<''EOF''\ngit reset --hard HEAD\nEOF`、`GIT_EDITOR=bash\nexport GIT_EDITOR\ngit commit -e -F - ...`、`git config core.editor sh && git commit -e -F - ...` はどれも HEAD で allow（基準コミットでも allow）。SPEC FR6/FR7 の対象外の形なので、塞ぐか残存リスクとして明記するかの判断が要る。'
+  suggestion: _overrides_command_name() の差し替え構文に、GIT_EDITOR / GIT_SEQUENCE_EDITOR / VISUAL / EDITOR への sink 値の代入・export と、git config による core.editor / sequence.editor の設定を加える。塞がない場合は SPEC の Accepted residual risk に明記する。
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: aa10c4f0bfc7f194
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2971
+  title: PATH 代入を declare/typeset/readonly/local や builtin export で書くと、FR7 の差し替え構文に数えられない
+  description: _overrides_command_name() が PATH 代入を拾うのは前置代入・単独文・export の引数だけ。`declare PATH=/tmp/bash-bin:$PATH; cat <<'EOF'\ngit reset --hard HEAD\nEOF` と typeset -x / readonly / builtin export 版は HEAD で allow（評価者が実行して確認）。
+  suggestion: word が builtin なら args[0] を実コマンド語として扱い、export / declare / typeset / readonly / local の引数に PATH_ASSIGNMENT があれば True を返す。各書き方の deny ケースを足す。
+  sources:
+  - claude:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 43c217cd485a5854
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3202
+  title: 差し替え構文が別のチャンクにあると、heredoc 自身のチャンクに sink 名が無い限り本文が走査されない
+  description: override_seen はコマンド全体のフラグだが、undetermined になった data heredoc の本文をキューに積むのはそのチャンクに sink 名があるときだけ。`cat() { bash; }; eval "cat <<'EOF'\ngit reset --hard HEAD\nEOF"` は HEAD で allow（同じチャンクの形は deny）。評価者が実行して確認。SPEC A6 には当たらない。
+  suggestion: SHELL_SINK に一致したチャンクがコマンド全体で一つでもあったかをフラグとして持ち、上書きが原因で undetermined になった heredoc では `chunk_sink_fallback or command_sink_seen` で再走査を判定する。deferred_data_bodies の条件も同じにする。eval 形を deny ケースとして足す。
+  sources:
+  - claude:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+evaluation:
+  round_summary: Round 1（diff、cross_validation=true）。security#0 と comprehensive#0（codex）は JSON 以外を返して失敗し、fallback（claude）がその観点を担った。reviewer の出力に注入の試みは無い。評価者の再実行で run-destructive-guard.py は 555/555、python3 -m unittest discover -s tests は 6497 件すべて通過。既存ケース 455 件はすべて残り期待判定も不変（FR9）。約 60KB の AC-4 入力は HEAD で 0.12 秒（基準 15.25 秒）。fallback reviewer の指摘 7 件をすべて再現し 6 件に統合（FR2 の指摘は security high と comprehensive medium が同一箇所）。critical/high は 1 件。architecture / performance は corroborated。spec#0 は空を返したが、評価者自身が FR2 未実装・FR6 の置換見逃しを確認し、同じ箇所の security / comprehensive の findings に含めた。
+  recommended_action: auto_fix
+  action_rationale: high 1 件は destructive-guard.py と cases.json の中で直せる。medium 5 件も同じ 2 ファイルで直せるが、FR6 のパス値の扱いと前の文での editor 設定は SPEC 側の判断を伴う。性能・既存ケース維持・ランナーの制限時間には問題が無い。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  aborted_stable_ids:
+  - bc9a99dd0d07ffa5
+residual_critical_high: 1
+rework_required: true
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  note: vulnerability 観点は未選択（依存マニフェストの変更なし）で、対象の findings が無い
