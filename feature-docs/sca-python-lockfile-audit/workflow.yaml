@@ -88,9 +88,11 @@ workflow:
   status: completed
   completed_at_commit: 2bef049ec63f758c435ca1a15a80a7e2ba120fc0
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  summary: 'repo-tests (python3 -m unittest discover -s tests): 6933 tests OK, exit 0. plugin-invariants: 7 checks PASS, exit 0. TS1-TS15 pass (TS10: tests/test_sca_scan_normalization.py unmodified; TS13: no new non-stdlib import, only contextlib added; TS15: no .claude-plugin/ path changed since base_commit). Excluded requirements: none. Manual real-tool check not run (no real pip-audit / network in batch).'
+  completed_at_commit: b50c57efe55320971d8b5c7d1796e0350d2e07b6
 - id: retrospect
   status: pending
 tasks:
