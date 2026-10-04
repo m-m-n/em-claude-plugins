@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-scanner-project-config-isolation
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: c803cfd072cf150036f18d3da23a3a9fac452068
 last_input_digest: sha256:e891cb24af56eb41581f203f714317e35467fa4c7bdd325af719dd4b74fa2e76
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -31,7 +31,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: sca-scanner-project-config-isolation-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:e891cb24af56eb41581f203f714317e35467fa4c7bdd325af719dd4b74fa2e76
   base_workflow_blob: 3b13c66db38195be203a4a61a567eabdd678c824
 progress_fingerprint: null
