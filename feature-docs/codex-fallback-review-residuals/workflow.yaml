@@ -223,7 +223,7 @@ tasks:
     - FR7
     - NFR2
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-fallback-review-residuals/task0004
 review:
   status: pending
