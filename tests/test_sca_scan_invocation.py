@@ -24,6 +24,16 @@ Covers task0008 Acceptance Criteria
   the child environment's configuration/registry selection are identical
   to those constructed from the same fixture without those two files.
 
+sca-python-lockfile-audit task0001 AC-2 (FR3, NFR2, NFR6, TM-5) extends AC-1
+for a changed poetry.lock / Pipfile.lock: the pip job is built for a PREPARED
+requirements file -- [executable, `-r`, prepared file, `--no-deps`,
+`--disable-pip`, `--format`, `json`] with the lockfile as the job's manifest --
+without reading, writing or launching anything; a lockfile manifest without a
+prepared file is rejected and never yields the directory form; requirements.txt
+and pyproject.toml jobs keep their previous vectors with neither new flag; and
+the registry pip entry, ALLOWED_EXECUTABLES, ECOSYSTEM_LOCKFILES and the pip
+child-environment pins hold their previous (literal) values.
+
 Per Test Notes / IMPLEMENTATION.md Conventions: this module's own imports
 stay standard-library only (NFR7) -- the script under test is loaded by
 file path (its name contains a hyphen), following
@@ -240,28 +250,99 @@ class TestPipJobAuditsTheReviewedProject(unittest.TestCase):
         job = SCAN.build_scan_job(self.pip_entry, "services/api/pyproject.toml", "/proj", "/x/pip-audit")
         self.assertEqual(job["argv"], ["/x/pip-audit", "services/api", "--format", "json"])
 
-    def test_a_changed_lockfile_audits_its_own_directory_not_pyproject_via_r(self):
-        # poetry.lock / Pipfile.lock are not pip-format requirement files;
-        # -r would misparse them, so they get the directory-targeting form
-        # too, same as pyproject.toml.
-        job = SCAN.build_scan_job(self.pip_entry, "poetry.lock", "/proj", "/x/pip-audit")
-        self.assertEqual(job["argv"], ["/x/pip-audit", ".", "--format", "json"])
+    # sca-python-lockfile-audit task0001 AC-2 (FR3, NFR2, NFR6, TM-5): a
+    # lockfile is never handed to pip-audit directly nor audited through its
+    # directory. The lockfile job audits a PREPARED requirements file (one
+    # `name==version` line per pin) that a separate stage wrote outside the
+    # project root; build_scan_job only receives that file's path.
+    PREPARED = "/tmp/prepared-requirements.txt"
+    LOCKFILE_JOB_ARGV_TAIL = ["--no-deps", "--disable-pip", "--format", "json"]
+
+    def _build(self, manifest):
+        prepared = self.PREPARED if os.path.basename(manifest) in ("poetry.lock", "Pipfile.lock") else None
+        return SCAN.build_scan_job(
+            self.pip_entry, manifest, "/proj", "/x/pip-audit", prepared_file=prepared
+        )
+
+    def test_a_changed_lockfile_gets_the_lockfile_job_form(self):
+        for lockfile in ("poetry.lock", "Pipfile.lock", "services/api/poetry.lock", "svc/Pipfile.lock"):
+            with self.subTest(lockfile=lockfile):
+                job = SCAN.build_scan_job(
+                    self.pip_entry, lockfile, "/proj", "/x/pip-audit", prepared_file=self.PREPARED
+                )
+                self.assertEqual(
+                    job["argv"],
+                    ["/x/pip-audit", "-r", self.PREPARED] + self.LOCKFILE_JOB_ARGV_TAIL,
+                )
+                self.assertEqual(job["manifest"], lockfile)
+                self.assertEqual(job["ecosystem"], "pip")
+                self.assertEqual(job["cwd"], "/proj")
+
+    def test_lockfile_job_is_built_even_when_the_prepared_path_does_not_exist(self):
+        missing = "/definitely/not/a/real/dir/prepared-requirements.txt"
+        with mock.patch("builtins.open", side_effect=AssertionError("file opened")), \
+                mock.patch("os.open", side_effect=AssertionError("file opened")), \
+                mock.patch("subprocess.Popen", side_effect=AssertionError("process launched")), \
+                mock.patch("subprocess.run", side_effect=AssertionError("process launched")):
+            job = SCAN.build_scan_job(
+                self.pip_entry, "poetry.lock", "/proj", "/x/pip-audit", prepared_file=missing
+            )
+        self.assertEqual(job["argv"][:3], ["/x/pip-audit", "-r", missing])
+        self.assertFalse(os.path.exists(missing))
+
+    def test_a_lockfile_manifest_without_a_prepared_file_is_rejected(self):
+        for lockfile in ("poetry.lock", "Pipfile.lock", "sub/poetry.lock"):
+            for kwargs in ({}, {"prepared_file": None}, {"prepared_file": ""}):
+                with self.subTest(lockfile=lockfile, kwargs=kwargs):
+                    with self.assertRaises(ValueError):
+                        SCAN.build_scan_job(
+                            self.pip_entry, lockfile, "/proj", "/x/pip-audit", **kwargs
+                        )
+
+    def test_the_directory_form_is_never_produced_for_a_lockfile(self):
+        for lockfile in ("poetry.lock", "Pipfile.lock"):
+            with self.subTest(lockfile=lockfile):
+                with self.assertRaises(ValueError):
+                    SCAN._pip_target(lockfile)
+
+    def test_non_lockfile_jobs_ignore_a_prepared_file_and_carry_neither_flag(self):
+        for manifest in ("requirements.txt", "pyproject.toml", "backend/requirements.txt"):
+            with self.subTest(manifest=manifest):
+                with_file = SCAN.build_scan_job(
+                    self.pip_entry, manifest, "/proj", "/x/pip-audit", prepared_file=self.PREPARED
+                )
+                without = SCAN.build_scan_job(self.pip_entry, manifest, "/proj", "/x/pip-audit")
+                self.assertEqual(with_file["argv"], without["argv"])
+                self.assertNotIn("--no-deps", without["argv"])
+                self.assertNotIn("--disable-pip", without["argv"])
 
     def test_target_is_never_absent_never_the_ambient_environment(self):
         for manifest in ("requirements.txt", "pyproject.toml", "poetry.lock", "Pipfile.lock"):
             with self.subTest(manifest=manifest):
-                job = SCAN.build_scan_job(self.pip_entry, manifest, "/proj", "/x/pip-audit")
+                job = self._build(manifest)
                 # More than the bare `[executable, --format, json]` form:
                 # a real target token is present.
                 self.assertGreater(len(job["argv"]), 3)
 
     def test_no_argument_form_installs_or_writes_a_resolution_artifact(self):
-        forbidden_tokens = ("install", "--fix", "-o", "--output", "--require-hashes", "--no-deps")
+        forbidden_tokens = ("install", "--fix", "-o", "--output", "--require-hashes")
         for manifest in ("requirements.txt", "pyproject.toml", "poetry.lock", "Pipfile.lock"):
-            job = SCAN.build_scan_job(self.pip_entry, manifest, "/proj", "/x/pip-audit")
+            job = self._build(manifest)
             with self.subTest(manifest=manifest):
                 for forbidden in forbidden_tokens:
                     self.assertNotIn(forbidden, job["argv"])
+
+    def test_no_deps_and_disable_pip_appear_only_on_lockfile_jobs(self):
+        for manifest in ("requirements.txt", "pyproject.toml"):
+            job = self._build(manifest)
+            with self.subTest(manifest=manifest, kind="non-lockfile"):
+                self.assertNotIn("--no-deps", job["argv"])
+                self.assertNotIn("--disable-pip", job["argv"])
+        for manifest in ("poetry.lock", "Pipfile.lock"):
+            job = self._build(manifest)
+            with self.subTest(manifest=manifest, kind="lockfile"):
+                self.assertIn("--no-deps", job["argv"])
+                self.assertIn("--disable-pip", job["argv"])
 
 
 # ---------------------------------------------------------------------------
@@ -389,6 +470,61 @@ class TestConfigurationIsolationIgnoresProjectFiles(unittest.TestCase):
 
         params = list(inspect.signature(SCAN.build_child_env).parameters)
         self.assertNotIn("project_root", params)
+
+
+# ---------------------------------------------------------------------------
+# sca-python-lockfile-audit task0001 AC-2 (NFR6): the pip registry entry, the
+# executable allowlist, the lockfile sets and the pip child-environment pins
+# hold their previous values -- asserted against literals.
+# ---------------------------------------------------------------------------
+
+class TestPipInvariantsUnchanged(unittest.TestCase):
+    def test_pip_registry_entry_is_unchanged(self):
+        registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
+        pip_entry = {e["ecosystem"]: e for e in registry["ecosystems"]}["pip"]
+        self.assertEqual(
+            pip_entry,
+            {
+                "ecosystem": "pip",
+                "manifests": ["pyproject.toml", "requirements.txt"],
+                "executable": "pip-audit",
+                "args": ["--format", "json"],
+                "target_flag": "-r",
+                "severity_map": {"critical": "critical", "high": "high"},
+                "threshold": {"direct_only": True, "min_severity": "high"},
+            },
+        )
+
+    def test_allowed_executables_are_unchanged(self):
+        self.assertEqual(
+            SCAN.ALLOWED_EXECUTABLES,
+            {
+                "npm": {"npm"},
+                "cargo": {"cargo-audit"},
+                "pip": {"pip-audit"},
+                "go": {"govulncheck"},
+            },
+        )
+
+    def test_ecosystem_lockfiles_are_unchanged(self):
+        self.assertEqual(
+            SCAN.ECOSYSTEM_LOCKFILES,
+            {
+                "npm": {"package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml"},
+                "cargo": {"Cargo.lock"},
+                "pip": {"poetry.lock", "Pipfile.lock"},
+                "go": {"go.sum"},
+            },
+        )
+
+    def test_pip_child_environment_pins_are_unchanged(self):
+        self.assertEqual(
+            SCAN.ECOSYSTEM_ENV_PINS["pip"],
+            {"PIP_CONFIG_FILE": os.devnull, "PIP_INDEX_URL": "https://pypi.org/simple/"},
+        )
+        env = SCAN.build_child_env({"ecosystem": "pip"}, environ={"PATH": "/bin", "PIP_INDEX_URL": "http://evil/"})
+        self.assertEqual(env["PIP_CONFIG_FILE"], os.devnull)
+        self.assertEqual(env["PIP_INDEX_URL"], "https://pypi.org/simple/")
 
 
 if __name__ == "__main__":
