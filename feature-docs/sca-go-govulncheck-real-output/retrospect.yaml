@@ -1,5 +1,5 @@
 feature: sca-go-govulncheck-real-output
-collected_at: "2026-10-04T23:40:00+09:00"
+collected_at: "2026-10-04T23:31:10+09:00"
 session_ids: [01a10752-5075-7719-aaeb-28e67a81f60f]
 signals:
   review_critical_high: []
