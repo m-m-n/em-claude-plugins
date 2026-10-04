@@ -630,11 +630,16 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # Refreshed again by feature-docs/threat-model-stride/tasks/task0005.md
 # (FR8): Step 4's `<task>` and `<grounding_rules>` prose gained the
 # `threat_model_path` / THREAT-MODEL.md carriage sentences.
+#
+# Refreshed again: the temp-file discipline section now opens with "Do
+# not write any file", and Step 5 limits the Bash call to the `PROMPT`
+# (and optional `SCHEMA`) assignment plus the wrapper line, with `PROMPT`
+# assigned through a quoted heredoc rather than a single-quoted string.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "9772b22fbb58eb2152bcfd7d6b12368f01c483c8d9af31b2978b88361c0a258e"
+    "339528e61142a60ecd562df8d2612b956ca8f7782b58f2c9555179c8a9df27d4"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"
