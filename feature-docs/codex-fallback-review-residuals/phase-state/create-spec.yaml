@@ -1,14 +1,18 @@
 schema_version: 1
 feature: codex-fallback-review-residuals
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: df60850b1d491738e5a75062dfa23b2b0df06b99
-last_input_digest: null
-active_request_id: null
+base_revision: eec404e1a167d7bdbd9b436cd84e813c679b31b5
+last_input_digest: sha256:60d283a536c2a71308c21dcbd7e005a99725b3bd765c9e8e22578ba18bccd349
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:60d283a536c2a71308c21dcbd7e005a99725b3bd765c9e8e22578ba18bccd349
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
