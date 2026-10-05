@@ -7,7 +7,7 @@ acceptance_tests:
       - tests.test_exit4_tip_argument_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
       - tests.test_exit4_tip_argument_version_bump.TestPluginManifestVersion.test_name_field_unchanged
     red_confirmed: true
-    red_reason: "AssertionError: 44 not greater than 44 (plugin.json still 0.1.44 before the bump)"
+    red_reason: "AssertionError: (0, 1, 68) not greater than (0, 1, 68) (plugin.json still 0.1.68, the pre-bump value at the feature's diff base, before the bump; baseline patch 68)"
   AC-2:
     tests:
       - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
@@ -15,12 +15,12 @@ acceptance_tests:
       - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
       - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_version_not_bumped_with_em_workflow
     red_confirmed: true
-    red_reason: "AssertionError: 44 not greater than 44 (marketplace.json em-workflow entry still 0.1.44 before the bump); test_em_workflow_entry_version_matches_plugin_manifest was green at the 0.1.44 baseline because plugin.json and the marketplace em-workflow entry both read 0.1.44, so test_em_workflow_entry_version_is_past_baseline alone carried the observed red; test_em_review_entry_source_unchanged (source is still ./em-review) and test_em_review_entry_version_not_bumped_with_em_workflow (em-review version differs from the em-workflow plugin manifest version, so it does not follow the em-workflow bump) were already green before the change and are retention guards"
+    red_reason: "AssertionError: (0, 1, 68) not greater than (0, 1, 68) (marketplace.json em-workflow entry still 0.1.68, the pre-bump value at the feature's diff base, before the bump; baseline patch 68); test_em_workflow_entry_version_matches_plugin_manifest was green at the 0.1.68 baseline because plugin.json and the marketplace em-workflow entry both read 0.1.68, so test_em_workflow_entry_version_is_past_baseline alone carried the observed red; test_em_review_entry_source_unchanged (source is still ./em-review) and test_em_review_entry_version_not_bumped_with_em_workflow (em-review version differs from the em-workflow plugin manifest version, so it does not follow the em-workflow bump) were already green before the change and are retention guards"
   AC-3:
     tests:
       - tests.test_exit4_tip_argument_version_bump
     red_confirmed: true
-    red_reason: "Module did not exist before this task; once written it failed on the un-bumped 0.1.44 tree (see AC-1/AC-2), proving discovery + baseline-expression are exercised. Module imports only json/re/unittest/pathlib and no other test module."
+    red_reason: "Module did not exist before this task; once written it failed on the un-bumped 0.1.68 tree with AssertionError: (0, 1, 68) not greater than (0, 1, 68) (see AC-1/AC-2; baseline patch 68), proving discovery + baseline-expression are exercised. Module imports only json/re/unittest/pathlib and no other test module."
   AC-4:
     tests:
       - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
