@@ -117,19 +117,18 @@ worker_runs:
   input_digest: sha256:d2ff1512a140e741a34a372b314e99dadb54295a51a0980dd47c64721f3c2fae
   output_digest: null
 - request_id: create-spec-run-0007
-  status: dispatched
+  status: completed
   input_digest: sha256:d2ff1512a140e741a34a372b314e99dadb54295a51a0980dd47c64721f3c2fae
   output_digest: null
 artifacts:
 - path: feature-docs/prelaunch-inprogress-routeback/REQUIREMENTS.md
-  sha256: sha256:08e302175834d7992978d65b7ea71178bf3aabad12c589ab1362e9ed6e80bd2b
-  produced_by: create-spec-run-0003
+  sha256: sha256:4771a6895b942797413ec4e19952017ecfb4c311568831e927024906328023ab
+  produced_by: create-spec-run-0007
 - path: feature-docs/prelaunch-inprogress-routeback/SPEC.md
-  sha256: sha256:d92f877b5aebf510ddcb24371fbb87be76616c8b02929c85903da396f19b284b
-  produced_by: create-spec-run-0003
+  sha256: sha256:0054d11bddeababb709aedaba665e77742c03212e2a403912a2d5b2a88f136a6
+  produced_by: create-spec-run-0007
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-spec-run-0006 blocked: spec-writer has no hashing tool to verify
-  expect_digest; orchestrator verified digests pre-dispatch and re-dispatched'
+last_error: null
