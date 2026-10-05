@@ -1,5 +1,5 @@
 """Agreement test for the unified lexer of `em-workflow/hooks/destructive-guard.py`
-(destructive-guard-unified-lexer task0001, FR10; D6).
+(destructive-guard-unified-lexer task0001 and rework task0002, FR10; D6).
 
 The hook decides every quote / comment / expansion / substitution judgment in
 one place, `lex_shell(text, mode)`. This module proves that every reader built
@@ -28,7 +28,14 @@ Layout:
 - TestHeredocBodies: nothing written inside a real heredoc body opens
   anything for the command text after its delimiter line.
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
+- TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11).
 - TestModuleContract: the replaced readers are gone; standard library only.
+
+Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
+words after closers and name-taking keywords), P11 (where a heredoc body
+begins) and P12 (the word after a process substitution) to the fixed
+expectations above: COMMAND_POSITION_FORMS, NON_ARITHMETIC_FORMS,
+PROCESS_SUBSTITUTION_FORMS and HEREDOC_BODY_START_FORMS.
 """
 
 import ast
@@ -188,7 +195,29 @@ COMMAND_POSITION_FORMS = [
     "case x in x) ((1<<2));; esac",
     "f() ((1<<2))",
     "coproc ((1<<2))",
+    # P10 (rework round 1, finding 42180fe3cd060309): a reserved word right
+    # after a closer or a name-taking keyword, and the position after
+    # `coproc NAME` / `function NAME [()]`.
+    "if (true) then ((1<<2)); fi",
+    "if ((1)) then ((1<<2)); fi",
+    "if { true; } then ((1<<2)); fi",
+    "if [[ 1 ]] then ((1<<2)); fi",
+    "until (true) do ((1<<2)); done",
+    "for x do ((1<<2)); done",
+    "function f() ((1<<2))",
+    "coproc foo ((1<<2))",
+    "select x do ((1<<2)); done",
+    "function f ((1<<2))",
+    "if :; then if :; then :; fi else ((1<<2)); fi",
+    "if :; then while false; do :; done else ((1<<2)); fi",
+    "if :; then case x in x) :;; esac else ((1<<2)); fi",
 ]
+
+# Command-position forms that hold one more arithmetic-command region than the
+# `((1<<2))` every form is about: the form -> the extra regions, written out.
+COMMAND_POSITION_EXTRA_REGIONS = {
+    "if ((1)) then ((1<<2)); fi": [("arithmetic-command", "((1))")],
+}
 
 # `((` that is not arithmetic: no arithmetic-command region. The verdict is
 # the one the unchanged hook gave when this test was written; this feature
@@ -197,6 +226,14 @@ NON_ARITHMETIC_FORMS = [
     ('echo "((1<<2))"', [("double-quote", '"((1<<2))"')], "allow"),
     ("echo a ((b))", [], "allow"),
     ("cat < ((x))", [], "allow"),
+    # P10 negatives: a reserved word at an argument position, `]]` as an
+    # argument and a word after a substitution's `)` are none of them a
+    # reserved word that opens a command position. The verdicts were
+    # recorded from the hook at the base of rework task0002.
+    ("echo then ((b))", [], "allow"),
+    ("echo ]] then ((b))", [], "allow"),
+    ("echo $(true) then ((b))", [("command-substitution", "$(true)")], "allow"),
+    ("echo function f ((b))", [], "allow"),
 ]
 
 PROCESS_SUBSTITUTION_FORMS = [
@@ -220,6 +257,97 @@ PROCESS_SUBSTITUTION_FORMS = [
         [("process-substitution", "<(((1<<2)))"), ("arithmetic-command", "((1<<2))")],
         "deny",
     ),
+    # P12 (rework round 1, finding acf9e8aa8bb287ea): the word goes on after
+    # the closing `)`, so a `#` right after it is no comment; a `#` after a
+    # blank still is.
+    (
+        "cat <(true)#; rm -rf /home/sakura/valuable",
+        [("process-substitution", "<(true)")],
+        "deny",
+    ),
+    (
+        "cat >(true)#; rm -rf /home/sakura/valuable",
+        [("process-substitution", ">(true)")],
+        "deny",
+    ),
+    ("echo <(true)#x", [("process-substitution", "<(true)")], "allow"),
+    (
+        "cat <(true) #; rm -rf /home/sakura/valuable",
+        [
+            ("process-substitution", "<(true)"),
+            ("comment", "#; rm -rf /home/sakura/valuable"),
+        ],
+        "allow",
+    ),
+]
+
+# P11 (rework round 1, finding 6ad3de37b64392ec): where a heredoc body begins.
+# (command, expected regions, operator literal, delimiter, delimiter quoted,
+# body, verdict). Every form has exactly one real heredoc operator, and the
+# delimiter line is the last line of the command, holding the delimiter alone.
+HEREDOC_BODY_START_FORMS = [
+    (
+        'cat <<EOF; echo "\n"; rm -rf /home/sakura/valuable\nEOF',
+        [("double-quote", '"\n"')],
+        "<<EOF",
+        "EOF",
+        False,
+        "",
+        "deny",
+    ),
+    (
+        "cat <<EOF; echo '\n'; rm -rf /home/sakura/valuable\nEOF",
+        [("single-quote", "'\n'")],
+        "<<EOF",
+        "EOF",
+        False,
+        "",
+        "deny",
+    ),
+    (
+        "cat <<EOF; echo $(\n); rm -rf /home/sakura/valuable\nEOF",
+        [("command-substitution", "$(\n)")],
+        "<<EOF",
+        "EOF",
+        False,
+        "",
+        "deny",
+    ),
+    (
+        'cat <<EOF; echo "\n"; git reset --hard HEAD\nEOF',
+        [("double-quote", '"\n"')],
+        "<<EOF",
+        "EOF",
+        False,
+        "",
+        "deny",
+    ),
+    (
+        "cat <<EOF \\\n; rm -rf /home/sakura/valuable\nEOF",
+        [],
+        "<<EOF",
+        "EOF",
+        False,
+        "",
+        "deny",
+    ),
+    (
+        'cat <<\'EOF\'; echo "a\nb"\ngit reset --hard HEAD\nEOF',
+        [("double-quote", '"a\nb"')],
+        "<<'EOF'",
+        "EOF",
+        True,
+        "git reset --hard HEAD\n",
+        "allow",
+    ),
+]
+
+# Small copies of the two ~60KB inputs of TestReworkLinearity: the repeated
+# units followed by the destructive statement. They join the stage agreement
+# loop at this size (the 60KB originals would blow its runtime budget).
+REWORK_REPEATED_FORMS = [
+    "if (true) then ((1<<2)); fi\n" * 3 + "rm -rf /home/sakura/valuable",
+    'cat <<EOF; echo "\n"; :\nEOF\n' * 3 + "rm -rf /home/sakura/valuable",
 ]
 
 # Each form is followed by TAIL: an arithmetic-expansion region and no real
@@ -393,9 +521,62 @@ class TestFixedExpectations(unittest.TestCase):
         for form in COMMAND_POSITION_FORMS:
             text = form + TAIL
             with self.subTest(text=text):
-                lexmap = self.check_regions(text, [("arithmetic-command", "((1<<2))")])
+                expected = [("arithmetic-command", "((1<<2))")]
+                expected += COMMAND_POSITION_EXTRA_REGIONS.get(form, [])
+                lexmap = self.check_regions(text, expected)
                 self.assertEqual(list(lexmap.heredocs), [])
                 self.assertIsNone(lexmap.tail_start)
+
+    def test_heredoc_body_start_forms(self):
+        # AC-3 (P11): one real heredoc operator, at the `<<`; its body begins
+        # after the newline that ends the line on which the region opened
+        # after the operator closes; the delimiter line is the last line.
+        for text, regions, op_literal, delimiter, quoted, body, _verdict in (
+            HEREDOC_BODY_START_FORMS
+        ):
+            with self.subTest(text=text):
+                lexmap = self.check_regions(text, regions)
+                self.assertEqual(len(lexmap.heredocs), 1)
+                op = lexmap.heredocs[0]
+                self.assertEqual((op.start, op.end), span_of(text, op_literal))
+                self.assertEqual((op.delimiter, op.quoted), (delimiter, quoted))
+                self.assertEqual(heredoc_body(text, op), body)
+                delimiter_line = len(text) - len(delimiter)
+                self.assertEqual(text[delimiter_line - 1], "\n")
+                self.assertEqual(op.body_end, delimiter_line)
+                self.assertEqual(op.body_start, delimiter_line - len(body))
+                self.assertEqual(op.close_end, len(text))
+                self.assertEqual(text[op.body_end : op.close_end], delimiter)
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_a_region_enclosing_the_operator_defers_no_body(self):
+        # P11: a command or process substitution that holds the operator
+        # defers nothing, whether it is still open at the newline after the
+        # operator or closed before it: the body is the line after that
+        # newline. This is the pre-rework handling of the shape; rework
+        # round 1 must not change it.
+        for text in (
+            "echo $(cat <<EOF\nhi\nEOF\n)",
+            "echo $(cat <<EOF); echo x\nhi\nEOF",
+            "cat <(cat <<EOF\nhi\nEOF\n)",
+            "cat <(cat <<EOF); echo x\nhi\nEOF",
+        ):
+            with self.subTest(text=text):
+                lexmap = H.lex_shell(text)
+                self.assertEqual(len(lexmap.heredocs), 1)
+                op = lexmap.heredocs[0]
+                self.assertEqual(text[op.start : op.end], "<<EOF")
+                self.assertEqual(heredoc_body(text, op), "hi\n")
+
+    def test_a_backslash_newline_is_no_body_start(self):
+        # P11: the continuation line after `\` + newline still belongs to the
+        # operator's command line; the body begins after the line that ends it.
+        text = "cat <<EOF \\\nbody-or-command\nEOF\nrm -rf /home/sakura/valuable"
+        lexmap = H.lex_shell(text)
+        self.assertEqual(len(lexmap.heredocs), 1)
+        op = lexmap.heredocs[0]
+        self.assertEqual(heredoc_body(text, op), "")
+        self.assertEqual(text[op.body_end : op.close_end], "EOF\n")
 
     def test_arithmetic_for_header(self):
         text = "for ((i=0; i<3; i++)); do echo $i; done"
@@ -624,6 +805,16 @@ class TestFixedVerdicts(unittest.TestCase):
             with self.subTest(form=form):
                 self.check(form + TAIL, "deny")
 
+    def test_heredoc_body_start_forms(self):
+        for text, *_middle, verdict in HEREDOC_BODY_START_FORMS:
+            with self.subTest(text=text):
+                self.check(text, verdict)
+
+    def test_repeated_rework_forms_are_denied(self):
+        for text in REWORK_REPEATED_FORMS:
+            with self.subTest(text=text[:60]):
+                self.check(text, "deny")
+
     def test_unclosed_opener_forms_are_denied(self):
         for text, _opener in UNCLOSED_OPENER_FORMS:
             with self.subTest(text=text):
@@ -779,6 +970,10 @@ def all_commands():
         add(text)
     for form, _regions in EXPANSION_POSITION_FORMS:
         add(form + TAIL)
+    for text, *_rest in HEREDOC_BODY_START_FORMS:
+        add(text)
+    for text in REWORK_REPEATED_FORMS:
+        add(text)
     for text, _opener in UNCLOSED_OPENER_FORMS:
         add(text)
     for text, *_rest in CANDIDATE_FORMS:
@@ -1314,6 +1509,60 @@ class TestUnclosedOpeners(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Rework round 1: the two ~60KB inputs (task0002 AC-6, NFR3).
+# ---------------------------------------------------------------------------
+
+
+class TestReworkLinearity(unittest.TestCase):
+    """Reading a reserved word after a closer (P10) and deferring a heredoc
+    body over a multi-line region (P11) must stay linear in the text. Each
+    input is run through the hook's stdin JSON / stdout contract and timed."""
+
+    DESTRUCTIVE = "rm -rf /home/sakura/valuable"
+    SIZE = 60000
+
+    def inputs(self):
+        reserved = "if (true) then ((1<<2)); fi\n"
+        deferred = 'cat <<EOF; echo "\n"; :\nEOF\n'
+        return {
+            "reserved word after a closer": (
+                reserved * (self.SIZE // len(reserved)) + self.DESTRUCTIVE
+            ),
+            "heredoc body deferred over a multi-line quote": (
+                deferred * (self.SIZE // len(deferred)) + self.DESTRUCTIVE
+            ),
+        }
+
+    def test_each_input_gets_deny_within_the_time_limit(self):
+        for name, command in self.inputs().items():
+            with self.subTest(form=name):
+                self.assertGreater(len(command), 50000)
+                start = time.monotonic()
+                decision, reason = hook_verdict(command)
+                self.assertEqual(decision, "deny", msg=reason[:200])
+                self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+    def test_lexing_work_stays_within_the_linear_bound(self):
+        for name, command in self.inputs().items():
+            with self.subTest(form=name):
+                lexmap = H.lex_shell(command)
+                self.assertLessEqual(
+                    lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024
+                )
+
+    def test_lexing_work_grows_linearly_with_the_input(self):
+        units = {
+            "reserved word after a closer": "if (true) then ((1<<2)); fi\n",
+            "heredoc body deferred over a multi-line quote": 'cat <<EOF; echo "\n"; :\nEOF\n',
+        }
+        for name, unit in units.items():
+            with self.subTest(form=name):
+                small = H.lex_shell(unit * 200)
+                large = H.lex_shell(unit * 400)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+
+
+# ---------------------------------------------------------------------------
 # Module contract (AC-3, AC-9).
 # ---------------------------------------------------------------------------
 
@@ -1366,6 +1615,28 @@ class TestModuleContract(unittest.TestCase):
         self.assertEqual(verdicts[11], "allow")
         self.assertEqual(verdicts[19], "allow")
         self.assertEqual(verdicts.count("deny"), 28)
+
+    def test_rework_cases_are_appended_after_every_earlier_entry(self):
+        # task0002 appends 23 cases after the 604 entries that exist at its
+        # base: 19, 22 and 23 (indexes 18, 21, 22 of the new block) allow,
+        # every other one denies; each label cites its finding's stable_id.
+        cases = case_commands()
+        self.assertGreaterEqual(len(cases), 627)
+        block = cases[604:627]
+        verdicts = [want for want, _label, _cmd in block]
+        self.assertEqual(
+            [i for i, want in enumerate(verdicts) if want == "allow"], [18, 21, 22]
+        )
+        self.assertEqual(verdicts.count("deny"), 20)
+        finding_of = (
+            ["42180fe3cd060309"] * 13
+            + ["6ad3de37b64392ec"] * 6
+            + ["acf9e8aa8bb287ea"] * 4
+        )
+        for (_want, label, _cmd), finding in zip(block, finding_of):
+            self.assertIn(finding, label)
+        self.assertEqual(block[0][2], "if (true) then ((1<<2)); fi" + TAIL)
+        self.assertEqual(block[22][2], "cat <(true) #; rm -rf /home/sakura/valuable")
 
 
 if __name__ == "__main__":
