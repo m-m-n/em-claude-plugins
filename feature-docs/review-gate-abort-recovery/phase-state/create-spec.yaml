@@ -1,0 +1,122 @@
+schema_version: 1
+feature: review-gate-abort-recovery
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 3058404c3e96445f99a370b98ee2a77a5cf135da
+last_input_digest: sha256:91f3b01209c028fb91baf9be9a60ca65e2680913e21cf0fe4618581ed51450e0
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-05T15:05:26+09:00'
+    questions:
+    - question_id: requirement.recovery-approach
+      status: answered
+    - question_id: requirement.legacy-failed-recovery
+      status: answered
+    - question_id: requirement.failed-reservation-scope
+      status: answered
+    - question_id: requirement.resume-path
+      status: answered
+    - question_id: design-step.decision
+      status: obsolete
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-10-05T15:10:18+09:00'
+    questions:
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.recovery-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_pending
+    freeform: null
+    normalized_answer: keep_pending
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option keep_pending; record_as_assumption:
+      true; Codex: review.status は §10 step 1 で既に pending。workflow[review].status
+      もそろえれば停止条件 3 の例外を増やさず復帰できる'
+  requirement.legacy-failed-recovery:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - document_procedure
+    freeform: null
+    normalized_answer: document_procedure
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option document_procedure; record_as_assumption:
+      true; Codex: ゲート中断による failed と記録で確認できる場合に限り両 status を pending・needs_rework を
+      true に戻す手順を SSOT に書き、resume_conditions から参照する。exit4-tip-argument は既に completed
+      なので変更不要'
+  requirement.failed-reservation-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - declare_step_semantics
+    freeform: null
+    normalized_answer: declare_step_semantics
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option declare_step_semantics; record_as_assumption:
+      true; Codex: 927 行目の予約は perspective_runs の evaluator エントリ対象。R5 に適用範囲とゲート中断で
+      failed を書かない規則を明記し、workflow-schema.md の許容値は変えない'
+  requirement.resume-path:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - rerun_review_round
+    freeform: null
+    normalized_answer: rerun_review_round
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option rerun_review_round; record_as_assumption:
+      true; Codex: obsolete packet の再提示禁止（question-resolution.md）と整合し、新しい再開分岐を作らずに済む'
+  design-step.decision:
+    packet_id: create-spec-q0002
+    answered_at: '2026-10-05T15:10:18+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously (design_step_recommendation: skip)'
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml option_id
+      decide_autonomously; adopts worker recommendation skip'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: invalid_input
+  input_digest: sha256:1fb80a0b449e4a41b4ba4ff954fb9c109f84ca093f7cc7dd494259d99a4565c0
+  output_digest: sha256:5fb31000283999f327ae3b25b7230d931e87d132a61fa48c21d85f07987977a2
+- request_id: create-spec-run-0002
+  status: needs_user_input
+  input_digest: sha256:d3d5410385ed890be8acb7ac9475023e26f3b4cb815798a94ab953d8854d21bd
+  output_digest: sha256:0beb2f74df34047a041426f00ab99c04369e2d827f8ef7f02b7fb63f5f890f48
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:47e07d897557a00d4001d4dea582b4f39b083c2524a93a0353e4a0bdcaf77e1e
+  output_digest: sha256:0bddb41f72e9c75f079313d2d0d6099403f5572bdf5955a629a791ab0841180e
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: sha256:91f3b01209c028fb91baf9be9a60ca65e2680913e21cf0fe4618581ed51450e0
+  output_digest: null
+artifacts:
+- path: feature-docs/review-gate-abort-recovery/REQUIREMENTS.md
+  sha256: sha256:f00ee0c056d059444893acfbfe1d350b140d0b3c8e43ed71710da3a2c4bc0190
+  produced_by: create-spec-run-0004
+- path: feature-docs/review-gate-abort-recovery/SPEC.md
+  sha256: sha256:dcfa254f621fc633b057f9b4d0d594cb476a667ef2f3a52b46b2752298c00a50
+  produced_by: create-spec-run-0004
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

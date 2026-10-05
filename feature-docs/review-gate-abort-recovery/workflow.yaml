@@ -1,0 +1,376 @@
+schema_version: 1
+feature: review-gate-abort-recovery
+created: '2026-10-05'
+base_branch: main
+goal: '# em-workflow: rework.spec-change ゲート中断が review.status に failed を書き、停止条件 3 で feature が復旧不能になる
+
+
+  Notion task: https://www.notion.so/3d53509ec8ee81de95c5fd4aed538494
+
+
+  ## 現象 (必須)
+
+  `rework.spec-change` の fail-closed ゲートで review フェーズが中断したとき、オーケストレーターが `workflow[review].status` に `failed`
+  を書き込む。その結果、その feature は develop の停止条件 3 に永久に掛かり、batch でも interactive でも先へ進めなくなる。
+
+  2 点の食い違いがある。
+
+  1. `em-workflow/references/review-phase.md` の 848 行目付近は `status: failed` を「two structural degradation」ケースに予約すると宣言している。ゲート中断はそのどちらでもない。
+
+  2. develop の停止条件 3 の carve-out は `implement` の `failed_kind` と `verify` の cap 到達の 2 つだけ。`review: failed`
+  はどちらにも当たらないため、`/em-workflow:develop <feature>` を interactive で叩いても Step B が step を特定した時点で停止する。申し送りが想定した「interactive
+  で再開すればゲートに答えられる」経路は成立しない。
+
+  復旧には `workflow[review].status` とトップレベル `review.status` を人手で `pending` に戻す手編集が要る。この手順はどの SSOT にも書かれていない。
+
+  ## 再現手順 (必須)
+
+  1. batch 実行で review フェーズが residual critical/high を残し、rework-planner が `gate_id: rework.spec-change`
+  の question packet を返す
+
+  2. その feature の `workflow.yaml` に `goal` ブロックが無いため、`references/question-resolution.md` の Classification
+  gate が inapplicable となり run が停止する
+
+  3. 停止時にオーケストレーターが `workflow[review].status: failed` を書き、コミットする
+
+  4. 同じ feature を interactive で `/em-workflow:develop <feature>` として再開する
+
+  5. Step B が最初の未完了 step として `review`（`failed`）を特定し、停止条件 3 で即停止することを確認する
+
+  実例: `em-workflow/exit4-tip-argument/integration`（PR #17）。コミット `5dc0f6c docs(exit4-tip-argument): review
+  aborted at rework.spec-change fail-closed gate`。
+
+  ## 期待する挙動 (必須)
+
+  ゲート中断で停止した review から、手編集なしに正規手順で復帰できること。次のいずれか。
+
+  - (a) ゲート中断時に `review.status` を `failed` にせず、`pending` のまま（`needs_rework: true` と中断記録を伴って）残す。`status:
+  failed` は review-phase.md が予約する 2 つの structural degradation ケース専用に戻す
+
+  - (b) `review: failed` に対する停止条件 3 の carve-out を定義し、再エントリ時にゲートを再提示する経路を SSOT に書く
+
+  - (c) ゲート中断からの復旧手順（どのフィールドをどの値に戻すか）を SSOT に明記し、オーケストレーター自身が実行できるようにする
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] `review.status: failed` の意味が review-phase.md の予約宣言と一致している
+
+  - [ ] `python3 -m unittest discover -s tests` が通る
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/references/review-phase.md` — 848 行目付近の `status: failed` 予約宣言、および Rework path / Batch
+  mode 節
+
+  - `em-workflow/skills/develop/SKILL.md` — 停止条件 3 と、その carve-out（`implement` の `failed_kind` / `verify`
+  の cap 到達）
+
+  - `em-workflow/references/question-resolution.md` — Classification gate の Applicability（`goal` ブロック欠如時の
+  inapplicable 停止）
+
+  - `em-workflow/references/rework-task-synthesis.md` — Section 10 の SPEC-change transition
+
+  ## 実害・発生条件 (任意)
+
+  `goal` ブロックを持たない古い feature が SPEC 変更を要する review 指摘を受けると、確定的にこの状態になる。`exit4-tip-argument` は 2026-08-18
+  の停止以降 3 週間動かせていない。子 feature `tip-capture-idiom-unification` はこの feature を親ブランチにしているため、同時に止まっている。
+
+  Codex 相談（2026-09-08）でも「interactive に切り替えるだけで再開できるとは保証できない。停止条件 3 は対話にも適用される」と独立に指摘されている。
+
+
+  ## 追加指示（起動者）
+
+  Once the implementation is finished, push the integration branch to the remote and create a Pull Request
+  against base_branch with gh pr create. Keep the integration branch both locally and on the remote (do
+  not auto-merge it into base_branch).
+
+  Consult Codex on any unclear points and adopt the option judged to be comparatively better.
+
+  Record the content of that discussion in Notion.
+
+  '
+parent_branch: em-workflow/review-gate-abort-recovery/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.34
+      '2': 0.66
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.66
+      '2': 0.34
+      '3': 0.0
+  at: '2026-10-05T14:55:50+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 406d2e866ea4952dc3693e8ca92c021d012a9c83
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 変更は SSOT 文書とドキュメント構造テストだけで、画面や見た目を持たない
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 7c31c9c44b7b5fe31eca489d584eec7403f8261e
+- id: implement
+  status: completed
+  completed_at_commit: 53faba673f6573802e016e6b19d137f546fbcec9
+  base_commit: 1592f337e8dbf86c90d2e1833a3d782609e1103a
+- id: review
+  status: completed
+  completed_at_commit: c2bb9b733f1cb24fd847a7ae908df75dc0b400c1
+- id: verify
+  status: completed
+  completed_at_commit: a38d7f714e49832de4b72ec349036c85950cc6d5
+  result: pass
+  failed_items: []
+- id: retrospect
+  status: completed
+  completed_at_commit: b036e562c2ecb539ffb88e992a8c172e38293912
+tasks:
+  task0001:
+    title: 'review-phase.md Phase R5: gate-abort status rule, resume path, legacy recovery'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/review-phase.md
+    - tests/test_review_gate_abort_review_phase.py
+    - tests/test_tier_record_schema_v2.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: merged
+    notes: null
+    branch: em-workflow/review-gate-abort-recovery/task0001
+  task0002:
+    title: 'develop SKILL.md: cite the Phase R5 gate-abort rule and legacy recovery'
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_review_gate_abort_skill_wiring.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR2
+    - FR4
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR6
+    - NFR7
+    status: merged
+    notes: null
+    branch: em-workflow/review-gate-abort-recovery/task0002
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: ゲート中断時の review の status
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR2:
+    title: 規則の定義元と引用
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-2
+    - TS-9
+  FR3:
+    title: 再開経路
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+  FR4:
+    title: '既存の review: failed の復旧手順'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-5
+    - TS-9
+  FR5:
+    title: failed の予約宣言の適用範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  FR6:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-6
+  NFR1:
+    title: 停止条件 3 と既存の例外・failed_kind ブロックを変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-2
+    - TS-7
+  NFR2:
+    title: interactive に新しい質問を追加しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-2
+    - TS-7
+  NFR3:
+    title: 規則の定義元を 1 箇所にし他は引用だけにする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-9
+  NFR4:
+    title: 既存テストが固定する文言と出現順序を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-2
+    - TS-7
+  NFR5:
+    title: workflow-schema.md の status 許容値と batch.review_rework_count の扱いを変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  NFR6:
+    title: plugin の version を触らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
+  NFR7:
+    title: python3 -m unittest discover -s tests が通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-7
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

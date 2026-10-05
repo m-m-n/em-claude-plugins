@@ -467,8 +467,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # "Triage filing" subsection, Phase R5's triage_filing receipt (YAML example
 # and prose) and Phase R6 gained the partial-failure fields and the
 # "triage filing incomplete" report.
+# Refreshed by task0001 of review-gate-abort-recovery (FR1, FR3-FR5): Phase
+# R5 gained the gate-abort and legacy-recovery blocks and the scope
+# statement on the `status: failed` reservation.
 REVIEW_PHASE_SHA256 = (
-    "dea28e6e484f393547620c91e60143a48cd42ba5ccb6d985141e267927ae1b91"
+    "d15a347b95ffa9e80cbe8df0ba71ab33ad597d526e08de0598e01f5d82b84821"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
