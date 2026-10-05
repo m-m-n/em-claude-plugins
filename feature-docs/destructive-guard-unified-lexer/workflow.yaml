@@ -160,9 +160,6 @@ tasks:
     branch: em-workflow/destructive-guard-unified-lexer/task0001
     notes: null
     branch: null
-review:
-  status: pending
-  rounds_completed: 0
 requirements:
   FR1:
     title: ANSI-C 引用を bash と同じ範囲で読む
