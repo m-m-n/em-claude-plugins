@@ -2,7 +2,8 @@ schema_version: 1
 feature: exit4-version-baseline-refresh
 created: '2026-10-05'
 base_branch: main
-goal: 'em-workflow: test_exit4_tip_argument_version_bump の BASELINE_PATCH=44 が古く version bump ガードが空振りする
+goal: 'em-workflow: test_exit4_tip_argument_version_bump の BASELINE_PATCH=44 が古く version
+  bump ガードが空振りする
 
 
   Notion: https://www.notion.so/3d53509ec8ee816dbc36f30bb64acffc  (種別: バグ)
@@ -10,13 +11,15 @@ goal: 'em-workflow: test_exit4_tip_argument_version_bump の BASELINE_PATCH=44 �
 
   ## 現象 (必須)
 
-  `tests/test_exit4_tip_argument_version_bump.py` の `BASELINE_PATCH = 44` が実 diff base より
+  `tests/test_exit4_tip_argument_version_bump.py` の `BASELINE_PATCH = 44` が実 diff
+  base より
 
   古く、version bump ガードが空振りする。
 
   diff base 02aff93 における `em-workflow/.claude-plugin/plugin.json` と
 
-  `.claude-plugin/marketplace.json` の em-workflow エントリはともに 0.1.68。BASELINE_PATCH が 44 の
+  `.claude-plugin/marketplace.json` の em-workflow エントリはともに 0.1.68。BASELINE_PATCH が
+  44 の
 
   ままなので `patch > 44` は bump 前のツリーでも成立し、0.1.69 を 0.1.68 に巻き戻してもテストは緑のまま通る。
 
@@ -28,8 +31,8 @@ goal: 'em-workflow: test_exit4_tip_argument_version_bump の BASELINE_PATCH=44 �
 
   1. ブランチ `em-workflow/exit4-tip-argument/integration` を checkout する
 
-  2. `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の em-workflow の version
-  を 0.1.69 から 0.1.68 に戻す
+  2. `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json`
+  の em-workflow の version を 0.1.69 から 0.1.68 に戻す
 
   3. `python3 -m unittest tests.test_exit4_tip_argument_version_bump` を実行する
 
@@ -138,7 +141,30 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Refresh the version-bump test baseline and align the task0002 test record
+    plan: tasks/task0001.md
+    files:
+    - tests/test_exit4_tip_argument_version_bump.py
+    - test-docs/exit4-tip-argument/task0002.tests.yaml
+    skills: []
+    domains: []
+    complexity: low
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
 requirements:
@@ -147,71 +173,96 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-4
   FR2:
     title: Forged pre-bump sample refresh
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   FR3:
     title: Module text alignment
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   FR4:
     title: Baseline/sample tie test
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
   FR5:
     title: Per-task test record alignment
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-7
   NFR1:
     title: No registry edits
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-8
   NFR2:
     title: Suite stays green
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-5
   NFR3:
     title: Standard library only
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   NFR4:
     title: Historical records untouched
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   NFR5:
     title: Sibling finding excluded
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+    - TS-8
 batch:
   review_rework_count: 0
   verify_rework:
