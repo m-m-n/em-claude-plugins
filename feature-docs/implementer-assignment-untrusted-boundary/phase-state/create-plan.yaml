@@ -37,7 +37,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: implementer-assignment-untrusted-boundary-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:65689f5d8490494d1bfc5053a778506eba28d785b063c842b230c99d4d24a0b5
   base_workflow_blob: 03b57a014c5ae4c852e4c24897ff86470911cca8
 progress_fingerprint: null
