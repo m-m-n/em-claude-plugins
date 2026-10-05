@@ -1,6 +1,6 @@
 task_id: task0004
 baseline_failures: []          # python3 -m unittest discover -s tests: 7412 tests OK before any edit; check-plugin-invariants.py: all PASS
-final_failures: []             # re-executed after the implementation: 7480 tests OK; check-plugin-invariants.py: all PASS
+final_failures: []             # re-executed after the implementation: 7480 tests OK, and again after merging the parent (task0003 included): 7516 tests OK; check-plugin-invariants.py: all PASS
 acceptance_tests:
   AC-1:
     tests:
