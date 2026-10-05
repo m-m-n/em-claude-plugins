@@ -194,8 +194,9 @@ tasks:
     - FR2
     - NFR1
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/codex-repo-hook-trust/task0002
     provenance:
       source: verify
       source_ids:
