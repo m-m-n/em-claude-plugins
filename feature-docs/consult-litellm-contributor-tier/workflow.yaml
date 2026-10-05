@@ -103,7 +103,30 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Gate the litellm consultation model on recorded contributor consent
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - tests/test_consultation_harness_chain.py
+    skills: []
+    domains:
+    - auth
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -113,7 +136,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   FR2:
@@ -121,7 +145,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR3:
@@ -129,7 +154,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   FR4:
@@ -137,7 +163,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
   FR5:
@@ -145,7 +172,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
   NFR1:
@@ -153,7 +181,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   NFR2:
@@ -161,14 +190,17 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   NFR3:
     title: 既存のテストを修正後も全部通す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   NFR4:
@@ -176,8 +208,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
 batch:
   review_rework_count: 0
   verify_rework:
