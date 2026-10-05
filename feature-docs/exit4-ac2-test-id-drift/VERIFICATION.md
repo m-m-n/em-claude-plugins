@@ -17,6 +17,13 @@ Terms used below:
 - **new module**: `tests/test_exit4_ac2_test_id_drift.py`
 - **stale ID**: `tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key`
 - **replacement ID**: `tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_version_not_bumped_with_em_workflow`
+- **observed-red clause**: the existing text of AC-2's red_reason before the
+  semicolon, exactly: "AssertionError: 44 not greater than 44 (marketplace.json
+  em-workflow entry still 0.1.44 before the bump)"
+- **AC-2 test methods**: `test_em_workflow_entry_version_is_past_baseline`
+  (the past-baseline test), `test_em_workflow_entry_version_matches_plugin_manifest`
+  (the equality test), `test_em_review_entry_source_unchanged`,
+  `test_em_review_entry_version_not_bumped_with_em_workflow`
 
 ## Build Verification
 
@@ -46,7 +53,7 @@ added here so that every FR and NFR has a verifying item.
 | TS-3 | SPEC TS3 (FR7): the resolution judge is given the stale ID | Judged unresolved, including when the standard loader signals the missing attribute through a placeholder or loader error; the stale ID's module part and module-plus-class part resolve | Unit |
 | TS-4 | SPEC TS4 (FR7): non-vacuity guard on the extracted ID list | The list is not empty and contains the replacement ID; AC-5 (`tests: []`) contributes no ID | Unit |
 | TS-5 | SPEC TS5 (FR3, FR4): read the version_bump module's docstring from source | Neither ``no `version` key`` nor `no-version-key` is present; the text read is not empty and mentions AC-2 and AC-4 | Unit |
-| TS-6 | FR2: inspect the AC-2 block of the target record | Contains "44 not greater than 44"; does not contain "that entry is untouched"; `red_confirmed: true` | Unit |
+| TS-6 | FR2: read the value of AC-2's red_reason from the target record | The value is not empty and begins with the observed-red clause; "AssertionError" occurs exactly once; all four AC-2 test methods are named; neither "that entry is untouched" nor `has_no_version_key` is present; the AC-2 block keeps `red_confirmed: true`; a missing or malformed red_reason line fails the check | Unit |
 | TS-7 | FR5: aggregate check over two distinct unresolvable IDs and one resolvable ID | Fails; the message contains both unresolvable IDs and not the resolvable one | Unit |
 | TS-8 | FR6: the new module's target list | Explicit enumeration whose only entry is the target record; no glob or directory scan of `test-docs/` | Inspection |
 | TS-9 | NFR1: the new module's imports | Only standard-library modules; no YAML library | Inspection |
@@ -74,7 +81,7 @@ added here so that every FR and NFR has a verifying item.
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
 | AC-1 | AC-2 lists the replacement ID instead of the stale ID, and the replacement ID passes when run by name | TS-1, TS-2 |
-| AC-2 | AC-2's red_reason states the observed em-workflow red and the em-review retention guards, without "that entry is untouched" | TS-6 plus the manual item below |
+| AC-2 | AC-2's red_reason keeps the observed-red clause verbatim, states that the equality test was green at the 0.1.44 baseline so the past-baseline test alone carried the observed red, and states the em-review retention guards, without "that entry is untouched". SPEC AC-2's wording "the red observed on the two em-workflow tests" is read under FR2's rule "do not write a red that was not observed", which governs | TS-6 plus the manual item below |
 | AC-3 | The version_bump module docstring no longer contains the old strings and matches the real assertions | TS-5 plus the manual item below |
 | AC-4 | The recurrence test resolves all 11 IDs of the target record, which is enumerated explicitly | TS-2, TS-8 |
 | AC-5 | Negative proof for the stale ID and non-vacuity guard on the extracted list | TS-3, TS-4 |
@@ -103,11 +110,16 @@ The project has no E2E framework, so there is no E2E section.
 
 - [ ] **red_reason semantics (FR2)**: AC-2's red_reason in the target record
   meets all of the following.
-  - It keeps the existing em-workflow clause verbatim.
+  - It keeps the observed-red clause verbatim, as the red observed on the
+    past-baseline test.
+  - It states that the equality test was green at the 0.1.44 baseline because
+    `plugin.json` and the marketplace em-workflow entry both read 0.1.44, so
+    the past-baseline test alone carried the observed red.
   - It describes the two em-review tests (`source` unchanged; em-review
     `version` not following the em-workflow manifest `version`) as retention
     guards that were already green before the change.
-  - It claims no red that was not observed.
+  - It attributes no red to the equality test or to either em-review test, and
+    claims no red that was not observed.
   - It stays a single-line double-quoted scalar.
 - [ ] **Docstring semantics (FR3, FR4)**: the version_bump module docstring
   meets all of the following.
