@@ -41,6 +41,12 @@ isolation directory, and cargo's argument vector carries the registry-declared
 `--file <copy>` right after `audit`. The configuration-isolation cases (AC-4)
 keep proving that hostile project files change nothing about the job.
 
+sca-file-tasks-robustness task0004 (FR6): `build_scan_jobs` returns plans (one
+per project-directory group, not launched), so the AC-3 checks read the plans
+and their resolved executable; the constructed-job checks stay on
+`build_scan_job`, and the argv / cwd a launched job really gets are asserted on
+`run_scan` in tests/test_sca_run_scan_plan_units.py.
+
 Per Test Notes / IMPLEMENTATION.md Conventions: this module's own imports
 stay standard-library only (NFR7) -- the script under test is loaded by
 file path (its name contains a hyphen), following
@@ -393,24 +399,29 @@ class TestPipJobAuditsTheReviewedProject(unittest.TestCase):
 
 # ---------------------------------------------------------------------------
 # AC-3 (TS-26/TS-4): the trusted binary absent from PATH -> machine-stable
-# skip, no job, no alternative command form.
+# skip, no plan, no alternative command form.
+#
+# sca-file-tasks-robustness task0004: `build_scan_jobs` returns the plans of
+# the scan, not built jobs, so the checks below read plans. The job a plan's
+# executable ends up in (argv[0] absolute, `audit` right after it for cargo)
+# is asserted on `build_scan_job` above and on `run_scan` in
+# tests/test_sca_run_scan_plan_units.py.
 # ---------------------------------------------------------------------------
 
-class TestUnresolvableBinaryYieldsSkipNoJob(unittest.TestCase):
-    def test_missing_cargo_audit_yields_skip_reason_and_no_job(self):
+class TestUnresolvableBinaryYieldsSkipNoPlan(unittest.TestCase):
+    def test_missing_cargo_audit_yields_skip_reason_and_no_plan(self):
         registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
         with tempfile.TemporaryDirectory() as tmp:
             empty_bin = Path(tmp) / "empty-bin"
             empty_bin.mkdir()
             with mock.patch.dict(os.environ, {"PATH": str(empty_bin)}, clear=False):
-                jobs, skip_reasons = SCAN.build_scan_jobs(
-                    registry, ["Cargo.toml"], Path(tmp) / "proj",
-                    prepared_inputs={"Cargo.toml": _prepared("cargo")},
+                plans, skip_reasons = SCAN.build_scan_jobs(
+                    registry, ["Cargo.toml"], Path(tmp) / "proj"
                 )
-        self.assertEqual(jobs, [])
+        self.assertEqual(plans, [])
         self.assertEqual(skip_reasons, ["cargo_tool_not_found"])
 
-    def test_present_binary_yields_exactly_one_job_with_absolute_path(self):
+    def test_present_binary_yields_exactly_one_plan_with_the_absolute_path(self):
         registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir = Path(tmp) / "bin"
@@ -419,18 +430,19 @@ class TestUnresolvableBinaryYieldsSkipNoJob(unittest.TestCase):
             stub.write_text(f"#!{sys.executable}\n", encoding="utf-8")
             stub.chmod(0o755)
             with mock.patch.dict(os.environ, {"PATH": str(bin_dir)}, clear=False):
-                jobs, skip_reasons = SCAN.build_scan_jobs(
-                    registry, ["Cargo.toml"], Path(tmp) / "proj",
-                    prepared_inputs={"Cargo.toml": _prepared("cargo")},
+                plans, skip_reasons = SCAN.build_scan_jobs(
+                    registry, ["Cargo.toml"], Path(tmp) / "proj"
                 )
         self.assertEqual(skip_reasons, [])
-        self.assertEqual(len(jobs), 1)
-        self.assertTrue(os.path.isabs(jobs[0]["argv"][0]))
-        self.assertEqual(jobs[0]["argv"][1], "audit")
+        self.assertEqual(len(plans), 1)
+        self.assertTrue(os.path.isabs(plans[0].executable))
+        self.assertEqual(plans[0].executable, str(stub))
+        self.assertEqual(plans[0].ecosystem["ecosystem"], "cargo")
+        self.assertEqual(plans[0].target, "Cargo.toml")
 
-    def test_no_job_is_built_for_the_ecosystem_with_no_resolvable_binary(self):
+    def test_no_plan_is_built_for_the_ecosystem_with_no_resolvable_binary(self):
         # Two ecosystems selected; only npm's stub is present. cargo
-        # contributes a skip reason and no job -- npm still gets one, and
+        # contributes a skip reason and no plan -- npm still gets one, and
         # no alternative command form is attempted for cargo.
         registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
         with tempfile.TemporaryDirectory() as tmp:
@@ -440,15 +452,11 @@ class TestUnresolvableBinaryYieldsSkipNoJob(unittest.TestCase):
             stub.write_text(f"#!{sys.executable}\n", encoding="utf-8")
             stub.chmod(0o755)
             with mock.patch.dict(os.environ, {"PATH": str(bin_dir)}, clear=False):
-                jobs, skip_reasons = SCAN.build_scan_jobs(
-                    registry, ["package.json", "Cargo.toml"], Path(tmp) / "proj",
-                    prepared_inputs={
-                        "package.json": _prepared("npm"),
-                        "Cargo.toml": _prepared("cargo"),
-                    },
+                plans, skip_reasons = SCAN.build_scan_jobs(
+                    registry, ["package.json", "Cargo.toml"], Path(tmp) / "proj"
                 )
         self.assertEqual(skip_reasons, ["cargo_tool_not_found"])
-        self.assertEqual([j["ecosystem"] for j in jobs], ["npm"])
+        self.assertEqual([p.ecosystem["ecosystem"] for p in plans], ["npm"])
 
 
 # ---------------------------------------------------------------------------
