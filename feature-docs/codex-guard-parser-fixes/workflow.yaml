@@ -169,9 +169,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-guard-parser-fixes/task0001
   task0002:
     title: Correct the information-option rule in the earlier SPEC
     plan: tasks/task0002.md
@@ -182,9 +182,9 @@ tasks:
     complexity: low
     requirements:
     - FR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-guard-parser-fixes/task0002
 review:
   status: pending
   rounds_completed: 0
