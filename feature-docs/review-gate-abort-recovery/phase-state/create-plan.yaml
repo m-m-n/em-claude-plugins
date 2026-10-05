@@ -1,11 +1,11 @@
 schema_version: 1
 feature: review-gate-abort-recovery
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: c529f5516bc046ec38b098dfe9f3a665052dd2cb
 last_input_digest: sha256:1270976783c1ce4da3e19d0b477db877be24f9d3d56fdc3512ca17031bdf123d
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets:
   create-plan-q0001:
     packet_id: create-plan-q0001
