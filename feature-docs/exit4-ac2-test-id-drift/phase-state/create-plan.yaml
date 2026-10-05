@@ -1,7 +1,7 @@
 schema_version: 1
 feature: exit4-ac2-test-id-drift
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 2
 base_revision: 428e92e1a6b08f65fec3f6cfa0530cd815bd012e
 last_input_digest: sha256:d1cb9ea0ccb894683b88b262589aad247abbba86f4cb56d1ebf7a62856aabc15
