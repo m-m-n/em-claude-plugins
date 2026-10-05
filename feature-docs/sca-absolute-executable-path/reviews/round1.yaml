@@ -1,0 +1,62 @@
+round: 1
+executed_at: "2026-10-05T23:52:50+09:00"
+scope:
+  review_mode: diff
+  base_commit: e69f212bcd3934e61ca3c8c023e2505df1c43ef4
+  head_commit: 1d9a93c9c08c85806a6ee968d68f3d0c6e1deeef
+  changed_files:
+    - em-workflow/scripts/scan-dependencies.py
+    - test-docs/sca-absolute-executable-path/task0001.tests.yaml
+    - test-docs/sca-absolute-executable-path/task0002.tests.yaml
+    - tests/test_sca_absolute_executable_resolution.py
+    - tests/test_sca_child_env_path_filtering.py
+    - tests/test_sca_scan_unchanged_surfaces.py
+plan:
+  floor: [comprehensive, security, spec, performance, architecture]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: aadc87e78f496658
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    line: 808
+    title: "Windowsで拡張子付きのスキャナーを検出できなくなる"
+    description: "resolve_executable は各絶対パス項目について os.path.join(entry, name) の 1 候補だけを確かめる（808-814 行）。以前の shutil.which は Windows で PATHEXT の拡張子を補っていたため、絶対パスのディレクトリに govulncheck.exe / pip-audit.exe / cargo-audit.exe だけがある環境では、変更後は None になり、<ecosystem>_tool_not_found でスキャンが飛ばされる。結果は安全側（信頼できないファイルは起動しない）で、スキップ理由も記録される。SPEC は Windows を要件に含めておらず、IMPLEMENTATION.md のリスク表は Linux での運用を前提にしている。"
+    suggestion: "Windows を対象外とするかどうかを先に決める。対象外にするなら resolve_executable の docstring に PATHEXT を補わないことを明示する。対象にするなら絶対パス項目だけを探す制約は残し、os.name == 'nt' のときだけ .exe の候補を確かめ、拡張子付きのファイルしか無いケースの回帰テストを足す。"
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外。Windows を対象にするかは範囲の判断が要るため別タスクとして起票する"
+evaluation:
+  round_summary: "Round 1（diff モード、cross_validation=true）。reviewer 5 本のうち 4 本は指摘 0 件、comprehensive#0 だけが medium 1 件（Windows の PATHEXT による後退）を報告した。critical / high は 0 件。reviewer の出力にプロンプト注入の試みは無かった。security / comprehensive / spec / performance / architecture はいずれも evaluator が独自に読んで corroborated。記録に残さない細かい点: task0001.tests.yaml のテスト ID に `tests.` の接頭辞が無く、task0002 と書き方がそろっていない。"
+  recommended_action: complete
+  action_rationale: "critical / high は 0 件で完了の条件を満たす。残る medium 1 件は SPEC の範囲外の Windows 移植性の問題で、対象範囲の判断しだいのため人が判断する事項として記録に残す。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-sca-absolute-executable-path-20261005T145243Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
