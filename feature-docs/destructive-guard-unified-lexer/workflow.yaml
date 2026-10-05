@@ -115,7 +115,7 @@ workflow:
   status: completed
   completed_at_commit: d0bbc29284d39ecf9268a9052752e1a5446f4618
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 5165c29c2dcd77b7834e79e6f811b98d89a2c61c
   base_commit: e69f212bcd3934e61ca3c8c023e2505df1c43ef4
 - id: review
@@ -159,7 +159,35 @@ tasks:
     status: merged
     branch: em-workflow/destructive-guard-unified-lexer/task0001
     notes: null
-    branch: null
+  task0002:
+    title: Lexer readings after closers, heredoc body start across multi-line regions, and words after a process substitution
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR3
+    - FR6
+    - FR8
+    - FR10
+    - FR11
+    - FR12
+    - NFR3
+    - NFR4
+    provenance:
+      source: review
+      source_ids:
+      - 42180fe3cd060309
+      - 6ad3de37b64392ec
+      - acf9e8aa8bb287ea
+      review_round: 1
+    status: pending
 requirements:
   FR1:
     title: ANSI-C 引用を bash と同じ範囲で読む
@@ -191,6 +219,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -199,6 +228,7 @@ requirements:
     - TS-13
     - TS-14
     - TS-16
+    - TS-21
   FR4:
     title: 展開の中の置換の検査を保つ
     status: ok
@@ -228,8 +258,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
+    - TS-23
   FR7:
     title: 位置追跡用の書き換えと検査用の値を分ける
     status: ok
@@ -247,10 +279,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
     - TS-8
     - TS-17
+    - TS-22
   FR9:
     title: 置換を拾う 3 つの方針を保つ
     status: ok
@@ -268,9 +302,13 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
     - TS-16
+    - TS-21
+    - TS-22
+    - TS-23
   FR11:
     title: 修正より前にケースを足す
     status: ok
@@ -278,6 +316,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -287,6 +326,9 @@ requirements:
     - TS-15
     - TS-19
     - TS-20
+    - TS-21
+    - TS-22
+    - TS-23
   FR12:
     title: 既存ケースを保つ
     status: ok
@@ -294,6 +336,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-4
     - TS-6
@@ -322,9 +365,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
     - TS-12
+    - TS-21
+    - TS-22
   NFR4:
     title: 変更範囲
     status: ok
@@ -332,16 +378,21 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-11
 review:
   status: pending
   rounds_completed: 1
   plan:
-    floor: [comprehensive, security, architecture, spec]
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
     discretionary:
     - perspective: performance
-      reason: "PreToolUse で毎回走るフックの字句解析を 1 パスの走査に作り直しており、入力長に対する計算量の退行が起き得るため"
+      reason: PreToolUse で毎回走るフックの字句解析を 1 パスの走査に作り直しており、入力長に対する計算量の退行が起き得るため
     cross_validation: true
   perspectives:
     comprehensive: completed
@@ -352,7 +403,7 @@ review:
   residual_critical_high: 3
   needs_rework: true
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
