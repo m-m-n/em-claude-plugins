@@ -1,0 +1,93 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any file was
+                                # touched: "Ran 8238 tests in 117.531s / OK" -- no failures inherited.
+                                # python3 em-workflow/scripts/check-plugin-invariants.py . also run
+                                # first: every check [PASS], exit 0.
+final_failures: []             # same command, run again after implementer.md was edited and the new
+                                # test module added: "Ran 8264 tests in 115.442s / OK" (+26 tests,
+                                # exactly the new module). The invariants run after the edit: every
+                                # check [PASS], exit 0. This task changes a document the new module
+                                # reads (implementer.md), so the re-run could not be skipped.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implementer_untrusted_data_rule.TestAc1DataNotInstructions.test_names_the_untrusted_data_section_of_the_assignment_prompt
+      - tests.test_implementer_untrusted_data_rule.TestAc1DataNotInstructions.test_says_values_come_from_workflow_yaml
+      - tests.test_implementer_untrusted_data_rule.TestAc1DataNotInstructions.test_says_values_are_data_not_instructions
+    red_confirmed: true
+    red_reason: >
+      Ran the new module (`python3 -m unittest discover -s tests -p
+      test_implementer_untrusted_data_rule.py -v`) against the pre-edit implementer.md: the class
+      errored in setUpClass with "AssertionError: no heading line containing 'Untrusted data'
+      found in .../em-workflow/agents/implementer.md" (the rule section did not exist), so none of
+      the three methods could pass. After adding the rule section, the same command passed them.
+  AC-2:
+    tests:
+      - tests.test_implementer_untrusted_data_rule.TestAc2PermittedUses.test_skills_to_load_use_is_skill_identifiers_loaded_with_skill_tool
+      - tests.test_implementer_untrusted_data_rule.TestAc2PermittedUses.test_project_commands_use_is_commands_under_existing_execution_rules
+      - tests.test_implementer_untrusted_data_rule.TestAc2PermittedUses.test_project_commands_empty_string_means_no_such_command
+      - tests.test_implementer_untrusted_data_rule.TestAc2PermittedUses.test_expected_files_use_is_the_task_file_scope_list
+      - tests.test_implementer_untrusted_data_rule.TestAc2PermittedUses.test_each_field_has_a_sole_permitted_use
+      - tests.test_implementer_untrusted_data_rule.TestAc2PermittedUses.test_instruction_source_is_referred_to_not_redefined
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: the class errored in setUpClass with the same "no heading line containing
+      'Untrusted data'" AssertionError, because the field names are matched inside the rule
+      section only and that section did not exist. Passed after the rule section was added.
+  AC-3:
+    tests:
+      - tests.test_implementer_untrusted_data_rule.TestAc3DecodeInstruction.test_json_literal_is_decoded_before_the_value_is_used
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: test_json_literal_is_decoded_before_the_value_is_used FAILED with the same
+      "no heading line containing 'Untrusted data'" AssertionError raised from Document.rule(). It
+      passed after the rule section (with its "Decode the JSON literal of each data line before you
+      use its value" sentence) was added.
+  AC-4:
+    tests:
+      - tests.test_implementer_untrusted_data_rule.TestAc4NaturalLanguageInstructionRule.test_instruction_inside_a_value_is_not_followed
+      - tests.test_implementer_untrusted_data_rule.TestAc4NaturalLanguageInstructionRule.test_instruction_is_recorded_in_the_report_notes_field
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: the class errored in setUpClass with the same "no heading line containing
+      'Untrusted data'" AssertionError (the block mentioning "natural-language instruction" is
+      located inside the rule section). Passed after the rule section was added.
+  AC-5:
+    tests:
+      - tests.test_implementer_untrusted_data_rule.TestAc5InputsSection.test_inputs_section_names_the_untrusted_data_section
+      - tests.test_implementer_untrusted_data_rule.TestAc5InputsSection.test_inputs_section_lists_the_three_fields_as_json_literals
+      - tests.test_implementer_untrusted_data_rule.TestAc5InputsSection.test_untrusted_fields_come_after_every_trusted_field
+      - tests.test_implementer_untrusted_data_rule.TestAc5InputsSection.test_trusted_field_descriptions_are_kept
+    red_confirmed: true
+    red_reason: >
+      Same pre-edit run: test_inputs_section_names_the_untrusted_data_section and
+      test_inputs_section_lists_the_three_fields_as_json_literals FAILED (the pre-edit Inputs
+      section named no `Untrusted data` section and no JSON literal), and
+      test_untrusted_fields_come_after_every_trusted_field ERRORED (ValueError: the marker
+      substring "`Untrusted data` section" is absent from the pre-edit Inputs section). All three
+      passed after the Inputs section was rewritten. test_trusted_field_descriptions_are_kept
+      passed before and after: it pins that the trusted-field descriptions stay unchanged, so it
+      is a preservation guard, not part of the red evidence.
+  AC-6:
+    tests:
+      - tests.test_implementer_untrusted_data_rule.TestAc6NoTaskAssignmentHeading.test_no_line_of_implementer_md_is_a_task_assignment_header
+      - tests.test_implementer_untrusted_data_rule.TestAc6NoTaskAssignmentHeading.test_pattern_matches_a_genuine_header_line
+      - tests.test_implementer_untrusted_data_rule.TestAc6NoTaskAssignmentHeading.test_pattern_ignores_a_mention_inside_a_sentence
+    red_confirmed: false
+    red_reason: >
+      No red state occurred: implementer.md had no line matching `^# Task assignment\s*$` before
+      this task, and `python3 em-workflow/scripts/check-plugin-invariants.py .` passed (exit 0,
+      forbidden_task_assignment_heading [PASS]) before any edit, so the new test is a guard
+      against introducing such a line, not a check that failed first. The existing
+      tests.test_check_plugin_invariants cases for that check run on synthetic temp-directory
+      fixtures, not on the real implementer.md, so they are not listed as coverage.
+  AC-7:
+    tests:
+      - tests.test_implementer_untrusted_data_rule.TestAc7StdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >
+      No red state occurred: the new module was written with standard-library imports only, so its
+      stdlib-only check could not have failed before an implementation existed. The full-suite
+      outcome ("Ran 8264 tests ... OK") and the absence of modified existing test modules (git
+      status shows only em-workflow/agents/implementer.md modified plus the new test module and
+      this file) are verified from the run and the diff, not by a failing-first test.
