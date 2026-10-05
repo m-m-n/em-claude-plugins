@@ -10,7 +10,8 @@ Covers task0002 Acceptance Criteria
 - AC-2 (FR6): `.claude-plugin/marketplace.json` parses as JSON; its
   `plugins[]` entry named `em-workflow` reports a `version` string identical
   to the plugin manifest's; the entry named `em-review` still has `source`
-  `./em-review` and still carries no `version` key.
+  `./em-review` and its `version` is not equal to the plugin manifest's
+  version (does not follow the em-workflow bump).
 - AC-3: this module exists, is discovered by
   `python3 -m unittest discover -s tests` from the repository root, imports
   only the Python standard library and no other test module, parses both
@@ -37,7 +38,8 @@ Matcher -> negative-proof inventory (AC-4):
 - `_assert_versions_equal` (the equality matcher): negative proof is
   `test_equality_matcher_rejects_forged_differing_versions`, non-vacuity
   guard is `test_forged_differing_versions_are_both_well_formed`.
-- `_marketplace_entry`'s lookups (`em-review` source / no-version-key) are
+- `_marketplace_entry`'s lookups feed two checks: the `em-review` `source`,
+  and the `em-review` `version` not following the em-workflow bump. Both are
   pure regression guards over retained, pre-change fields -- no matcher is
   asserting new wording, so this needs no negative proof (task0002.md,
   Design: "need no negative proof").
