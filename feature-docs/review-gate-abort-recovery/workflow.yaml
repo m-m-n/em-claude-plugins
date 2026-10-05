@@ -204,7 +204,7 @@ tasks:
     - NFR4
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-gate-abort-recovery/task0002
 review:
