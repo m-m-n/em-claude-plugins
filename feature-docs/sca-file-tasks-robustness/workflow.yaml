@@ -143,7 +143,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/sca-file-tasks-robustness/task0002
   task0003:
