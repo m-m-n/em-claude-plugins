@@ -20,7 +20,7 @@ bases:
       '1': 0.81
       '2': 0.19
       '3': 0.0
-  observed_at: '2026-10-05T22:56:00+09:00'
+  observed_at: '2026-10-05T22:57:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.76
       '2': 0.24
       '3': 0.0
-  observed_at: '2026-10-05T23:04:00+09:00'
+  observed_at: '2026-10-05T23:01:00+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/scripts/scan-dependencies.py
@@ -69,4 +69,4 @@ pre_survey_estimate:
   caller_and_dependency_count: 4
   changes_external_contract: false
   changes_behavior: true
-decided_at: '2026-10-05T23:05:00+09:00'
+decided_at: '2026-10-05T23:02:00+09:00'
