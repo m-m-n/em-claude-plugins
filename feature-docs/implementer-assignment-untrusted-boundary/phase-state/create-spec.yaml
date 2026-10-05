@@ -1,21 +1,81 @@
 schema_version: 1
 feature: implementer-assignment-untrusted-boundary
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 2e456776f77a8518797e7bffc2c313ea95349a39
 last_input_digest: sha256:2861b658855631b184f4b0d06f30522bc61255d9a9ba2211aaef54be6109dc00
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-06T00:15:55+09:00'
+    questions:
+    - question_id: requirement.data-field-scope
+      status: answered
+    - question_id: requirement.value-encoding
+      status: answered
+    - question_id: design.step
+      status: answered
+answers:
+  requirement.data-field-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-06T00:15:55+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - workflow_derived
+    freeform: null
+    normalized_answer: workflow.yaml 由来の値すべて（project_commands・expected_files・skills_to_load）をデータ境界の内側に置く
+    resolution_note: 'policy create-spec.requirement-clarification: codex_consultation
+      (harness: codex, 1 turn). Codex recommended workflow_derived: all three fields
+      carry workflow.yaml values (implement-phase.md:411,413,416). Orchestrator judged
+      the mapping and agreed (skills_to_load is the same trust class; leaving it out
+      keeps the same injection path open). Not chosen: named_only. Opus escalation
+      not run.'
+  requirement.value-encoding:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-06T00:15:55+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - json_string_values
+    freeform: null
+    normalized_answer: 信頼済みの欄の後に、未信頼データと明示したデータ節を置き、各値は 1 行の JSON 文字列（リストは文字列の JSON
+      配列）で書く。実装者はコマンドを復号した文字列そのままで実行する
+    resolution_note: 'policy create-spec.requirement-clarification: codex_consultation
+      (harness: codex, 1 turn). Codex recommended json_string_values: one-line JSON
+      escapes newlines so a value cannot forge the header / task_id / worktree_path
+      lines the hooks match first (queue_launch_guard.py:71); decoded commands keep
+      verbatim execution (worktree-task-workflow SKILL.md:117). Caveats recorded:
+      JSON alone does not guarantee non-compliance, so the data-not-instructions rule
+      must also be stated; bash_guard strips surrounding whitespace (bash_guard.py:152,179,208)
+      so the spec must not claim raw byte equality beyond the existing rule. Not chosen:
+      delimited_block (end-marker / newline breakout), instruction_only (no structural
+      separation). Opus escalation not run.'
+  design.step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-06T00:15:55+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design ステップはスキップ（推奨どおり）
+    resolution_note: 'batch-policies.yaml create-spec.design-step: select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: failed
   input_digest: sha256:2861b658855631b184f4b0d06f30522bc61255d9a9ba2211aaef54be6109dc00
-  output_digest: null
+  output_digest: sha256:11da731660f46a3b1e3a524cf9ea8a8d6513a487dbf963073121c5eb2da1d398
+- request_id: create-spec-run-0002
+  status: needs_user_input
+  input_digest: sha256:2861b658855631b184f4b0d06f30522bc61255d9a9ba2211aaef54be6109dc00
+  output_digest: sha256:8606145154148ad930d2ef1a54ca32b21de907999805fd0cda3f3141b724f797
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-spec-run-0001: validate-worker-output gate_id error (create-spec.design-step
+  lacked decide_autonomously); re-dispatched as create-spec-run-0002'
