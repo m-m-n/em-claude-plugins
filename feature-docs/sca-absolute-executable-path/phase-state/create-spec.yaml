@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-absolute-executable-path
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: caa5e10f54bceba02b14bcb325d7c0256c3431fc
 last_input_digest: sha256:b765151a1f1293f6e7eb6b36e2b06ab4b5251cae6f85bc27708071e572cf2605
