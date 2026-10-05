@@ -1,7 +1,7 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 2
 base_revision: 1c9d23ece9f3e428ae6bc5accfc1262e5fbcf7b8
 last_input_digest: sha256:48cb59e2585f42e13eb0106110c80365ada04daf7995f44bfa547bbfc6f18b11
@@ -15,6 +15,12 @@ packets:
       status: answered
     - question_id: design-step.skip
       status: answered
+  create-spec-q0002:
+    status: issued
+    issued_at: '2026-10-05T19:58:00+09:00'
+    questions:
+    - question_id: requirement.routeback-reset-confirmation
+      status: unanswered
 answers:
   create-spec.feature-identity:
     question_id: create-spec.feature-identity
@@ -72,7 +78,7 @@ worker_runs:
   input_digest: sha256:48cb59e2585f42e13eb0106110c80365ada04daf7995f44bfa547bbfc6f18b11
   output_digest: sha256:85b9e8f10749f3ffc6f79ffe18e2d70a90706473f3bcf924a243971b5fd60e48
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:458027fab44069cb591073b916989d1d4cfbb5a7014cc0e88c57cd970cc8bafe
   output_digest: null
 artifacts:
