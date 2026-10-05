@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 7375ec7cb7feac57f8e2478083b76d2ff93d61f9
 last_input_digest: sha256:59ccbf1e2fa544a741a215cd75b1162ff949bf6559d9f732d13f253e85fae16a
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -99,6 +99,14 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:59ccbf1e2fa544a741a215cd75b1162ff949bf6559d9f732d13f253e85fae16a
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:59ccbf1e2fa544a741a215cd75b1162ff949bf6559d9f732d13f253e85fae16a
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: null
   output_digest: null
 artifacts: []
 patches: []
