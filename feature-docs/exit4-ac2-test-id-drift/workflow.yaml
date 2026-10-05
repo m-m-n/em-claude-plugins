@@ -26,7 +26,8 @@ goal: '# em-workflow: exit4-tip-argument task0002.tests.yaml の AC-2 が実在�
 
   2. `test-docs/exit4-tip-argument/task0002.tests.yaml` の AC-2 の acceptance test ID を読む
 
-  3. `python3 -m unittest tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key` を実行し、AttributeError になることを確認する
+  3. `python3 -m unittest tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key`
+  を実行し、AttributeError になることを確認する
 
   4. `tests/test_exit4_tip_argument_version_bump.py` に実在するのが `test_em_review_entry_version_not_bumped_with_em_workflow` であることを確認する
 
@@ -72,7 +73,8 @@ goal: '# em-workflow: exit4-tip-argument task0002.tests.yaml の AC-2 が実在�
 
   ## 追加指示（起動者）
 
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）。
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch
+  へ自動マージしない）。
 
   - 不明点は Codex に相談し、相対的に良いと判断した案を採用する。
 
@@ -145,7 +147,33 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Repair the exit4-tip-argument task0002 AC-2 test ID drift and add an ID-resolution regression test
+    plan: tasks/task0001.md
+    files:
+    - test-docs/exit4-tip-argument/task0002.tests.yaml
+    - tests/test_exit4_tip_argument_version_bump.py
+    - tests/test_exit4_ac2_test_id_drift.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -157,78 +185,104 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR2:
     title: AC-2 の red_reason の書き換え
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   FR3:
     title: モジュール docstring の AC-2 記述の修正
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   FR4:
     title: モジュール docstring の AC-4 matcher インベントリの修正
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   FR5:
     title: 再発を検出するテスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-7
   FR6:
     title: 検出対象の限定
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-8
   FR7:
     title: 解決判定の negative proof と non-vacuity guard
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
   NFR1:
     title: テストコードは標準ライブラリだけを使う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   NFR2:
     title: version_bump モジュールはモジュール docstring だけを変える
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR3:
     title: プラグイン配下と version を変更しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR4:
     title: unittest discover -s tests がリポジトリルートで成功する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
 batch:
   review_rework_count: 0
   verify_rework:
