@@ -1,0 +1,148 @@
+schema_version: 1
+feature: consult-litellm-contributor-tier
+created: '2026-10-06'
+base_branch: main
+goal: "# batch の Codex 相談が litellm 経路に落ちると、同意済みでも muse-spark-contributor ではなく muse-spark で呼ばれる\n\n## 現象 (必須)\nbatch の Codex 相談で litellm 経路に移ったとき、同意が記録済みのリポジトリでも `muse-spark`（Standard ティア）で呼ばれる。`muse-spark-contributor` にならない。\n2026-10-05 の em-claude-plugins（feature: codex-interactive-guard-hook）で 2 回発生した。\n- 00:48:15 JST の相談：Codex がタイムアウトし、litellm 経路へ移った。`run_codex_exec.sh readonly --litellm muse-spark ...` で実行した\n- 01:12:54 JST の相談：同じく `--litellm muse-spark` で実行した\nどちらのセッションでも `muse_guard.py --list` は実行されていない。同じリポジトリでは `--list` がプロジェクトのキーを出力する（同意済み）。\n## 再現手順 (必須)\n1. `/em-workflow:contributor-consent` で同意を記録したリポジトリで、`/em-workflow:develop --batch` を走らせる\n2. create-spec / create-plan などで Codex 相談が発生し、codex エントリが使えない（またはタイムアウトする）状況にする\n3. litellm エントリでの wrapper 呼び出しを見る\n## 期待する挙動 (必須)\n同意が記録済みなら `--litellm muse-spark-contributor` で呼ばれる。未同意なら `--litellm muse-spark` で呼ばれる。判定は `references/reviewers.yaml` の contributor-tier pre-dispatch criteria と同じ。\n## 完了の定義 (必須)\n- [ ] 再現手順で現象が起きない\n- [ ] 再発を検出するテストがある\n## 該当箇所 (任意)\n- `em-workflow/references/question-resolution.md:431-461`（Codex consultation procedure の手順 1・2）\n- 対比：`em-workflow/references/review-phase.md:91-96`（Phase R0 の `contributor_consented` 判定）\n- `em-workflow/references/reviewers.yaml:38-49`（contributor-tier pre-dispatch criteria）\n### 原因\n- 手順 1（447-450 行目）は「contributor として扱うかは reviewers.yaml の決まりに従う」と参照先を示すだけで、判定の手順を持たない\n- 手順 2（459-461 行目）は呼び出し例として `--litellm muse-spark` を具体的に書いている\n- オーケストレーターは手順 2 の例を文字どおり使い、参照先の判定を行わなかった\n- レビュー経路は Phase R0 で `contributor_consented` を判定する手順が明記されているため、同じ問題が起きない\n### 修正案\n1. 手順 1 の litellm エントリの可用性判定に、review-phase.md Phase R0 と同じ `contributor_consented` 判定を加える。litellm エントリが available のときだけ次を実行し、1 行出力されたら true、何も出ないか失敗したら false とする\n```bash\n   python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/muse_guard.py\" --list --project-dir \"{project_root}\"\n```\n1. 手順 2 の呼び出し例を固定のモデル名ではなく、判定結果で決める形にする。`contributor_consented` が true なら `--litellm muse-spark-contributor`、false なら `--litellm muse-spark` と両方を明記する\n2. 「the model name written here is never edited to reach that tier」の一文は残す（チェーンのエントリ自体は `muse-spark` のまま、読み替えだけを行う）\n3. 再発検出のテストとして、`scripts/check-plugin-invariants.py` か `tests/` に「question-resolution.md の litellm 呼び出し箇所が `contributor_consented` 判定と `muse-spark-contributor` の両方に言及している」ことを検査するケースを足す\n## 実害・発生条件 (任意)\n- 発生条件：同意済みリポジトリで、batch の Codex 相談が litellm エントリに落ちたとき\n- 実害：Standard ティアの単価（入力 \\$1.25 / 出力 \\$4.25）で課金され、contributor ティア（\\$0.10 / \\$0.20）より高くつく\n### 関連する観察（本件の範囲外）\n01:12:54 JST の相談では codex エントリを試さず、最初から litellm エントリで呼んでいた。手順 1 は相談ごとに codex から順に可用性を判定する決まりなので、こちらも手順から外れている可能性がある。\n\n"
+parent_branch: em-workflow/consult-litellm-contributor-tier/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.97
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.04
+      '1': 0.94
+      '2': 0.02
+      '3': 0.0
+  at: '2026-10-06T07:49:22+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 68686d3a918e939ba1094ff6ff75e0ba8476dbe2
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI も視覚的な成果物も無い。変更は Markdown の手順書 1 つとユニットテストだけ。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 68686d3a918e939ba1094ff6ff75e0ba8476dbe2
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 可用性判定に contributor_consented 判定を足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: 呼び出し例のモデル名を判定結果で決める
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR3:
+    title: チェーンのエントリと参照の記述を残す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR4:
+    title: 判定値は 1 回の相談を通して固定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR5:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR1:
+    title: テストは標準ライブラリの unittest だけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR2:
+    title: プラグインの version は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 既存のテストを修正後も全部通す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR4:
+    title: run_codex_exec.sh / muse_guard.py / reviewers.yaml / review-phase.md は変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
