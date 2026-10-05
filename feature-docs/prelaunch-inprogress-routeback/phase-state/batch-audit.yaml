@@ -22,3 +22,19 @@ records:
     の記録に失敗したら起動を拒否する（queue_launch_guard を fail-closed にする）』案はフックの挙動変更でスコープが広がるため採らず、残るリスクとして別タスクに起票する。Opus
     escalation not run.'
   answered_at: '2026-10-05T18:52:00+09:00'
+- question_id: review.auto-fix-test-regression
+  packet_id: null
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - revert_and_rework
+  freeform: null
+  normalized_answer: 'revert_and_rework: review round 1 loop 1 で review-editor が適用した修正（stable_id 197991d271fd0f74）を
+    バックアップから復元して abort し、R5 で residual high 1 件として batch auto-rework に回す。'
+  resolution_note: 'gate: review.auto-fix-test-regression（gate_id を持たない unlisted な判断点。Phase R4 は editor 適用後のテスト回帰の扱いを定めていない）。
+    状況: needs-judgment を batch 規定どおり Apply as-is で適用したところ python3 -m unittest discover -s tests が 3 件失敗した
+    （tests/test_prelaunch_inprogress_launch_order.py の AC-5 固定句消失 2 件、tests/test_prelaunch_inprogress_pending_launched.py の never-arise 主張禁止 1 件）。
+    options: A=修正を戻して abort し rework-planner に文書とテストをまとめて計画させる, B=修正を残してコミットし壊れたテストは再レビューと後続 rework に任せる。
+    chosen: A。Codex（run_codex_exec.sh readonly、turn 1 で収束）の理由: 設計判断が必要な high を未解決として残し rework-planner に文書とテストをまとめて計画させられる。
+    B は既知のテスト失敗を含む修正をコミットし、整合性の回復を後続工程に依存させる。Opus escalation not run.'
+  answered_at: '2026-10-05T19:35:36+09:00'
