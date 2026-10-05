@@ -47,6 +47,7 @@ Output: a PreToolUse permission decision on stdout; exit 0 either way.
 """
 
 import bisect
+import collections
 import json
 import os
 import re
@@ -94,7 +95,7 @@ UNRESOLVED_MARK = "\x00"
 # _strip_unresolved_marks() recover which CHUNK_SUBS entry produced a given
 # surviving token by direct lookup, rather than by counting markers
 # left-to-right across the token stream — a count that a lexer-dropped
-# comment (`# $(cmd)`, consumed whole by shlex's `comments=True` and never
+# comment (`# $(cmd)`, blanked out of the view shlex reads and so never
 # reaching the token stream) silently desynchronizes from CHUNK_SUBS's own
 # enumeration.
 _MARK_TERMINATOR = "\x02"
@@ -495,67 +496,1282 @@ class _TrackingLexer(shlex.shlex):
         return token
 
 
-_COMMENT_WORD_BOUNDARY = " \t\r\n;|&()<>"
+# --- Unified lexer (destructive-guard-unified-lexer, FR1-FR9) ---------------
+#
+# lex_shell() is the ONE place in this file that decides where a quote, a
+# comment, a parameter / arithmetic expansion, a command / backtick / process
+# substitution, a here-string operator and a real here-document operator
+# begin and end. strip_heredocs(), scan_structure(), the text _TrackingLexer
+# reads and tokens() all take those judgments from its map; none of them
+# classifies a character on its own. See IMPLEMENTATION.md ("Unified lexer
+# contract", postconditions P1-P12).
+#
+# Rework round 1 (task0002) -- three readings the lexer takes the way bash
+# does, so a destructive statement after them is never dropped as a heredoc
+# body or a comment (review findings 42180fe3cd060309, 6ad3de37b64392ec,
+# acf9e8aa8bb287ea):
+#
+#   P10 (FR3)  a reserved word is recognized directly after a closer (the `)`
+#              of a subshell group, the `}` of a brace group, the `))` of an
+#              arithmetic command, the `]]` of a conditional command, and
+#              `fi` / `done` / `esac`), and a recognized one sets command
+#              position exactly as at a command position; the `do` after
+#              `for NAME` / `select NAME` is one too; the position after
+#              `coproc NAME`, `function NAME` and `function NAME ()` is a
+#              command position. Grammar state: _LexFrame.rw, .kw, .cond.
+#   P11 (FR8)  a pending heredoc body begins after the first newline read
+#              while no region opened after its operator is still open; a
+#              backslash-newline never begins one. Each operator remembers
+#              the region sequence number it was registered at.
+#   P12 (FR6)  a process substitution stays part of its word: after its
+#              closing `)` the word continues, so a `#` right after it is no
+#              comment.
+#
+# Work bound (P7, D4). A pass reads the text once, left to right, with an
+# explicit stack (no recursion). An opener that never closes cannot be known
+# to be one until the end of the text, so the text is read again with every
+# such opener settled as "not opened"; likewise a `((` / `$((` whose first
+# close is not an adjacent `))` is read again as two parentheses. Every
+# opener settled this way is remembered, so a pass never rescans because of an
+# opener it has already settled, and all unclosed openers found by one pass
+# are settled together -- `${` repeated twenty thousand times costs two passes,
+# not twenty thousand. The total number of loop iterations over all passes is
+# counted; past LEX_WORK_FACTOR times the text length (plus a floor) the
+# lexer raises LexBudgetExceeded and the hook issues its scan-budget "ask"
+# decision, never an "allow".
+
+LEX_WORK_FACTOR = 8
+_LEX_WORK_FLOOR = 1024
 
 
-def _blank_comments(text):
-    """TEXT with every `#`-comment -- a `#` outside quotes, at the start of
-    a word -- replaced by spaces from the `#` up to but NOT including its
-    terminating newline. Quote tracking mirrors scan_structure()'s own
-    shell-mode rule (a `#` inside a quoted span is literal, never a
-    comment); a backslash-escaped character, in or out of quotes, is
-    skipped whole so an escaped quote/`#` is never misread as one starting
-    or ending. Kept as its own light, self-contained pass rather than a
-    scan_structure() call because every lex_segments() caller already hands
-    it a MARKED chunk (substitutions already replaced by marker residue),
-    so no substitution/case tracking is needed to find a comment's own
-    boundary here -- only where it starts and where its line ends.
+class LexBudgetExceeded(Exception):
+    """lex_shell() could not settle a text within its linear work bound.
+    run() turns it into the existing scan-budget "ask" decision
+    (destructive-guard-unified-lexer D4, NFR3)."""
 
-    This exists because Python's shlex, given `commenters` containing `#`
-    (its own default), swallows the comment's OWN terminating newline
-    along with the comment text -- it never emits a separator token for
-    that specific newline, so two statements split only by a trailing
-    comment (`echo hi # x\nrm -rf y`) lex as ONE merged statement, with
-    `rm -rf y` read as mere arguments to `echo` rather than as its own
-    statement. Blanking the comment text here, while leaving the newline
-    itself in place, removes every `#` character before the lexer ever
-    sees one (lex_segments() below turns its OWN `commenters` off to
-    match) -- so the newline the comment used to swallow now reaches the
-    lexer as ordinary text and is tokenized as a real, counted separator,
-    same as any other newline. This does not change the WORDS surrounding
-    a comment -- comment text was already discarded, never yielded as a
-    token, on the old commenters path too -- only whether the newline that
-    follows still separates them.
-    """
-    out = list(text)
+
+LexRegion = collections.namedtuple(
+    "LexRegion", ["kind", "start", "end", "parent", "closed"]
+)
+LexHeredoc = collections.namedtuple(
+    "LexHeredoc",
+    ["start", "end", "delimiter", "quoted", "body_start", "body_end", "close_end"],
+)
+LexCandidate = collections.namedtuple(
+    "LexCandidate", ["quote", "start", "end", "enclosing"]
+)
+
+LEX_SUBSTITUTION_KINDS = frozenset(
+    {"command-substitution", "backtick-substitution", "process-substitution"}
+)
+LEX_QUOTE_KINDS = frozenset(
+    {"single-quote", "double-quote", "ansi-c-quote", "locale-quote"}
+)
+# Regions that are inert for statement-separator counting at the top level.
+LEX_OPAQUE_KINDS = LEX_QUOTE_KINDS | LEX_SUBSTITUTION_KINDS | frozenset(
+    {
+        "comment",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+    }
+)
+# Regions whose content shlex would read differently from bash: the masked
+# view hides every character inside one of these (comments are blanked).
+LEX_MASKED_KINDS = frozenset(
+    {
+        "ansi-c-quote",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+    }
+)
+
+
+class LexMap:
+    """The lexical map lex_shell() returns (IMPLEMENTATION.md, "Output").
+
+    - REGIONS: LexRegion(kind, start, end, parent, closed) in order of start;
+      END is exclusive, PARENT the index of the immediately enclosing region
+      (None at the top level), CLOSED False for a quote or substitution that
+      runs to the end of the text unterminated.
+    - HEREDOCS: LexHeredoc for every real here-document operator in text
+      order: START/END span the `<<` / `<<-` through its delimiter word;
+      BODY_START/BODY_END the body lines and CLOSE_END the end of the
+      delimiter line (all None when the delimiter line never appears, or the
+      map was made without body skipping).
+    - CANDIDATES: LexCandidate(quote, start, end, enclosing) -- P8: the
+      substitutions the broad search reads inside the single-quote or
+      ansi-c-quote region with index QUOTE; ENCLOSING is the index of the
+      substitution region around that quote, or None.
+    - UNOPENED: offsets of the openers settled as not opened (P4); TAIL_START
+      the earliest of them (the re-read tail starts there), None without any.
+    - WORK / ROUNDS: loop iterations and passes it cost (P7)."""
+
+    __slots__ = (
+        "regions", "heredocs", "candidates", "unopened", "tail_start", "work",
+        "rounds",
+    )
+
+    def __init__(self, regions, heredocs, candidates, unopened, tail_start, work, rounds):
+        self.regions = regions
+        self.heredocs = heredocs
+        self.candidates = candidates
+        self.unopened = unopened
+        self.tail_start = tail_start
+        self.work = work
+        self.rounds = rounds
+
+    def as_tuple(self):
+        return (
+            tuple(self.regions), tuple(self.heredocs), tuple(self.candidates),
+            tuple(self.unopened), self.tail_start, self.work, self.rounds,
+        )
+
+
+class _LexFrame:
+    """One open context on the lexer's stack. KIND is `top`, `btop` (the
+    literal top level of a heredoc body), `cmdsub`, `backtick`, `procsub`,
+    `group` (shell rules); `dq`, `locale`, `sq`, `ansi`, `param`, `arith`,
+    `bracket`. REGION is the region the frame owns and REG the region a child
+    of this frame hangs under. The grammar state of the shell-rule kinds is
+    CMD (the next word is at a command position), RW (P10: the next word
+    comes directly after a closer or a `for` / `select` name, so a reserved
+    word is recognized there although it is not a command position), CS (the
+    case-construct stack), COND (a `[[` opened at a command position awaits
+    its `]]`) and the little markers `time -p`, KW (the keyword the previous
+    word was: `for`, `select` or `coproc`), function-name and function-head
+    tracking."""
+
+    __slots__ = (
+        "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
+        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond",
+    )
+
+    def __init__(self, kind, start, region, reg, cmd=False, depth=0):
+        self.kind = kind
+        self.start = start
+        self.region = region
+        self.reg = reg
+        self.cmd = cmd
+        self.cs = []
+        self.in_word = False
+        self.depth = depth
+        self.prev_plain = False
+        self.time_p = False
+        self.kw = ""
+        self.fn_p = False
+        self.rw = False
+        self.cond = False
+
+
+class _LexLines:
+    """Line index of a text for here-document body lookup: START offsets of
+    every line (str.splitlines() rules, as strip_heredocs() always used) and,
+    built on first use, WORD_TO_LINES -- every line that is nothing but a
+    bare word, per _delimiter_line_word(), indexed by that word (NFR3)."""
+
+    __slots__ = ("text", "starts", "_word_to_lines")
+
+    def __init__(self, text):
+        starts = []
+        total = 0
+        for line in text.splitlines(keepends=True):
+            starts.append(total)
+            total += len(line)
+        self.text = text
+        self.starts = starts
+        self._word_to_lines = None
+
+    def word_to_lines(self):
+        if self._word_to_lines is None:
+            mapping = {}
+            starts = self.starts
+            text = self.text
+            last = len(starts) - 1
+            for idx, s in enumerate(starts):
+                e = starts[idx + 1] if idx < last else len(text)
+                word = _delimiter_line_word(text[s:e])
+                if word is not None:
+                    mapping.setdefault(word, []).append(idx)
+            self._word_to_lines = mapping
+        return self._word_to_lines
+
+
+_LEX_WS = re.compile(r"[ \t\r]+")
+_LEX_WORD_RUN = re.compile(r"[^ \t\r\n;|&()<>\"'`$\\]+")
+_LEX_DQ_SPECIAL = re.compile(r"[\\\"$`]")
+_LEX_PARAM_SPECIAL = re.compile(r"[\\'\"$`}]")
+_LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
+_LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
+_LEX_ANSI_SPECIAL = re.compile(r"[\\']")
+_LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
+_LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
+_LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
+_LEX_WORD_END = frozenset(" \t\r\n;|&()<>")
+_LEX_SHELL_KINDS = frozenset({"top", "cmdsub", "group", "procsub", "backtick"})
+# Case-construct states while a pattern is being read: PATTERN_FIRST right
+# after `in`, PATTERN_NEXT right after a `;;` (where a bare `esac` always ends
+# the construct, so `$(case x in x) :;; esac)` closes at its last `)`), and
+# PATTERN_REST once the pattern's first word is past.
+_LEX_CASE_PATTERN_STATES = ("pattern_first", "pattern_next", "pattern_rest")
+# Words after which the next word is still at a command position (P3).
+_LEX_COMMAND_KEEPERS = frozenset(
+    {"if", "then", "elif", "else", "do", "while", "until", "time", "coproc", "!", "{"}
+)
+# The reserved words recognized directly after a closer (P10). Each is
+# handled afterwards exactly as at a command position.
+_LEX_AFTER_CLOSER_WORDS = frozenset(
+    {"then", "do", "else", "elif", "fi", "done", "esac", "}"}
+)
+# After `coproc`, a word that begins a compound command is not the coprocess
+# NAME; any other word is, and the position after it is a command position.
+_LEX_COPROC_COMPOUND = frozenset(
+    {"{", "if", "while", "until", "case", "for", "select", "function", "time",
+     "!", "[[", "coproc"}
+)
+_LEX_SPECIAL_PARAMETERS = "$?#!-@*0123456789"
+
+_LEX_CACHE = {}
+_LEX_CACHE_LIMIT = 16
+
+
+def _lex_quote_candidates(text, lo, hi, quote_index, enclosing, out):
+    """P8: the candidate substitutions inside the quote content TEXT[LO:HI],
+    appended to OUT as LexCandidate. Left to right: a `$(` closes at the `)`
+    that balances its own `(` when every `(` and `)` up to HI counts alike,
+    failing that at the first `)` after it, with none it is no candidate; a
+    backtick closes at the next backtick before HI, with none it is no
+    candidate; scanning resumes after a candidate's end. One forward pass
+    for all the `$(` (_single_quoted_sub_closes()), one `find` per backtick
+    that is either paired or the last one: linear in HI - LO."""
+    closes = None
+    p = lo
+    while True:
+        m = _LEX_CANDIDATE_OPEN.search(text, p, hi)
+        if m is None:
+            return
+        j = m.start()
+        if m.group() == "`":
+            k = text.find("`", j + 1, hi)
+            if k == -1:
+                p = j + 1
+                continue
+            out.append(LexCandidate(quote_index, j, k + 1, enclosing))
+            p = k + 1
+        else:
+            if closes is None:
+                closes = _single_quoted_sub_closes(text, j, hi)
+            c = closes.get(j, -1)
+            if c == -1:
+                p = j + 1
+                continue
+            out.append(LexCandidate(quote_index, j, c + 1, enclosing))
+            p = c + 1
+
+
+def _lex_pass(text, mode, settled, reparen, lines, budget):
+    """ONE left-to-right pass of lex_shell(). SETTLED are the openers earlier
+    passes settled as not opened (P4) and REPAREN the `((` / `$((` openers
+    earlier passes found to close without an adjacent `))`, which are read as
+    two parentheses; LINES is the line index when here-document bodies are to
+    be skipped (None otherwise). Returns
+    ("done", regions, ops, candidates, unopened, iterations) or
+    ("restart", new_settled, new_reparen, iterations) when this pass learned
+    of openers to settle; raises LexBudgetExceeded past BUDGET iterations.
+
+    The grammar state a shell-rule frame carries (CMD, RW, CS and the small
+    markers on _LexFrame) is advanced one word at a time by word_transition():
+    it is what decides, by P3 and P10, whether a bare `((` is arithmetic.
+
+    Here-document bodies (P6, P11). A real operator is queued in HD_PENDING
+    with the region sequence number it was registered at (HD_SEQS; every
+    pushed region gets the next number, RSEQ holds the numbers of the regions
+    open now). While operators are pending, HD_TRIGGER is the offset of the
+    next line start and no scan reads past it (LIMIT). When the lexer arrives
+    there, an operator takes its body from that line on exactly when no
+    region opened after it is still open -- the topmost open region's number
+    is not above its own -- and the newline just read was no backslash-newline
+    line continuation; otherwise the operator stays pending and the next line
+    start becomes the trigger. A region that encloses the operator was open
+    when it registered and so never defers it."""
     n = len(text)
-    q = None
+    tail_start = min(settled) if settled else None
+    regions = []  # [kind, start, end, parent, closed, nearest substitution ancestor]
+    ops = []
+    candidates = []
+    encountered = []
+    stack = [_LexFrame("btop" if mode == "heredoc-body" else "top", 0, None, None, True)]
+    iterations = 0
     i = 0
+    hd_pending = []
+    hd_seqs = []
+    hd_trigger = None
+    cont_at = -1
+    rseq = []
+    seq = 0
+    limit = n
+
+    def new_region(kind, start, f):
+        parent = f.reg
+        if parent is None:
+            anc = None
+        else:
+            anc = parent if regions[parent][0] in LEX_SUBSTITUTION_KINDS else regions[parent][5]
+        regions.append([kind, start, None, parent, True, anc])
+        return len(regions) - 1
+
+    def push(f, kind, region_kind, start, cmd=False, depth=0):
+        nonlocal seq
+        idx = new_region(region_kind, start, f)
+        stack.append(_LexFrame(kind, start, idx, idx, cmd, depth))
+        seq += 1
+        rseq.append(seq)
+
+    def close(f, end):
+        regions[f.region][2] = end
+        stack.pop()
+        rseq.pop()
+        if f.kind == "sq":
+            _lex_quote_candidates(
+                text, f.start + 1, end - 1, f.region, regions[f.region][5], candidates
+            )
+        elif f.kind == "ansi":
+            _lex_quote_candidates(
+                text, f.start + 2, end - 1, f.region, regions[f.region][5], candidates
+            )
+
+    def word_transition(f, w, end):
+        """F's grammar state advances over one word: W is its text when it
+        is a plain, complete word, else None; END the offset after it.
+
+        P10 (FR3). RW says the word comes directly after a closer (or after
+        the NAME of a `for` / `select`): a reserved word of
+        _LEX_AFTER_CLOSER_WORDS is recognized there and handled as at a
+        command position, any other word is an argument. `]]` closes a
+        conditional command opened at a command position (COND); `fi`,
+        `done`, `esac` and `}` at a command position are closers themselves
+        and set RW for the word after them; the word after `coproc` is the
+        coprocess NAME unless it begins a compound command, and the position
+        after the NAME -- like the one after `function NAME` -- is a command
+        position."""
+        time_p = f.time_p
+        kw = f.kw
+        rw = f.rw
+        f.time_p = False
+        f.kw = ""
+        f.rw = False
+        f.prev_plain = False
+        cs = f.cs
+        top = cs[-1] if cs else None
+        if rw and not f.cmd and w in _LEX_AFTER_CLOSER_WORDS:
+            f.cmd = True
+        if f.cond and w == "]]":
+            f.cond = False
+            f.cmd = False
+            f.rw = True
+        elif top == "await_subject":
+            cs[-1] = "await_in"
+            f.cmd = False
+        elif top == "await_in":
+            cs[-1] = "pattern_first"
+            f.cmd = False
+        elif top == "pattern_first" or top == "pattern_next":
+            if w == "esac":
+                rest = end
+                while rest < n and text[rest] in " \t":
+                    rest += 1
+                if top == "pattern_first" and rest < n and text[rest] == ")":
+                    cs[-1] = "pattern_rest"
+                else:
+                    cs.pop()
+                    f.cmd = False
+                    f.rw = True
+            else:
+                cs[-1] = "pattern_rest"
+        elif top == "pattern_rest":
+            pass
+        elif f.fn_p:
+            f.fn_p = False
+            f.cmd = True
+            f.prev_plain = True
+        elif time_p and w == "-p":
+            f.time_p = True
+        elif kw == "for" or kw == "select":
+            f.cmd = False
+            f.rw = True
+        elif kw == "coproc" and (w is None or w not in _LEX_COPROC_COMPOUND):
+            f.cmd = True
+        elif f.cmd and w is not None:
+            if w == "esac":
+                if cs:
+                    cs.pop()
+                f.cmd = False
+                f.rw = True
+            elif w == "case":
+                cs.append("await_subject")
+                f.cmd = False
+            elif w in _LEX_COMMAND_KEEPERS:
+                f.time_p = w == "time"
+                if w == "coproc":
+                    f.kw = "coproc"
+            elif w == "function":
+                f.fn_p = True
+                f.cmd = False
+            elif w == "for" or w == "select":
+                f.kw = w
+                f.cmd = False
+            elif w == "fi" or w == "done" or w == "}":
+                f.cmd = False
+                f.rw = True
+            elif w == "[[":
+                f.cond = True
+                f.cmd = False
+            else:
+                f.cmd = False
+                f.prev_plain = True
+        else:
+            f.cmd = False
+
+    def start_word(f, i):
+        if not f.in_word:
+            word_transition(f, None, i)
+            f.in_word = True
+
+    def dollar(i, f, in_quotes, body_literal):
+        """The `$` at I: open the expansion it starts, or consume the special
+        parameter it names; returns the offset to continue at (P1-P3)."""
+        c2 = text[i + 1] if i + 1 < n else ""
+        if c2 == "(":
+            if text.startswith("(", i + 2):
+                if i in settled:
+                    encountered.append(i)
+                    return i + 3
+                if i not in reparen:
+                    push(f, "arith", "arithmetic-expansion", i, depth=2)
+                    return i + 3
+            push(f, "cmdsub", "command-substitution", i, cmd=True)
+            return i + 2
+        if c2 == "{":
+            if i in settled:
+                encountered.append(i)
+                return i + 2
+            push(f, "param", "parameter-expansion", i)
+            return i + 2
+        if c2 == "[":
+            if i in settled:
+                encountered.append(i)
+                return i + 2
+            push(f, "bracket", "bracket-arithmetic", i, depth=1)
+            return i + 2
+        if c2 == "'" and not in_quotes and not body_literal:
+            if i in settled:
+                encountered.append(i)
+                return i + 2
+            push(f, "ansi", "ansi-c-quote", i)
+            return i + 2
+        if c2 == '"' and not in_quotes and not body_literal:
+            push(f, "locale", "locale-quote", i)
+            return i + 2
+        if c2 and c2 in _LEX_SPECIAL_PARAMETERS:
+            return i + 2
+        return i + 1
+
+    def register_operator(i, m):
+        """A real here-document operator at I: queue it for a body (P11).
+        Its body is not looked up here -- where it begins depends on the
+        newlines read after it."""
+        nonlocal hd_trigger, limit
+        op = [i, m.end(), m.group(2), bool(m.group(1)), None, None, None]
+        ops.append(op)
+        if lines is None:
+            return
+        if not hd_pending:
+            starts = lines.starts
+            k = bisect.bisect_right(starts, i)
+            hd_trigger = starts[k] if k < len(starts) else None
+            limit = hd_trigger if hd_trigger is not None else n
+        hd_pending.append(op)
+        hd_seqs.append(seq)
+
     while i < n:
-        c = text[i]
-        if q:
-            if c == q:
-                q = None
-            elif c == "\\" and q == '"' and i + 1 < n:
+        iterations += 1
+        if iterations > budget:
+            raise LexBudgetExceeded()
+        if hd_trigger is not None and i >= hd_trigger:
+            # A line start with here-document operators pending (P11). The
+            # operators whose registration-time regions are all that is
+            # open now (the pending list is in registration order, so they
+            # are a suffix of it) take their bodies from this line on, in
+            # operator order; the others -- and all of them after a
+            # backslash-newline -- wait for the next line start.
+            boundary = hd_trigger
+            starts = lines.starts
+            if boundary == cont_at:
+                cut = len(hd_pending)
+            else:
+                cut = bisect.bisect_left(hd_seqs, rseq[-1] if rseq else 0)
+            if cut < len(hd_pending):
+                hd_next = bisect.bisect_right(starts, boundary) - 1
+                jump = None
+                by_word = lines.word_to_lines()
+                for op in hd_pending[cut:]:
+                    found_lines = by_word.get(op[2], ())
+                    pos = bisect.bisect_left(found_lines, hd_next)
+                    if pos < len(found_lines):
+                        found = found_lines[pos]
+                        op[4] = starts[hd_next]
+                        op[5] = starts[found]
+                        op[6] = starts[found + 1] if found + 1 < len(starts) else n
+                        hd_next = found + 1
+                        jump = op[6]
+                del hd_pending[cut:]
+                del hd_seqs[cut:]
+                if jump is not None and jump > i:
+                    i = jump
+                stack[-1].in_word = False
+            if hd_pending:
+                k = bisect.bisect_right(starts, max(i, boundary))
+                hd_trigger = starts[k] if k < len(starts) else None
+                limit = hd_trigger if hd_trigger is not None else n
+            else:
+                hd_trigger = None
+                limit = n
+            continue
+        f = stack[-1]
+        kind = f.kind
+
+        if kind in _LEX_SHELL_KINDS:
+            c = text[i]
+            if c in " \t\r":
+                i = _LEX_WS.match(text, i, limit).end()
+                f.in_word = False
+                continue
+            if c == "\n":
+                f.cmd = True
+                f.in_word = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
                 i += 1
-            i += 1
-            continue
-        if c == "\\" and i + 1 < n:
-            i += 2
-            continue
-        if c in ("'", '"'):
-            q = c
-            i += 1
-            continue
-        if c == "#" and (i == 0 or text[i - 1] in _COMMENT_WORD_BOUNDARY):
-            j = text.find("\n", i)
-            end = j if j != -1 else n
-            for k in range(i, end):
-                out[k] = " "
+                continue
+            if c == "\\":
+                if text.startswith("\n", i + 1):
+                    # A line continuation: it never starts a here-document body (P11).
+                    i += 2
+                    cont_at = i
+                    continue
+                start_word(f, i)
+                i += 2
+                continue
+            if c == "#" and not f.in_word and (tail_start is None or i < tail_start):
+                end = text.find("\n", i, limit)
+                if end == -1:
+                    end = limit
+                idx = new_region("comment", i, f)
+                regions[idx][2] = end
+                i = end
+                continue
+            if c == ";":
+                if text.startswith(";;&", i):
+                    step = 3
+                elif text.startswith(";;", i) or text.startswith(";&", i) or text.startswith(";|", i):
+                    step = 2
+                else:
+                    step = 1
+                cs = f.cs
+                if step > 1 and cs and cs[-1] == "body":
+                    cs[-1] = "pattern_next"
+                f.cmd = True
+                f.in_word = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
+                i += step
+                continue
+            if c == "&" or c == "|":
+                f.in_word = False
+                if c == "&" and text.startswith("&>", i):
+                    i += 3 if text.startswith("&>>", i) else 2
+                    continue
+                if c == "|" and f.cs and f.cs[-1] in _LEX_CASE_PATTERN_STATES:
+                    i += 1
+                    continue
+                if text.startswith("&&", i) or text.startswith("||", i) or text.startswith("|&", i):
+                    i += 2
+                else:
+                    i += 1
+                f.cmd = True
+                f.prev_plain = f.time_p = False
+                f.kw = ""
+                continue
+            if c == "(":
+                top_cs = f.cs[-1] if f.cs else None
+                f.in_word = False
+                if top_cs == "pattern_first" or top_cs == "pattern_next":
+                    i += 1
+                    continue
+                if f.prev_plain:
+                    m = _LEX_FUNCTION_HEAD.match(text, i, limit)
+                    if m is not None:
+                        i = m.end()
+                        f.cmd = True
+                        f.prev_plain = f.time_p = False
+                        f.kw = ""
+                        continue
+                if (
+                    (f.cmd or f.kw == "for")
+                    and text.startswith("((", i)
+                    and top_cs not in _LEX_CASE_PATTERN_STATES
+                ):
+                    if i in settled:
+                        encountered.append(i)
+                        f.in_word = True
+                        f.cmd = False
+                        f.kw = ""
+                        f.prev_plain = f.time_p = False
+                        i += 2
+                        continue
+                    if i not in reparen:
+                        f.kw = ""
+                        f.prev_plain = f.time_p = False
+                        push(f, "arith", "arithmetic-command", i, depth=2)
+                        i += 2
+                        continue
+                f.kw = ""
+                f.prev_plain = f.time_p = False
+                stack.append(_LexFrame("group", i, None, f.reg, True))
+                i += 1
+                continue
+            if c == ")":
+                f.in_word = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
+                top_cs = f.cs[-1] if f.cs else None
+                if top_cs in _LEX_CASE_PATTERN_STATES:
+                    f.cs[-1] = "body"
+                    f.cmd = True
+                elif kind == "group":
+                    stack.pop()
+                    parent = stack[-1]
+                    parent.cmd = False
+                    parent.in_word = False
+                    parent.rw = True
+                elif kind == "cmdsub":
+                    close(f, i + 1)
+                elif kind == "procsub":
+                    # P12: the process substitution is part of its word, as a
+                    # command substitution is; the word stays in progress.
+                    close(f, i + 1)
+                i += 1
+                continue
+            if c == "<" or c == ">":
+                in_word = f.in_word
+                f.in_word = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
+                if c == "<":
+                    if text.startswith("<<<", i):
+                        idx = new_region("here-string-operator", i, f)
+                        regions[idx][2] = i + 3
+                        i += 3
+                        continue
+                    if text.startswith("<<", i):
+                        m = HEREDOC_OP.match(text, i)
+                        if m is not None and (tail_start is None or i < tail_start):
+                            register_operator(i, m)
+                            i = m.end()
+                        else:
+                            i += 2
+                        continue
+                    if text.startswith("<(", i) and (i == 0 or text[i - 1] not in "<>"):
+                        f.in_word = in_word
+                        start_word(f, i)
+                        push(f, "procsub", "process-substitution", i, cmd=True)
+                        i += 2
+                        continue
+                    i += 2 if (text.startswith("<&", i) or text.startswith("<>", i)) else 1
+                    continue
+                if text.startswith(">(", i) and (i == 0 or text[i - 1] not in "<>"):
+                    f.in_word = in_word
+                    start_word(f, i)
+                    push(f, "procsub", "process-substitution", i, cmd=True)
+                    i += 2
+                    continue
+                i += 2 if (
+                    text.startswith(">>", i) or text.startswith(">&", i) or text.startswith(">|", i)
+                ) else 1
+                continue
+            if c == "'":
+                start_word(f, i)
+                push(f, "sq", "single-quote", i)
+                i += 1
+                continue
+            if c == '"':
+                start_word(f, i)
+                push(f, "dq", "double-quote", i)
+                i += 1
+                continue
+            if c == "$":
+                start_word(f, i)
+                i = dollar(i, f, False, False)
+                continue
+            if c == "`":
+                if kind == "backtick":
+                    close(f, i + 1)
+                    i += 1
+                    continue
+                start_word(f, i)
+                push(f, "backtick", "backtick-substitution", i, cmd=True)
+                i += 1
+                continue
+            run = _LEX_WORD_RUN.match(text, i, limit)
+            end = run.end()
+            if f.in_word:
+                i = end
+                continue
+            complete = end >= n or text[end] in _LEX_WORD_END
+            word_transition(f, text[i:end] if complete else None, end)
+            f.in_word = True
             i = end
             continue
-        i += 1
-    return "".join(out)
+
+        if kind == "dq" or kind == "locale":
+            m = _LEX_DQ_SPECIAL.search(text, i, limit)
+            if m is None:
+                i = limit
+                continue
+            j = m.start()
+            c = text[j]
+            if c == "\\":
+                i = j + 2
+            elif c == '"':
+                close(f, j + 1)
+                i = j + 1
+            elif c == "$":
+                i = dollar(j, f, True, False)
+            else:
+                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                i = j + 1
+            continue
+
+        if kind == "sq":
+            j = text.find("'", i, limit)
+            if j == -1:
+                i = limit
+            else:
+                close(f, j + 1)
+                i = j + 1
+            continue
+
+        if kind == "ansi":
+            m = _LEX_ANSI_SPECIAL.search(text, i, limit)
+            if m is None:
+                i = limit
+                continue
+            j = m.start()
+            if text[j] == "\\":
+                i = j + 2
+            else:
+                close(f, j + 1)
+                i = j + 1
+            continue
+
+        if kind == "param":
+            m = _LEX_PARAM_SPECIAL.search(text, i, limit)
+            if m is None:
+                i = limit
+                continue
+            j = m.start()
+            c = text[j]
+            if c == "\\":
+                i = j + 2
+            elif c == "}":
+                close(f, j + 1)
+                i = j + 1
+            elif c == "'":
+                push(f, "sq", "single-quote", j)
+                i = j + 1
+            elif c == '"':
+                push(f, "dq", "double-quote", j)
+                i = j + 1
+            elif c == "$":
+                i = dollar(j, f, False, False)
+            else:
+                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                i = j + 1
+            continue
+
+        if kind == "arith":
+            m = _LEX_ARITH_SPECIAL.search(text, i, limit)
+            if m is None:
+                i = limit
+                continue
+            j = m.start()
+            c = text[j]
+            if c == "\\":
+                i = j + 2
+            elif c == "(":
+                f.depth += 1
+                i = j + 1
+            elif c == ")":
+                f.depth -= 1
+                if f.depth != 1:
+                    i = j + 1
+                elif text.startswith(")", j + 1):
+                    close(f, j + 2)
+                    if regions[f.region][0] == "arithmetic-command":
+                        parent = stack[-1]
+                        parent.cmd = False
+                        parent.in_word = False
+                        parent.rw = True
+                    i = j + 2
+                else:
+                    # The first close is not an adjacent `))`: read the opener
+                    # as two parentheses (P4) in a new pass.
+                    return ("restart", [], [f.start], iterations)
+            elif c == "'":
+                push(f, "sq", "single-quote", j)
+                i = j + 1
+            elif c == '"':
+                push(f, "dq", "double-quote", j)
+                i = j + 1
+            elif c == "$":
+                i = dollar(j, f, False, False)
+            else:
+                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                i = j + 1
+            continue
+
+        if kind == "bracket":
+            m = _LEX_BRACKET_SPECIAL.search(text, i, limit)
+            if m is None:
+                i = limit
+                continue
+            j = m.start()
+            c = text[j]
+            if c == "\\":
+                i = j + 2
+            elif c == "[":
+                f.depth += 1
+                i = j + 1
+            elif c == "]":
+                f.depth -= 1
+                if f.depth == 0:
+                    close(f, j + 1)
+                i = j + 1
+            elif c == "'":
+                push(f, "sq", "single-quote", j)
+                i = j + 1
+            elif c == '"':
+                push(f, "dq", "double-quote", j)
+                i = j + 1
+            elif c == "$":
+                i = dollar(j, f, False, False)
+            else:
+                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                i = j + 1
+            continue
+
+        # `btop`: the literal top level of a heredoc body -- only the `$`
+        # expansions, backticks and backslash escapes mean anything.
+        m = _LEX_BODY_SPECIAL.search(text, i, limit)
+        if m is None:
+            i = limit
+            continue
+        j = m.start()
+        c = text[j]
+        if c == "\\":
+            i = j + 2
+        elif c == "$":
+            i = dollar(j, f, False, True)
+        else:
+            push(f, "backtick", "backtick-substitution", j, cmd=True)
+            i = j + 1
+
+    unclosed = [f.start for f in stack[1:] if f.kind in ("param", "arith", "bracket", "ansi")]
+    if unclosed:
+        return ("restart", unclosed, [], iterations)
+    for f in stack[1:]:
+        if f.region is not None:
+            regions[f.region][2] = n
+            regions[f.region][4] = False
+            if f.kind == "sq":
+                _lex_quote_candidates(
+                    text, f.start + 1, n, f.region, regions[f.region][5], candidates
+                )
+    return ("done", regions, ops, candidates, encountered, iterations)
+
+
+def lex_shell(text, mode="shell", bodies=True):
+    """The unified lexer (FR1-FR9, and FR3 / FR6 / FR8 as reworked by P10-P12;
+    IMPLEMENTATION.md "Unified lexer contract", P1-P12): ONE forward reading
+    of TEXT that decides every quote, comment, expansion and substitution
+    range, every real here-document operator, and the single-quote
+    substitution candidates. Returns a LexMap.
+
+    MODE is `shell` (the default) or `heredoc-body`: in `heredoc-body` mode,
+    outside any substitution, quote characters, `$'`, `$"`, `#`, `<(` / `>(`
+    and a bare `((` are literal text, while the `$` expansions are
+    recognized; inside a substitution the shell rules apply.
+
+    BODIES (shell mode) says TEXT still holds its here-document bodies: the
+    body lines of a real operator, through its delimiter line, are then
+    skipped (they change no lexer state) and reported on the operator. The
+    body begins on the line after the first newline read while no region
+    opened after the operator is still open, never after a backslash-newline
+    (P11). Pass
+    False for a text whose bodies were already removed (strip_heredocs()'s
+    output): its operators are still reported, but consume nothing, so the
+    text after them is lexed as it stands.
+
+    TEXT is any string, including one with unbalanced quotes or unclosed
+    openers (P4: an opener among `${`, `$((`, `$[`, `((` and `$'` that never
+    closes is not a region, its characters are literal, and the text from the
+    earliest such opener on is read without any `<<` operator and without
+    any comment). The same TEXT, MODE and BODIES always give the same map;
+    nothing is read from disk and nothing is evaluated (P7). Raises
+    LexBudgetExceeded when the work bound is exceeded.
+
+    The result is cached on (TEXT, MODE, BODIES): the maps are never
+    modified, and every stage that needs the lexer's reading of one chunk
+    shares one lexing."""
+    if mode not in ("shell", "heredoc-body"):
+        raise ValueError("unknown lexer mode: %r" % (mode,))
+    if bodies and (mode != "shell" or "<<" not in text):
+        bodies = False
+    key = (text, mode, bodies)
+    cached = _LEX_CACHE.get(key)
+    if cached is not None:
+        return cached
+    n = len(text)
+    budget = LEX_WORK_FACTOR * n + _LEX_WORK_FLOOR
+    lines = _LexLines(text) if bodies else None
+    settled = set()
+    reparen = set()
+    used = 0
+    rounds = 0
+    while True:
+        rounds += 1
+        result = _lex_pass(text, mode, settled, reparen, lines, budget - used)
+        if result[0] == "done":
+            break
+        used += result[3]
+        settled.update(result[1])
+        reparen.update(result[2])
+    _, regions, ops, candidates, encountered, iterations = result
+    used += iterations
+    # The re-read tail starts at the earliest opener settled as not opened:
+    # it is the very rule the final pass applied (no `<<` operator, no
+    # comment from there on).
+    unopened = sorted(encountered)
+    tail_start = min(settled) if settled else None
+    lex_map = LexMap(
+        [LexRegion(kind, s, e, parent, closed) for kind, s, e, parent, closed, _anc in regions],
+        [LexHeredoc(*op) for op in ops],
+        sorted(candidates, key=lambda c: (c.start, c.end)),
+        unopened,
+        tail_start,
+        used,
+        rounds,
+    )
+    if len(_LEX_CACHE) >= _LEX_CACHE_LIMIT:
+        del _LEX_CACHE[next(iter(_LEX_CACHE))]
+    _LEX_CACHE[key] = lex_map
+    if bodies and all(op.body_start is None for op in lex_map.heredocs):
+        _LEX_CACHE[(text, mode, False)] = lex_map
+    return lex_map
+
+
+# --- Position map, masked view and value restoration (FR7) -----------------
+#
+# The text _TrackingLexer reads is not the text the lexer read: a substitution
+# became marker residue, and the content of an ANSI-C quote, a parameter or
+# arithmetic expansion is hidden from shlex, which would read it differently
+# from bash. Three coordinate systems therefore meet here: O (the command
+# chunk), S (O without real heredoc bodies) and M (S with top-level
+# substitutions replaced by marker residue). A _PositionMap translates between
+# two neighbours; a _MarkedText carries M, its map back to S, and the masked
+# view of M that shlex reads.
+
+
+class _PositionMap:
+    """Position translation between two texts, OLD and NEW, as an ordered
+    list of SEGMENTS `(kind, old_start, old_end, new_start, new_end, ref)`
+    covering both texts end to end without a gap.
+
+    A `copy` segment is a run of characters carried verbatim: both ranges have
+    one length and a position inside it moves by a constant shift, so a
+    round trip returns the same position and the same character. A `replace`
+    segment is a range that has no character-level counterpart -- a removed
+    heredoc body (its NEW range is empty, REF the HeredocRecord) or a marked
+    substitution (its NEW range the marker residue, whatever length that has,
+    REF the span): every position inside either range maps to the whole of the
+    other, never to a single position in it. Nothing is promised across
+    replaced segments beyond the order being kept.
+
+    to_new(pos) is ("copy", new_pos) or ("replace", new_start, new_end, ref);
+    to_old(pos) is ("copy", old_pos) or ("replace", old_start, old_end, ref).
+    A position at or past the end of the text maps to the other text's end.
+    Building the map is linear in the number of segments, a lookup one
+    bisect (destructive-guard-unified-lexer, position map contract)."""
+
+    __slots__ = ("segments", "old_len", "new_len", "_old_starts", "_new_starts")
+
+    def __init__(self, segments, old_len, new_len):
+        self.segments = segments
+        self.old_len = old_len
+        self.new_len = new_len
+        self._old_starts = [seg[1] for seg in segments]
+        self._new_starts = [seg[3] for seg in segments]
+
+    def to_new(self, pos):
+        if pos >= self.old_len:
+            return ("copy", self.new_len)
+        kind, old_start, _old_end, new_start, new_end, ref = self.segments[
+            bisect.bisect_right(self._old_starts, pos) - 1
+        ]
+        if kind == "copy":
+            return ("copy", new_start + pos - old_start)
+        return ("replace", new_start, new_end, ref)
+
+    def to_old(self, pos):
+        if pos >= self.new_len:
+            return ("copy", self.old_len)
+        # Of several segments sharing a start (an empty replaced range in
+        # NEW), the last one is the one that holds POS.
+        kind, old_start, old_end, new_start, _new_end, ref = self.segments[
+            bisect.bisect_right(self._new_starts, pos) - 1
+        ]
+        if kind == "copy":
+            return ("copy", old_start + pos - new_start)
+        return ("replace", old_start, old_end, ref)
+
+
+def _identity_map(length):
+    """The map of a text onto itself."""
+    segments = [("copy", 0, length, 0, length, None)] if length else []
+    return _PositionMap(segments, length, length)
+
+
+_PRIVATE_USE = re.compile("[-\U000f0000-\U000ffffd\U00100000-\U0010fffd]")
+
+
+def _mask_char_for(*texts):
+    """A private-use character that occurs in none of TEXTS: the mask the
+    masked view writes over hidden content. shlex reads it as an ordinary
+    word character (not whitespace, a quote, an escape, a punctuation
+    character or a commenter), and it differs from every marker character this
+    module uses. Chosen per text so a command that itself holds private-use
+    characters cannot collide with it; restoration is by position and never
+    searches the text for the mask."""
+    present = set()
+    for text in texts:
+        present.update(_PRIVATE_USE.findall(text))
+    for first, last in ((0xE000, 0xF8FF), (0xF0000, 0xFFFFD), (0x100000, 0x10FFFD)):
+        for code in range(first, last + 1):
+            ch = chr(code)
+            if ch not in present:
+                return ch
+    raise LexBudgetExceeded()
+
+
+def _merge_ranges(ranges):
+    """RANGES -- (start, end) pairs -- sorted, with overlapping ones joined."""
+    merged = []
+    for start, end in sorted(ranges):
+        if merged and start < merged[-1][1]:
+            if end > merged[-1][1]:
+                merged[-1] = (merged[-1][0], end)
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _map_copy_ranges(posmap, ranges):
+    """The parts of RANGES (sorted, disjoint ranges of OLD) that lie in copy
+    segments, as ranges of NEW. A part inside a replaced segment has no
+    counterpart and is dropped: marker residue is never masked."""
+    segments = posmap.segments
+    out = []
+    for lo, hi in ranges:
+        k = max(bisect.bisect_right(posmap._old_starts, lo) - 1, 0)
+        while k < len(segments):
+            kind, old_start, old_end, new_start, _new_end, _ref = segments[k]
+            if old_start >= hi:
+                break
+            if kind == "copy":
+                a = max(lo, old_start)
+                b = min(hi, old_end)
+                if a < b:
+                    out.append((new_start + a - old_start, new_start + b - old_start))
+            k += 1
+    return out
+
+
+class _MarkedText:
+    """The text _TrackingLexer reads, with everything needed to read it
+    back (FR7; IMPLEMENTATION.md "Masked view and value restoration").
+
+    - SOURCE: the text the lexer read (S). TEXT: SOURCE with substitutions
+      replaced by marker residue (M). POSMAP: the S-to-M _PositionMap.
+    - VIEW: TEXT's masked view, as long as TEXT. Every character inside a
+      region whose content shlex would read differently from bash
+      (ansi-c-quote, parameter-expansion, the three arithmetic kinds) is
+      MASK_CHAR, and so is the quote character of a `$'` settled as not
+      opened (P4); comment text is blank up to, not including, its newline.
+      Marker residue is never masked, so the existing marker mechanism still
+      yields the same unresolved / substitution_only flags.
+    - MASK_RANGES: the (start, end) ranges of TEXT that VIEW masks, sorted.
+      Values are restored from them by position, never by searching a text
+      for the mask character.
+
+    Built from the lexer's map of SOURCE alone: no stage that reads VIEW
+    classifies a character itself."""
+
+    __slots__ = (
+        "source", "text", "posmap", "view", "mask_char", "mask_ranges",
+        "_mask_starts", "_quote_starts", "_quote_ends",
+    )
+
+    def __init__(self, source, text, posmap):
+        lexmap = lex_shell(source, "shell", False)
+        masked = []
+        blanked = []
+        quoted = []
+        for region in lexmap.regions:
+            kind = region.kind
+            if kind in LEX_MASKED_KINDS:
+                masked.append((region.start, region.end))
+            elif kind == "comment":
+                blanked.append((region.start, region.end))
+            if kind in LEX_QUOTE_KINDS:
+                quoted.append((region.start, region.end))
+        for pos in lexmap.unopened:
+            if source.startswith("$'", pos):
+                masked.append((pos + 1, pos + 2))
+        for op in lexmap.heredocs:
+            if op.quoted:
+                # The quote characters of `<<'EOF'` are quote delimiters of
+                # the delimiter word, though not a region of their own.
+                quoted.append((op.end - len(op.delimiter) - 2, op.end))
+        mask_ranges = _map_copy_ranges(posmap, _merge_ranges(masked))
+        blank_ranges = _map_copy_ranges(posmap, _merge_ranges(blanked))
+        quote_ranges = []
+        for lo, hi in _merge_ranges(quoted):
+            start = posmap.to_new(lo)
+            if start[0] != "copy":
+                continue  # inside a marked substitution: that is its own chunk
+            end = posmap.to_new(hi - 1)
+            quote_ranges.append((start[1], end[1] + 1 if end[0] == "copy" else end[2]))
+        mask_char = _mask_char_for(source, text)
+        chars = list(text)
+        for lo, hi in blank_ranges:
+            chars[lo:hi] = " " * (hi - lo)
+        for lo, hi in mask_ranges:
+            chars[lo:hi] = mask_char * (hi - lo)
+        self.source = source
+        self.text = text
+        self.posmap = posmap
+        self.view = "".join(chars)
+        self.mask_char = mask_char
+        self.mask_ranges = mask_ranges
+        self._mask_starts = [lo for lo, _hi in mask_ranges]
+        self._quote_starts = [lo for lo, _hi in quote_ranges]
+        self._quote_ends = [hi for _lo, hi in quote_ranges]
+
+    @classmethod
+    def plain(cls, text):
+        """TEXT as it stands: nothing marked, nothing removed."""
+        return cls(text, text, _identity_map(len(text)))
+
+    def masked_parts(self, start, end):
+        """The parts of TEXT[START:END] that VIEW masks, in order."""
+        ranges = self.mask_ranges
+        out = []
+        k = max(bisect.bisect_right(self._mask_starts, start) - 1, 0)
+        while k < len(ranges):
+            lo, hi = ranges[k]
+            if lo >= end:
+                break
+            if hi > start:
+                out.append((max(lo, start), min(hi, end)))
+            k += 1
+        return out
+
+    def touches_quote(self, start, end):
+        """Whether TEXT[START:END] holds a quote region or a quote
+        delimiter of any kind (single, double, ANSI-C, locale), one nested
+        in an expansion included."""
+        k = bisect.bisect_right(self._quote_starts, end - 1) - 1
+        return k >= 0 and self._quote_ends[k] > start
+
+    def restore(self, raw, start, end):
+        """The inspection value of the token shlex read as RAW from
+        TEXT[START:END] of VIEW: RAW with its mask characters -- one for each
+        masked position of the span, in order -- given back their original
+        characters. A span without masked positions keeps RAW exactly. No
+        value leaves here holding the mask character."""
+        parts = self.masked_parts(start, end)
+        if not parts:
+            return raw
+        fill = "".join(self.text[lo:hi] for lo, hi in parts)
+        pieces = raw.split(self.mask_char)
+        if len(pieces) - 1 != len(fill):
+            # shlex did not carry every hidden character into the token; the
+            # span's own text is the value that is never wrong.
+            return self.text[start:end]
+        out = [pieces[0]]
+        for ch, piece in zip(fill, pieces[1:]):
+            out.append(ch)
+            out.append(piece)
+        return "".join(out)
+
+
+def _tokenize_marked(marked, layout=True):
+    """Tokenize MARKED's masked view with _TrackingLexer and return
+    [(Tok, start, end)], START and END being the token's span in
+    MARKED.text.
+
+    LAYOUT (the default) is the lexing pass of _lex_layout(): newline and
+    the operator characters are punctuation, so statements stay separated.
+    Without it the view is split into plain words, the way tokens() reads a
+    segment. Comments never reach the tokenizer (shlex's own commenters are
+    off): the view has them blank.
+
+    Each Tok's value is restored from MARKED (restore()), is_operator comes
+    from the lexer's own state, and quoted is True when the token's span holds
+    a quote region or quote delimiter of any kind. Raises ValueError when the
+    view does not tokenize (an unclosed quote, a trailing backslash)."""
+    view = marked.view
+    if layout:
+        lex = _TrackingLexer(view, posix=True, punctuation_chars=PUNCTUATION)
+        lex.whitespace = " \t\r"
+    else:
+        lex = _TrackingLexer(view, posix=True)
+    lex.whitespace_split = True
+    lex.commenters = ""
+    whitespace = lex.whitespace
+    size = len(view)
+    out = []
+    previous_end = 0
+    while True:
+        raw = lex.get_token()
+        if raw is None or raw == lex.eof:
+            break
+        # last_end is where the lexer's input stands once the token is whole:
+        # past the character that ended it (whitespace, consumed; or the next
+        # character, pushed back for the following token), unless the input
+        # ended with the token (state None).
+        end = lex.last_end if lex.state is None else lex.last_end - 1
+        start = previous_end
+        while start < size and view[start] in whitespace:
+            start += 1
+        previous_end = end
+        value = marked.restore(raw, start, end)
+        quoted = lex.last_was_quoted or marked.touches_quote(start, end)
+        out.append((Tok(value, lex.last_was_operator, quoted=quoted), start, end))
+    return out
 
 
 def lex_segments(chunk):
@@ -568,15 +1784,24 @@ def lex_segments(chunk):
     denied a command that deletes nothing. Literal command text like that
     shows up constantly in generated docs, tests, and commit messages.
 
+    CHUNK is a str or a _MarkedText (a chunk whose substitutions are already
+    marker residue, with the masked view built from the lexer's map of it).
+    shlex reads only the masked view, so a separator, a `<<` or a quote
+    inside an ANSI-C quote, a parameter or arithmetic expansion, or a
+    comment never reaches it as syntax (destructive-guard-unified-lexer
+    FR1-FR3, FR5, FR7).
+
     LEXED is True on this path: each returned token is a Tok, carrying (as
     `.is_operator`) whether shlex read it from bare operator syntax or from
     a word/quoted span — the signal split_redirects() needs to tell a real
     `>` apart from a quoted string that merely looks like one — and (as
-    `.quoted`, task0004) whether building the token passed through a quote
-    state at all, the analogous signal `_shape_leading()` needs to tell a
-    bare `case`/reserved word apart from a quoted string that merely
-    matches its text (`.is_operator` cannot do this for a word: neither a
-    bare nor a quoted letter-word ever enters the punctuation-sticky state).
+    `.quoted`, task0004) whether the token's span holds a quote of any kind,
+    the analogous signal `_shape_leading()` needs to tell a bare
+    `case`/reserved word apart from a quoted string that merely matches its
+    text (`.is_operator` cannot do this for a word: neither a bare nor a
+    quoted letter-word ever enters the punctuation-sticky state). A Tok's
+    value is the text of its span: characters hidden from shlex are given
+    back, so no value holds the mask character.
 
     SEP (task0001, case-pattern tracking) is the raw separator text that
     ended this statement (possibly fused with an adjacent separator, e.g.
@@ -591,13 +1816,9 @@ def lex_segments(chunk):
     unbalanced quote, usually. That path keeps the old false positives and
     returns LEXED False (and SEP always None, since separator provenance is
     unavailable there too); a parse failure is rare, and waving the chunk
-    through unexamined would be a hole rather than a nuisance. The fallback
-    reads the ORIGINAL, un-blanked CHUNK — _blank_comments() only changes
-    which characters a `#` comment's own newline separates, never which
-    quote pairing balances, so nothing about when this path is taken
-    changes; keeping it on the original text avoids any risk, however
-    small, of the blanking pass itself disagreeing with shlex about where
-    an unbalanced quote sits.
+    through unexamined would be a hole rather than a nuisance. The words of
+    each fallback statement come from tokens(), which reads them through the
+    lexer too: a comment is never part of a word there either.
 
     The lexing itself lives in _lex_layout(), which can also report where
     each statement sits in CHUNK; this function is its segments only.
@@ -606,12 +1827,12 @@ def lex_segments(chunk):
 
 
 def _lex_segments_with_ends(chunk):
-    """lex_segments()'s result plus SEG_ENDS, the character offset in CHUNK
-    (the lexed text is exactly as long as CHUNK, comments being blanked in
-    place) at which each statement's own separator starts — the offset where
-    the statement ends — and `len(CHUNK)` for the trailing statement. A
-    statement's number is its index in the result, so an offset maps to
-    "how many statements end at or before it" by bisecting SEG_ENDS
+    """lex_segments()'s result plus SEG_ENDS, the character offset in the
+    lexed text (CHUNK itself when it is a str, its marked TEXT when it is a
+    _MarkedText) at which each statement's own separator starts — the offset
+    where the statement ends — and the length of that text for the trailing
+    statement. A statement's number is its index in the result, so an offset
+    maps to "how many statements end at or before it" by bisecting SEG_ENDS
     (statements() uses that to place a heredoc body between statements).
     SEG_ENDS is None on the parse-failure fallback, whose statements carry
     no offsets, and whenever _lex_layout() reports no LAYOUT. It is read off
@@ -625,51 +1846,35 @@ def _lex_segments_with_ends(chunk):
     seg_ends = [
         starts[k + 1] - len(sep) for k, (_, _, sep) in enumerate(segments[:-1])
     ]
-    seg_ends.append(len(chunk))
+    seg_ends.append(len(chunk.text if isinstance(chunk, _MarkedText) else chunk))
     return segments, seg_ends
-
-
-def _operator_token_start(text, tok, end):
-    """Where in TEXT the bare operator token TOK begins, or None when TEXT
-    does not show TOK where the lexer's position says it ended.
-
-    END is how many characters the lexer had taken in when it returned TOK.
-    An operator token is made of punctuation only, so its text is exactly the
-    characters it was read from. The character that ended it was read as
-    well -- whitespace that was consumed, or the next character, pushed back
-    for the following token -- so END is one past the token; only at the end
-    of the input is END the token's own end. Telling these apart needs no
-    knowledge of the lexer's internals: the token's own text matches at
-    exactly one of the two candidates, because the character after it is
-    never one of the characters it is made of."""
-    n = len(tok)
-    for stop in (end, end - 1):
-        if n <= stop <= len(text) and text[stop - n : stop] == tok:
-            return stop - n
-    return None
 
 
 def _lex_layout(chunk, track):
     """lex_segments()'s one lexing pass: (segments, layout, operators).
     SEGMENTS is lex_segments()'s own return value, unchanged.
 
-    With TRACK, LAYOUT says where the statements sit in the text that was
-    lexed (the same offsets in CHUNK, since comment blanking keeps every
-    character's position) as a list: LAYOUT[k] is the offset where statement
-    k begins, which is the end of the separator before it (0 for the first).
-    Statement k is everything from LAYOUT[k] up to LAYOUT[k + 1], its own
-    terminating separator included, or to the end of the text for the last
-    one. LAYOUT is None when the chunk does not lex, or when a separator's
-    offset could not be confirmed against the text.
+    CHUNK is a str or a _MarkedText; the offsets below are offsets in the
+    text shlex's view was made from (a _MarkedText's TEXT), which is exactly
+    as long as that view.
+
+    With TRACK, LAYOUT says where the statements sit in that text as a list:
+    LAYOUT[k] is the offset where statement k begins, which is the end of the
+    separator before it (0 for the first). Statement k is everything from
+    LAYOUT[k] up to LAYOUT[k + 1], its own terminating separator included, or
+    to the end of the text for the last one. LAYOUT is None when the chunk
+    does not lex, or when a separator's offset could not be confirmed against
+    the text.
 
     OPERATORS, with TRACK, is the record of heredoc operator starts: {k: the
-    offsets in CHUNK, ascending, of every `<<` that statement k holds as bare,
+    offsets, ascending, of every `<<` that statement k holds as bare,
     unquoted operator syntax}. Only a token the lexer read from operator
-    syntax is searched, so a `<<` inside a quoted word never enters the
-    record; and a token fused with neighbouring punctuation (`;<<`, `(<<`)
-    is searched piece by piece, each piece attributed to the statement it
-    falls in. A statement holding no such `<<` has no entry. OPERATORS is
-    None exactly when LAYOUT is.
+    syntax is searched, so a `<<` inside a quoted word, a comment, an
+    expansion or an arithmetic region never enters the record; and a token
+    fused with neighbouring punctuation (`;<<`, `(<<`) is searched piece by
+    piece, each piece attributed to the statement it falls in. A statement
+    holding no such `<<` has no entry. OPERATORS is None exactly when LAYOUT
+    is.
 
     Separators are recognised once, here. Whatever places a heredoc's host
     statement reads these offsets rather than counting separator characters
@@ -677,24 +1882,14 @@ def _lex_layout(chunk, track):
     escaped `;` or `&`, a backslash before a newline) that this pass does
     not count as a separator can never be counted as one by a second
     rule."""
+    marked = chunk if isinstance(chunk, _MarkedText) else _MarkedText.plain(chunk)
+    text = marked.text
     try:
-        text = _blank_comments(chunk)
-        lex = _TrackingLexer(text, posix=True, punctuation_chars=PUNCTUATION)
-        lex.whitespace = " \t\r"
-        lex.whitespace_split = True
-        lex.commenters = ""
-        toks = []
-        while True:
-            raw = lex.get_token()
-            if raw is None or raw == lex.eof:
-                break
-            toks.append(
-                (Tok(raw, lex.last_was_operator, quoted=lex.last_was_quoted), lex.last_end)
-            )
+        toks = _tokenize_marked(marked)
     except ValueError:
         return [
             (tokens(seg), False, None)
-            for seg in SEGMENT_SPLIT.split(chunk)
+            for seg in SEGMENT_SPLIT.split(text)
             if seg.strip()
         ], None, None
 
@@ -702,7 +1897,7 @@ def _lex_layout(chunk, track):
     starts = [0]
     operators = {}
     confirmed = track
-    for t, end in toks:
+    for t, tok_start, tok_end in toks:
         # punctuation_chars makes shlex fuse adjacent punctuation into one
         # token, so a separator with no space before the next operator
         # (';>', '\n(') arrives as a single token that is neither a clean
@@ -740,8 +1935,9 @@ def _lex_layout(chunk, track):
             and t.is_operator
             and (any(c in SEGMENT_CHARS for c in t) or "<<" in t)
         ):
-            base = _operator_token_start(text, t, end)
-            if base is None:
+            if text[tok_start:tok_end] == t:
+                base = tok_start
+            else:
                 confirmed = False
         offset = 0
         for seg in segs:
@@ -1049,157 +2245,61 @@ def _delimiter_line_word(line):
     return m.group(1) if m else None
 
 
-# Characters at which _OperatorContext has something to decide, per quote
-# state (single quotes are searched for their closing `'` directly). Anything
-# else is plain text and skipped in bulk, so a long line costs a handful of
-# regex searches rather than a Python-level step per character.
-_CONTEXT_SPECIAL_UNQUOTED = re.compile(r"[\\'\"$`()#<]")
-_CONTEXT_SPECIAL_DOUBLE = re.compile(r"[\\\"$`]")
-_CONTEXT_SPECIAL_ANSI = re.compile(r"[\\']")
+def _strip_heredocs_mapped(chunk):
+    """(CHUNK with every real heredoc body removed, the ordered list of
+    HeredocRecord, the original-to-stripped _PositionMap). Which `<<` is a
+    real operator, and which lines are its body, is lex_shell()'s judgment
+    (P6, FR8): this function only cuts the lines the lexer reported.
 
-# The previous characters after which a `#` starts a comment -- the same set
-# _at_word_start() applies to scan_structure()'s own comment rule.
-_COMMENT_PREV_CHARS = frozenset(" \t\r\n;|&()<>")
+    Each removed body -- the body lines and the delimiter line, through its
+    line end -- is one `replace` segment of the map (its stripped range
+    empty, its REF the body's HeredocRecord); the text between bodies is
+    copied verbatim. Construction is linear in the chunk."""
+    lexmap = lex_shell(chunk, "shell")
+    ops = [op for op in lexmap.heredocs if op.body_start is not None]
+    if not ops:
+        return chunk, [], _identity_map(len(chunk))
+    close_ends = [op.close_end for op in ops]
+    removed_before = [0]
+    for op in ops:
+        removed_before.append(removed_before[-1] + op.close_end - op.body_start)
 
+    def stripped_pos(pos):
+        # Bodies removed from before POS: the ones that end at or before it.
+        return pos - removed_before[bisect.bisect_right(close_ends, pos)]
 
-class _OperatorContext:
-    """Forward, line-by-line reader of the quote / comment / substitution
-    state a heredoc operator candidate sits in (task0003, FR5). Fed the
-    chunk's lines in order by strip_heredocs(); its state is advanced over
-    every line strip_heredocs() keeps and is NEVER advanced over a real
-    heredoc body (those lines are skipped by strip_heredocs() itself), so a
-    quote character or `#` written inside a body never opens a quote or
-    starts a comment for the command text. One forward pass, nothing
-    restarts from an earlier line (NFR3).
-
-    Quoting follows scan_structure()'s rule (IMPLEMENTATION.md C2): outside
-    single quotes a backslash makes the next character literal, so an escaped
-    quote opens nothing; inside single quotes everything up to the next `'`
-    is literal; a `#` starts a comment only at the start of a word outside
-    quotes and the comment ends with its line.
-
-    A `<<`/`<<-` is a heredoc operator only where the shell parses it as
-    one: outside single quotes, double quotes and comments, or inside a
-    command substitution (`$( )` or backticks) -- even one written inside a
-    double-quoted string, since the substitution opens a fresh unquoted
-    context of its own. The quoting of the delimiter word (`<<'EOF'`,
-    `<<"EOF"`) is part of the operator (HEREDOC_OP consumes it), never a
-    quote start. Inside single quotes every `<<` is literal, including one
-    written within a `$(`, because the `$(` itself is literal there.
-
-    A candidate that is not a real operator is simply never returned: it
-    records no heredoc and captures no body, and the lines after it stay in
-    the chunk for the later stages to read by their actual syntax.
-    """
-
-    __slots__ = ("stack", "prev", "in_comment")
-
-    def __init__(self):
-        # Frames, innermost last: [kind, quote]. KIND is "top" (the chunk
-        # itself), "sub" (`$(`), "group" (`(`) or "tick" (a backtick pair);
-        # QUOTE is None, "'", '"' or "$'" (ANSI-C quoting) for that frame
-        # only -- a `$(` opened inside a double-quoted string starts with
-        # no quote of its own.
-        self.stack = [["top", None]]
-        # The last character of the previous line, so a `#` at the start of
-        # a line is judged by what really precedes it.
-        self.prev = "\n"
-        # A comment that has not reached its newline (the line ended with
-        # some other line terminator) continues on the next line.
-        self.in_comment = False
-
-    def real_operators(self, line):
-        """Advance over LINE (a whole line, its terminator included) and
-        return the HEREDOC_OP matches that are real operators, in order."""
-        if self.in_comment:
-            if line.endswith("\n"):
-                self.in_comment = False
-            self.prev = line[-1]
-            return []
-        found = []
-        stack = self.stack
-        n = len(line)
-        i = 0
-        while i < n:
-            frame = stack[-1]
-            quote = frame[1]
-            if quote == "'":
-                j = line.find("'", i)
-                if j == -1:
-                    break
-                frame[1] = None
-                i = j + 1
-                continue
-            if quote == "$'":
-                # `$'...'` (ANSI-C quoting): unlike plain single quotes a
-                # backslash escapes the next character, so `$'it\'s'` is
-                # one string and the `'` after the backslash closes nothing.
-                m = _CONTEXT_SPECIAL_ANSI.search(line, i)
-                if m is None:
-                    break
-                if m.group() == "\\":
-                    i = m.start() + 2
-                else:
-                    frame[1] = None
-                    i = m.end()
-                continue
-            m = (
-                _CONTEXT_SPECIAL_DOUBLE if quote == '"' else _CONTEXT_SPECIAL_UNQUOTED
-            ).search(line, i)
-            if m is None:
-                break
-            i = m.start()
-            c = line[i]
-            if c == "\\":
-                i += 2
-                continue
-            if c == "$":
-                if line.startswith("(", i + 1):
-                    stack.append(["sub", None])
-                    i += 2
-                elif quote is None and line.startswith("'", i + 1):
-                    frame[1] = "$'"
-                    i += 2
-                else:
-                    i += 1
-                continue
-            if c == "`":
-                if quote is None and frame[0] == "tick":
-                    stack.pop()
-                else:
-                    stack.append(["tick", None])
-                i += 1
-                continue
-            if quote == '"':
-                frame[1] = None  # c is the closing `"`
-                i += 1
-                continue
-            # Unquoted within this frame.
-            if c == "#":
-                before = line[i - 1] if i else self.prev
-                if before in _COMMENT_PREV_CHARS:
-                    self.in_comment = not line.endswith("\n")
-                    break
-            elif c == "'" or c == '"':
-                frame[1] = c
-            elif c == "(":
-                stack.append(["group", None])
-            elif c == ")":
-                if frame[0] in ("sub", "group"):
-                    stack.pop()
-            elif c == "<" and line.startswith("<<<", i):
-                # here-string: takes no body, skip all three characters
-                i += 3
-                continue
-            elif c == "<" and line.startswith("<<", i):
-                op = HEREDOC_OP.match(line, i)
-                if op:
-                    found.append(op)
-                    i = op.end()
-                    continue
-            i += 1
-        self.prev = line[-1]
-        return found
+    out = []
+    records = []
+    segments = []
+    cursor = 0
+    new_cursor = 0
+    for op in ops:
+        record = HeredocRecord(
+            chunk[op.body_start : op.body_end],
+            stripped_pos(op.start),
+            stripped_pos(op.end),
+            op.quoted,
+        )
+        records.append(record)
+        if op.body_start > cursor:
+            out.append(chunk[cursor : op.body_start])
+            length = op.body_start - cursor
+            segments.append(
+                ("copy", cursor, op.body_start, new_cursor, new_cursor + length, None)
+            )
+            new_cursor += length
+        segments.append(
+            ("replace", op.body_start, op.close_end, new_cursor, new_cursor, record)
+        )
+        cursor = op.close_end
+    if cursor < len(chunk):
+        out.append(chunk[cursor:])
+        length = len(chunk) - cursor
+        segments.append(
+            ("copy", cursor, len(chunk), new_cursor, new_cursor + length, None)
+        )
+        new_cursor += length
+    return "".join(out), records, _PositionMap(segments, len(chunk), new_cursor)
 
 
 def strip_heredocs(chunk):
@@ -1217,78 +2317,28 @@ def strip_heredocs(chunk):
       consumes nothing (its would-be body stays in the chunk, exactly as
       before this task), and does not stop a LATER operator on the same
       line from finding its own delimiter independently.
-    - Only a REAL operator is collected (_OperatorContext above): a `<<WORD`
-      inside single quotes, double quotes or a `#`-comment is not syntax at
-      all, so it opens no heredoc and consumes no body -- it stays in the
-      chunk as ordinary text and the lines after it stay where they are, to
-      be read by their actual syntax (as the continuation of an open quote,
-      or as commands). The quote / comment state is carried across lines
-      and is advanced over every line this function keeps, but never over a
-      real heredoc body: those lines are skipped, so a quote character or
-      `#` inside one opens nothing in the command text. A real operator
-      inside a command substitution stays one, even when the substitution
-      sits in a double-quoted string.
+    - Only a REAL operator is collected: a `<<WORD` inside single quotes,
+      double quotes, a `#`-comment, a parameter expansion or an arithmetic
+      region is not syntax at all, so it opens no heredoc and consumes no
+      body -- it stays in the chunk as ordinary text and the lines after it
+      stay where they are, to be read by their actual syntax. A real
+      operator inside a command substitution stays one, even when the
+      substitution sits in a double-quoted string. The body lines of a real
+      operator change no lexer state, so a quote character or `#` inside one
+      opens nothing in the command text after its delimiter line.
 
-    Delimiter-line CANDIDATES (every line that is nothing but a bare word,
-    per _delimiter_line_word()) are indexed once, up front, into
-    WORD_TO_LINES. Finding (or ruling out) a given operator's own closing
-    line is then a bisect lookup into that word's own candidate list --
-    O(log m), m being how many lines share that one word -- rather than a
-    linear scan of everything after the operator. This is what keeps an
-    unterminated operator from costing a fresh scan of the remaining input
-    (NFR3, TM-5): the line-by-line pass below still visits every line
-    exactly once, in order, and a delimiter that never appears anywhere
-    later is discovered by an empty/exhausted bisect range, never by
-    reading all the way to the end of the chunk.
-    """
-    lines = chunk.splitlines(keepends=True)
-    n = len(lines)
-    word_to_lines = {}
-    for idx, line in enumerate(lines):
-        word = _delimiter_line_word(line)
-        if word is not None:
-            word_to_lines.setdefault(word, []).append(idx)
+    Which operators are real, and which lines are their bodies, is decided
+    by lex_shell() (destructive-guard-unified-lexer FR8); nothing here
+    classifies a character. The delimiter-line lookup is the lexer's indexed
+    one: finding (or ruling out) an operator's own closing line is a bisect
+    into the candidate lines of that one word, never a scan of everything
+    after the operator, so an unterminated operator does not cost a fresh
+    pass over the remaining input (NFR3, TM-5).
 
-    out = []
-    records = []
-    out_len = 0
-    context = _OperatorContext()
-    i = 0
-    while i < n:
-        line = lines[i]
-        matches = context.real_operators(line)
-        if not matches:
-            out.append(line)
-            out_len += len(line)
-            i += 1
-            continue
-        # The operator line is kept verbatim; each operator's own offset in
-        # the STRIPPED output is fixed before it, since appending LINE
-        # unchanged does not move where its own text starts.
-        op_positions = [
-            (out_len + m.start(), out_len + m.end(), m.group(2), bool(m.group(1)))
-            for m in matches
-        ]
-        out.append(line)
-        out_len += len(line)
-        start = i + 1
-        for op_start, op_end, delimiter, quoted in op_positions:
-            candidates = word_to_lines.get(delimiter, ())
-            pos = bisect.bisect_left(candidates, start)
-            if pos < len(candidates):
-                found = candidates[pos]
-                records.append(
-                    HeredocRecord(
-                        "".join(lines[start:found]), op_start, op_end, quoted
-                    )
-                )
-                start = found + 1
-            # No candidate at/after START for THIS operator: it consumes
-            # nothing, and START stays put, so a LATER operator on this
-            # same line still searches from the same point (Component 1
-            # postcondition 3).
-        i = start
-    return "".join(out), records
+    _strip_heredocs_mapped() is the same result plus the position map from
+    the original chunk to the stripped one."""
+    stripped, records, _omap = _strip_heredocs_mapped(chunk)
+    return stripped, records
 
 
 # --- Component 2: per-heredoc destination decision -------------------------
@@ -1590,59 +2640,25 @@ def _is_assignment_only(words_only):
 
 # --- Component 1: lexical structure scan -----------------------------------
 #
-# One scanner, shared by every caller that needs to find comment spans,
-# quoted spans, or command-substitution spans: chunk processing (statements()
-# itself), heredoc operator collection (strip_heredocs()) and body-
-# substitution extraction (_extract_heredoc_body_substitutions()). It is the
-# only routine in the file that decides where a substitution starts and
-# ends, so a heredoc's destination, and every other caller, agree by
+# scan_structure() is the structural reading every caller that needs to find
+# comment spans, quoted spans, or substitution spans shares: chunk processing
+# (statements() itself), heredoc operator collection (strip_heredocs()) and
+# body-substitution extraction (_extract_heredoc_body_substitutions()). Where
+# a substitution starts and ends is lex_shell()'s judgment (the unified lexer
+# above), so a heredoc's destination, and every other caller, agree by
 # construction rather than by two independent re-lexes drawing the same line
 # differently.
-
-_SUB_WORD_STOP = frozenset(' \t\r\n;|&()<>"\'`$')
-
-
-def _word_at(text, i):
-    """The maximal run of characters starting at I that are not whitespace,
-    a statement separator/operator, a quote, `$`, or a backtick -- used only
-    to recognise `case`/`esac` as WHOLE words, never as a substring of a
-    longer identifier (`case-sensitive` is one word, not the keyword).
-
-    A backslash and the character it escapes stay inside the word, whatever
-    that character is (C2): an escaped quote is a literal part of the word,
-    never the end of it. Stopping at the quote would hand the quote back to
-    scan_structure()'s main loop as a quote start (`echo it\\'s`,
-    `echo a\\"b`), so the rest of the text would be read as quoted."""
-    j = i
-    n = len(text)
-    while j < n:
-        c = text[j]
-        if c == "\\" and j + 1 < n:
-            j += 2
-        elif c in _SUB_WORD_STOP:
-            break
-        else:
-            j += 1
-    return text[i:j], j
-
-
-def _at_word_start(text, i):
-    """Whether TEXT[I] could begin a new word: start of text, or the
-    previous character is whitespace or one of the operator characters a
-    word never continues across."""
-    if i == 0:
-        return True
-    return text[i - 1] in ' \t\r\n;|&()<>'
-
 
 _SQ_PAREN_TOKEN = re.compile(r"\$\(|[()]")
 
 
 def _single_quoted_sub_closes(text, start, limit):
     """Closing parenthesis of every `$(` in TEXT[START:LIMIT], found in ONE
-    forward pass -- the rest of one single-quoted span for the
-    honor_single_quotes=False scan in scan_structure(), LIMIT being its
-    closing quote (or the end of TEXT when the quote is never closed).
+    forward pass -- the rest of one single-quote or ANSI-C-quote region, for
+    the single-quote substitution candidates of lex_shell() (P8, FR9), LIMIT
+    being its closing quote (or the end of TEXT when the quote is never
+    closed). This is the candidate rule's own helper: only
+    _lex_quote_candidates() calls it.
     Returns {offset of the `$`: offset of its `)`}; a `$(` absent from the
     result stays unmatched. Each character in the range is examined a
     bounded number of times however many `$(` it holds, so the total cost
@@ -1688,29 +2704,36 @@ def _single_quoted_sub_closes(text, start, limit):
 
 
 def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=True):
-    """Component 1. One pass over TEXT (a text and an outer MODE, `shell`
-    or `heredoc-body`). Returns (spans, parent_of, unmatched, opaque,
-    containing_span):
+    """Component 1. The structural reading of TEXT (a text and an outer MODE,
+    `shell` or `heredoc-body`), taken from lex_shell(): this function keeps
+    the span bookkeeping and the choice of which lexer output each search
+    policy reads, and classifies no character itself
+    (destructive-guard-unified-lexer layer 3). Returns (spans, parent_of,
+    unmatched, opaque, containing_span):
 
-    - SPANS: every `$( … )`/`` ` … ` `` span found, at every nesting level.
+    - SPANS: every `$( … )`/`` ` … ` ``/`<( … )`/`>( … )` span found, at every
+      nesting level -- inside a parameter expansion, an arithmetic expansion
+      or a double-quoted string included (FR4). A process substitution is a
+      substitution (D5): its span starts at the `<` or `>`, and its body is
+      its own chunk.
     - PARENT_OF: {span: its immediate enclosing span, or None} -- a span
       strictly containing it with nothing tighter in between.
     - UNMATCHED: start offsets of an opener never closed by end of text.
     - OPAQUE: TOP-LEVEL ranges inert for statement-separator counting: a
-      quoted span, a comment span, or a top-level substitution span (mode
-      `shell` only -- `heredoc-body` mode returns `[]` here, since quotes
-      and comments are literal at that mode's own top level and no caller
-      needs separator counting over heredoc-body text). No caller counts
-      separators from these ranges any more: which statement a position
-      belongs to is read from lex_segments() itself (_lex_layout()), so
-      there is one separator rule, not two.
+      quoted span, a comment span, a parameter-expansion or arithmetic
+      region, or a top-level substitution span (mode `shell` only --
+      `heredoc-body` mode returns `[]` here, since quotes and comments are
+      literal at that mode's own top level and no caller needs separator
+      counting over heredoc-body text). No caller counts separators from
+      these ranges any more: which statement a position belongs to is read
+      from lex_segments() itself (_lex_layout()), so there is one separator
+      rule, not two.
     - CONTAINING_SPAN: {checkpoint position: the innermost span enclosing
-      it, or None} for every position in CHECKPOINTS, found for free while
-      the scan passes each one -- the position-only way a heredoc operator
-      is matched to the substitution (if any) that holds it, with no
-      marker text ever written into TEXT (Component 3: "no marker
-      characters are inserted... a control character in the input has no
-      special meaning").
+      it, or None} for every position in CHECKPOINTS -- the position-only way
+      a heredoc operator is matched to the substitution (if any) that holds
+      it, with no marker text ever written into TEXT (Component 3: "no
+      marker characters are inserted... a control character in the input has
+      no special meaning").
 
     Postconditions:
     1. Inside a substitution body, shell rules apply in BOTH modes: a `)`
@@ -1723,11 +2746,11 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
     3. In `heredoc-body` mode, quote characters and `#` outside any
        substitution are literal text. A backslash-escaped `$` or backtick
        opens no span, in either mode.
-    4. An unterminated span is reported as unterminated (in UNMATCHED) and
-       extends to the end of the text; it is never truncated silently.
+    4. An unterminated span is reported as unterminated (in UNMATCHED); it is
+       not among SPANS and extends to the end of the text; it is never
+       truncated silently.
     5. Outside quotes, a backslash-escaped `'` or `"` is a literal
-       character, never a quote start (C2) -- in the main loop and in the
-       word reading that tells `case` and `esac` apart (_word_at()) alike.
+       character, never a quote start (C2).
 
     HONOR_SINGLE_QUOTES defaults to True, which is postcondition 2 exactly
     (real shell semantics: single quotes suppress expansion, so a `$(`/
@@ -1736,270 +2759,86 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
     `_extract_heredoc_body_substitutions()`), since Component 3/4's
     statement/case-state analysis needs the position of a REAL shell
     separator, which a single-quoted `$(`/backtick can never introduce.
-    Passing False keeps every other rule identical but stops single quotes
-    from suppressing `$(`/backtick recognition -- used ONLY by
-    `statements()`'s own general, non-heredoc substitution discovery (the
-    span list `_mark_substitutions()`/`_mark_quoted_substitutions()` mark
-    and that `pending` recurses into), which predates this task and must
-    keep its own pre-existing, quote-agnostic reach: check_rm() and the
-    other per-token checks read `.unresolved` as "this token's value was
-    never fully present, regardless of how the substitution sitting in it
-    was written" -- a static, conservative reading that intentionally does
-    not depend on whether a real shell would actually expand that spot,
-    the same way UNRESOLVED_EXPANSION's own raw-text search (check_rm()
-    step 3) never did either. Since the only code path this flag touches
-    is the `q == "'"` branch, every other input -- and this same function's
-    heredoc-facing callers, which never pass it -- is completely unaffected.
+    Passing False keeps every other rule identical but also reports the
+    lexer's single-quote substitution candidates (P8, FR9: the `$(`/backtick
+    ranges the pre-change broad search found inside every single-quote and
+    ANSI-C-quote region) -- used ONLY by `statements()`'s own general,
+    non-heredoc substitution discovery (the span list
+    `_mark_substitutions()`/`_mark_quoted_substitutions()` mark and that
+    `pending` recurses into), which predates this task and must keep its own
+    pre-existing, quote-agnostic reach: check_rm() and the other per-token
+    checks read `.unresolved` as "this token's value was never fully
+    present, regardless of how the substitution sitting in it was written"
+    -- a static, conservative reading that intentionally does not depend on
+    whether a real shell would actually expand that spot, the same way
+    UNRESOLVED_EXPANSION's own raw-text search (check_rm() step 3) never did
+    either.
     """
+    lexmap = lex_shell(text, mode, False)
+    regions = lexmap.regions
+    # Per region, the index of the nearest CLOSED substitution around it:
+    # only a closed substitution is a span, so an unterminated one is no
+    # parent (its content is reported as if it sat at the level outside).
+    around = [None] * len(regions)
+    span_of = {}
     spans = []
-    parent_open_of = {}
     unmatched = []
-    opaque = []
-    containing_open = {}
-
-    checkpoints = sorted(set(checkpoints or ()))
-    ci = 0
-
-    # Stack of frames: [open_pos_or_None, is_sub, quote_char_or_None,
-    # case_stack]. stack[0] is the implicit top-level frame (never itself a
-    # span). CASE_STACK is per FRAME -- a case construct cannot span a
-    # subshell/substitution boundary, so each pushed frame starts fresh,
-    # mirroring statements()'s own per-chunk reset.
-    stack = [[None, False, None, []]]
-    sub_open_stack = []
-    top_opaque_start = [None]
-    # Closes of the `$(` in the single-quoted span being scanned (only for
-    # honor_single_quotes=False): None until the span's first `$(`, then
-    # {offset of `$`: offset of `)`}. Reset at every single-quote opener.
-    sq_closes = None
-
-    def close_top_opaque(end):
-        if top_opaque_start[0] is not None:
-            opaque.append((top_opaque_start[0], end))
-            top_opaque_start[0] = None
-
-    n = len(text)
-    i = 0
-    while i < n:
-        while ci < len(checkpoints) and checkpoints[ci] <= i:
-            containing_open[checkpoints[ci]] = (
-                sub_open_stack[-1] if sub_open_stack else None
+    for index, region in enumerate(regions):
+        parent = region.parent
+        if parent is not None:
+            parent_region = regions[parent]
+            around[index] = (
+                parent
+                if parent_region.kind in LEX_SUBSTITUTION_KINDS and parent_region.closed
+                else around[parent]
             )
-            ci += 1
-
-        frame = stack[-1]
-        depth = len(stack) - 1
-        literal = depth == 0 and mode == "heredoc-body"
-        q = frame[2]
-        c = text[i]
-
-        if q == "'":
-            if c == "'":
-                frame[2] = None
-                if depth == 0:
-                    close_top_opaque(i + 1)
-                i += 1
-                continue
-            if not honor_single_quotes and c == "$" and i + 1 < n and text[i + 1] == "(":
-                if sq_closes is None:
-                    # First `$(` of this single-quoted span: resolve every
-                    # `$(` left in the span in one pass instead of searching
-                    # from each one (that was quadratic). The close is inside
-                    # the single-quoted range only (it holds no `'`, so the
-                    # span can never leak past the quote).
-                    quote_end = text.find("'", i + 1)
-                    sq_closes = _single_quoted_sub_closes(
-                        text, i, quote_end if quote_end != -1 else n
-                    )
-                close_pos = sq_closes.get(i, -1)
-                if close_pos != -1:
-                    spans.append((i, close_pos + 1))
-                    parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-                    i = close_pos + 1
-                    continue
-                i += 1
-                continue
-            if not honor_single_quotes and c == "`":
-                quote_end = text.find("'", i + 1)
-                j = text.find("`", i + 1)
-                if j == -1 or (quote_end != -1 and j > quote_end):
-                    i += 1
-                    continue
-                spans.append((i, j + 1))
-                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-                if depth == 0:
-                    if top_opaque_start[0] is None:
-                        top_opaque_start[0] = i
-                    close_top_opaque(j + 1)
-                i = j + 1
-                continue
-            i += 1
-            continue
-
-        if c == "\\" and i + 1 < n:
-            i += 2
-            continue
-
-        if q == '"':
-            if c == '"':
-                frame[2] = None
-                if depth == 0:
-                    close_top_opaque(i + 1)
-                i += 1
-                continue
-            if c == "$" and i + 1 < n and text[i + 1] == "(":
-                stack.append([i, True, None, []])
-                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-                sub_open_stack.append(i)
-                i += 2
-                continue
-            if c == "`":
-                j = text.find("`", i + 1)
-                if j == -1:
-                    unmatched.append(i)
-                    i = n
-                    break
-                spans.append((i, j + 1))
-                parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-                sub_open_stack.append(i)
-                while ci < len(checkpoints) and checkpoints[ci] <= j:
-                    containing_open[checkpoints[ci]] = sub_open_stack[-1]
-                    ci += 1
-                sub_open_stack.pop()
-                i = j + 1
-                continue
-            i += 1
-            continue
-
-        # Unquoted within this frame.
-        if not literal and c == "#" and _at_word_start(text, i):
-            j = text.find("\n", i)
-            end = j if j != -1 else n
-            if depth == 0:
-                if top_opaque_start[0] is None:
-                    top_opaque_start[0] = i
-                close_top_opaque(end)
-            i = end
-            continue
-
-        if not literal and c == "'":
-            frame[2] = "'"
-            sq_closes = None
-            if depth == 0 and top_opaque_start[0] is None:
-                top_opaque_start[0] = i
-            i += 1
-            continue
-        if not literal and c == '"':
-            frame[2] = '"'
-            if depth == 0 and top_opaque_start[0] is None:
-                top_opaque_start[0] = i
-            i += 1
-            continue
-
-        if c == "$" and i + 1 < n and text[i + 1] == "(":
-            stack.append([i, True, None, []])
-            parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-            sub_open_stack.append(i)
-            if depth == 0 and top_opaque_start[0] is None:
-                top_opaque_start[0] = i
-            i += 2
-            continue
-
-        if c == "`":
-            j = text.find("`", i + 1)
-            if j == -1:
-                unmatched.append(i)
-                i = n
-                break
-            spans.append((i, j + 1))
-            parent_open_of[i] = sub_open_stack[-1] if sub_open_stack else None
-            sub_open_stack.append(i)
-            while ci < len(checkpoints) and checkpoints[ci] <= j:
-                containing_open[checkpoints[ci]] = sub_open_stack[-1]
-                ci += 1
-            sub_open_stack.pop()
-            if depth == 0:
-                if top_opaque_start[0] is None:
-                    top_opaque_start[0] = i
-                close_top_opaque(j + 1)
-            i = j + 1
-            continue
-
-        if c == "(":
-            stack.append([i, False, None, []])
-            i += 1
-            continue
-
-        case_stack = frame[3]
-        top = case_stack[-1] if case_stack else None
-        if c == ")":
-            if top in ("pattern_first", "pattern_rest"):
-                # A case pattern's own closer -- never the frame's closer,
-                # regardless of nesting depth (postcondition 1).
-                case_stack[-1] = "body"
-                i += 1
-                continue
-            if len(stack) > 1:
-                open_pos, is_sub, _q, _cs = stack.pop()
-                if is_sub:
-                    spans.append((open_pos, i + 1))
-                    if sub_open_stack and sub_open_stack[-1] == open_pos:
-                        sub_open_stack.pop()
-                if len(stack) == 1:
-                    close_top_opaque(i + 1)
-            i += 1
-            continue
-
-        if (c.isalnum() or c == "_") and _at_word_start(text, i):
-            word, end = _word_at(text, i)
-            if top == "await_subject":
-                case_stack[-1] = "await_in"
-            elif top == "await_in":
-                case_stack[-1] = "pattern_first"
-            elif top == "pattern_first":
-                rest = end
-                while rest < n and text[rest] in " \t":
-                    rest += 1
-                followed_by_closer = rest < n and text[rest] == ")"
-                if word == "esac" and not followed_by_closer:
-                    case_stack.pop()
-                else:
-                    case_stack[-1] = "pattern_rest"
-            elif top == "pattern_rest":
-                pass
+        if region.kind in LEX_SUBSTITUTION_KINDS:
+            if region.closed:
+                span = (region.start, region.end)
+                span_of[index] = span
+                spans.append(span)
             else:
-                if word == "esac" and case_stack:
-                    case_stack.pop()
-                elif word == "case":
-                    case_stack.append("await_subject")
-            i = end
-            continue
-
-        i += 1
-
-    while ci < len(checkpoints):
-        containing_open[checkpoints[ci]] = (
-            sub_open_stack[-1] if sub_open_stack else None
-        )
-        ci += 1
-
-    for frame in stack[1:]:
-        if frame[1]:
-            unmatched.append(frame[0])
-    if top_opaque_start[0] is not None:
-        opaque.append((top_opaque_start[0], n))
-
-    open_to_span = {s: (s, e) for s, e in spans}
+                unmatched.append(region.start)
     parent_of = {}
-    for s, e in spans:
-        p_open = parent_open_of.get(s)
-        parent_of[(s, e)] = open_to_span.get(p_open) if p_open is not None else None
+    for index, span in span_of.items():
+        enclosing = around[index]
+        parent_of[span] = span_of[enclosing] if enclosing is not None else None
 
-    opaque.sort()
-    containing_span = {
-        pos: (open_to_span.get(open_pos) if open_pos is not None else None)
-        for pos, open_pos in containing_open.items()
-    }
+    if not honor_single_quotes:
+        for candidate in lexmap.candidates:
+            span = (candidate.start, candidate.end)
+            spans.append(span)
+            enclosing = candidate.enclosing
+            if enclosing is not None and not regions[enclosing].closed:
+                enclosing = around[enclosing]
+            parent_of[span] = span_of[enclosing] if enclosing is not None else None
+
+    opaque = []
+    if mode == "shell":
+        opaque = [
+            (region.start, region.end)
+            for region in regions
+            if region.parent is None and region.kind in LEX_OPAQUE_KINDS
+        ]
+
+    containing_span = {}
+    if checkpoints:
+        # The innermost substitution (open or not) strictly around each
+        # checkpoint; one sweep over the regions, which are ordered by start.
+        subs = [
+            (index, region)
+            for index, region in enumerate(regions)
+            if region.kind in LEX_SUBSTITUTION_KINDS
+        ]
+        stack = []
+        cursor = 0
+        for pos in sorted(set(checkpoints)):
+            while cursor < len(subs) and subs[cursor][1].start < pos:
+                stack.append(subs[cursor])
+                cursor += 1
+            while stack and stack[-1][1].end <= pos:
+                stack.pop()
+            containing_span[pos] = span_of.get(stack[-1][0]) if stack else None
     return spans, parent_of, unmatched, opaque, containing_span
 
 
@@ -2491,21 +3330,6 @@ def _decide_destination(chain):
     return "data"
 
 
-def _marked_offsets(top_spans):
-    """(ENDS, REMOVED) for turning an offset in a text into the offset of the
-    same character in _mark_substitutions(text, top_spans, 0): ENDS[k] is
-    where top span k ends in the text, and REMOVED[k] is how many characters
-    the first k spans lose when each is replaced by its marker (REMOVED has
-    one more entry than ENDS)."""
-    ends = []
-    removed = [0]
-    for k, (start, end) in enumerate(top_spans):
-        ends.append(end)
-        marker = len(f"{UNRESOLVED_MARK}{k}{_MARK_TERMINATOR}")
-        removed.append(removed[-1] + (end - start) - marker)
-    return ends, removed
-
-
 def _statement_holds_operator(operators, idx, marked_pos):
     """Whether the lex_segments() statement IDX holds the heredoc operator
     whose `<<` starts at MARKED_POS (FR2), MARKED_POS being the operator's
@@ -2547,22 +3371,23 @@ def _statement_info_at(text, pos, memo_key, tables_cache, operator=False):
         group_closer_of, open_groups_at, mismatched = _track_groups(table)
         cached = (
             table, group_closer_of, open_groups_at, {}, unmatched, starts,
-            operators, _marked_offsets(top_spans), mismatched,
+            operators, marked.posmap, mismatched,
         )
         tables_cache[memo_key] = cached
     (
         table, group_closer_of, open_groups_at, pipe_memo, unmatched, starts,
-        operators, offsets, mismatched,
+        operators, posmap, mismatched,
     ) = cached
     if any(p < pos for p in unmatched):
         return None
     if starts is None:
         return None
     # POS in the text the lexer actually saw (substitutions replaced by their
-    # markers), then a bisect over the statement starts: O(log n) per query
-    # against one O(n) pass shared by every heredoc in TEXT (NFR3).
-    ends, removed = offsets
-    marked_pos = pos - removed[bisect.bisect_right(ends, pos)]
+    # markers), through the position map -- a position inside a marked
+    # substitution lands on its marker -- then a bisect over the statement
+    # starts: O(log n) per query against one O(n) pass shared by every
+    # heredoc in TEXT (NFR3).
+    marked_pos = posmap.to_new(pos)[1]
     idx = bisect.bisect_right(starts, marked_pos) - 1
     if idx >= len(table):
         return None
@@ -2642,18 +3467,77 @@ def _heredoc_destinations(chunk, records, chunk_scan):
     return destinations
 
 
+def _substitution_body_range(chunk, span):
+    """The part of SPAN -- a (start, end) pair from scan_structure() -- that
+    marking replaces by marker residue. A command or backtick substitution is
+    replaced whole. A process substitution `<( … )` / `>( … )` is replaced by
+    its BODY only: the two opener characters and the closing `)` stay in the
+    text, so the statement holding it still shows the opener (and the closer)
+    as bare operator tokens, which is what _has_process_substitution() reads
+    and what keeps `tee >(bash) <<'EOF'` a sink-bound heredoc (D5). The body
+    is queued as its own chunk, like the body of a `$( … )`."""
+    start, end = span
+    if chunk[start] in "<>":
+        return start + 2, end - 1
+    return start, end
+
+
+def _mark_with(chunk, top_spans, marker_for):
+    """CHUNK with the body of every span in TOP_SPANS replaced by
+    MARKER_FOR(span index, span), as a _MarkedText (the position map from
+    CHUNK to the marked text is built here, each replaced body one `replace`
+    segment whose marker may be shorter or longer than it)."""
+    out = []
+    segments = []
+    cursor = 0
+    new_cursor = 0
+    for i, span in enumerate(top_spans):
+        lo, hi = _substitution_body_range(chunk, span)
+        if lo >= hi:
+            continue  # an empty process substitution body: nothing to mark
+        if lo > cursor:
+            out.append(chunk[cursor:lo])
+            segments.append(("copy", cursor, lo, new_cursor, new_cursor + lo - cursor, None))
+            new_cursor += lo - cursor
+        marker = marker_for(i, span)
+        out.append(marker)
+        segments.append(("replace", lo, hi, new_cursor, new_cursor + len(marker), span))
+        new_cursor += len(marker)
+        cursor = hi
+    if cursor < len(chunk):
+        out.append(chunk[cursor:])
+        segments.append(
+            ("copy", cursor, len(chunk), new_cursor, new_cursor + len(chunk) - cursor, None)
+        )
+        new_cursor += len(chunk) - cursor
+    return _MarkedText(
+        chunk, "".join(out), _PositionMap(segments, len(chunk), new_cursor)
+    )
+
+
 def _mark_substitutions(chunk, top_spans, offset_=0):
     """Blank every span in TOP_SPANS -- CHUNK's own top-level `$( … )`/
-    `` ` … ` `` spans, Component 1's scan_structure() result narrowed by
-    _top_level_spans() -- by replacing it with UNRESOLVED_MARK, so the word
-    it sat in survives lexing as a token no matter whether the span filled
-    the whole word or sat beside real text (destructive-guard-command-
-    substitution task0001 Design Part 1, "evidence survives the lexing
-    boundary"). Unlike SUBSTITUTION's own single-level, paren-free regex,
-    TOP_SPANS already reflects true nesting (Component 1), so a chunk whose
-    only substitution is several levels deep is still marked correctly here
-    -- the nested levels are found in turn once this span's own inner text
-    is queued and re-scanned as its own chunk (see call site).
+    `` ` … ` ``/`<( … )`/`>( … )` spans, Component 1's scan_structure()
+    result narrowed by _top_level_spans() -- by replacing it with
+    UNRESOLVED_MARK, so the word it sat in survives lexing as a token no
+    matter whether the span filled the whole word or sat beside real text
+    (destructive-guard-command-substitution task0001 Design Part 1, "evidence
+    survives the lexing boundary"). Unlike SUBSTITUTION's own single-level,
+    paren-free regex, TOP_SPANS already reflects true nesting (Component 1),
+    so a chunk whose only substitution is several levels deep is still marked
+    correctly here -- the nested levels are found in turn once this span's
+    own inner text is queued and re-scanned as its own chunk (see call site).
+
+    The result is a _MarkedText: the marked text, the position map from CHUNK
+    to it (each marked substitution one replaced segment, whose marker may be
+    longer or shorter than the substitution), and the masked view shlex reads
+    (destructive-guard-unified-lexer FR7).
+
+    A process substitution is marked by its BODY only: `<(` / `>(` and the
+    closing `)` stay in the text as operator tokens, the body becomes marker
+    residue. The statement holding it therefore keeps the opener evidence
+    _has_process_substitution() reads (D5), while the body -- queued as its
+    own chunk -- is scanned like the body of a `$(...)`.
 
     Unlike before this task, there is no boundary test here and no separate
     "blank to a space" branch: every match becomes marker residue, and
@@ -2688,20 +3572,16 @@ def _mark_substitutions(chunk, top_spans, offset_=0):
     `bash -c '...'` payload pushed back onto PENDING), where a fresh,
     differently-numbered local list would otherwise either miss the entry
     (index out of range) or, worse, resolve to an unrelated entry that
-    merely happens to be in range. This lets _strip_unresolved_marks()
-    recover the right ALL_SUBS entry for a surviving marker by direct index
-    lookup even when some other span in the same chunk never reaches the
-    token stream at all (dropped whole by a lexer-level comment).
+    merely happens to be in range. This lets _strip_unresolved_marks() recover
+    the right ALL_SUBS entry for a surviving marker by direct index lookup
+    even when some other span in the same chunk never reaches the token
+    stream at all (dropped whole by a comment).
     """
-    out = []
-    cursor = 0
-    for i, (start, end) in enumerate(top_spans):
-        out.append(chunk[cursor:start])
-        index = offset_ + i
-        out.append(f"{UNRESOLVED_MARK}{index}{_MARK_TERMINATOR}")
-        cursor = end
-    out.append(chunk[cursor:])
-    return "".join(out)
+    return _mark_with(
+        chunk,
+        top_spans,
+        lambda i, span: f"{UNRESOLVED_MARK}{offset_ + i}{_MARK_TERMINATOR}",
+    )
 
 
 def _mark_quoted_substitutions(chunk, top_spans):
@@ -2717,7 +3597,8 @@ def _mark_quoted_substitutions(chunk, top_spans):
     no index, no terminator — the two functions' outputs are compared only
     by segment/token shape, never by absolute offset, so this narrower
     replacement is enough; see this function's own second docstring
-    paragraph below).
+    paragraph below). A process substitution is marked by its body only, as
+    in _mark_substitutions().
 
     Used ONLY by extract_shell_payload() (task0001 FR4), which lexes this
     output as a second, parallel token sequence to _mark_substitutions()'s
@@ -2727,17 +3608,14 @@ def _mark_quoted_substitutions(chunk, top_spans):
     that specific substitution was written enclosed in quotes. No other
     stage calls this function.
     """
-    out = []
-    cursor = 0
-    for start, end in top_spans:
-        out.append(chunk[cursor:start])
+
+    def marker_for(_i, span):
+        start, end = span
         if 0 < start and end < len(chunk) and chunk[start - 1] == '"' and chunk[end] == '"':
-            out.append(QUOTED_MARK)
-        else:
-            out.append(UNRESOLVED_MARK)
-        cursor = end
-    out.append(chunk[cursor:])
-    return "".join(out)
+            return QUOTED_MARK
+        return UNRESOLVED_MARK
+
+    return _mark_with(chunk, top_spans, marker_for)
 
 
 def _strip_unresolved_marks(toks, chunk_subs=None):
@@ -2771,9 +3649,9 @@ def _strip_unresolved_marks(toks, chunk_subs=None):
     back out and looks CHUNK_SUBS up directly, rather than counting markers
     left-to-right across the token stream. A left-to-right ordinal count
     would desync the moment any match in the chunk never reaches the token
-    stream at all — which happens when shlex's own `comments=True` consumes
-    a `#` comment, and any `$(...)`/`` `...` `` written inside it, whole,
-    before lexing ever produces a marker token for it; CHUNK_SUBS still
+    stream at all — which happens when a `#` comment, and any `$(...)`/
+    `` `...` `` written inside it, is blanked out of the masked view before
+    lexing ever produces a marker token for it; CHUNK_SUBS still
     counts that match, but no token carries its marker, so a plain
     left-to-right count silently attributes every later marker to the WRONG
     entry. Reading the index out of the marker itself is immune to that: a
@@ -3053,41 +3931,29 @@ def _segment_boundaries(text, opaque):
     return boundaries
 
 
-def _statements_ended_by(chunk, top_spans, offset_, seg_ends, opaque):
+def _statements_ended_by(chunk, marked, seg_ends, opaque):
     """A function mapping a character position in CHUNK to the number of
     statements of the lexed chunk that END at or before it (their separator
     starts at or before it) — so the statement with that index is the first
     one that starts after the position.
 
-    The statements are those statements() lexes: the chunk with TOP_SPANS
-    replaced by markers (the marker for span I is `UNRESOLVED_MARK`, the
-    number OFFSET_ + I and `_MARK_TERMINATOR`, shorter or longer than the
-    span it stands for), and SEG_ENDS their separator offsets in that marked
-    text (_lex_segments_with_ends()). A position is first moved from CHUNK to
-    the marked text; a position inside a span lands on that span's marker.
-    When the chunk fell back to the regex split (SEG_ENDS None) there are no
-    lexer offsets, and the count comes from _segment_boundaries() over OPAQUE
-    (the chunk scan's opaque ranges) instead — best effort, and stable."""
+    The statements are those statements() lexes: the chunk with its top-level
+    substitutions replaced by markers, MARKED (a _MarkedText), and SEG_ENDS
+    their separator offsets in its marked text (_lex_segments_with_ends()). A
+    position is first moved from CHUNK to the marked text through MARKED's
+    position map (a position inside a marked substitution lands on that
+    substitution's marker); the count is a bisect over SEG_ENDS. When the
+    chunk fell back to the regex split (SEG_ENDS None) there are no lexer
+    offsets, and the count comes from _segment_boundaries() over OPAQUE (the
+    chunk scan's opaque ranges) instead — best effort, and stable."""
     if seg_ends is None:
         boundaries = _segment_boundaries(chunk, opaque)
         return lambda pos: bisect.bisect_right(boundaries, pos)
     separators = seg_ends[:-1]
-    span_ends = [end for _, end in top_spans]
-    shifts = []
-    total = 0
-    for i, (start, end) in enumerate(top_spans):
-        marker_length = len(f"{UNRESOLVED_MARK}{offset_ + i}{_MARK_TERMINATOR}")
-        total += (end - start) - marker_length
-        shifts.append(total)
+    posmap = marked.posmap
 
     def ended_by(pos):
-        before = bisect.bisect_right(span_ends, pos)
-        shift = shifts[before - 1] if before else 0
-        if before < len(top_spans) and top_spans[before][0] <= pos:
-            marked_pos = top_spans[before][0] - shift
-        else:
-            marked_pos = pos - shift
-        return bisect.bisect_right(separators, marked_pos)
+        return bisect.bisect_right(separators, posmap.to_new(pos)[1])
 
     return ended_by
 
@@ -3229,6 +4095,21 @@ def _overrides_command_name_unlexed(toks, shaped_words):
     if any("()" in t for t in toks[:2]) or toks[1:3] == ["(", ")"]:
         return True
     return any(PATH_ASSIGNMENT.match(t) for t in toks)
+
+
+def ask_scan_budget_exceeded():
+    """Emit the scan-budget `ask` decision and stop: the static analysis
+    would cost far more than the input is long, either because statements()
+    queued too much text (its own relative cap) or because lex_shell() could
+    not settle the text within its linear work bound (LexBudgetExceeded,
+    destructive-guard-unified-lexer D4). Never an `allow`: under claude-batch
+    the `ask` is demoted to `deny` by decide()."""
+    decide(
+        "ask",
+        "scan-budget-exceeded",
+        "入れ子/積み上げの構造が深く、静的解析の走査量が入力長に対して"
+        "過大になったため打ち切った。安全側で確認を挟む。",
+    )
 
 
 def statements(command):
@@ -3416,13 +4297,8 @@ def statements(command):
             anchor = marker_pos.get(sub_index, anchor)
         scanned_chars += len(chunk)
         if scanned_chars > scan_budget:
-            decide(
-                "ask",
-                "scan-budget-exceeded",
-                "入れ子/積み上げの構造が深く、静的解析の走査量が入力長に対して"
-                "過大になったため打ち切った。安全側で確認を挟む。",
-            )
-        chunk, heredocs = strip_heredocs(chunk)
+            ask_scan_budget_exceeded()
+        chunk, heredocs, _omap = _strip_heredocs_mapped(chunk)
         # Component 1: ONE structural scan of CHUNK, shared by every caller
         # below that needs to know where CHUNK's own top-level substitutions
         # sit -- the heredoc destination decision, and this chunk's own
@@ -3454,9 +4330,8 @@ def statements(command):
         # The chunk's one lexing: its statements are walked further down, and
         # SEG_ENDS (where each statement's separator starts) lets a heredoc
         # body queued below be anchored between the right two statements.
-        segments, seg_ends = _lex_segments_with_ends(
-            _mark_substitutions(chunk, top_spans, offset)
-        )
+        marked_chunk = _mark_substitutions(chunk, top_spans, offset)
+        segments, seg_ends = _lex_segments_with_ends(marked_chunk)
         if heredocs:
             # Component 2/3 (task0001): each heredoc is judged on its own
             # destination, not on whether a sink word appears ANYWHERE in
@@ -3493,7 +4368,7 @@ def statements(command):
                 if queued_whole or defer_data or not record.quoted:
                     if heredoc_ended_by is None:
                         heredoc_ended_by = _statements_ended_by(
-                            chunk, top_spans, offset, seg_ends, chunk_scan[3]
+                            chunk, marked_chunk, seg_ends, chunk_scan[3]
                         )
                     body_anchor = anchor + (
                         _heredoc_body_step(chunk, heredoc_ended_by, record, index),
@@ -3641,9 +4516,18 @@ def statements(command):
 
 
 def tokens(segment):
-    """Best-effort tokenization. Falls back to whitespace on a parse error."""
+    """Best-effort tokenization of SEGMENT into words, the parse-failure
+    path of _lex_layout() and nothing else. The words come from the same
+    masked view the layout pass reads (destructive-guard-unified-lexer FR1-FR3,
+    FR5, FR7): a `#` comment is dropped only where the lexer sees one, text
+    hidden inside an ANSI-C quote, a parameter or arithmetic expansion is
+    given back unchanged, and the raw text never reaches a comment-stripping
+    tokenizer. Falls back to whitespace only when the view does not tokenize
+    either (an unclosed quote, a trailing backslash)."""
     try:
-        return shlex.split(segment, comments=True)
+        return [str(tok) for tok, _start, _end in _tokenize_marked(
+            _MarkedText.plain(segment), layout=False
+        )]
     except ValueError:
         return segment.split()
 
@@ -5813,5 +6697,16 @@ def main():
     sys.exit(0)
 
 
+def run():
+    """main(), with the lexer's work bound turned into a decision: a text
+    lex_shell() could not settle within its linear bound gets the same
+    scan-budget `ask` statements() gives an over-large scan -- never an
+    `allow` (destructive-guard-unified-lexer D4, NFR3)."""
+    try:
+        main()
+    except LexBudgetExceeded:
+        ask_scan_budget_exceeded()
+
+
 if __name__ == "__main__":
-    main()
+    run()

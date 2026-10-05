@@ -1,0 +1,43 @@
+schema_version: 1
+feature: destructive-guard-unified-lexer
+records:
+- question_id: requirement.lexer-scope
+  packet_id: create-spec-q0001
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - shared_state_lexer
+  freeform: null
+  normalized_answer: 'shared_state_lexer: 新しい字句解析が 1 回のパスで引用・コメント・展開の範囲を決める唯一の場所になり、_OperatorContext と _blank_comments() を置き換える。scan_structure() はこの結果から判定を取る。shlex は位置を保って書き換えたテキストのトークン化だけを続ける。補強: (1) tokens() の shlex.split(comments=True) にも元の文字列を直接渡さず、共通の状態解析の結果を通す（これを 7e700e9f9906edc7 解消の条件にする）。(2) 位置追跡用の書き換えと検査用の値を分け、伏字を下流へ渡さない。Tok の is_operator / quoted / unresolved は元の入力の由来を保つ（rm -rf /tmp/safe$''\t'' の退行を再発させない）。(3) 実際のヒアドキュメント本文は状態追跡から外し、元入力・本文除去後・置換印挿入後の位置を対応させる。(4) shell / heredoc-body / 単一引用内の置換を拾う既存方針を区別して保つ。(5) 一致検査は引用範囲に加え、文境界・演算子位置・Tok の由来・検査用の値を、既存ケースと追加する攻撃形・無害な対照例について検証するテストを tests/ に置く。(6) 既存 574 件と無人実行の降格 1 件を維持する。'
+  resolution_note: 'gate: create-spec.requirement-clarification（policy action codex_consultation, record_as_assumption）。options: shared_state_lexer / unify_all_readers / targeted_fixes。chosen: shared_state_lexer。Codex（run_codex_exec.sh readonly、entry codex、turn 1 で収束）の理由: 攻撃は展開内の << の誤認と ANSI-C 引用の誤読による文境界のずれで成立し、状態解析の一本化で塞げる（round2.yaml:154,167）。下流は shlex の演算子結合・Tok の由来・文の位置に依存しており（destructive-guard.py:692,706,753）、出力契約を保つ方が全面置換より退行確認の範囲を抑えられる。7e700e9f9906edc7 は共有定義の参照を求めており shlex 撤去までは要求していない（round2.yaml:181）。退けた案: unify_all_readers は演算子の結合・引用の由来・文の位置まで作り直し退行確認の範囲が広すぎる。targeted_fixes は同じ方式で退行が出て撤回済みで、読み取りの分散も残る（round2.yaml:258,284,310）。Claude も根拠を確認して同意し、Codex の補強案（tokens() の経路を共通化、値の復元、位置対応、一致検査の範囲）をすべて採った。残るリスク: 伏字による安全なパスの未解決変数化（値の復元が主要課題）、引用範囲の一致だけでは誤った文へのヒアドキュメント帰属を防げない（最終判定まで検証が要る）。Opus escalation not run.'
+  answered_at: '2026-10-05T23:20:00+09:00'
+- question_id: review.codex-nonjson-result
+  packet_id: null
+  answered_at: '2026-10-06T01:55:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - accept_schema_valid
+  freeform: null
+  normalized_answer: 'accept_schema_valid: round 1 の comprehensive#0 と security#0（いずれも codex-reviewer）が約 9 分走ったのち {findings: [], summary: "codex returned non-JSON output"} を返した。この結果をスキーマ妥当な完了結果として扱い、Claude fallback は出さない。'
+  resolution_note: 'gate: review phase R2b の結果判定（gate_id なし・未掲載の判断）。options: accept_schema_valid / treat_as_harness_failure（Claude fallback を各観点 1 回出す）。chosen: accept_schema_valid。Codex（run_codex_exec.sh readonly、1 ターン）の理由: review-phase.md R2b は「スキーマ妥当性が唯一の判定基準」と明記し、不正結果の規定はスキーマ違反か Task 出力自体の解析不能を対象にしている。summary の解析失敗報告で完了判定を覆す例外は書かれていない。B は合理的だが追加解釈が要る。Claude も codex-reviewer.md:189-190 がこの空結果を設計どおりの縮退として定めていることを確認して同意した。残るリスク: comprehensive と security は主レビュアーの所見が無いまま評価者の独立検査（Independent Inspection Duty）に頼る。codex-reviewer の非 JSON 縮退が未レビューを完了に見せる点は別課題として起票する。Opus escalation not run.'
+- question_id: review.evaluator-absolute-path
+  packet_id: null
+  answered_at: '2026-10-06T02:08:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - strip_project_root_prefix
+  freeform: null
+  normalized_answer: 'strip_project_root_prefix: 評価者が返した所見 6 件の file は project_root を前置した絶対パスだった。project_root 接頭辞が完全一致し、realpath が changed_files の実ファイルと一致する場合に限り相対パスへ戻し、R3b の残りの検査をそのまま適用する。それ以外は棄却する。'
+  resolution_note: 'gate: review phase R3b step 1（gate_id なし・未掲載の判断）。options: drop_absolute（字義どおり 6 件すべて棄却）/ strip_project_root_prefix。chosen: strip_project_root_prefix。Codex（run_codex_exec.sh readonly、1 ターン）の理由: R2 / R3a は入力パスを project_root 基準の絶対パスにするため、A は表現差だけで high 3 件を含む 6 件を捨て、完了判定を誤らせる。B は接頭辞と realpath の一致を条件にしたうえで .. / NUL / 存在確認と残りの R3b を通すので、所見を無条件には信用しない。ただし字義どおりの R3b は A を求めており、B は段階間の表現の不整合を補う限定的な解釈になる。Claude も同意した。Opus escalation not run.'
+- question_id: review.codex-nonjson-result-round2
+  packet_id: null
+  answered_at: '2026-10-06T03:10:00+09:00'
+  source: batch-precedent
+  answer_mode: single_select
+  selected_option_ids:
+  - accept_schema_valid
+  freeform: null
+  normalized_answer: 'accept_schema_valid: round 2 でも comprehensive#0 と security#0（いずれも codex-reviewer）が {findings: [], summary: "codex returned non-JSON output"} を返した。round 1 の review.codex-nonjson-result と同じ判断を適用し、スキーマ妥当な完了結果として扱い Claude fallback は出さない。'
+  resolution_note: 'gate: review phase R2b の結果判定（gate_id なし・未掲載の判断）。options: accept_schema_valid / treat_as_harness_failure。chosen: accept_schema_valid。同じ問い・同じ根拠（review-phase.md R2b「スキーマ妥当性が唯一の判定基準」）で round 1 に Codex 相談済みのため、Codex への再相談はせず先例を適用した。評価者への入力でこの 2 観点の Independent Inspection Duty を明示した。Opus escalation not run.'

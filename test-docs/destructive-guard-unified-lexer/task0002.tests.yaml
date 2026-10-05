@@ -1,0 +1,110 @@
+task_id: task0002
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 8251 tests, OK (no failing test)
+final_failures: []             # re-executed after the implementation: python3 -m unittest discover -s tests -> Ran 8260 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 628/628 passed (627 cases + 1 hard-coded unattended-demotion case)
+acceptance_tests:
+  AC-1:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (the 23 appended cases)"
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_rework_cases_are_appended_after_every_earlier_entry
+    red_confirmed: true
+    red_reason: >-
+      Against the hook at the task's base (before any hook edit) the case runner
+      reported 609/628 passed, i.e. 19 of the 23 appended cases failed (got allow,
+      want deny): P10.1-P10.9 and P10.11-P10.13 (42180fe3cd060309), P11.1-P11.5
+      (6ad3de37b64392ec), P12.1 and P12.2 (acf9e8aa8bb287ea). P10.10, P11.6, P12.3
+      and P12.4 already passed at the base. The case commit message lists the
+      failing labels. The commit order (cases, then the agreement test, then the
+      hook) is a property of the git history, checked with git log; it has no
+      executable check that can fail.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_command_position_arithmetic
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_command_position_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_double_paren_is_not_arithmetic_elsewhere
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_non_arithmetic_forms_keep_the_unchanged_verdict
+    red_confirmed: true
+    red_reason: >-
+      Against the hook at the task's base test_command_position_arithmetic FAILED for
+      12 of the 13 new forms (AssertionError: Lists differ: [] != [('arithmetic-command',
+      15, 23)] -- no arithmetic-command region where the ((1<<2)) follows the reserved
+      word, coproc NAME or function NAME()) and test_command_position_forms_are_denied
+      FAILED for the same 12 (AssertionError: 'allow' != 'deny'). `function f ((1<<2))`
+      was already read correctly at the base. The four negative forms (`echo then ((b))`,
+      `echo ]] then ((b))`, `echo $(true) then ((b))`, `echo function f ((b))`) are
+      recorded from the base hook (allow, no arithmetic-command region) and were green
+      before and after; they pin that this task does not change them.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_heredoc_body_start_forms
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_heredoc_body_start_forms
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_a_backslash_newline_is_no_body_start
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_a_region_enclosing_the_operator_defers_no_body
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_context_forms
+    red_confirmed: true
+    red_reason: >-
+      Against the hook at the task's base TestFixedExpectations.test_heredoc_body_start_forms
+      FAILED for all six forms (the map's regions / operator body differed: the body
+      began at the first newline inside the multi-line quote, command substitution or
+      after the backslash-newline); TestFixedVerdicts.test_heredoc_body_start_forms
+      FAILED for cases 14-18 (AssertionError: 'allow' != 'deny'; case 19 already
+      allowed); test_a_backslash_newline_is_no_body_start FAILED (AssertionError:
+      'body-or-command\n' != ''). test_a_region_enclosing_the_operator_defers_no_body
+      and the `echo $(cat <<EOF\nhi\nEOF\n)` entry of CONTEXT_FORMS were already green:
+      they pin the pre-rework handling that this task must not change.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_process_substitution_forms
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_process_substitution_forms
+    red_confirmed: true
+    red_reason: >-
+      Against the hook at the task's base TestFixedVerdicts.test_process_substitution_forms
+      FAILED for `cat <(true)#; rm ...` and `cat >(true)#; rm ...` (AssertionError:
+      'allow' != 'deny'), and TestFixedExpectations.test_process_substitution_forms
+      FAILED for the three `#` word forms without a blank (e.g. `echo <(true)#x`:
+      Lists differ: [('comment', 12, 14), ('process-substitution', 5, 12)] !=
+      [('process-substitution', 5, 12)]). The case with a blank before the `#`
+      (comment region expected) was already green.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+    red_confirmed: true
+    red_reason: >-
+      The hand-written expected regions, heredoc operators, body line ranges and
+      verdicts are the red part: the fixed-expectation tests listed under AC-2 to
+      AC-4 failed against the hook at the task's base. The stage agreement
+      properties (a)-(f) over the new forms were already green at the base, because
+      every layer reads the one lexer map (D6); they hold after the change as well
+      (unittest discover -s tests: Ran 8260 tests, OK).
+  AC-6:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (all 628 entries, each bounded at 10 seconds)"
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_each_input_gets_deny_within_the_time_limit
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_stays_within_the_linear_bound
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_grows_linearly_with_the_input
+    red_confirmed: true
+    red_reason: >-
+      Red only for the runner half: against the hook at the task's base the case
+      runner did not pass every case (609/628, the 19 failures listed under AC-1).
+      No red state occurred for the other halves: the existing entries were
+      unchanged and passing before and after (the unchanged-position check
+      test_existing_cases_stay_in_place_and_new_ones_come_after was green), and both
+      ~60KB inputs already got deny from the base hook within the limit (they were
+      green against the base); the task's change keeps them at about 0.6 s and
+      0.9 s through the hook's stdin / stdout contract.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_hook_and_test_import_only_the_standard_library
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_lexer_reads_no_file_and_evaluates_nothing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestModuleContract.test_hook_and_test_import_only_the_standard_library and
+      test_lexer_reads_no_file_and_evaluates_nothing detect a non-standard import or
+      an open() / eval() in the lexer path; no red state occurred for this change.
+      The changed-path scope (the three Scope files plus this feature's test-docs;
+      hooks.json, every plugin.json and marketplace.json untouched) is verified with
+      `git diff --stat em-workflow/destructive-guard-unified-lexer/integration...HEAD`
+      and has no executable check that can fail before the change.

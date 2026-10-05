@@ -1,0 +1,145 @@
+round: 1
+executed_at: '2026-10-06T02:10:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: e69f212bcd3934e61ca3c8c023e2505df1c43ef4
+  head_commit: 928eac83fb0459eb32c8da0ce897a3d1f457e98d
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-unified-lexer/task0001.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: PreToolUse で毎回走るフックの字句解析を 1 パスの走査に作り直しており、入力長に対する計算量の退行が起き得るため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 42180fe3cd060309
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 828
+  title: コマンド位置の判定が bash より狭い。閉じ記号の後の予約語、for NAME do、function NAME()、coproc NAME の後ろにある ((...)) の << をヒアドキュメント演算子と読む
+  description: word_transition() は f.cmd が真のときしか予約語（then / do など）を扱わない。また、群の `)` と算術コマンドの `))` を閉じたときに親の cmd を偽にする（1032 行、1192 行）。bash は `)`・`}`・`))`・`]]`・fi / done / esac の直後でも予約語を認める（parse.y の reserved_word_acceptable）。`for NAME` / `select NAME` の後の do、`coproc NAME` / `function NAME` の後のコマンド位置も同様に認める（special_case_tokens）。そのため次の各形では `<<2` が本物の演算子として登録され、続く行は本文として読み飛ばされる。各形の後ろに `\nrm -rf /home/sakura/valuable\n2` を続けると、フックは allow を返し、bash 5.3 は 2 行目を実行する。`if (true) then ((1<<2)); fi` / `if ((1)) then ((1<<2)); fi` / `if { true; } then ((1<<2)); fi` / `if [[ 1 ]] then ((1<<2)); fi` / `until (true) do ((1<<2)); done` / `for x do ((1<<2)); done` / `function f() ((1<<2))` / `coproc foo ((1<<2))`。これは FR3（コマンド位置には予約語の後ろを含む）と IMPLEMENTATION.md P3（do・coproc の後、関数定義の本体）に反する。基準コミットのフックも同じ形を allow にするので退行ではない。COMMAND_POSITION_FORMS はこれらの形を含んでいない。
+  suggestion: bash の reserved_word_acceptable に合わせる。閉じ記号（群の `)`、`}`、算術コマンドの `))`、`]]`、fi / done / esac）の直後を「予約語を受け付ける」状態にし、then / do / else / elif / fi / done などを keeper として扱う。for / select の後の NAME に続く do、coproc NAME、function NAME [()] の後もコマンド位置にする。hook-tests.md に従い、直す前に上の各形を deny ケースとして cases.json に足し、COMMAND_POSITION_FORMS にも加える。
+  sources: &id001
+  - claude:evaluator
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 6ad3de37b64392ec
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 921
+  title: 演算子の行で開いた引用や置換が改行をまたぐと、bash が実行する行をヒアドキュメント本文として読み飛ばす
+  description: '_lex_pass() は、演算子がある物理行の終わり（hd_trigger）に達すると、スタックの状態にかかわらず本文の後ろへ飛ぶ（921〜927 行）。bash は保留中の本文を、演算子を読んだ文脈の改行トークンに達したときに集める。演算子の後ろで開いた二重引用・単一引用・`$(` が改行をまたぐと、本文はその引用が閉じた行の次から始まる。例: `cat <<EOF; echo "\n"; rm -rf /home/sakura/valuable\nEOF`。bash は rm を実行し、本文は空になる。字句解析は 2 行目を本文に入れ、フックは allow を返す。`echo ''\n''` や `echo $(\n)` の形、`git reset --hard HEAD` でも同じ結果になる。基準コミットも allow なので退行ではないが、FR8 の本文判定を担う新しいコードにある。'
+  suggestion: 演算子を登録したときのフレーム（スタックの深さ）を記録する。本文への飛び越しは、そのフレームが最上位にあり、かつそのフレームで改行を読んだときだけ行う。別のフレームが開いている間は飛び越しを保留し、本文の探索を始める行もその改行の次の行に合わせる。直す前に上の形を deny ケースとして足す。
+  sources: *id001
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: acf9e8aa8bb287ea
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1038
+  title: 'プロセス置換の直後の # をコメントの開始と読み、後続の文を消す'
+  description: '`<(...)` / `>(...)` を閉じると、_lex_pass() は親フレームの in_word を偽にする（1036〜1038 行）。そのため直後の `#` から行末までがコメント領域になり、shlex に渡す前に伏字になる。bash ではプロセス置換は語の一部で、直後の `#` は語の途中にある（`echo <(true)#` は `/dev/fd/63#` を出力する）。`cat <(true)#; rm -rf /home/sakura/valuable` や `cat >(true)#; rm -rf /home/sakura/valuable` を bash は実行するが、フックは allow を返す。基準コミットも allow なので退行ではないが、FR6 で唯一のコメント判定元になった新しいコードにある。'
+  suggestion: プロセス置換を閉じた後は、親フレームの in_word を真のまま残す（コマンド置換を閉じたときと同じ扱いにする）。直す前に上の 2 形を deny ケースとして、`echo <(true)#x` 形を allow の対照として足す。
+  sources: *id001
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: b739294836fa88ea
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1050
+  title: 代入語の配列添字 a[1<<2]= の中の << をヒアドキュメント演算子と読む
+  description: '[1050 行] bash は、代入として受け付けられる位置にある識別子の直後の `[` を、`]` までの対の括弧として読む（read_token_word の P_ARRAYSUB）。そのため `a[1<<2]=x` の `<<` は演算子にならない。字句解析は単語の中の `<` で語を切り、`<<2` を本物の演算子として登録する。`a[1<<2]=x\nrm -rf /home/sakura/valuable\n2` を bash は実行するが、フックは allow を返す。基準コミットも allow。 / [同一箇所で統合した 1051 行の所見（元 stable_id e69e7660d6daa738）: 区切り語に英数字以外を含むヒアドキュメント（<<END-X など）で、区切り語を途中までしか読まず、後ろの行を本文として捨てる] 字句解析は HEREDOC_OP（154 行、`(\w+)`）で区切り語を取る。`<<END-X` や `<<E.X` では区切り語が `END` / `E` で切れ、その名前だけの行を探す。`cat <<END-X\nbody\nEND-X\nrm -rf /home/sakura/valuable\nEND` では、bash の本文は `body` だけで rm を実行する。一方、字句解析は後ろの `END` 行までを本文にし、フックは allow を返す。基準コミットも allow。'
+  suggestion: (1050) コマンド位置（または代入が続く位置）の語が `識別子[` で始まるときは、`]` までを対で読む領域にし、その中の `<<` を演算子にしない。TS-8 の `a[1] <<EOF`（本物の演算子）とは区別して残す。(1051) 区切り語を、bash と同じく次のメタ文字までの 1 語として読み、引用除去した値を区切り語にする。`\w+` に収まらない区切り語を見つけたときは、本文を取らない（後ろを検査から外さない）読みに倒す。どちらも直す前に deny ケースとして足す。
+  sources: *id001
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 551b3cec17ed0813
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1198
+  title: ))で閉じない (( / $(( を 1 個見つけるたびに全文を読み直すため仕事量が二乗で増え、無害なコマンドが scan-budget の ask になる（退行）
+  description: 未閉鎖の opener はひとつのパスでまとめて確定するが、最初の閉じが隣接する `))` でない `((` / `$((` は、見つけた時点で opener を 1 個だけ持って restart する（1198 行）。そのため k 個あると k+1 回のパスになり、仕事量はおよそ k·n/2 に増える。予算 LEX_WORK_FACTOR·n+1024 を超えると LexBudgetExceeded になり、ask を返す（CLAUDE_BATCH 下では deny）。`x=$((echo N) | wc -c)` を 28 行（約 630 文字）並べると予算を超えて ask になる。`((cd /tmp/aN && ls) || echo no)` を 40 文並べても ask になる。基準コミットはどちらも allow なので、本差分による退行にあたる。513〜517 行のコメントと NFR3 の線形性の主張は、この経路で成り立っていない。
+  suggestion: 非隣接の閉じを見つけたら、全文からではなく、その opener から局所的に読み直す。あるいは 1 パスで見つけた非隣接の opener をすべて集めてから restart する。k 個の `$((cmd) ...)` を並べたケースで、rounds と work が n に比例することを TestUnclosedOpeners に足す。
+  sources: *id001
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: null
+evaluation:
+  round_summary: 'round 1（diff、cross_validation=true）。comprehensive#0 と security#0 は Codex の出力を解析できず、分析が 0 件だった。litellm の 3 観点はいずれも所見なしを返した。評価者がファイルを直接読んで確かめた。cases.json は追加 30 件だけで削除はない。run-destructive-guard.py は 605/605 pass、test_destructive_guard_lexer_agreement は 69 件 OK、unittest discover -s tests は 8251 件 OK。基準 e69f212 のフックとの差分ファズ（約 1,500 コマンド）で、deny / ask から allow への退行は見つからなかった。bash の読みとの食い違いによる抜け道を 5 件再現した（どれも基準コミットでも allow）。性能の退行を 1 件見つけた。reviewer_outputs に指示の注入の試みはなかった。範囲外のため所見にしなかったもの: 構文エラーの行を bash が捨てて次の行を実行する形（`x=( <<EOF\nrm -rf ...\nEOF`、基準でも allow）。観点ごと: comprehensive: findings（Codex の分析 0 件、評価者自身の点検）。security: findings。architecture: corroborated。spec: findings（FR3 / P3 違反）。performance: findings。'
+  recommended_action: auto_fix
+  action_rationale: 6 件とも再現手順付きで確認した。修正箇所は字句解析内の局所に収まり、ケース追加、修正、605 件と一致検査の再実行という順で確かめられる。#1 は SPEC FR3 への違反、#6 は基準コミットからの退行なので、完了にはできない。#1〜#5 は基準でも allow だった既存の抜け道で、すべて評価者が起こした所見にあたる。comprehensive と security は Codex が分析を返していないので、修正後の round で両観点の実レビューを得ることを勧める。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 3
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-unified-lexer-20261005T170446Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+unreviewed_perspectives: []
+notes:
+- 'R3b step 1: 評価者は project_root を前置した絶対パスを返した。project_root 接頭辞を外して changed_files の実ファイルと realpath が一致することを確かめてから相対パスとして gate に通した（Codex 相談で B を採用、batch-audit.yaml 参照）。'
+- 'R3b dedupe: 1050 行と 1051 行の security 所見は same_site のため 1 件に統合した（元 stable_id b739294836fa88ea / e69e7660d6daa738）。'
+- 'R4: 全所見の sources が [claude:evaluator] のみのため needs-judgment に強制され、batch では skip した。自動修正 0 件。'

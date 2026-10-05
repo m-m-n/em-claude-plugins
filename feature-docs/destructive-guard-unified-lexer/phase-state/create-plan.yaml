@@ -1,0 +1,171 @@
+schema_version: 1
+feature: destructive-guard-unified-lexer
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 6772919ffd818efec2e1b83b1c0ad3b547980293
+last_input_digest: sha256:b96c997f8951672aa8a700572b5064f57b4bb1f772a383932521cade8d1517e7
+active_request_id: null
+packets: {}
+answers:
+  create-plan.assumption.PA1:
+    packet_id: null
+    answered_at: '2026-10-05T23:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'Codex 相談で採用: 1 タスク（high）のまま。分割するとケース追加側は意図した失敗を抱え、修正側は新しい字句解析への一致検査を単独で検証できない。FR11
+      は同一タスク内で「ケース追加・失敗確認・コミット → 一致検査 → 修正」の順で満たす。最終検証で先行コミットの順序も確認する。'
+  create-plan.assumption.PA4:
+    packet_id: null
+    answered_at: '2026-10-05T23:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'Codex 相談で PA4 を修正: 「リダイレクト・プロセス置換開始の直後を一律に除外」はやめ、構文状態で判定する。リダイレクト先の裸の (( は算術にしない。<(
+      / >( の開始文字は 1 回だけ消費し、置換本文では新しいコマンド位置を始める（cat <((rm -rf x)) は <( と単独の ( で算術ではない。cat <(((1<<2))) は内側の
+      (( が算術コマンド）。裸の (( は実際のコマンド位置（; && || | ! then do else elif { ( time / time -p、case パターンを閉じる )、関数定義本文、coproc
+      の後）で認識し、引用・エスケープ内や引数位置では認識しない。$(( は展開なので位置に関係なく（二重引用内・リダイレクト先でも）認識する。'
+  create-plan.assumption.Q3-procsub:
+    packet_id: null
+    answered_at: '2026-10-05T23:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'Codex 相談で採用（計画の欠陥修正）: 現行フックは cat <((rm -rf /home/sakura/valuable)) に allow を返す。プロセス置換
+      <( / >( の本文を置換範囲として抽出し検査へ送る経路と、最終判定 deny の試験を計画に明記する。'
+  create-plan.assumption.Q3-single-quote-candidates:
+    packet_id: null
+    answered_at: '2026-10-05T23:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'Codex 相談で採用（計画の欠陥修正）: FR9 の広い探索（単一引用内の置換候補、destructive-guard.py:1803 の現行の引用内探索）を字句解析の範囲情報から再現できるよう、字句解析が単一引用内の置換候補の範囲を返す契約を追加する。'
+  create-plan.assumption.Q3-position-map:
+    packet_id: null
+    answered_at: '2026-10-05T23:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'Codex 相談で採用（計画の欠陥修正）: 位置対応を『厳密増加・全域』とする契約は、置換印の長さが元の範囲と異なる場合（destructive-guard.py:2701、3
+      文字の $() が 6 文字の印になる）に成立しない。置換部分は元の範囲全体へ対応させ、文字位置の往復一致は未変更部分に限定する。'
+  create-plan.assumption.Q3-agreement-risk:
+    packet_id: null
+    answered_at: '2026-10-05T23:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'Codex 相談で採用: 各層が同じ誤読を共有したまま一致検査を通るリスクがある。追加例では固定した範囲の期待値と最終判定の両方を確認し、閉じない開始記号の再読でもコメントやヒアドキュメント本文の取り込みで後続を捨てないことを検証する。'
+  create-plan.assumption.PA5:
+    packet_id: null
+    answered_at: '2026-10-06T00:20:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: プロセス置換 <(...) / >(...) は $(...) と同じく置換範囲として scan_structure() の spans に載せ、本文を独立したチャンクとして検査し、中のヒアドキュメントも本文側の文に帰属させる。ホストの文は
+      has_process_sub の証拠を保つ（既存ケース tee >(bash) <<'EOF' は deny のまま）。
+  create-plan.assumption.PA6:
+    packet_id: null
+    answered_at: '2026-10-06T00:20:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 閉じない開始記号（${ / $(( / $[ / (( / $'）以降の再読範囲では、<< を本物のヒアドキュメント演算子にせず、# もコメントにしない。区切りは通常どおり数える。
+  create-plan.assumption.PA7:
+    packet_id: null
+    answered_at: '2026-10-06T00:20:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 単一引用内の置換候補（P8）は ANSI-C 引用 $'...' の中も対象にする。
+  create-plan.assumption.PA8:
+    packet_id: null
+    answered_at: '2026-10-06T00:20:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: SPEC の 17 件に加え、プロセス置換 4 件・構文状態 7 件・再読範囲 2 件の計 13 件を、同じ先行コミットで cases.json に追記する（合計
+      30 件）。
+  create-plan.assumption.PA9:
+    packet_id: null
+    answered_at: '2026-10-06T00:20:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 一致検査のテストは、ケース追加コミットの後・フック変更コミットの前に単独でコミットする。検証では git 履歴でこの順序と、変更前フックでの失敗を確かめる（TS-19
+      / TS-20）。
+  create-plan.assumption.PA10:
+    packet_id: null
+    answered_at: '2026-10-06T00:20:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 判定を変えてはならない固定形（算術にならない (( の形、単一引用内の置換候補の形）の期待判定は、テスト作成時に変更前フックの判定を値として書き込む。それ以外の追加形は手書きの判定（攻撃形は
+      deny、対照は allow）を使う。
+  create-plan.assumption.PA11:
+    packet_id: null
+    answered_at: '2026-10-06T00:20:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: task0001 の skills は backend-impl とする。
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:ae1e1ac46a20376aea6820e7a4ddea9836a3123ccb6917c67567979e01831854
+  output_digest: sha256:f31119498b5b162b6d45ea0acfdeac78003099d47925044f8b1168be810f4cf4
+- request_id: create-plan-run-0002
+  status: completed
+  input_digest: sha256:b96c997f8951672aa8a700572b5064f57b4bb1f772a383932521cade8d1517e7
+  output_digest: sha256:9e0e259b75f01aa91bfa52e0339720ddcb617658ef0a7e6c2fee70c601577387
+artifacts:
+- path: feature-docs/destructive-guard-unified-lexer/IMPLEMENTATION.md
+  sha256: sha256:b862c1a1fee1a45e9768b1cdb1a033cf57c5db5fe285b6d96b75c2c620b68421
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-unified-lexer/VERIFICATION.md
+  sha256: sha256:28ec780fac6cfdf9d3f5bb1d763ff5e02cf940dfaf7e7bf57fa651371695732a
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-unified-lexer/THREAT-MODEL.md
+  sha256: sha256:b8f927e03208e4f5771898c5e9d1d4d6ecc7486ea91602117266e57e309172ad
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-unified-lexer/tasks/task0001.md
+  sha256: sha256:6e3cf7654c92e66d3be3d2c6b9b91e2eda988732a48c85089090699b8a80acaf
+  produced_by: create-plan-run-0001
+- path: feature-docs/destructive-guard-unified-lexer/IMPLEMENTATION.md
+  sha256: sha256:18ee9d58bd7a0406b915dedf7f53f2adc82587cfb739a28926febab8ae48b6fd
+  produced_by: create-plan-run-0002
+- path: feature-docs/destructive-guard-unified-lexer/VERIFICATION.md
+  sha256: sha256:f5ad9f2e34a44c36343ab985be61d67da06b9f432f588235760df2c8619eab63
+  produced_by: create-plan-run-0002
+- path: feature-docs/destructive-guard-unified-lexer/THREAT-MODEL.md
+  sha256: sha256:cbae3f23e870709ec3a412e714fabe9ba414db5eeaef21cdc6a21776c2405f1d
+  produced_by: create-plan-run-0002
+- path: feature-docs/destructive-guard-unified-lexer/tasks/task0001.md
+  sha256: sha256:9f8f744ea2145503dc70d352e37242ac3cd86286feaa4e3a8ee0501a5288b2c8
+  produced_by: create-plan-run-0002
+patches:
+- patch_id: destructive-guard-unified-lexer-p0001
+  status: rejected
+  base_input_digest: sha256:ae1e1ac46a20376aea6820e7a4ddea9836a3123ccb6917c67567979e01831854
+  base_workflow_blob: 429966a6dfa9a406833d1ad57280f2a76a49e7df
+- patch_id: destructive-guard-unified-lexer-p0002
+  status: applied
+  base_input_digest: sha256:b96c997f8951672aa8a700572b5064f57b4bb1f772a383932521cade8d1517e7
+  base_workflow_blob: 429966a6dfa9a406833d1ad57280f2a76a49e7df
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

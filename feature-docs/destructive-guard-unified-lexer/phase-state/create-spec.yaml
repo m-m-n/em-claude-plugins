@@ -1,0 +1,79 @@
+schema_version: 1
+feature: destructive-guard-unified-lexer
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 1e52d9b968e9ca5b8bdbe1f1840a79dc5d47d50c
+last_input_digest: sha256:db6deb82b0a00a4b60c7dea04d8b9d6f492afcdb106cb351bd6f4fdf0653bf4c
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-05T23:08:14+09:00'
+    questions:
+    - question_id: requirement.lexer-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: destructive-guard-unified-lexer'
+    answered_at: '2026-10-05T23:02:00+09:00'
+  requirement.lexer-scope:
+    question_id: requirement.lexer-scope
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - shared_state_lexer
+    freeform: null
+    normalized_answer: 'shared_state_lexer: 新しい字句解析が 1 回のパスで引用・コメント・展開の範囲を決める唯一の場所になり、_OperatorContext と _blank_comments() を置き換える。scan_structure() はこの結果から判定を取る。shlex は位置を保って書き換えたテキストのトークン化だけを続ける。補強: (1) tokens() の shlex.split(comments=True) にも元の文字列を直接渡さず、共通の状態解析の結果を通す（これを 7e700e9f9906edc7 解消の条件にする）。(2) 位置追跡用の書き換えと検査用の値を分け、伏字を下流へ渡さない。Tok の is_operator / quoted / unresolved は元の入力の由来を保つ（rm -rf /tmp/safe$''\t'' の退行を再発させない）。(3) 実際のヒアドキュメント本文は状態追跡から外し、元入力・本文除去後・置換印挿入後の位置を対応させる。(4) shell / heredoc-body / 単一引用内の置換を拾う既存方針を区別して保つ。(5) 一致検査は引用範囲に加え、文境界・演算子位置・Tok の由来・検査用の値を、既存ケースと追加する攻撃形・無害な対照例について検証するテストを tests/ に置く。(6) 既存 574 件と無人実行の降格 1 件を維持する。'
+    resolution_note: 'gate: create-spec.requirement-clarification（policy action codex_consultation, record_as_assumption）。options: shared_state_lexer / unify_all_readers / targeted_fixes。chosen: shared_state_lexer。Codex（run_codex_exec.sh readonly、entry codex、turn 1 で収束）の理由: 攻撃は展開内の << の誤認と ANSI-C 引用の誤読による文境界のずれで成立し、状態解析の一本化で塞げる（round2.yaml:154,167）。下流は shlex の演算子結合・Tok の由来・文の位置に依存しており（destructive-guard.py:692,706,753）、出力契約を保つ方が全面置換より退行確認の範囲を抑えられる。7e700e9f9906edc7 は共有定義の参照を求めており shlex 撤去までは要求していない（round2.yaml:181）。退けた案: unify_all_readers は演算子の結合・引用の由来・文の位置まで作り直し退行確認の範囲が広すぎる。targeted_fixes は同じ方式で退行が出て撤回済みで、読み取りの分散も残る（round2.yaml:258,284,310）。Claude も根拠を確認して同意し、Codex の補強案（tokens() の経路を共通化、値の復元、位置対応、一致検査の範囲）をすべて採った。残るリスク: 伏字による安全なパスの未解決変数化（値の復元が主要課題）、引用範囲の一致だけでは誤った文へのヒアドキュメント帰属を防げない（最終判定まで検証が要る）。Opus escalation not run.'
+    answered_at: '2026-10-05T23:20:00+09:00'
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously: design step を skip する（UI の無い PreToolUse フックの字句解析の修正）'
+    answered_at: '2026-10-05T23:20:00+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:0ae7633fe2b05ada49503db12d5fc4d65ca6ede29d64d3c16dccaee568199bf8
+  output_digest: null
+  note: 'validation error: create-spec.design-step options lacked decide_autonomously; corrected in run-0002'
+- request_id: create-spec-run-0002
+  status: needs_user_input
+  input_digest: sha256:0ae7633fe2b05ada49503db12d5fc4d65ca6ede29d64d3c16dccaee568199bf8
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:db6deb82b0a00a4b60c7dea04d8b9d6f492afcdb106cb351bd6f4fdf0653bf4c
+  output_digest: sha256:2a3256518cf5578e71f8a2d37c5e6aa098b254dfeed608934ec1f4f59d76065c
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: sha256:cf59a1b0cb7b5de4de6b50ff213dd7f1288860cfcf1b791f2dc1c6a582c59651
+  output_digest: null
+artifacts:
+- path: feature-docs/destructive-guard-unified-lexer/REQUIREMENTS.md
+  sha256: sha256:5ed4ce070f356e14176d3f3c4bbc9bacc56c865afa35f786fdca06242ef17b60
+  produced_by: create-spec-run-0004
+- path: feature-docs/destructive-guard-unified-lexer/SPEC.md
+  sha256: sha256:8c62c0c1fccf645fbcad0ede14cfed1028cc941af11b7f6c956665469480a070
+  produced_by: create-spec-run-0004
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

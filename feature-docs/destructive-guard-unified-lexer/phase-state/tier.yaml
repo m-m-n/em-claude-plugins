@@ -1,0 +1,62 @@
+schema_version: 2
+feature: destructive-guard-unified-lexer
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 2.46
+    confidence: 0.49
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.02
+      '2': 0.49
+      '3': 0.49
+  observed_at: '2026-10-05T22:55:45+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.87
+    confidence: 0.78
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.17
+      '2': 0.78
+      '3': 0.05
+  observed_at: '2026-10-05T23:01:42+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: -1
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 現在のmainで、指定されたANSI-C引用の2形、パラメータ展開、算術展開、算術コマンド、角括弧算術、予約語後の算術、入れ子の角括弧算術の計8形をJSON標準入力で確認した結果、通常実行・CLAUDE_BATCH=1の両方ですべてallowだった。レビューの追加3形もallowだった（feature-docs/destructive-guard-heredoc-sink-gaps/reviews/round2.yaml:154、同ファイル:167、同ファイル:271、同ファイル:297）。_blank_commentsは通常の引用を追い（em-workflow/hooks/destructive-guard.py:546）、_lex_layoutはその結果をshlexへ渡している（同ファイル:681）。real_operatorsは${...}や算術式を区別せず<<を拾い（同ファイル:1156、同ファイル:1194）、strip_heredocsが後続行を本文として取り除く（同ファイル:1282）。確認した11入力は既存テストに同一コマンドの登録がなく、指定8形のdenyケース追加と解析ロジックの修正が残る。解析の一本化はレビューでも推奨されている（feature-docs/destructive-guard-heredoc-sink-gaps/reviews/round2.yaml:298）。退行防止5件は残り、通常・無人実行とも先頭3件がdeny、後ろ2件がallowだった（em-workflow/hooks/tests/destructive-guard-cases.json:592、同ファイル:595）。既存ランナーは575/575成功し、基準コミット3efc2b9cのdeny/ask登録323件も期待値・ラベル・コマンドを含めすべて残っていた（em-workflow/hooks/tests/run-destructive-guard.py:80）。主要解析4箇所の直接呼出元は7関数、同一ファイル内の依存先は7関数・クラスだった（em-workflow/hooks/destructive-guard.py:605、同ファイル:622、同ファイル:682、同ファイル:1259、同ファイル:2040、同ファイル:2229、同ファイル:2541、同ファイル:3432）。変更行数は未確定で、ファイル変更は行っていない
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 14
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-05T23:02:10+09:00'
