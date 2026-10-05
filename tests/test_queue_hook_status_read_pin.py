@@ -18,8 +18,10 @@ source-text pin.
 
 Layer 2 (behavioral observation): queue_stop_guard.py is invoked as a
 subprocess against a throwaway fixture whose journal last event is
-`failed`, varying only that task's own workflow.yaml status between
-`pending` (carve-out applies) and a non-`pending` value (it does not).
+`failed` (physical line 1) and whose task block carries a matching
+`routeback_failed_journal_line` record, varying only that task's own
+workflow.yaml status between `pending` (carve-out applies) and a
+non-`pending` value (it does not).
 tests/test_queue_stop_guard.py already covers this discriminator
 behaviorally; that coverage is deliberately duplicated here, unmodified and
 not imported (D3), because this module's purpose is different -- it is the
@@ -197,6 +199,10 @@ def _build_carveout_fixture(tmp_dir, workflow_status):
             "  {task_id}:".format(task_id=FIXTURE_TASK_ID),
             '    title: "carve-out pin task"',
             "    status: {status}".format(status=workflow_status),
+            # Matching record: the journal's `failed` event below is
+            # physical line 1, so the carve-out's three-condition match
+            # holds whenever the status reads `pending`.
+            "    routeback_failed_journal_line: 1",
         ]
     ) + "\n"
     with open(os.path.join(docs_dir, "workflow.yaml"), "w", encoding="utf-8") as fh:

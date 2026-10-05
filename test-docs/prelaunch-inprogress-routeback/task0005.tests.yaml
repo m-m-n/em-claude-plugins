@@ -1,0 +1,75 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_record_equal_to_the_failed_line_blocks_and_names_the_task
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_record_equal_to_a_later_failed_line_blocks
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_no_record_is_failed
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_null_record_is_failed
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_record_naming_a_different_line_is_failed
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_relaunched_and_failed_again_no_longer_matches_the_old_record
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_trailing_whitespace_after_the_digits_is_still_canonical
+      - tests.test_queue_stop_guard_routeback_record.TestRecordMatch.test_status_other_than_pending_is_failed_even_with_a_matching_record
+    red_confirmed: true
+    red_reason: "Against the base hook (record ignored), test_no_record_is_failed failed with 'AssertionError: 2 != 0 : queue_stop_guard: BLOCK feature=routeback-record-feature free_slots=6 launch=task0001,task0002,task0003'; the null-record, different-line and relaunched-and-failed-again cases failed the same way. The matching-record cases (a) and the non-pending-status case passed on the base hook already."
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestRecordValueParsing.test_non_canonical_values_are_no_record
+      - tests.test_queue_stop_guard_routeback_record.TestRecordValueParsing.test_underscore_separated_digits_are_not_canonical
+      - tests.test_queue_stop_guard_routeback_record.TestRecordValueParsing.test_value_without_a_space_after_the_colon_is_no_record
+      - tests.test_queue_stop_guard_routeback_record.TestRecordValueParsing.test_first_occurrence_in_the_block_wins
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_record_in_another_tasks_block_is_not_this_tasks_record
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_record_in_the_previous_tasks_block_is_not_this_tasks_record
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_own_record_is_read_when_other_tasks_carry_other_records
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_step_level_record_line_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_top_level_record_line_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_record_line_after_the_tasks_mapping_ended_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_record_line_at_the_task_key_indent_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_commented_out_record_line_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestRecordBlockScoping.test_key_with_a_longer_name_is_not_the_record
+    red_confirmed: true
+    red_reason: "Against the base hook (record ignored), each non-canonical value (0, -1, 1.5, quoted, empty, leading zero and the others) and each out-of-block placement (another task's block, step level, top level, sibling indent) failed with 'AssertionError: 2 != 0 : queue_stop_guard: BLOCK ...launch=task0001,task0002,task0003'."
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_each_skipped_line_kind_before_the_target_is_counted
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_all_skipped_kinds_together_before_the_target_are_counted
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_lines_after_the_target_do_not_change_its_line
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_final_segment_without_a_terminating_lf_counts_as_a_line
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_a_trailing_lf_does_not_add_a_line
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_cr_inside_a_line_does_not_shift_the_count
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_crlf_terminated_lines_count_once_each
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_a_line_of_only_a_cr_counts_as_one_blank_line
+      - tests.test_queue_stop_guard_routeback_record.TestPhysicalLineCounting.test_other_unicode_line_separators_do_not_split_a_line
+    red_confirmed: true
+    red_reason: "Against the base hook (record ignored), the skipped-line-number assertions failed with 'AssertionError: 2 != 0 : queue_stop_guard: BLOCK feature=routeback-record-feature free_slots=5 launch=task0001,task0003' (all-kinds-together case) and the same 2 != 0 shape in each per-kind subtest, the CR case and the final-segment case. The correct-physical-line assertions (exit 2) passed on the base hook already."
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestUnchangedClassifications
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_id_with_pending_status_is_unlaunched_and_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_consecutive_block_cap_still_works_with_reclassified_task
+      - tests.test_queue_stop_guard.TestQueueStopGuardRetryAfterFailure
+      - tests.test_queue_hook_status_read_pin.TestQueueStopGuardCarveOutBehavioralPin
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: the no-event, launched and merged classifications are unchanged, and the existing tests/test_queue_stop_guard.py cases (kept in full) and the Layer 2 pin in tests/test_queue_hook_status_read_pin.py detect them; the three recycled-task-id tests and the Layer 2 fixture only gained a matching record and keep their expectations. They passed before and after the fixture edits, so no red state occurred for this change."
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestModuleDocstring
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringRemovedPhrase
+      - tests.test_task_id_allocation_ssot_comments.TestStopGuardDocstringOwnIdDescription
+    red_confirmed: true
+    red_reason: "Against the base docstring, test_live_docstring_states_the_new_classification failed with \"AssertionError: 'only when all three hold' not found in 'em-workflow Stop hook: queue loop guard ...\" (and likewise for the record and failed-outcome wordings). The kept own-id wording and the absence of the recycled-id wording are asserted by tests/test_task_id_allocation_ssot_comments.py, which passes unmodified and passed on the base docstring already."
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestFailOpen
+      - tests.test_queue_stop_guard.TestQueueStopGuardStdlibOnly
+      - tests.test_hook_classification_pin
+    red_confirmed: true
+    red_reason: "Against the base hook (record ignored), test_garbled_bytes_in_the_record_line_are_no_record, test_extremely_long_digit_record_exits_0, test_invalid_utf8_and_nul_lines_before_the_target_are_counted and test_record_naming_a_garbled_journal_line_does_not_match failed with 'AssertionError: 2 != 0 : queue_stop_guard: BLOCK ...'. The directory-as-journal, directory-as-workflow, binary-garbage-workflow and garbled-status cases, TestQueueStopGuardStdlibOnly and tests/test_hook_classification_pin.py passed on the base hook already (fail-open and stdlib-only behavior pre-existed)."
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly
+    red_confirmed: false
+    red_reason: "The new module's stdlib-only import discipline passed as soon as the module existed, and no existing test fails when another file under em-workflow/hooks/ changes (the existing tests/test_queue_stop_guard.py, tests/test_queue_hook_status_read_pin.py and tests/test_hook_classification_pin.py reference queue_stop_guard.py itself, not other hook files). The rest is verified by git diff --name-only (em-workflow/hooks/ contains only queue_stop_guard.py) and a green full-suite run (python3 -m unittest discover -s tests: 7412 tests OK before, 7459 tests OK after); no executable red exists for it."
