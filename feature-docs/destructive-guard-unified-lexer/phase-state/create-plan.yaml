@@ -3,9 +3,9 @@ feature: destructive-guard-unified-lexer
 phase: create-plan
 status: dispatching
 generation: 1
-base_revision: ac776099d2b68914d9929792abbbf51f0d924cb7
-last_input_digest: sha256:ae1e1ac46a20376aea6820e7a4ddea9836a3123ccb6917c67567979e01831854
-active_request_id: create-plan-run-0001
+base_revision: 6772919ffd818efec2e1b83b1c0ad3b547980293
+last_input_digest: sha256:b96c997f8951672aa8a700572b5064f57b4bb1f772a383932521cade8d1517e7
+active_request_id: create-plan-run-0002
 packets: {}
 answers:
   create-plan.assumption.PA1:
@@ -67,6 +67,10 @@ worker_runs:
   status: completed
   input_digest: sha256:ae1e1ac46a20376aea6820e7a4ddea9836a3123ccb6917c67567979e01831854
   output_digest: sha256:f31119498b5b162b6d45ea0acfdeac78003099d47925044f8b1168be810f4cf4
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:b96c997f8951672aa8a700572b5064f57b4bb1f772a383932521cade8d1517e7
+  output_digest: null
 artifacts:
 - path: feature-docs/destructive-guard-unified-lexer/IMPLEMENTATION.md
   sha256: sha256:b862c1a1fee1a45e9768b1cdb1a033cf57c5db5fe285b6d96b75c2c620b68421
