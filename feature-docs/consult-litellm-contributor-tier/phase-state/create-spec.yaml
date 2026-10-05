@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: cca447060a92dce464acba29bd436f0c089ed580
 last_input_digest: sha256:2e9db4fec08291fa56c4a3d3f03766adf7af74d1c4ded936b30d956fc1bd2154
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,13 @@ worker_runs:
   input_digest: sha256:156c12e36bbe42781688a15db7d5f146818e02170757dce0910d751537ff917a
   output_digest: sha256:17be721660ffab17fa20b52cc6678e127eb7c0554c3fa251d01dabea93abe2ba
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:2e9db4fec08291fa56c4a3d3f03766adf7af74d1c4ded936b30d956fc1bd2154
-  output_digest: null
-artifacts: []
+  output_digest: sha256:8a2060eaab1e441693425f84979dfefcbdfd857eedd7b91ece73dc56d1023255
+artifacts:
+- path: feature-docs/consult-litellm-contributor-tier/SPEC.md
+  sha256: sha256:8a2060eaab1e441693425f84979dfefcbdfd857eedd7b91ece73dc56d1023255
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
