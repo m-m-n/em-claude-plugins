@@ -145,8 +145,8 @@ declares two disjoint sets rather than re-declaring registered ids as
   `workflow.yaml` the patch is applied to. Each carried id's record is
   copied from that `workflow.yaml` **verbatim** — `title`, `plan`, `files`,
   `skills`, `domains`, `complexity`, `requirements`, `status`, `branch`,
-  `notes` — and the patch supplies no body for it: a carried id must not
-  also be a key of `tasks_patch.entries`.
+  `notes`, `routeback_failed_journal_line` — and the patch supplies no body
+  for it: a carried id must not also be a key of `tasks_patch.entries`.
 - `tasks_patch.entries` — only task ids NOT yet registered in that
   `workflow.yaml`. Every field of an entry (including `initial_status:
   pending`, application rule 12) is worker-supplied and validated exactly as
