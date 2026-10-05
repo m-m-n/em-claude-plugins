@@ -1,0 +1,127 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 8182 tests, OK (no failing test)
+final_failures: []             # re-executed after the implementation: python3 -m unittest discover -s tests -> Ran 8251 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 605/605 passed (604 cases + 1 hard-coded unattended-demotion case)
+acceptance_tests:
+  AC-1:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (the 30 appended cases)"
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_command_position_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_expansion_position_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_process_substitution_forms
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_unclosed_opener_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_attack_forms_are_denied
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook (copy of the base destructive-guard.py), the case
+      runner reported 582/605 passed, i.e. 23 of the 30 appended cases failed
+      (destructive statements after a misread $'...', ${...}, $((...)), ((...)),
+      $[...] or <(...) / >(...) came back allow). The five TestFixedVerdicts tests
+      listed above each ended in FAIL (assertion: expected deny, got allow) in the
+      same run (AssertionError: 'allow' != 'deny'). The case commit lists the
+      failing labels.
+  AC-2:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (all 605 entries)"
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
+    red_confirmed: false
+    red_reason: >-
+      Regression-preservation criterion: every pre-existing case already passed at
+      its expected verdict before the change (the unchanged hook scored 582/605, all
+      23 failures being new cases) and test_existing_cases_stay_in_place_and_new_ones_come_after
+      was green once the cases file carried the appended entries. There is no
+      executable check of this property that can fail before the implementation.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_replaced_readers_are_gone
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_a_scan_structure_follows_the_lexer
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_a_unterminated_substitutions_are_reported_unmatched
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_a_real_heredoc_operators_become_the_records
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_b_separators_lie_outside_every_region
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook, test_replaced_readers_are_gone FAILED (_OperatorContext
+      and _blank_comments still defined), and every TestFixedExpectations test and the
+      stage (a)/(b) agreement tests ERRORed (AttributeError: module has no attribute
+      'lex_shell'; the per-command stage tests: no attribute '_strip_heredocs_mapped').
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_d_tok_provenance_matches_the_contract
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_e_values_carry_no_mask_character
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_e_unmasked_spans_equal_their_shlex_reading
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_e_tokens_keeps_values_clean_and_matches_shlex_without_regions
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the four tests ERRORed (AttributeError: the hook has
+      no attribute '_strip_heredocs_mapped' / 'lex_shell', which the provenance
+      checks read through). The control
+      `rm -rf /tmp/safe$'\t'` was already green before the change (listed in
+      AC-2 / the cases file), so only the provenance and mask-character properties
+      are the red part of this criterion.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestPositionMap
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_c_real_operators_are_recorded_in_their_statement
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_c_no_record_lies_inside_a_region
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_f_position_maps_meet_their_contract
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocBodies.test_nothing_in_a_body_opens_anything_for_the_following_text
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocBodies.test_a_body_in_a_double_quoted_substitution_is_still_a_body
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook all four TestPositionMap tests, the stage (c)/(f)
+      tests and the two TestHeredocBodies tests above ERRORed (AttributeError: no
+      'lex_shell' / '_strip_heredocs_mapped' in the hook). test_sink_bound_body_in_a_substitution_is_scanned
+      and test_quote_in_a_body_does_not_hide_the_next_heredoc were already green
+      (pre-existing behavior) and are not counted as the red part.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestSubstitutionPolicies.test_broad_spans_are_default_spans_plus_candidates
+      - tests.test_destructive_guard_lexer_agreement.TestSubstitutionPolicies.test_process_substitution_body_is_its_own_chunk_and_host_keeps_the_opener
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_single_quote_candidates
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement.test_a_scan_structure_follows_the_lexer
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook test_broad_spans_are_default_spans_plus_candidates and
+      test_single_quote_candidates ERRORed (AttributeError: no 'lex_shell'), and
+      test_process_substitution_body_is_its_own_chunk_and_host_keeps_the_opener FAILED
+      (the procsub body was not queued as its own chunk). The three-search policy
+      tests (shell mode, heredoc-body mode, honor_single_quotes=False) were already
+      green and pin existing behavior.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_many_unclosed_openers_are_settled_without_a_rescan_per_opener
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_lexing_work_is_linear_for_unclosed_and_closed_forms
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_same_command_gives_an_identical_map_and_decision
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_bulk_unclosed_openers_get_a_non_allow_decision_in_time
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_mixed_bulk_openers_get_a_non_allow_decision_in_time
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_budget_exceeded_is_an_ask_never_an_allow
+    red_confirmed: true
+    red_reason: >-
+      Lexer half: against the unchanged hook test_many_unclosed_openers_are_settled_without_a_rescan_per_opener,
+      test_lexing_work_is_linear_for_unclosed_and_closed_forms and
+      test_same_command_gives_an_identical_map_and_decision ERRORed (AttributeError:
+      no 'lex_shell'). Decision half: the 60KB bulk / mixed non-allow tests and the
+      budget-ask test already passed against the unchanged hook (its existing
+      scan budget already produced a non-allow decision within the time limit), so
+      that half has no observed red.
+  AC-8:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the agreement test file ran 69 tests: 43 ERROR
+      (AttributeError: no attribute 'lex_shell' / '_strip_heredocs_mapped'), 7 FAIL
+      (e.g. AssertionError: 'allow' != 'deny'; test_replaced_readers_are_gone:
+      True is not false) and 19 ok, so 50 of 69 were red.
+  AC-9:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_hook_and_test_import_only_the_standard_library
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_lexer_reads_no_file_and_evaluates_nothing
+    red_confirmed: false
+    red_reason: >-
+      Scope and standard-library-only properties already held before the change (the
+      unchanged hook imports only standard library modules and reads no file in the
+      lexer path), so the two tests were green against the unchanged hook. The
+      changed-path scope (three Scope files plus test-docs, no hooks.json /
+      plugin.json / marketplace.json) is verified with `git diff --stat` against the
+      parent branch and has no executable check that can fail before the change.
