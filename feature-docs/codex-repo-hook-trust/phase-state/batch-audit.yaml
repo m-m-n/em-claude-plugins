@@ -1,0 +1,12 @@
+schema_version: 1
+feature: codex-repo-hook-trust
+records:
+  - question_id: verify.ts8-verdict
+    packet_id: null
+    answered_at: "2026-10-05T11:45:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single
+    selected_option_ids: [A]
+    freeform: null
+    normalized_answer: "TS-8 = fail (category security); rework: re-run the read-only codex commands under a temporary HOME/CODEX_HOME and update HOOK-TRUST-FINDINGS.md"
+    resolution_note: "gate: verify-phase judgment of TS-8 (no gate_id; unclear point consulted per launcher instruction); options: A) fail + rework (re-run `codex features list` etc. under temporary home, update the record) / B) pass with a note (reads were read-only, disclosed, no credentials, verdicts unaffected); choice: A; codex_consulted: true; Codex reasons: NFR1 (SPEC.md:27) and TS-8 forbid reading the real Codex home too, and `codex features list` reads the real config.toml; B would grant an exception the requirement does not have — read-only, disclosure, no credential output and unchanged verdicts do not cure the NFR1 violation; opus_escalation: not run"
