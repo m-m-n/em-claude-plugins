@@ -830,12 +830,16 @@ def manifest_file_for(ecosystem, changed_files):
 # executable and target once the run side has bound and prepared the group.
 # ---------------------------------------------------------------------------
 
-# Process plumbing carried through unchanged when present -- locating the
-# shell, temp space, the already-resolved binary on PATH -- never a source
-# of a TOOL'S OWN configuration (a registry endpoint, a subcommand alias).
-# Everything else the reviewed project's environment might carry is left
-# out: the child environment is built explicitly, never inherited
-# wholesale (task0008 Design, "Configuration isolation").
+# Process plumbing carried through when present -- locating the shell, temp
+# space and the scanner's own helper programs -- never a source of a TOOL'S
+# OWN configuration (a registry endpoint, a subcommand alias). Every key but
+# PATH is carried through unchanged. PATH keeps only its absolute entries,
+# unmodified and in their original order, and is left out when no absolute
+# entry remains, so a scanner cannot resolve a helper program from a relative
+# or empty entry (see build_child_env). Everything else the reviewed
+# project's environment might carry is left out: the child environment is
+# built explicitly, never inherited wholesale (task0008 Design,
+# "Configuration isolation").
 CHILD_ENV_BASE_KEYS = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "USERPROFILE")
 
 # Per-ecosystem pins, each through the tool's OWN documented environment
@@ -896,12 +900,31 @@ ECOSYSTEM_ENV_PINS = {
 def build_child_env(ecosystem, environ=None):
     """The explicit child environment for one scan job: a minimal base
     (process plumbing only, see CHILD_ENV_BASE_KEYS) plus this ecosystem's
-    pins (ECOSYSTEM_ENV_PINS) layered on top. Never reads any file inside
-    the reviewed project -- the result is identical regardless of what
-    configuration files that project's tree happens to contain."""
+    pins (ECOSYSTEM_ENV_PINS) layered on top. Every base key but PATH is
+    copied unchanged when `environ` has it. PATH keeps only the entries of
+    `environ`'s PATH that are non-empty and absolute, each as written and in
+    its original order, joined with the platform's path-list separator, and
+    it is left out when no such entry remains or `environ` has no PATH, so a
+    scanner cannot resolve its own helper programs from a relative or empty
+    entry. The decision is lexical: no file is opened, no filesystem state is
+    inspected and no process is started, and the result is identical
+    regardless of what configuration files the reviewed project's tree
+    happens to contain."""
     environ = os.environ if environ is None else environ
     name = ecosystem.get("ecosystem", "unknown")
-    env = {key: environ[key] for key in CHILD_ENV_BASE_KEYS if key in environ}
+    env = {}
+    for key in CHILD_ENV_BASE_KEYS:
+        if key not in environ:
+            continue
+        if key == "PATH":
+            entries = [
+                entry for entry in environ[key].split(os.pathsep)
+                if entry and os.path.isabs(entry)
+            ]
+            if entries:
+                env[key] = os.pathsep.join(entries)
+        else:
+            env[key] = environ[key]
     env.update(ECOSYSTEM_ENV_PINS.get(name, {}))
     return env
 
