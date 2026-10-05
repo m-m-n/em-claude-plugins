@@ -148,7 +148,7 @@ workflow:
   summary: 'TS-1..TS-8 all pass. Full suite python3 -m unittest discover -s tests: 7353 tests OK. Module: 11 tests OK. TS-4 throwaway tree (both registries 0.1.68, outside repo): test_version_is_past_baseline and test_em_workflow_entry_version_is_past_baseline fail with "(0, 1, 68) not greater than (0, 1, 68)", matching task0002 AC-1/AC-2/AC-3 red_reason. TS-6: no 44 in module. TS-7: only AC-1/2/3 red_reason changed. TS-8: changed paths confined; imports json/re/unittest/pathlib only. Build/format: not configured. Excluded requirements: none.'
   completed_at_commit: ca62936e661c9816204ee511bbaec2a0a020fc3b
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Refresh the version-bump test baseline and align the task0002 test record
