@@ -1,0 +1,12 @@
+schema_version: 1
+feature: sca-file-tasks-robustness
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-10-05T13:25:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline auto-addition of tests/test_tier_record_schema_v2.py to task0003 files"
+    normalized_answer: "declined"
+    resolution_note: "task_id: task0003; deviation path: tests/test_tier_record_schema_v2.py (refreshed the REVIEW_PHASE_SHA256 pin after review-phase.md changed); path shape check: passed; control path: no; observable outcome: present (the pinned-hash test fails without the refresh); missing evidence part: identifier — the report names no AC-n of task0003's plan and no requirement id registered in workflow.yaml; not auto-added to tasks.task0003.files, left to the containment check"
