@@ -779,7 +779,40 @@ def build_command(ecosystem):
 
 
 def resolve_executable(name):
-    return shutil.which(name)
+    """The absolute path of the scanner executable `name` (an allowlisted
+    bare name -- planning validates the registry entry first), or None.
+
+    Only ABSOLUTE entries of the search list are searched. The list is the
+    process PATH when that variable is present (an empty value counts as
+    present and yields no entries); when PATH is unset it is the platform
+    default search path (`os.defpath`), read at call time. An empty entry and a
+    relative entry (`tools`, `./node_modules/.bin`, `.`, `~/bin`) are skipped
+    silently: nothing is expanded, and no implicit current-directory entry is
+    searched on any platform. Such an entry names a different directory
+    depending on the current directory (the process cwd at planning, the
+    job's cwd at launch), so it could let a file inside the reviewed tree
+    stand in for the scanner.
+
+    The first absolute entry, in its original order, that holds an existing
+    non-directory file named `name` that the current user may execute wins;
+    the result is that entry joined with `name`, unnormalized, and therefore
+    absolute. None means no absolute entry qualifies -- including a scanner
+    reachable only through relative or empty entries -- and planning reports
+    the existing `<ecosystem>_tool_not_found` reason for it."""
+    search_path = os.environ.get("PATH")
+    if search_path is None:
+        search_path = os.defpath
+    for entry in search_path.split(os.pathsep):
+        if not entry or not os.path.isabs(entry):
+            continue
+        candidate = os.path.join(entry, name)
+        if (
+            os.path.exists(candidate)
+            and os.access(candidate, os.X_OK)
+            and not os.path.isdir(candidate)
+        ):
+            return candidate
+    return None
 
 
 def manifest_file_for(ecosystem, changed_files):
@@ -822,10 +855,14 @@ def manifest_file_for(ecosystem, changed_files):
 # subcommand" / "Configuration isolation"). PURE: no subprocess is launched
 # by anything in this section. `build_scan_jobs`, the caller of everything
 # here, plans the scan: it validates each selected registry entry
-# (validate_ecosystem_entry), resolves its executable on PATH
-# (resolve_executable) and returns one `ScanPlan` per project-directory group
-# -- an unresolvable/invalid entry yields no plan and the ecosystem's
-# existing tool-absent skip reason instead, never a fallback command form.
+# (validate_ecosystem_entry), resolves its executable (resolve_executable)
+# and returns one `ScanPlan` per project-directory group -- an
+# unresolvable/invalid entry yields no plan and the ecosystem's existing
+# tool-absent skip reason instead, never a fallback command form. Resolution
+# searches only the ABSOLUTE entries of PATH (the default search path when
+# PATH is unset) and never an empty or relative entry, so every plan carries
+# an absolute executable, and a scanner reachable only through relative or
+# empty entries gets the existing `<ecosystem>_tool_not_found` reason.
 # `build_scan_job` then builds ONE job from a plan's ALREADY-RESOLVED
 # executable and target once the run side has bound and prepared the group.
 # ---------------------------------------------------------------------------
@@ -1161,8 +1198,8 @@ class ScanPlan:
 def build_scan_jobs(registry, changed_files, project_root):
     """The only planning stage of the `scan` subcommand: reduces `changed_files`
     to the ecosystems the registry selects (select_ecosystems, unchanged),
-    validates each entry (validate_ecosystem_entry), resolves its executable on
-    PATH (resolve_executable), groups that ecosystem's changed files by real
+    validates each entry (validate_ecosystem_entry), resolves its executable
+    (resolve_executable), groups that ecosystem's changed files by real
     path (`_verified_groups`) and emits ONE `ScanPlan` per (ecosystem, project
     directory) group, with the group's target already selected by
     manifest_file_for. Returns (plans, skip_reasons): ecosystems in registry
@@ -1171,6 +1208,13 @@ def build_scan_jobs(registry, changed_files, project_root):
     invalid entry or an unresolvable binary contributes its existing
     machine-stable skip reason once and NO plan -- no path is resolved for it
     and no fallback command form is ever attempted.
+
+    Resolution searches only the ABSOLUTE entries of PATH (the default search
+    path when PATH is unset); an empty or relative entry is never searched, so
+    every plan's executable is an absolute path whatever the job's working
+    directory. A scanner found only under relative or empty entries is an
+    unresolvable binary: the ecosystem gets the existing
+    `<ecosystem>_tool_not_found` reason once and no plan.
 
     Grouping is by REAL path: a changed file belongs to the group of its
     containing directory's real path relative to the real project root, so a
