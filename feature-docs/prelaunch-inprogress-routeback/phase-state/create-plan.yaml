@@ -1,14 +1,18 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-plan
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 5be1e1bbaed7ff4f837b0973eeab91bed9cd0fde
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
+active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
