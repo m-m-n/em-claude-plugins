@@ -1,20 +1,89 @@
 schema_version: 1
 feature: review-gate-abort-recovery
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
-base_revision: 54044fa44b1bdec52a09a57885e5b61cf3346ffb
+base_revision: c529f5516bc046ec38b098dfe9f3a665052dd2cb
 last_input_digest: sha256:1270976783c1ce4da3e19d0b477db877be24f9d3d56fdc3512ca17031bdf123d
 active_request_id: create-plan-run-0001
-packets: {}
-answers: {}
+packets:
+  create-plan-q0001:
+    packet_id: create-plan-q0001
+    origin: orchestrator (planner IMPLEMENTATION.md open questions)
+    status: answered
+    issued_at: '2026-10-05T15:42:18+09:00'
+    questions:
+    - question_id: q-oq1-fail-closed-packet-state
+      status: answered
+    - question_id: q-oq2-unmapped-stop-wording
+      status: answered
+    - question_id: q-oq3-direction2-fallback-stop
+      status: answered
+    - question_id: q-oq4-legacy-recovery-trigger
+      status: answered
+answers:
+  q-oq1-fail-closed-packet-state:
+    packet_id: create-plan-q0001
+    answered_at: '2026-10-05T15:42:18+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [plan_as_is]
+    freeform: null
+    normalized_answer: 'plan_as_is: fail-closed abort 後の旧 packet の状態に新しい規則を足さない。obsolete 化は question-resolution.md Classification gate の stop / inapplicable に限られ、SPEC FR1/FR3/A4 は task0001 で満たされる'
+    resolution_note: 'codex_consulted: true (readonly, 1 turn). 不採用: revise_plan（SPEC にない規則が増える）/ follow_up_task（FR3 達成に不要）'
+  q-oq2-unmapped-stop-wording:
+    packet_id: create-plan-q0001
+    answered_at: '2026-10-05T15:42:18+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [plan_as_is]
+    freeform: null
+    normalized_answer: 'plan_as_is: reason code は batch-terminal-line.md の対応表が所有し、D2 どおり編集対象に書かない。SPEC Edge Case の unmapped_stop 記述は不正確だが実装規則として複製しない'
+    resolution_note: 'codex_consulted: true (readonly, 1 turn). 不採用: revise_plan（D2・NFR3・NFR4 に反する）/ follow_up_task（機能追加なし）'
+  q-oq3-direction2-fallback-stop:
+    packet_id: create-plan-q0001
+    answered_at: '2026-10-05T15:42:18+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [follow_up_task]
+    freeform: null
+    normalized_answer: 'follow_up_task: Classification gate direction 2 から相談経路・Unlisted-gate fallback に進んで止まる経路は SPEC FR1 の対象外。その停止時の review の状態と再開経路は別タスクとして起票する'
+    resolution_note: 'codex_consulted: true (readonly, 1 turn). 不採用: revise_plan（FR1 の対象拡張）/ plan_as_is（未対応経路を追跡対象にすべき）'
+  q-oq4-legacy-recovery-trigger:
+    packet_id: create-plan-q0001
+    answered_at: '2026-10-05T15:42:18+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [plan_as_is]
+    freeform: null
+    normalized_answer: 'plan_as_is: 既存 review: failed の復旧は自動契機を持たず、SSOT の手順（task0001 Design 3）と停止報告・resume_conditions からの案内（task0002 Design 2）で足りる'
+    resolution_note: 'codex_consulted: true (readonly, 1 turn). 不採用: revise_plan（Step B 分岐の追加は FR4 を超え NFR1 に触れる）/ follow_up_task（不要）'
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:1270976783c1ce4da3e19d0b477db877be24f9d3d56fdc3512ca17031bdf123d
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: 
+artifacts:
+- path: feature-docs/review-gate-abort-recovery/IMPLEMENTATION.md
+  sha256: sha256:9f78580479a58f63cb396812d4d6c43590f201a4ac97dec35bcf46a1d8881f76
+  produced_by: create-plan-run-0001
+- path: feature-docs/review-gate-abort-recovery/VERIFICATION.md
+  sha256: sha256:a961aab801d6358312096d8341a4889096b129b5e17ee7ef0e141adfaf6bf5d9
+  produced_by: create-plan-run-0001
+- path: feature-docs/review-gate-abort-recovery/THREAT-MODEL.md
+  sha256: sha256:b24acb9a282520e19c0c169f605d63ece39c9010f54f934bca957c1e4fbe4a7f
+  produced_by: create-plan-run-0001
+- path: feature-docs/review-gate-abort-recovery/tasks/task0001.md
+  sha256: sha256:5665cec88c3aeae8235b53547874406665e17b89aa8c0badba848c9f3c605558
+  produced_by: create-plan-run-0001
+- path: feature-docs/review-gate-abort-recovery/tasks/task0002.md
+  sha256: sha256:09686be601f4e4743387fe3844fa0cc009099bc16c48818210e7e95fb2c84bc2
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: review-gate-abort-recovery-p0001
+  status: validated
+  base_input_digest: sha256:1270976783c1ce4da3e19d0b477db877be24f9d3d56fdc3512ca17031bdf123d
+  base_workflow_blob: 611ddf58618716b5fbbbb9f8b967809438153986
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
