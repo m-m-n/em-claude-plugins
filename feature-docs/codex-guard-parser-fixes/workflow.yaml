@@ -187,7 +187,7 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-parser-fixes/task0002
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -196,7 +196,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   residual_critical_high: 0
   needs_rework: false
 requirements:
