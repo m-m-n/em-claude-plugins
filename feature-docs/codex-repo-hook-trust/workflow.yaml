@@ -128,7 +128,7 @@ workflow:
   completed_at_commit: a2d190bdbc95ce9b5c09e80c54d63c50d10d0b58
   base_commit: 6e48db5b950b1b7215eb97c6a867fb02c818fbb2
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -174,7 +174,16 @@ tasks:
     notes: null
     branch: em-workflow/codex-repo-hook-trust/task0001
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
