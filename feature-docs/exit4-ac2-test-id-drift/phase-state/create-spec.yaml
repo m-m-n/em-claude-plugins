@@ -1,0 +1,28 @@
+schema_version: 1
+feature: exit4-ac2-test-id-drift
+phase: create-spec
+status: completed
+generation: 1
+base_revision: b3373f7fc94eddfc587230280fd395656d802e2b
+last_input_digest: sha256:bb68f6975ff16dd01d078c4a38a6cb1148e121a6a49bd5e47dec39b494fa50dd
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:349b38c13385deb85ea3cc571815c0736fc35e8ba9816c028d3f78b476b2f42f
+  output_digest: sha256:3231c380bb12b0bbe3d0e92480cc9652f6f856b794e77c65bbe830427156fc01
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:bb68f6975ff16dd01d078c4a38a6cb1148e121a6a49bd5e47dec39b494fa50dd
+  output_digest: sha256:0c7489a802637f513dab2db33ebbee651eac4be1b35ff2645ff4164b7ed18dc6
+artifacts:
+- path: feature-docs/exit4-ac2-test-id-drift/SPEC.md
+  sha256: sha256:146e5cdab0e2982523d42d903196ac12b0aa75b5c6f15d0ced00bb84f42d4f4a
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: sha256:32180d6019da7e2d44b67efe7dd78c2266b319c822f8abf22106342a32f14466
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
