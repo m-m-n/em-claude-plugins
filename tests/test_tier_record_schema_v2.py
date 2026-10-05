@@ -463,8 +463,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0002 of sca-scanner-project-config-isolation (FR13):
 # Phase R2's axis-2 text now describes the npm / cargo isolation directory,
 # the isolation failure tokens and the trusted configuration scope.
+# Refreshed by task0001 of review-gate-abort-recovery (FR1, FR3-FR5): Phase
+# R5 gained the gate-abort and legacy-recovery blocks and the scope
+# statement on the `status: failed` reservation.
 REVIEW_PHASE_SHA256 = (
-    "4b2deaba214fcee339cb5d7fb9e50294adefca68789a3791aa41d6d97c96bc6b"
+    "64c2b08f3752c07ebd9d540546c9048ffaa1f9a0bbc0df7f1ed9a90341c36ddb"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
