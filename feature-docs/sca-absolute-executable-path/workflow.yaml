@@ -2,72 +2,40 @@ schema_version: 1
 feature: sca-absolute-executable-path
 created: '2026-10-05'
 base_branch: main
-goal: '# SCA 軸: PATH の相対項目で解決した実行ファイルが、入れ子のプロジェクトを cwd にすると別のファイルとして起動される
-
+goal: |
+  # SCA 軸: PATH の相対項目で解決した実行ファイルが、入れ子のプロジェクトを cwd にすると別のファイルとして起動される
 
   Notion タスク: https://www.notion.so/3ef3509ec8ee81719ec9d7605a726ce1 （種別: セキュリティ）
 
-
   ## 脆弱性の概要
-
-  `resolve_executable()` が `shutil.which()` の結果をそのまま返すため、PATH に相対の項目があると argv[0] が相対パスになる。npm
-  / cargo / go のスキャンは cwd を入れ子のプロジェクトに移すので、解決時とは別の実行ファイルが起動される。
-
+  `resolve_executable()` が `shutil.which()` の結果をそのまま返すため、PATH に相対の項目があると argv[0] が相対パスになる。npm / cargo / go のスキャンは cwd を入れ子のプロジェクトに移すので、解決時とは別の実行ファイルが起動される。
 
   ## 参照
-
   - CVE / GHSA ID: 該当なし / severity: medium / 修正済みバージョン: 無し
 
-
   ## 攻撃シナリオ
-
-  レビュー実行者の PATH に相対の項目（例: `tools`、`./node_modules/.bin`）がある状態で、第三者が `services/api/package.json`・`package-lock.json`
-  と、同名の実行可能ファイル `services/api/tools/npm` をリポジトリに追加する。SCA 軸のスキャンが `services/api` を
-  cwd にして相対の argv[0] を起動し、解決時に確認した `<起動時の cwd>/tools/npm` ではなく `services/api/tools/npm`
-  が実行される。子プロセスの PATH にも相対の項目がそのまま渡るので、npm の `env node` なども入れ子のディレクトリから解決される。
-
+  レビュー実行者の PATH に相対の項目（例: `tools`、`./node_modules/.bin`）がある状態で、第三者が `services/api/package.json`・`package-lock.json` と、同名の実行可能ファイル `services/api/tools/npm` をリポジトリに追加する。SCA 軸のスキャンが `services/api` を cwd にして相対の argv[0] を起動し、解決時に確認した `<起動時の cwd>/tools/npm` ではなく `services/api/tools/npm` が実行される。子プロセスの PATH にも相対の項目がそのまま渡るので、npm の `env node` なども入れ子のディレクトリから解決される。
 
   ## 影響範囲
-
   レビュー実行者の権限での任意コード実行。SPEC FR3 の「argv[0] は実行ファイルの絶対パス」も満たさない。ルートのプロジェクトでは変更前から同じ種類の露出があった。
 
-
   ## 完了の定義
-
   - [ ] 攻撃シナリオが成立しない
-
   - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
-
   - [ ] cwd が入れ子のジョブでも argv[0] が絶対パスになることを確かめるテストがある
 
-
   ## 該当箇所
-
-  `em-workflow/scripts/scan-dependencies.py:717`（`resolve_executable`）、`em-workflow/scripts/scan-dependencies.py:919`（`build_scan_job`
-  の cwd 束縛）、`build_child_env`
-
-  修正案: `resolve_executable()` の結果を `os.path.abspath()` で絶対パスに固定する。`build_child_env()`
-  では PATH の相対の項目を除くか、絶対パスに直す。
-
-  出典: em-workflow レビュー round 1（feature `sca-per-project-scan-binding`）の finding `f7a5bd6dae54d451`（severity:
-  medium, category: security, source: codex:security）。
-
+  `em-workflow/scripts/scan-dependencies.py:717`（`resolve_executable`）、`em-workflow/scripts/scan-dependencies.py:919`（`build_scan_job` の cwd 束縛）、`build_child_env`
+  修正案: `resolve_executable()` の結果を `os.path.abspath()` で絶対パスに固定する。`build_child_env()` では PATH の相対の項目を除くか、絶対パスに直す。
+  出典: em-workflow レビュー round 1（feature `sca-per-project-scan-binding`）の finding `f7a5bd6dae54d451`（severity: medium, category: security, source: codex:security）。
 
   ## 暫定緩和策
-
   PATH に相対の項目を含めない状態でレビューを実行する。
 
-
   ## 追加の指示
-
-  - 実装完了後、integration ブランチをリモートへ push し、gh pr create で base_branch への PR を作成する。integration
-  ブランチはローカル・リモートの両方に残す（base_branch へ自動マージしない）。
-
+  - 実装完了後、integration ブランチをリモートへ push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートの両方に残す（base_branch へ自動マージしない）。
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
-
   - その議論の内容を Notion に記録する。
-
-  '
 parent_branch: em-workflow/sca-absolute-executable-path/integration
 tier: full
 tier_decision:
