@@ -34,6 +34,11 @@ Covers task0003 Acceptance Criteria
   (`python3 -m unittest discover -s tests`); this module itself imports the
   standard library only.
 
+Extended for task0003 of sca-file-tasks-robustness (AC-7): the audit-item
+source map gains one row (the incomplete triage filing), so the row-count
+pin below moves from seven to eight in place; AC-2's "unchanged" wording
+above describes the count at the time that feature landed.
+
 Test authoring follows
 `tests/test_batch_quiet_output_audit_record_contract.py`'s form: standard
 library only, no import from another test module, every constant
@@ -281,9 +286,12 @@ class TestAC2SurvivingClausesAndCountsUnchanged(unittest.TestCase):
             section.count("and the kept integration branch name"), 1
         )
 
-    def test_batch_quiet_output_source_map_still_has_seven_rows(self):
+    def test_batch_quiet_output_source_map_has_eight_rows(self):
+        # sca-file-tasks-robustness task0003 AC-7: the incomplete triage
+        # filing adds one row, moving the count from seven to eight in
+        # place.
         section = _sections(_read(BATCH_MODE_PATH))["Batch quiet output"]
-        self.assertEqual(len(_table_rows(section)), 7)
+        self.assertEqual(len(_table_rows(section)), 8)
 
 
 # ---------------------------------------------------------------------------

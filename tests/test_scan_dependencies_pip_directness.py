@@ -995,9 +995,9 @@ class TestUndeterminedNote(PipDirectnessCase):
         self.install_executable("govulncheck")
         self.install_executable("cargo-audit")
 
-        def stand_in_unit(ecosystem, directory, files, project_root, real_root, executable_path):
+        def stand_in_unit(plan, project_root):
             unit = SCAN._group_audit(completed=True)
-            if ecosystem["ecosystem"] == "go":
+            if plan.ecosystem["ecosystem"] == "go":
                 unit["undetermined"] = 1
             else:
                 unit["directness_undetermined"] = 2
@@ -1042,7 +1042,7 @@ class TestUndeterminedNote(PipDirectnessCase):
         self.write("Cargo.toml", "[dependencies]\n")
         self.install_executable("cargo-audit")
 
-        def stand_in_unit(ecosystem, directory, files, project_root, real_root, executable_path):
+        def stand_in_unit(plan, project_root):
             unit = SCAN._group_audit(completed=True)
             unit["directness_undetermined"] = 2
             return unit

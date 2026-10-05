@@ -8,6 +8,13 @@ All five underlying findings share one root cause: `phase-state.md`'s
 list, not a map), and three statements written before rework round 1 turned
 it into a list still assumed the old `answers` map shape.
 
+Extended for task0003 (sca-file-tasks-robustness; see
+feature-docs/sca-file-tasks-robustness/tasks/task0003.md AC-7): the
+audit-item source map's row count moves from seven to eight in place (the
+new row is the incomplete triage filing); the count assertion is renamed
+from `test_source_map_still_has_seven_rows` to
+`test_source_map_has_eight_rows`, no assertion deleted.
+
 Covers task0006 Acceptance Criteria:
 
 - AC-1 (FR11, NFR4): `batch-mode.md`'s audit-item source map rows for "Every
@@ -117,7 +124,7 @@ Covers task0002 Acceptance Criteria
 - AC-5 (FR21, NFR9): the writer-count sentence and the source-map row
   count are updated in place, not deleted; each moved count keeps a
   positive pin at its new value (`TestWriterCountSentence`,
-  `TestAC2SourceMapRegressionGuards.test_source_map_still_has_seven_rows`
+  `TestAC2SourceMapRegressionGuards.test_source_map_has_eight_rows`
   in `tests/test_batch_quiet_output_discipline.py` /
   `tests/test_batch_quiet_output_audit_persistence.py`).
 - AC-7 (NFR1, NFR4): the new bullet cites `references/question-resolution.md`
@@ -322,8 +329,10 @@ class TestAC1SourceMapRowsNameRecordsContainer(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# AC-2: exactly seven rows (task0002 AC-5: moved from six -- see the
-# relaxed-route row this task adds); the assumption row is byte-identical
+# AC-2: exactly eight rows (task0002 AC-5: moved from six to seven -- see the
+# relaxed-route row that task added; sca-file-tasks-robustness task0003 AC-7:
+# moved from seven to eight -- see the incomplete-triage-filing row that task
+# added); the assumption row is byte-identical
 # ---------------------------------------------------------------------------
 
 ASSUMPTION_ROW = (
@@ -339,8 +348,8 @@ class TestAC2SourceMapRegressionGuards(unittest.TestCase):
         cls.text = _read(BATCH_MODE_PATH)
         cls.quiet_section = _slice(cls.text, "## Batch quiet output")
 
-    def test_source_map_still_has_seven_rows(self):
-        self.assertEqual(len(_table_rows(self.quiet_section)), 7)
+    def test_source_map_has_eight_rows(self):
+        self.assertEqual(len(_table_rows(self.quiet_section)), 8)
 
     def test_assumption_row_unchanged_character_for_character(self):
         self.assertIn(ASSUMPTION_ROW, self.quiet_section)
