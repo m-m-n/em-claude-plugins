@@ -1,0 +1,75 @@
+round: 1
+executed_at: "2026-10-05T13:54:18+09:00"
+scope:
+  review_mode: diff
+  base_commit: 60d36ae60fd6ecac21dfb7f81b7b05307d5f0b05
+  head_commit: 83289bafd954c159ba5069043bb76b78fbec3bd1
+  changed_files:
+  - em-workflow/references/batch-mode.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/scripts/scan-dependencies.py
+  - test-docs/sca-file-tasks-robustness/task0001.tests.yaml
+  - test-docs/sca-file-tasks-robustness/task0002.tests.yaml
+  - test-docs/sca-file-tasks-robustness/task0003.tests.yaml
+  - test-docs/sca-file-tasks-robustness/task0004.tests.yaml
+  - tests/test_batch_quiet_output_audit_persistence.py
+  - tests/test_batch_quiet_output_audit_record_contract.py
+  - tests/test_batch_quiet_output_discipline.py
+  - tests/test_sca_file_tasks_oserror.py
+  - tests/test_sca_finding_title_roundtrip.py
+  - tests/test_sca_run_scan_plan_units.py
+  - tests/test_sca_scan_invocation.py
+  - tests/test_sca_scan_job_grouping.py
+  - tests/test_sca_scanner_project_config_isolation.py
+  - tests/test_sca_triage_receipt_partial_failure.py
+  - tests/test_tier_record_schema_v2.py
+  - tests/test_wrapper_fallback_doc_realignment.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: failed}
+  - {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 3b0cbcee0a37b8bf
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    line: 421
+    title: "A temp-file removal error after a successful create/update reports the package as failed and stops the rest of the batch"
+    description: "_run_entry_point_with_references deletes the references file in a finally block (lines 421-423) with an unguarded Path(refs_path).unlink(missing_ok=True). If that unlink raises OSError after subprocess.run has already returned exit 0, the OSError replaces the return value; create_security_task / append_security_task_references turn it into EntryPointError, and file_tasks records the package as failed_package (task_create_failed / task_update_failed), puts it first in unattempted_packages and stops the batch. The receipt then calls a filed package unfiled. FR3 only requires converting launch and temp-file write errors. _write_references_tempfile already suppresses unlink errors, so the two cleanup paths are inconsistent. tests/test_sca_file_tasks_oserror.py::TestFilingHelpersConvertOsErrors.test_temp_file_removal_failure_becomes_entry_point_error pins the current behaviour."
+    suggestion: "Decide success or failure from the launch and exit status only: guard the unlink in the finally with try/except OSError and print the removal error to stderr. Remove 'removing the file' from the docstrings of _run_entry_point_with_references and create_security_task, and rewrite test_temp_file_removal_failure_becomes_entry_point_error to assert the helper returns normally and the error text reaches stderr only."
+    sources: [claude:comprehensive]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "medium severity is below the auto-fix and completion-gate threshold"
+evaluation:
+  round_summary: "Round 1 (diff mode, cross_validation=true). No reviewer reported a critical or high finding. The only finding is one medium from comprehensive#fallback, confirmed by the evaluator. comprehensive#0 (codex) returned non-JSON and was treated as failed; comprehensive#fallback covers that perspective. No injection attempts found. Coverage: security, comprehensive, performance, architecture corroborated; spec corroborated for production and reference files; test files test-docs task0001-0004, test_sca_finding_title_roundtrip.py, test_sca_triage_receipt_partial_failure.py, test_sca_scan_job_grouping.py, test_sca_scan_invocation.py, test_sca_scanner_project_config_isolation.py, test_batch_quiet_output_audit_persistence.py and test_tier_record_schema_v2.py not read by the evaluator (read budget exhausted)."
+  recommended_action: auto_fix
+  action_rationale: "No critical or high finding remains. The single medium finding has a small mechanical fix. If auto-fix does not cover medium findings, the round can complete."
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-sca-file-tasks-robustness-20261005T045354Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0

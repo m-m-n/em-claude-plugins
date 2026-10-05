@@ -387,47 +387,88 @@ def list_security_tasks(entry_point):
 
 
 def _write_references_tempfile(reference_lines):
-    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as fh:
-        fh.write("\n".join(reference_lines) + "\n")
-        return fh.name
+    """Writes `reference_lines` to a new temporary file and returns its path.
+    A failure while writing removes the partial file before the OS error
+    propagates, so the caller never has a path to clean up that it was not
+    given."""
+    fh = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
+    try:
+        with fh:
+            fh.write("\n".join(reference_lines) + "\n")
+    except OSError:
+        with contextlib.suppress(OSError):
+            Path(fh.name).unlink(missing_ok=True)
+        raise
+    return fh.name
+
+
+def _run_entry_point_with_references(reference_lines, build_argv):
+    """Writes `reference_lines` to a temporary references file, launches the
+    entry point with the argv `build_argv(<that file's path>)` builds, removes
+    the file afterwards (also when the launch failed) and returns the
+    CompletedProcess. Any OS error raised along the way -- creating or
+    writing the file, launching the process, removing the file -- propagates
+    as an OSError for the two public helpers below to convert."""
+    refs_path = None
+    try:
+        refs_path = _write_references_tempfile(reference_lines)
+        return subprocess.run(
+            build_argv(refs_path),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        if refs_path is not None:
+            Path(refs_path).unlink(missing_ok=True)
 
 
 def create_security_task(entry_point, package, reference_lines):
+    """Creates one security task for `package` through the entry point.
+    Pre: unchanged -- an entry point that is not an executable file raises
+    EntryPointError. Post: the task was created, or EntryPointError was
+    raised: for a non-zero exit of the launched process, and for ANY OS error
+    raised while writing the temporary references file, launching the
+    process or removing the file (the OS error is kept as the cause and its
+    text may appear in the message, which only ever reaches stderr). A raw
+    OS error never leaves this function."""
     if not _entry_point_is_valid(entry_point):
         raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
-    refs_path = _write_references_tempfile(reference_lines)
     try:
-        proc = subprocess.run(
-            [
+        proc = _run_entry_point_with_references(
+            reference_lines,
+            lambda refs_path: [
                 str(entry_point), "task", "create",
                 "--title", package,
                 "--type", SECURITY_TASK_TYPE,
                 "--priority", FILED_PRIORITY,
                 "--references-file", refs_path,
             ],
-            capture_output=True,
-            text=True,
-            check=False,
         )
-    finally:
-        Path(refs_path).unlink(missing_ok=True)
+    except OSError as exc:
+        raise EntryPointError(f"task create failed for package {package!r}: {exc}") from exc
     if proc.returncode != 0:
         raise EntryPointError(f"task create failed for package {package!r}: {proc.stderr.strip()}")
 
 
 def append_security_task_references(entry_point, task_id, reference_lines):
+    """Appends `reference_lines` to the references of task `task_id` through
+    the entry point. Same pre/postcondition as `create_security_task`: the
+    only exception that leaves this function for a launch, file or exit
+    failure is EntryPointError."""
     if not _entry_point_is_valid(entry_point):
         raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
-    refs_path = _write_references_tempfile(reference_lines)
     try:
-        proc = subprocess.run(
-            [str(entry_point), "task", "update", "--id", str(task_id), "--append-references-file", refs_path],
-            capture_output=True,
-            text=True,
-            check=False,
+        proc = _run_entry_point_with_references(
+            reference_lines,
+            lambda refs_path: [
+                str(entry_point), "task", "update",
+                "--id", str(task_id),
+                "--append-references-file", refs_path,
+            ],
         )
-    finally:
-        Path(refs_path).unlink(missing_ok=True)
+    except OSError as exc:
+        raise EntryPointError(f"task update failed for task {task_id!r}: {exc}") from exc
     if proc.returncode != 0:
         raise EntryPointError(f"task update failed for task {task_id!r}: {proc.stderr.strip()}")
 
@@ -450,17 +491,27 @@ def file_tasks(project_root, feature, findings, entry_point):
     Every pre-existing key (`branch`, `filed_packages`, `appended_packages`,
     `suppressed`, `report_path`, `degraded`, `degraded_reason`) keeps its
     name and meaning (task plan "the summary dict grows, never changes
-    shape"). Four keys are ADDED:
+    shape"). Five keys are ADDED:
 
     - `malformed_findings` -- findings skipped by the poison-finding policy
       (position + machine-stable reason, never advisory-sourced text).
     - `listing_dropped_count` -- entries the task listing dropped item-wise
       by validation (0 when no listing was consulted or nothing dropped).
     - `failed_package` / `failure_reason` -- set when the external task
-      system failed mid-batch; both None on a batch that completed without
-      such a failure. No exception escapes this function for a poison
-      finding or a mid-batch external failure -- both degrade to data in
-      the returned summary instead."""
+      system failed mid-batch (an entry-point failure, which includes an OS
+      error raised while launching the entry point or writing its temporary
+      references file); both None on a batch that completed without such a
+      failure. `failure_reason` is a fixed token, never OS-error or
+      advisory-sourced text; that text goes to stderr only.
+    - `unattempted_packages` -- on a mid-batch failure, the failed package
+      followed by every later package in the group order (after title
+      recovery, de-duplication and truncation), in that order; malformed
+      findings never appear in it. An empty list when the batch completed,
+      on the report branch and on the degraded report branch.
+
+    No exception escapes this function for a poison finding or a mid-batch
+    external failure -- both degrade to data in the returned summary
+    instead."""
     groups, malformed_findings = group_findings_by_package(findings)
 
     if entry_point is None:
@@ -478,6 +529,7 @@ def file_tasks(project_root, feature, findings, entry_point):
             "listing_dropped_count": 0,
             "failed_package": None,
             "failure_reason": None,
+            "unattempted_packages": [],
         }
 
     listing_outcome = list_security_tasks(entry_point)
@@ -500,6 +552,7 @@ def file_tasks(project_root, feature, findings, entry_point):
             "listing_dropped_count": 0,
             "failed_package": None,
             "failure_reason": None,
+            "unattempted_packages": [],
         }
 
     listing = listing_outcome.tasks
@@ -551,6 +604,14 @@ def file_tasks(project_root, feature, findings, entry_point):
                 break
             filed_packages.append(package)
 
+    # The failed package and every package after it in the group order were
+    # never completed (empty when the walk ran to the end). Group keys are
+    # unique, so the failed package's position is unambiguous.
+    package_order = list(groups)
+    unattempted_packages = (
+        package_order[package_order.index(failed_package):] if failed_package is not None else []
+    )
+
     return {
         "branch": "ntd",
         "filed_packages": filed_packages,
@@ -563,6 +624,7 @@ def file_tasks(project_root, feature, findings, entry_point):
         "listing_dropped_count": listing_outcome.dropped_count,
         "failed_package": failed_package,
         "failure_reason": failure_reason,
+        "unattempted_packages": unattempted_packages,
     }
 
 
@@ -734,9 +796,10 @@ def manifest_file_for(ecosystem, changed_files):
     Without a pip lockfile the target is what it always was. npm, cargo and
     go keep their manifest-first order.
 
-    The selection rule is unchanged by per-project binding: `run_scan` calls
-    this once per (ecosystem, project directory) group, with ONLY that
-    group's changed files, in their original input order (FR2)."""
+    The selection rule is unchanged by per-project binding: `build_scan_jobs`
+    calls this once per (ecosystem, project directory) group, with ONLY that
+    group's changed files, in their original input order (FR2). `run_scan`
+    never selects a target again; it launches the target the plan carries."""
     manifests = set(ecosystem.get("manifests") or [])
     lockfiles = ECOSYSTEM_LOCKFILES.get(ecosystem.get("ecosystem", "unknown"), set())
     if ecosystem.get("ecosystem") == "pip":
@@ -757,11 +820,14 @@ def manifest_file_for(ecosystem, changed_files):
 # Scan job construction (IMPLEMENTATION.md Shared Components, "Scan job";
 # task0008 Design, "The scan job" / "Trusted binary, never a multiplexer
 # subcommand" / "Configuration isolation"). PURE: no subprocess is launched
-# by anything in this section. Pre: the registry entry has already passed
-# validate_ecosystem_entry and its executable has already resolved on PATH
-# (resolve_executable) -- an unresolvable/invalid entry yields no job and
-# the ecosystem's existing tool-absent skip reason instead (build_scan_jobs
-# below), never a fallback command form.
+# by anything in this section. `build_scan_jobs`, the caller of everything
+# here, plans the scan: it validates each selected registry entry
+# (validate_ecosystem_entry), resolves its executable on PATH
+# (resolve_executable) and returns one `ScanPlan` per project-directory group
+# -- an unresolvable/invalid entry yields no plan and the ecosystem's
+# existing tool-absent skip reason instead, never a fallback command form.
+# `build_scan_job` then builds ONE job from a plan's ALREADY-RESOLVED
+# executable and target once the run side has bound and prepared the group.
 # ---------------------------------------------------------------------------
 
 # Process plumbing carried through unchanged when present -- locating the
@@ -1039,79 +1105,71 @@ def _prepared_copies(name, prepared_inputs):
     return copies
 
 
-def _lexical_project_directory(path):
-    """The project directory of ONE changed path, worked out from the text of
-    the path alone: repeated separators collapse, `.` segments drop, and each
-    `name/..` pair cancels; the directory part of the result is returned
-    `/`-separated, `""` for the root. Touches no file and never raises, for
-    any string (a NUL included).
+@dataclasses.dataclass(frozen=True)
+class ScanPlan:
+    """One scan unit that has not been launched: the group of one ecosystem's
+    changed files that share a project directory. A read-only record with
+    exactly these fields:
 
-    Returns `(directory, unbindable)`. `unbindable` is True when the path
-    cannot belong to any project directory below the project root: it is
-    absolute, it still starts with a `..` segment after normalization, or it
-    contains NUL. An absolute path keeps its leading `/` in `directory`, and
-    an escaping one keeps its leading `..` segments, so that two different
-    locations never share a key; the key is only ever used to partition."""
-    absolute = path.startswith("/") or os.path.isabs(path)
-    parts = []
-    for segment in path.split("/"):
-        if segment in ("", "."):
-            continue
-        if segment == ".." and parts and parts[-1] != "..":
-            parts.pop()
-        else:
-            parts.append(segment)
-    escaping = bool(parts) and parts[0] == ".."
-    directory = "/".join(parts[:-1])
-    if absolute:
-        directory = "/" + directory
-    return directory, ("\x00" in path or absolute or escaping)
+    - `ecosystem`: the validated registry entry (its name is read from it).
+    - `directory`: the group key D -- the real directory relative to the real
+      project root, `/`-separated, `""` for the root; for a pip path that
+      could not be verified, its raw directory part.
+    - `real_root`: the real path of the project root (None when it could not
+      be resolved).
+    - `files`: the group's changed files, in input order.
+    - `target`: the selected target. npm, cargo and go: D, a `/`, and the
+      basename of the file `manifest_file_for` selected over `files` (the bare
+      basename at the root); pip: the raw selected file.
+    - `executable`: the absolute executable path, resolved once for the
+      ecosystem.
+
+    `run_scan` launches exactly these units and never selects a target again.
+    A plan is not a verdict: the binding check still runs on the run side."""
+
+    ecosystem: dict
+    directory: str
+    real_root: object
+    files: tuple
+    target: str
+    executable: str
 
 
-def build_scan_jobs(registry, changed_files, project_root, environ=None, prepared_inputs=None):
-    """Orchestrates job construction for every SELECTED ecosystem
-    (select_ecosystems, unchanged): validates each entry
-    (validate_ecosystem_entry), resolves its executable on PATH
-    (resolve_executable), then builds ONE job per (ecosystem, project
-    directory) group (build_scan_job). An invalid entry or an unresolvable
-    binary contributes its existing machine-stable skip reason once and NO
-    job -- no fallback command form is ever attempted for it, and nothing
-    below the gate runs for it. Returns (jobs, skip_reasons): ecosystems in
-    registry order, each ecosystem's groups in ascending plain-string order
-    of the directory (the root first), each reason at most once per
-    ecosystem; executing a job (judging its exit status and payload
-    together) is the sibling rework task's contract, not this function's.
+def build_scan_jobs(registry, changed_files, project_root):
+    """The only planning stage of the `scan` subcommand: reduces `changed_files`
+    to the ecosystems the registry selects (select_ecosystems, unchanged),
+    validates each entry (validate_ecosystem_entry), resolves its executable on
+    PATH (resolve_executable), groups that ecosystem's changed files by real
+    path (`_verified_groups`) and emits ONE `ScanPlan` per (ecosystem, project
+    directory) group, with the group's target already selected by
+    manifest_file_for. Returns (plans, skip_reasons): ecosystems in registry
+    order, each ecosystem's groups in ascending plain-string order of the
+    directory (the root first), each reason at most once per ecosystem. An
+    invalid entry or an unresolvable binary contributes its existing
+    machine-stable skip reason once and NO plan -- no path is resolved for it
+    and no fallback command form is ever attempted.
 
-    Grouping is LEXICAL (pure, FR12): a changed file belongs to the group of
-    its textually normalized directory (_lexical_project_directory), so
-    `a/package.json` and `a/./package-lock.json` share one group. For npm,
-    cargo and go a path that is absolute, escapes through `..` or contains
-    NUL can belong to no project directory: it is dropped, and the
-    ecosystem gains `<ecosystem>_project_unbindable` once. pip paths are
-    only partitioned, never dropped (its validation is unchanged). Each
-    group's file is chosen by manifest_file_for over that group's files in
-    input order; an npm / cargo / go job's target (its manifest) is the
-    group directory, `/`, and that file's basename (the bare basename at the
-    root), a pip job's target the raw selected file. Verified grouping on
-    real paths and every binding check belong to `run_scan`, not here.
+    Grouping is by REAL path: a changed file belongs to the group of its
+    containing directory's real path relative to the real project root, so a
+    symlinked alias of a directory and a `..` spelling that stays inside the
+    root share one plan with the plain spelling. For npm, cargo and go a path
+    that is absolute, contains NUL or escapes the root (lexically or through a
+    symlink) can belong to no project directory: it joins no plan, and the
+    ecosystem gains `<ecosystem>_project_unbindable` once. pip paths are only
+    partitioned, never rejected; an unverifiable one keeps its raw directory
+    part as its key, apart from the verified keys. An npm / cargo / go plan's
+    target is the group directory, `/`, and the basename of the selected file
+    (the bare basename at the root); a pip plan's target is the raw selected
+    file.
 
-    Performs no run-time preparation (no lockfile read, no prepared file, no
-    isolation directory). A pip lockfile target is therefore OUTSIDE its
-    contract: such a job needs a prepared requirements file this function
-    never creates, so `build_scan_job` rejects it (JobConstructionError).
-    `run_scan` audits a pip lockfile through its own preparation stage
-    instead. An npm / cargo job likewise needs the prepared isolation inputs
-    of its group, which only the run side can create: the caller supplies
-    them as `prepared_inputs`, a dict from a job's target (its manifest, as
-    described above) to a `PreparedInputs`. An npm / cargo group whose target
-    has no entry is rejected with JobConstructionError (never a job whose
-    cwd is the project root). go and pip groups need no entry. `run_scan`
-    does not use this function: it prepares each group's isolation directory
-    itself (`_scan_bound_group`)."""
-    selected = select_ecosystems(registry, changed_files)
-    jobs = []
+    Launches no process, builds no job, opens no file and creates no
+    directory: it only resolves paths and looks up the executable. A plan is
+    not a verdict -- the binding check, the per-group isolation directory, the
+    pip lockfile preparation and `build_scan_job` belong to `run_scan`, which
+    executes these plans in order (`_scan_bound_group`, `_scan_pip_group`)."""
+    plans = []
     skip_reasons = []
-    for ecosystem in selected:
+    for ecosystem in select_ecosystems(registry, changed_files):
         name = ecosystem.get("ecosystem", "unknown")
         validation_error = validate_ecosystem_entry(ecosystem)
         if validation_error is not None:
@@ -1121,39 +1179,28 @@ def build_scan_jobs(registry, changed_files, project_root, environ=None, prepare
         if executable_path is None:
             skip_reasons.append(f"{name}_tool_not_found")
             continue
-        recognised = set(ecosystem.get("manifests") or []) | ECOSYSTEM_LOCKFILES.get(name, set())
-        groups = {}
-        dropped = False
-        for changed in changed_files:
-            if os.path.basename(changed) not in recognised:
-                continue
-            directory, unbindable = _lexical_project_directory(changed)
-            if unbindable and name != "pip":
-                dropped = True
-                continue
-            groups.setdefault(directory, []).append(changed)
-        if dropped:
+        real_root = _verified_real_root(project_root)
+        groups, rejected = _verified_groups(name, ecosystem, changed_files, real_root)
+        if rejected:
             skip_reasons.append(f"{name}_project_unbindable")
-        for directory in sorted(groups):
-            selected_file = manifest_file_for(ecosystem, groups[directory])
+        for directory, files in groups:
+            selected_file = manifest_file_for(ecosystem, files)
             if name == "pip":
                 target = selected_file
             else:
                 basename = os.path.basename(selected_file)
                 target = f"{directory}/{basename}" if directory else basename
-            prepared = None
-            if name in ISOLATION_ECOSYSTEMS and prepared_inputs is not None:
-                try:
-                    prepared = prepared_inputs[target]
-                except KeyError:
-                    prepared = None
-            jobs.append(
-                build_scan_job(
-                    ecosystem, target, project_root, executable_path, environ,
-                    prepared_inputs=prepared,
+            plans.append(
+                ScanPlan(
+                    ecosystem=ecosystem,
+                    directory=directory,
+                    real_root=real_root,
+                    files=tuple(files),
+                    target=target,
+                    executable=executable_path,
                 )
             )
-    return jobs, skip_reasons
+    return plans, skip_reasons
 
 
 # ---------------------------------------------------------------------------
@@ -1410,6 +1457,15 @@ def _passes_threshold(ecosystem, is_direct, mapped_severity):
     return mapped_severity in ("critical", "high")
 
 
+def _collapse_short_title(title):
+    """The advisory short title with every maximal run of whitespace
+    (whatever `str.isspace()` accepts -- LF, CR, TAB, VT, FF, NEL, no-break
+    space, U+2028, U+2029, U+3000 and the rest) replaced by ONE ASCII space,
+    and leading / trailing whitespace removed. A short title that is only
+    whitespace collapses to the empty string (no fallback is added here)."""
+    return " ".join(str(title).split())
+
+
 def _build_finding(*, manifest_file, package, advisory_id, title, affected_range,
                     fixed_version, summary, severity):
     """IMPLEMENTATION.md "Finding text-encoding contract": `title` is
@@ -1418,8 +1474,16 @@ def _build_finding(*, manifest_file, package, advisory_id, title, affected_range
     `suggestion` is prose only (D4 -- never diff-shaped, so a vulnerability
     finding can never be classified auto-applicable). Every advisory-sourced
     string passes through `truncate_untrusted()` -- the SAME helper
-    `file_tasks` uses, per IMPLEMENTATION.md's single-helper contract."""
-    title_text = truncate_untrusted(f"{package}: {advisory_id} — {title}")
+    `file_tasks` uses, per IMPLEMENTATION.md's single-helper contract.
+
+    The short title is whitespace-collapsed (`_collapse_short_title`) BEFORE
+    the title is composed and truncated, so the title is one line that
+    `recover_package_advisory` can always parse back. `package` and
+    `advisory_id` are passed through untouched, as are the description and
+    suggestion."""
+    title_text = truncate_untrusted(
+        f"{package}: {advisory_id} — {_collapse_short_title(title)}"
+    )
     description_parts = []
     if affected_range:
         description_parts.append(f"affected: {affected_range}")
@@ -3205,19 +3269,23 @@ def _group_audit(reasons=(), findings=(), completed=False, undetermined=0):
     }
 
 
-def _scan_bound_group(ecosystem, directory, files, project_root, real_root, executable_path):
-    """One npm / cargo / go scan unit: the group of changed `files` in
-    project directory `directory` (D). The target and the findings' `file`
-    label follow the Target convention -- the basename of the file
-    manifest_file_for selects from the group, prefixed by D unless D is the
-    root. A group that fails the binding check launches nothing and reports
-    `<ecosystem>_project_unbindable` (and no isolation directory is created
-    for it); otherwise its outcome is judged and normalized as before. A Go
-    unit's normalizer gets the project root, like the cargo one, and may
-    return a not-completed reason (`go_direct_manifest_unreadable`): that
-    becomes the unit's only reason, with no findings and no undetermined
-    count. Returns `_group_audit` (its `undetermined` is the unit's Go
-    undetermined-severity count, 0 for every other ecosystem).
+def _scan_bound_group(plan, project_root):
+    """One npm / cargo / go scan unit: the `ScanPlan` of one group of changed
+    files in project directory `plan.directory` (D). The target and the
+    findings' `file` label are the plan's `target` -- it follows the Target
+    convention (the basename of the file manifest_file_for selected from the
+    group, prefixed by D unless D is the root) and is never selected again
+    here. The plan is not a verdict: the binding check runs here, against the
+    plan's directory and the basename of the plan's target, immediately before
+    isolation and launch. A group that fails the binding check launches
+    nothing and reports `<ecosystem>_project_unbindable` (and no isolation
+    directory is created for it); otherwise its outcome is judged and
+    normalized as before. A Go unit's normalizer gets the project root, like
+    the cargo one, and may return a not-completed reason
+    (`go_direct_manifest_unreadable`): that becomes the unit's only reason,
+    with no findings and no undetermined count. Returns `_group_audit` (its
+    `undetermined` is the unit's Go undetermined-severity count, 0 for every
+    other ecosystem).
 
     go runs in D. npm and cargo run from a per-group isolation directory
     outside the reviewed tree (`isolation_workspace`), which this function
@@ -3232,13 +3300,15 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
     the caller goes on with the remaining groups. The cargo
     direct-dependency judgment still reads the ORIGINAL Cargo.toml in the
     reviewed tree."""
+    ecosystem = plan.ecosystem
     name = ecosystem.get("ecosystem", "unknown")
-    selected = manifest_file_for(ecosystem, files)
-    basename = os.path.basename(selected)
+    directory = plan.directory
+    real_root = plan.real_root
+    target = plan.target
+    executable_path = plan.executable
     unbindable = _group_audit(reasons=[f"{name}_project_unbindable"])
-    if not _binding_check(name, real_root, directory, basename):
+    if not _binding_check(name, real_root, directory, os.path.basename(target)):
         return unbindable
-    target = f"{directory}/{basename}" if directory else basename
     if name in ISOLATION_ECOSYSTEMS:
         project_dir = _binding_project_dir(real_root, directory)
         try:
@@ -3282,15 +3352,17 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
     return _group_audit(findings=findings, completed=True)
 
 
-def _scan_pip_group(ecosystem, files, project_root, executable_path):
-    """One pip scan unit (FR10): the group's target is manifest_file_for
-    over the group's raw files, lockfile first. A lockfile target goes
-    through the existing lockfile audit; any other target through the
-    existing job (cwd = the project root) and normalizer. Returns
-    `_group_audit` plus `undetermined`, `directness_undetermined` and
-    `excluded` counts."""
+def _scan_pip_group(plan, project_root):
+    """One pip scan unit (FR10): the `ScanPlan`'s target is the raw file
+    manifest_file_for selected over the group's raw files, lockfile first --
+    it is never selected again here. A lockfile target goes through the
+    existing lockfile audit; any other target through the existing job
+    (cwd = the project root) and normalizer. Returns `_group_audit` plus
+    `undetermined`, `directness_undetermined` and `excluded` counts."""
+    ecosystem = plan.ecosystem
+    executable_path = plan.executable
     name = ecosystem.get("ecosystem", "unknown")
-    manifest_file = manifest_file_for(ecosystem, files)
+    manifest_file = plan.target
     if os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
         audit = _scan_pip_lockfile(ecosystem, manifest_file, project_root, executable_path)
         result = _group_audit(audit["reasons"], audit["findings"], audit["completed"])
@@ -3353,18 +3425,23 @@ def _undetermined_directness_notes(pip_count, cargo_count):
 def run_scan(project_root, changed_files, registry_path):
     """AC-1..AC-7 (task0001) plus this task's partial-coverage contract,
     sca-per-project-scan-binding and sca-scanner-project-config-isolation:
-    select ecosystems, resolve each on PATH, group each ecosystem's changed
-    files by project directory, execute one scan job per group and judge the
-    ONE outcome that execution yields
+    select ecosystems, plan the scan once (`build_scan_jobs`: validate and
+    resolve each ecosystem, group its changed files by project directory,
+    select each group's target), execute one scan job per plan, in plan order,
+    and judge the ONE outcome that execution yields
     (`judge_scan_outcome`), normalize completed payloads with a threshold
     applied at normalization time, and emit exactly one
-    review-output-schema.json-conformant object.
+    review-output-schema.json-conformant object. A plan never selects a target
+    twice and never replaces the run-side checks: planning every ecosystem
+    before the first launch widens the time between grouping and launch, so
+    each group's binding check still runs immediately before its isolation
+    directory and launch.
 
     - No manifest in the change: an empty, non-skipped result.
     - A selected ecosystem's validation fails or its executable is not
-      resolvable on PATH: that ecosystem contributes its reason ONCE and
-      nothing below runs for it -- no path verification, no binding check,
-      no launch, no fallback of any kind (FR9).
+      resolvable on PATH: `build_scan_jobs` gives that ecosystem's reason
+      ONCE and no plan, so nothing below runs for it -- no path verification,
+      no binding check, no launch, no fallback of any kind (FR9).
     - npm / cargo / go: one scan unit per verified project directory (FR1),
       labelled with its own manifest path (FR2, FR3). go is launched inside
       that directory. npm and cargo are launched from a per-group isolation
@@ -3431,46 +3508,32 @@ def run_scan(project_root, changed_files, registry_path):
             return _skip_result(combined_reason, summary)
         return _empty_result()
 
+    plans, plan_reasons = build_scan_jobs(registry, changed_files, project_root)
     all_findings = []
-    skip_reasons = set()
+    skip_reasons = set(plan_reasons)
     ran_ecosystems = set()
     pip_severity_undetermined_total = 0
     pip_unpinnable_total = 0
     go_severity_undetermined_total = 0
     pip_directness_undetermined_total = 0
     cargo_directness_undetermined_total = 0
-    for ecosystem in selected:
-        name = ecosystem.get("ecosystem", "unknown")
-        validation_error = validate_ecosystem_entry(ecosystem)
-        if validation_error is not None:
-            skip_reasons.add(validation_error)
-            continue
-        executable_path = resolve_executable(ecosystem.get("executable"))
-        if executable_path is None:
-            skip_reasons.add(f"{name}_tool_not_found")
-            continue
-        real_root = _verified_real_root(project_root)
-        groups, rejected = _verified_groups(name, ecosystem, changed_files, real_root)
-        if rejected:
-            skip_reasons.add(f"{name}_project_unbindable")
-        for directory, files in groups:
-            if name == "pip":
-                audit = _scan_pip_group(ecosystem, files, project_root, executable_path)
-                pip_severity_undetermined_total += audit["undetermined"]
-                pip_unpinnable_total += audit["excluded"]
-                pip_directness_undetermined_total += audit.get("directness_undetermined", 0)
-            else:
-                audit = _scan_bound_group(
-                    ecosystem, directory, files, project_root, real_root, executable_path
-                )
-                if name == "go":
-                    go_severity_undetermined_total += audit["undetermined"]
-                if name == "cargo":
-                    cargo_directness_undetermined_total += audit.get("directness_undetermined", 0)
-            all_findings.extend(audit["findings"])
-            skip_reasons.update(audit["reasons"])
-            if audit["completed"]:
-                ran_ecosystems.add(name)
+    for plan in plans:
+        name = plan.ecosystem.get("ecosystem", "unknown")
+        if name == "pip":
+            audit = _scan_pip_group(plan, project_root)
+            pip_severity_undetermined_total += audit["undetermined"]
+            pip_unpinnable_total += audit["excluded"]
+            pip_directness_undetermined_total += audit.get("directness_undetermined", 0)
+        else:
+            audit = _scan_bound_group(plan, project_root)
+            if name == "go":
+                go_severity_undetermined_total += audit["undetermined"]
+            if name == "cargo":
+                cargo_directness_undetermined_total += audit.get("directness_undetermined", 0)
+        all_findings.extend(audit["findings"])
+        skip_reasons.update(audit["reasons"])
+        if audit["completed"]:
+            ran_ecosystems.add(name)
 
     undetermined_note = ""
     if pip_severity_undetermined_total:

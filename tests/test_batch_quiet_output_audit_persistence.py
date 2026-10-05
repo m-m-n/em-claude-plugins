@@ -549,10 +549,13 @@ class TestAutonomousFailClosedRouteSourceMapRow(unittest.TestCase):
     def test_every_audit_item_still_has_exactly_one_row(self):
         # task0002 AC-4: the map gains exactly one row, and every audit
         # item (including the pre-existing six) still has exactly one.
+        # sca-file-tasks-robustness task0003 AC-7: the map gains one more
+        # row (the incomplete triage filing), moving the count from seven
+        # to eight in place.
         rows = _table_rows(self.quiet_section)
         first_cells = [row[0] for row in rows]
         self.assertEqual(len(first_cells), len(set(first_cells)))
-        self.assertEqual(len(rows), 7)
+        self.assertEqual(len(rows), 8)
 
 
 # ---------------------------------------------------------------------------

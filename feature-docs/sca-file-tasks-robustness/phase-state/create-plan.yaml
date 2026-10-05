@@ -1,0 +1,80 @@
+schema_version: 1
+feature: sca-file-tasks-robustness
+phase: create-plan
+status: completed
+generation: 2
+base_revision: 7c10615c2875ec337282c457821f27028807e93d
+last_input_digest: sha256:82e0ec9f63fa037003263b2a6663840d68a07308f386f55a8b665da1f54d9b3e
+active_request_id: null
+packets:
+  create-plan-q0001:
+    packet_id: create-plan-q0001
+    origin: orchestrator (planner IMPLEMENTATION.md open question)
+    questions:
+    - question_id: q-batch-mode-reporting
+      status: answered
+answers:
+  q-batch-mode-reporting:
+    question_id: q-batch-mode-reporting
+    packet_id: create-plan-q0001
+    answered_at: '2026-10-05T13:01:49+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - add-batch-mode-reporting
+    freeform: null
+    normalized_answer: 'add-batch-mode-reporting: SPEC FR5 requires ''triage filing incomplete'' with
+      the unattempted packages in R6 AND in the batch final result; R6 is withheld in batch and batch-mode.md''s
+      ## Reporting list plus audit-item source map is what the batch final report is assembled from. Add
+      one Reporting item and one source-map row pointing at reviews/roundN.yaml triage_filing.unattempted_packages
+      / failed_package, without restating their definitions (review-phase.md stays the definition owner).
+      Move batch-mode.md from Out of Scope into the plan and align acceptance criteria and VERIFICATION.'
+    resolution_note: 'Planner left this as an IMPLEMENTATION.md open question (not planned). Orchestrator
+      consulted Codex (readonly): Codex chose adding batch-mode.md now because FR5 explicitly requires
+      the batch final result, and no mechanism carries R6 text into the batch report otherwise; keep the
+      addition narrow to avoid definition duplication. Option not chosen: keep-review-phase-only + follow-up
+      task.'
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:9ff127c7d9016073cdb368dd9845273fd7d11858129f70ea94c965e7276c5633
+  output_digest: sha256:648b8c3a0416a6c3be52b4c23b3b2ef8f8e611012909546da14debdee8483b0e
+- request_id: create-plan-run-0002
+  status: completed
+  input_digest: sha256:82e0ec9f63fa037003263b2a6663840d68a07308f386f55a8b665da1f54d9b3e
+  output_digest: sha256:0944e25921dc86e61d661e45a26824e69c2d41e95a947d814276176ce8d8a9f0
+artifacts:
+- path: feature-docs/sca-file-tasks-robustness/IMPLEMENTATION.md
+  sha256: sha256:a500126c72b1da7f9c9e0f595591c049bd3db32798756c3c0a53d9c551045abb
+  produced_by: create-plan-run-0002
+- path: feature-docs/sca-file-tasks-robustness/VERIFICATION.md
+  sha256: sha256:61e1af8a1f8b8b888d632fc3fac6503d5f3f9ae121a5d6298a79b05be81fdd74
+  produced_by: create-plan-run-0002
+- path: feature-docs/sca-file-tasks-robustness/THREAT-MODEL.md
+  sha256: sha256:e2e277d6a2d2d6d7ecde99fce6af0add164a662b90f8cb6a8925b0e6c3e502f7
+  produced_by: create-plan-run-0002
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0001.md
+  sha256: sha256:8ea7975673eef075fcf0e55453a99dc00927467be694fea9397a7408240449e8
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0002.md
+  sha256: sha256:1f360ff945ca7530279f13cc3c86e0deeb8058c4a9bd9f55695b16d91c0f9ab1
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0003.md
+  sha256: sha256:6f791ee25a02065d1f1989762ad9c08a6cf933c0f6fa5d612ed71ec0c3eb9352
+  produced_by: create-plan-run-0002
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0004.md
+  sha256: sha256:2e6eabf0b86c3fef34d3f181a3ec79688ae81d362804a0e73ec29a4c5bcfea4b
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: superseded
+  base_input_digest: sha256:9ff127c7d9016073cdb368dd9845273fd7d11858129f70ea94c965e7276c5633
+  base_workflow_blob: 2831f98214ee9cab377d83e7452f392494faf1f3
+- patch_id: create-plan-p0002
+  status: applied
+  base_input_digest: sha256:82e0ec9f63fa037003263b2a6663840d68a07308f386f55a8b665da1f54d9b3e
+  base_workflow_blob: 2831f98214ee9cab377d83e7452f392494faf1f3
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
