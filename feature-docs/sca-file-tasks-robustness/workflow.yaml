@@ -2,92 +2,42 @@ schema_version: 1
 feature: sca-file-tasks-robustness
 created: '2026-10-05'
 base_branch: main
-goal: '# SCA 軸: file-tasks の堅牢性とトリアージ receipt の欠落
-
+goal: |+
+  # SCA 軸: file-tasks の堅牢性とトリアージ receipt の欠落
 
   ## 現象 (必須)
-
   `file-tasks` 経路の堅牢性と、その結果を記録する receipt に 4 つの欠落がある。
-
   **1. 複数行の advisory description が起票不能な finding を作る**（`53765f57beaf1658`, `scan-dependencies.py:1519`）
-
-  `_pip_advisory_headline` は `description[:match.start()].strip()` を返すため、CVSS ベクタの手前の散文に含まれる改行がそのまま残り、その値がタイトルになる。`_TITLE_RE`
-  は `DOTALL` も `MULTILINE` も付けずにコンパイルされているので `.*` が埋め込まれた改行を越えられず、`recover_package_advisory` が `FindingTitleError`
-  を送出する。finding 自体はきれいにスキャンされて報告されるが、`group_findings_by_package` が malformed に分類するため、トリアージタスクもレポートのパッケージセクションへのエントリも得られず、位置番号としてしか記録されない。
-
+  `_pip_advisory_headline` は `description[:match.start()].strip()` を返すため、CVSS ベクタの手前の散文に含まれる改行がそのまま残り、その値がタイトルになる。`_TITLE_RE` は `DOTALL` も `MULTILINE` も付けずにコンパイルされているので `.*` が埋め込まれた改行を越えられず、`recover_package_advisory` が `FindingTitleError` を送出する。finding 自体はきれいにスキャンされて報告されるが、`group_findings_by_package` が malformed に分類するため、トリアージタスクもレポートのパッケージセクションへのエントリも得られず、位置番号としてしか記録されない。
   **2. サブプロセス起動失敗が file_tasks を抜けてスクリプトを落とす**（`b6a281b50a243d88`, `scan-dependencies.py:528`）
-
-  起票ループが捕捉しているのは `EntryPointError` だけだが、`create_security_task` と `append_security_task_references` は `subprocess.run`
-  を直接呼んでおり、起動失敗時に `OSError` を送出する。`_entry_point_is_valid` は `is_file()` と `os.access(X_OK)` を見るだけで、exec
-  に失敗するファイルを除外できない。その `OSError` は `file_tasks` を抜け、`file_tasks_command` を抜け、`main` の `except ExecutionError`
-  も素通りするので、プロセスは traceback を出して死に、stdout に JSON を出さない。そのバッチで既に起票済みのパッケージがすべて破棄される — docstring の約束の正反対。round
-  1 の partial-progress rework の残件。
-
+  起票ループが捕捉しているのは `EntryPointError` だけだが、`create_security_task` と `append_security_task_references` は `subprocess.run` を直接呼んでおり、起動失敗時に `OSError` を送出する。`_entry_point_is_valid` は `is_file()` と `os.access(X_OK)` を見るだけで、exec に失敗するファイルを除外できない。その `OSError` は `file_tasks` を抜け、`file_tasks_command` を抜け、`main` の `except ExecutionError` も素通りするので、プロセスは traceback を出して死に、stdout に JSON を出さない。そのバッチで既に起票済みのパッケージがすべて破棄される — docstring の約束の正反対。round 1 の partial-progress rework の残件。
   **3. 永続化されるトリアージ receipt が途中失敗を記録できない**（`32d220f68e3f3224`, `review-phase.md:737`）
-
-  `file_tasks` は `failed_package` / `failure_reason` / `malformed_findings` / `listing_dropped_count`
-  を返すようになり、`main` はそれらに関わらずサマリを出して `EXIT_OK` を返す。しかし `review-phase.md` の receipt 定義と R5 の例はこの 4 つをどれも持たず、break
-  の後にループが試行しなかったパッケージの扱いも規定していない。パッケージ A が起票され B が失敗した場合、コミットされるラウンド記録は「A の起票が完全に成功した」場合と区別がつかず、B とそれ以降のパッケージはタスクもレポートエントリも得られないまま
-  run は 0 で終了する。
-
-  **4. \`run_scan\` が \`build_scan_jobs\` をインラインで再実装しており、テスト済みの関数が production で未使用**（`487bf6aa49a0e501`,
-  `scan-dependencies.py:1638`）
-
-  `build_scan_jobs` はジョブ構築のオーケストレータとして文書化されているが、`run_scan` はこれを呼ばず、同一の validate / resolve / `manifest_file_for`
-  / `build_scan_job` のシーケンスを再実装している。`build_scan_jobs` の唯一の呼び出し元は `tests/test_sca_scan_invocation.py` で、スイートが検証している関数は実際に走るコードパスではない。片方に入れた修正（特に
-  `20f7f988c9400af6` が要求するプロジェクトごとのジョブ構築）が、もう片方を古いまま残してもテストは通り続ける。
-
+  `file_tasks` は `failed_package` / `failure_reason` / `malformed_findings` / `listing_dropped_count` を返すようになり、`main` はそれらに関わらずサマリを出して `EXIT_OK` を返す。しかし `review-phase.md` の receipt 定義と R5 の例はこの 4 つをどれも持たず、break の後にループが試行しなかったパッケージの扱いも規定していない。パッケージ A が起票され B が失敗した場合、コミットされるラウンド記録は「A の起票が完全に成功した」場合と区別がつかず、B とそれ以降のパッケージはタスクもレポートエントリも得られないまま run は 0 で終了する。
+  **4. \`run_scan\` が \`build_scan_jobs\` をインラインで再実装しており、テスト済みの関数が production で未使用**（`487bf6aa49a0e501`, `scan-dependencies.py:1638`）
+  `build_scan_jobs` はジョブ構築のオーケストレータとして文書化されているが、`run_scan` はこれを呼ばず、同一の validate / resolve / `manifest_file_for` / `build_scan_job` のシーケンスを再実装している。`build_scan_jobs` の唯一の呼び出し元は `tests/test_sca_scan_invocation.py` で、スイートが検証している関数は実際に走るコードパスではない。片方に入れた修正（特に `20f7f988c9400af6` が要求するプロジェクトごとのジョブ構築）が、もう片方を古いまま残してもテストは通り続ける。
   ## 再現手順 (必須)
-
   1. 改行を含む description を持つ pip advisory を流す → finding が malformed に分類され、タスクもレポートエントリも作られない
-
-  2. `ntd.sh` として exec に失敗するファイル（例: 不正な shebang）を置き、複数パッケージのバッチで `file-tasks` を実行する → traceback で死に、stdout
-  に JSON が出ず、起票済みのパッケージも記録されない
-
+  2. `ntd.sh` として exec に失敗するファイル（例: 不正な shebang）を置き、複数パッケージのバッチで `file-tasks` を実行する → traceback で死に、stdout に JSON が出ず、起票済みのパッケージも記録されない
   3. 2 の状態でラウンド記録を見る → 完全成功と区別がつかない
-
   ## 期待する挙動 (必須)
-
-  - タイトルを組み立てる前に headline の空白を畳む。`_build_finding` が出すすべてのタイトルが `recover_package_advisory` で復元できることを表明する
-  scan → file_tasks のラウンドトリップテストを足す
-
+  - タイトルを組み立てる前に headline の空白を畳む。`_build_finding` が出すすべてのタイトルが `recover_package_advisory` で復元できることを表明する scan → file_tasks のラウンドトリップテストを足す
   - 両ヘルパの `subprocess.run` をラップし、`OSError` を `EntryPointError` に変換して、既存の break-and-return 経路を唯一の途中失敗ルートとして保つ
-
-  - `triage_filing` receipt を `failed_package` / `failure_reason` / `malformed_findings` / `listing_dropped_count`
-  で拡張し、試行されなかった残りをオーケストレーターがどう表面化 / リトライするかを `review-phase.md` に規定する
-
-  - `run_scan` が `build_scan_jobs` を呼び、それが既に返している `(jobs, skip_reasons)` のペアを消費する。テストされる経路と実行される経路を 1
-  つにする
-
+  - `triage_filing` receipt を `failed_package` / `failure_reason` / `malformed_findings` / `listing_dropped_count` で拡張し、試行されなかった残りをオーケストレーターがどう表面化 / リトライするかを `review-phase.md` に規定する
+  - `run_scan` が `build_scan_jobs` を呼び、それが既に返している `(jobs, skip_reasons)` のペアを消費する。テストされる経路と実行される経路を 1 つにする
   ## 完了の定義 (必須)
-
   - [ ] 3 つの再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
   - [ ] `build_scan_jobs` が production 経路で使われている
-
   ## 該当箇所 (任意)
-
-  `em-workflow/scripts/scan-dependencies.py` の `_pip_advisory_headline` / `_TITLE_RE`（1519）、`file_tasks`
-  の起票ループ（528）、`run_scan`（1638）、および `em-workflow/references/review-phase.md:737`
-
+  `em-workflow/scripts/scan-dependencies.py` の `_pip_advisory_headline` / `_TITLE_RE`（1519）、`file_tasks` の起票ループ（528）、`run_scan`（1638）、および `em-workflow/references/review-phase.md:737`
   ## 実害・発生条件 (任意)
-
   4 は他の残件（特にプロジェクトごとのジョブ構築）の修正を無効化しうるため、他の SCA 軸タスクより先に片付ける価値がある。
-
   ---
-
-  出典: em-workflow レビュー round 2 の findings `53765f57beaf1658` / `b6a281b50a243d88` / `32d220f68e3f3224`
-  / `487bf6aa49a0e501`（いずれも medium）。閾値未満のため `unresolved` のまま残った残件。
-
+  出典: em-workflow レビュー round 2 の findings `53765f57beaf1658` / `b6a281b50a243d88` / `32d220f68e3f3224` / `487bf6aa49a0e501`（いずれも medium）。閾値未満のため `unresolved` のまま残った残件。
   関連 PR: https://github.com/m-m-n/em-claude-plugins/pull/27
-
 
   Notion タスク: https://www.notion.so/3d43509ec8ee81108eb9f4524a79638d
 
-
-  '
 parent_branch: em-workflow/sca-file-tasks-robustness/integration
 tier: full
 tier_decision:
@@ -141,7 +91,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: ef642c349c574a554066397aed6a07cea8d3e3a9
 - id: implement
   status: pending
 - id: review
