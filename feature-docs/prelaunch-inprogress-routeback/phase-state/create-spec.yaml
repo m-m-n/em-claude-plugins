@@ -1,11 +1,11 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-spec
-status: completed
-generation: 1
+status: dispatching
+generation: 2
 base_revision: 1c9d23ece9f3e428ae6bc5accfc1262e5fbcf7b8
 last_input_digest: sha256:48cb59e2585f42e13eb0106110c80365ada04daf7995f44bfa547bbfc6f18b11
-active_request_id: null
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
@@ -71,6 +71,10 @@ worker_runs:
   status: completed
   input_digest: sha256:48cb59e2585f42e13eb0106110c80365ada04daf7995f44bfa547bbfc6f18b11
   output_digest: sha256:85b9e8f10749f3ffc6f79ffe18e2d70a90706473f3bcf924a243971b5fd60e48
+- request_id: create-spec-run-0004
+  status: dispatched
+  input_digest: sha256:288e91156c8c2cfb69c89280cded22408d1c40f22d5c47f6a80537d78e6d2f76
+  output_digest: null
 artifacts:
 - path: feature-docs/prelaunch-inprogress-routeback/REQUIREMENTS.md
   sha256: sha256:08e302175834d7992978d65b7ea71178bf3aabad12c589ab1362e9ed6e80bd2b
