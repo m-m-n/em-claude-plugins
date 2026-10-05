@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-repo-hook-trust
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 622211de129b09b59a2e253df7450a834edb02eb
 last_input_digest: sha256:dc6ef842ff7648cae04a994af73f84ca6b58349d84b638520b099300df548143
