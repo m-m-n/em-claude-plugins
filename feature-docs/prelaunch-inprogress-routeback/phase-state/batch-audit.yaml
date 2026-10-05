@@ -54,3 +54,12 @@ records:
     Claude も納得して proceed。Opus escalation not run。続けて spec-change 遷移（create-spec needs_update、create-plan/implement/review pending、
     base_commit 保持、rework.yaml spec_change 記録）を実行し batch.review_rework_count を 1 にした。'
   answered_at: '2026-10-05T19:43:07+09:00'
+- question_id: implement.wake-decline
+  packet_id: null
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: 'declined: tests/test_gate_option_vocabulary.py was not auto-added to task0006 files'
+  resolution_note: 'task_id: task0006; declined deviation path tests/test_gate_option_vocabulary.py (refreshed WORKFLOW_PATCH_SHA256 / VALIDATE_WORKER_OUTPUT_SHA256 digests in TestFrozenMachineReadSurface). Missing evidence part: the identifier of an existing AC-n of task0006 plan or a registered requirement id was not named. Path shape check passed and the path is not under a workflow control path. Not auto-added; left to the containment check as an ordinary deviation.'
+  answered_at: '2026-10-05T21:00:00+09:00'
