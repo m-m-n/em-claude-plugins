@@ -1,0 +1,116 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_prelaunch_inprogress_pending_launched.TestNeverArisesClaimRemoved.test_i2a_has_no_can_never_arise_phrase
+      - test_prelaunch_inprogress_pending_launched.TestNeverArisesClaimRemoved.test_i2a_has_no_never_arise_claim_in_any_inflection
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-change document before the edit, both failed:
+      "True is not false : I.2.a still contains 'can never arise'" and
+      "<re.Match object; span=(1979, 1990), match='never arise'> is not
+      None". Their negative proof,
+      TestPreChangeSampleDetection.test_never_arise_matchers_flag_the_pre_change_sentence,
+      asserts both matchers find the claim in the verbatim pre-change sample.
+  AC-2:
+    tests:
+      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_sits_between_in_flight_sentence_and_next_sentence
+      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_launch_window
+      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_commit_not_reached_cases
+      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_cites_in_flight_rule
+      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_carve_out_does_not_apply
+      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_contains_launch_state_commit_term
+      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_ends_before_next_sentence
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-change document before the edit, the placement
+      test failed with "that combination arises between a task's launch and
+      Step I.2.a's launch-state commit below not found at or after offset
+      1031", and the six content/slice tests errored with "ValueError:
+      terminal phrase 'the recycled-task-id carve-out above does not apply
+      to it.' not found after the opening anchor".
+  AC-3:
+    tests:
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_carve_out_scoped_sentence_is_byte_identical
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_in_flight_sentence_is_byte_identical
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_through_scoped_span_is_byte_identical
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_select_linewrap_literal_is_byte_identical
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_items_keep_their_original_relative_order
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_span_has_exactly_one_because_and_one_so
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_stays_independent_of_ancestor_check
+      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_recursion_invariant_follows_replacement_text
+    red_confirmed: false
+    red_reason: >-
+      The criterion is mostly retention: the listed items must stay
+      byte-identical and in order, so those seven tests passed on the
+      pre-change document by design and no red state exists for them. Only
+      test_recursion_invariant_follows_replacement_text was observed to fail
+      before the edit ("ValueError: terminal phrase ... not found after the
+      opening anchor"). The clause "the diff of implement-phase.md is
+      confined to the one sentence" has no executable check; it was
+      verified by reading `git diff` (one hunk, lines 273-275 replaced by
+      lines 273-280).
+  AC-4:
+    tests:
+      - test_routeback_reset_scope_consistency.TestCrossReferencesDescribeGateCorrectly.test_i2a_unreachability_sentence_present_and_terminates_correctly
+      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_placed_after_unreachability_terminal
+    red_confirmed: true
+    red_reason: >-
+      After retargeting both tests to UNREACHABILITY_TERMINAL_PHRASE and
+      before editing the document, both errored with "ValueError: substring
+      not found" (the new terminal phrase was absent from the old text).
+  AC-5:
+    tests:
+      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_present
+      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_cites_allocation_rule
+      - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_unreachability_slice_anchors_survive
+    red_confirmed: true
+    red_reason: >-
+      After retargeting the three tests to this module's own
+      UNREACHABILITY_TERMINAL_PHRASE and before editing the document, the
+      first two errored with "ValueError: substring not found" and
+      test_unreachability_slice_anchors_survive failed with "'the
+      recycled-task-id carve-out above does not apply to it.' not found in
+      <I.2.a section>".
+  AC-6:
+    tests:
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_never_arise_matchers_flag_the_pre_change_sentence
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_placement_matcher_fails_on_pre_change_sentence
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_launch_window_matcher_flags_absence_in_pre_change_sentence
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_commit_not_reached_matcher_flags_absence_in_pre_change_sentence
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_in_flight_citation_matcher_flags_absence_in_pre_change_sentence
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_launch_state_commit_term_matcher_flags_absence_in_pre_change_sentence
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_replacement_slice_cannot_be_taken_on_pre_change_sentence
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_in_flight_sentence_is_in_sample_and_live_document
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_opening_anchor_is_in_sample_and_live_document
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_next_sentence_anchor_is_in_sample_and_live_document
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_sample_carries_the_old_claim_the_live_document_dropped
+      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_sample_is_ordered_like_the_live_document
+      - test_prelaunch_inprogress_pending_launched.TestModuleUsesOnlyStandardLibrary.test_imports_are_standard_library_only
+    red_confirmed: true
+    red_reason: >-
+      The module's new-wording matchers (the AC-1 and AC-2 tests above) were
+      observed to fail against the pre-change document before the edit, 11
+      tests in total (4 FAIL, 7 ERROR); the negative-proof tests assert the
+      same matchers fail on the verbatim pre-change sample, and the guards
+      assert each anchor is present in both the sample and the live document.
+      test_sample_carries_the_old_claim_the_live_document_dropped also
+      failed before the edit ("live I.2.a still contains 'can never
+      arise.'"). The stdlib-only test is structural and passed at birth.
+  AC-7:
+    tests:
+      - test_implement_routeback_gate
+      - test_exit4_tip_argument_consistency
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      test_implement_routeback_gate and
+      test_exit4_tip_argument_consistency (both read
+      em-workflow/references/implement-phase.md) detect edits to the
+      protected I.2.c and exit-4 text; no red state occurred for this
+      change. The full suite (python3 -m unittest discover -s tests) and
+      python3 em-workflow/scripts/check-plugin-invariants.py . both pass;
+      "the diff touches only the four files in Scope" was verified by
+      `git status`.
