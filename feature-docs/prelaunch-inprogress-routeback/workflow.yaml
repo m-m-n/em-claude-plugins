@@ -1,0 +1,538 @@
+schema_version: 1
+feature: prelaunch-inprogress-routeback
+created: '2026-10-05'
+base_branch: main
+goal: '# em-workflow: I.2.a が起動前に全選択タスクの in_progress をコミットするため未起動タスクが I.2.c route-back
+  を恒久的に塞ぐ
+
+
+  Notion: https://www.notion.so/3d53509ec8ee81c280a3cdf8dc62349f  (種別: バグ)
+
+
+  ## 現象 (必須)
+
+  `em-workflow/references/implement-phase.md` の Step I.2.a 新シーケンス（299-316 行）は、
+
+  step 3 で「この entry で選択された EVERY task」の `in_progress` を 1 つの write set にまとめ、
+
+  step 4 で 1 コミットにする。しかしこのコミットの後に承認ゲート（batch では未承認
+
+  `project_commands` が hard-fail）と `Task()` 起動ループが来るため、両者の間で中断すると、
+
+  journal に launched イベントが無いまま `in_progress` が branch にコミット済みで残る。
+
+  I.2.a の選択規則は再選択できるので通常の再入は自己修復するが、I.2.c は do not refill なので、
+
+  同一 entry の一部だけ起動して失敗した場合、未起動タスクは二度と起動されない。その状態で
+
+  route-back ゲートは workflow.yaml の `in_progress` ユニオンだけで塞がるため、一度も起動されて
+
+  いないタスクの `in_progress` が route-back を恒久的にブロックする。
+
+  ## 再現手順 (必須)
+
+  1. `em-workflow/references/implement-phase.md` の Step I.2.a、299-316 行の新シーケンスを読む
+
+  2. step 3 の write set が「この entry で選択された EVERY task」を対象にし、step 4 で 1 コミットになることを確認する
+
+  3. そのコミットの後に承認ゲートと `Task()` 起動ループが置かれていることを確認する
+
+  4. Step I.2.c の route-back ゲートを読み、workflow.yaml の `in_progress` ユニオンだけでゲートが塞がること、および
+  do not refill であることを確認する
+
+  ## 期待する挙動 (必須)
+
+  起動前に中断したタスクの `in_progress` 残骸が、I.2.c の route-back を恒久的にブロックしないこと。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/references/implement-phase.md:310` — Step I.2.a の write/commit シーケンス
+
+  - `em-workflow/references/implement-phase.md` — Step I.2.c の route-back ゲート
+
+  ## 実害・発生条件 (任意)
+
+  変更前は write が未コミットで、I.2.b step 2 の `reset --hard` に捨てられていたため到達しなかった。
+
+  `exit4-tip-argument` の変更が新たに作る永続状態。
+
+  出典: PR #17 (feature `exit4-tip-argument`) review round 2 の未解決 medium
+
+  `bd794c3459ca8c75`（confidence 70、評価者も auto-fix 対象外に同意）。記録は
+
+  `feature-docs/exit4-tip-argument/reviews/round2.yaml`。
+
+  推奨対応（設計判断が要る）:
+
+  - (a) I.2.c の route-back ゲートの `in_progress` 半分に「journal に一切イベントが無いタスクの workflow.yaml
+  `in_progress` は起動前中断の残骸とみなし、in-flight として扱わない」というカーブアウトを明記する
+
+  - (b) write/commit を承認ゲートと起動の後ろに移し、実際に起動できたタスクだけを `in_progress` としてコミットする
+
+
+  ## 追加指示（起動者）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration
+  ブランチはローカル・remote とも残す（base_branch へ自動マージしない）。
+
+  - 不明点は Codex に相談し、相対的に良いと判断した案を採用する。
+
+  - その議論の内容を Notion に記録する。
+
+  '
+parent_branch: em-workflow/prelaunch-inprogress-routeback/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.82
+      '2': 0.16
+      '3': 0.01
+    description_plus_code:
+      '0': 0.02
+      '1': 0.69
+      '2': 0.29
+      '3': 0.0
+  at: '2026-10-05T18:31:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 1c4e80b28672ac463a6f7ac8d3644523e6072307
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 画面や見た目の変更が無い。変更はプロトコル文書（implement-phase.md）とドキュメント契約テストに限られる。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: a3eed4fbbc1f8afbbe77e7ad2985881119c6f8ab
+- id: implement
+  status: completed
+  completed_at_commit: 6a57a518a56bf2ddf9ce1277a08bfba809fadf00
+  base_commit: dd41baa5a975b37ed01aea80428101f7b7403230
+- id: review
+  status: completed
+  completed_at_commit: 04f12094cfa70cd57add4afd6be53f49c82941d7
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  summary: 'TS1-TS16 all pass. Full suite python3 -m unittest discover -s tests: 7610 tests OK. plugin-invariants: 7/7 PASS. TS7: tests/test_implement_routeback_gate.py and tests/test_exit4_tip_argument_consistency.py unmodified; implement-phase.md I.2.c has one hunk (route-back record item) and no hunk in the Branch & Worktree Model. TS16: changed paths limited to implement-phase.md, queue_stop_guard.py, workflow-schema.md, workflow-patch.md, validate-worker-output.py, tests/, feature-docs/ and test-docs/ of this feature. Build/format: not configured. Manual reading checks (4) not automated. Excluded requirements: none.'
+  completed_at_commit: 1f340800b5ffa6febaf6878268bf8f17d1c7d029
+- id: retrospect
+  status: completed
+  completed_at_commit: 63e607542ad3d84746994d39a6619e9267b30016
+tasks:
+  task0001:
+    title: Move the I.2.a launch-state commit behind the approval gate and launch
+      loop
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_prelaunch_inprogress_launch_order.py
+    skills: []
+    domains:
+    - concurrency
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0001
+  task0002:
+    title: Rewrite the I.2.a pending + launched sentence and the tests pinned to it
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_prelaunch_inprogress_pending_launched.py
+    - tests/test_routeback_reset_scope_consistency.py
+    - tests/test_recycled_task_id_consistency.py
+    skills: []
+    domains:
+    - concurrency
+    complexity: high
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0002
+  task0003:
+    title: Record already-failed launches in the I.2.a launch-state commit
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_prelaunch_failed_launch_state.py
+    skills: []
+    domains:
+    - concurrency
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR4
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0003
+  task0004:
+    title: Limit the recycled-task-id carve-out to the route-back record
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_routeback_record_carve_out.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_routeback_reset_scope_consistency.py
+    - tests/test_implement_routeback_gate.py
+    skills: []
+    domains:
+    - concurrency
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR5
+    - FR6
+    - FR8
+    - FR9
+    - FR10
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0004
+  task0005:
+    title: Align queue_stop_guard.py with the record-match classification
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/queue_stop_guard.py
+    - tests/test_queue_stop_guard_routeback_record.py
+    - tests/test_queue_stop_guard.py
+    - tests/test_queue_hook_status_read_pin.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - concurrency
+    - external-io
+    complexity: high
+    requirements:
+    - FR6
+    - FR9
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    notes: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0005
+  task0006:
+    title: Define the record, carry it on re-planning, and reject it in worker patches
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_routeback_record_schema_patch.py
+    - tests/test_replanning_carry_over.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR6
+    - FR11
+    - FR12
+    - FR13
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0006
+review:
+  status: completed
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  rounds_completed: 2
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: I.2.a の launch-state 書き込みを承認ゲートと起動ループの後ろへ移す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS1
+  FR2:
+    title: 起動を確認できたタスクを in_progress としてコミットする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS2
+    - TS8
+  FR3:
+    title: write set が空ならコミットを省略し、ターンはコミット処理の後に終える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS3
+    - TS8
+  FR4:
+    title: コミット時と exit 4 再試行時に journal を読み直し、終端タスクを in_progress にしない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS4
+    - TS8
+  FR5:
+    title: pending と launched の組み合わせについての文を事実に合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0004
+    tests:
+    - TS5
+  FR6:
+    title: 再発検出テストの追加と、古い文を固定しているテストの修正
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS6
+    - TS5
+    - TS15
+  NFR1:
+    title: I.2.c と exit-4 証明の文言
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS7
+  NFR2:
+    title: 変更範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS8
+    - TS16
+  NFR3:
+    title: テストスイート
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS6
+    - TS15
+  NFR4:
+    title: テストの形式
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS6
+  FR7:
+    title: launch-state commit で、起動後すでに失敗したタスクを failed として記録する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS8
+  FR8:
+    title: recycled-task-id carve-out を、route-back の記録と一致する場合に限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS9
+    - TS7
+  FR9:
+    title: queue_stop_guard.py の分類を FR8 に揃える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0005
+    tests:
+    - TS10
+  FR10:
+    title: I.2.a の根拠文を事実に合わせて直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS11
+  FR11:
+    title: workflow-schema.md に tasks.{T}.routeback_failed_journal_line を定義する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0006
+    tests:
+    - TS12
+  FR12:
+    title: re-planning の replace_all で記録を引き継ぐ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0006
+    tests:
+    - TS13
+  FR13:
+    title: ワーカーの tasks_patch による記録の設定を validate-worker-output.py で拒否する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0006
+    tests:
+    - TS14
+  NFR5:
+    title: queue_stop_guard.py の制約を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0005
+    tests:
+    - TS10
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

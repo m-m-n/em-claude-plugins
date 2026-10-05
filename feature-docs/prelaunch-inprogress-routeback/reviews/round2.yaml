@@ -1,0 +1,155 @@
+round: 2
+executed_at: '2026-10-05T21:11:34+09:00'
+scope:
+  review_mode: diff
+  base_commit: dd41baa5a975b37ed01aea80428101f7b7403230
+  head_commit: 5374a3f541ac397543429ea76ac1fdf88f42b1d7
+  changed_files:
+  - em-workflow/hooks/queue_stop_guard.py
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/validate-worker-output.py
+  - test-docs/prelaunch-inprogress-routeback/task0001.tests.yaml
+  - test-docs/prelaunch-inprogress-routeback/task0002.tests.yaml
+  - test-docs/prelaunch-inprogress-routeback/task0003.tests.yaml
+  - test-docs/prelaunch-inprogress-routeback/task0004.tests.yaml
+  - test-docs/prelaunch-inprogress-routeback/task0005.tests.yaml
+  - test-docs/prelaunch-inprogress-routeback/task0006.tests.yaml
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_prelaunch_failed_launch_state.py
+  - tests/test_prelaunch_inprogress_launch_order.py
+  - tests/test_prelaunch_inprogress_pending_launched.py
+  - tests/test_queue_hook_status_read_pin.py
+  - tests/test_queue_stop_guard.py
+  - tests/test_queue_stop_guard_routeback_record.py
+  - tests/test_recycled_task_id_consistency.py
+  - tests/test_replanning_carry_over.py
+  - tests/test_routeback_record_carve_out.py
+  - tests/test_routeback_record_schema_patch.py
+  - tests/test_routeback_reset_scope_consistency.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: performance#1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 425ad71ec84f3214
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/queue_stop_guard.py
+  line: 243
+  title: route-back の記録の読み取りが notes の複数行文字列の中も拾い、本物の記録より優先される
+  description: 'iter_task_block_lines（160〜212 行）は、タスクキーより深いインデントの行を区別せずにすべて返す。task_routeback_records_from_workflow（240〜249 行）は、その中で ^\s+routeback_failed_journal_line: に合う最初の行を記録として採用する。このため notes: | の本文の行も記録として読まれる。workflow-schema.md の並びでは notes が記録より前にあり、Step I.2.c の route-back write set は実装者の報告の notes と記録を同じ書き込みで tasks.{T} に入れる。そのため notes の本文が「最初の出現」になり、本物の記録を隠す。評価者の再現: notes 本文に routeback_failed_journal_line: 3、本物の記録に 1 を持つブロックで、関数は {''task0001'': ''3''} を返した。影響は 2 方向: (1) 本物の記録が一致しているのに不一致と判定され、本来ブロックすべき場面で exit 0 になる。(2) 記録が無い、または一致しない pending + failed のタスクが notes 内の値との一致で unlaunched に分類され、Stop フックが再起動を求めてブロックする。tests/test_queue_stop_guard_routeback_record.py のフィクスチャは常に notes: null で、この形のケースが無い。'
+  suggestion: '記録（できれば status も）を tasks.{T} の直下のキーだけから読む。タスクブロックで最初に現れる空でない行のインデントを直下の深さとし、それより深い行（ブロックスカラー | / > の本文や入れ子のマッピング）は読まない。tests/test_queue_stop_guard_routeback_record.py に回帰ケースを足す: notes: | の本文に一致する値があり本物の記録が無ければ exit 0、notes 本文に不一致値があっても本物の記録が一致すれば exit 2。'
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: medium は auto-fix 候補外（Phase R4 の candidate gate は critical/high のみ）。別タスクとして起票する
+- stable_id: 425ad71ec84f3214
+  severity: medium
+  category: security
+  file: em-workflow/hooks/queue_stop_guard.py
+  line: 243
+  title: route-back の記録の読み取りが notes の複数行文字列の中も拾い、本物の記録より優先される
+  description: 'THREAT-MODEL.md の TB-2 / TM-2 は、タスク自身の正規の記録だけを信頼すると定めている。しかしフックは tasks.{T} ブロック内のすべての行から記録を探す。tasks.{T}.notes は Step I.2.c が実装者の報告（信頼できない、実装者由来の文字列）から書く欄で、schema の並びでは記録より前に置かれる。実装者が notes の本文に routeback_failed_journal_line: N の形の行を入れると、その値が first-occurrence で採用され、記録が無い、または一致しない pending + failed のタスクが unlaunched に分類され、Stop フックが I.2.c の判断を経ない再起動を求めてブロックする（exit 2）。逆に本物の記録が隠される場合もある。悪用の前提として pending + failed の状態と行番号の一致が要るため medium。'
+  suggestion: 記録を tasks.{T} の直下のキーとしてだけ受け付け、ブロックスカラーの本文や入れ子の行を除外する。notes 内の偽の記録では起動対象にならないこと（exit 0）を確かめるテストを追加する。
+  sources:
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: medium は auto-fix 候補外（Phase R4 の candidate gate は critical/high のみ）。別タスクとして起票する
+- stable_id: 425ad71ec84f3214
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/queue_stop_guard.py
+  line: 243
+  title: route-back の記録の読み取りが notes の複数行文字列の中も拾い、本物の記録より優先される
+  description: 'SPEC FR11 は記録を tasks.{T} の項目（tasks.{T}.routeback_failed_journal_line）として定義している。FR8 (2) と FR9 は、記録が無い・不正・一致しない pending + failed を failed として扱い exit 0 にすることを求めている。実装は notes: | の本文の行も項目として数えるため、FR11 の項目定義と FR8 / FR9 の分類から外れる。項目を持たないタスクでも notes 本文の値が journal の最終 failed の行番号と一致すると exit 2 になる。notes 本文が先に現れると本物の項目の値も無視される。'
+  suggestion: 直下の項目だけを読み、notes の複数行文字列の行を除外する。この形のケースで exit 0 になること（本物の項目が一致するなら exit 2 になること）を検査する回帰テストを追加する。
+  sources:
+  - codex:spec
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: medium は auto-fix 候補外（Phase R4 の candidate gate は critical/high のみ）。別タスクとして起票する
+evaluation:
+  round_summary: 'round 2（diff、cross_validation=true）。reviewer run 7 件のうち、performance#0 と spec#0（muse-spark-contributor）はデータが大きすぎて skip した。それぞれ performance#1 と spec#1（codex）が完了しているので、未確認の観点はない。comprehensive#0・security#0・spec#1 の 3 run が、queue_stop_guard.py 240〜249 行の同じ欠陥を独立に medium で報告した。評価者はコードを読み、スクラッチパッドでの再現で確かめた（notes: | の本文の値 3 が、本物の記録 1 より優先される）。schema の並びで notes が記録より前にあり、I.2.c が実装者の notes を記録と同じ書き込みで入れるので、本物の記録が隠される方向も成り立つことを補足した。3 件は同じ箇所の同じ欠陥で、修正は 1 つで足りる。category の照合を守るため、観点ごとに 1 件ずつ出した。security#0 の 2 件目（implement-phase.md 411〜416 行、project_commands / expected_files を実装者への指示文に展開する問題）は採用しなかった。該当行は 2026-07-04 のコミット e5458a24f から変わっておらず、今回の差分の範囲外にある。また、この指摘を前回の 197991d271fd0f74 と結びつけているが、197991d271fd0f74 は起動後の失敗の分類の問題で、別件になる。必要なら別途起票する。前回の high 197991d271fd0f74 は今回の差分で解消されたと判断した。I.2.a の write set に failed part を加え、launch-state commit で status=failed を書く（FR7）。carve-out を記録との一致に限った（FR8、I.2.a / I.2.b step 1 / Stop-hook 箇条）。I.2.c が記録を書く。I.2.a の根拠文を直した（FR10）。フックも 3 条件に揃えた（FR9）。この round
+    では critical/high の報告は無く、dismissed_sites は空。観点ごとの確認状況: comprehensive=findings、security=findings（2 件目は差分の範囲外なので採用しなかった）、performance=corroborated、architecture=findings（指摘は他の観点の 3 件にまとめた）、spec=findings。読んだファイルは上限ちょうどの 10 件。テストは実行していない。reviewer の出力に注入の試みは無かった。'
+  recommended_action: auto_fix
+  action_rationale: 残っているのは medium 1 件だけで、3 観点が同じ箇所を報告している。修正は queue_stop_guard.py の task_routeback_records_from_workflow / iter_task_block_lines の読み取り範囲を tasks.{T} の直下のキーに絞ることと、tests/test_queue_stop_guard_routeback_record.py に回帰ケースを足すことに閉じている。SPEC の前提や設計を見直す必要は無い。前回の high は今回の差分で解消されているので、rework は要らない。上限つきの auto_fix が適切。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+  aborted_stable_ids: []
+  notes: Phase R4 の candidate gate（severity ∈ {critical, high}）を満たす finding が 0 件のため auto-fix ループは走らせていない。evaluator の recommended_action=auto_fix は助言であり、candidate gate を上書きしない（Phase R3b）
+residual_critical_high: 0
+rework_required: false
+prior_round_resolution_notes: round 1 の high 197991d271fd0f74 は今回の 5 観点のいずれも再報告せず、evaluator も今回の差分（task0003〜task0006 の rework）で解消済みと判断した
+chain_walk_deviation: 'performance#0 / spec#0 の skip_reason=review_data_too_large は R2b 表の retryable 理由に無いが、Codex 相談（CHOICE: B）により別ハーネス（codex）の次エントリへ 1 hop 進めた。詳細は phase-state/batch-audit.yaml'
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-prelaunch-inprogress-routeback-20261005T121111Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+  notes: '未解決の vulnerability finding は 0 件。ntd.sh を渡したがタスク一覧の取得が非 0 終了し report 側に縮退（degraded_reason: listing_exit_nonzero）'

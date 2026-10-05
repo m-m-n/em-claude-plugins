@@ -1,0 +1,134 @@
+schema_version: 1
+feature: prelaunch-inprogress-routeback
+phase: create-spec
+status: completed
+generation: 2
+base_revision: 1c4e80b28672ac463a6f7ac8d3644523e6072307
+last_input_digest: sha256:d2ff1512a140e741a34a372b314e99dadb54295a51a0980dd47c64721f3c2fae
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-05T18:45:00+09:00'
+    questions:
+    - question_id: requirement.residue-fix-approach
+      status: answered
+    - question_id: design-step.skip
+      status: answered
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-10-05T19:58:00+09:00'
+    questions:
+    - question_id: requirement.routeback-reset-confirmation
+      status: answered
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: prelaunch-inprogress-routeback'
+    answered_at: '2026-10-05T18:31:00+09:00'
+  requirement.residue-fix-approach:
+    question_id: requirement.residue-fix-approach
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - commit_after_launch
+    freeform: null
+    normalized_answer: 'commit_after_launch: I.2.a の capture/refresh/write/commit
+      を承認ゲートと Task() 起動ループの後ろに移し、journal に launched を確認できたタスクだけを in_progress としてまとめて
+      1 回でコミットする。補強: (1) 一部だけ起動できた場合も、起動を確認できたタスクの集合でコミットする。起動ゼロならコミットを省略する。コミット処理の後にターンを終える。(2)
+      通常のコミット時も exit 4 の再試行時も最新の journal を読み直し、既に終端（merged / failed）に達したタスクを in_progress
+      に戻さない。2 回目の exit 4 で停止する場合も、起動記録と worktree を保持する。(3) I.2.a の『pending + launched
+      は決して起きない』文を事実に合わせて書き直し、固定しているテストも直す。I.2.c のゲート・リセット集合・掃除対象・exit-4 の証明は変えない。'
+    resolution_note: 'gate: create-spec.requirement-clarification（修正方式）。options: commit_after_launch=(b)
+      起動後にコミット, routeback_gate_carve_out=(a) I.2.c ゲートに除外規定。chosen: commit_after_launch。Codex（run_codex_exec.sh
+      readonly、entry codex、turn 1 で収束）の理由: (b) は残骸を発生源で無くし、I.2.c のゲート・リセット集合・削除対象の連動変更を避けられる。(a)
+      は起動ガードが fail-open で launched を記録せずに実装者が動いた場合、実行中の worktree を削除対象に含め得る（queue_launch_guard.py:241、implement-phase.md:1021）。(b)
+      で増える exit 4 は既存の『1 回再試行、2 回目で停止』で扱える。Codex の補強案のうち、部分起動・起動ゼロの扱いと exit 4 再試行時の読み直しは採用した。『launched
+      の記録に失敗したら起動を拒否する（queue_launch_guard を fail-closed にする）』案はフックの挙動変更でスコープが広がるため採らず、残るリスクとして別タスクに起票する。Opus
+      escalation not run.'
+    answered_at: '2026-10-05T18:52:00+09:00'
+  design-step.skip:
+    question_id: design-step.skip
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously: design step を skip する（UI 変更なし）'
+    answered_at: '2026-10-05T18:52:00+09:00'
+  requirement.routeback-reset-confirmation:
+    question_id: requirement.routeback-reset-confirmation
+    packet_id: create-spec-q0002
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - routeback_reset_record
+    freeform: null
+    normalized_answer: 'routeback_reset_record: I.2.c の route-back write set に、リセットした各タスクの確認記録
+      tasks.{T}.routeback_failed_journal_line（任意項目。同じ feature の journal.jsonl 内で、その時点の最終
+      failed イベントを指す 1 始まりの物理行番号。空行・不正行も数える。未設定・null は記録なし）を加え、既存の route-back コミットで確定する。carve-out
+      の条件は pending・journal 最終 failed・その行番号が記録と一致の 3 つで、I.2.a / I.2.b step 1 / Stop-hook
+      箇条 / queue_stop_guard.py を同じ条件に揃える。記録の欠落・不正・不一致は failed として I.2.c に回す（アップグレード前のリセット済みタスクも同じ）。記録は起動時・通常の状態更新では書き換えない。補強:
+      workflow-schema.md に項目を定義、workflow-patch.md の replace_all で既存タスクから引き継ぐ項目一覧に追加（preserve
+      の許可項目は増やさない）、記録の writer を I.2.c のオーケストレーターに限りワーカーの tasks_patch からの設定を validate-worker-output.py
+      で拒否、NFR1 は I.2.c の記録追加を許し NFR2 はフック・schema・patch 契約・検証スクリプトとテストを含める。'
+    resolution_note: 'gate: create-spec.requirement-clarification（policy action codex_consultation,
+      record_as_assumption）。options: routeback_reset_record / worktree_absence / git_history_orchestrator_only。chosen:
+      routeback_reset_record。Codex（run_codex_exec.sh readonly、entry codex、turn 1 で収束）の理由:
+      pending + failed だけでは route-back リセットと起動後失敗を区別できない（implement-phase.md:423-433）。記録をリセットと同じコミットに入れれば
+      worktree 再作成後や削除前中断でも判定が保たれ（同:340-366, 1026-1068）、tasks.{T} 配下なら replace_all
+      の既存タスク引き継ぎ規則で保持できる（workflow-patch.md:144-149, 240-244）。オーケストレーターとフックが同じファイルで照合でき、フックのプロセス起動禁止とも両立する（queue_stop_guard.py:383-408,
+      tests/test_queue_stop_guard.py:707-714）。退けた案: worktree_absence は I.2.a が起動前に
+      worktree を作るため確認済みリセットを識別できず削除前中断も誤分類する。git_history_orchestrator_only はフックと判定が食い違い起動漏れ検出が効かない。Claude
+      も根拠を確認して同意（I.2.c の残余文も正しいまま残る）。変更範囲が workflow-schema.md / workflow-patch.md
+      / validate-worker-output.py に広がる点は受け入れた。Opus escalation not run.'
+    answered_at: '2026-10-05T20:10:00+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:8ca177adf1038aba74592fc68422137d53769c83cf5a6e6b542966f6efbc8e2a
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:161633b1790946b54d2d868acca24ebd8674c8a6b5bbbfb8c848e718df7cba22
+  output_digest: sha256:26b117792f09caf3f055f59e0c185460baaa8f96236a5f9da9b73d07d9af0ea8
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:48cb59e2585f42e13eb0106110c80365ada04daf7995f44bfa547bbfc6f18b11
+  output_digest: sha256:85b9e8f10749f3ffc6f79ffe18e2d70a90706473f3bcf924a243971b5fd60e48
+- request_id: create-spec-run-0004
+  status: needs_user_input
+  input_digest: sha256:458027fab44069cb591073b916989d1d4cfbb5a7014cc0e88c57cd970cc8bafe
+  output_digest: null
+- request_id: create-spec-run-0005
+  status: completed
+  input_digest: sha256:3b5ec24eb08c79dfd44f5cf12f6968df1b85909d61322e08f3430ac10779672f
+  output_digest: sha256:c4a27f44c85ef9f4d8705991d90ade74a07957576d9f944d98b3307d564a3621
+- request_id: create-spec-run-0006
+  status: blocked
+  input_digest: sha256:d2ff1512a140e741a34a372b314e99dadb54295a51a0980dd47c64721f3c2fae
+  output_digest: null
+- request_id: create-spec-run-0007
+  status: completed
+  input_digest: sha256:d2ff1512a140e741a34a372b314e99dadb54295a51a0980dd47c64721f3c2fae
+  output_digest: null
+artifacts:
+- path: feature-docs/prelaunch-inprogress-routeback/REQUIREMENTS.md
+  sha256: sha256:4771a6895b942797413ec4e19952017ecfb4c311568831e927024906328023ab
+  produced_by: create-spec-run-0007
+- path: feature-docs/prelaunch-inprogress-routeback/SPEC.md
+  sha256: sha256:0054d11bddeababb709aedaba665e77742c03212e2a403912a2d5b2a88f136a6
+  produced_by: create-spec-run-0007
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

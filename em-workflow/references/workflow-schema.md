@@ -123,6 +123,11 @@ tasks:                             # written by implementation-planner; status b
     status: pending                # pending | in_progress | merged | failed
     notes: null                    # set on failure (reason; feeds re-planning)
     branch: em-workflow/{feature}/task0001   # set by orchestrator at dispatch
+    routeback_failed_journal_line: {line number}
+                                   # OPTIONAL; written by the orchestrator at route-back,
+                                   #   absent by default (see
+                                   #   "## `routeback_failed_journal_line`"
+                                   #   below)
 
 review:                            # phase-state SUMMARY only (details: reviews/roundN.yaml)
   status: pending                  # pending | in_progress | completed | failed
@@ -356,6 +361,43 @@ Y  : workflow.yaml status = completed, completed_at_commit = X
 `completed_at_commit` always names `X`, never `Y` (the completion commit
 itself). For `implement`, `X` is the integration branch tip after every
 task has merged (a chain of merge commits, not a single artifact commit).
+
+## `routeback_failed_journal_line`
+
+`routeback_failed_journal_line` is the route-back reset confirmation record:
+an optional key of a task's own `tasks.{T}` mapping that identifies the
+exact journal `failed` event a route-back reset returned to `pending`. The
+key is absent by default.
+
+**Target file.**
+`{project_root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl`.
+
+**Value.** The 1-based physical line, in the target file, of the task's last
+`failed` event at reset time.
+
+**Line counting.** Lines are delimited by LF only; a CR is never a
+delimiter. Line N is the N-th LF-terminated segment, counted from 1. A final
+non-empty segment with no terminating LF counts as one more line. Blank
+lines, malformed lines, lines with an unknown event and lines with an
+invalid task id are all counted.
+
+**Canonical form.** An unquoted decimal integer of ASCII digits whose first
+digit is 1-9. Every reader treats a value that is absent, `null` or not in
+canonical form as no record.
+
+**Writer.** The orchestrator is the sole writer, inside Step I.2.c's
+route-back write set. A reset task with no journal event gets no record.
+Scripts, hooks and worker patches never write it.
+
+**Lifecycle.** It is not rewritten by the I.2.a launch-state commit, I.2.b
+step 3, a retry or a terminal-status write. It is overwritten only by a
+later route-back of the same task. Nothing clears it. A re-planning
+`replace_all` copies it verbatim for carried task ids
+(`references/workflow-patch.md`).
+
+**Readers.** I.2.a selection, I.2.b step 1 reconcile and
+`queue_stop_guard.py` read it. `references/implement-phase.md` owns how they
+use it and is not restated here.
 
 ## Sibling artifacts
 
