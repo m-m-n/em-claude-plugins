@@ -1,0 +1,17 @@
+schema_version: 1
+feature: exit4-version-baseline-refresh
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 2d11cfd679f56bf3ee761baf0f2cc3e0291096b3
+last_input_digest: sha256:d1e549afc812dcf07fe5ffbf6d0c52f4b89fd41dcd18079b4dad7760f0e3bb6c
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
