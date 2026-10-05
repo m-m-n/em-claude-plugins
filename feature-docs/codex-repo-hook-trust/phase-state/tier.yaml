@@ -1,0 +1,91 @@
+schema_version: 2
+feature: codex-repo-hook-trust
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.18
+    confidence: 0.81
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.81
+      '2': 0.18
+      '3': 0.0
+  observed_at: '2026-10-05T09:47:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.79
+    confidence: 0.74
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.22
+      '2': 0.75
+      '3': 0.02
+  observed_at: '2026-10-05T09:58:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md
+  - em-workflow/scripts/run_codex_exec.sh
+  - em-review/scripts/run_codex_exec.sh
+  - tests/test_codex_hook_wrapper_args.py
+  - tests/test_consultation_harness_chain.py
+  - feature-docs/codex-interactive-guard-hook/VERIFICATION.md
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/agents/codex-reviewer.md
+  - em-review/agents/codex-reviewer.md
+  - em-workflow/references/question-resolution.md
+  - em-workflow/skills/develop/SKILL.md
+  work_still_required: true
+  work_still_required_evidence: '確認・記録の作業は残っている。feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md:21
+    はリポジトリ側設定の読み込みを未確認としており、reviews/round1.yaml:106-117 も TB-3 を unresolved としている。IMPLEMENTATION.md:72
+    にも未確認事項が残る。
+
+    両ラッパーは、自身の scripts/ 内の codex-hook-interactive-guard.py を絶対パスで指定し、シェル用の引用処理後に TOML
+    文字列へ変換して、hooks.PreToolUse の Bash matcher と --dangerously-bypass-hook-trust を渡している（em-workflow/scripts/run_codex_exec.sh:151-204、em-review/scripts/run_codex_exec.sh:124-177）。リポジトリ側設定を除外する専用処理は確認できない。
+
+    em-workflow の既定経路は --ignore-user-config を指定するが、--litellm はそれを外して -p litellm -m
+    MODEL を渡す（同ファイル:83-111）。em-review は常に --ignore-user-config を指定し、--litellm を受け付ける分岐はない。両方とも
+    --ignore-rules を指定するが、コメントが説明する対象は execpolicy の .rules である。
+
+    関連テストはあるが、この攻撃条件を覆うテストは確認できない。tests/test_codex_hook_wrapper_args.py:92-182 は代用
+    codex で起動引数を記録し、:406-416 は既存フラグの有無を確認する。tests/test_consultation_harness_chain.py:143-155
+    も代用 codex で設定フラグを確認する。tests/test_codex_hook_interactive_guard.py はガード単体の判定を検証する。em-workflow/hooks/tests/
+    の検査対象は destructive-guard.py である。
+
+    workflow.yaml:21-27 の Codex 0.160.0 に関する記録は、引数で渡した hook の動作についてであり、作業ディレクトリ側の
+    hook の実行可否を検証した記録ではない。VERIFICATION.md:77-81 の手動確認もリポジトリ側 hook を対象としていない。
+
+    reviews/round1.yaml:113 に記録された推奨対応は、既定経路と --litellm 経路を Codex 0.160.0 で確認し、実行されるなら設定層を読まない起動へ変更してテストを追加し、実行されないなら
+    TB-3 に記録すること。files_expected の起動スクリプトとテストは、実行が確認された場合の変更候補である。実装の要否・方法はファイルだけでは確定できないため、行数・新規関数・追加ケースの
+    0 は未確定を示し、変更不要を意味しない。'
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 8
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-05T09:59:00+09:00'
