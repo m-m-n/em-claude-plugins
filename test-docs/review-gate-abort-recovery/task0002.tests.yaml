@@ -1,0 +1,73 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac1_paragraph_cites_gate_abort_block
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac1_paragraph_defers_status_and_resume_path
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac1_negative_twin_pre_change_paragraph_is_rejected
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac1_negative_twin_citation_split_across_lines_is_rejected
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac1_negative_twin_bare_citation_lacks_the_scope_statement
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac1_negative_twin_wrong_label_is_rejected
+    red_confirmed: true
+    red_reason: "test_ac1_paragraph_cites_gate_abort_block failed before the SKILL.md insertion: AssertionError: False is not true : expected one line of the gate-call paragraph to name references/review-phase.md, Phase R5 and 'Spec-change gate abort (review-sourced rework)'. test_ac1_paragraph_defers_status_and_resume_path failed the same way."
+  AC-2:
+    tests:
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac2_paragraph_restates_no_cited_value
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac2_pre_change_paragraph_restates_no_cited_value_either
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac2_negative_twin_restated_value_is_flagged
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_ac2_negative_twin_each_forbidden_token_is_flagged
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall
+    red_confirmed: false
+    red_reason: "The gate-call paragraph restated none of the listed values before the insertion, and the existing TestDevelopSkillStepBSpecChangeGateCall pins its phrases; the new non-restatement matcher is a non-change guard, so no red state occurred for this change. The matcher's discrimination is shown by its negative twins."
+  AC-3:
+    tests:
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_section_cites_legacy_recovery_block
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_section_carries_recovery_location_and_content
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_recovery_paragraph_follows_the_three_bullets
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_no_level_two_heading_inside_the_section
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_negative_twin_pre_change_section_is_rejected
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_negative_twin_bare_pointer_lacks_content_carriage
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_negative_twin_other_label_is_rejected
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_negative_twin_citation_split_across_lines_is_rejected
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac3_negative_twin_label_in_a_bullet_is_not_the_paragraph
+    red_confirmed: true
+    red_reason: "test_ac3_section_cites_legacy_recovery_block failed before the SKILL.md insertion: AssertionError: False is not true : expected one line of a paragraph after the three bullets to name references/review-phase.md, Phase R5 and 'Legacy review-failure recovery'. test_ac3_section_carries_recovery_location_and_content failed likewise, and test_ac3_recovery_paragraph_follows_the_three_bullets failed with: AssertionError: unexpectedly None."
+  AC-4:
+    tests:
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac4_section_restates_no_cited_value
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac4_pre_change_section_restates_no_cited_value_either
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac4_negative_twin_restated_applicability_is_flagged
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_ac4_negative_twin_each_forbidden_token_is_flagged
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce
+      - tests.test_batch_stop_contract_skill_wiring
+    red_confirmed: false
+    red_reason: "The stop-report section restated none of the listed literals before the insertion, and the existing TestStopAbortExceptionStatedOnce and test_batch_stop_contract_skill_wiring pin its bullets, the single batch-mode.md mention and the value-carriage statement; the new non-restatement matcher is a non-change guard, so no red state occurred for this change. The matcher's discrimination is shown by its negative twins."
+  AC-5:
+    tests:
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_every_protected_anchor_is_present
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_enumeration_holds_exactly_three_top_level_bullets
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_negative_twin_a_dropped_anchor_is_reported_missing
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_negative_twin_a_reworded_anchor_is_reported_missing
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_negative_twin_four_bullet_enumeration_is_rejected
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_negative_twin_two_bullet_enumeration_is_rejected
+    red_confirmed: false
+    red_reason: "The protected stop-condition-3 texts and the three-bullet enumeration are untouched by this task, so the guard passes before and after the insertions; no red state occurred for this change. The matchers' discrimination is shown by the dropped-anchor, reworded-anchor and four-bullet negative twins."
+  AC-6:
+    tests:
+      - tests.test_review_gate_abort_skill_wiring.TestInteractiveBehaviourUnchanged
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_gate_call_paragraph_is_non_vacuous
+      - tests.test_review_gate_abort_skill_wiring.TestGateCallParagraphCitesGateAbortBlock.test_step_b_region_is_non_vacuous
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_stop_report_section_is_non_vacuous
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_every_protected_region_is_non_vacuous
+      - tests.test_review_gate_abort_skill_wiring.TestStopConditionThreeTextsUnchanged.test_enumeration_region_is_non_vacuous
+      - tests.test_muse_consent_no_new_questions
+    red_confirmed: false
+    red_reason: "The interactive-unchanged statement and the AskUserQuestion count of 7 in the develop skill pre-existed this change, and the existing test_muse_consent_no_new_questions pins the count; the negative twins and non-vacuity checks are structural properties of the new module. No red state occurred for this change."
+  AC-7:
+    tests:
+      - "python3 -m unittest discover -s tests"
+      - "python3 em-workflow/scripts/check-plugin-invariants.py ."
+    red_confirmed: false
+    red_reason: "Non-regression criterion: both commands pass on the baseline and after the change (7352 tests before, 7394 after, 42 of them in the new module; all seven invariants PASS); no red state occurred for this change."
