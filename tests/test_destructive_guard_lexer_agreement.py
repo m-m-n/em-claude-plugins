@@ -1,0 +1,1372 @@
+"""Agreement test for the unified lexer of `em-workflow/hooks/destructive-guard.py`
+(destructive-guard-unified-lexer task0001, FR10; D6).
+
+The hook decides every quote / comment / expansion / substitution judgment in
+one place, `lex_shell(text, mode)`. This module proves that every reader built
+on that lexer agrees with it, and -- because layers that all read one lexer map
+can share one misread and still agree -- anchors the lexer itself to
+hand-written expectations (D6): every edge form below carries expected regions,
+expected real heredoc operators where relevant, and an expected hook verdict,
+all written out by hand as literals. Nothing here is computed by a shell.
+
+The hook has no package, so the module is loaded from its file path
+(test/README.md). Verdict, linearity and determinism checks run the hook
+through its stdin JSON / stdout contract. Standard library only.
+
+Layout:
+
+- TestFixedExpectations: regions, real heredoc operators, single-quote
+  candidates and the unopened openers of every fixed-expectation form.
+- TestFixedVerdicts: the hook's verdict for every fixed form, every benign
+  control and every attack form (AC-1, AC-2, AC-7 of the SPEC).
+- TestStageAgreement: the stage agreement properties (a)-(f) over every
+  cases.json command, every attack form, every benign control and every fixed
+  form.
+- TestPositionMap: the position-map contract, including a marker longer than
+  the substitution it replaces.
+- TestSubstitutionPolicies: the three substitution searches stay distinct.
+- TestHeredocBodies: nothing written inside a real heredoc body opens
+  anything for the command text after its delimiter line.
+- TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
+- TestModuleContract: the replaced readers are gone; standard library only.
+"""
+
+import ast
+import bisect
+import importlib.util
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+import time
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HOOK = os.path.join(ROOT, "em-workflow", "hooks", "destructive-guard.py")
+CASES_JSON = os.path.join(
+    ROOT, "em-workflow", "hooks", "tests", "destructive-guard-cases.json"
+)
+
+# Bound for one evaluation of the hook, the same as hooks.json's timeout.
+GUARD_TIMEOUT_SECONDS = 10
+
+
+def _load_hook():
+    spec = importlib.util.spec_from_file_location("destructive_guard_under_test", HOOK)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+H = _load_hook()
+
+TAIL = "\nrm -rf /home/sakura/valuable\n2"
+
+SUBSTITUTION_KINDS = frozenset(
+    {"command-substitution", "backtick-substitution", "process-substitution"}
+)
+QUOTE_KINDS = frozenset({"single-quote", "double-quote", "ansi-c-quote", "locale-quote"})
+OPAQUE_KINDS = QUOTE_KINDS | SUBSTITUTION_KINDS | frozenset(
+    {
+        "comment",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+    }
+)
+# Kinds whose content shlex would read differently from bash: the masked view
+# hides them from the tokenizer.
+HIDDEN_KINDS = frozenset(
+    {
+        "ansi-c-quote",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+        "comment",
+    }
+)
+
+
+# ---------------------------------------------------------------------------
+# Hand-written expectations (D6). A region is written as (kind, literal) or
+# (kind, literal, n): the n-th (default first) occurrence of LITERAL in the
+# command is the region's text. A heredoc is (delimiter, quoted, body).
+# A candidate is (quote literal, candidate literal).
+# ---------------------------------------------------------------------------
+
+CONTEXT_FORMS = [
+    ('echo "$\'x\'"', [("double-quote", '"$\'x\'"')], [], "allow"),
+    ('echo $"a b"', [("locale-quote", '$"a b"')], [], "allow"),
+    (
+        "echo $$'x' $?'y'",
+        [("single-quote", "'x'"), ("single-quote", "'y'")],
+        [],
+        "allow",
+    ),
+    (
+        "echo $'a\\\\b\\'c'",
+        [("ansi-c-quote", "$'a\\\\b\\'c'")],
+        [],
+        "allow",
+    ),
+    (
+        "echo ${#x} ${x#pat} $#",
+        [("parameter-expansion", "${#x}"), ("parameter-expansion", "${x#pat}")],
+        [],
+        "allow",
+    ),
+    (
+        'echo ${x:-"}"}',
+        [("parameter-expansion", '${x:-"}"}'), ("double-quote", '"}"')],
+        [],
+        "allow",
+    ),
+    (
+        "echo ${x:-${y}}",
+        [("parameter-expansion", "${x:-${y}}"), ("parameter-expansion", "${y}")],
+        [],
+        "allow",
+    ),
+    (
+        "echo $((1+2)) $( (echo a) )",
+        [("arithmetic-expansion", "$((1+2))"), ("command-substitution", "$( (echo a) )")],
+        [],
+        "allow",
+    ),
+    ("( (echo a) )", [], [], "allow"),
+    ("cat a[1] <<EOF\nhi\nEOF", [], [("EOF", False, "hi\n")], "allow"),
+    (
+        "cat <<<'x'",
+        [("here-string-operator", "<<<"), ("single-quote", "'x'")],
+        [],
+        "allow",
+    ),
+    (
+        "echo $(cat <<EOF\nhi\nEOF\n)",
+        [("command-substitution", "$(cat <<EOF\nhi\nEOF\n)")],
+        [("EOF", False, "hi\n")],
+        "allow",
+    ),
+    (
+        "echo $'a' ${x} $((1<<2)) \"b\" # c",
+        [
+            ("ansi-c-quote", "$'a'"),
+            ("parameter-expansion", "${x}"),
+            ("arithmetic-expansion", "$((1<<2))"),
+            ("double-quote", '"b"'),
+            ("comment", "# c"),
+        ],
+        [],
+        "allow",
+    ),
+    ('echo "a\nb"; ls', [("double-quote", '"a\nb"')], [], "allow"),
+    ("echo ${x:-a\nb}; ls", [("parameter-expansion", "${x:-a\nb}")], [], "allow"),
+    ("echo $'a\nb'; ls", [("ansi-c-quote", "$'a\nb'")], [], "allow"),
+]
+
+# Arithmetic commands at every command position P3 lists. Each form is
+# followed by TAIL; expected: one arithmetic-command region at the `((`, no
+# real heredoc operator, verdict deny.
+COMMAND_POSITION_FORMS = [
+    "true; ((1<<2))",
+    "true && ((1<<2))",
+    "false || ((1<<2))",
+    "true | ((1<<2))",
+    "! ((1<<2))",
+    "if true; then ((1<<2)); fi",
+    "while false; do ((1<<2)); done",
+    "if false; then :; else ((1<<2)); fi",
+    "if false; then :; elif ((1<<2)); then :; fi",
+    "{ ((1<<2)); }",
+    "( ((1<<2)) )",
+    "time ((1<<2))",
+    "time -p ((1<<2))",
+    "case x in x) ((1<<2));; esac",
+    "f() ((1<<2))",
+    "coproc ((1<<2))",
+]
+
+# `((` that is not arithmetic: no arithmetic-command region. The verdict is
+# the one the unchanged hook gave when this test was written; this feature
+# must not change it.
+NON_ARITHMETIC_FORMS = [
+    ('echo "((1<<2))"', [("double-quote", '"((1<<2))"')], "allow"),
+    ("echo a ((b))", [], "allow"),
+    ("cat < ((x))", [], "allow"),
+]
+
+PROCESS_SUBSTITUTION_FORMS = [
+    (
+        "cat <((rm -rf /home/sakura/valuable))",
+        [("process-substitution", "<((rm -rf /home/sakura/valuable))")],
+        "deny",
+    ),
+    (
+        "cat <(rm -rf /home/sakura/valuable)",
+        [("process-substitution", "<(rm -rf /home/sakura/valuable)")],
+        "deny",
+    ),
+    (
+        "cat <(((1<<2)))",
+        [("process-substitution", "<(((1<<2)))"), ("arithmetic-command", "((1<<2))")],
+        "allow",
+    ),
+    (
+        "cat <(((1<<2)))" + TAIL,
+        [("process-substitution", "<(((1<<2)))"), ("arithmetic-command", "((1<<2))")],
+        "deny",
+    ),
+]
+
+# Each form is followed by TAIL: an arithmetic-expansion region and no real
+# heredoc operator; verdict deny.
+EXPANSION_POSITION_FORMS = [
+    (
+        'echo "$((1<<2))"',
+        [("double-quote", '"$((1<<2))"'), ("arithmetic-expansion", "$((1<<2))")],
+    ),
+    ("cat <$((1<<2))", [("arithmetic-expansion", "$((1<<2))")]),
+    (
+        "echo ${x:-$((1<<2))}",
+        [
+            ("parameter-expansion", "${x:-$((1<<2))}"),
+            ("arithmetic-expansion", "$((1<<2))"),
+        ],
+    ),
+]
+
+# (command, the opener that is settled as not opened). Expected: no region,
+# the re-read tail starting at the opener, no comment and no real heredoc
+# operator anywhere; verdict deny.
+UNCLOSED_OPENER_FORMS = [
+    ("echo ${x\nrm -rf /home/sakura/valuable", "${"),
+    ("echo $((1\nrm -rf /home/sakura/valuable", "$(("),
+    ("echo $[1\nrm -rf /home/sakura/valuable", "$["),
+    ("((x\nrm -rf /home/sakura/valuable", "(("),
+    ("echo $'x\nrm -rf /home/sakura/valuable", "$'"),
+    ("echo ${x # ; rm -rf /home/sakura/valuable", "${"),
+    ("echo $((1 # ; rm -rf /home/sakura/valuable", "$(("),
+    ("echo ${x <<EOF\nrm -rf /home/sakura/valuable\nEOF", "${"),
+    ("echo $[1 <<EOF\nrm -rf /home/sakura/valuable\nEOF", "$["),
+]
+
+# (command, quote literal, candidate literals, enclosing literal or None).
+# The verdict is the unchanged hook's (allow).
+CANDIDATE_FORMS = [
+    ("echo '$(a b)'", "'$(a b)'", ["$(a b)"], None),
+    ("echo '$(a (b) c'", "'$(a (b) c'", ["$(a (b)"], None),
+    ("echo '$(a b'", "'$(a b'", [], None),
+    ("echo '`x`'", "'`x`'", ["`x`"], None),
+    ("echo '`x'", "'`x'", [], None),
+    ("echo $'$(a)'", "$'$(a)'", ["$(a)"], None),
+    ("echo $(echo '$(a)')", "'$(a)'", ["$(a)"], "$(echo '$(a)')"),
+]
+
+BENIGN_CONTROLS = [
+    "rm -rf /tmp/safe$'\\t'",
+    'echo "${x:-a(b}"; cat <<\'EOF\'\ngit reset --hard HEAD\nEOF',
+    "echo $((1<<2)); cat <<'EOF'\nrm -rf /tmp/zz\nEOF",
+    "for ((i=0; i<3; i++)); do echo $i; done",
+    'echo "$\'x\'"',
+    "cat <(((1<<2)))",
+]
+
+# SPEC AC-1 forms 1-11 and AC-7 forms 1-5 (deny).
+ATTACK_FORMS = [
+    "cat $'\\'' ; bash -s \\' <<EOF\ngit reset --hard HEAD\nEOF",
+    "echo $'\\'' ; rm -rf /home/sakura/valuable \\'",
+    "echo $'\\'' ' #' ; rm -rf /home/sakura/valuable\necho \\'",
+    "echo ${x/<<EOF/}\nrm -rf /home/sakura/valuable\nEOF",
+    "echo ${x:-<<EOF}\nrm -rf /home/sakura/valuable\nEOF",
+    "x=${y/<<EOF/}; ls\ngit reset --hard HEAD~3\nEOF",
+    "echo $((1<<2))\nrm -rf /home/sakura/valuable\n2",
+    "((x=1<<2))\nrm -rf /home/sakura/valuable\n2",
+    "echo $[1<<2]\nrm -rf /home/sakura/valuable\n2",
+    "if ((1<<2)); then :; fi\nrm -rf /home/sakura/valuable\n2",
+    "echo $[a[1]<<2]\nrm -rf /home/sakura/valuable\n2",
+    "for ((i=0; i<3; i++)); do rm -rf /home/sakura/valuable; done",
+    "echo $(( $(rm -rf /home/sakura/valuable) + 1 ))",
+    "echo ${x:-$(rm -rf /home/sakura/valuable)}",
+    'echo "$\'" ; rm -rf /home/sakura/valuable',
+    "echo ${x\nrm -rf /home/sakura/valuable",
+]
+ATTACK_ALLOW_FORM = "echo $((1<<2)); cat <<'EOF'\nrm -rf /tmp/zz\nEOF"
+
+
+def span_of(text, literal, nth=0):
+    """(start, end) of the NTH occurrence of LITERAL in TEXT."""
+    start = -1
+    for _ in range(nth + 1):
+        start = text.index(literal, start + 1)
+    return start, start + len(literal)
+
+
+def expected_regions(text, items):
+    out = []
+    for item in items:
+        kind, literal = item[0], item[1]
+        nth = item[2] if len(item) > 2 else 0
+        start, end = span_of(text, literal, nth)
+        out.append((kind, start, end))
+    return sorted(out)
+
+
+def actual_regions(lexmap):
+    return sorted((r.kind, r.start, r.end) for r in lexmap.regions)
+
+
+_verdict_cache = {}
+
+
+def hook_verdict(command, batch=False):
+    """The decision the hook gives COMMAND, run through its stdin JSON /
+    stdout contract. Returns (decision, reason)."""
+    key = (command, batch)
+    if key in _verdict_cache:
+        return _verdict_cache[key]
+    env = dict(os.environ)
+    env.pop("CLAUDE_BATCH", None)
+    if batch:
+        env["CLAUDE_BATCH"] = "1"
+    try:
+        proc = subprocess.run(
+            [sys.executable, HOOK],
+            input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=GUARD_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        result = ("(timeout)", "")
+    else:
+        if proc.returncode != 0:
+            result = ("(exit %d)" % proc.returncode, proc.stderr.strip())
+        elif not proc.stdout.strip():
+            result = ("(silent)", "")
+        else:
+            out = json.loads(proc.stdout)["hookSpecificOutput"]
+            result = (out["permissionDecision"], out["permissionDecisionReason"])
+    _verdict_cache[key] = result
+    return result
+
+
+def case_commands():
+    with open(CASES_JSON, encoding="utf-8") as f:
+        return [(want, label, cmd) for want, label, cmd in json.load(f)]
+
+
+def heredoc_body(text, op):
+    return text[op.body_start : op.body_end] if op.body_start is not None else None
+
+
+# ---------------------------------------------------------------------------
+# Fixed expectations: the lexer's own reading (D6).
+# ---------------------------------------------------------------------------
+
+
+class TestFixedExpectations(unittest.TestCase):
+    def check_regions(self, text, items, mode="shell"):
+        lexmap = H.lex_shell(text, mode)
+        self.assertEqual(
+            actual_regions(lexmap), expected_regions(text, items), msg=repr(text)
+        )
+        return lexmap
+
+    def check_heredocs(self, text, lexmap, expected):
+        got = [(op.delimiter, op.quoted, heredoc_body(text, op)) for op in lexmap.heredocs]
+        self.assertEqual(got, expected, msg=repr(text))
+
+    def test_context_forms(self):
+        for text, regions, heredocs, _verdict in CONTEXT_FORMS:
+            with self.subTest(text=text):
+                lexmap = self.check_regions(text, regions)
+                self.check_heredocs(text, lexmap, heredocs)
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(list(lexmap.unopened), [])
+
+    def test_command_position_arithmetic(self):
+        for form in COMMAND_POSITION_FORMS:
+            text = form + TAIL
+            with self.subTest(text=text):
+                lexmap = self.check_regions(text, [("arithmetic-command", "((1<<2))")])
+                self.assertEqual(list(lexmap.heredocs), [])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_arithmetic_for_header(self):
+        text = "for ((i=0; i<3; i++)); do echo $i; done"
+        self.check_regions(text, [("arithmetic-command", "((i=0; i<3; i++))")])
+
+    def test_double_paren_is_not_arithmetic_elsewhere(self):
+        for text, regions, _verdict in NON_ARITHMETIC_FORMS:
+            with self.subTest(text=text):
+                lexmap = self.check_regions(text, regions)
+                self.assertNotIn("arithmetic-command", [r.kind for r in lexmap.regions])
+
+    def test_process_substitution_forms(self):
+        for text, regions, _verdict in PROCESS_SUBSTITUTION_FORMS:
+            with self.subTest(text=text):
+                lexmap = self.check_regions(text, regions)
+                self.assertEqual(list(lexmap.heredocs), [])
+
+    def test_expansion_position_forms(self):
+        for form, regions in EXPANSION_POSITION_FORMS:
+            text = form + TAIL
+            with self.subTest(text=text):
+                lexmap = self.check_regions(text, regions)
+                self.assertEqual(list(lexmap.heredocs), [])
+
+    def test_unclosed_opener_forms(self):
+        for text, opener in UNCLOSED_OPENER_FORMS:
+            with self.subTest(text=text):
+                start = text.index(opener)
+                lexmap = H.lex_shell(text)
+                self.assertEqual(actual_regions(lexmap), [], msg=repr(text))
+                self.assertEqual(list(lexmap.unopened), [start])
+                self.assertEqual(lexmap.tail_start, start)
+                self.assertEqual(list(lexmap.heredocs), [])
+                self.assertNotIn("comment", [r.kind for r in lexmap.regions])
+
+    def test_single_quote_candidates(self):
+        for text, quote, candidates, enclosing in CANDIDATE_FORMS:
+            with self.subTest(text=text):
+                lexmap = H.lex_shell(text)
+                q_start, q_end = span_of(text, quote)
+                quotes = [
+                    i
+                    for i, r in enumerate(lexmap.regions)
+                    if r.kind in ("single-quote", "ansi-c-quote")
+                    and (r.start, r.end) == (q_start, q_end)
+                ]
+                self.assertEqual(len(quotes), 1, msg=repr(text))
+                got = [
+                    text[c.start : c.end] for c in lexmap.candidates if c.quote == quotes[0]
+                ]
+                self.assertEqual(got, candidates)
+                for c in lexmap.candidates:
+                    self.assertTrue(q_start < c.start and c.end <= q_end)
+                    if enclosing is None:
+                        self.assertIsNone(c.enclosing)
+                    else:
+                        outer = lexmap.regions[c.enclosing]
+                        self.assertEqual(
+                            (outer.kind, text[outer.start : outer.end]),
+                            ("command-substitution", enclosing),
+                        )
+
+    def test_nesting_is_reported_with_parents(self):
+        text = 'echo ${x:-"}"}'
+        lexmap = H.lex_shell(text)
+        kinds = {(r.kind): r for r in lexmap.regions}
+        outer = lexmap.regions.index(kinds["parameter-expansion"])
+        self.assertIsNone(kinds["parameter-expansion"].parent)
+        self.assertEqual(kinds["double-quote"].parent, outer)
+
+    def test_regions_are_ordered_by_start(self):
+        text = "echo ${x:-$(echo \"a $((1+2))\")} $'z' # c"
+        lexmap = H.lex_shell(text)
+        starts = [r.start for r in lexmap.regions]
+        self.assertEqual(starts, sorted(starts))
+        for i, r in enumerate(lexmap.regions):
+            if r.parent is not None:
+                p = lexmap.regions[r.parent]
+                self.assertLess(r.parent, i)
+                self.assertTrue(p.start <= r.start and r.end <= p.end)
+
+    def test_special_parameters_are_consumed_as_a_unit(self):
+        # `$$'` is `$$` followed by an ordinary single quote; the `#` of `$#`,
+        # `${#x}` and `${x#pat}` is never a comment.
+        for text in ("echo $$'x'", "echo $?'x'", "echo $# $$ $! $- $@ $* $0 $9"):
+            with self.subTest(text=text):
+                lexmap = H.lex_shell(text)
+                self.assertNotIn("ansi-c-quote", [r.kind for r in lexmap.regions])
+                self.assertNotIn("comment", [r.kind for r in lexmap.regions])
+
+    def test_backslash_escaped_dollar_opens_nothing(self):
+        for text in ("echo \\$'x' ; ls", "echo \\${x ; ls", "echo \\$((1 ; ls"):
+            with self.subTest(text=text):
+                lexmap = H.lex_shell(text)
+                self.assertEqual(actual_regions(lexmap), [] if "'x'" not in text else [("single-quote", text.index("'x'"), text.index("'x'") + 3)])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_arithmetic_read_as_two_parentheses_when_close_is_not_adjacent(self):
+        # `((a) | cat)` has a matching close that is not an adjacent `))`: two
+        # parentheses, no arithmetic region and no re-read tail.
+        for text in ("((echo a) | cat)", "echo $((echo a) | cat)"):
+            with self.subTest(text=text):
+                lexmap = H.lex_shell(text)
+                self.assertNotIn(
+                    "arithmetic-command", [r.kind for r in lexmap.regions]
+                )
+                self.assertNotIn(
+                    "arithmetic-expansion", [r.kind for r in lexmap.regions]
+                )
+                self.assertIsNone(lexmap.tail_start)
+        lexmap = H.lex_shell("echo $((echo a) | cat)")
+        self.assertEqual(
+            [r.kind for r in lexmap.regions], ["command-substitution"]
+        )
+
+    def test_case_pattern_close_does_not_end_a_substitution(self):
+        text = "echo $(case x in a) echo 1;; b) echo 2;; esac; echo done)"
+        lexmap = H.lex_shell(text)
+        self.assertEqual(
+            actual_regions(lexmap), expected_regions(text, [("command-substitution", text[5:])])
+        )
+
+    def test_comment_ends_before_its_newline(self):
+        text = "echo a # c $(x)\necho b"
+        lexmap = H.lex_shell(text)
+        self.assertEqual(
+            actual_regions(lexmap), expected_regions(text, [("comment", "# c $(x)")])
+        )
+
+    def test_hash_inside_a_word_is_no_comment(self):
+        for text in ("echo a#b", "echo $(x)#c", "echo 'a'#b"):
+            with self.subTest(text=text):
+                self.assertNotIn("comment", [r.kind for r in H.lex_shell(text).regions])
+
+    def test_hash_after_group_close_is_a_comment(self):
+        text = "(echo a)#c"
+        self.assertIn("comment", [r.kind for r in H.lex_shell(text).regions])
+
+    def test_heredoc_body_mode_literal_top_level(self):
+        text = "echo 'a' # $(b) \"c\" $((1<<2)) <(x)"
+        lexmap = H.lex_shell(text, "heredoc-body")
+        self.assertEqual(
+            actual_regions(lexmap),
+            expected_regions(
+                text,
+                [
+                    ("command-substitution", "$(b)"),
+                    ("arithmetic-expansion", "$((1<<2))"),
+                ],
+            ),
+        )
+
+    def test_real_heredoc_operator_positions_and_bodies(self):
+        text = "cat <<EOF <<-'X'\none\nEOF\ntwo\nX\nrm -rf /tmp/zz"
+        lexmap = H.lex_shell(text)
+        got = [
+            (op.delimiter, op.quoted, text[op.start : op.end], heredoc_body(text, op))
+            for op in lexmap.heredocs
+        ]
+        self.assertEqual(
+            got,
+            [
+                ("EOF", False, "<<EOF", "one\n"),
+                ("X", True, "<<-'X'", "two\n"),
+            ],
+        )
+
+    def test_heredoc_whose_delimiter_never_appears_consumes_nothing(self):
+        text = "cat <<EOF\nrm -rf /tmp/zz\nno delimiter"
+        lexmap = H.lex_shell(text)
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertIsNone(lexmap.heredocs[0].body_start)
+        stripped, records, _omap = H._strip_heredocs_mapped(text)
+        self.assertEqual(stripped, text)
+        self.assertEqual(records, [])
+
+    def test_here_string_is_never_a_heredoc_operator(self):
+        text = "cat <<<EOF\nrm -rf /tmp/zz\nEOF"
+        lexmap = H.lex_shell(text)
+        self.assertEqual(list(lexmap.heredocs), [])
+        self.assertEqual([r.kind for r in lexmap.regions], ["here-string-operator"])
+
+    def test_same_text_gives_the_same_map(self):
+        text = "echo ${x # ; $'a' $((1<<2)) <(y)\ncat <<EOF\nhi\nEOF\n$(z"
+        first = H.lex_shell(text)
+        # A second, independent lexing: the memo the hook keeps must not be
+        # what makes the two maps equal.
+        H._LEX_CACHE.clear()
+        second = H.lex_shell(text)
+        self.assertIsNot(first, second)
+        self.assertEqual(first.as_tuple(), second.as_tuple())
+
+
+# ---------------------------------------------------------------------------
+# Verdicts (SPEC AC-1, AC-2, AC-7; the benign controls; the fixed forms).
+# ---------------------------------------------------------------------------
+
+
+class TestFixedVerdicts(unittest.TestCase):
+    def check(self, command, want):
+        got, reason = hook_verdict(command)
+        self.assertEqual(got, want, msg="%r -> %s %s" % (command, got, reason))
+
+    def test_context_forms(self):
+        for text, _regions, _heredocs, verdict in CONTEXT_FORMS:
+            with self.subTest(text=text):
+                self.check(text, verdict)
+
+    def test_command_position_forms_are_denied(self):
+        for form in COMMAND_POSITION_FORMS:
+            with self.subTest(form=form):
+                self.check(form + TAIL, "deny")
+
+    def test_non_arithmetic_forms_keep_the_unchanged_verdict(self):
+        for text, _regions, verdict in NON_ARITHMETIC_FORMS:
+            with self.subTest(text=text):
+                self.check(text, verdict)
+
+    def test_process_substitution_forms(self):
+        for text, _regions, verdict in PROCESS_SUBSTITUTION_FORMS:
+            with self.subTest(text=text):
+                self.check(text, verdict)
+
+    def test_expansion_position_forms_are_denied(self):
+        for form, _regions in EXPANSION_POSITION_FORMS:
+            with self.subTest(form=form):
+                self.check(form + TAIL, "deny")
+
+    def test_unclosed_opener_forms_are_denied(self):
+        for text, _opener in UNCLOSED_OPENER_FORMS:
+            with self.subTest(text=text):
+                self.check(text, "deny")
+
+    def test_candidate_forms_keep_the_unchanged_verdict(self):
+        for text, _quote, _candidates, _enclosing in CANDIDATE_FORMS:
+            with self.subTest(text=text):
+                self.check(text, "allow")
+
+    def test_benign_controls_are_allowed(self):
+        for text in BENIGN_CONTROLS:
+            with self.subTest(text=text):
+                self.check(text, "allow")
+
+    def test_attack_forms_are_denied(self):
+        for text in ATTACK_FORMS:
+            with self.subTest(text=text):
+                self.check(text, "deny")
+        self.check(ATTACK_ALLOW_FORM, "allow")
+
+    def test_attack_forms_are_in_the_cases_file(self):
+        cases = {cmd: want for want, _label, cmd in case_commands()}
+        for text in ATTACK_FORMS:
+            self.assertEqual(cases.get(text), "deny", msg=repr(text))
+        self.assertEqual(cases.get(ATTACK_ALLOW_FORM), "allow")
+
+    def test_same_command_gives_an_identical_decision(self):
+        for text in ATTACK_FORMS[:4] + [ATTACK_ALLOW_FORM]:
+            with self.subTest(text=text):
+                _verdict_cache.pop((text, False), None)
+                first = hook_verdict(text)
+                _verdict_cache.pop((text, False), None)
+                second = hook_verdict(text)
+                self.assertEqual(first, second)
+
+
+# ---------------------------------------------------------------------------
+# Stage agreement properties (a)-(f).
+# ---------------------------------------------------------------------------
+
+
+def _removed_before(segments, pos):
+    """Characters removed from the old text before POS, collapsing a position
+    inside a replaced segment to that segment's start."""
+    shift = 0
+    for seg in segments:
+        kind, old_start, old_end, new_start, new_end, _ref = seg
+        if kind != "replace":
+            continue
+        if old_end <= pos:
+            shift += (old_end - old_start) - (new_end - new_start)
+        elif old_start < pos:
+            shift += pos - old_start
+            break
+        else:
+            break
+    return shift
+
+
+def to_new_position(posmap, pos):
+    """POS of the old text as a position of the new text; a position inside a
+    replaced segment collapses to the segment's new start."""
+    new = pos - _removed_before(posmap.segments, pos)
+    for kind, old_start, old_end, new_start, new_end, _ref in posmap.segments:
+        if kind == "replace" and old_start <= pos < old_end:
+            return new_start
+    return new
+
+
+class Analysis:
+    """One command run through the hook's own per-chunk pipeline, the way
+    statements() runs the top-level chunk."""
+
+    def __init__(self, command):
+        self.command = command
+        self.stripped, self.records, self.omap = H._strip_heredocs_mapped(command)
+        self.lex_o = H.lex_shell(command, "shell")
+        self.lex_s = H.lex_shell(self.stripped, "shell", False)
+        self.scan = H.scan_structure(self.stripped, "shell")
+        self.broad = H.scan_structure(self.stripped, "shell", honor_single_quotes=False)
+        self.top_spans = H._top_level_spans(self.broad[0], self.broad[1])
+        self.marked = H._mark_substitutions(self.stripped, self.top_spans, 0)
+
+    def s_pos(self, o_pos):
+        return to_new_position(self.omap, o_pos)
+
+    def region_closed(self, region):
+        return region.closed or region.kind not in SUBSTITUTION_KINDS
+
+    def layout_regions(self):
+        """The regions the layout layer cannot see into: every region of the
+        stripped text except here-string operators and unterminated
+        substitutions (their text is read raw). A process substitution
+        counts by its body only: marking replaces the body and leaves `<(`
+        and `)` in the text as operator tokens (D5)."""
+        out = []
+        for r in self.lex_s.regions:
+            if r.kind == "here-string-operator" or not self.region_closed(r):
+                continue
+            if r.kind == "process-substitution":
+                r = r._replace(start=r.start + 2, end=r.end - 1)
+            out.append(r)
+        return out
+
+    def quote_ranges(self):
+        """Where a quote region or a quote delimiter sits in the stripped
+        text: every quote region not nested in a marked substitution, and the
+        quote characters of a quoted here-document delimiter."""
+        ranges = [
+            (r.start, r.end)
+            for i, r in enumerate(self.lex_s.regions)
+            if r.kind in QUOTE_KINDS and not self.has_closed_substitution_ancestor(i)
+        ]
+        for op in self.lex_s.heredocs:
+            if op.quoted:
+                ranges.append((op.end - len(op.delimiter) - 2, op.end))
+        return ranges
+
+    def in_region(self, regions, pos):
+        return any(r.start <= pos < r.end for r in regions)
+
+    def has_closed_substitution_ancestor(self, index):
+        parent = self.lex_s.regions[index].parent
+        while parent is not None:
+            r = self.lex_s.regions[parent]
+            if r.kind in SUBSTITUTION_KINDS and r.closed:
+                return True
+            parent = r.parent
+        return False
+
+
+def all_commands():
+    commands = []
+    seen = set()
+
+    def add(cmd):
+        if cmd not in seen:
+            seen.add(cmd)
+            commands.append(cmd)
+
+    for _want, _label, cmd in case_commands():
+        add(cmd)
+    for cmd in ATTACK_FORMS + [ATTACK_ALLOW_FORM] + BENIGN_CONTROLS:
+        add(cmd)
+    for text, *_rest in CONTEXT_FORMS:
+        add(text)
+    for form in COMMAND_POSITION_FORMS:
+        add(form + TAIL)
+    for text, *_rest in NON_ARITHMETIC_FORMS:
+        add(text)
+    for text, *_rest in PROCESS_SUBSTITUTION_FORMS:
+        add(text)
+    for form, _regions in EXPANSION_POSITION_FORMS:
+        add(form + TAIL)
+    for text, _opener in UNCLOSED_OPENER_FORMS:
+        add(text)
+    for text, *_rest in CANDIDATE_FORMS:
+        add(text)
+    return commands
+
+
+class TestStageAgreement(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.commands = all_commands()
+
+    def each(self, check):
+        for command in self.commands:
+            with self.subTest(command=command[:80]):
+                check(Analysis(command))
+
+    # (a) scan_structure() agrees with the lexer's regions.
+    def test_a_scan_structure_follows_the_lexer(self):
+        def check(a):
+            spans = sorted(
+                (a.s_pos(r.start), a.s_pos(r.end))
+                for r in a.lex_o.regions
+                if r.kind in SUBSTITUTION_KINDS and r.closed
+            )
+            self.assertEqual(sorted(a.scan[0]), spans)
+            opaque = sorted(
+                (a.s_pos(r.start), a.s_pos(r.end))
+                for r in a.lex_o.regions
+                if r.parent is None and r.kind in OPAQUE_KINDS
+            )
+            self.assertEqual(a.scan[3], opaque)
+            candidates = [
+                (a.s_pos(c.start), a.s_pos(c.end)) for c in a.lex_o.candidates
+            ]
+            self.assertEqual(sorted(a.broad[0]), sorted(spans + candidates))
+
+        self.each(check)
+
+    def test_a_unterminated_substitutions_are_reported_unmatched(self):
+        def check(a):
+            unterminated = sorted(
+                a.s_pos(r.start)
+                for r in a.lex_o.regions
+                if r.kind in SUBSTITUTION_KINDS and not r.closed
+            )
+            self.assertEqual(sorted(a.scan[2]), unterminated)
+
+        self.each(check)
+
+    def test_a_real_heredoc_operators_become_the_records(self):
+        def check(a):
+            with_body = [op for op in a.lex_o.heredocs if op.body_start is not None]
+            self.assertEqual(len(with_body), len(a.records))
+            for op, record in zip(with_body, a.records):
+                self.assertEqual(record.op_start, a.s_pos(op.start))
+                self.assertEqual(record.op_end, a.s_pos(op.end))
+                self.assertEqual(record.quoted, op.quoted)
+                self.assertEqual(record.body, a.command[op.body_start : op.body_end])
+                self.assertEqual(
+                    a.stripped[record.op_start : record.op_end],
+                    a.command[op.start : op.end],
+                )
+
+        self.each(check)
+
+    # (b) separators.
+    def test_b_separators_lie_outside_every_region(self):
+        def check(a):
+            segments, starts, _operators = H._lex_layout(a.marked, True)
+            if starts is None:
+                return
+            regions = a.layout_regions()
+            ranges = []
+            for k in range(len(segments) - 1):
+                sep = segments[k][2]
+                end = starts[k + 1]
+                ranges.append((end - len(sep), end))
+            for m_start, m_end in ranges:
+                for m_pos in range(m_start, m_end):
+                    kind, s_pos = a.marked.posmap.to_old(m_pos)[:2]
+                    self.assertEqual(kind, "copy")
+                    self.assertFalse(
+                        a.in_region(regions, s_pos),
+                        msg="separator at %d lies inside a region" % s_pos,
+                    )
+            separator_positions = set()
+            for m_start, m_end in ranges:
+                for m_pos in range(m_start, m_end):
+                    separator_positions.add(a.marked.posmap.to_old(m_pos)[1])
+            text = a.stripped
+            for pos, ch in enumerate(text):
+                if ch != "\n" or a.in_region(regions, pos):
+                    continue
+                backslashes = 0
+                while pos - 1 - backslashes >= 0 and text[pos - 1 - backslashes] == "\\":
+                    backslashes += 1
+                if backslashes % 2 == 1:
+                    continue
+                self.assertIn(
+                    pos, separator_positions, msg="newline at %d is no separator" % pos
+                )
+
+        self.each(check)
+
+    # (c) heredoc operator records.
+    def test_c_real_operators_are_recorded_in_their_statement(self):
+        def check(a):
+            segments, starts, operators = H._lex_layout(a.marked, True)
+            if starts is None:
+                return
+            substitutions = [
+                r for r in a.lex_s.regions if r.kind in SUBSTITUTION_KINDS
+            ]
+            for op in a.lex_o.heredocs:
+                s_pos = a.s_pos(op.start)
+                if a.in_region(substitutions, s_pos):
+                    continue
+                m_pos = to_new_position(a.marked.posmap, s_pos)
+                k = bisect.bisect_right(starts, m_pos) - 1
+                self.assertIn(m_pos, operators.get(k, []), msg="operator at %d" % op.start)
+
+        self.each(check)
+
+    def test_c_no_record_lies_inside_a_region(self):
+        def check(a):
+            _segments, starts, operators = H._lex_layout(a.marked, True)
+            if starts is None:
+                return
+            regions = a.layout_regions()
+            for k, held in operators.items():
+                for m_pos in held:
+                    kind, s_pos = a.marked.posmap.to_old(m_pos)[:2]
+                    self.assertEqual(kind, "copy")
+                    if a.in_region(regions, s_pos):
+                        self.fail("record at %d lies inside a region" % s_pos)
+
+        self.each(check)
+
+    # (d) Tok provenance.
+    def test_d_tok_provenance_matches_the_contract(self):
+        def check(a):
+            if "\x00" in a.command:
+                return
+            try:
+                raw = H._tokenize_marked(a.marked)
+            except ValueError:
+                return
+            regions = a.layout_regions()
+            quote_regions = a.quote_ranges()
+            for tok, start, end in raw:
+                s_start = a.marked.posmap.to_old(start)
+                s_end_kind = a.marked.posmap.to_old(end - 1) if end > start else s_start
+                # A span that touches a marker residue maps whole; widen it
+                # to the substitution it replaced.
+                lo = s_start[1] if s_start[0] == "copy" else s_start[1]
+                hi = (
+                    s_end_kind[1] + 1
+                    if s_end_kind[0] == "copy"
+                    else s_end_kind[2]
+                )
+                text = a.marked.text[start:end]
+                expected_operator = bool(text) and all(
+                    c in H.PUNCTUATION for c in text
+                ) and not any(r.start < hi and lo < r.end for r in regions)
+                self.assertEqual(tok.is_operator, expected_operator, msg=repr(text))
+                expected_quoted = any(q_s < hi and lo < q_e for q_s, q_e in quote_regions)
+                self.assertEqual(tok.quoted, expected_quoted, msg=repr(text))
+            # unresolved / substitution_only keep coming from the existing
+            # marker mechanism: a token whose value holds marker residue is
+            # unresolved (text beside the residue) or substitution_only
+            # (nothing but residue); any other token is neither.
+            stripped = H._strip_unresolved_marks([t for t, _s, _e in raw])
+            for (tok, start, end), done in zip(raw, stripped):
+                value = str(tok)
+                if H._MARK_RE.search(value):
+                    rest = H._MARK_RE.sub("", value)
+                    self.assertEqual(done.substitution_only, rest == "", msg=repr(value))
+                    self.assertEqual(done.unresolved, rest != "", msg=repr(value))
+                elif a.command.count("\x00") == 0:
+                    self.assertFalse(done.unresolved, msg=repr(value))
+                    self.assertFalse(done.substitution_only, msg=repr(value))
+
+        self.each(check)
+
+    # (e) inspection values.
+    def test_e_values_carry_no_mask_character(self):
+        def check(a):
+            try:
+                raw = H._tokenize_marked(a.marked)
+            except ValueError:
+                return
+            mask = a.marked.mask_char
+            self.assertNotIn(mask, a.marked.text)
+            for tok, _start, _end in raw:
+                self.assertNotIn(mask, tok)
+            segments = H._lex_layout(a.marked, False)[0]
+            for toks, _lexed, sep in segments:
+                for tok in toks:
+                    self.assertNotIn(mask, tok)
+
+        self.each(check)
+
+    def test_e_unmasked_spans_equal_their_shlex_reading(self):
+        def check(a):
+            try:
+                raw = H._tokenize_marked(a.marked)
+            except ValueError:
+                return
+            masked = set()
+            for lo, hi in a.marked.mask_ranges:
+                masked.update(range(lo, hi))
+            for tok, start, end in raw:
+                if tok.is_operator or any(p in masked for p in range(start, end)):
+                    continue
+                self.assertEqual(
+                    shlex.split(a.marked.text[start:end], comments=False),
+                    [str(tok)],
+                    msg=repr(a.marked.text[start:end]),
+                )
+
+        self.each(check)
+
+    def test_e_tokens_keeps_values_clean_and_matches_shlex_without_regions(self):
+        def check(a):
+            for segment in H.SEGMENT_SPLIT.split(a.command):
+                if not segment.strip():
+                    continue
+                got = H.tokens(segment)
+                for word in got:
+                    for ch in word:
+                        if 0xE000 <= ord(ch) <= 0xF8FF:
+                            self.assertIn(ch, a.command)
+                lexmap = H.lex_shell(segment)
+                if any(r.kind in HIDDEN_KINDS for r in lexmap.regions) or "#" in segment:
+                    continue
+                try:
+                    want = shlex.split(segment, comments=False)
+                except ValueError:
+                    continue
+                self.assertEqual(got, want, msg=repr(segment))
+
+        self.each(check)
+
+    # (f) position map.
+    def test_f_position_maps_meet_their_contract(self):
+        def check(a):
+            self.check_posmap(a.omap, a.command, a.stripped)
+            self.check_posmap(a.marked.posmap, a.stripped, a.marked.text)
+
+        self.each(check)
+
+    def check_posmap(self, posmap, old_text, new_text):
+        self.assertEqual(posmap.old_len, len(old_text))
+        self.assertEqual(posmap.new_len, len(new_text))
+        previous_old = previous_new = 0
+        for kind, old_start, old_end, new_start, new_end, ref in posmap.segments:
+            self.assertEqual(old_start, previous_old)
+            self.assertEqual(new_start, previous_new)
+            previous_old, previous_new = old_end, new_end
+            if kind == "copy":
+                self.assertEqual(old_end - old_start, new_end - new_start)
+                self.assertEqual(old_text[old_start:old_end], new_text[new_start:new_end])
+                # constant shift: round trips return the same position and character
+                for probe in {old_start, (old_start + old_end) // 2, old_end - 1}:
+                    if not old_start <= probe < old_end:
+                        continue
+                    mapped = posmap.to_new(probe)
+                    self.assertEqual(mapped[0], "copy")
+                    back = posmap.to_old(mapped[1])
+                    self.assertEqual(back[:2], ("copy", probe))
+                    self.assertEqual(old_text[probe], new_text[mapped[1]])
+            else:
+                self.assertEqual(kind, "replace")
+                for probe in {old_start, (old_start + old_end) // 2, old_end - 1}:
+                    if not old_start <= probe < old_end:
+                        continue
+                    mapped = posmap.to_new(probe)
+                    self.assertEqual(mapped, ("replace", new_start, new_end, ref))
+                for probe in {new_start, (new_start + new_end) // 2, new_end - 1}:
+                    if not new_start <= probe < new_end:
+                        continue
+                    back = posmap.to_old(probe)
+                    self.assertEqual(back, ("replace", old_start, old_end, ref))
+        self.assertEqual(previous_old, len(old_text))
+        self.assertEqual(previous_new, len(new_text))
+        # order is kept
+        last = -1
+        for probe in range(0, len(old_text), max(1, len(old_text) // 200)):
+            mapped = posmap.to_new(probe)
+            value = mapped[1]
+            self.assertGreaterEqual(value, last)
+            last = value
+
+
+# ---------------------------------------------------------------------------
+# Position map contract.
+# ---------------------------------------------------------------------------
+
+
+class TestPositionMap(unittest.TestCase):
+    def test_removed_heredoc_body_maps_as_a_whole_to_its_record(self):
+        text = "cat <<EOF\nrm -rf /tmp/zz\nEOF\necho done"
+        stripped, records, omap = H._strip_heredocs_mapped(text)
+        self.assertEqual(stripped, "cat <<EOF\necho done")
+        self.assertEqual(len(records), 1)
+        replaced = [seg for seg in omap.segments if seg[0] == "replace"]
+        self.assertEqual(len(replaced), 1)
+        _kind, old_start, old_end, new_start, new_end, ref = replaced[0]
+        self.assertIs(ref, records[0])
+        self.assertEqual(text[old_start:old_end], "rm -rf /tmp/zz\nEOF\n")
+        self.assertEqual(new_start, new_end)
+        for probe in range(old_start, old_end):
+            self.assertEqual(
+                omap.to_new(probe), ("replace", new_start, new_end, records[0])
+            )
+
+    def test_marker_longer_than_the_substitution_maps_as_a_whole_range(self):
+        text = "echo $() $() $()"
+        spans, parent_of, _unmatched, _opaque, _containing = H.scan_structure(text)
+        top = H._top_level_spans(spans, parent_of)
+        self.assertEqual(len(top), 3)
+        marked = H._mark_substitutions(text, top, 10)
+        # `$()` is three characters; the marker for index 10 is four.
+        replaced = [seg for seg in marked.posmap.segments if seg[0] == "replace"]
+        self.assertEqual(len(replaced), 3)
+        for _kind, s_start, s_end, m_start, m_end, _ref in replaced:
+            self.assertEqual(s_end - s_start, 3)
+            self.assertGreater(m_end - m_start, s_end - s_start)
+            for probe in range(s_start, s_end):
+                self.assertEqual(marked.posmap.to_new(probe)[:3], ("replace", m_start, m_end))
+            for probe in range(m_start, m_end):
+                self.assertEqual(marked.posmap.to_old(probe)[:3], ("replace", s_start, s_end))
+        self.assertEqual(
+            marked.text,
+            "echo %s %s %s"
+            % tuple("%s%d%s" % (H.UNRESOLVED_MARK, 10 + i, H._MARK_TERMINATOR) for i in range(3)),
+        )
+
+    def test_marker_shorter_than_the_substitution_maps_as_a_whole_range(self):
+        text = "echo $(cat /etc/hostname)"
+        spans, parent_of, _u, _o, _c = H.scan_structure(text)
+        top = H._top_level_spans(spans, parent_of)
+        marked = H._mark_substitutions(text, top, 0)
+        replaced = [seg for seg in marked.posmap.segments if seg[0] == "replace"]
+        self.assertEqual(len(replaced), 1)
+        _kind, s_start, s_end, m_start, m_end, _ref = replaced[0]
+        self.assertLess(m_end - m_start, s_end - s_start)
+        self.assertEqual(marked.posmap.to_new(s_start + 3)[:3], ("replace", m_start, m_end))
+
+    def test_substitution_in_a_removed_heredoc_body_is_not_marked_at_this_level(self):
+        text = "cat <<EOF\n$(rm -rf /tmp/zz)\nEOF\necho $(date)"
+        stripped, _records, _omap = H._strip_heredocs_mapped(text)
+        self.assertEqual(stripped, "cat <<EOF\necho $(date)")
+
+
+# ---------------------------------------------------------------------------
+# The three substitution searches stay distinct (FR9, AC-6).
+# ---------------------------------------------------------------------------
+
+
+class TestSubstitutionPolicies(unittest.TestCase):
+    TEXT = "echo '$(a)' # $(b)"
+
+    def texts(self, spans, text):
+        return sorted(text[s:e] for s, e in spans)
+
+    def test_shell_mode_honors_single_quotes_and_comments(self):
+        spans = H.scan_structure(self.TEXT, mode="shell")[0]
+        self.assertEqual(spans, [])
+
+    def test_heredoc_body_mode_treats_top_level_quotes_and_hash_as_literal(self):
+        spans = H.scan_structure(self.TEXT, mode="heredoc-body")[0]
+        self.assertEqual(self.texts(spans, self.TEXT), ["$(a)", "$(b)"])
+
+    def test_broad_search_also_finds_substitutions_inside_single_quotes(self):
+        spans = H.scan_structure(self.TEXT, mode="shell", honor_single_quotes=False)[0]
+        self.assertEqual(self.texts(spans, self.TEXT), ["$(a)"])
+
+    def test_broad_spans_are_default_spans_plus_candidates(self):
+        text = "echo $(echo '$(a)' `x`) '`y`' \"$(z)\""
+        default = H.scan_structure(text, mode="shell")[0]
+        broad = H.scan_structure(text, mode="shell", honor_single_quotes=False)[0]
+        lexmap = H.lex_shell(text)
+        candidates = [(c.start, c.end) for c in lexmap.candidates]
+        self.assertEqual(sorted(broad), sorted(default + candidates))
+        self.assertTrue(candidates)
+
+    def test_substitution_inside_an_expansion_is_queued_for_scanning(self):
+        for command in (
+            "echo ${x:-$(rm -rf /home/sakura/valuable)}",
+            "echo $(( $(rm -rf /home/sakura/valuable) + 1 ))",
+            'echo "${x:-$(rm -rf /home/sakura/valuable)}"',
+        ):
+            with self.subTest(command=command):
+                words = [toks[0] for _t, toks, *_r in H.statements(command) if toks]
+                self.assertIn("rm", words)
+
+    def test_process_substitution_body_is_its_own_chunk_and_host_keeps_the_opener(self):
+        command = "tee >(bash) <<'EOF'\nrm -rf /home/sakura/valuable\nEOF"
+        statements = list(H.statements(command))
+        hosts = [toks for _t, toks, *_r in statements if toks and toks[0] == "tee"]
+        self.assertEqual(len(hosts), 1)
+        self.assertTrue(H._has_process_substitution(hosts[0]))
+        words = [toks[0] for _t, toks, *_r in statements if toks]
+        self.assertIn("bash", words)
+        command = "cat <(rm -rf /home/sakura/valuable)"
+        words = [toks[0] for _t, toks, *_r in H.statements(command) if toks]
+        self.assertIn("rm", words)
+        hosts = [toks for _t, toks, *_r in H.statements(command) if toks and toks[0] == "cat"]
+        self.assertTrue(H._has_process_substitution(hosts[0]))
+
+    def test_heredoc_operator_inside_a_process_substitution_is_attributed_there(self):
+        command = "cat <(bash <<EOF\nrm -rf /home/sakura/valuable\nEOF\n)"
+        self.assertEqual(hook_verdict(command)[0], "deny")
+        command = "echo $(bash <<EOF\nrm -rf /home/sakura/valuable\nEOF\n)"
+        self.assertEqual(hook_verdict(command)[0], "deny")
+        command = "echo $(cat <<'EOF'\nrm -rf /home/sakura/valuable\nEOF\n)"
+        self.assertEqual(hook_verdict(command)[0], "allow")
+
+
+# ---------------------------------------------------------------------------
+# Heredoc bodies change no lexer state (FR8, AC-5).
+# ---------------------------------------------------------------------------
+
+
+class TestHeredocBodies(unittest.TestCase):
+    BODIES = [
+        "it's",
+        'say "hi',
+        "# not a comment",
+        "${x",
+        "$((1",
+        "$'a",
+        "$[1",
+        "`x",
+        "$(y",
+        "it's \"${ $(( $' # `",
+    ]
+
+    def test_nothing_in_a_body_opens_anything_for_the_following_text(self):
+        for body in self.BODIES:
+            command = "cat <<EOF\n%s\nEOF\nrm -rf /home/sakura/valuable" % body
+            with self.subTest(body=body):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(actual_regions(lexmap), [])
+                self.assertEqual(len(lexmap.heredocs), 1)
+                self.assertEqual(heredoc_body(command, lexmap.heredocs[0]), body + "\n")
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_a_body_in_a_double_quoted_substitution_is_still_a_body(self):
+        command = 'echo "$(cat <<EOF\nit\'s\nEOF\n)"; rm -rf /home/sakura/valuable'
+        lexmap = H.lex_shell(command)
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_sink_bound_body_in_a_substitution_is_scanned(self):
+        for command in (
+            "echo $(bash <<EOF\nrm -rf /home/sakura/valuable\nEOF\n)",
+            "x=$(sh -s <<EOF\ngit reset --hard HEAD\nEOF\n)",
+            "cat <(bash <<EOF\nrm -rf /home/sakura/valuable\nEOF\n)",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_quote_in_a_body_does_not_hide_the_next_heredoc(self):
+        command = "cat <<A\nit's\nA\nbash <<B\nrm -rf /home/sakura/valuable\nB"
+        self.assertEqual(hook_verdict(command)[0], "deny")
+
+
+# ---------------------------------------------------------------------------
+# Unclosed openers in bulk (NFR1, NFR3, AC-7).
+# ---------------------------------------------------------------------------
+
+
+class TestUnclosedOpeners(unittest.TestCase):
+    OPENERS = ["${", "$((", "$[", "((", "$'"]
+    DESTRUCTIVE = "\nrm -rf /home/sakura/valuable\n"
+
+    def bulk(self, opener, size=60000):
+        return (opener + " ") * (size // (len(opener) + 1)) + self.DESTRUCTIVE
+
+    def test_bulk_unclosed_openers_get_a_non_allow_decision_in_time(self):
+        for opener in self.OPENERS:
+            command = self.bulk(opener)
+            with self.subTest(opener=opener):
+                start = time.monotonic()
+                decision, _reason = hook_verdict(command)
+                self.assertNotEqual(decision, "allow")
+                self.assertNotEqual(decision, "(timeout)")
+                self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+    def test_mixed_bulk_openers_get_a_non_allow_decision_in_time(self):
+        unit = "${ $(( $[ (( $' "
+        command = unit * (60000 // len(unit)) + self.DESTRUCTIVE
+        decision, _reason = hook_verdict(command)
+        self.assertNotIn(decision, ("allow", "(timeout)"))
+
+    def test_same_command_gives_an_identical_map_and_decision(self):
+        command = self.bulk("${", 6000)
+        first = H.lex_shell(command)
+        H._LEX_CACHE.clear()
+        second = H.lex_shell(command)
+        self.assertIsNot(first, second)
+        self.assertEqual(first.as_tuple(), second.as_tuple())
+        self.assertEqual(hook_verdict(command), hook_verdict(command))
+
+    def test_lexing_work_is_linear_for_unclosed_and_closed_forms(self):
+        unit_forms = {
+            "closed": "echo ${x} $((1+2)) \"a\" $'b' # c\n",
+            "one unclosed per line": "echo ${x\n",
+            "unclosed quote chars": "echo $'x\n",
+        }
+        for name, unit in unit_forms.items():
+            with self.subTest(form=name):
+                small = H.lex_shell(unit * 200)
+                large = H.lex_shell(unit * 400)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(unit * 400) + 1024)
+
+    def test_many_unclosed_openers_are_settled_without_a_rescan_per_opener(self):
+        command = "${ " * 20000
+        lexmap = H.lex_shell(command)
+        self.assertLessEqual(lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024)
+        self.assertEqual(len(lexmap.unopened), 20000)
+        self.assertEqual(lexmap.tail_start, 0)
+
+    def test_budget_exceeded_is_an_ask_never_an_allow(self):
+        command = "(( ;" * 15000 + self.DESTRUCTIVE
+        decision, _reason = hook_verdict(command)
+        self.assertIn(decision, ("ask", "deny"))
+
+
+# ---------------------------------------------------------------------------
+# Module contract (AC-3, AC-9).
+# ---------------------------------------------------------------------------
+
+
+class TestModuleContract(unittest.TestCase):
+    def test_replaced_readers_are_gone(self):
+        self.assertFalse(hasattr(H, "_OperatorContext"))
+        self.assertFalse(hasattr(H, "_blank_comments"))
+        with open(HOOK, encoding="utf-8") as f:
+            source = f.read()
+        self.assertNotIn("class _OperatorContext", source)
+        self.assertNotIn("def _blank_comments", source)
+
+    def test_hook_and_test_import_only_the_standard_library(self):
+        allowed = set(sys.stdlib_module_names)
+        for path in (HOOK, os.path.abspath(__file__)):
+            with open(path, encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    names = [alias.name.split(".")[0] for alias in node.names]
+                elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                    names = [node.module.split(".")[0]]
+                else:
+                    continue
+                for name in names:
+                    self.assertIn(name, allowed, msg="%s imports %s" % (path, name))
+
+    def test_lexer_reads_no_file_and_evaluates_nothing(self):
+        with open(HOOK, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        forbidden = {"open", "eval", "exec", "compile", "__import__"}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and (
+                node.name.startswith("lex_")
+                or node.name.startswith("_lex")
+                or node.name in ("scan_structure", "strip_heredocs", "_strip_heredocs_mapped")
+            ):
+                for call in ast.walk(node):
+                    if isinstance(call, ast.Call) and isinstance(call.func, ast.Name):
+                        self.assertNotIn(call.func.id, forbidden, msg=node.name)
+                    if isinstance(call, ast.Attribute):
+                        self.assertNotIn(call.attr, {"system", "popen", "run", "Popen"}, msg=node.name)
+
+    def test_existing_cases_stay_in_place_and_new_ones_come_after(self):
+        cases = case_commands()
+        self.assertGreaterEqual(len(cases), 604)
+        verdicts = [want for want, _label, _cmd in cases[574:604]]
+        self.assertEqual(verdicts.count("allow"), 2)
+        self.assertEqual(verdicts[11], "allow")
+        self.assertEqual(verdicts[19], "allow")
+        self.assertEqual(verdicts.count("deny"), 28)
+
+
+if __name__ == "__main__":
+    unittest.main()
