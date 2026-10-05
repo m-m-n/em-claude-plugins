@@ -1,0 +1,51 @@
+task_id: task0006
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: Ran 7412 tests, OK; check-plugin-invariants.py exits 0
+final_failures: []             # re-executed after implementation: Ran 7459 tests (7412 + 47 new), OK; check-plugin-invariants.py exits 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_routeback_record_schema_patch.TestFullStructureListsOptionalField
+      - tests.test_routeback_record_schema_patch.TestSectionHeadingAndPlacement
+      - tests.test_routeback_record_schema_patch.TestSectionDefinesTheRecord
+    red_confirmed: true
+    red_reason: "Run against the old workflow-schema.md: AssertionError: unexpectedly None : expected a routeback_failed_journal_line field line (Full structure tasks block); AssertionError: 0 != 1 (the exact heading line count); AssertionError: unexpectedly None : expected the exact-heading section (meaning, path, value, counting rule, canonical form and no-record phrases)"
+  AC-2:
+    tests:
+      - tests.test_routeback_record_schema_patch.TestSectionNamesWriterLifecycleAndReaders
+    red_confirmed: true
+    red_reason: "Run against the old workflow-schema.md: AssertionError: unexpectedly None : expected the exact-heading section (sole writer, never-written-by, not-rewritten, overwrite-only-by-route-back and reader phrases)"
+  AC-3:
+    tests:
+      - tests.test_routeback_record_schema_patch.TestCarryOverListNamesTheRecord
+      - tests.test_routeback_record_schema_patch.TestPreserveVocabularyHasNoRecordEntry
+      - tests.test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver
+    red_confirmed: true
+    red_reason: "Run against the old workflow-patch.md: AssertionError: 'routeback_failed_journal_line' not found in ['title', 'plan', 'files', 'skills', 'domains', 'complexity', 'requirements', 'status', 'branch', 'notes'] (new module), and tests.test_replanning_carry_over's test_doc_names_exactly_the_fields_apply_patch_copies failed with 'Items in the second set but not the first' once its constant held 11 entries. The 'no preserve-vocabulary entry' half is a negative assertion that held before and after (no red state for that half)"
+  AC-4:
+    tests:
+      - tests.test_routeback_record_schema_patch.TestApplyPatchKeepsTheRecordOnCarriedTasks
+      - tests.test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim
+    red_confirmed: false
+    red_reason: "apply_patch's replace_planning arm already deep-copies each carried task's whole record (goal-vs-spec-divergence task0023), so integer, absent and null survived before any change; the new tests passed on first run. The existing tests.test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim detects the whole-record copy (its fixture now carries an integer record); no red state occurred for this change"
+  AC-5:
+    tests:
+      - tests.test_routeback_record_schema_patch.TestValidatorRejectsTheRecordInWorkerEntries
+      - tests.test_routeback_record_schema_patch.TestPatchesWithoutTheKeyStillPass.test_validate_task_entry_alone_rejects_the_key_in_both_modes
+    red_confirmed: true
+    red_reason: "Run against the old validator: AssertionError: Lists differ: [] != ['routeback_failed_journal_line'] for the replace_all integer, replace_all null, append integer and append null cases (every offending patch was accepted)"
+  AC-6:
+    tests:
+      - tests.test_routeback_record_schema_patch.TestPatchesWithoutTheKeyStillPass
+      - tests.test_validate_worker_output
+    red_confirmed: false
+    red_reason: "valid patches without the key pass both before and after the change by design (the control half of the AC-5 specificity proof), and the existing tests.test_validate_worker_output (TestFixtureCorpusDataDriven runs every em-workflow/references/fixtures/workflow-patch fixture against the verdict its directory name declares) detects any verdict change; no red state occurred for this change. tests/test_validate_worker_output.py is unmodified"
+  AC-7:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract
+      - tests.test_failed_kind_schema
+      - tests.test_reference_sweep
+      - tests.test_tier_workflow_schema
+      - tests.test_task_id_allocation_ssot_comments
+      - tests.test_routeback_record_schema_patch.TestModuleImportsOnlyStandardLibrary
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing tests.test_workflow_schema_journal_readers_doc_contract, tests.test_failed_kind_schema, tests.test_reference_sweep and tests.test_tier_workflow_schema detect any edit inside the pinned workflow-schema.md spans, and tests.test_task_id_allocation_ssot_comments detects a split of the replace-all-task-id-reused comment block; all pass unmodified and no red state occurred for this change. The standard-library-only check is satisfied by the new module from its first run. The full suite and check-plugin-invariants.py pass. tests.test_gate_option_vocabulary's two frozen-file digest pins (workflow-patch.md, validate-worker-output.py) failed after the intentional edits and were refreshed with the repository's established refresh-not-remove convention"
