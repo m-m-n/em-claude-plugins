@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: caa5e10f54bceba02b14bcb325d7c0256c3431fc
 last_input_digest: sha256:b765151a1f1293f6e7eb6b36e2b06ab4b5251cae6f85bc27708071e572cf2605
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -68,10 +68,16 @@ worker_runs:
   input_digest: sha256:584db35d37444a3e89898aff9cf06dcdbe3af207b6d32a13cd44922323a7cd7d
   output_digest: sha256:9bbd13bec2bf906423a55d1f6fd3e124ed90d009fd5e0a06e2b2b4ff383011e7
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:b765151a1f1293f6e7eb6b36e2b06ab4b5251cae6f85bc27708071e572cf2605
-  output_digest: null
-artifacts: []
+  output_digest: sha256:94c0b35524e7be857697299aa310726e6d7b5aab78f819e9369df1285dc1a5e4
+artifacts:
+- path: feature-docs/sca-absolute-executable-path/REQUIREMENTS.md
+  sha256: sha256:77016d5b59be4fd4e01e16939859eba39fa33bdf31f7a89b75430caaf930dbe2
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-absolute-executable-path/SPEC.md
+  sha256: sha256:2c46ccd2e25fdbe198999d09bc569ec14f58a9bf1bf02e039d572839c8dd36c2
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
