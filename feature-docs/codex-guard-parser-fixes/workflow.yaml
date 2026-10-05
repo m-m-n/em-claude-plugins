@@ -1,0 +1,239 @@
+schema_version: 1
+feature: codex-guard-parser-fixes
+created: '2026-10-05'
+base_branch: main
+goal: '# codex-hook-interactive-guard の解析器の見落とし・誤爆 6 件を直す
+
+
+  Notion: https://www.notion.so/3ef3509ec8ee814094b0c4a35fa0cee7
+
+
+  ## 現象 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）のコマンド解析に、見落とし 2 件と誤爆 4 件がある。PR https://github.com/m-m-n/em-claude-plugins/pull/86
+  の review round 1 で medium として未解決のまま残った。
+
+  - 8145e7b41df8bd41 / 101256e4667a9ec6（見落とし）: シェルの `-c` を値を取るオプションとして扱うため、`bash -cx ''python3 -i''`・`bash
+  -ce ''python3 -i''`・`bash -c -- ''python3 -i''` が通る。`bash -ci ''python3''` も束の中の `-i` と内側の引数なし起動の両方を見落とす。
+
+  - 71168f778ca98eb1（見落とし）: `INFO_LETTERS = "Vh"` が全処理系に効くため `bash -h` / `sh -h` が情報表示として通る。Bash の `-h`
+  はハッシュ化オプションで、対話シェルになる。
+
+  - b151c1b9643b68b4（誤爆）: 二重引用符の中の `$( ... )` を読み飛ばさないため、`echo "$(echo "; python3 -i")"` が拒否される。
+
+  - ad51d256afb757aa（誤爆）: 括弧のグループに標準入力の接続を引き継がないため、`(python3) < /dev/null` と `printf ''print(1)\n'' |
+  (echo ignored; python3)` が拒否される。
+
+  - a1b1320c32b41256（誤爆）: パイプ直後の改行で接続情報を消すため、複数行のパイプの右側の `python3` が拒否される。
+
+  ## 再現手順 (必須)
+
+  1. 上記の各コマンドを `{"tool_input": {"command": "..."}}` として hook の標準入力に渡す
+
+  2. 見落としの 3 件は拒否されず、誤爆の 3 件は拒否される
+
+  ## 期待する挙動 (必須)
+
+  - 見落としの 3 件は拒否する
+
+  - 誤爆の 3 件は通す。読み切れない場合は判定不能として通す
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] `tests/test_codex_hook_interactive_guard.py:281` の `bash -cx` の期待値を deny に直す
+
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  - [ ] SPEC FR7 の `-h` 共通扱いを処理系ごとの定義に直す
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:517`（シェルの `-c`）
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:530`（`INFO_LETTERS`）
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:267`（`_double_quoted`）
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:406`（括弧の扱い）
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:212`（`_separator`）
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
+  - 記録: `feature-docs/codex-interactive-guard-hook/reviews/round1.yaml`（ブランチ `em-workflow/codex-interactive-guard-hook/integration`）
+
+  ## 実害・発生条件 (任意)
+
+  見落としは Codex レビュアーが対話モードの処理系を起動して孤児プロセスが残る経路を残す。誤爆はレビュアーの正当な確認を止める。
+
+
+  Once the implementation is finished, push the integration branch to the remote and create a Pull Request
+  against base_branch with gh pr create. Keep the integration branch both locally and on the remote (do
+  not auto-merge it into base_branch).
+
+  Consult Codex on any unclear points and adopt the option judged to be comparatively better.
+
+  Record the content of that discussion in Notion.
+
+  '
+parent_branch: em-workflow/codex-guard-parser-fixes/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.5
+      '2': 0.5
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.15
+      '2': 0.85
+      '3': 0.0
+  at: '2026-10-05T09:50:38+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 2edc0781f8292421ac403f32323783433274f8c6
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI もデザイン資源も無く、既存の解析器・テスト表・SPEC の記述の修正に閉じている。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: fa502d0f08fb027922c14203184cd2eeae6e3a70
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: シェルの -c を値を取らないフラグとして読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 情報表示用の短いオプションを処理系ごとに定義する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 二重引用符の中のコマンド置換を 1 つの塊として読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 括弧・波括弧のグループに標準入力の接続を引き継ぐ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: パイプ直後の改行で接続情報を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 2 つのコピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: SPEC FR7 の修正
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 誤爆の回避
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 静的制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
