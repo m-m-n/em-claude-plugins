@@ -124,18 +124,18 @@ workflow:
   status: completed
   completed_at_commit: 74fab7819249f273902d492b9fdc9b3265363d11
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: a2d190bdbc95ce9b5c09e80c54d63c50d10d0b58
   base_commit: 6e48db5b950b1b7215eb97c6a867fb02c818fbb2
 - id: review
   status: completed
   completed_at_commit: d91c263505896ae1594a32bba4be5fff0fa2a8fc
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: TS-8
-    note: 'HOOK-TRUST-FINDINGS.md section 2 records that `codex features list` (and codex --version / --help) ran without a temporary HOME/CODEX_HOME; on 0.160.0 `codex features list` reads $CODEX_HOME/config.toml, so the FR1 investigation read the user''s real Codex home (NFR1). Tests themselves use temporary homes and pass.'
+    note: HOOK-TRUST-FINDINGS.md section 2 records that `codex features list` (and codex --version / --help) ran without a temporary HOME/CODEX_HOME; on 0.160.0 `codex features list` reads $CODEX_HOME/config.toml, so the FR1 investigation read the user's real Codex home (NFR1). Tests themselves use temporary homes and pass.
     category: security
 - id: retrospect
   status: pending
@@ -177,6 +177,30 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/codex-repo-hook-trust/task0001
+  task0002:
+    title: Re-derive the findings record's auxiliary Codex facts under temporary Codex homes
+    plan: tasks/task0002.md
+    files:
+    - feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md
+    skills:
+    - infra-impl
+    domains:
+    - auth
+    - external-io
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - NFR1
+    - NFR5
+    status: pending
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - TS-8
+      review_round: null
 review:
   status: completed
   plan:
@@ -205,6 +229,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-4
   FR2:
@@ -214,6 +239,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-4
   FR3:
@@ -262,8 +288,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
+    - TS-15
   NFR2:
     title: テストは Python 標準ライブラリのみ
     status: ok
@@ -299,6 +327,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-12
   NFR6:
