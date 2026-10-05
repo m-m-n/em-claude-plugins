@@ -198,7 +198,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/sca-directness-resolution/task0002
   task0003:
