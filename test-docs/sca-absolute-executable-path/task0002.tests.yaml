@@ -1,0 +1,64 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_relative_and_empty_entries_are_dropped_and_absolute_ones_joined
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_a_duplicated_absolute_entry_keeps_every_original_position
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_an_absolute_entry_ending_in_a_separator_is_kept_unchanged
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_the_duplicate_and_the_trailing_separator_survive_together
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_the_original_order_is_kept_not_sorted
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_an_absolute_entry_is_not_normalized
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_a_home_shorthand_and_a_variable_reference_are_relative_entries
+      - tests.test_sca_child_env_path_filtering.TestAC1AbsoluteEntriesSurvive.test_ac1_a_single_surviving_entry_has_no_separator
+    red_confirmed: true
+    red_reason: "Run before any change to scan-dependencies.py: AssertionError 'tools::/usr/bin:./node_modules/.bin:/opt/bin' != '/usr/bin:/opt/bin' (the relative and empty entries were passed through), and likewise for the duplicate, trailing-separator, order, non-normalization and single-entry cases. test_ac1_an_all_absolute_path_is_unchanged passed before the change and is a regression guard."
+  AC-2:
+    tests:
+      - tests.test_sca_child_env_path_filtering.TestAC2NoPathKeyWhenNoEntrySurvives.test_ac2_a_path_of_only_relative_or_empty_entries_is_left_out
+      - tests.test_sca_child_env_path_filtering.TestAC2NoPathKeyWhenNoEntrySurvives.test_ac2_a_path_of_only_separators_is_left_out
+      - tests.test_sca_child_env_path_filtering.TestAC2NoPathKeyWhenNoEntrySurvives.test_ac2_an_empty_path_is_left_out
+      - tests.test_sca_child_env_path_filtering.TestAC2NoPathKeyWhenNoEntrySurvives.test_ac2_the_other_keys_are_kept_when_path_is_left_out
+      - tests.test_sca_child_env_path_filtering.TestAC2NoPathKeyWhenNoEntrySurvives.test_ac2_the_pins_still_apply_when_path_is_left_out
+      - tests.test_sca_child_env_path_filtering.TestAC2NoPathKeyWhenNoEntrySurvives.test_ac2_an_environ_without_path_has_no_path_key
+    red_confirmed: true
+    red_reason: "Run before any change to scan-dependencies.py: AssertionError 'PATH' unexpectedly found in {'PATH': 'tools:./node_modules/.bin:.::~/bin', ...} for the relative-only case, and 'PATH' unexpectedly found in {'PATH': '', ...} for the empty-string case. The no-PATH-in-environ case (test_ac2_an_environ_without_path_has_no_path_key) passed before the change and is a regression guard, as the task plan states."
+  AC-3:
+    tests:
+      - tests.test_sca_child_env_path_filtering.TestAC3OtherKeysAndPinsAreUnchanged.test_ac3_every_ecosystem_is_covered
+      - tests.test_sca_child_env_path_filtering.TestAC3OtherKeysAndPinsAreUnchanged.test_ac3_the_other_pass_through_keys_reach_the_child_with_the_callers_values
+      - tests.test_sca_child_env_path_filtering.TestAC3OtherKeysAndPinsAreUnchanged.test_ac3_every_pin_of_the_ecosystem_overrides_the_callers_value
+      - tests.test_sca_child_env_path_filtering.TestAC3OtherKeysAndPinsAreUnchanged.test_ac3_no_variable_outside_the_pass_through_keys_and_pins_reaches_the_child
+      - tests.test_sca_child_env_path_filtering.TestAC3OtherKeysAndPinsAreUnchanged.test_ac3_the_pass_through_key_list_is_unchanged
+      - tests.test_sca_scan_unchanged_surfaces.TestAC2EnvPinsKeepEveryEcosystemValue.test_ac2_the_child_environment_is_the_pass_through_keys_plus_the_pins
+    red_confirmed: false
+    red_reason: "The pass-through of HOME / TMPDIR / TEMP / TMP / SYSTEMROOT / USERPROFILE and the ecosystem pins pre-existed in the base code, so these guards passed before the change and no red state occurred for this change (the task plan names AC-3 a regression guard). The updated existing test (absolute fixture PATH) passed before the change as well, because an absolute value passes through the unfiltered code. The combined test test_ac3_the_child_environment_is_the_other_keys_plus_the_filtered_path_plus_the_pins failed before the change, but only on the PATH value, so it is not offered as evidence for this criterion."
+  AC-4:
+    tests:
+      - tests.test_sca_child_env_path_filtering.TestAC4RunScanChildrenReceiveTheFilteredPath.test_ac4_every_recorded_launch_received_the_runners_absolute_entries_in_order
+      - tests.test_sca_child_env_path_filtering.TestAC4RunScanChildrenReceiveTheFilteredPath.test_ac4_no_launch_received_a_relative_or_empty_path_entry
+    red_confirmed: true
+    red_reason: "Run before any change to scan-dependencies.py: each of the four recorded launches (npm, cargo-audit, pip-audit, govulncheck) failed with AssertionError 'tools::/tmp/<tmp>/bin:./node_modules/.bin:...' != '/tmp/<tmp>/bin:/tmp/<tmp>/extra-bin/', and the second test failed with \"PATH entry 'tools' is relative or empty\"."
+  AC-5:
+    tests:
+      - tests.test_sca_child_env_path_filtering.TestAC5BuildChildEnvIsLexical.test_ac5_the_same_result_while_files_the_filesystem_and_processes_are_off_limits
+      - tests.test_sca_child_env_path_filtering.TestAC5BuildChildEnvIsLexical.test_ac5_the_environ_default_is_the_process_environment
+      - tests.test_sca_child_env_path_filtering.TestAC5BuildChildEnvIsLexical.test_ac5_the_process_environment_with_no_path_gives_a_child_without_path
+      - tests.test_sca_child_env_path_filtering.TestAC5BuildChildEnvIsLexical.test_ac5_the_parameters_stay_ecosystem_and_environ
+      - tests.test_sca_child_env_path_filtering.TestAC5BuildChildEnvIsLexical.test_ac5_the_callers_environ_is_not_modified
+    red_confirmed: false
+    red_reason: "NFR1 held before the change (build_child_env was already lexical with the same signature), so the lexical, signature and no-mutation guards passed before the change and no red state occurred for it. test_ac5_the_environ_default_is_the_process_environment failed before the change, but only because PATH was not yet filtered. After the implementation, a temporary mutation that called os.path.isdir inside the PATH filter made the forbidden-entry-point tests fail with 'os.path.isdir called', so the guard is not vacuous; the mutation was reverted."
+  AC-6:
+    tests:
+      - tests.test_sca_child_env_path_filtering.TestAC6CommentAndDocstringStateThePathRule.test_ac6_the_comment_above_the_key_list_states_the_path_rule
+      - tests.test_sca_child_env_path_filtering.TestAC6CommentAndDocstringStateThePathRule.test_ac6_the_comment_no_longer_says_path_is_carried_through_unchanged
+      - tests.test_sca_child_env_path_filtering.TestAC6CommentAndDocstringStateThePathRule.test_ac6_the_docstring_states_the_path_rule
+    red_confirmed: true
+    red_reason: "Run before any change to scan-dependencies.py: the comment test failed with 'the comment above CHILD_ENV_BASE_KEYS does not state that PATH keeps its absolute entries and is left out when none remain', the no-longer test failed with 'the comment still carries PATH through unchanged: \"Process plumbing carried through unchanged when present -- ... the already-resolved binary on PATH ...\"', and the docstring test failed with 'the build_child_env docstring does not state ...'. The tests look only for the rule's elements and for the absence of the old claim; the wording itself is reviewed by inspection."
+  AC-7:
+    tests:
+      - tests.test_sca_scan_unchanged_surfaces.TestAC2EnvPinsKeepEveryEcosystemValue.test_ac2_the_child_environment_is_the_pass_through_keys_plus_the_pins
+      - tests.test_sca_child_env_path_filtering.TestAC7OwnModuleStdlibOnly.test_ac7_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "The criterion is the outcome of 'python3 -m unittest discover -s tests' (8214 tests OK after the change) and the fact that the only edit to an existing test file is the fixture PATH value (checked in the diff); a suite cannot assert its own full-suite outcome. A dedicated new module is out of scope, but the existing tests.test_sca_scan_unchanged_surfaces test_ac2_the_child_environment_is_the_pass_through_keys_plus_the_pins detects the pass-through-keys-plus-pins mapping with the absolute fixture PATH; no red state occurred for this change, because the fixture edit was made before the implementation and an absolute value passes through the unfiltered code."
