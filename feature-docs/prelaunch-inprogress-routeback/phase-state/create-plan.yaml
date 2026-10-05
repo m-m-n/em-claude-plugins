@@ -85,7 +85,7 @@ patches:
   base_input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
   base_workflow_blob: 3ad5bab5d209f0a38f3d2612f766f977602f0616
 - patch_id: prelaunch-inprogress-routeback-p0002
-  status: validated
+  status: applied
   base_input_digest: sha256:f63a4206ae4f08fb9d2deae962fc1eb4cf893036703316f66ed22b99681daf77
   base_workflow_blob: f70dd095234c9d67c342b27098f14d40e9eb25a2
 progress_fingerprint: null
