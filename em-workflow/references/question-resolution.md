@@ -447,7 +447,18 @@ per-command approval fallback):
      Whether this entry is read as the contributor tier is owned by
      `references/reviewers.yaml`'s contributor-tier pre-dispatch criteria
      (cited, not restated); the model name written here is never edited to
-     reach that tier.
+     reach that tier. Only when this entry is judged available, and before
+     the consultation's first turn, determine `contributor_consented` by
+     running
+     `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/muse_guard.py" --list --project-dir "{project_root}"`:
+     it is true when the command succeeds and prints one line, and false
+     when it prints nothing or fails (a non-zero exit, or the command cannot
+     run). A failure takes precedence over the one-line rule: a failed run
+     that printed one line (for example a single-line error message) still
+     yields false. The value is fixed for the whole consultation: every
+     `litellm` turn of that consultation uses it, including the turns after
+     a mid-consultation move from `codex` to `litellm`, and it is never
+     re-determined per turn.
    No entry available → skip straight to the Opus escalation below, which
    runs in Codex's place, without ever reaching Codex; if the escalation
    leaves a question undecided too, that question falls through to step 6
@@ -456,9 +467,12 @@ per-command approval fallback):
    Task-dispatched agent — in read-only mode with the project root, on the
    entry step 1 selected:
    `"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" "$PROMPT"`,
-   and for the `litellm` entry the same call with `--litellm muse-spark`
-   inserted before `-C`, which the wrapper expands to
-   `-p litellm -m muse-spark`.
+   and for the `litellm` entry the same call with a `--litellm` flag
+   inserted before `-C`, chosen by the `contributor_consented` value step 1
+   fixed for this consultation: `--litellm muse-spark-contributor` when it
+   is true, which the wrapper expands to
+   `-p litellm -m muse-spark-contributor`, and `--litellm muse-spark` when
+   it is false, which the wrapper expands to `-p litellm -m muse-spark`.
    Run this Bash tool call with a timeout of 600000 milliseconds.
    A turn whose wrapper call exits non-zero — including the wrapper's own
    exit 124 (`CODEX_TIMEOUT`) — moves the consultation to the NEXT
