@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-directness-resolution
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 73f47ceb26f1b09dcf887f3194598a175398539b
+last_input_digest: sha256:bd5aa8d5c5eccd0a07976150c9c7410cb000b9d3d764de3fd13f8dbdcc48381d
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:bd5aa8d5c5eccd0a07976150c9c7410cb000b9d3d764de3fd13f8dbdcc48381d
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
