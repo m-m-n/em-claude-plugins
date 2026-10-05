@@ -1,6 +1,6 @@
 task_id: task0003
-baseline_failures: []          # python3 -m unittest discover -s tests (7352 tests, OK) and check-plugin-invariants.py (exit 0) before any edit
-final_failures: []             # re-executed after implementation: unittest discover -s tests (7438 tests, OK) and check-plugin-invariants.py (exit 0)
+baseline_failures: []          # refreshed after parent-side adoption of task0001 and task0002: unittest discover -s tests ran 7567 tests and every failure was in this task's own new module (red again against the adopted script), none inherited; check-plugin-invariants.py exit 0
+final_failures: []             # re-executed after re-implementing on the updated parent: unittest discover -s tests (7567 tests, OK) and check-plugin-invariants.py (exit 0)
 acceptance_tests:
   AC-1:
     tests:
