@@ -1,0 +1,21 @@
+schema_version: 1
+feature: consult-litellm-contributor-tier
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 18fbfdd470eccc46e96ee488e3203f50297a8f75
+last_input_digest: sha256:4b83b10e1bc11eb9f1a721598e7f3afbc2e55ebb5bee821f52da1acb52317fcf
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:4b83b10e1bc11eb9f1a721598e7f3afbc2e55ebb5bee821f52da1acb52317fcf
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
