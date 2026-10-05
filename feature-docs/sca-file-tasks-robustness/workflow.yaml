@@ -121,9 +121,9 @@ tasks:
     - FR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-file-tasks-robustness/task0001
   task0002:
     title: 'file-tasks: OS errors become entry-point failures and unattempted packages are recorded'
     plan: tasks/task0002.md
@@ -143,9 +143,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-file-tasks-robustness/task0002
   task0003:
     title: Extend the triage_filing receipt and report incomplete filing in review-phase.md and batch-mode.md
     plan: tasks/task0003.md
@@ -168,9 +168,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-file-tasks-robustness/task0003
   task0004:
     title: run_scan consumes the plans build_scan_jobs returns (plan-units)
     plan: tasks/task0004.md
@@ -191,9 +191,9 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-file-tasks-robustness/task0004
 review:
   status: pending
   rounds_completed: 0
