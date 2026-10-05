@@ -270,9 +270,14 @@ prior `failed` status, never from a task inheriting a different task's
 retired id. Given I.2.c's route-back precondition below, which admits only
 tasks with a terminal journal last event, and the allocation rule's
 guarantee that a `replace_all` never re-issues a retired id, a task can
-only ever carry its OWN journal's terminal event — so workflow.yaml
-`status: pending` combined with journal last event `launched` can never
-arise. Because Step I.2.c's route-back gate below blocks route-back
+only ever carry its OWN journal's terminal event — route-back alone
+therefore never produces workflow.yaml `status: pending` combined with
+journal last event `launched`; that combination arises between a task's
+launch and Step I.2.a's launch-state commit below, and also when that
+commit is not reached (an interruption, or a second exit 4). The
+in-flight rule stated just above governs that combination, cited here and
+not restated; the recycled-task-id carve-out above does not apply to it.
+Because Step I.2.c's route-back gate below blocks route-back
 whenever any task's journal last event is `merged` — read from the
 journal directly, independent of the ancestor check — that gate never
 admits route-back while such an event stands. No retired task id is ever
