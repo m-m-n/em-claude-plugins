@@ -1,0 +1,17 @@
+schema_version: 1
+feature: consult-litellm-contributor-tier
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 295cb1d2fb326e8c0b3fc7b377174674e42f2086
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
