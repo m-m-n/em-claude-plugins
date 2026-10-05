@@ -1,0 +1,72 @@
+schema_version: 2
+feature: sca-absolute-executable-path
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.19
+    confidence: 0.81
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.81
+      '2': 0.19
+      '3': 0.0
+  observed_at: '2026-10-05T22:56:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.24
+    confidence: 0.75
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.76
+      '2': 0.24
+      '3': 0.0
+  observed_at: '2026-10-05T23:04:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_sca_run_scan_plan_units.py
+  - tests/test_sca_scan_unchanged_surfaces.py
+  changed_lines_approx: 110
+  new_functions_needed: []
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_sca_scan_unchanged_surfaces.py
+  work_still_required: true
+  work_still_required_evidence: em-workflow/scripts/scan-dependencies.py:782 は shutil.which()
+    の結果をそのまま返す。同ファイル:839 と :904 は PATH を加工せず子環境へ渡し、:1053 は解決結果をそのまま argv[0] に設定する。go
+    の cwd は :1051 で入れ子のディレクトリとなり、:1366 はその argv・cwd・env で subprocess.run() を呼ぶため、相対パスの再解決が残っている。メモリ上の確認でも
+    tools/govulncheck が相対の argv[0] として残った。ただし npm/cargo の現在の cwd は :1056 の隔離ディレクトリであり、記載された
+    npm の攻撃シナリオとは異なる。tests/test_sca_run_scan_plan_units.py:213 は絶対 PATH を設定し、:708
+    の既存検査は相対 PATH を扱わない。tests/test_sca_scan_unchanged_surfaces.py:399 と :403 は相対値
+    runner-PATH の無加工継承を期待しており、期待値更新が必要になる。関連する書き込みを伴わない既存テスト10件は成功した。直接の本番呼び出し元は同スクリプト:1178
+    の build_scan_jobs と :1087 の build_scan_job の2関数で、関連する標準ライブラリは :45 の os と :47 の
+    shutil の2モジュール。ファイル変更は行っていない
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-05T23:05:00+09:00'
