@@ -142,7 +142,7 @@ workflow:
   completed_at_commit: 11b5069f08b212cd5ce5ca8b4d3718aa68dcd333
   base_commit: dd41baa5a975b37ed01aea80428101f7b7403230
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
 - id: retrospect
@@ -195,7 +195,7 @@ tasks:
     notes: null
     branch: em-workflow/prelaunch-inprogress-routeback/task0002
 review:
-  status: in_progress
+  status: pending
   plan:
     floor:
     - comprehensive
@@ -205,9 +205,15 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
-  residual_critical_high: 0
-  needs_rework: false
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 1
+  needs_rework: true
 requirements:
   FR1:
     title: I.2.a の launch-state 書き込みを承認ゲートと起動ループの後ろへ移す
