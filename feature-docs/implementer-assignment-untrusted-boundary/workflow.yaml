@@ -172,7 +172,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/implementer-assignment-untrusted-boundary/task0002
     notes: null
   task0003:
