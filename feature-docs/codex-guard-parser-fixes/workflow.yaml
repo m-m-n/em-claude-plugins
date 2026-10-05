@@ -169,7 +169,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-guard-parser-fixes/task0001
   task0002:
