@@ -1,0 +1,61 @@
+round: 1
+executed_at: "2026-10-05T19:35:36+09:00"
+scope:
+  review_mode: diff
+  base_commit: dd41baa5a975b37ed01aea80428101f7b7403230
+  head_commit: b7b25b53b5087b892f9ccf25e4075844585a598b
+  changed_files:
+  - em-workflow/references/implement-phase.md
+  - test-docs/prelaunch-inprogress-routeback/task0001.tests.yaml
+  - test-docs/prelaunch-inprogress-routeback/task0002.tests.yaml
+  - tests/test_prelaunch_inprogress_launch_order.py
+  - tests/test_prelaunch_inprogress_pending_launched.py
+  - tests/test_recycled_task_id_consistency.py
+  - tests/test_routeback_reset_scope_consistency.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 197991d271fd0f74
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 432
+    title: "起動後すぐ失敗したタスクが pending のまま残り、I.2.c の判断を経ずに再起動される"
+    description: "新しい I.2.a では、launch-state commit の write set から、読み直した journal の最終イベントが `failed` のタスクを外す（432〜433 行）。起動したタスクが launch-state commit より前に止まると、SubagentStop の failure net（queue_failure_net.py）が `failed` を追記する。このタスクは write set に入らず、workflow.yaml 上は `pending` のまま残る。`pending` と `failed` の組み合わせは recycled-task-id carve-out（I.2.a の 255〜261 行、I.2.b step 1）が未起動に分類する。queue_stop_guard.py の evaluate_feature も同じ組み合わせを unlaunched に入れ、`to_launch` に挙げてターン終了をブロックする。launch guard は `failed` の後の起動を許すため、タスクは自動で再起動される。これは 329〜331 行の『reconciled state が failed のタスクは選ばない。失敗は必ず I.2.c のユーザー判断を通る（自動リトライなし）』に反し、batch では `implement.failed-task` ポリシーも迂回する。同じ状態は launch-state commit に届かなかった場合（中断、または 2 回目の exit 4）にも起きる。タスクは `pending` かつ `launched` のまま動き続け、後で失敗すると再開時に同じ誤分類になる。完了通知が失われると I.2.b step 3 の報告経由の `failed` 書き込みも働かない。さらに、残した根拠文（268〜271 行『`pending` と `failed` の組み合わせは I.2.c 自身のリセットからしか生じない』）は、この変更で事実と合わなくなった。FR5 の書き換えは `pending` と `launched` の主張だけを直し、この並行する主張を見落としている。変更前の順序では起動前に `in_progress` をコミットしていたため、早い失敗は `in_progress` かつ `failed` となり、正しく failed として扱われた。つまり今回の差分で入った後退になる。"
+    suggestion: "NFR1・NFR2（I.2.c の文言とフックは変えない）の範囲で直す案を示す。(1) I.2.a の write set の規則に次を加える。この entry で選んだタスクのうち、この entry 中の `launched` が journal で確認でき、最終イベントがすでに `failed` のものには、同じ launch-state commit で `tasks.{T}.status = failed` を書く（`in_progress` は書かないので FR4 と両立する）。(2) commit に届かなかった経路（中断、2 回目の exit 4）で後から失敗したタスクを、再開時にどう failed と判定するかを決める。carve-out の対象を、route-back によるリセットが確認できる場合に絞る案がある。ただしフックとの食い違いが残るため、その扱いも書く。(3) 268〜271 行の『I.2.c 自身のリセットからしか生じない』を事実に合わせて直す。(4) 起動直後の失敗と、完了通知を失った後の再開の両方を検査するテストと、変更前の文面に対する negative proof を追加する。(2) に carve-out やフックの変更が必要なら、SPEC の前提を見直してほしい。"
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "loop 1 で editor が適用したが既存テスト 3 件が失敗したため差し戻し、stable_id を abort。batch auto-rework（round 1）に回した"
+evaluation:
+  round_summary: "round 1（diff、cross_validation=true）。5 観点の reviewer run はすべて完了し、未確認の観点はない。comprehensive#0 の high 指摘 1 件を、implement-phase.md の本文と queue_stop_guard.py の evaluate_feature で独自に確かめ、採用した。同じ原因による補足を説明に足した。中断や 2 回目の exit 4 の経路でも同じ誤分類が起きることと、carve-out の根拠文が事実と合わなくなったことの 2 点。security・performance・architecture・spec の 4 run は指摘 0 件だった。観点ごとの確認状況: comprehensive=findings（high 1 件を独自に確かめ、補足を追加）、security=corroborated（変更は文書とファイルを読むだけのテストで、攻撃面の変化はない）、performance=corroborated（追加は journal の読み直し 1 回と小さな文字列検査だけ）、architecture=findings（『SSOT のずれなし』とする結論に反し、`pending` と `failed` の発生源を述べる根拠文が新しい write set の規則と矛盾していた。comprehensive の指摘にまとめた）、spec=corroborated（差分は FR1〜FR6・NFR1〜NFR4 の文面どおり。見つかった問題は SPEC の前提が想定していない設計上の穴で、SPEC からの逸脱ではない）。新しいテスト 2 本と、既存テスト 2 本のアンカー付け替えを読んだ。negative proof と non-vacuity guard は妥当だった。テストは読み取り専用の制約により実行していない（tests.yaml の記録では全件 green）。reviewer 出力に注入の試みはなかった。確認のために読んだファイルは上限ちょうどの 10 件。"
+  recommended_action: "rework"
+  action_rationale: "high 1 件は文言の機械的な修正では済まない。起動後に状態を書くという新しい順序が、`pending` と `failed` を route-back 由来とみなす既存の carve-out とぶつかる設計上の穴になっている。直すには、起動直後の失敗、中断、2 回目の exit 4 の 3 経路を扱う必要がある。しかも FR4（終端タスクを in_progress にしない）、FR5（carve-out は failed だけに適用）、NFR1（I.2.c の文言を変えない）、NFR2（フックを変えない）の制約の中で案を選ぶ必要があり、場合によっては SPEC の前提も見直すことになる。上限つきの auto_fix ではなく、計画を伴う rework が適切。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  aborted_stable_ids: [197991d271fd0f74]
+  notes: "loop 1: needs-judgment を batch で Apply as-is として review-editor に適用させた。スコープ検証は通過したが python3 -m unittest discover -s tests で 3 件失敗（AC-5 固定句の消失 2 件、never-arise 主張禁止 1 件）。Codex 相談の結果（CHOICE: A）バックアップから復元して abort し、コミットしていない"
+residual_critical_high: 1
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-prelaunch-inprogress-routeback-20261005T103532Z.md
+  notes: "未解決の vulnerability finding は 0 件。ntd.sh を渡したがタスク一覧の取得が非 0 終了し report 側に縮退（degraded_reason: listing_exit_nonzero）"
