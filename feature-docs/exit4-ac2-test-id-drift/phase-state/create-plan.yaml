@@ -1,0 +1,72 @@
+schema_version: 1
+feature: exit4-ac2-test-id-drift
+phase: create-plan
+status: completed
+generation: 2
+base_revision: 428e92e1a6b08f65fec3f6cfa0530cd815bd012e
+last_input_digest: sha256:d1cb9ea0ccb894683b88b262589aad247abbba86f4cb56d1ebf7a62856aabc15
+active_request_id: null
+packets:
+  create-plan-q0001:
+    packet_id: create-plan-q0001
+    origin: orchestrator (planner report open item 1 — SPEC AC-2 wording vs observed facts)
+    questions:
+    - question_id: q-ac2-red-reason-em-workflow-clause
+      status: answered
+answers:
+  q-ac2-red-reason-em-workflow-clause:
+    question_id: q-ac2-red-reason-em-workflow-clause
+    packet_id: create-plan-q0001
+    answered_at: '2026-10-05T15:31:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep-clause-and-note-equality-green
+    freeform: null
+    normalized_answer: 'keep-clause-and-note-equality-green: Keep the existing em-workflow clause of AC-2 red_reason
+      verbatim (''AssertionError: 44 not greater than 44 ...'', the red observed on test_em_workflow_entry_version_is_past_baseline).
+      In addition, state explicitly that test_em_workflow_entry_version_matches_plugin_manifest was green at the
+      0.1.44 baseline because plugin.json and the marketplace em-workflow entry were both 0.1.44, so only the past_baseline
+      test carried the observed red. Rewrite the em-review clause as two retention guards (source unchanged; version
+      not following the em-workflow bump) that were green before the change. Attribute no red to the equality test
+      or to the em-review tests. SPEC AC-2''s phrase ''red observed on the 2 em-workflow tests'' is read under FR2''s
+      ''do not write a red that was not observed'', which governs.'
+    resolution_note: 'Planner run-0001 kept the existing em-workflow clause only (option A) and flagged the SPEC
+      AC-2 wording conflict as an open item. Orchestrator consulted Codex (readonly). Codex replayed the b7abdcac-era
+      test module against the b7abdcac^ registries in memory: past_baseline FAIL (AssertionError: 44 not greater
+      than 44), matches_plugin_manifest PASS, em-review source PASS, em-review has_no_version_key PASS. Codex chose
+      C (keep clause + note equality test green at baseline) because it preserves the observed record, states the
+      fact explicitly, and removes the ambiguity of SPEC AC-2. Not chosen: A (no factual error but leaves the "both
+      tests red" ambiguity), B (claims an unobserved red, violates FR2).'
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:fdbe1dc83ea3b94dddead59a806c5f5537bad6ff3e07ed2b6ee07953921dffaf
+  output_digest: null
+- request_id: create-plan-run-0002
+  status: completed
+  input_digest: sha256:d1cb9ea0ccb894683b88b262589aad247abbba86f4cb56d1ebf7a62856aabc15
+  output_digest: sha256:d5063ee2a3b4644747a1053a63c74e0296956e9ed6e4a7858e72ea9ef1322369
+artifacts:
+- path: feature-docs/exit4-ac2-test-id-drift/VERIFICATION.md
+  sha256: sha256:38fcf3dbe91ded15c6590ca23de643a2e443e8b9bff6ecb371c02504a6652f94
+  produced_by: create-plan-run-0002
+- path: feature-docs/exit4-ac2-test-id-drift/THREAT-MODEL.md
+  sha256: sha256:6d6a3e743a75b1052ea26ede1dc257d7eff15da12804597aba52b58c5d92effa
+  produced_by: create-plan-run-0001
+- path: feature-docs/exit4-ac2-test-id-drift/tasks/task0001.md
+  sha256: sha256:411350badce01048db662ba3f9b6ed31f5d9ae92e3da30df4058f42dd08b4476
+  produced_by: create-plan-run-0002
+patches:
+- patch_id: create-plan-p0001
+  status: superseded
+  base_input_digest: sha256:fdbe1dc83ea3b94dddead59a806c5f5537bad6ff3e07ed2b6ee07953921dffaf
+  base_workflow_blob: 19cff5555b599c042ca157cf11fb2191a51a64b9
+- patch_id: create-plan-p0002
+  status: applied
+  base_input_digest: sha256:d1cb9ea0ccb894683b88b262589aad247abbba86f4cb56d1ebf7a62856aabc15
+  base_workflow_blob: 19cff5555b599c042ca157cf11fb2191a51a64b9
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
