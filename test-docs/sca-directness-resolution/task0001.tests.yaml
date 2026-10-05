@@ -1,0 +1,118 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 7352 tests OK; check-plugin-invariants.py: all PASS
+final_failures: []             # re-executed after implementation: 7416 tests OK (64 new); check-plugin-invariants.py: all PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc1CanonicalMatching
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ac1_declared_foo_underscore_bar_matches_reported_foo_hyphen_bar
+      ("AssertionError: 0 != 1": the old exact-name membership produced no
+      finding for declared Foo_Bar vs reported foo-bar) and every subtest of
+      test_ac1_case_and_separator_variants_match_in_both_directions.
+      The is_direct precedence tests (is_direct true / false, also under an
+      incomplete set) describe behavior that pre-existed; they were green
+      before the change and are regression guards, not reds.
+  AC-2:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc2DependencyTables
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ac2_the_sub_table_form_declares_a_direct_crate
+      ("AssertionError: 0 != 1": the TOML-lite scan read [dependencies.serde]
+      as a table named serde), test_ac2_the_sub_table_form_works_in_the_other_dependency_tables_too
+      and test_ac2_a_target_specific_sub_table_form_declares_a_direct_crate.
+      The [dependencies] / [dev-dependencies] / [build-dependencies] and the
+      target.<cfg> inline-form tests describe behavior that pre-existed; they
+      were green before the change and are regression guards, not reds.
+  AC-3:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc3RenamesAndWorkspaceInheritance
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ac3_a_package_rename_makes_the_real_name_direct_and_not_the_alias
+      (failed in assertFindingFor: no finding for real-name, the old scan
+      added the key alias), test_ac3_a_rename_in_the_sub_table_form_is_read_too
+      and test_ac3_a_workspace_entry_renamed_in_workspace_dependencies_is_direct_under_the_new_name.
+      test_ac3_workspace_dependencies_entries_are_not_direct_by_themselves
+      failed too (the old scan read [workspace.dependencies] keys as direct).
+      The workspace = true entries without a rename were green before the
+      change and are regression guards, not reds.
+  AC-4:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc4WorkspaceMembers
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ac4_an_undeclared_advisory_under_workspace_members_is_counted_not_a_finding
+      (failed in assertCompletedWithNote: the summary did not end with the
+      cargo undetermined note), test_ac4_crates_declared_in_the_roots_own_tables_remain_direct
+      and test_ac4_member_manifests_are_not_read. The complete-manifest tests
+      (undeclared advisory stays transitive, no note; workspace without
+      members; empty members list) were green before the change and are
+      regression guards, not reds.
+  AC-5:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc5UnresolvableManifests
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation: test_ac5_invalid_toml_is_counted_as_undetermined,
+      test_ac5_a_dependencies_table_given_as_a_string_is_counted_as_undetermined,
+      test_ac5_a_package_given_as_a_number_is_counted_as_undetermined and
+      test_ac5_a_manifest_that_cannot_be_read_is_counted_as_undetermined all
+      failed in assertCompletedWithNote (no undetermined note: the old resolver
+      returned an empty set and the advisory was treated as transitive);
+      test_ac5_the_resolver_never_raises_* errored on the missing `complete`
+      attribute. The unreadable-manifest sub-case skips itself only when the
+      process ignores file permissions; here it ran (uid 1000).
+  AC-6:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc6CountingAndNote
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ac6_an_unknown_severity_is_counted_exactly_once,
+      test_ac6_two_undetermined_advisories_use_the_plural_text and
+      test_ac6_the_cargo_note_follows_every_pre_existing_note (no cargo note in
+      the summary), test_ac6_the_note_composer_orders_pip_before_cargo_and_omits_zero_counts
+      (errored: no _undetermined_directness_notes). The known-below-threshold
+      drop test and the no-crate-name / no-path text test were green before the
+      change (nothing was counted at all) and are regression guards, not reds.
+  AC-7:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc7TomlParserUnavailable
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ac7_without_tomllib_the_cargo_unit_reports_the_fixed_skip_reason
+      ("AssertionError: False is not true": result["skipped"] was False with the
+      tomllib binding replaced by None), and
+      test_ac7_without_tomllib_the_cargo_audit_stand_in_is_never_invoked (the
+      stand-in was launched).
+  AC-8:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc8StandardLibraryOnly
+      - tests.test_scan_dependencies_cargo_directness.TestDirectNamesContract
+      - tests.test_sca_scan_normalization
+      - tests.test_sca_go_govulncheck_real_output
+      - tests.test_sca_per_project_scan_binding
+      - tests.test_sca_scanner_project_config_isolation
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the full-suite run (python3 -m unittest discover -s
+      tests, 7416 tests OK after the change; the npm and go tests unmodified)
+      plus a standard-library-only import constraint. Both held before the
+      change; no executable check of this criterion can be made to fail first.
+      The three TestAc8StandardLibraryOnly tests were green before the change
+      (the existing guarded tomllib import is the only way the script reaches
+      tomllib), so they are regression guards, not reds. A dedicated new module
+      is out of scope, but the existing tests.test_sca_scan_normalization,
+      tests.test_sca_go_govulncheck_real_output,
+      tests.test_sca_per_project_scan_binding and
+      tests.test_sca_scanner_project_config_isolation load the real
+      scan-dependencies.py and detect regressions of the npm / go / cargo
+      paths; no red state occurred for this change.
