@@ -1,0 +1,20 @@
+schema_version: 1
+feature: sca-directness-resolution
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: fafed0f15972d0a07ee5c8acb5b1dd7efcb79369
+last_input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
