@@ -181,9 +181,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/review-gate-abort-recovery/task0001
   task0002:
     title: 'develop SKILL.md: cite the Phase R5 gate-abort rule and legacy recovery'
     plan: tasks/task0002.md
@@ -204,9 +204,9 @@ tasks:
     - NFR4
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/review-gate-abort-recovery/task0002
 review:
   status: pending
   rounds_completed: 0
