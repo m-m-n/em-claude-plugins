@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-unified-lexer
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 1e52d9b968e9ca5b8bdbe1f1840a79dc5d47d50c
 last_input_digest: sha256:db6deb82b0a00a4b60c7dea04d8b9d6f492afcdb106cb351bd6f4fdf0653bf4c
