@@ -1,7 +1,7 @@
 schema_version: 1
 feature: exit4-ac2-test-id-drift
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: b3373f7fc94eddfc587230280fd395656d802e2b
 last_input_digest: sha256:bb68f6975ff16dd01d078c4a38a6cb1148e121a6a49bd5e47dec39b494fa50dd
@@ -16,7 +16,7 @@ worker_runs:
 - request_id: create-spec-run-0002
   status: completed
   input_digest: sha256:bb68f6975ff16dd01d078c4a38a6cb1148e121a6a49bd5e47dec39b494fa50dd
-  output_digest: n/a (result envelope held in session; spec-writer returned completed)
+  output_digest: sha256:0c7489a802637f513dab2db33ebbee651eac4be1b35ff2645ff4164b7ed18dc6
 artifacts:
 - path: feature-docs/exit4-ac2-test-id-drift/SPEC.md
   sha256: sha256:146e5cdab0e2982523d42d903196ac12b0aa75b5c6f15d0ced00bb84f42d4f4a

@@ -1,0 +1,239 @@
+schema_version: 1
+feature: exit4-ac2-test-id-drift
+created: '2026-10-05'
+base_branch: main
+goal: '# em-workflow: exit4-tip-argument task0002.tests.yaml の AC-2 が実在しない acceptance test ID を指している
+
+
+  ## 現象
+
+  `test-docs/exit4-tip-argument/task0002.tests.yaml` の AC-2 が acceptance test として
+
+  `tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key`
+
+  を列挙しているが、このテストはモジュールに存在しない。`main` のマージで em-review エントリに
+
+  version キーが付いたため、実装側は `test_em_review_entry_version_not_bumped_with_em_workflow`
+
+  にリネームされており、`{T}.tests.yaml` の記録だけが旧名で残っている。
+
+  当該 ID を unittest で解決すると AttributeError で error になる。
+
+
+  ## 再現手順
+
+  1. ブランチ `em-workflow/exit4-tip-argument/integration` を checkout する（現在は main にマージ済み）
+
+  2. `test-docs/exit4-tip-argument/task0002.tests.yaml` の AC-2 の acceptance test ID を読む
+
+  3. `python3 -m unittest tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key` を実行し、AttributeError になることを確認する
+
+  4. `tests/test_exit4_tip_argument_version_bump.py` に実在するのが `test_em_review_entry_version_not_bumped_with_em_workflow` であることを確認する
+
+
+  ## 期待する挙動
+
+  `{T}.tests.yaml` は verify / rework / retrospect が AC からテストを解決する SSOT なので、
+
+  列挙された acceptance test ID がすべて実在し、unittest で解決できること。
+
+
+  ## 完了の定義
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+
+  ## 該当箇所
+
+  - `test-docs/exit4-tip-argument/task0002.tests.yaml:16` — AC-2 の acceptance test ID と red_reason
+
+  - `tests/test_exit4_tip_argument_version_bump.py` — モジュール docstring の AC-2 記述 2 箇所、AC-4 の matcher インベントリ
+
+
+  ## 実害・発生条件
+
+  AC-2 のカバレッジ主張が検証不能になり、リネーム後の実テストはどの AC にも紐づかない。
+
+  同じドリフトが version_bump モジュールの docstring 2 箇所と AC-2 の red_reason にも残っている。
+
+  出典: PR #17 (feature `exit4-tip-argument`) review round 2 の未解決 medium `4773e33be20e67f4`。
+
+  推奨対応: AC-2 の ID を `test_em_review_entry_version_not_bumped_with_em_workflow` に差し替え、
+
+  AC-2 の red_reason を実アサーションに合わせて書き換える。あわせて version_bump モジュール
+
+  docstring の AC-2 記述と AC-4 matcher インベントリも実アサーションに揃える。
+
+
+  (Notion task: https://www.notion.so/3d53509ec8ee81bb8615d901df21168c)
+
+
+  ## 追加指示（起動者）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）。
+
+  - 不明点は Codex に相談し、相対的に良いと判断した案を採用する。
+
+  - その議論の内容を Notion に記録する。
+
+  '
+parent_branch: em-workflow/exit4-ac2-test-id-drift/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.32
+      '1': 0.67
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  at: '2026-10-05T14:56:22+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+  - IMPLEMENTATION.md (同一ファイルを複数タスクが宣言しない場合)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: bb8b187057c6487160a48344804c0c8408db45df
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や見た目の変更が無い。変わるのはテスト記録の YAML、テストの docstring、テストモジュールだけ
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: AC-2 の acceptance test ID の差し替え
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: AC-2 の red_reason の書き換え
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: モジュール docstring の AC-2 記述の修正
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: モジュール docstring の AC-4 matcher インベントリの修正
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 検出対象の限定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 解決判定の negative proof と non-vacuity guard
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: テストコードは標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: version_bump モジュールはモジュール docstring だけを変える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: プラグイン配下と version を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: unittest discover -s tests がリポジトリルートで成功する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
