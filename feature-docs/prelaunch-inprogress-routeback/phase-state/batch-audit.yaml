@@ -1,0 +1,24 @@
+schema_version: 1
+feature: prelaunch-inprogress-routeback
+records:
+- question_id: requirement.residue-fix-approach
+  packet_id: create-spec-q0001
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - commit_after_launch
+  freeform: null
+  normalized_answer: 'commit_after_launch: I.2.a の capture/refresh/write/commit を承認ゲートと
+    Task() 起動ループの後ろに移し、journal に launched を確認できたタスクだけを in_progress としてまとめて 1 回でコミットする。補強:
+    (1) 一部だけ起動できた場合も、起動を確認できたタスクの集合でコミットする。起動ゼロならコミットを省略する。コミット処理の後にターンを終える。(2) 通常のコミット時も
+    exit 4 の再試行時も最新の journal を読み直し、既に終端（merged / failed）に達したタスクを in_progress に戻さない。2
+    回目の exit 4 で停止する場合も、起動記録と worktree を保持する。(3) I.2.a の『pending + launched は決して起きない』文を事実に合わせて書き直し、固定しているテストも直す。I.2.c
+    のゲート・リセット集合・掃除対象・exit-4 の証明は変えない。'
+  resolution_note: 'gate: create-spec.requirement-clarification（修正方式）。options: commit_after_launch=(b)
+    起動後にコミット, routeback_gate_carve_out=(a) I.2.c ゲートに除外規定。chosen: commit_after_launch。Codex（run_codex_exec.sh
+    readonly、entry codex、turn 1 で収束）の理由: (b) は残骸を発生源で無くし、I.2.c のゲート・リセット集合・削除対象の連動変更を避けられる。(a)
+    は起動ガードが fail-open で launched を記録せずに実装者が動いた場合、実行中の worktree を削除対象に含め得る（queue_launch_guard.py:241、implement-phase.md:1021）。(b)
+    で増える exit 4 は既存の『1 回再試行、2 回目で停止』で扱える。Codex の補強案のうち、部分起動・起動ゼロの扱いと exit 4 再試行時の読み直しは採用した。『launched
+    の記録に失敗したら起動を拒否する（queue_launch_guard を fail-closed にする）』案はフックの挙動変更でスコープが広がるため採らず、残るリスクとして別タスクに起票する。Opus
+    escalation not run.'
+  answered_at: '2026-10-05T18:52:00+09:00'
