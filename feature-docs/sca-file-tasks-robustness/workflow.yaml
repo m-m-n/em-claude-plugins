@@ -106,7 +106,8 @@ workflow:
   failed_items: []
   completed_at_commit: c713066bb46ff8ff87eda6f8b4e7dd985d9c5be8
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: ac3a6e75bcb033df1f14ffc68d645d00af3bf1ab
 tasks:
   task0001:
     title: Collapse whitespace in advisory short titles and pin the scan-to-file_tasks round trip
