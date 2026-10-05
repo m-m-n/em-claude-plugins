@@ -21,3 +21,13 @@ records:
   freeform: null
   normalized_answer: 'accept_schema_valid: round 1 の comprehensive#0 と security#0（いずれも codex-reviewer）が約 9 分走ったのち {findings: [], summary: "codex returned non-JSON output"} を返した。この結果をスキーマ妥当な完了結果として扱い、Claude fallback は出さない。'
   resolution_note: 'gate: review phase R2b の結果判定（gate_id なし・未掲載の判断）。options: accept_schema_valid / treat_as_harness_failure（Claude fallback を各観点 1 回出す）。chosen: accept_schema_valid。Codex（run_codex_exec.sh readonly、1 ターン）の理由: review-phase.md R2b は「スキーマ妥当性が唯一の判定基準」と明記し、不正結果の規定はスキーマ違反か Task 出力自体の解析不能を対象にしている。summary の解析失敗報告で完了判定を覆す例外は書かれていない。B は合理的だが追加解釈が要る。Claude も codex-reviewer.md:189-190 がこの空結果を設計どおりの縮退として定めていることを確認して同意した。残るリスク: comprehensive と security は主レビュアーの所見が無いまま評価者の独立検査（Independent Inspection Duty）に頼る。codex-reviewer の非 JSON 縮退が未レビューを完了に見せる点は別課題として起票する。Opus escalation not run.'
+- question_id: review.evaluator-absolute-path
+  packet_id: null
+  answered_at: '2026-10-06T02:08:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - strip_project_root_prefix
+  freeform: null
+  normalized_answer: 'strip_project_root_prefix: 評価者が返した所見 6 件の file は project_root を前置した絶対パスだった。project_root 接頭辞が完全一致し、realpath が changed_files の実ファイルと一致する場合に限り相対パスへ戻し、R3b の残りの検査をそのまま適用する。それ以外は棄却する。'
+  resolution_note: 'gate: review phase R3b step 1（gate_id なし・未掲載の判断）。options: drop_absolute（字義どおり 6 件すべて棄却）/ strip_project_root_prefix。chosen: strip_project_root_prefix。Codex（run_codex_exec.sh readonly、1 ターン）の理由: R2 / R3a は入力パスを project_root 基準の絶対パスにするため、A は表現差だけで high 3 件を含む 6 件を捨て、完了判定を誤らせる。B は接頭辞と realpath の一致を条件にしたうえで .. / NUL / 存在確認と残りの R3b を通すので、所見を無条件には信用しない。ただし字義どおりの R3b は A を求めており、B は段階間の表現の不整合を補う限定的な解釈になる。Claude も同意した。Opus escalation not run.'
