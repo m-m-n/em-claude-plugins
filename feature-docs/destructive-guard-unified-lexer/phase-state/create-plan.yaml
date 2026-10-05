@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-unified-lexer
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 6772919ffd818efec2e1b83b1c0ad3b547980293
 last_input_digest: sha256:b96c997f8951672aa8a700572b5064f57b4bb1f772a383932521cade8d1517e7
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-plan.assumption.PA1:
@@ -162,7 +162,7 @@ patches:
   base_input_digest: sha256:ae1e1ac46a20376aea6820e7a4ddea9836a3123ccb6917c67567979e01831854
   base_workflow_blob: 429966a6dfa9a406833d1ad57280f2a76a49e7df
 - patch_id: destructive-guard-unified-lexer-p0002
-  status: validated
+  status: applied
   base_input_digest: sha256:b96c997f8951672aa8a700572b5064f57b4bb1f772a383932521cade8d1517e7
   base_workflow_blob: 429966a6dfa9a406833d1ad57280f2a76a49e7df
 progress_fingerprint: null
