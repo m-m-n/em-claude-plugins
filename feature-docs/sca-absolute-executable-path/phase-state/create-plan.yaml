@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-absolute-executable-path
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 13f99725bc36fc3711892b54f05ae7945ac98cf1
 last_input_digest: sha256:d399d1d2d358c20c54a973e946f876bf50728b4231696beaa0a559472173076c
@@ -10,11 +10,30 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:d399d1d2d358c20c54a973e946f876bf50728b4231696beaa0a559472173076c
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:466f8bba8a4156208f69c72998fdae6db6a7e06815ba31b68537857e7d02b727
+artifacts:
+- path: feature-docs/sca-absolute-executable-path/IMPLEMENTATION.md
+  sha256: sha256:ef44650879acba9a00cf595b1afed955fd2738c392a2212d174129906bc40309
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-absolute-executable-path/VERIFICATION.md
+  sha256: sha256:52a771dec8671074460cde39f21a36a2c19fa1bd76bfcbf540e6a5d7f49a4d30
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-absolute-executable-path/THREAT-MODEL.md
+  sha256: sha256:0e33575e47630eac052bf0304506d82d853327091f74d4f7f750eb13634653a2
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-absolute-executable-path/tasks/task0001.md
+  sha256: sha256:ae27f9fa892bf2d9896a922b4d919dd699fe8f74b92b0813c5d8b50fadbad752
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-absolute-executable-path/tasks/task0002.md
+  sha256: sha256:c65f6d52474f6feba3a0c0685e8433d70fd1597475c54bacf23f96b4bb6d0713
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:d399d1d2d358c20c54a973e946f876bf50728b4231696beaa0a559472173076c
+  base_workflow_blob: fa4aaeea3b8a1a06d509a98183c1817828aabc32
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
