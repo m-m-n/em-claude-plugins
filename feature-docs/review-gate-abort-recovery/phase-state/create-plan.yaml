@@ -1,0 +1,21 @@
+schema_version: 1
+feature: review-gate-abort-recovery
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 54044fa44b1bdec52a09a57885e5b61cf3346ffb
+last_input_digest: sha256:1270976783c1ce4da3e19d0b477db877be24f9d3d56fdc3512ca17031bdf123d
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:1270976783c1ce4da3e19d0b477db877be24f9d3d56fdc3512ca17031bdf123d
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
