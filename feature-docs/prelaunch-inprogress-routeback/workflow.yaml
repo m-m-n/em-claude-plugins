@@ -219,9 +219,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0003
   task0004:
     title: Limit the recycled-task-id carve-out to the route-back record
     plan: tasks/task0004.md
@@ -247,9 +247,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0004
   task0005:
     title: Align queue_stop_guard.py with the record-match classification
     plan: tasks/task0005.md
@@ -272,9 +272,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0005
   task0006:
     title: Define the record, carry it on re-planning, and reject it in worker patches
     plan: tasks/task0006.md
@@ -299,9 +299,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0006
 review:
   status: pending
   plan:

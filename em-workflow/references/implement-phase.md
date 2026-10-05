@@ -442,16 +442,42 @@ orchestrator's own bookkeeping.
 **Journal re-read and write set**: after the launch loop, re-read the latest
 journal (the same replay as at the top of this section, last event per
 task). The write set is the tasks selected in this entry whose journal last
-event is `launched` — the launches the journal confirms. A selected task
-outside the write set is not written:
+event is `launched` — the launches the journal confirms, the **in_progress
+part** — together with the failed launches of the **failed part** below.
+Both parts go into the one write set of this entry and the same
+launch-state commit:
 
-- no event for the task (stopped at the approval gate, denied by the launch
-  guard, or `Task()` never issued) → not in the write set; the task stays
-  `pending` in workflow.yaml;
-- last event `merged` or `failed` (terminal) → not in the write set; never
-  written `in_progress`.
+- **in_progress part**: a selected task whose re-read journal last event is
+  `launched`. It is written `in_progress`.
+- **failed part**: a selected task that meets two conditions. First, a
+  `launched` event for the task appears in the re-read journal after the
+  extent replayed at selection time (the **selection-time replay**, the
+  replay at the top of this section). Second, the re-read journal last
+  event is `failed`. Such a task launched in this entry and had already
+  failed by the time of the re-read. Its `tasks.{T}.status = failed` and
+  `tasks.{T}.branch` are written in the same write set and the same
+  launch-state commit, it is never written `in_progress`, and it is never
+  left `pending`.
 
-A partial launch still yields exactly one write set and one commit.
+A selected task outside the write set is not written:
+
+- no `launched` appended after the selection-time replay → not in the write
+  set; the task stays `pending` in workflow.yaml. This covers a task
+  stopped at the approval gate, a task denied by the launch guard, a task
+  whose `Task()` never issued, and a task that was already `pending` +
+  `failed` at selection and did not launch this time;
+- last event `merged` → not in the write set; it is never written and is
+  left to I.2.b.
+
+A task with re-read last event `merged` or `failed` is never written
+`in_progress`; a last event `failed` is written only as the failed part
+above.
+
+A partial launch still yields exactly one write set and one commit, which
+hold the in_progress part and the failed part together.
+
+The launch-state write never sets or changes
+`tasks.{T}.routeback_failed_journal_line`.
 
 Write the launch state for the write set in this normative order — the
 capture precedes the refresh, the refresh precedes the write, and the
@@ -461,15 +487,16 @@ write precedes the commit:
    `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`
 2. **refresh** the integration worktree to the branch —
    `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
-3. **write**, on the worktree just refreshed, `tasks.{T}.status =
-   in_progress` and `tasks.{T}.branch` into workflow.yaml for every task
-   in the write set (not every selected task) — one write set, not one per
-   task
+3. **write**, on the worktree just refreshed, into workflow.yaml for every
+   task in the write set (not every selected task) — one write set, not one
+   per task: `tasks.{T}.status = in_progress` and `tasks.{T}.branch` for
+   each task of the in_progress part, and `tasks.{T}.status = failed` and
+   `tasks.{T}.branch` for each task of the failed part
 4. **commit** that single write set — the launch-state commit — with the
    captured tip as the third argument —
    `commit-docs.sh {integration_worktree} "docs({feature}): launch {T1},
-   {T2}, …"  "$LAUNCH_TIP"` (naming every task in the write set; the
-   third argument is `expected_base_tip`; exit-4 recovery: Branch &
+   {T2}, …"  "$LAUNCH_TIP"` (naming every task in the write set, both
+   parts; the third argument is `expected_base_tip`; exit-4 recovery: Branch &
    Worktree Model above — the "a second exit 4 stops the phase" counter
    there is counted per commit attempt, i.e. per entry into this sequence,
    not per task named in the commit)
@@ -512,21 +539,25 @@ step's third argument: it is captured at Step I.2.b step 2, BEFORE Step
 I.2.b step 3's own commit advances the branch tip, so by the time the
 refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already stale.
 
-**Empty write set**: when the write set is empty (no confirmed launch, or
-every confirmed task already terminal at the re-read), the write and the
-commit are omitted.
+**Empty write set**: when the write set is empty — only when both parts are
+empty, that is, no task is confirmed `launched` and no launched task has
+already failed at the re-read — the write and the commit are omitted, and
+the turn still ends after that omission.
 
 **exit 4**: the bounded recovery is the Branch & Worktree Model's exit-4
 recovery, cited here and not restated. Applied to the launch-state commit:
 on the retry, the journal is re-read again after the re-capture and refresh,
-and the write set is re-derived the same way (terminal tasks excluded; an
-empty re-derived write set means no retry commit). A second exit 4 stops the
+and the write set is re-derived the same way: both parts are re-derived by
+the same rule, so a task that reached `failed` between the first attempt
+and the retry moves from the in_progress part to the failed part (an empty
+re-derived write set means no retry commit). A second exit 4 stops the
 phase with a report naming the call site (Step I.2.a's launch-state commit)
 and the tasks in the write set; the stop keeps the journal's launch records
 and the tasks' worktrees and branches — nothing is deleted or rolled back.
-Those tasks then read `pending` with journal last event `launched` and are
-in-flight under the in-flight rule in the selection rules above (cited, not
-restated).
+The in_progress-part tasks then read `pending` with journal last event
+`launched` and are in-flight under the in-flight rule in the selection
+rules above (cited, not restated); a failed-part task reads `pending` with
+journal last event `failed`.
 
 **End the turn** after the launch-state commit, or after its omission when
 the write set is empty — no polling, no synchronous wait. In a `--batch`
