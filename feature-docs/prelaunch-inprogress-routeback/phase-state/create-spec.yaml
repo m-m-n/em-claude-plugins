@@ -1,0 +1,31 @@
+schema_version: 1
+feature: prelaunch-inprogress-routeback
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 1c9d23ece9f3e428ae6bc5accfc1262e5fbcf7b8
+last_input_digest: sha256:8ca177adf1038aba74592fc68422137d53769c83cf5a6e6b542966f6efbc8e2a
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: prelaunch-inprogress-routeback'
+    answered_at: '2026-10-05T18:31:00+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:8ca177adf1038aba74592fc68422137d53769c83cf5a6e6b542966f6efbc8e2a
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
