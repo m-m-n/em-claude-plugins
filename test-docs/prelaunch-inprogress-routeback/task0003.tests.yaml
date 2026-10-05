@@ -1,0 +1,67 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: Ran 7412 tests, OK; check-plugin-invariants.py: all PASS
+final_failures: []             # re-executed after implementation: Ran 7448 tests (7412 + 36 new), OK; check-plugin-invariants.py all PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_prelaunch_failed_launch_state.TestAC1BothPartsOfTheWriteSet.test_both_parts_are_named_and_the_in_progress_part_is_defined
+      - tests.test_prelaunch_failed_launch_state.TestAC1BothPartsOfTheWriteSet.test_failed_part_needs_a_launched_after_the_selection_time_replay_and_a_failed_last_event
+      - tests.test_prelaunch_failed_launch_state.TestAC1BothPartsOfTheWriteSet.test_failed_part_is_written_failed_in_the_same_commit_never_in_progress
+      - tests.test_prelaunch_failed_launch_state.TestAC1BothPartsOfTheWriteSet.test_write_step_writes_failed_and_branch_for_the_failed_part
+      - tests.test_prelaunch_failed_launch_state.TestAC1BothPartsOfTheWriteSet.test_in_progress_write_literal_stays_in_the_write_step
+      - tests.test_prelaunch_failed_launch_state.TestAC1BothPartsOfTheWriteSet.test_selection_time_replay_named_by_the_failed_part_exists_in_region_p
+      - tests.test_prelaunch_failed_launch_state.TestAC1BothPartsOfTheWriteSet.test_failed_part_wording_lives_in_region_l_not_region_p
+    red_confirmed: true
+    red_reason: "Run against the old Region L: AssertionError: False is not true for the both-parts-named matcher (no '**in_progress part**' / '**failed part**' labels), the failed-part-definition matcher, the failed-part-written-failed-never-in_progress matcher and the write-step matcher (no '`tasks.{T}.status = failed` ... for each task of the failed part')"
+  AC-2:
+    tests:
+      - tests.test_prelaunch_failed_launch_state.TestAC2UnlaunchedSelectedTasksAreNotWritten.test_no_launched_appended_means_not_written_and_stays_pending
+      - tests.test_prelaunch_failed_launch_state.TestAC2UnlaunchedSelectedTasksAreNotWritten.test_pending_failed_at_selection_and_not_launched_is_named
+      - tests.test_prelaunch_failed_launch_state.TestAC2UnlaunchedSelectedTasksAreNotWritten.test_launch_state_write_leaves_the_routeback_record_alone
+      - tests.test_prelaunch_failed_launch_state.TestAC2UnlaunchedSelectedTasksAreNotWritten.test_region_l_never_writes_the_routeback_record
+      - tests.test_prelaunch_failed_launch_state.TestAC2UnlaunchedSelectedTasksAreNotWritten.test_earlier_unconfirmed_launch_causes_are_kept
+    red_confirmed: true
+    red_reason: "Run against the old Region L: AssertionError: 'a task that was already `pending` + `failed` at selection and did not launch this time' not found in 'A selected task outside the write set is not written: - no event for the task (...) ...'; and AssertionError: 0 not greater than 0 (the name tasks.{T}.routeback_failed_journal_line did not occur in Region L). The retained-wording test test_earlier_unconfirmed_launch_causes_are_kept passed before the edit by design (it guards the three causes the earlier task pinned)"
+  AC-3:
+    tests:
+      - tests.test_prelaunch_failed_launch_state.TestAC3CommitNamesBothPartsAndEmptySet.test_commit_message_names_every_task_in_the_write_set_both_parts
+      - tests.test_prelaunch_failed_launch_state.TestAC3CommitNamesBothPartsAndEmptySet.test_partial_launch_yields_one_write_set_and_one_commit_for_both_parts
+      - tests.test_prelaunch_failed_launch_state.TestAC3CommitNamesBothPartsAndEmptySet.test_write_and_commit_are_omitted_only_when_both_parts_are_empty
+      - tests.test_prelaunch_failed_launch_state.TestAC3CommitNamesBothPartsAndEmptySet.test_turn_ends_after_the_commit_or_its_omission
+      - tests.test_prelaunch_failed_launch_state.TestAC3CommitNamesBothPartsAndEmptySet.test_the_end_of_turn_paragraph_follows_the_empty_write_set_paragraph
+      - tests.test_prelaunch_failed_launch_state.TestAC3CommitNamesBothPartsAndEmptySet.test_batch_marker_only_sentence_occurs_exactly_once
+      - tests.test_prelaunch_failed_launch_state.TestAC3CommitNamesBothPartsAndEmptySet.test_region_l_keeps_the_launch_state_commit_term
+    red_confirmed: true
+    red_reason: "Run against the old Region L: AssertionError: False is not true for test_commit_message_names_every_task_in_the_write_set_both_parts ('naming every task in the write set, both parts' missing), test_partial_launch_yields_one_write_set_and_one_commit_for_both_parts and test_write_and_commit_are_omitted_only_when_both_parts_are_empty ('only when both parts are empty' and 'the turn still ends after that omission' missing). The end-of-turn, batch-marker and launch-state-commit-term tests passed before the edit by design (retained wording from the earlier task)"
+  AC-4:
+    tests:
+      - tests.test_prelaunch_failed_launch_state.TestAC4TerminalTasksAndTheExit4Retry.test_merged_last_event_is_never_written_and_left_to_i2b
+      - tests.test_prelaunch_failed_launch_state.TestAC4TerminalTasksAndTheExit4Retry.test_no_terminal_task_is_written_in_progress
+      - tests.test_prelaunch_failed_launch_state.TestAC4TerminalTasksAndTheExit4Retry.test_retry_re_derives_both_parts_after_the_re_capture_and_refresh
+      - tests.test_prelaunch_failed_launch_state.TestAC4TerminalTasksAndTheExit4Retry.test_retry_phrases_are_found_in_the_exit4_paragraph_not_before_it
+      - tests.test_prelaunch_failed_launch_state.TestAC4TerminalTasksAndTheExit4Retry.test_second_exit4_still_stops_and_keeps_records_worktrees_branches
+      - tests.test_prelaunch_failed_launch_state.TestAC4TerminalTasksAndTheExit4Retry.test_exit4_recovery_is_cited_not_restated
+    red_confirmed: true
+    red_reason: "Run against the old Region L: AssertionError: 'last event `merged` or `failed` is never written `in_progress`' not found (the old text said 'last event `merged` or `failed` (terminal) → ... never written `in_progress`'), and AssertionError: 'both parts are re-derived by the same rule' not found in '**exit 4**: the bounded recovery is ... the write set is re-derived the same way (terminal tasks excluded; ...)'. The second-exit-4 and exit-4-cited tests passed before the edit by design (retained wording)"
+  AC-5:
+    tests:
+      - tests.test_prelaunch_failed_launch_state.TestAC5NewWordingMatchersFailOnPreChangeSample.test_every_matcher_holds_on_the_live_region_l
+      - tests.test_prelaunch_failed_launch_state.TestAC5NewWordingMatchersFailOnPreChangeSample.test_every_matcher_fails_on_the_pre_change_sample
+      - tests.test_prelaunch_failed_launch_state.TestAC5NewWordingMatchersFailOnPreChangeSample.test_the_sample_is_the_whole_pre_change_region_l
+      - tests.test_prelaunch_failed_launch_state.TestAC5NewWordingMatchersFailOnPreChangeSample.test_non_vacuity_anchors_are_in_both_sample_and_live_region_l
+      - tests.test_prelaunch_failed_launch_state.TestAC5NewWordingMatchersFailOnPreChangeSample.test_slice_boundaries_the_matchers_use_are_in_both
+      - tests.test_prelaunch_failed_launch_state.TestAC5NewWordingMatchersFailOnPreChangeSample.test_sample_still_has_the_old_single_part_wording
+      - tests.test_prelaunch_failed_launch_state.TestAC5NewWordingMatchersFailOnPreChangeSample.test_the_phrases_kept_by_the_earlier_task_are_in_both
+    red_confirmed: true
+    red_reason: "The module did not exist before this task. With the module in place and the document still old, test_every_matcher_holds_on_the_live_region_l failed for all 11 matchers (AssertionError: False is not true). The negative-proof, non-vacuity and sample-shape tests are sample-based, so they pass independent of the live document by design"
+  AC-6:
+    tests:
+      - tests.test_prelaunch_failed_launch_state.TestAC6OnlyRegionLChanges
+      - tests.test_prelaunch_inprogress_launch_order
+      - tests.test_exit4_tip_argument_consistency
+      - tests.test_tip_capture_idiom_uniformity
+      - tests.test_protocol_git_ops_pass_destructive_guard
+      - tests.test_batch_quiet_output_phase_wiring
+      - tests.test_implement_routeback_gate
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing tests.test_prelaunch_inprogress_launch_order, tests.test_exit4_tip_argument_consistency, tests.test_tip_capture_idiom_uniformity, tests.test_protocol_git_ops_pass_destructive_guard, tests.test_batch_quiet_output_phase_wiring and tests.test_implement_routeback_gate detect the pinned I.2.a / Region L literals, the exit-4 bullet and the I.2.c route-back gate; no red state occurred for this change, they were green before and stayed green unmodified. The new TestAC6OnlyRegionLChanges digests (Step I.2 intro, Branch & Worktree Model) were also green before the edit by design: they guard against a stray edit, and their sensitivity is shown by test_digest_is_sensitive_to_a_one_character_change. The I.2.c section is not digest-pinned here because task0004 adds one write-set item to it; its byte-identity outside Region L was checked at task time by comparing the text before and after Region L at the base revision and the working tree (identical)"
