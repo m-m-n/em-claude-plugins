@@ -1,7 +1,7 @@
 schema_version: 1
 feature: review-gate-abort-recovery
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 3058404c3e96445f99a370b98ee2a77a5cf135da
 last_input_digest: sha256:91f3b01209c028fb91baf9be9a60ca65e2680913e21cf0fe4618581ed51450e0
