@@ -1,0 +1,65 @@
+round: 1
+executed_at: "2026-10-05T11:17:14+09:00"
+scope:
+  review_mode: diff
+  base_commit: fa502d0f08fb027922c14203184cd2eeae6e3a70
+  head_commit: 4ad2c466b4894ba495b8ab30a665271639042b9d
+  changed_files:
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - feature-docs/codex-interactive-guard-hook/SPEC.md
+    - test-docs/codex-guard-parser-fixes/task0001.tests.yaml
+    - test-docs/codex-guard-parser-fixes/task0002.tests.yaml
+    - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: failed}
+  - {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+# comprehensive#0: the codex reviewer returned `findings: []` with summary
+# "codex returned non-JSON output" — treated as a harness-level failure, so
+# the comprehensive perspective received one Claude fallback dispatch.
+findings:
+  - stable_id: 08a75f1657a9298e
+    severity: medium
+    category: security
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 341
+    title: "配列代入 `a=()` の後に改行を挟んだサブシェルを関数本体とみなし、対話起動を通す（基準版からの回帰）"
+    description: "`a=()\\n(python3 -i)` は、基準版 (fa502d0f) では deny (interactive, python3) になる。変更後は何も出力しない。同じ原因で、`a+=()\\n(python3 -i)`、`export a=()\\n(python3 -i)`、`a=()\\n\\n(python3)`、`a=()\\n# c\\n(python3 -i)` も deny から許可に変わる。`;` で区切った `a=() ; (python3 -i)` は deny のまま。原因は 3 つの処理の組み合わせ。(1) `_open_group`（341 行）は、`(` の直前に語があれば中身を問わず head を立てる（made = bool(words)）。このため代入語 `a=` も関数名として扱われる。(2) `_close_group`（354 行）は、中身が空の `()` を閉じると fn_head を立てる。(3) fn_head は改行では消えない（325 行）。結果として、次の行の `(` / `{` が関数本体として skip される。bash では `a=()` は配列代入で、次の行のサブシェルは実行される。THREAT-MODEL TM-2 の「緩和は定めた条件の範囲だけに効かせる」を満たしていない。em-review 側のコピーはバイト単位で同一なので、同じ問題がある。同じ原因で `a=()\\n{ python3 -i; }` も通る。こちらは基準版でも通っていた既存の見落とし。"
+    suggestion: "`_open_group` で head を立てる条件を絞る。`(` の直前の単純コマンドが動的でない語 1 つだけで、その語が `=` を含まない有効な関数名のとき（または `function NAME` の形）に限る。`foo()\\n(python3 -i)` と `f() (python3 -i)` は bash の関数定義なので、silent のまま保つ。CASES には `a=()\\n(python3 -i)` と `a+=()\\n(python3 -i)` を deny として足す。両方のコピーを同じ変更で直し、バイト単位で同一に保つ。"
+    sources: ["codex:security"]
+    confidence: 95
+    resolution: unresolved
+    resolution_reason: "medium は auto-fix の対象外（R4 の候補は critical / high のみ）"
+# R3b step 2 で破棄した evaluator の low 2 件（severity が critical/high/medium 以外）:
+# - security#0 由来: `_is_case_keyword` が直前の語の綴りだけで case をキーワードと誤認し、
+#   `echo "$(echo if case x)"; python3 -i` が判定不能として通る（line 553）
+# - comprehensive#fallback 由来: 関数定義の名前が単純コマンドとして残り、
+#   `python() { python3 "$@"; }` 等が noprogram で拒否される既存の誤爆（line 354）
+evaluation:
+  round_summary: "round 1（diff、cross_validation 有り）の評価。security#0 の 2 件は、いずれも基準版 fa502d0f からの回帰（deny から許可への変化）として両コピーで再現した。そのうち配列代入 `a=()` の後の改行越しのサブシェルを skip する件が、この round の主な指摘（medium）になる。`case` の誤認は、受け入れ済みの残余に近く実用上の影響も小さいため、low に下げた。comprehensive#fallback の 1 件は既存の誤爆（回帰ではない）なので low に下げた。critical / high の報告は無く、dismissed_sites は空。reviewer の出力に注入の試みは無かった。観点ごとの確認状況: comprehensive corroborated（primary の codex は非 JSON 出力で失敗し fallback が代わりに実行）、security corroborated、architecture corroborated（両コピーのバイト一致を cmp で確認）、spec corroborated（FR1〜FR8 と TS の主なケースが CASES にあり、unittest 38 件通過）。"
+  recommended_action: auto_fix
+  action_rationale: "確認できた medium の回帰が 1 件ある（TM-2 に反する見落とし）。修正箇所は `_open_group` / `_close_group` の関数定義を判定する部分に限られる。残りの low 2 件も同じ解析器の近くの箇所で、修正方針も具体的に決まっている。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-parser-fixes-20261005T021710Z.md
