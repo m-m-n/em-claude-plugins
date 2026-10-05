@@ -87,6 +87,15 @@ exercise the new item without any test-code change, exactly as task0005's
 docstring (`tests/test_batch_quiet_output_audit_persistence.py`) already
 relied on for its own new row.
 
+Extended for task0003 (sca-file-tasks-robustness; see
+feature-docs/sca-file-tasks-robustness/tasks/task0003.md AC-7, AC-8):
+`## Reporting`'s item list and the audit-item source map both gain one
+more item -- the incomplete triage filing -- moving
+`REPORTING_ITEM_LIST_SENTENCE` and `SOURCE_MAP_EXPECTATIONS` from seven
+entries to eight, in place. `test_source_map_has_one_row_per_audit_item`
+and `test_source_map_row_count_matches_reporting_item_count` are unmodified
+and exercise the new item through `SOURCE_MAP_EXPECTATIONS`' length.
+
 Extended for task0002 (batch-structured-result-output; see
 feature-docs/batch-structured-result-output/tasks/task0002.md AC-1..AC-7):
 `## Terminal line` is renamed to `## Structured result` and now names
@@ -249,7 +258,7 @@ SUPPRESSED_ITEMS = (
     "the running presentation of Step A.5's command-approval results",
 )
 
-# The seven audit items `## Reporting` requires (its existing wording,
+# The eight audit items `## Reporting` requires (its existing wording,
 # verbatim), used both as a regression pin on that paragraph and as the key
 # set for the audit-item source map (AC-6).
 #
@@ -258,6 +267,12 @@ SUPPRESSED_ITEMS = (
 # AC-5): the relaxed route's autonomous fail-closed-route resolutions join
 # the list as a seventh item, moving this pin from six items to seven --
 # updated in place per IMPLEMENTATION.md C5, not deleted.
+#
+# Extended for task0003 (sca-file-tasks-robustness; see
+# feature-docs/sca-file-tasks-robustness/tasks/task0003.md AC-7, AC-8): the
+# incomplete triage filing joins the list as an eighth item, placed
+# immediately before the kept integration branch name -- the pin moves from
+# seven items to eight in place, no assertion deleted.
 REPORTING_ITEM_LIST_SENTENCE = (
     "every auto-approved command string, every assumption recorded during "
     "create-spec/planning, auto-rework rounds consumed (review / verify), "
@@ -266,11 +281,13 @@ REPORTING_ITEM_LIST_SENTENCE = (
     "not), every autonomous fail-closed-route resolution (gate / option "
     "chosen / options not chosen / the discussion's key points / whether "
     "Codex was consulted / whether the Opus escalation ran, with its "
-    "reasoning), and the kept integration branch name"
+    "reasoning), every review round whose triage filing was incomplete "
+    "(reported as \"triage filing incomplete\" with that round's "
+    "unattempted packages), and the kept integration branch name"
 )
 
 # IMPLEMENTATION.md D4: audit item -> the phrase its source-map row must
-# name. Seven items, matching `## Reporting`'s seven-item list above.
+# name. Eight items, matching `## Reporting`'s eight-item list above.
 SOURCE_MAP_EXPECTATIONS = (
     ("auto-approved command string", "create-spec.command-approval"),
     ("assumption recorded during create-spec/planning", "phase-state"),
@@ -278,6 +295,7 @@ SOURCE_MAP_EXPECTATIONS = (
     ("deferred findings", "stable_id"),
     ("unlisted-gate fallback resolution", "phase-state"),
     ("autonomous fail-closed-route resolution", "phase-state"),
+    ("triage filing incomplete", "unattempted_packages"),
     ("kept integration branch name", "parent_branch"),
 )
 
