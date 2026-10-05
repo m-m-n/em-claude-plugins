@@ -1,0 +1,28 @@
+schema_version: 1
+feature: destructive-guard-heredoc-syntax-error
+records:
+- question_id: requirement.fix-scope
+  packet_id: create-spec-q0001
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - array_assignment_only
+  freeform: null
+  normalized_answer: 'array_assignment_only: `NAME=(` / `NAME+=(`（`declare -a x=(`
+    など宣言組み込みの引数の複合代入を含む）の括弧の中で、置換と引用の外にある `<<` をヒアドキュメント演算子として登録しない。続く行は本文として外さずコマンドとして判定する。補強:
+    (1) bash はこの配列エラーで行全体を捨てるので、同じ行で配列より前に登録された演算子（`cat <<''A''; x=( <<B`）にも本文を取らせない。(2)
+    配列エラーの後は配列状態を解除し、次の行以降の本物のヒアドキュメントは従来どおり扱う。(3) 配列内のコマンド置換・プロセス置換の中、引用の中、閉じた配列の後の
+    `<<` は本物の演算子のまま（EC4〜EC6 の allow を維持）。配列の祖先があるだけで抑止しない。(4) 再発防止ケースには単独で deny /
+    ask になるコマンド（`git reset --hard HEAD`、`rm -rf /home/sakura/valuable`）を使う。(5) 対応の無い
+    `)` や置けない位置の予約語は bash が停止して後続行を実行しないため範囲外。'
+  resolution_note: 'gate: create-spec.requirement-clarification（policy action codex_consultation,
+    record_as_assumption）。options: array_assignment_only / syntax_error_line_general
+    / fail_closed_whole_command。chosen: array_assignment_only。Codex（run_codex_exec.sh
+    readonly、entry codex、turn 1 で収束）の理由: 完了の定義は配列形を求めている。Bash 5.3.9 の実測で `x=(`・`x+=(`・要素入り・複数行・`declare
+    -a` の各形はエラー後の行を実行したが、対応の無い `)` と単独の then/fi/done/in/esac では bash が停止し後続行を実行しなかった。フックは配列の
+    `(` を group として積み、中の `<<` を登録する（destructive-guard.py:1143,1180）。退けた案: syntax_error_line_general
+    は追加候補で後続行が実行されず、文法判定を広げる根拠が無い。fail_closed_whole_command は無害な後続行でも deny になり『それ以外は
+    allow』の方針を広げる（destructive-guard.py:12）。Claude も根拠を確認して同意し、Codex の補強案（同じ行の先行演算子にも本文を取らせない、declare
+    -a を含める、エラー後の配列状態の解除、EC4〜EC6 の allow 維持）をすべて採った。残るリスク: 配列の祖先があるだけで抑止すると置換内の本物のヒアドキュメントで誤爆する。Opus
+    escalation not run.'
+  answered_at: '2026-10-06T07:58:00+09:00'
