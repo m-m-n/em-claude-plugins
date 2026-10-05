@@ -122,7 +122,8 @@ workflow:
   artifacts:
   - REQUIREMENTS.md
   - SPEC.md
-  status: in_progress
+  status: completed
+  completed_at_commit: 1c4e80b28672ac463a6f7ac8d3644523e6072307
 - id: design
   artifacts:
   - DESIGN.md
@@ -222,7 +223,7 @@ requirements:
     tests:
     - TS1
   FR2:
-    title: 起動を確認できたタスクだけを in_progress としてコミットする
+    title: 起動を確認できたタスクを in_progress としてコミットする
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -231,7 +232,7 @@ requirements:
     tests:
     - TS2
   FR3:
-    title: 起動ゼロのときはコミットを省略し、ターンはコミット処理の後に終える
+    title: write set が空ならコミットを省略し、ターンはコミット処理の後に終える
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -240,7 +241,7 @@ requirements:
     tests:
     - TS3
   FR4:
-    title: コミット時と exit 4 再試行時に journal を読み直し、終端タスクを in_progress に戻さない
+    title: コミット時と exit 4 再試行時に journal を読み直し、終端タスクを in_progress にしない
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -249,7 +250,7 @@ requirements:
     tests:
     - TS4
   FR5:
-    title: 『pending と launched の組み合わせは決して生じない』文を事実に合わせて書き直す
+    title: pending と launched の組み合わせについての文を事実に合わせる
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -269,7 +270,7 @@ requirements:
     - TS6
     - TS5
   NFR1:
-    title: I.2.c と exit-4 証明の文言を変えない
+    title: I.2.c と exit-4 証明の文言
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -308,6 +309,62 @@ requirements:
     - task0002
     tests:
     - TS6
+  FR7:
+    title: launch-state commit で、起動後すでに失敗したタスクを failed として記録する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: recycled-task-id carve-out を、route-back の記録と一致する場合に限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: queue_stop_guard.py の分類を FR8 に揃える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: I.2.a の根拠文を事実に合わせて直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: workflow-schema.md に tasks.{T}.routeback_failed_journal_line を定義する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR12:
+    title: re-planning の replace_all で記録を引き継ぐ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: ワーカーの tasks_patch による記録の設定を validate-worker-output.py で拒否する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: queue_stop_guard.py の制約を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
 batch:
   review_rework_count: 1
   verify_rework:
