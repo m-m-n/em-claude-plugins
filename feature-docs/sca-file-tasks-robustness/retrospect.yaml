@@ -1,5 +1,5 @@
 feature: sca-file-tasks-robustness
-collected_at: "2026-10-05T14:20:00+09:00"
+collected_at: "2026-10-05T14:05:23+09:00"
 session_ids: [01a10a72-10db-7434-bdbc-abf8fdc1df89]
 signals:
   review_critical_high: []
