@@ -1,0 +1,73 @@
+round: 1
+executed_at: "2026-10-05T13:42:14+09:00"
+scope:
+  review_mode: diff
+  base_commit: fa502d0f08fb027922c14203184cd2eeae6e3a70
+  head_commit: bced0c0b269eee62c9f612e18bb8346f7d17181a
+  changed_files:
+  - em-workflow/scripts/scan-dependencies.py
+  - test-docs/sca-directness-resolution/task0001.tests.yaml
+  - test-docs/sca-directness-resolution/task0002.tests.yaml
+  - test-docs/sca-directness-resolution/task0003.tests.yaml
+  - tests/test_scan_dependencies_cargo_directness.py
+  - tests/test_scan_dependencies_pip_directness.py
+  - tests/test_scan_dependencies_pyproject_directness.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 41bbbe176869ebfc
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1996
+  title: "TM-5: 複数のオプションを含む行の -r を辿らず、直接依存を黙って推移的依存として扱う"
+  description: "`_requirements_option` は行の先頭のオプションしか見ない。`-c constraints.txt -r deps.txt` や `--index-url https://x/simple -r deps.txt` では、pip は deps.txt を読むが、直接依存の集合は空のまま complete=True になる。deps.txt で宣言した直接依存の high/critical の advisory は推移的依存として捨てられ、finding にも判定不能の件数にも残らない（TB-1 / TM-5）。評価者が再現済み。"
+  suggestion: "オプション部分を shlex で分割し、位置に関係なく `-r`/`--requirement`（`=` 形式も含む）の値をすべて辿る。解釈できないときは complete=False にする。`-c a -r b` と `--index-url URL -r b` の 2 形式のテストを足す。"
+  sources: ["codex:security"]
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: "medium のため auto-fix 対象外（R4 は critical/high のみ）"
+- stable_id: b34e1e48141a9af9
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1669
+  title: "TM-5: path 依存による暗黙のワークスペースメンバーがあっても集合を完全として扱う"
+  description: "`_cargo_workspace_view` は `[workspace]` に members が無い・空配列のとき complete=True を返す。Cargo ではワークスペース配下の path 依存は自動でメンバーになり、その依存は Cargo.lock に入るがマニフェストは読まれない。members を省いた `[workspace]` と `member = { path = \"member\" }` では {'member'} のまま complete=True となり、member の直接依存の advisory が黙って捨てられる。SPEC FR5 の文言の範囲外だが、FR5 の意図と TM-5 に反する。評価者が再現済み。"
+  suggestion: "`[workspace]` があり、ルートの依存テーブル（target 配下も含む）に `path` を持つエントリがあるときは complete=False にする。members の省略・空配列と path 依存の組み合わせのテストを足す。"
+  sources: ["codex:security"]
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: "medium のため auto-fix 対象外（R4 は critical/high のみ）"
+evaluation:
+  round_summary: "ラウンド 1（diff、cross_validation=true）。reviewer の指摘は 5 件（すべて medium）で、評価者がすべて再現した。security#0 の 2 件（複数オプション行の -r、暗黙のワークスペースメンバー）は TM-5 が防ぐはずの黙って捨てる経路のため medium のまま。comprehensive#0 の 3 件は low に下げた（direct_only=false は同梱レジストリで到達しない／シンボリックリンク構成はわざと組まない限り起きない／圧縮拡張子名は件数として結果に現れる）。low は R3b step 2 で finding から除外した。critical/high は無し。新規テスト 215 件と既存 SCA テスト 631 件は通過。architecture・spec は corroborated で指摘無し。命令の差し込みは見当たらなかった。"
+  recommended_action: "auto_fix"
+  action_rationale: "medium の 2 件は直接依存の判定処理の中で直せ、直し方とテストも明確。ただし R4 の auto-fix 対象は critical/high のみのため、この助言は採用せず unresolved として残す。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+dropped_below_threshold:
+- {run_id: "comprehensive#0", line: 1795, title: "cargo の判定不能の分岐が threshold.direct_only=false を考慮しない", evaluator_severity: low}
+- {run_id: "comprehensive#0", line: 2173, title: "シンボリックリンクの requirements ファイルで、-r の参照先をリンク先のディレクトリから解決する", evaluator_severity: low}
+- {run_id: "comprehensive#0", line: 1842, title: "圧縮ファイルの拡張子で終わる正当な PEP 508 名を、名前なしとして扱う", evaluator_severity: low}
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
