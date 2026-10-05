@@ -926,6 +926,10 @@ Phase R3b's accountability floor had to lift one or more sites into
 `findings`; its `status` stays `completed` in that case (IMPLEMENTATION.md
 D8) — `status: failed` is reserved for the two structural degradation
 triggers of Phase R3b.
+That reservation governs the `status` of `perspective_runs` entries — the
+`evaluator` entry's — and not the review step's `workflow[review].status`
+or the top-level `review.status`; for those under a gate abort, see
+`references/review-phase.md` Phase R5, `Spec-change gate abort (review-sourced rework)`.
 
 The round record persists the evaluation's `dismissed_sites` at the
 round-record root (`file`, `line`, `run_id`, `reason` per entry), present
@@ -1034,6 +1038,59 @@ round-record writes are unchanged by `references/batch-mode.md`'s
 output-suppression discipline; any abort reached during this phase is a
 stop under that document's stop/abort exception and keeps its full
 output.
+
+**Spec-change gate abort (review-sourced rework)**: in review-sourced
+rework, after step 1 of `references/rework-task-synthesis.md` Section 10
+has written `review.needs_rework = true` and `review.status = pending`, a
+spec-change question that ends the run is a gate abort. Exactly four stops
+are gate aborts, each defined in `references/question-resolution.md` and
+not restated here: the Classification gate's verdict stop (including the
+stop that verdict (a), goal not met, produces), the Classification gate's
+inapplicable case, the Classification gate's origin-membership failure,
+and the malformed spec-change pairing abort. At a gate abort the orchestrator writes
+`workflow[review].status` as `pending` (it was `in_progress` from Step B);
+`review.status` stays `pending` and `review.needs_rework` stays `true`.
+`failed` is written to neither `workflow[review].status` nor
+`review.status`. The write is committed with `commit-docs.sh` before the
+run stops; an exit 4 follows the exit-4 recovery of
+`skills/develop/SKILL.md` Step B (cited, not restated).
+
+None of the five steps of the Section 10 specification-change transition
+runs, so the create-spec, create-plan and implement statuses are
+unchanged, and `batch.review_rework_count` is not incremented (its
+increment belongs to the applied-patch path of the batch-mode paragraph
+above). A spec-change gate stop in verify-sourced rework is outside this
+block.
+
+After such a stop, `/em-workflow:develop <feature>` resumes the run: Step B
+selects `review` (`pending`) as the next step and stop condition 3 does not
+fire. The review phase then runs a new round, and the Completion gate leads
+into the ordinary rework path above. In interactive mode, the spec-change
+question rework-planner returns is asked to the user directly. The packet
+that the Classification gate's stop or inapplicable outcome closed as
+`obsolete` is not re-presented (`references/question-resolution.md`,
+Classification gate, Outcome step).
+
+The stop's report — in batch, the `resume_conditions` value included —
+conveys that running `/em-workflow:develop <feature>` in interactive mode
+re-runs a review round and then reaches the spec-change decision. This
+block adds no Step B branch, no stop-condition-3 exception and no
+interactive question.
+
+**Legacy review-failure recovery**: a review step already left `failed` by
+a gate abort is recovered by the orchestrator when both hold:
+`workflow[review].status` is `failed`, and the last entry of
+`classification` in `phase-state/rework.yaml` (record shape:
+`references/phase-state.md`) has `decision: stop`. The procedure restores
+`workflow[review].status` and `review.status` to `pending`, and
+`review.needs_rework` to `true`. The write is committed with
+`commit-docs.sh`. When the record does not confirm both conditions — the
+file is absent, the `classification` list is empty, or its last entry is
+not `decision: stop` — the procedure is not applied and stop condition 3's
+ordinary stop stands. After the procedure, the run resumes through the
+resume path of the
+`Spec-change gate abort (review-sourced rework)` block above. The procedure
+adds no Step B branch and no stop-condition-3 exception.
 
 ## Phase R6: Report (Japanese)
 
