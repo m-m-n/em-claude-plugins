@@ -18,7 +18,7 @@ Three boundaries carry realistic threats:
 
 Accepted residual risks, with no mitigation recorded:
 - **Deliberate evasion of the guard**: option-bearing wrappers, shell expansions, `eval`, shell nesting deeper than one `-c` literal, interaction through `write_stdin`, REPLs opened from inside code, and REPLs opened by subcommands. These are passed by design (SPEC A7, FR11, NFR2). The hook guards against accidental launches of a REPL; it is not a sandbox.
-- **Configuration layers the wrapper does not author**: the `--litellm` path loads user-level Codex configuration by design (SPEC A3). Whether Codex 0.160.0 also loads repository-local configuration under the bypass flag is unconfirmed, and is raised as an open question (TB-3).
+- **Configuration layers the wrapper does not author**: the `--litellm` path loads user-level Codex configuration by design (SPEC A3). Whether Codex 0.160.0 also loads repository-local configuration under the bypass flag was confirmed afterwards by the codex-repo-hook-trust feature and is no longer open: see the "Status after codex-repo-hook-trust" paragraph under TB-3 and `feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md`.
 
 Not boundaries:
 - the static reviewer guidance text in `codex-reviewer.md`, which is authored in this repository and has nothing interpolated into it
@@ -56,3 +56,20 @@ Depth: deep (auth, external-io)
 | STRIDE category | Threat | Mitigation ID | Mitigation | Implemented by | Verified by |
 |---|---|---|---|---|---|
 | Elevation of privilege | With the gate lifted, hook definitions from a configuration layer the wrapper does not author, such as user-level Codex configuration, would run unsandboxed and without a trust prompt (FR1–FR4, NFR5) | TM-4 | Every launch keeps the config-isolation flags it carries today: `--ignore-user-config` where present, and `--ignore-rules`. The bypass flag is only ever added alongside them, so lifting the gate does not widen which configuration layers a launch loads. | task0002 AC-5 | VERIFICATION.md TS-6; Performance / Security Verification item TM-4 |
+
+#### Status after codex-repo-hook-trust
+
+The open question of the Rationale (do repository-local Codex hooks run under the bypass flag) was answered on Codex 0.160.0 by the codex-repo-hook-trust feature. The evidence is in `feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md`; this paragraph records the status and does not restate the evidence.
+
+Per-route verdicts, for hook definitions in the working directory's `.codex/config.toml` and `.codex/hooks.json` and in the same files one directory above (the repository root):
+- em-workflow default route (`--ignore-user-config`): repository hooks did not run, in readonly and in readwrite.
+- em-review default route (`--ignore-user-config`): repository hooks did not run, in readonly and in readwrite.
+- em-workflow `--litellm` route: repository hooks ran when the user configuration trusts the project (readonly and readwrite), and in readwrite also when it does not, because Codex marks an unmarked project trusted itself under a writable sandbox. This was the only executing route.
+
+Every "did not run" verdict has a control in which the same definitions ran in the same environment. Three events could not be observed on any route: PermissionRequest (`codex exec` runs with approval policy `never`) and SubagentStart / SubagentStop (Codex rejects the model's `spawn_agent` call). The protective specification below does not depend on them, because it keeps the whole project layer from loading.
+
+Change: the `--litellm` route of `em-workflow/scripts/run_codex_exec.sh` now runs `codex exec` with `CODEX_HOME` set to a launch-dedicated directory, created for the run and removed on exit. It holds a copy of the `litellm` profile and a `config.toml` that marks the working directory and every ancestor `untrusted`. The argv is unchanged; `-p litellm -m MODEL`, `--ignore-rules`, the guard registration and the bypass flag stay. The default routes of both wrappers keep their launch composition. A probe of the changed route, with the project trusted and with it unmarked, in both modes, showed no repository hook running (tests: `tests/test_codex_repo_hook_trust.py`, a stub check and a real-Codex check).
+
+The wrapper's guard still fires on every route, including the changed one, so the A1 exception (a route on which the guard no longer fires) is not triggered. The wrapper's `-c hooks.PreToolUse` merges with a repository PreToolUse definition rather than replacing it, so a repository hook that reaches execution runs alongside the guard and the guard is no defense against it.
+
+Consequences accepted with the change: the `--litellm` route no longer loads the user's base `config.toml` (only the `litellm` profile), so SPEC A3's statement that the path loads user-level configuration no longer holds for the base file; and a writable-sandbox run on a default route still writes a trust entry for the project into `$CODEX_HOME/config.toml` without reading it, which has no effect on those launches. Other Codex versions are outside this record.
