@@ -463,8 +463,12 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0002 of sca-scanner-project-config-isolation (FR13):
 # Phase R2's axis-2 text now describes the npm / cargo isolation directory,
 # the isolation failure tokens and the trusted configuration scope.
+# Refreshed by task0003 of sca-file-tasks-robustness (FR4, FR5): Phase R4's
+# "Triage filing" subsection, Phase R5's triage_filing receipt (YAML example
+# and prose) and Phase R6 gained the partial-failure fields and the
+# "triage filing incomplete" report.
 REVIEW_PHASE_SHA256 = (
-    "4b2deaba214fcee339cb5d7fb9e50294adefca68789a3791aa41d6d97c96bc6b"
+    "dea28e6e484f393547620c91e60143a48cd42ba5ccb6d985141e267927ae1b91"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

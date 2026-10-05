@@ -1,0 +1,61 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests: 7352 tests OK; check-plugin-invariants.py: all [PASS], exit 0
+final_failures: []             # re-executed after the last edit: python3 -m unittest discover -s tests (7424 tests OK) and check-plugin-invariants.py . (exit 0)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestAC1R4ReceiptItemNamesFiveFields
+      - tests.test_sca_triage_receipt_partial_failure.TestAC1MatcherCanFail
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: AssertionError, 'failed_package' (and the other four field names) not found in the Phase R4 'The receipt' item; test_matcher_holds_on_the_real_document returned False."
+  AC-2:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestAC2R5YamlBlockCarriesFiveKeys
+      - tests.test_sca_triage_receipt_partial_failure.TestAC2MatcherCanFail
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: AssertionError, 'failed_package' not found in the triage_filing block pairs {executed, branch, filed, appended, duplicates_suppressed, report_path} (same for the other four keys, their inline comments and the failure_reason comment tokens)."
+  AC-3:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestAC3R5ProseNamesFieldsAndDefinesUnattempted
+      - tests.test_sca_triage_receipt_partial_failure.TestAC3MatcherCanFail
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: the R5 receipt prose named none of the five fields; test_prose_names_every_new_field failed per field, test_prose_states_the_another_round_values failed on 'empty/null/0', test_prose_defines_unattempted_packages returned False."
+  AC-4:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestAC4R5ProseUntrustedTextStatement
+      - tests.test_sca_triage_receipt_partial_failure.TestAC4MatcherCanFail
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: AssertionError, 'copied from the `file-tasks` summary', '`task_create_failed`', '`task_update_failed`', 'no advisory-sourced text' and 'stderr' not found in the R5 receipt prose."
+  AC-5:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestAC5UnattemptedPackagePolicy
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: AssertionError, 'no automatic retry', 'only the remainder' and 'latest listing' not found in the Triage filing subsection; the once-in-document count was 0."
+  AC-6:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestAC6R6ReportsIncompleteFiling
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: AssertionError, '\"triage filing incomplete\"', '`triage_filing.unattempted_packages`', 'batch final result', 'disclosure only' not found in the Phase R6 slice, and 'completion condition does not change' not found in the Triage filing subsection. The no-gate_id-line test (R4/R5/R6) was already green: that property pre-existed and is a guard."
+  AC-7:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestOwnModuleStdlibOnly
+      - tests.test_sca_triage_receipt_partial_failure.TestAC1MatcherCanFail
+      - tests.test_sca_triage_receipt_partial_failure.TestAC2MatcherCanFail
+      - tests.test_sca_triage_receipt_partial_failure.TestAC3MatcherCanFail
+      - tests.test_sca_triage_receipt_partial_failure.TestAC4MatcherCanFail
+      - tests.test_sca_triage_receipt_partial_failure.TestAC8MatcherCanFail
+      - tests.test_sca_axis_triage_timing
+      - tests.test_batch_quiet_output_discipline.TestAuditItemSourceMap
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_source_map_has_eight_rows
+      - tests.test_batch_quiet_output_audit_persistence.TestAutonomousFailClosedRouteSourceMapRow.test_every_audit_item_still_has_exactly_one_row
+      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_batch_quiet_output_source_map_has_eight_rows
+    red_confirmed: true
+    red_reason: "The in-place moved pins were run against the original (seven-row, seven-item) batch-mode.md and failed: 7 != 8 in the audit-record-contract, audit-persistence, wrapper-fallback and discipline row-count tests, the discipline Reporting item-list sentence did not match, and no source-map row existed for 'triage filing incomplete'. The stdlib-only test, the matcher negative controls and the unchanged test_sca_axis_triage_timing run were green on first run (they guard properties of the new module and of existing text, not of the new document content); see unconfirmed_reds in the report."
+  AC-8:
+    tests:
+      - tests.test_sca_triage_receipt_partial_failure.TestAC8ReportingItem
+      - tests.test_sca_triage_receipt_partial_failure.TestAC8SourceMapRow
+      - tests.test_sca_triage_receipt_partial_failure.TestAC8NoNewStructure
+      - tests.test_sca_triage_receipt_partial_failure.TestAC8MatcherCanFail
+    red_confirmed: true
+    red_reason: "Before editing batch-mode.md: AssertionError, 0 != 1 occurrences of 'triage filing incomplete' in Reporting; no source-map row for it (rows[-2] was 'Every autonomous fail-closed-route resolution'); source map had 7 rows, not 8. The gate_id count, level-2 heading list, no-restatement and no-backtick-key tests were already green: unchanged-state guards."
