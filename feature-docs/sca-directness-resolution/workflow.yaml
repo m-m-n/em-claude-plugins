@@ -174,9 +174,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/sca-directness-resolution/task0001
   task0002:
     title: pyproject.toml direct names from tomllib with explicit skip
     plan: tasks/task0002.md
@@ -198,9 +198,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR6
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/sca-directness-resolution/task0002
   task0003:
     title: requirements include resolution and pip undetermined reporting
     plan: tasks/task0003.md
@@ -223,9 +223,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/sca-directness-resolution/task0003
 review:
   status: pending
   rounds_completed: 0
