@@ -2,7 +2,7 @@
 
 ## Overview
 
-Four independent fixes to the SCA axis: advisory short titles are whitespace-collapsed so every finding round-trips into file-tasks (task0001); an OS error inside the two filing helpers becomes the existing entry-point failure and the summary names the packages never attempted (task0002); review-phase.md's triage_filing receipt records partial failures and the incomplete-filing report (task0003); run_scan consumes the plans build_scan_jobs returns (task0004).
+Four independent fixes to the SCA axis: advisory short titles are whitespace-collapsed so every finding round-trips into file-tasks (task0001); an OS error inside the two filing helpers becomes the existing entry-point failure and the summary names the packages never attempted (task0002); review-phase.md's triage_filing receipt records partial failures and the incomplete-filing report, and batch-mode.md's batch report item list points at it (task0003); run_scan consumes the plans build_scan_jobs returns (task0004).
 
 ## Technology Stack
 
@@ -12,15 +12,16 @@ Four independent fixes to the SCA axis: advisory short titles are whitespace-col
 
 ## Layer Structure
 
-Not a layered application. Three artifact kinds are touched:
+Not a layered application. Four artifact kinds are touched:
 
 | Artifact | Role | May depend on |
 |----------|------|---------------|
 | `em-workflow/scripts/scan-dependencies.py` | One CLI with two subcommands (`scan`, `file-tasks`) | standard library only |
 | `em-workflow/references/review-phase.md` | Protocol the orchestrator follows; defines how the `file-tasks` summary is persisted (receipt) and reported (R6, batch final result) | the `file-tasks` summary contract below |
-| `tests/test_*.py` | unittest modules; load the script by file path (its name contains a hyphen) | the script and the reference, read-only |
+| `em-workflow/references/batch-mode.md` | Batch-run protocol; its `## Reporting` item list and audit-item source map are what the batch final report is assembled from | the triage_filing receipt review-phase.md defines (pointed at, never redefined) |
+| `tests/test_*.py` | unittest modules; load the script by file path (its name contains a hyphen) | the script and the references, read-only |
 
-The script never reads review-phase.md. review-phase.md describes the script's output; it never redefines it.
+The script never reads review-phase.md. review-phase.md describes the script's output; it never redefines it. batch-mode.md points at the receipt review-phase.md defines; it never restates it.
 
 ## Shared Components
 
@@ -51,9 +52,9 @@ Three tasks modify the same script in parallel. Each owns a disjoint region and 
 
 Rationale: keeps parent-side adoption merges mechanical. Affected: task0001, task0002, task0004.
 
-### D2: Existing regression-pin modules stay untouched outside task0004
+### D2: Existing test modules change only where a task names them
 
-`tests/test_sca_task_filing.py` and `tests/test_sca_axis_triage_timing.py` are not modified by any task; they must keep passing as-is, which is how NFR5 and AC6's existing pins are demonstrated. Only task0004 rewrites existing modules (the three that call `build_scan_jobs`). Affected: all tasks.
+`tests/test_sca_task_filing.py` and `tests/test_sca_axis_triage_timing.py` are not modified by any task; they must keep passing as-is, which is how NFR5 and AC6's existing pins are demonstrated. Two tasks modify existing modules, on disjoint sets: task0004 rewrites the three that call `build_scan_jobs`; task0003 moves, in place, the seven-item / seven-row pins on batch-mode.md's `## Reporting` list and audit-item source map to eight in the four modules that carry them, deleting no assertion. Affected: all tasks.
 
 ### D3: Round-trip tests do not depend on the new summary key
 
@@ -74,9 +75,12 @@ The whitespace collapse happens at the single title-assembly point every normali
 | Parallel edits to `scan-dependencies.py` conflict at merge | Low | Low | D1 region ownership; parent-side adoption protocol |
 | Moving `build_scan_jobs` from lexical to real-path grouping changes expectations of existing grouping tests (symlinked aliases) | Medium | Medium | task0004 rewrites those tests as plan checks and adds alias / `..` cases (TS-9) |
 | A refactor of the run side drops or reorders the binding check relative to isolation and launch | Low | High | task0004 AC-5 pins the order with a symlink swapped after planning (TM-5) |
-| The batch final report never shows "triage filing incomplete" because the item list owned by `references/batch-mode.md` (`## Reporting`) is not updated — SPEC scopes the statement to review-phase.md only | Medium | Medium | Open question below; VERIFICATION.md manual item checks the two documents read consistently |
+| batch-mode.md's new Reporting item or source-map row restates receipt definitions owned by review-phase.md and drifts from them | Low | Medium | task0003 AC-8 (pointer only; negative phrase checks) |
+| The added source-map row and Reporting item break the seven-row / seven-item pins in four existing batch-mode test modules | High | Low | task0003 owns moving those pins in place (D2, task0003 AC-7) |
 | Docstring phrases pinned by `tests/test_sca_scanner_project_config_isolation.py` are lost while rewriting run-side docstrings | Medium | Low | task0004 AC-7 |
 
 ## Open Questions
 
-- [ ] `references/batch-mode.md`'s `## Reporting` section enumerates what a batch run's final report MUST include. SPEC FR5 places the "triage filing incomplete" statement in review-phase.md only. Should batch-mode.md's list (and its audit-item source map, pointing at `reviews/roundN.yaml` `triage_filing.unattempted_packages`) also name it? Not planned in this feature.
+- [x] Should `references/batch-mode.md`'s `## Reporting` list and its audit-item source map also name "triage filing incomplete"? Resolved by create-plan-q0001 (`add-batch-mode-reporting`): task0003 adds one Reporting item and one source-map row pointing at `reviews/roundN.yaml` `triage_filing.unattempted_packages` / `failed_package`, with review-phase.md staying the definition owner.
+
+No open questions remain.
