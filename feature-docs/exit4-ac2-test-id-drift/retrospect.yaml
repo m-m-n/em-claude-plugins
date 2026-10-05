@@ -1,0 +1,81 @@
+feature: exit4-ac2-test-id-drift
+collected_at: '2026-10-05T15:49:10+09:00'
+session_ids:
+- 01a10ad1-b572-7323-81ac-779fc4457c1d
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みでバケット 1（確率 0.99）が支配的となり reduced に決定した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 0.68
+        confidence: 0.67
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.32
+          '1': 0.67
+          '2': 0.01
+          '3': 0.0
+      observed_at: '2026-10-05T14:50:27+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.01
+        confidence: 0.98
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.99
+          '2': 0.01
+          '3': 0.0
+      observed_at: '2026-10-05T14:56:22+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - test-docs/exit4-tip-argument/task0002.tests.yaml
+      - tests/test_exit4_tip_argument_version_bump.py
+      changed_lines_approx: 30
+      new_functions_needed: 1
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      work_still_required_evidence: main の test-docs/exit4-tip-argument/task0002.tests.yaml:16
+        は存在しない旧メソッド名を参照しており、unittest で指定すると AttributeError になる。実在するメソッドは tests/test_exit4_tip_argument_version_bump.py:143
+        で、同ファイル:149 は em-review と em-workflow のバージョンが異なることを検証している。対象モジュールの既存10テストは成功するが、記録の
+        ID 解決は検証していない。test-docs/**/*.tests.yaml の acceptance test ID を unittest で解決する既存テストは見つからず、tests/test_implementer_tests_yaml_record_contract.py:298
+        の関連テストも説明文中のキーの存在を確認するだけである。修正対象には記録の red_reason（test-docs/exit4-tip-argument/task0002.tests.yaml:18）、AC-2
+        の説明2箇所（tests/test_exit4_tip_argument_version_bump.py:10、同ファイル:122）、AC-4 のインベントリ（同ファイル:40）も含まれる。約30行はこれらの修正と、同モジュールへの記録
+        ID 解決テスト1件の追加を対象とする見積もりである。呼び出し元・依存先の3件は当該記録と、同モジュール:53・:54 が指定する2つの JSON
+        ファイルとして数えた。標準ライブラリの使用は test/README.md:7 に規定されている。記録のキー構造は維持し、ID の解決結果がエラーから実在テストの解決に変わる。
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 1
+      body_change_kind: wording_or_rule_addition
+      change_containment: single_module
+      caller_and_dependency_count: 3
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates: []
