@@ -1,18 +1,90 @@
 schema_version: 1
 feature: sca-file-tasks-robustness
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: cb65f380ca5898d21485c3df1c1e542281bb89f8
 last_input_digest: sha256:6e81f3b2dfcd5e275bc33f79da3d39795646430ca8e266e53830c5ca2fb25ed0
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-05T12:36:53+09:00'
+    questions:
+    - question_id: q-build-scan-jobs-unification
+      status: answered
+    - question_id: q-unattempted-policy
+      status: answered
+    - question_id: q-design-step
+      status: answered
+answers:
+  q-build-scan-jobs-unification:
+    question_id: q-build-scan-jobs-unification
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T12:36:53+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - plan-units
+    freeform: null
+    normalized_answer: 'plan-units: build_scan_jobs becomes the single planning stage (validate, resolve,
+      real-path grouping via _verified_groups, target selection) and returns (plans, skip_reasons) where
+      each plan is an unlaunched per-group unit (ecosystem, directory/real root, files, target, executable).
+      run_scan consumes exactly those plans and does not repeat target selection; binding check, per-group
+      isolation directory, pip lockfile preparation and build_scan_job stay on the run side in their current
+      order (no path checks when validate/resolve fails; isolation prepared only after binding passes).
+      Group order, pip unverified-path handling, output object and reason strings are unchanged. Tests
+      that assumed built job dicts from build_scan_jobs are rewritten to verify plans; argv/env/cwd assertions
+      move to build_scan_job and run_scan tests.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose plan-units, matching
+      the analyst recommendation: build_scan_jobs is lexical and cannot handle npm/cargo prepared inputs
+      or pip lockfiles (scan-dependencies.py:1085, :1098); production groups by real path after validate/resolve
+      (:2968); sharing grouping+target selection keeps per-group isolation lifetime and pip one-to-many
+      runs (:2818, :2767, :2426). Rejected: prepare-all-then-build (changes isolation lifetime), delete-build-scan-jobs
+      (contradicts done-definition), gate-only (paths stay split). Orchestrator adopted Codex choice (comparatively
+      better). Opus escalation not run. Recorded as assumption (batch-policies record_as_assumption).'
+  q-unattempted-policy:
+    question_id: q-unattempted-policy
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T12:36:53+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - record-and-surface
+    freeform: null
+    normalized_answer: 'record-and-surface: file_tasks adds a 5th summary key unattempted_packages, defined
+      as ''the failed package and every package after it that was never attempted'', generated from the
+      recovered/de-duplicated/truncated group processing order (malformed findings excluded). It is present
+      on every return branch ([] on full success, report branch, and another-round). The triage_filing
+      receipt records it alongside the four task-listed keys in all three review-phase.md places (R4 receipt,
+      R5 YAML example, R5 prose). No automatic retry; the run surfaces ''triage filing incomplete'' with
+      the packages in R6 and in the batch final result (R6 alone is suppressed in batch); the review completion
+      condition is unchanged. A later re-run of file-tasks recovers only the remainder via duplicate detection,
+      guaranteed only when the latest listing reflects the filed packages.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1) chose record-and-surface,
+      matching the analyst recommendation: the loop stops at the first failure and later packages are
+      recorded nowhere (scan-dependencies.py:537, :547, :554); keeps report_path report-branch-only and
+      the once-per-review filing rule (review-phase.md:911, :806); re-run suppression of filed packages
+      is already tested (tests/test_sca_task_filing.py:826, :850). Rejected: partial-report-fallback (widens
+      report_path meaning), retry-once (adds a second filing per review). Orchestrator adopted Codex choice.
+      Opus escalation not run. Recorded as assumption.'
+  q-design-step:
+    question_id: q-design-step
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T12:36:53+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously: accept the analyst''s recommendation (skip the design step;
+      no UI).'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously.
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:6e81f3b2dfcd5e275bc33f79da3d39795646430ca8e266e53830c5ca2fb25ed0
-  output_digest: null
+  output_digest: sha256:5481a86844678119473aeefeb2715f07c67f20c59b68bd81313a311aa3db0680
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -20,7 +92,18 @@ stale_redispatch_count: 0
 resolved_input_cache:
   reference_scan_targets:
     resolved_at_generation: 1
-    paths: ["em-workflow/scripts/scan-dependencies.py", "em-workflow/references/review-phase.md", "tests/test_sca_task_filing.py", "tests/test_sca_scan_normalization.py", "tests/test_sca_axis_triage_timing.py", "tests/test_sca_scan_job_grouping.py", "tests/test_sca_scan_execution.py", "tests/test_sca_scan_invocation.py", "tests/test_sca_scanner_project_config_isolation.py", "tests/test_sca_pip_lockfile_audit.py", "tests/test_sca_per_project_scan_binding.py"]
+    paths:
+    - em-workflow/scripts/scan-dependencies.py
+    - em-workflow/references/review-phase.md
+    - tests/test_sca_task_filing.py
+    - tests/test_sca_scan_normalization.py
+    - tests/test_sca_axis_triage_timing.py
+    - tests/test_sca_scan_job_grouping.py
+    - tests/test_sca_scan_execution.py
+    - tests/test_sca_scan_invocation.py
+    - tests/test_sca_scanner_project_config_isolation.py
+    - tests/test_sca_pip_lockfile_audit.py
+    - tests/test_sca_per_project_scan_binding.py
     truncated: false
   design_system_candidates:
     resolved_at_generation: 1
