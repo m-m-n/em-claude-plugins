@@ -31,3 +31,17 @@ records:
     still resolves node etc. from the reviewed tree, so keep only absolute entries
     in order and omit PATH when none remain. Orchestrator judged the mapping and agreed;
     Opus escalation not run.'
+- question_id: create-spec.design-system
+  packet_id: null
+  answered_at: '2026-10-05T23:16:31+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - top_candidate_or_none
+  freeform: null
+  normalized_answer: 'kind: none, paths: []'
+  resolution_note: 'gate: create-spec.design-system; policy top_candidate_or_none.
+    The only discovered path (em-workflow/references/templates/design-tokens.yaml)
+    is em-workflow''s own distributed schema template, which requirements-analyst
+    classified as not the project''s design system, so there is no project design-system
+    candidate -> none. Design step is skipped. Codex not consulted.'
