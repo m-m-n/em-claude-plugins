@@ -1,0 +1,33 @@
+feature: codex-repo-hook-trust
+collected_at: "2026-10-05T12:10:00+09:00"
+session_ids: [01a10a00-914f-76d2-8a75-7725a2dc7bce]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0002
+      files: []
+  verification_failures:
+    # verify round 1（rework 前）の failed_items。rework round 1（task0002）後の verify は pass
+    - id: TS-8
+      note: "HOOK-TRUST-FINDINGS.md section 2 records that `codex features list` (and codex --version / --help) ran without a temporary HOME/CODEX_HOME; on 0.160.0 `codex features list` reads $CODEX_HOME/config.toml, so the FR1 investigation read the user's real Codex home (NFR1). Tests themselves use temporary homes and pass."
+      category: security
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読みで score 1.79（バケット 2: 0.75）となり、閾値表から full を採用した"
+    bases:
+      - basis: description_only
+        score: {"type": "score", "score": 1.18, "confidence": 0.81, "probabilities": {"0": 0.01, "1": 0.81, "2": 0.18, "3": 0.0}}
+        observed_at: "2026-10-05T09:46:00+09:00"
+      - basis: description_plus_code
+        score: {"type": "score", "score": 1.79, "confidence": 0.74, "probabilities": {"0": 0.01, "1": 0.22, "2": 0.75, "3": 0.02}}
+        observed_at: "2026-10-05T09:49:30+09:00"
+    pre_survey_estimate: {"changed_lines_approx": 0, "new_functions_needed": 0, "new_files_needed": [], "new_dependencies_needed": [], "covering_tests_exist": false, "work_still_required": true, "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 0, "body_change_kind": "new_logic", "change_containment": "multiple_modules", "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "FR1 の実機調査で `codex features list` 等を一時 HOME/CODEX_HOME なしで実行し、NFR1（利用者の ~/.codex を読まない）に反して verify で TS-8 が fail した。調査コマンドも一時ホーム下で走らせる規律を task 計画に明記する余地がある"
+  - "Codex 事前調査の pre_survey_estimate は行数・新規関数を 0（未確定）と返した。調査系タスクでは規模見積りが立たない"
+  - "review round 1 の evaluator が閾値未満として残した観察: --litellm の readwrite 起動で起動専用ホームの config.toml をサンドボックス内コマンドが書き換えうる（セッション開始後の再読込は未確認、low 相当）"
+  - "task0002 の deviation 2 件はパスを名指ししておらず（tests_yaml_path と feature-docs 編集の説明）、files への自動追加は行わなかった"
