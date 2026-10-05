@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-parser-fixes
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: e6bbecff865460ce2291b8f8ca12317b19edd67b
+last_input_digest: sha256:f6eafd573bd6fbb662750d99ea85b7362b558afb1530257e18b26fb2e6ef34a3
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:f6eafd573bd6fbb662750d99ea85b7362b558afb1530257e18b26fb2e6ef34a3
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
