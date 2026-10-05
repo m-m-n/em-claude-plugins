@@ -1,0 +1,36 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_matches_baseline_patch
+      - tests.test_exit4_tip_argument_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "Observed on a scratch copy of the final module with only BASELINE_PATCH reverted to 44 (FORGED_PRE_BUMP_VERSION left at 0.1.68): test_baseline_matcher_rejects_forged_pre_bump_version failed with 'AssertionError: AssertionError not raised' and test_forged_pre_bump_version_matches_baseline_patch failed with 'AssertionError: Tuples differ: (0, 1, 68) != (0, 1, 44)'. This was a revert-and-observe run made after the change, not a run before it. Before the change the unmodified module was green on a throwaway tree whose both registries read 0.1.68 (10 tests OK), which is the defect; with BASELINE_PATCH = 68 the same throwaway tree fails test_version_is_past_baseline and test_em_workflow_entry_version_is_past_baseline with 'AssertionError: (0, 1, 68) not greater than (0, 1, 68)'. The two live-registry tests pass on the current tree (em-workflow 0.3.16) both before and after."
+  AC-2:
+    tests:
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_matches_baseline_patch
+    red_confirmed: true
+    red_reason: "With only BASELINE_PATCH changed to 68 and FORGED_PRE_BUMP_VERSION still '0.1.44', test_forged_pre_bump_version_matches_baseline_patch failed with 'AssertionError: Tuples differ: (0, 1, 44) != (0, 1, 68)'; it went green once FORGED_PRE_BUMP_VERSION read '0.1.68'. FORGED_VERSION_A / FORGED_VERSION_B were not touched (the equality-matcher tests stay green throughout)."
+  AC-3:
+    tests:
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_matches_baseline_patch
+    red_confirmed: true
+    red_reason: "Written first while the constants read 44 / '0.1.44' (green, pair consistent); after changing only BASELINE_PATCH to 68 it failed with 'AssertionError: Tuples differ: (0, 1, 44) != (0, 1, 68)'; after FORGED_PRE_BUMP_VERSION became '0.1.68' it passed. The test uses only _parse_version and the two constants: no new import, no git invocation."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Docstring/comment wording of the module; no executable check can fail on it without pinning the literal 68 or matching comment text, which the plan rules out (SPEC A3). Searched tests/ by path (tests/test_exit4_tip_argument_version_bump.py) and basename (test_exit4_tip_argument_version_bump): the only other hits are docstring mentions in tests/test_heredoc_stdin_guard_version_bump.py, which does not read the module, so no existing test covers this criterion. Verified by a text search of the final module for 44 (no occurrence) and by reading the five Change 4 locations; no red state occurred for this change."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Only the red_reason values of AC-1/AC-2/AC-3 in test-docs/exit4-tip-argument/task0002.tests.yaml changed; no executable check can fail on that wording. Searched tests/ by path (test-docs/exit4-tip-argument/task0002.tests.yaml) and basename (task0002.tests.yaml): the only hit is tests/test_codex_wrapper_fallback_removal_integrated_checks.py, which names a different feature's record, so no existing test reads this file. Verified by git diff showing only the three red_reason lines differ, by a YAML parse, and by the quoted 'AssertionError: (0, 1, 68) not greater than (0, 1, 68)' text matching the throwaway-tree red run; no red state occurred for this change."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "Suite exit code plus a changed-paths check, not a single failing-first test. The full suite ran 7352 tests OK before the change and 7353 tests OK after (the one added test is the tie test); the changed paths are the two files in Scope plus this task's own test-docs record, with no plugin registry, SPEC.md, task0002.md or round2.yaml among them. The module imports only json, re, unittest and pathlib. No red state occurred for this criterion."
