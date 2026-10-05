@@ -124,7 +124,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/sca-absolute-executable-path/task0001
   task0002:
     title: Child PATH keeps only absolute entries
     plan: tasks/task0002.md
@@ -145,7 +146,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/sca-absolute-executable-path/task0002
 review:
   status: pending
   rounds_completed: 0
