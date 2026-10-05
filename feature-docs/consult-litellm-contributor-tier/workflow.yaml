@@ -106,7 +106,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: b0a8e6fbc8d2bae9b425ad59f40eba2d02ad8226
 tasks:
   task0001:
     title: Gate the litellm consultation model on recorded contributor consent
