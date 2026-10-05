@@ -1,0 +1,60 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests: 7412 tests OK before any edit; check-plugin-invariants.py: all PASS
+final_failures: []             # re-executed after the implementation: 7480 tests OK, and again after merging the parent (task0003 included): 7516 tests OK; check-plugin-invariants.py: all PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_routeback_record_carve_out.TestCarveOutDefinition
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection.test_three_condition_predicate_flags_the_pre_change_definition
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection.test_definition_phrases_are_absent_from_pre_change_definition
+    red_confirmed: true
+    red_reason: "Run against the unmodified implement-phase.md, test_definition_states_three_conditions failed with Lists differ: ['record_literal', 'line_equality', 'failed_outcome'] != [], and test_definition_lists_each_non_match_case / test_definition_cites_workflow_schema_next_to_record_name failed (new wording absent). The scoped-once and reclassifies-only retention tests were green before and after."
+  AC-2:
+    tests:
+      - tests.test_routeback_record_carve_out.TestI2bStep1Clause
+      - tests.test_routeback_record_carve_out.TestStopHookBullet
+      - tests.test_routeback_record_carve_out.TestSitesAgreeOnTheMatchRule
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection.test_three_condition_predicate_flags_the_pre_change_i2b_clause
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection.test_three_condition_predicate_flags_the_pre_change_stop_bullet
+    red_confirmed: true
+    red_reason: "Against the unmodified document, test_i2b_clause_states_three_conditions and test_stop_hook_bullet_states_three_conditions failed with Lists differ: ['record_literal', 'line_equality', 'failed_outcome'] != []; test_stop_hook_bullet_says_hook_does_not_block failed ('the hook does not block that feature (exit 0)' not found); test_i2b_clause_routes_non_match_to_failure_handling failed."
+  AC-3:
+    tests:
+      - tests.test_routeback_record_carve_out.TestI2cRecordItem
+      - tests.test_routeback_record_carve_out.TestDigestPinsAreSensitive
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection.test_record_item_is_absent_from_pre_change_write_set
+    red_confirmed: true
+    red_reason: "Against the unmodified document, test_record_item_occurs_exactly_once, test_record_item_sits_between_status_reset_and_gate_tail, test_record_item_sets_record_to_last_failed_event_line and test_removing_the_record_item_restores_the_base_i2c_text failed (the item was absent, so removal could not be performed). The exit-4 bullet digest, the failed_kind-through-record span, the residual sentence and the pending-within-60 checks were green before and after (retention checks)."
+  AC-4:
+    tests:
+      - tests.test_routeback_record_carve_out.TestReasonSentence
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection.test_reason_matchers_flag_the_pre_change_sentence
+    red_confirmed: true
+    red_reason: "Against the unmodified document, test_i2a_no_longer_claims_the_combination_arises_only_from_reset failed (the old claim was present) and test_reason_names_the_route_back_reset_origin / test_reason_names_the_not_reached_launch_state_commit_origin / test_reason_states_the_record_match_tells_the_origins_apart failed (new wording absent). The allocation-rule citation and task0001 / renumber absence checks were green before and after (retention checks)."
+  AC-5:
+    tests:
+      - tests.test_routeback_record_carve_out.TestFr5AdditionAndNeighbours
+      - tests.test_routeback_record_carve_out.TestDivergenceParagraph
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection.test_fr5_sentence_is_absent_from_pre_change_definition
+    red_confirmed: true
+    red_reason: "Against the unmodified document, test_fr5_sentence_is_in_region_p and test_region_p_items_keep_their_relative_order failed (FR5 sentence absent) and test_fr5_sentence_does_not_sit_between_replacement_and_premise errored (substring not found); test_divergence_paragraph_states_record_match_requirement failed. The in-flight sentence, replacement-through-premise raw span and one-Because / one-so checks were green before and after (byte-identity retention checks)."
+  AC-6:
+    tests:
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleDetection
+      - tests.test_routeback_record_carve_out.TestPreChangeSampleGuards
+      - tests.test_routeback_record_carve_out.TestModuleUsesOnlyStandardLibrary
+    red_confirmed: false
+    red_reason: "The negative proofs assert that a verbatim base-revision sample lacks the new wording, so they pass by construction when written; no red state occurred for them. The paired positive matchers were observed failing against the unmodified document (AC-1 to AC-5), which is the same text the samples were captured from."
+  AC-7:
+    tests:
+      - tests.test_routeback_record_carve_out.TestProtectedTextIsUnchanged
+      - tests.test_prelaunch_inprogress_pending_launched
+      - tests.test_exit4_tip_argument_consistency
+      - tests.test_hook_classification_pin
+      - tests.test_failed_kind_write_paths
+      - tests.test_failed_kind_resume_reentry
+      - tests.test_recycled_task_id_consistency
+      - tests.test_routeback_reset_scope_consistency
+      - tests.test_implement_routeback_gate
+    red_confirmed: false
+    red_reason: "A dedicated new module for Region L is out of scope (task0003 owns Region L, so a permanent digest pin would break once it merges); the existing modules listed detect their pinned behavior and passed unmodified before and after the change, and TestProtectedTextIsUnchanged pins the Branch & Worktree Model and the hook classification table by digest; no red state occurred for this change. Region L byte-identity to the base revision was checked once by script on this branch. The three follow-only modules needed no edit: none of their pins matched wording this task changed."
