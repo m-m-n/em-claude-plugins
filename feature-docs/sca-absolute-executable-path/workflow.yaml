@@ -96,7 +96,8 @@ workflow:
   completed_at_commit: bfa6007f312c7cad0848687c4ab45f7acd10165e
   base_commit: e69f212bcd3934e61ca3c8c023e2505df1c43ef4
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 1d9a93c9c08c85806a6ee968d68f3d0c6e1deeef
 - id: verify
   status: pending
   result: null
@@ -150,8 +151,15 @@ tasks:
     status: merged
     branch: em-workflow/sca-absolute-executable-path/task0002
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, spec, performance, architecture]
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor: [comprehensive, security, spec, performance, architecture]
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 実行ファイルの解決は PATH の絶対パスの項目だけを探索する
