@@ -822,9 +822,23 @@ progress and no user-resolvable candidates → `no-progress`.
    whether triage filing ran this round, which branch was taken (the
    external task system or the report), and the packages filed / appended
    to / suppressed as duplicates, plus the report path when the report
-   branch ran. The field is present and empty when the disposition was
+   branch ran. It also records `failed_package`, `failure_reason`,
+   `malformed_findings`, `listing_dropped_count` and
+   `unattempted_packages`, each taken from the `file-tasks` summary key of
+   the same name. The field is present and empty when the disposition was
    `another-round`. This is disclosure and audit only: it introduces no
    new gate identifier and never affects the completion gate below.
+5. **An incomplete filing**: when the external task system fails partway
+   through a filing run, the packages the run never attempted are recorded
+   in `unattempted_packages` (Phase R5 defines it). There is no automatic
+   retry. When `unattempted_packages` is non-empty, the run reports
+   "triage filing incomplete" together with those packages, in the Phase R6
+   report and in the batch final result (in a `--batch` run the R6 body is
+   withheld, so the batch final result is where it appears;
+   `references/batch-mode.md`'s `## Reporting` item list is the route). The
+   review completion condition does not change. Running `file-tasks` again
+   files only the remainder through its duplicate detection; this holds
+   only when the latest listing already shows the packages filed earlier.
 
 The branch between filing and report is decided mechanically from R0's
 probe result — no question is put to the user, in either interactive or
@@ -909,6 +923,11 @@ triage_filing:               # present and empty when this round's disposition w
   appended: []
   duplicates_suppressed: []
   report_path: null            # set only when branch == report
+  failed_package: null         # package whose filing failed partway, null when none
+  failure_reason: null         # task_create_failed | task_update_failed, null when no failure
+  malformed_findings: []       # findings the script skipped: position + fixed-token reason
+  listing_dropped_count: 0     # task-listing entries the script dropped item-wise
+  unattempted_packages: []     # failed package + later packages never attempted, in processing order
 ```
 
 `perspective_runs` entries gain a `role` field: `primary` (a `primary_chain`
@@ -957,11 +976,30 @@ not touch — remains the batch-visible channel for this content.
 The round record also persists the triage-filing receipt under a root
 `triage_filing` field: an `executed` flag, the `branch` taken (`ntd` /
 `report`), the packages `filed` / `appended` / `duplicates_suppressed`, and
-`report_path` (set only when the report branch ran) — see "Triage filing"
-above (Phase R4) for when this runs. `executed` is `false` and every other
-value is empty/null when this round's disposition was `another-round`.
-This is disclosure and audit only: it introduces no new gate identifier
-and never affects the completion gate below.
+`report_path` (set only when the report branch ran), plus five fields that
+record how the filing run ended: `failed_package` (the package whose filing
+failed partway, else null), `failure_reason` (`task_create_failed` or
+`task_update_failed`, null when no failure occurred), `malformed_findings`
+(the findings the script skipped, each as a position and a fixed-token
+reason), `listing_dropped_count` (the number of task-listing entries the
+script dropped item-wise) and `unattempted_packages` (defined below) — see
+"Triage filing" above (Phase R4) for when this runs. `executed` is `false`
+and every other value is empty/null/0 when this round's disposition was
+`another-round`: `failed_package` and `failure_reason` are null,
+`malformed_findings` and `unattempted_packages` are `[]`, and
+`listing_dropped_count` is `0`.
+
+`unattempted_packages` is the failed package followed by every later
+package never attempted, in processing order, with malformed findings
+excluded; it is empty when filing completed or the report branch ran.
+
+Every receipt value is copied from the `file-tasks` summary and nothing
+else enters the receipt. `failure_reason` is `task_create_failed`,
+`task_update_failed` or null, and nothing else; no advisory-sourced text
+and no OS-error message text is ever recorded in the receipt (such text
+goes to the script's stderr only). This is disclosure and audit only: it
+introduces no new gate identifier and never affects the completion gate
+below.
 
 develop-駆動: update workflow.yaml `review` block (rounds_completed,
 perspectives, residual_critical_high, needs_rework, status), then commit
@@ -1044,6 +1082,11 @@ Each critical/high entry of the round record's `dismissed_sites` is
 rendered as one line (file, line, reason) in its own subsection — an
 interactive-mode-only surfacing of Phase R5's `dismissed_sites`
 disclosure, not a new gate.
+When the round record's `triage_filing.unattempted_packages` is non-empty,
+the report also shows "triage filing incomplete" together with that package
+list (Phase R4's "Triage filing" states the policy). This is disclosure
+only: it introduces no new gate identifier and never affects the completion
+gate.
 タメ語・女性・体言止めなし。develop-駆動では末尾に round 記録のパスと
 workflow.yaml の review サマリ更新結果を1行ずつ添える。
 
@@ -1052,4 +1095,6 @@ context (`references/batch-mode.md` defines the withholding), while the
 round record `reviews/round{N}.yaml` Phase R5 writes above — its content,
 fields and write timing — are unchanged; this is what keeps this phase's
 findings, including any deferred at Phase R5's cap, auditable from the run
-report.
+report. The batch final result carries the same "triage filing incomplete"
+line with the same packages, assembled from that round record through
+`references/batch-mode.md`'s `## Reporting` item list.
