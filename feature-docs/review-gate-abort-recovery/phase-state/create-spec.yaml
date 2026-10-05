@@ -6,16 +6,83 @@ generation: 1
 base_revision: 3058404c3e96445f99a370b98ee2a77a5cf135da
 last_input_digest: sha256:1fb80a0b449e4a41b4ba4ff954fb9c109f84ca093f7cc7dd494259d99a4565c0
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: '2026-10-05T15:05:26+09:00'
+    questions:
+    - question_id: requirement.recovery-approach
+      status: answered
+    - question_id: requirement.legacy-failed-recovery
+      status: answered
+    - question_id: requirement.failed-reservation-scope
+      status: answered
+    - question_id: requirement.resume-path
+      status: answered
+    - question_id: design-step.decision
+      status: issued
+answers:
+  requirement.recovery-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_pending
+    freeform: null
+    normalized_answer: keep_pending
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option keep_pending; record_as_assumption:
+      true; Codex: review.status は §10 step 1 で既に pending。workflow[review].status
+      もそろえれば停止条件 3 の例外を増やさず復帰できる'
+  requirement.legacy-failed-recovery:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - document_procedure
+    freeform: null
+    normalized_answer: document_procedure
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option document_procedure; record_as_assumption:
+      true; Codex: ゲート中断による failed と記録で確認できる場合に限り両 status を pending・needs_rework を
+      true に戻す手順を SSOT に書き、resume_conditions から参照する。exit4-tip-argument は既に completed
+      なので変更不要'
+  requirement.failed-reservation-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - declare_step_semantics
+    freeform: null
+    normalized_answer: declare_step_semantics
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option declare_step_semantics; record_as_assumption:
+      true; Codex: 927 行目の予約は perspective_runs の evaluator エントリ対象。R5 に適用範囲とゲート中断で
+      failed を書かない規則を明記し、workflow-schema.md の許容値は変えない'
+  requirement.resume-path:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T15:05:26+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - rerun_review_round
+    freeform: null
+    normalized_answer: rerun_review_round
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); mapped to option rerun_review_round; record_as_assumption:
+      true; Codex: obsolete packet の再提示禁止（question-resolution.md）と整合し、新しい再開分岐を作らずに済む'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:1fb80a0b449e4a41b4ba4ff954fb9c109f84ca093f7cc7dd494259d99a4565c0
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: invalid_input
+  input_digest: sha256:1fb80a0b449e4a41b4ba4ff954fb9c109f84ca093f7cc7dd494259d99a4565c0
+  output_digest: sha256:5fb31000283999f327ae3b25b7230d931e87d132a61fa48c21d85f07987977a2
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-spec-run-0001: validate-worker-output.py gate_id error: create-spec.design-step
+  requires option_id decide_autonomously to be offered'
