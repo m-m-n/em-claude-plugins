@@ -1,0 +1,57 @@
+task_id: task0001
+# Baseline run (python3 -m unittest discover -s tests) before any file was
+# touched: Ran 8414 tests, OK (skipped=1).
+baseline_failures: []
+# Actually re-executed after the implementation: Ran 8422 tests (the 8414 of
+# the baseline plus the 8 new cases), OK (skipped=1).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_1_determines_contributor_consent_with_the_pinned_command
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_1_runs_the_check_only_for_an_available_entry_before_turn_one
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_1_states_the_true_and_false_rule
+    red_confirmed: true
+    red_reason: "Run against the unmodified question-resolution.md all three failed: AssertionError: 'contributor_consented' not found in '1. **Availability probe.** ...' (the field name and the muse_guard.py consent-check command were absent), 'this entry is judged available' not found, and 'true when the command succeeds and prints one line' not found."
+  AC-2:
+    tests:
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_2_names_both_invocations_and_the_consent_value
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_2_ties_each_invocation_to_its_consent_value
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_2_standard_form_check_is_not_satisfied_by_the_contributor_form
+    red_confirmed: true
+    red_reason: "Run against the unmodified document all three failed: AssertionError: 'contributor_consented' not found in '2. **Wrapper invocation.** ...', '`--litellm muse-spark-contributor` when it is true' not found, and '--litellm muse-spark-contributor' not found (step 2 carried only the fixed standard example). The prefix trap was also checked by a mutation run against a scratch copy of the revised document with every standalone standard form replaced by a placeholder: test_step_2_names_both_invocations_and_the_consent_value and test_step_2_ties_each_invocation_to_its_consent_value failed, so the standard-form check is not satisfied by the contributor form alone."
+  AC-3:
+    tests:
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_consent_value_is_fixed_for_the_whole_consultation
+    red_confirmed: true
+    red_reason: "Run against the unmodified document it failed: AssertionError: 'every `litellm` turn of that consultation uses it' not found in the step 1 to step 2 range."
+  AC-4:
+    tests:
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_contributor_read_mapping_is_cited_not_restated
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_probe_states_two_entries_in_order
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_wrapper_invocation_carries_the_litellm_flag
+      - tests.test_consultation_harness_chain.TestRegistriesAssignOnlyMuseSpark
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests listed here detect the preserved behavior (the chain entry litellm with the model muse-spark, the '(cited, not restated)' citation, the 'never edited to reach that tier' sentence, the --litellm flag and the unchanged registries); no red state occurred for this change, they stayed green with their assertions unchanged before and after the revision. That the change set touches only the two files in Scope (plus this record) was checked with git diff --name-only, which is not a test."
+  AC-5:
+    tests:
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_1_determines_contributor_consent_with_the_pinned_command
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_1_runs_the_check_only_for_an_available_entry_before_turn_one
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_1_states_the_true_and_false_rule
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_2_names_both_invocations_and_the_consent_value
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_2_ties_each_invocation_to_its_consent_value
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_step_2_standard_form_check_is_not_satisfied_by_the_contributor_form
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_consent_value_is_fixed_for_the_whole_consultation
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_a_failed_consent_check_yields_false_even_when_it_printed_a_line
+    red_confirmed: true
+    red_reason: "The red run was recorded before question-resolution.md was revised: python3 -m unittest tests.test_consultation_harness_chain.TestConsultationProcedureChain ran 21 tests with failures=8, exactly these 8 new cases, and the 13 existing cases passed. All 8 pass against the revised document."
+  AC-6:
+    tests:
+      - tests.test_consultation_harness_chain.TestConsultationProcedureChain.test_a_failed_consent_check_yields_false_even_when_it_printed_a_line
+    red_confirmed: true
+    red_reason: "Run against the unmodified document it failed: AssertionError: 'A failure takes precedence over the one-line rule' not found in the step 1 range."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable check of this criterion can be made to fail on its own. The stdlib-only half: the new cases add no import beyond importlib.util, which the module already imported; searched tests/ by the path tests/test_consultation_harness_chain.py and the basename test_consultation_harness_chain and found no test that reads this module's imports (the sys.stdlib_module_names checks in other test modules are scoped to their own files). The full-suite half (python3 -m unittest discover -s tests) is a regression gate that passed, 8422 tests OK, with no red state of its own; the red observed was the 8 new cases failing in the class-level run recorded under AC-5."
