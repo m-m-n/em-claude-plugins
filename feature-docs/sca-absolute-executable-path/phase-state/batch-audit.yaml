@@ -1,0 +1,33 @@
+schema_version: 1
+feature: sca-absolute-executable-path
+records:
+- question_id: requirement.resolve-relative-path-entries
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-05T23:08:49+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - skip_relative_entries
+  freeform: null
+  normalized_answer: PATH の相対・空の項目を探索せず、絶対パスの項目だけから解決して絶対パスを返す。見つからなければ既存の <ecosystem>_tool_not_found
+    でスキップする
+  resolution_note: 'relaxed route (category: security, batch). Codex consulted (harness:
+    codex, 1 turn). Codex recommended skip_relative_entries: abspath alone leaves
+    the root-project exposure (argv[0] from :781-782 used at :1053); skipping relative/empty
+    entries closes it and reuses the existing tool_not_found skip (:1178-1181). Orchestrator
+    judged the mapping and agreed; Opus escalation not run.'
+- question_id: requirement.child-path-relative-entries
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-05T23:08:49+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - drop_relative_entries
+  freeform: null
+  normalized_answer: 子の PATH から相対・空の項目を除き、絶対パスの項目だけを元の順序で渡す。残らなければ PATH キーを渡さない
+  resolution_note: 'relaxed route (category: security, batch). Codex consulted (harness:
+    codex, 1 turn). Codex recommended drop_relative_entries: build_child_env copies
+    PATH verbatim (:904) and the child runs in job cwd (:1366-1373); absolutizing
+    still resolves node etc. from the reviewed tree, so keep only absolute entries
+    in order and omit PATH when none remain. Orchestrator judged the mapping and agreed;
+    Opus escalation not run.'
