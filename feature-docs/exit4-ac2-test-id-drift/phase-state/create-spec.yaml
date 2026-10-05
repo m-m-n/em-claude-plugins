@@ -1,14 +1,18 @@
 schema_version: 1
 feature: exit4-ac2-test-id-drift
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: b3373f7fc94eddfc587230280fd395656d802e2b
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:349b38c13385deb85ea3cc571815c0736fc35e8ba9816c028d3f78b476b2f42f
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:349b38c13385deb85ea3cc571815c0736fc35e8ba9816c028d3f78b476b2f42f
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
