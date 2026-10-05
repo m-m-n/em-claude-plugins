@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: eb973b91e1eb3a93d5f2d3a7bdea7ab9e2e3f77d
-last_input_digest: sha256:a3c6d670753e6b2fd10948da52b7c594e02d4027063491b374cbdb307efe2636
+last_input_digest: sha256:7db2e13c83770a05d05df4f37f420fe9f827d0d2335b131fb119099f2d793ef0
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -72,7 +72,14 @@ worker_runs:
   status: completed
   input_digest: sha256:a3c6d670753e6b2fd10948da52b7c594e02d4027063491b374cbdb307efe2636
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:7db2e13c83770a05d05df4f37f420fe9f827d0d2335b131fb119099f2d793ef0
+  output_digest: null
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-syntax-error/SPEC.md
+  sha256: sha256:a7a7fe26d29ce782e950f500433a2dc3862784fda18b703c034286ef8049b1b8
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
