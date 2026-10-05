@@ -1,0 +1,64 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests: 7352 tests OK; check-plugin-invariants.py: all PASS
+final_failures: []             # re-executed after implementation: 7417 tests OK; check-plugin-invariants.py: all PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_sca_scan_job_grouping.TestThePlanRecord
+      - test_sca_scan_job_grouping.TestPlanPerProjectDirectoryGroup
+      - test_sca_scan_job_grouping.TestAliasSpellingsJoinOnePlan
+      - test_sca_scan_invocation.TestUnresolvableBinaryYieldsSkipNoPlan
+      - test_sca_scanner_project_config_isolation.TestBuildScanJobsReturnsPlans
+    red_confirmed: true
+    red_reason: "run against the pre-change script: AttributeError: 'dict' object has no attribute 'target' / 'directory' / 'ecosystem' (build_scan_jobs returned job dicts), and AssertionError on the six-field plan record"
+  AC-2:
+    tests:
+      - test_sca_scan_job_grouping.TestRealPathGrouping
+      - test_sca_scan_job_grouping.TestUnbindablePaths
+    red_confirmed: true
+    red_reason: "run against the pre-change script: the alias, '..', symlink-escape and pip raw-key cases raised AttributeError: 'dict' object has no attribute 'directory' / 'target', and the go symlink-escape cases failed (the lexical grouping returned a job for a path that escapes through a symlink); the pure-lexical unbindable cases (absolute, '..', NUL) that returned an empty list or only reasons already passed before the change"
+  AC-3:
+    tests:
+      - test_sca_scan_job_grouping.TestEcosystemGateReasons
+      - test_sca_scan_job_grouping.TestPlanningIsPure
+      - test_sca_run_scan_plan_units.TestAnEcosystemThatFailedItsGateGetsNoPathWork
+    red_confirmed: true
+    red_reason: "run against the pre-change script: TestEcosystemGateReasons.test_path_verification_reaches_only_the_ecosystems_that_passed_both_gates errored (no plan record), TestPlanningIsPure.test_the_planning_signature_takes_neither_an_environment_nor_prepared_inputs failed (['registry', 'changed_files', 'project_root', 'environ', 'prepared_inputs'] != the three-parameter signature) and test_a_nonexistent_project_root_stays_nonexistent / test_planning_a_real_tree_with_symlinks_opens_and_creates_nothing errored; the recording-double tests that show no path verification for a failed gate passed before the change because the gate itself already existed"
+  AC-4:
+    tests:
+      - test_sca_run_scan_plan_units.TestRunScanLaunchesThePlansBuildScanJobsReturns
+    red_confirmed: true
+    red_reason: "run against the pre-change script: AssertionError: 0 != 1 (run_scan never called build_scan_jobs) and AttributeError: module has no attribute 'ScanPlan'"
+  AC-5:
+    tests:
+      - test_sca_run_scan_plan_units.TestTheRunSideBindingCheckGuardsTheWindowAfterPlanning
+      - test_sca_run_scan_plan_units.TestTheRunSideOrder
+    red_confirmed: true
+    red_reason: "run against the pre-change script: the swapped-directory tests failed with AssertionError: 0 != 1 (the planner double was never called, so the swap never happened), and the order tests failed with Lists differ: ['binding', 'isolation', 'job', 'launch'] != ['plan', 'binding', 'isolation', 'job', 'launch']"
+  AC-6:
+    tests:
+      - test_sca_run_scan_plan_units.TestWhatRunScanLaunches
+      - test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry
+      - test_sca_scanner_project_config_isolation.TestBuildScanJobsReturnsPlans
+      - test_sca_scan_execution
+      - test_sca_scan_normalization
+      - test_sca_per_project_scan_binding
+      - test_sca_pip_lockfile_audit
+      - test_sca_go_govulncheck_real_output
+      - test_sca_scan_unchanged_surfaces
+      - test_sca_scanner_project_config_isolation
+    red_confirmed: false
+    red_reason: "behavior-preserving criterion: a dedicated new module is out of scope, but the existing test_sca_scan_execution, test_sca_scan_normalization, test_sca_per_project_scan_binding, test_sca_pip_lockfile_audit, test_sca_go_govulncheck_real_output, test_sca_scan_unchanged_surfaces and test_sca_scanner_project_config_isolation detect any change of what run_scan shows from outside; no red state occurred for this change. The argv / env / cwd checks moved into TestWhatRunScanLaunches (and the build_scan_job checks in TestArgumentVectorsFromTheRealRegistry and TestBuildScanJobsReturnsPlans) describe behavior that pre-exists, so they pass against the pre-change script as well"
+  AC-7:
+    tests:
+      - test_sca_run_scan_plan_units.TestTheDocumentationDescribesPlanUnits
+      - test_sca_scanner_project_config_isolation.TestTheNewExecutionLocationIsDocumented
+    red_confirmed: true
+    red_reason: "run against the pre-change script: all six TestTheDocumentationDescribesPlanUnits tests failed (the old docstring still said 'run_scan does not use this function', _lexical_project_directory still existed, manifest_file_for still named run_scan as its caller); TestTheNewExecutionLocationIsDocumented is the existing pin on the run-side docstrings and passes before and after"
+  AC-8:
+    tests:
+      - test_sca_run_scan_plan_units.TestTheModulesImportOnlyTheStandardLibrary
+      - test_sca_scan_job_grouping.TestOwnImportsAreStandardLibraryOnly
+      - test_sca_scanner_project_config_isolation.TestThisModuleUsesOnlyTheStandardLibrary
+    red_confirmed: false
+    red_reason: "no executable red exists: the import assertion passes whenever a module imports only the standard library, and no implementation step is needed to make it hold; no red state occurred for this change"
