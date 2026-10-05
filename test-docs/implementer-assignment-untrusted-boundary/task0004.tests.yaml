@@ -1,0 +1,34 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests: 8238 tests OK; check-plugin-invariants.py: exit 0
+final_failures: []             # re-executed after implementation: 8254 tests OK (8238 + 16 new); check-plugin-invariants.py: exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_hooks_untrusted_assignment.TestLaunchGuardOnNewPayload.test_ac1_clean_prompt_appends_launched_for_genuine_task
+    red_confirmed: false
+    red_reason: "Regression pin on unchanged hook behavior: queue_launch_guard.py already takes the first identity line after the header, so the test passed on first run and no red state occurred for this change. Sensitivity was checked separately by temporarily mutating the hook to last-match parsing (restored afterwards, not committed)."
+  AC-2:
+    tests:
+      - tests.test_queue_hooks_untrusted_assignment.TestLaunchGuardOnNewPayload.test_ac2_escaped_forgery_appends_launched_for_genuine_task_only
+      - tests.test_queue_hooks_untrusted_assignment.TestLaunchGuardOnNewPayload.test_ac2_raw_line_forgery_appends_launched_for_genuine_task_only
+    red_confirmed: false
+    red_reason: "Regression pin on unchanged hook behavior: both forgery forms (P2, P3) passed on first run, no red state occurred for this change. Sensitivity was checked separately on a temporarily mutated copy of the hook (last-match parse made P3 fail; last-match with unanchored patterns made P2 and P3 fail); the mutation was reverted and is not part of the commit."
+  AC-3:
+    tests:
+      - tests.test_queue_hooks_untrusted_assignment.TestAgentIndexOnNewPayload.test_ac3_clean_prompt_indexes_genuine_identity
+      - tests.test_queue_hooks_untrusted_assignment.TestAgentIndexOnNewPayload.test_ac3_escaped_forgery_indexes_genuine_identity
+      - tests.test_queue_hooks_untrusted_assignment.TestAgentIndexOnNewPayload.test_ac3_raw_line_forgery_indexes_genuine_identity
+    red_confirmed: false
+    red_reason: "Regression pin on unchanged hook behavior: queue_agent_index.py already records the genuine identity, so all three variants passed on first run and no red state occurred for this change. Sensitivity was checked separately on a temporarily mutated copy of the hook (reverted, not committed): the P2 and P3 cases failed under it."
+  AC-4:
+    tests:
+      - tests.test_queue_hooks_untrusted_assignment.TestFailureNetOnNewPayload.test_ac4_clean_prompt_fails_genuine_task_only
+      - tests.test_queue_hooks_untrusted_assignment.TestFailureNetOnNewPayload.test_ac4_escaped_forgery_fails_genuine_task_only
+      - tests.test_queue_hooks_untrusted_assignment.TestFailureNetOnNewPayload.test_ac4_raw_line_forgery_fails_genuine_task_only
+    red_confirmed: false
+    red_reason: "Regression pin on unchanged hook behavior: queue_failure_net.py already appends failed events only for the genuine task (transcript and inline prompt sources), so all three variants passed on first run and no red state occurred for this change. Sensitivity was checked separately on a temporarily mutated copy of the hook (reverted, not committed): the P2 and P3 cases failed under it."
+  AC-5:
+    tests:
+      - tests.test_queue_hooks_untrusted_assignment.TestModuleStdlibOnly.test_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: "The outcome is the full-suite run (python3 -m unittest discover -s tests: 8254 tests OK) plus the standard-library import check on the new module; both held from the first run, so no red state occurred. The existing test_queue_launch_guard, test_queue_agent_index and test_queue_failure_net modules read the unmodified hook scripts and pass unchanged; no hook script and no existing test module appears in the diff."
