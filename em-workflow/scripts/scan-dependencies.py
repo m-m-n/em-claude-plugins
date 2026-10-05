@@ -1854,28 +1854,169 @@ def _requirement_name(requirement):
 # changed-file entry can never open a file outside the project root.
 # pyproject.toml is read with tomllib (`_pip_pyproject_direct_names`); a
 # resolver reports through `DirectNames` whether it resolved every
-# declaration.
+# declaration. A requirements file's `-r` includes are followed under the
+# same confinement (`_pip_requirements_direct_names`).
 # ---------------------------------------------------------------------------
 
-_REQUIREMENTS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*")
+# pip's own comment rule: a `#` that starts the line or follows whitespace.
+_REQUIREMENTS_COMMENT_RE = re.compile(r"(^|\s+)#.*$")
+# A string that starts with a URL scheme (`https:`, `file:`, `git+ssh:`, ...).
+_URL_SCHEME_PREFIX_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:")
+# The option forms a requirements file may use to include, constrain or
+# declare an editable requirement: (kind, short form, long form).
+_REQUIREMENTS_OPTION_FORMS = (
+    ("include", "-r", "--requirement"),
+    ("constraint", "-c", "--constraint"),
+    ("editable", "-e", "--editable"),
+)
 
 
-def _pip_requirements_direct_names(content):
-    """Package names declared in a requirements.txt-style file: option
-    lines (-e, -r, --hash, ...), blank lines and comments are skipped; an
-    extras suffix (`pkg[extra]`) and an environment marker (`; ...`) are
-    stripped before the bare package name is matched."""
-    names = set()
-    for raw_line in content.splitlines():
-        stripped = raw_line.split("#", 1)[0].strip()
-        if not stripped or stripped.startswith("-"):
+def _requirements_logical_lines(content):
+    """The logical lines of a requirements file's text: a physical line
+    ending in a backslash joins the following line (a whole-line comment
+    ends a joined run, as in pip), comments are dropped, and blank lines
+    are skipped."""
+    joined = []
+    pending = []
+    for line in content.splitlines():
+        comment_only = _REQUIREMENTS_COMMENT_RE.match(line) is not None
+        if line.endswith("\\") and not comment_only:
+            pending.append(line[:-1])
             continue
-        stripped = stripped.split(";", 1)[0].strip()
-        stripped = re.sub(r"\[[^\]]*\]", "", stripped)
-        match = _REQUIREMENTS_NAME_RE.match(stripped)
-        if match:
-            names.add(match.group(0))
-    return names
+        if pending:
+            pending.append(" " + line if comment_only else line)
+            line = "".join(pending)
+            pending = []
+        joined.append(line)
+    if pending:
+        joined.append("".join(pending))
+    logical = []
+    for line in joined:
+        text = _REQUIREMENTS_COMMENT_RE.sub("", line).strip()
+        if text:
+            logical.append(text)
+    return logical
+
+
+def _requirements_option(text):
+    """(kind, value) when the option line `text` is an include, constraint
+    or editable line in any of its forms (`-r X`, `-rX`, `--requirement X`,
+    `--requirement=X`, and the same for the other two); None for every
+    other line. `value` may be empty. An include or constraint value is the
+    first token, or the quoted text; an editable value is the rest of the
+    line."""
+    for kind, short, long in _REQUIREMENTS_OPTION_FORMS:
+        if text.startswith(long):
+            rest = text[len(long):]
+            if rest.startswith("="):
+                value = rest[1:].strip()
+            elif rest[:1].isspace():
+                value = rest.strip()
+            else:
+                continue
+        elif text.startswith(short):
+            value = text[len(short):].strip()
+        else:
+            continue
+        if kind != "editable":
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            else:
+                value = value.split(None, 1)[0] if value else ""
+        return kind, value
+    return None
+
+
+def _requirements_include_target(project_root, including_rel, target):
+    """(project-relative location, resolved path) of the include `target`
+    named in the file at project-relative `including_rel`, or None when it
+    may not be opened: `target` is a URL, or does not resolve to a location
+    confined to the project root (`..` escapes, absolute paths outside the
+    root and symlinks leading outside it)."""
+    if not target or _URL_SCHEME_PREFIX_RE.match(target):
+        return None
+    try:
+        if os.path.isabs(target):
+            rel = os.path.relpath(target, project_root)
+        else:
+            rel = os.path.join(os.path.dirname(including_rel), target)
+        resolved = _resolve_project_relative(project_root, rel)
+    except (OSError, ValueError):
+        return None
+    if resolved is None:
+        return None
+    return rel, resolved
+
+
+def _pip_requirements_direct_names(path, project_root):
+    """The direct names of the requirements file at `path` (inside
+    `project_root`), following `-r` includes -- `-r X`, `-rX`,
+    `--requirement X`, `--requirement=X` -- recursively. Returns a
+    `DirectNames`; never raises, never opens a file outside the project
+    root and never fetches a URL.
+
+    Each include is taken relative to the including file's directory and
+    opened only when `_resolve_project_relative` confines it to the root;
+    every file is opened at most once per walk (keyed by its resolved
+    location), so cycles end without error. Names declared by an included
+    file are direct. The set is incomplete when a file is missing or
+    unreadable, an include is a URL or leaves the root, a requirement line
+    has no resolvable name (a URL or a local path), or an editable line has
+    none. Constraint files (`-c` / `--constraint`) are neither opened nor
+    cause incompleteness; every other option line is ignored."""
+    names = set()
+    complete = True
+    try:
+        if project_root is None or not path:
+            return DirectNames((), complete=False)
+        root = os.path.realpath(str(project_root))
+        candidate = str(path)
+        if not os.path.isabs(candidate):
+            candidate = os.path.join(root, candidate)
+        start_rel = os.path.relpath(candidate, root)
+        start = _resolve_project_relative(root, start_rel)
+        if start is None:
+            return DirectNames((), complete=False)
+        visited = {start}
+        pending = [(start_rel, start)]
+        while pending:
+            file_rel, file_path = pending.pop()
+            text = _read_resolved_text(file_path)
+            if text is None:
+                complete = False
+                continue
+            for line in _requirements_logical_lines(text.lstrip("\ufeff")):
+                if not line.startswith("-"):
+                    name = _requirement_name(line)
+                    if name is None:
+                        complete = False
+                    else:
+                        names.add(name)
+                    continue
+                option = _requirements_option(line)
+                if option is None:
+                    continue
+                kind, value = option
+                if kind == "constraint":
+                    continue
+                if kind == "editable":
+                    name = _requirement_name(value)
+                    if name is None:
+                        complete = False
+                    else:
+                        names.add(name)
+                    continue
+                target = _requirements_include_target(root, file_rel, value)
+                if target is None:
+                    complete = False
+                    continue
+                if target[1] in visited:
+                    continue
+                visited.add(target[1])
+                pending.append(target)
+    except Exception:
+        complete = False
+    return DirectNames(names, complete=complete)
 
 
 # The Poetry tables of `[tool.poetry]` whose keys are direct names. Poetry's
@@ -2026,16 +2167,19 @@ def _pip_direct_dependency_names(project_root, manifest_file):
     if _pip_direct_names_from_pyproject(manifest_file):
         return _pip_pyproject_direct_names(manifest_path)
     if not manifest_path:
-        return set()
+        # The unit's manifest cannot be resolved inside the project root: its
+        # declarations are unknown, so nothing may be assumed transitive.
+        return DirectNames((), complete=False)
+    if os.path.basename(manifest_path) != "Pipfile":
+        # A requirements file is read by its own resolver, which follows
+        # `-r` includes confined to the project root.
+        return _pip_requirements_direct_names(manifest_path, project_root)
     try:
         with open(manifest_path, "r", encoding="utf-8") as f:
             content = f.read()
     except (OSError, ValueError):
         return set()
-    basename = os.path.basename(manifest_path)
-    if basename == "Pipfile":
-        return _pip_pipfile_direct_names(content)
-    return _pip_requirements_direct_names(content)
+    return _pip_pipfile_direct_names(content)
 
 
 # ---------------------------------------------------------------------------
@@ -2303,16 +2447,23 @@ def prepared_requirements_files(groups):
 _CVSS_VECTOR_RE = re.compile(r"CVSS:3\.[01](?:/[A-Z]{1,3}:[A-Za-z])+")
 
 
-def _pip_severity_from_description(ecosystem, description):
-    """Returns the mapped severity (per this ecosystem's severity_map) when
-    `description` embeds a CVSS v3 vector, else None -- "cannot be
-    determined from that output" (task0008 Design), never a guess."""
+def _pip_cvss_band(description):
+    """The CVSS severity band (critical / high / medium / low / none) of
+    the v3 vector embedded in `description`, or None when there is no
+    vector or it cannot be scored."""
     if not isinstance(description, str):
         return None
     match = _CVSS_VECTOR_RE.search(description)
     if not match:
         return None
-    band = _cvss_severity_band(match.group(0))
+    return _cvss_severity_band(match.group(0))
+
+
+def _pip_severity_from_description(ecosystem, description):
+    """Returns the mapped severity (per this ecosystem's severity_map) when
+    `description` embeds a CVSS v3 vector, else None -- "cannot be
+    determined from that output" (task0008 Design), never a guess."""
+    band = _pip_cvss_band(description)
     if band is None:
         return None
     return _map_severity(ecosystem, band)
@@ -2343,24 +2494,38 @@ def normalize_pip(ecosystem, data, manifest_file, project_root=None):
     is excluded from `findings` but counted (direct dependencies only,
     since a transitive one is dropped regardless of severity) and returned
     as `skip_info` for the caller to fold into the summary's affected count
-    (NFR4: counts only, no advisory-sourced text). Returns
-    (findings, skip_info); skip_info is None when nothing was undetermined.
+    (NFR4: counts only, no advisory-sourced text).
+
+    The declared set may be incomplete (a declaration that could not be
+    resolved: an include leaving the project root, a URL or path
+    requirement, an unreadable file, ...). IMPLEMENTATION.md D2 then
+    decides an advisory for a package the set does not name: a severity
+    that is known and below the threshold drops it uncounted; otherwise it
+    is neither a finding nor transitive but counted once as undetermined
+    directness, and in no other counter. With a complete set such an
+    advisory is transitive and dropped. A resolver result without a
+    `complete` attribute is treated as complete.
+
+    Returns (findings, skip_info); skip_info is None when nothing was
+    undetermined, otherwise a dict: `reason` (always
+    `pip_severity_undetermined`) and `count` (the severity-undetermined
+    count, possibly 0), plus `directness_undetermined` (the count above)
+    only when it is not 0.
 
     For a pip lockfile `manifest_file` (sca-python-lockfile-audit FR10) the
     findings' `file` is the lockfile's project-relative path, directness is
     resolved from its sibling declaration file (`_pip_manifest_candidate`),
     and `affected_range` is the pinned version pip-audit reported."""
     findings = []
+    declared = _pip_direct_dependency_names(project_root, manifest_file)
+    complete = _names_complete(declared)
     # FR9: directness is decided on PEP 503 canonical names on BOTH sides, so
     # a declared `Django` / `Foo_Bar.baz` matches a reported `django` /
     # `foo-bar-baz` (every pip job, whatever its manifest).
-    direct_names = {
-        canonical_pip_name(declared)
-        for declared in (
-            _pip_direct_dependency_names(project_root, manifest_file) if project_root else set()
-        )
-    }
+    direct_names = {canonical_pip_name(name) for name in declared}
+    directness_matters = (ecosystem.get("threshold") or {}).get("direct_only", True)
     undetermined_count = 0
+    directness_undetermined_count = 0
     for dep in data.get("dependencies") or []:
         if not isinstance(dep, dict):
             continue
@@ -2371,6 +2536,16 @@ def normalize_pip(ecosystem, data, manifest_file, project_root=None):
                 continue
             description = vuln.get("description")
             mapped = _pip_severity_from_description(ecosystem, description)
+            if directness_matters and not is_direct and not complete:
+                # D2 step 4: a severity that is known (a CVSS band could be
+                # scored) and below the threshold drops the advisory
+                # uncounted; anything else is undetermined directness.
+                band = _pip_cvss_band(description)
+                if band is None or _passes_threshold(
+                    ecosystem, True, _map_severity(ecosystem, band)
+                ):
+                    directness_undetermined_count += 1
+                continue
             if mapped is None:
                 if is_direct:
                     undetermined_count += 1
@@ -2390,7 +2565,11 @@ def normalize_pip(ecosystem, data, manifest_file, project_root=None):
                     severity=mapped,
                 )
             )
-    skip_info = {"reason": "pip_severity_undetermined", "count": undetermined_count} if undetermined_count else None
+    skip_info = None
+    if undetermined_count or directness_undetermined_count:
+        skip_info = {"reason": "pip_severity_undetermined", "count": undetermined_count}
+        if directness_undetermined_count:
+            skip_info["directness_undetermined"] = directness_undetermined_count
     return findings, skip_info
 
 
@@ -2633,6 +2812,8 @@ def _scan_pip_lockfile(ecosystem, lockfile, project_root, executable_path):
       resolved, or the reasons of runs that did not complete -- D5).
     - `findings`: the completed runs' findings, in run order.
     - `undetermined`: the undetermined-severity count summed over runs.
+    - `directness_undetermined`: the undetermined-directness count summed
+      over runs.
     - `excluded`: the number of lockfile entries left out of conversion --
       0 unless at least one run was launched (D3).
     - `completed`: True when at least one run completed.
@@ -2645,7 +2826,14 @@ def _scan_pip_lockfile(ecosystem, lockfile, project_root, executable_path):
     prepared file on exit, normal or exceptional (NFR1). An exception from
     the execution step propagates -- only untrusted FILE CONTENT is
     contained."""
-    audit = {"reasons": [], "findings": [], "undetermined": 0, "excluded": 0, "completed": False}
+    audit = {
+        "reasons": [],
+        "findings": [],
+        "undetermined": 0,
+        "directness_undetermined": 0,
+        "excluded": 0,
+        "completed": False,
+    }
     converted = convert_pip_lockfile(project_root, lockfile)
     if converted is None:
         audit["reasons"].append(PIP_LOCKFILE_UNCONVERTIBLE)
@@ -2678,6 +2866,7 @@ def _scan_pip_lockfile(ecosystem, lockfile, project_root, executable_path):
             audit["findings"].extend(findings)
             if skip_info:
                 audit["undetermined"] += skip_info["count"]
+                audit["directness_undetermined"] += skip_info.get("directness_undetermined", 0)
             audit["completed"] = True
     return audit
 
@@ -3098,17 +3287,20 @@ def _scan_pip_group(ecosystem, files, project_root, executable_path):
     over the group's raw files, lockfile first. A lockfile target goes
     through the existing lockfile audit; any other target through the
     existing job (cwd = the project root) and normalizer. Returns
-    `_group_audit` plus `undetermined` and `excluded` counts."""
+    `_group_audit` plus `undetermined`, `directness_undetermined` and
+    `excluded` counts."""
     name = ecosystem.get("ecosystem", "unknown")
     manifest_file = manifest_file_for(ecosystem, files)
     if os.path.basename(manifest_file) in ECOSYSTEM_LOCKFILES["pip"]:
         audit = _scan_pip_lockfile(ecosystem, manifest_file, project_root, executable_path)
         result = _group_audit(audit["reasons"], audit["findings"], audit["completed"])
         result["undetermined"] = audit["undetermined"]
+        result["directness_undetermined"] = audit["directness_undetermined"]
         result["excluded"] = audit["excluded"]
         return result
     result = _group_audit()
     result["undetermined"] = 0
+    result["directness_undetermined"] = 0
     result["excluded"] = 0
     # FR6 / D4: a unit whose direct names come from pyproject.toml cannot be
     # judged without the TOML parser -- it does not complete and pip-audit is
@@ -3136,6 +3328,7 @@ def _scan_pip_group(ecosystem, files, project_root, executable_path):
     result["findings"].extend(pip_findings)
     if pip_skip:
         result["undetermined"] += pip_skip["count"]
+        result["directness_undetermined"] += pip_skip.get("directness_undetermined", 0)
     result["completed"] = True
     return result
 
