@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-file-tasks-robustness
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: cb65f380ca5898d21485c3df1c1e542281bb89f8
 last_input_digest: sha256:8a8e3683f28cf5c021a1918aeb4d79f3082b308cb3e49ff2c6d967404757926b
