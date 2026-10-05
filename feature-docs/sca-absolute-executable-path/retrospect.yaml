@@ -1,0 +1,57 @@
+feature: sca-absolute-executable-path
+collected_at: "2026-10-05T23:59:30+09:00"
+session_ids:
+  - 01a10c79-2dfa-7563-9f4c-32fd94e7bbf8
+  - 01a10c85-19b0-7498-b725-ebaf6da079cd
+  - 01a10c8f-ef02-72f1-b25a-0b8aead63c87
+  - 01a10c92-c541-76ab-b24b-2753ede9e474
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み description_plus_code（score 1.24, confidence 0.75）を評価器が閾値表で full と判定した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.19
+          confidence: 0.81
+          probabilities: {'0': 0.0, '1': 0.81, '2': 0.19, '3': 0.0}
+        observed_at: "2026-10-05T22:57:00+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.24
+          confidence: 0.75
+          probabilities: {'0': 0.0, '1': 0.76, '2': 0.24, '3': 0.0}
+        observed_at: "2026-10-05T23:01:00+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/scan-dependencies.py
+        - tests/test_sca_run_scan_plan_units.py
+        - tests/test_sca_scan_unchanged_surfaces.py
+      changed_lines_approx: 110
+      new_functions_needed: []
+      new_files_needed: []
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      spillover_modules:
+        - tests/test_sca_scan_unchanged_surfaces.py
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 8
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium finding aadc87e78f496658（Windows の PATHEXT で拡張子付きスキャナーを検出できなくなる）は unresolved のまま残り、triage は report 分岐で起票されていない"
+  - "事前調査の files_expected は既存テストへの追記を見込んだが、実際は新規テストファイル 2 つ（test_sca_absolute_executable_resolution.py / test_sca_child_env_path_filtering.py）に分かれた"
+  - "implementer 報告（conflict_retries / deviations）が feature-docs に残らないため、retrospect の収集にセッションログの探索が要った"
