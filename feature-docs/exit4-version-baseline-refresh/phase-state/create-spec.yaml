@@ -1,11 +1,11 @@
 schema_version: 1
 feature: exit4-version-baseline-refresh
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 2d11cfd679f56bf3ee761baf0f2cc3e0291096b3
 last_input_digest: sha256:d1e549afc812dcf07fe5ffbf6d0c52f4b89fd41dcd18079b4dad7760f0e3bb6c
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets:
   create-spec-run-q0001:
     iteration: 1
@@ -91,7 +91,18 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:d1e549afc812dcf07fe5ffbf6d0c52f4b89fd41dcd18079b4dad7760f0e3bb6c
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:pending-run-0002
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:pending-run-0003
+  output_digest: null
+artifacts:
+- path: feature-docs/exit4-version-baseline-refresh/SPEC.md
+  sha256: sha256:548cbbb58cc56e6cdba792823fbdd2905fc78116deab4bd33fdd4b9f4b5f40e8
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
