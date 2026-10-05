@@ -184,6 +184,13 @@ WRITE_POLICY_ACTIONS = {
 
 COMPLEXITY_VALUES = {"low", "medium", "high"}
 
+# The route-back reset confirmation record
+# (references/workflow-schema.md, "## `routeback_failed_journal_line`").
+# Only the orchestrator writes it, in Step I.2.c's route-back write set; a
+# worker's tasks_patch.entries entry may never carry the key, whatever its
+# value (null included). The error code is the field name itself.
+ROUTEBACK_RECORD_FIELD = "routeback_failed_journal_line"
+
 REQUIREMENTS_PATCH_SET_KEYS = {
     "tasks_append",
     "tests_append",
@@ -1279,6 +1286,15 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
                 errors.append(err("requirements", f"{p}.requirements entry {r!r} does not exist in workflow.yaml"))
     if entry.get("initial_status") != "pending":
         errors.append(err("initial_status", f"{p}.initial_status must be 'pending'"))
+    if ROUTEBACK_RECORD_FIELD in entry:
+        errors.append(
+            err(
+                ROUTEBACK_RECORD_FIELD,
+                f"{p}.{ROUTEBACK_RECORD_FIELD} must not be set by a worker "
+                "(orchestrator-only route-back record; see "
+                "references/workflow-schema.md)",
+            )
+        )
     if mode == "append":
         provenance = entry.get("provenance")
         if not provenance:
