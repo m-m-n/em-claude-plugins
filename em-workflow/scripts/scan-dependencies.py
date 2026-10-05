@@ -387,47 +387,88 @@ def list_security_tasks(entry_point):
 
 
 def _write_references_tempfile(reference_lines):
-    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as fh:
-        fh.write("\n".join(reference_lines) + "\n")
-        return fh.name
+    """Writes `reference_lines` to a new temporary file and returns its path.
+    A failure while writing removes the partial file before the OS error
+    propagates, so the caller never has a path to clean up that it was not
+    given."""
+    fh = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
+    try:
+        with fh:
+            fh.write("\n".join(reference_lines) + "\n")
+    except OSError:
+        with contextlib.suppress(OSError):
+            Path(fh.name).unlink(missing_ok=True)
+        raise
+    return fh.name
+
+
+def _run_entry_point_with_references(reference_lines, build_argv):
+    """Writes `reference_lines` to a temporary references file, launches the
+    entry point with the argv `build_argv(<that file's path>)` builds, removes
+    the file afterwards (also when the launch failed) and returns the
+    CompletedProcess. Any OS error raised along the way -- creating or
+    writing the file, launching the process, removing the file -- propagates
+    as an OSError for the two public helpers below to convert."""
+    refs_path = None
+    try:
+        refs_path = _write_references_tempfile(reference_lines)
+        return subprocess.run(
+            build_argv(refs_path),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        if refs_path is not None:
+            Path(refs_path).unlink(missing_ok=True)
 
 
 def create_security_task(entry_point, package, reference_lines):
+    """Creates one security task for `package` through the entry point.
+    Pre: unchanged -- an entry point that is not an executable file raises
+    EntryPointError. Post: the task was created, or EntryPointError was
+    raised: for a non-zero exit of the launched process, and for ANY OS error
+    raised while writing the temporary references file, launching the
+    process or removing the file (the OS error is kept as the cause and its
+    text may appear in the message, which only ever reaches stderr). A raw
+    OS error never leaves this function."""
     if not _entry_point_is_valid(entry_point):
         raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
-    refs_path = _write_references_tempfile(reference_lines)
     try:
-        proc = subprocess.run(
-            [
+        proc = _run_entry_point_with_references(
+            reference_lines,
+            lambda refs_path: [
                 str(entry_point), "task", "create",
                 "--title", package,
                 "--type", SECURITY_TASK_TYPE,
                 "--priority", FILED_PRIORITY,
                 "--references-file", refs_path,
             ],
-            capture_output=True,
-            text=True,
-            check=False,
         )
-    finally:
-        Path(refs_path).unlink(missing_ok=True)
+    except OSError as exc:
+        raise EntryPointError(f"task create failed for package {package!r}: {exc}") from exc
     if proc.returncode != 0:
         raise EntryPointError(f"task create failed for package {package!r}: {proc.stderr.strip()}")
 
 
 def append_security_task_references(entry_point, task_id, reference_lines):
+    """Appends `reference_lines` to the references of task `task_id` through
+    the entry point. Same pre/postcondition as `create_security_task`: the
+    only exception that leaves this function for a launch, file or exit
+    failure is EntryPointError."""
     if not _entry_point_is_valid(entry_point):
         raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
-    refs_path = _write_references_tempfile(reference_lines)
     try:
-        proc = subprocess.run(
-            [str(entry_point), "task", "update", "--id", str(task_id), "--append-references-file", refs_path],
-            capture_output=True,
-            text=True,
-            check=False,
+        proc = _run_entry_point_with_references(
+            reference_lines,
+            lambda refs_path: [
+                str(entry_point), "task", "update",
+                "--id", str(task_id),
+                "--append-references-file", refs_path,
+            ],
         )
-    finally:
-        Path(refs_path).unlink(missing_ok=True)
+    except OSError as exc:
+        raise EntryPointError(f"task update failed for task {task_id!r}: {exc}") from exc
     if proc.returncode != 0:
         raise EntryPointError(f"task update failed for task {task_id!r}: {proc.stderr.strip()}")
 
@@ -450,17 +491,27 @@ def file_tasks(project_root, feature, findings, entry_point):
     Every pre-existing key (`branch`, `filed_packages`, `appended_packages`,
     `suppressed`, `report_path`, `degraded`, `degraded_reason`) keeps its
     name and meaning (task plan "the summary dict grows, never changes
-    shape"). Four keys are ADDED:
+    shape"). Five keys are ADDED:
 
     - `malformed_findings` -- findings skipped by the poison-finding policy
       (position + machine-stable reason, never advisory-sourced text).
     - `listing_dropped_count` -- entries the task listing dropped item-wise
       by validation (0 when no listing was consulted or nothing dropped).
     - `failed_package` / `failure_reason` -- set when the external task
-      system failed mid-batch; both None on a batch that completed without
-      such a failure. No exception escapes this function for a poison
-      finding or a mid-batch external failure -- both degrade to data in
-      the returned summary instead."""
+      system failed mid-batch (an entry-point failure, which includes an OS
+      error raised while launching the entry point or writing its temporary
+      references file); both None on a batch that completed without such a
+      failure. `failure_reason` is a fixed token, never OS-error or
+      advisory-sourced text; that text goes to stderr only.
+    - `unattempted_packages` -- on a mid-batch failure, the failed package
+      followed by every later package in the group order (after title
+      recovery, de-duplication and truncation), in that order; malformed
+      findings never appear in it. An empty list when the batch completed,
+      on the report branch and on the degraded report branch.
+
+    No exception escapes this function for a poison finding or a mid-batch
+    external failure -- both degrade to data in the returned summary
+    instead."""
     groups, malformed_findings = group_findings_by_package(findings)
 
     if entry_point is None:
@@ -478,6 +529,7 @@ def file_tasks(project_root, feature, findings, entry_point):
             "listing_dropped_count": 0,
             "failed_package": None,
             "failure_reason": None,
+            "unattempted_packages": [],
         }
 
     listing_outcome = list_security_tasks(entry_point)
@@ -500,6 +552,7 @@ def file_tasks(project_root, feature, findings, entry_point):
             "listing_dropped_count": 0,
             "failed_package": None,
             "failure_reason": None,
+            "unattempted_packages": [],
         }
 
     listing = listing_outcome.tasks
@@ -551,6 +604,14 @@ def file_tasks(project_root, feature, findings, entry_point):
                 break
             filed_packages.append(package)
 
+    # The failed package and every package after it in the group order were
+    # never completed (empty when the walk ran to the end). Group keys are
+    # unique, so the failed package's position is unambiguous.
+    package_order = list(groups)
+    unattempted_packages = (
+        package_order[package_order.index(failed_package):] if failed_package is not None else []
+    )
+
     return {
         "branch": "ntd",
         "filed_packages": filed_packages,
@@ -563,6 +624,7 @@ def file_tasks(project_root, feature, findings, entry_point):
         "listing_dropped_count": listing_outcome.dropped_count,
         "failed_package": failed_package,
         "failure_reason": failure_reason,
+        "unattempted_packages": unattempted_packages,
     }
 
 
