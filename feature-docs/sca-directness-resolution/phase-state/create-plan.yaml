@@ -1,0 +1,43 @@
+schema_version: 1
+feature: sca-directness-resolution
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 42d3d35f1291b379fee89aaa87139409fac59fdd
+last_input_digest: sha256:bd5aa8d5c5eccd0a07976150c9c7410cb000b9d3d764de3fd13f8dbdcc48381d
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:bd5aa8d5c5eccd0a07976150c9c7410cb000b9d3d764de3fd13f8dbdcc48381d
+  output_digest: sha256:fc9aa4d00f6a16cfca6643036fa997dc40b7a074e1c7b4c5b85c7855a75e281b
+artifacts:
+- path: feature-docs/sca-directness-resolution/IMPLEMENTATION.md
+  sha256: sha256:000b2f297c2ce3e7619f2bcc5271b59fb45b0aad118ea0f75184455fc16720a4
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-directness-resolution/VERIFICATION.md
+  sha256: sha256:62ded02b7abeeb8d5bb06014db4f6d92699a6020fdc1795ed4f21754c9a0e474
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-directness-resolution/THREAT-MODEL.md
+  sha256: sha256:82ddbc50c3c9618e5ab5eefbf6ea72bfbf3adcd7e6eafe14f26cf836d55f11ef
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-directness-resolution/tasks/task0001.md
+  sha256: sha256:600b78af2eac9d789960c86e487076d07df69f898c7fe3eff98e75b6859b05dc
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-directness-resolution/tasks/task0002.md
+  sha256: sha256:494f55cb7b23128f3bd4fcf3fe76adf33bf44def7a84201204bf0978cf1ce029
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-directness-resolution/tasks/task0003.md
+  sha256: sha256:4d18f6c97a00fae4b5b6e3563069b48232922cd1d5ea678e82ca078aeeffbc0d
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:bd5aa8d5c5eccd0a07976150c9c7410cb000b9d3d764de3fd13f8dbdcc48381d
+  base_workflow_blob: 7905fe3e895f738743eed24244fefd10ecfcb6e9
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

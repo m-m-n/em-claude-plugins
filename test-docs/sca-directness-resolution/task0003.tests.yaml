@@ -1,0 +1,46 @@
+task_id: task0003
+baseline_failures: []          # refreshed after parent-side adoption of task0001 and task0002: unittest discover -s tests ran 7567 tests and every failure was in this task's own new module (red again against the adopted script), none inherited; check-plugin-invariants.py exit 0
+final_failures: []             # re-executed after re-implementing on the updated parent: unittest discover -s tests (7567 tests, OK) and check-plugin-invariants.py (exit 0)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestIncludeResolution
+      - tests.test_scan_dependencies_pip_directness.TestRequirementNameContract
+      - tests.test_scan_dependencies_pip_directness.TestDirectNamesContract
+    red_confirmed: true
+    red_reason: "resolver tests: TypeError: _pip_requirements_direct_names() takes 1 positional argument but 2 were given (the old resolver read content, never followed includes); scan test test_a_high_advisory_for_an_included_name_produces_a_finding: 0 findings, expected 1; shared-contract tests: AttributeError no attribute DirectNames / _requirement_name"
+  AC-2:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestIncludeContainment
+    red_confirmed: true
+    red_reason: "resolver tests errored with TypeError (old one-argument resolver); test_an_escaping_include_makes_an_undeclared_advisory_undetermined failed because no pip_directness_undetermined note existed. test_an_advisory_for_a_name_resolved_before_the_escape_is_still_a_finding was already green before the change (pre-existing behavior) and is only a guard."
+  AC-3:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestUnresolvableDeclarations
+      - tests.test_scan_dependencies_pip_directness.TestTestDoublesWork
+    red_confirmed: true
+    red_reason: "TypeError: _pip_requirements_direct_names() takes 1 positional argument but 2 were given for the resolver assertions; the scan assertions (test_the_scan_returns_normally_for_every_unresolvable_shape) failed with no pip_directness_undetermined note in the summary"
+  AC-4:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestCyclesAndConstraints
+    red_confirmed: true
+    red_reason: "TypeError: _pip_requirements_direct_names() takes 1 positional argument but 2 were given (cycle and constraint resolver tests); test_a_constraint_scan_keeps_a_constraint_only_name_transitive_without_a_note was already green before the change (pre-existing behavior: -c lines were skipped as option lines) and is only a guard"
+  AC-5:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestClassification
+    red_confirmed: true
+    red_reason: "incomplete-set tests failed: test_an_incomplete_set_counts_an_undeclared_high_advisory_once and the unknown-severity variant found no pip_directness_undetermined note; the stand-in pyproject resolver tests errored with AttributeError no attribute DirectNames. The canonical-name tests, the complete-set transitive test and the below-threshold drop were already green before the change (pre-existing behavior; the existing test_sca_pip_lockfile_audit.TestCanonicalDirectness also detects the canonical comparison); they are guards, no red state occurred for them"
+  AC-6:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestUndeterminedNote
+      - tests.test_scan_dependencies_pip_directness.TestUndeterminedDirectnessNotesContract
+    red_confirmed: true
+    red_reason: "test_the_note_for_one_advisory_is_exact: AssertionError, summary lacked the pip directness note; test_the_note_follows_the_severity_go_notes_and_precedes_the_cargo_note and the cargo-count test: no cargo note; contract test: AttributeError no attribute _undetermined_directness_notes. test_the_note_does_not_change_skipped_or_skip_reason was already green before the change (skipped/skip_reason untouched is pre-existing) and is only a guard"
+  AC-7:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestStandardLibraryOnly
+      - tests.test_sca_scan_normalization
+      - tests.test_sca_go_govulncheck_real_output
+      - tests.test_sca_per_project_scan_binding
+    red_confirmed: false
+    red_reason: "a dedicated red state cannot occur: the criterion states an invariant (full suite passes, npm and go tests unmodified, no imports outside the standard library) that held before the change and holds after it. TestStandardLibraryOnly detects any new non-standard import in the script; the existing npm / go tests exercise the unchanged ecosystems; no red state occurred for this change. The full-suite pass is the executed check (7438 tests, OK)"
