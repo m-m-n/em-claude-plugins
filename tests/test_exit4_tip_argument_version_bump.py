@@ -1,12 +1,13 @@
 """Tests for task0002 (exit4-tip-argument): the em-workflow plugin version
-bump to a patch strictly greater than 44 in both registries.
+bump to a patch strictly greater than 68 in both registries.
 
 Covers task0002 Acceptance Criteria
 (feature-docs/exit4-tip-argument/tasks/task0002.md):
 
 - AC-1 (FR6): `em-workflow/.claude-plugin/plugin.json` parses as JSON, its
-  `version` is of the form `X.Y.Z` with major/minor `0.1` and patch strictly
-  greater than 44, and its `name` still reads `em-workflow`.
+  `version` is of the form `X.Y.Z` and compares strictly greater than
+  (0, 1, `BASELINE_PATCH`) per component numerically, so a later minor or
+  major bump stays green (SPEC A6), and its `name` still reads `em-workflow`.
 - AC-2 (FR6): `.claude-plugin/marketplace.json` parses as JSON; its
   `plugins[]` entry named `em-workflow` reports a `version` string identical
   to the plugin manifest's; the entry named `em-review` still has `source`
@@ -15,7 +16,7 @@ Covers task0002 Acceptance Criteria
   `python3 -m unittest discover -s tests` from the repository root, imports
   only the Python standard library and no other test module, parses both
   registries as JSON, and expresses its version assertion as a durable
-  baseline (patch > 44) rather than a fixed literal.
+  baseline (patch > 68) rather than a fixed literal.
 - AC-4: each of the two matchers has a negative proof plus a non-vacuity
   guard on its forged sample.
 - AC-5 (NFR3): the full suite passes with every pre-existing module
@@ -24,10 +25,10 @@ Covers task0002 Acceptance Criteria
 This is a documentation/registry task (Test Notes: unit-level assertions over
 two parsed JSON documents plus their negative proofs), following the pattern
 established by tests/test_recycled_task_id_version_bump.py and
-tests/test_routeback_reset_scope_version_bump.py, raising the baseline patch
-to 44 per IMPLEMENTATION.md D3 (this feature's own version-bump module must
-go red on the un-bumped `0.1.44` tree). JSON files are parsed, never
-pattern-matched.
+tests/test_routeback_reset_scope_version_bump.py. The baseline patch is 68,
+the em-workflow patch level both registries carried at exit4-tip-argument's
+diff base (02aff93), so this feature's own version-bump module goes red on an
+un-bumped `0.1.68` tree. JSON files are parsed, never pattern-matched.
 
 Matcher -> negative-proof inventory (AC-4):
 
@@ -53,8 +54,9 @@ PLUGIN_ROOT = REPO_ROOT / "em-workflow"
 PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 
-# Pre-change baseline: both registries read 0.1.44 before this task's edit.
-BASELINE_PATCH = 44
+# Pre-bump baseline: both registries read 0.1.68 at exit4-tip-argument's diff
+# base (02aff93), before that feature's version bump.
+BASELINE_PATCH = 68
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
@@ -154,7 +156,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     matcher showing the forged sample is itself well-formed, so the proof
     exercises the comparison rather than a parse failure."""
 
-    FORGED_PRE_BUMP_VERSION = "0.1.44"
+    FORGED_PRE_BUMP_VERSION = "0.1.68"
     FORGED_VERSION_A = "0.1.45"
     FORGED_VERSION_B = "0.1.46"
 
@@ -165,6 +167,17 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     def test_baseline_matcher_rejects_forged_pre_bump_version(self):
         with self.assertRaises(AssertionError):
             _assert_version_past_baseline(self, self.FORGED_PRE_BUMP_VERSION)
+
+    def test_forged_pre_bump_version_matches_baseline_patch(self):
+        """Ties the forged pre-bump sample to BASELINE_PATCH: detects a change
+        to either constant without the other, which would leave the negative
+        proof rejecting a sample that no longer equals the baseline."""
+        parts = _parse_version(self.FORGED_PRE_BUMP_VERSION)
+        self.assertIsNotNone(
+            parts,
+            f"forged pre-bump version {self.FORGED_PRE_BUMP_VERSION!r} is not of the form X.Y.Z",
+        )
+        self.assertEqual(parts, (0, 1, BASELINE_PATCH))
 
     def test_forged_differing_versions_are_both_well_formed(self):
         """Non-vacuity guard for the equality matcher."""
