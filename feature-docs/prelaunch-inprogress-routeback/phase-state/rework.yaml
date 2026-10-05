@@ -9,25 +9,30 @@ active_request_id: null
 packets:
   rework-q0001:
     status: answered
-    issued_at: "2026-10-05T19:42:58+09:00"
+    issued_at: '2026-10-05T19:42:58+09:00'
     questions:
-      - question_id: rework.spec-change.failed-before-launch-commit
-        status: answered
+    - question_id: rework.spec-change.failed-before-launch-commit
+      status: answered
 answers:
   rework.spec-change.failed-before-launch-commit:
     packet_id: rework-q0001
-    answered_at: "2026-10-05T19:42:58+09:00"
+    answered_at: '2026-10-05T19:42:58+09:00'
     source: batch-classification-gate
     answer_mode: single_select
-    selected_option_ids: [change-spec]
+    selected_option_ids:
+    - change-spec
     freeform: null
-    normalized_answer: "change-spec: SPEC を改訂して指摘 197991d271fd0f74 を完全に直す（launch-state commit での failed 記録、carve-out を route-back リセット確認時に限定、NFR2 を広げ queue_stop_guard.py を揃える、前提 2 と implement-phase.md の根拠文の訂正、テスト追加）"
-    resolution_note: "classification gate verdict spec_gap（classification[0]）。Codex が (b) を選び、根拠 ID FR1,FR2,FR4,FR5,FR6,NFR2,AC1,AC3,AC5,AC8 はすべて SPEC.md に実在。Claude も納得: ゴール（起動前中断の in_progress 残骸が route-back を塞がない）は満たされ、後退は FR4/FR5/NFR2 の制約が生む仕様の穴"
+    normalized_answer: 'change-spec: SPEC を改訂して指摘 197991d271fd0f74 を完全に直す（launch-state
+      commit での failed 記録、carve-out を route-back リセット確認時に限定、NFR2 を広げ queue_stop_guard.py
+      を揃える、前提 2 と implement-phase.md の根拠文の訂正、テスト追加）'
+    resolution_note: 'classification gate verdict spec_gap（classification[0]）。Codex
+      が (b) を選び、根拠 ID FR1,FR2,FR4,FR5,FR6,NFR2,AC1,AC3,AC5,AC8 はすべて SPEC.md に実在。Claude
+      も納得: ゴール（起動前中断の in_progress 残骸が route-back を塞がない）は満たされ、後退は FR4/FR5/NFR2 の制約が生む仕様の穴'
 worker_runs:
-  - request_id: rework-run-0001
-    status: needs_user_input
-    input_digest: sha256:52ede9efdd2ef8609c9ace23104a88eaa2015cf6952b676c5438c5eaa00f5566
-    output_digest: null
+- request_id: rework-run-0001
+  status: needs_user_input
+  input_digest: sha256:52ede9efdd2ef8609c9ace23104a88eaa2015cf6952b676c5438c5eaa00f5566
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -35,15 +40,28 @@ stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
 spec_change:
-  reason: "review round 1 の high 指摘 197991d271fd0f74（起動後 launch-state commit 前に失敗したタスクが pending + journal failed で残り、recycled-task-id carve-out により I.2.c を経ず自動再起動される後退）を完全に直すには FR5・NFR2・データフロー（failed を write set に含めない）・前提 2 の改訂が必要"
+  reason: review round 1 の high 指摘 197991d271fd0f74（起動後 launch-state commit 前に失敗したタスクが
+    pending + journal failed で残り、recycled-task-id carve-out により I.2.c を経ず自動再起動される後退）を完全に直すには
+    FR5・NFR2・データフロー（failed を write set に含めない）・前提 2 の改訂が必要
   origin_kind: review
   origin_id: 197991d271fd0f74
   recorded_at_commit: cbfd334ab11f7610d2b535ac20e9d6f4418e6830
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification:
-  - classifier: codex
-    verdict: spec_gap
-    evidence_ids: [FR1, FR2, FR4, FR5, FR6, NFR2, AC1, AC3, AC5, AC8]
-    decision: proceed
-    reason: "FR1・FR2 どおり未起動タスクに in_progress を書かず再発検出テストもありゴールは満たす。FR4・AC5 の終端除外が pending + failed を残し FR5 で保持する carve-out が未起動に誤分類する。中断・2 回目の exit 4 後も同様で、NFR2 がフック変更を禁じるため仕様に穴がある"
+- classifier: codex
+  verdict: spec_gap
+  evidence_ids:
+  - FR1
+  - FR2
+  - FR4
+  - FR5
+  - FR6
+  - NFR2
+  - AC1
+  - AC3
+  - AC5
+  - AC8
+  decision: proceed
+  reason: FR1・FR2 どおり未起動タスクに in_progress を書かず再発検出テストもありゴールは満たす。FR4・AC5 の終端除外が pending
+    + failed を残し FR5 で保持する carve-out が未起動に誤分類する。中断・2 回目の exit 4 後も同様で、NFR2 がフック変更を禁じるため仕様に穴がある
