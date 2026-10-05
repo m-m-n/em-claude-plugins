@@ -1,0 +1,53 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestCliCreatePathLaunchFailure.test_launch_failure_on_second_create_ends_the_run_through_the_summary
+    red_confirmed: true
+    red_reason: "exit code 1 instead of 0: the OS error from launching the swapped-out entry point escaped file_tasks as an uncaught FileNotFoundError traceback (AssertionError: 1 != 0)"
+  AC-2:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestCliAppendPathLaunchFailure.test_launch_failure_on_second_update_ends_the_run_through_the_summary
+    red_confirmed: true
+    red_reason: "exit code 1 instead of 0: uncaught FileNotFoundError traceback from the 2nd task update launch (AssertionError: 1 != 0)"
+  AC-3:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestTempFileWriteFailure.test_create_path_write_failure_equals_the_launch_failure_result
+      - tests.test_sca_file_tasks_oserror.TestTempFileWriteFailure.test_append_path_write_failure_equals_the_launch_failure_result
+      - tests.test_sca_file_tasks_oserror.TestFilingHelpersConvertOsErrors.test_write_failure_becomes_entry_point_error
+      - tests.test_sca_file_tasks_oserror.TestFilingHelpersConvertOsErrors.test_launch_failure_becomes_entry_point_error_and_temp_file_is_removed
+      - tests.test_sca_file_tasks_oserror.TestFilingHelpersConvertOsErrors.test_temp_file_removal_failure_becomes_entry_point_error
+      - tests.test_sca_file_tasks_oserror.TestFilingHelpersConvertOsErrors.test_failure_while_writing_leaves_no_temporary_file_behind
+    red_confirmed: true
+    red_reason: "OSError: [Errno 28] No space left on device escaped file_tasks from the writer test double (create and append path); the helper-level tests failed with the raw OSError (Errno 5) instead of EntryPointError, and the partial temporary file survived a failed write (AssertionError: True is not false)"
+  AC-4:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestUnattemptedPackagesWhenFirstPackageFails.test_first_package_rejected_by_the_task_system
+      - tests.test_sca_file_tasks_oserror.TestUnattemptedPackagesWhenFirstPackageFails.test_first_package_hits_an_os_error_writing_the_temporary_file
+    red_confirmed: true
+    red_reason: "KeyError: 'unattempted_packages' (summary lacked the key) for the non-zero-exit variant; uncaught OSError (Errno 28) for the temporary-file variant"
+  AC-5:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestSummaryKeySetAndEmptyUnattempted.test_full_success_has_twelve_keys_and_nothing_unattempted
+      - tests.test_sca_file_tasks_oserror.TestSummaryKeySetAndEmptyUnattempted.test_full_success_on_the_append_path_has_nothing_unattempted
+      - tests.test_sca_file_tasks_oserror.TestSummaryKeySetAndEmptyUnattempted.test_mid_batch_failure_has_exactly_twelve_keys
+      - tests.test_sca_file_tasks_oserror.TestSummaryKeySetAndEmptyUnattempted.test_report_branch_has_twelve_keys_and_nothing_unattempted
+      - tests.test_sca_file_tasks_oserror.TestSummaryKeySetAndEmptyUnattempted.test_degraded_report_branch_has_twelve_keys_and_nothing_unattempted
+    red_confirmed: true
+    red_reason: "AssertionError: the summary's key set had eleven keys, not the twelve of IMPLEMENTATION.md Shared Components, on every one of the five branches"
+  AC-6:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestUntrustedTextStaysOffTheSummary.test_create_path_os_error_text_reaches_stderr_only
+      - tests.test_sca_file_tasks_oserror.TestUntrustedTextStaysOffTheSummary.test_append_path_os_error_text_reaches_stderr_only
+      - tests.test_sca_file_tasks_oserror.TestUntrustedTextStaysOffTheSummary.test_real_launch_failure_text_reaches_stderr_only
+    red_confirmed: true
+    red_reason: "the marker-carrying OSError escaped main as an uncaught exception (in-process variants), and the real CLI exited 1 with a FileNotFoundError traceback whose path carried the marker (AssertionError: 1 != 0)"
+  AC-7:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestDocstringAndModuleDiscipline.test_file_tasks_docstring_names_five_added_keys
+      - tests.test_sca_file_tasks_oserror.TestDocstringAndModuleDiscipline.test_only_standard_library_imports
+      - tests.test_sca_task_filing
+    red_confirmed: true
+    red_reason: "observed red for the docstring check only: AssertionError 'five keys are added' not found (the docstring said 'Four keys are ADDED'). The standard-library-only import check and the unchanged tests.test_sca_task_filing module passed before any implementation (a property of the new test module and of an untouched existing module); no red state occurred for those two sub-claims."
