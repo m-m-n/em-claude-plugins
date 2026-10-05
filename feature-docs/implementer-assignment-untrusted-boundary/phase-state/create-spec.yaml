@@ -1,11 +1,11 @@
 schema_version: 1
 feature: implementer-assignment-untrusted-boundary
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 2e456776f77a8518797e7bffc2c313ea95349a39
 last_input_digest: sha256:4805262b3838ef740adea4d1e64e48a0d8f5710153874d2d0d5f7c05a60c220b
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -77,10 +77,16 @@ worker_runs:
   input_digest: sha256:0be87d296c5f403d447d52f8ae348269fa80328a887095aa0693c01bee68a194
   output_digest: sha256:98a2a445c8b425a2c27bad5c4f33adc003a1e265e239579e524260e7341f3634
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:4805262b3838ef740adea4d1e64e48a0d8f5710153874d2d0d5f7c05a60c220b
-  output_digest: null
-artifacts: []
+  output_digest: sha256:c882d4f5bcc8fbac1c1f5408fe83f19bcc7dc5489a6a4a0c38f55263e9dd7e1f
+artifacts:
+- path: feature-docs/implementer-assignment-untrusted-boundary/REQUIREMENTS.md
+  sha256: sha256:0ba4aac20470a247d184cff92cf2b13b5048a1b891468f9de3a2b507b064d4fb
+  produced_by: create-spec-run-0004
+- path: feature-docs/implementer-assignment-untrusted-boundary/SPEC.md
+  sha256: sha256:c5fbdbde0763901c9256f74632b04e838dbc72b3c6073638577b95b23c56691e
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
