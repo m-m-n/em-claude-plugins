@@ -2,9 +2,11 @@
 
 Record of whether hook definitions in the working directory's Codex configuration
 (repository hooks) execute under each launch route of the em-workflow and em-review
-Codex wrappers, measured on Codex 0.160.0. Written by task0001. The tests, the wrapper
-comments and TB-3 of `feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md` follow
-this record; a later change that contradicts it updates this record first.
+Codex wrappers, measured on Codex 0.160.0. Written by task0001; the auxiliary Codex
+invocations of section 2 were re-run under temporary Codex homes by task0002 (sections 2.1
+and 2.2). The tests, the wrapper comments and TB-3 of
+`feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md` follow this record; a later
+change that contradicts it updates this record first.
 
 ## 1. Result in brief
 
@@ -26,9 +28,19 @@ SubagentStop); the reasons are in section 6.3.
 
 ## 2. Environment
 
-- Codex as reported by the binary used: `codex-cli 0.160.0` (`codex --version`). The
-  real-Codex test (TS2) skips unless the binary reports exactly this.
+- Codex as reported by the binary used: `codex-cli 0.160.0` (`codex --version`, run under
+  temporary homes: section 2.1, row 1). The real-Codex test (TS2) skips unless the binary
+  reports exactly this.
 - Platform: Linux, bash and zsh available; the wrappers ran under bash.
+- Codex home isolation. Every Codex command line this record cites as evidence (the
+  auxiliary invocations of section 2.1, the probes, the positive controls, the post-change
+  probes) ran with `HOME` and `CODEX_HOME` set, on the same command line, to temporary
+  directories created for that one invocation, with `CODEX_HOME` = `<HOME>/.codex` (the
+  one exception in form is section 9, where the changed wrapper points `CODEX_HOME` at its
+  own temporary launch home). Section 2.2 states the two values for every group of command
+  lines. The user's real HOME and real Codex home are neither read, listed nor written for
+  any fact in this record (no configuration, session or credential file of them is touched).
+  The `codex` executable is the installed one found on `PATH`; it is only executed.
 - Every probe launch ran with `HOME` and `CODEX_HOME` set to directories created for that
   one probe, with `CODEX_HOME` = `<HOME>/.codex`. The temporary home alone held:
   - `config.toml`: empty, or one `[projects."<path>"]` table with `trust_level`, depending
@@ -45,18 +57,103 @@ SubagentStop); the reasons are in section 6.3.
   contributor tier).
 - Temporary repository per probe: `git init`, `<repo>/sub` is the working directory
   passed with `-C`, `<repo>` is the git root (one directory above the working directory).
-- Reads outside the temporary homes. The following were run without a temporary home and
-  only read: `codex --version`, `codex --help` and subcommand help text, `codex features
-  list`, and `strings` over the codex binary (the output was kept outside the repository).
-  No Codex session, no launch and no configuration write was made against the user's real
-  Codex home. `codex app-server generate-json-schema` and the `hooks/list` requests ran
-  with a temporary home.
+
+### 2.1 Auxiliary Codex invocations: isolated re-runs
+
+The auxiliary invocations that earlier versions of this section cited (`codex --version`,
+`codex --help` and subcommand help, `codex features list`) were run without temporary
+homes. On 0.160.0 `codex features list` reads `$CODEX_HOME/config.toml`, so those runs read
+the user's real Codex home. They are **superseded**: none of their output is cited
+anywhere in this record, and every fact those runs gave is re-derived below from the runs
+listed here. The same holds for a `codex --version` run made while this re-run was being
+prepared, before its temporary homes were in place. (A `strings` scan of the codex binary
+file made earlier is not a Codex invocation; nothing from it is cited either.)
+
+Every row below was run, after the earlier runs, with the same setup:
+
+- `<aux>` is a directory created fresh for that one invocation (`mktemp -d`).
+  `HOME=<aux>/home` and `CODEX_HOME=<aux>/home/.codex` are set on the same command line as
+  `codex`. The environment is cleared (`env -i`) except `PATH`, `HOME`, `CODEX_HOME` and
+  `LANG`. No credential variable is set: these commands need none, and the variable the
+  probes inherited (`LITELLM_API_KEY`) is not present.
+- Working directory `<aux>/repo/sub` (`git init` in `<aux>/repo`), the layout the probes used.
+- The temporary `CODEX_HOME` is **rebuilt from this record's own description** of the
+  probes' configuration (the `config.toml` and `litellm.config.toml` bullets above), file
+  by file: `config.toml` holds one `[projects."<aux>/repo"]` table with `trust_level =
+  "trusted"`; `litellm.config.toml` holds `[model_providers.litellm]` with `name =
+  "LiteLLM proxy"`, `env_key = "LITELLM_API_KEY"`, `wire_api = "responses"` and, as the
+  `base_url` of the local LiteLLM proxy, the loopback address `http://127.0.0.1:4000/v1`
+  (no row makes a request to it). The probes' configuration, as this record describes it,
+  sets no feature, so none is set. **Nothing was copied from the user's real HOME or Codex
+  home, and no configuration, session or credential file there was read, listed or
+  written.** (The installed `codex` executable, found on `PATH`, is only executed.) The
+  same configuration is rebuilt for every row, so `codex features list` (row 5) reads the
+  probes' configuration as this record describes it.
+- Bound: each invocation ran under a wall-clock bound of at most 120 seconds (the per-command
+  timeout of the run harness) and exited by itself (`rc` 0) before it. In rows 9a to 9c the
+  client additionally bounds the exchange to 60 seconds, closes the app-server's stdin after
+  the answer and waits for it to exit. No process of these runs was left behind (checked
+  after the runs).
+- Every run prints one `WARNING: proceeding, even though we could not create PATH aliases:
+  Refusing to create helper binaries under temporary dir "/tmp" ...` line from the
+  temporary Codex home (section 8.3). It is not part of the output cited below.
+
+Command lines (`HOME` and `CODEX_HOME` as above, `codex` first-on-`PATH`, no credential
+variable):
+
+| Row | Command line | Output the record relies on |
+|---|---|---|
+| 1 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex --version` | `codex-cli 0.160.0` |
+| 2 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex --help` | Subcommands include `exec`, `features`, `app-server`. `-p, --profile`: "Layer $CODEX_HOME/<name>.config.toml on top of the base user config". `--dangerously-bypass-hook-trust`: "Run enabled hooks without requiring persisted hook trust for this invocation." |
+| 3 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex exec --help` | The flags the wrappers pass exist: `-c/--config`, `-m/--model`, `-p/--profile`, `-s/--sandbox` (`read-only`, `workspace-write`, `danger-full-access`), `-C/--cd`, `--skip-git-repo-check`, `--ignore-rules`, `--output-schema`, `--color`, `--dangerously-bypass-hook-trust`, and `--ignore-user-config`: "Do not load `$CODEX_HOME/config.toml`; auth still uses `CODEX_HOME`". |
+| 4 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex features --help` | Subcommands `list`, `enable`, `disable`. |
+| 5 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex features list` | 154 features, each with stage and effective state. The hook-related ones: `hooks` stable true; `plugin_hooks` removed false. |
+| 6 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex app-server --help` | Subcommands `daemon`, `proxy`, `generate-ts`, `generate-json-schema`; `--stdio` selects the stdio transport. |
+| 7 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex app-server generate-json-schema --help` | `-o, --out <DIR>` is required. |
+| 8 | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex app-server generate-json-schema --out <aux>/schema` | `HookEventName` and `HookSource` as listed in section 3 step 1: 12 events and 11 sources, in that order. |
+| 9a | `HOME=<aux>/home CODEX_HOME=<aux>/home/.codex codex app-server --stdio`, then `initialize`, `initialized`, `hooks/list` with `cwds: ["<aux>/repo/sub"]`; `<aux>/repo/sub` holds a one-event (`SessionStart`) hook in each of the 13 candidate files of section 3 step 2; temporary user config trusts `<aux>/repo` | 1 hook listed: `source` `project`, `trustStatus` `untrusted`, file `<aux>/repo/sub/.codex/hooks.json`. |
+| 9b | as 9a; `<aux>/repo/sub/.codex/` holds `config.toml` and `hooks.json`, each with one hook for every one of the 12 events; temporary user config trusts `<aux>/repo` | 24 hooks listed (12 from `hooks.json`, 12 from `config.toml`), all `source` `project`, `trustStatus` `untrusted`; warning: `loading hooks from both <aux>/repo/sub/.codex/hooks.json and <aux>/repo/sub/.codex/config.toml; prefer a single representation for this layer`. |
+| 9c | as 9b, with a temporary user config that has no trust entry (empty `config.toml`) | 0 hooks listed. |
+
+Facts re-derived from these runs, and whether each is unchanged from what this section
+derived before the re-run:
+
+| Fact | Derived before | Re-derived (row) | Unchanged |
+|---|---|---|---|
+| Reported version | `codex-cli 0.160.0` | `codex-cli 0.160.0` (1) | Yes |
+| Hook event list | 12 events: `preToolUse`, `permissionRequest`, `postToolUse`, `preCompact`, `postCompact`, `sessionStart`, `sessionEnd`, `userPromptSubmit`, `subagentStart`, `subagentStop`, `stop`, `interrupt` | the same 12, same order (8) | Yes |
+| Hook source values | 11 values; only `project` comes from the repository under review; `sessionFlags` is what the wrapper's `-c hooks.PreToolUse=...` produces | the same 11 values (8) | Yes |
+| Hook locations | Of the 13 candidate files only `.codex/hooks.json` was listed, with source `project`; `.codex/config.toml` and `.codex/hooks.json` together listed both, with the single-representation warning; 24 hooks against 0 for the same two-file repository, trusted and not trusted | the same (9a, 9b, 9c) | Yes |
+| Feature state | The record named `codex features list` and cited no value from it | `hooks` stable true (enabled); `plugin_hooks` removed false (5) | No earlier cited value to differ from. The state is the one the probe results presuppose (repository hooks ran on the executing routes, so the `hooks` feature was on); no probe result, per-route verdict or the branch changes |
+
+The result matrix (section 6.1), the per-route verdicts (section 7) and the branch (section
+1) are unchanged by these re-runs.
+
+### 2.2 `HOME` and `CODEX_HOME` of every Codex command line in this record
+
+| Command lines | Where | `HOME` | `CODEX_HOME` |
+|---|---|---|---|
+| Auxiliary invocations, rows 1 to 9c | 2.1; the re-derived content of section 3 steps 1 and 2 and of its final paragraph | `<aux>/home` | `<aux>/home/.codex` |
+| Probes P1 to P4, readonly and readwrite, every kind, and the `codex` shim that forwards to the real binary | section 5 | `<probe>/home` | `<probe>/home/.codex` |
+| Section 3 step 3, the directory-scope observation | one pre-change probe launch (P2 readwrite with the extra `<repo>/sub/deeper/.codex/`, section 10 `deeperdir`) | `<probe>/home` | `<probe>/home/.codex` |
+| Positive controls (`stripiuc`, P2 ro for P3 ro) | 6.2 | `<probe>/home` | `<probe>/home/.codex` |
+| Attempts at the unobservable events | 6.3 (P2 launches) | `<probe>/home` | `<probe>/home/.codex` |
+| Trust-gate observations (`addiuc`, `mixedroot*`, `ro444`, `sandboxc`, `slash*`, `symlinkC`, `untrust*`, `sandbox`) and the same-key override runs | 6.4, 6.5 | `<probe>/home` | `<probe>/home/.codex` |
+| Pre-change rows of the run log | 10 | `<probe>/home` | `<probe>/home/.codex` |
+| Post-change probes and post-change rows of the run log (P2, P3, changed wrapper) | 9, 10 | `<probe>/home` | the wrapper's launch-dedicated home `${TMPDIR:-/tmp}/codex-launch-home.XXXXXX` (a fresh temporary directory per launch, section 8.1); `<probe>/home/.codex` is only what the wrapper copies the probe's `litellm.config.toml` from |
+| Real-Codex test TS2, its control launch and its wrapper launch | 11 | `<work>/home` | `<work>/codex-home` (`<work>` a temporary directory the test creates) |
+| TS2's version check (`codex --version`) | 11 | one scratch temporary directory | the same scratch temporary directory |
+| Stub-codex test TS1 | 11 | `<work>/home` | `<work>/user-codex-home`; on the changed route, the launch-dedicated home |
+
+No command line of this record names the user's real HOME or Codex home as a place read or
+written for evidence.
 
 ## 3. Hook locations and events under test
 
-How the list was established (all on 0.160.0):
+How the list was established (all on 0.160.0; steps 1 and 2 are the isolated re-runs of
+section 2.1, rows 8 and 9a to 9c, under temporary `HOME` and `CODEX_HOME`):
 
-1. `codex app-server generate-json-schema` (temporary home). The schema defines:
+1. `codex app-server generate-json-schema` (section 2.1, row 8). The schema defines:
    - `HookEventName`: `preToolUse`, `permissionRequest`, `postToolUse`, `preCompact`,
      `postCompact`, `sessionStart`, `sessionEnd`, `userPromptSubmit`, `subagentStart`,
      `subagentStop`, `stop`, `interrupt` (12 events);
@@ -64,7 +161,7 @@ How the list was established (all on 0.160.0):
      `cloudRequirements`, `cloudManagedConfig`, `legacyManagedConfigFile`,
      `legacyManagedConfigMdm`, `unknown`. Only `project` comes from the repository under
      review; `sessionFlags` is what the wrapper's `-c hooks.PreToolUse=...` produces.
-2. `hooks/list` on `codex app-server --stdio` (temporary home), given a temporary
+2. `hooks/list` on `codex app-server --stdio` (section 2.1, rows 9a to 9c), given a temporary
    repository holding a one-event hook in every candidate file below. Only
    `.codex/hooks.json` was listed, with source `project`:
    `.codex.toml`, `codex.toml`, `hooks.json`, `hooks/hooks.json`,
@@ -77,9 +174,10 @@ How the list was established (all on 0.160.0):
 3. Directory scope, by observation: a hook in `<repo>/.codex/` (the directory above the
    working directory) and one in `<repo>/sub/.codex/` (the working directory) both ran;
    a hook in `<repo>/sub/deeper/.codex/` (below the working directory) never ran
-   (a pre-change `--litellm`, trusted, readwrite launch: all 24 markers of the two
-   existing directories, none from the lower one). Project layers are therefore the
-   working directory and its ancestors.
+   (a pre-change `--litellm`, trusted, readwrite probe launch, run with `HOME=<probe>/home`
+   and `CODEX_HOME=<probe>/home/.codex`: all 24 markers of the two existing directories,
+   none from the lower one). Project layers are therefore the working directory and its
+   ancestors.
 
 Locations probed (repository-controlled, `source = project`), four per event:
 
@@ -92,7 +190,8 @@ Locations probed (repository-controlled, `source = project`), four per event:
 
 Events probed: all 12 above.
 
-`hooks/list` gives the gate itself. With the temporary user config marking the repository
+`hooks/list` gives the gate itself (section 2.1, rows 9b and 9c, run with `HOME=<aux>/home`
+and `CODEX_HOME=<aux>/home/.codex`). With the temporary user config marking the repository
 trusted it listed the project hooks (source `project`, `trustStatus` `untrusted`, which is
 the hook-level trust that `--dangerously-bypass-hook-trust` lifts); with no trust entry it
 listed none (24 hooks and 0 hooks for the same two-file repository).
@@ -118,18 +217,29 @@ seconds in the definitions; Codex clamps `SessionEnd` and `Interrupt` to 3 secon
 ## 5. Probe commands
 
 Every probe starts the wrapper itself, so the argv is the wrapper's own. Credentials appear
-as variable names only.
+as variable names only. Each command line below carries `HOME=<probe>/home` and
+`CODEX_HOME=<probe>/home/.codex`, both temporary directories created for that one probe.
+The `codex` shim and the real `codex` it forwards to run with the environment of the
+wrapper that starts them; only the changed `--litellm` route alters it (see below).
 
 ```
-HOME=<probe>/home CODEX_HOME=<probe>/home/.codex PATH=<probe>/bin:$PATH   # LITELLM_API_KEY inherited
-P1: em-workflow/scripts/run_codex_exec.sh {readonly|readwrite} -C <repo>/sub "<prompt>"
-P2: em-workflow/scripts/run_codex_exec.sh {readonly|readwrite} --litellm muse-spark -C <repo>/sub "<prompt>"
+P1: HOME=<probe>/home CODEX_HOME=<probe>/home/.codex PATH=<probe>/bin:$PATH \
+    em-workflow/scripts/run_codex_exec.sh {readonly|readwrite} -C <repo>/sub "<prompt>"
+P2: HOME=<probe>/home CODEX_HOME=<probe>/home/.codex PATH=<probe>/bin:$PATH \
+    em-workflow/scripts/run_codex_exec.sh {readonly|readwrite} --litellm muse-spark -C <repo>/sub "<prompt>"
     (temporary user config trusts <repo>)
-P3: the P2 command with a temporary user config that has no trust entry
-P4: em-review/scripts/run_codex_exec.sh {readonly|readwrite} -C <repo>/sub "<prompt>"
+P3: the P2 command line, HOME and CODEX_HOME included, with a temporary user config that
+    has no trust entry
+P4: HOME=<probe>/home CODEX_HOME=<probe>/home/.codex PATH=<probe>/bin:$PATH \
+    em-review/scripts/run_codex_exec.sh {readonly|readwrite} -C <repo>/sub "<prompt>"
+# LITELLM_API_KEY inherited by every line (name only)
 ```
 
-Argv the wrapper hands to `codex` (path of the working directory and of the plugin shortened):
+Argv the wrapper hands to `codex` (path of the working directory and of the plugin shortened).
+Before the change every one of these `codex` processes ran with `HOME=<probe>/home` and
+`CODEX_HOME=<probe>/home/.codex`. After the change, on the `--litellm` route (P2, P3) the
+wrapper sets `CODEX_HOME` to its launch-dedicated temporary home (section 8.1) and `HOME`
+stays `<probe>/home`; on P1 and P4 both stay as before.
 
 ```
 P1 readwrite: exec --color never --skip-git-repo-check --ignore-rules -s workspace-write -C <repo>/sub
@@ -170,6 +280,12 @@ verdicts below are aggregated over the kinds and rest on the positive controls r
 on any one run.
 
 ## 6. Results before the change
+
+Every launch behind this section (the probes, the positive controls of 6.2, the attempts
+of 6.3 and the observations of 6.4 and 6.5) is a probe command line of section 5 and ran
+with `HOME=<probe>/home` and `CODEX_HOME=<probe>/home/.codex`, temporary directories
+created for that one probe (section 2.2). A trust entry or a configuration write named in
+this section refers to that temporary `config.toml`.
 
 ### 6.1 Matrix
 
@@ -230,7 +346,7 @@ Observed on 0.160.0 and used to choose the means in section 8.
 - Writable sandbox: on a launch that reads the user configuration and runs
   `workspace-write`, Codex marks an unmarked project `trusted` in the user configuration
   and loads its project layer in the same run (P3 rw executes; the entry for the git root
-  was written to `config.toml`). Readonly leaves the configuration unchanged (P3 ro does
+  was written to the probe's temporary `config.toml`). Readonly leaves the configuration unchanged (P3 ro does
   not execute). `-c sandbox_mode="workspace-write"` in place of `-s workspace-write`
   behaves the same (`sandboxc`), and making the configuration file read-only (`ro444`)
   did not prevent it.
@@ -345,7 +461,11 @@ Alternatives checked and rejected:
 ## 9. Post-change probe
 
 The changed wrapper was launched with the same hook definitions and the same kinds on the
-changed route.
+changed route. Each launch is a P2 or P3 command line of section 5 with `HOME=<probe>/home`
+and `CODEX_HOME=<probe>/home/.codex`; the wrapper then ran `codex` with `HOME=<probe>/home`
+and `CODEX_HOME` set to its launch-dedicated temporary home (section 8.1), so both values
+the launched `codex` saw were temporary directories. The user's real HOME and Codex home
+were not involved (section 2.2).
 
 | Event | P2 ro | P2 rw | P3 ro | P3 rw |
 |---|---|---|---|---|
@@ -383,6 +503,10 @@ stream before any turn, inconclusive and not relied on). Control names are defin
 sections 5 and 6.4; `Wrapper guard denied` is only meaningful in `guard` runs.
 
 Labels: `pre` = before the change, `post` = after.
+
+Every row is a launch under temporary directories (section 2.2): `HOME=<probe>/home` and
+`CODEX_HOME=<probe>/home/.codex` on every `pre` row; `HOME=<probe>/home` and the
+wrapper's launch-dedicated temporary `CODEX_HOME` on every `post` row.
 
 | Label | Condition | Mode | Kind | Control | rc | Markers | PreToolUse hook lines | Wrapper guard denied |
 |---|---|---|---|---|---|---|---|---|
