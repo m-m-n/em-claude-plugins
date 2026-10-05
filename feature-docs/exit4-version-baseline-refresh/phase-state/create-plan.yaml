@@ -25,7 +25,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: exit4-version-baseline-refresh-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:e4819745cd468e1f56f4f10785d130896db31806ad610776c3be62903a730fa7
   base_workflow_blob: 72ad252ee898b8cabe98b73e9e34bd8553135c16
 progress_fingerprint: null
