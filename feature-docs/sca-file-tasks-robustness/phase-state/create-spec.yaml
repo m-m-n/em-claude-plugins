@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-file-tasks-robustness
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: cb65f380ca5898d21485c3df1c1e542281bb89f8
-last_input_digest: sha256:6e81f3b2dfcd5e275bc33f79da3d39795646430ca8e266e53830c5ca2fb25ed0
-active_request_id: null
+last_input_digest: sha256:3fdba9a38c0d9013be404be2204100c1ca4e68c767ad9437e2436fbe50b923c8
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -85,6 +85,10 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:6e81f3b2dfcd5e275bc33f79da3d39795646430ca8e266e53830c5ca2fb25ed0
   output_digest: sha256:5481a86844678119473aeefeb2715f07c67f20c59b68bd81313a311aa3db0680
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:3fdba9a38c0d9013be404be2204100c1ca4e68c767ad9437e2436fbe50b923c8
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
