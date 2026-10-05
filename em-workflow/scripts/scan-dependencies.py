@@ -1665,6 +1665,71 @@ def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
     return findings
 
 
+class DirectNames(frozenset):
+    """The direct-dependency set of one scan unit: the declared names (as
+    written in the manifest, never canonicalized) plus whether every
+    declaration of the manifest was resolved. Immutable, and for every read an
+    existing caller performs on a plain name collection (membership test,
+    iteration, size, equality with a plain set of the same names) it behaves
+    exactly like an immutable set of those names. `complete` is read-only:
+    True means every declaration was resolved. A name collection without a
+    `complete` attribute is treated as complete (the legacy-value rule), so a
+    resolver returning one still works with a classifier that reads
+    completeness."""
+
+    __slots__ = ("_complete",)
+
+    def __new__(cls, names=(), complete=True):
+        instance = super().__new__(cls, names)
+        object.__setattr__(instance, "_complete", bool(complete))
+        return instance
+
+    @property
+    def complete(self):
+        return self._complete
+
+    def __setattr__(self, name, value):
+        raise AttributeError(f"{type(self).__name__} is immutable")
+
+    def __delattr__(self, name):
+        raise AttributeError(f"{type(self).__name__} is immutable")
+
+    def __reduce__(self):
+        return (type(self), (tuple(self), self._complete))
+
+    def __repr__(self):
+        return f"{type(self).__name__}({sorted(self, key=str)!r}, complete={self._complete})"
+
+
+# The leading PEP 508 name of a requirement string, accepted only when it is
+# followed by the end of the string, whitespace, an extras bracket, a version
+# operator, a parenthesis, a marker separator, a direct-reference marker or a
+# comma.
+_REQUIREMENT_NAME_RE = re.compile(
+    r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?(?=$|[\s\[<>=!~(;@,])"
+)
+_ARCHIVE_SUFFIXES = (
+    ".whl", ".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz", ".tar.xz", ".txz",
+)
+
+
+def _requirement_name(requirement):
+    """The package name of one PEP 508 requirement string (comments and pip
+    options already removed), as written; None ("no name") when the leading
+    token is a URL (a scheme separator), a local path (a leading dot, slash
+    or tilde, a path separator, or a wheel / source-archive suffix) or
+    anything else that does not begin with a PEP 508 name. Never raises."""
+    if not isinstance(requirement, str):
+        return None
+    match = _REQUIREMENT_NAME_RE.match(requirement.strip())
+    if match is None:
+        return None
+    name = match.group(0)
+    if name.lower().endswith(_ARCHIVE_SUFFIXES):
+        return None
+    return name
+
+
 # ---------------------------------------------------------------------------
 # pip direct-dependency resolution (task0008 Design, "The pip normalizer's
 # real input contract"): pip-audit's `--format json` output carries no
@@ -1673,6 +1738,9 @@ def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
 # resolution the cargo path already performs against Cargo.toml
 # (_cargo_direct_dependency_names), reusing _resolve_project_relative so a
 # changed-file entry can never open a file outside the project root.
+# pyproject.toml is read with tomllib (`_pip_pyproject_direct_names`); a
+# resolver reports through `DirectNames` whether it resolved every
+# declaration.
 # ---------------------------------------------------------------------------
 
 _REQUIREMENTS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*")
@@ -1696,56 +1764,93 @@ def _pip_requirements_direct_names(content):
     return names
 
 
-_POETRY_DEP_TABLES = {"tool.poetry.dependencies", "tool.poetry.dev-dependencies"}
-_POETRY_TABLE_KEY_RE = re.compile(r'^"?([A-Za-z0-9][A-Za-z0-9_.\-]*)"?\s*=')
-_PEP508_NAME_HEAD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*")
+# The Poetry tables of `[tool.poetry]` whose keys are direct names. Poetry's
+# group tables (`tool.poetry.group.<g>.dependencies`) are deliberately absent.
+_POETRY_DEP_TABLES = ("dependencies", "dev-dependencies")
 
 
-def _extract_pep508_name(entry):
-    """The bare package name from one PEP 508 dependency string (e.g.
-    `"requests[socks]>=2.25; python_version >= '3.7'"` -> `requests`)."""
-    entry = entry.split(";", 1)[0]            # drop an environment marker
-    entry = re.sub(r"\[[^\]]*\]", "", entry)   # drop an extras suffix
-    match = _PEP508_NAME_HEAD_RE.match(entry.strip())
-    return match.group(0) if match else None
+def _pip_pyproject_direct_names(manifest_path):
+    """The direct names of a pyproject.toml, read with tomllib: the `[project]`
+    `dependencies` list (each item through `_requirement_name`, so quoting,
+    extras, markers and direct references make no difference) plus the keys of
+    `[tool.poetry.dependencies]` and `[tool.poetry.dev-dependencies]` except
+    `python`. `project.optional-dependencies`, `dependency-groups`,
+    `tool.poetry.group.<g>.dependencies` and every other table are never read.
+
+    `manifest_path` is the already-confined location of the manifest (None
+    when it could not be resolved). Returns a `DirectNames`; never raises.
+    The set is incomplete when the manifest cannot be resolved, read or parsed
+    (no tomllib, invalid TOML), when `[project].dynamic` lists `dependencies`
+    without a static list, when neither a static `[project].dependencies` list
+    nor a Poetry dependency table exists (a static empty list is a complete
+    declaration of zero names), and for any unexpected shape (a scalar where a
+    table or list is expected, a list item without a package name). Every name
+    that did resolve is still returned."""
+    unresolved = DirectNames((), complete=False)
+    if not manifest_path:
+        return unresolved
+    text = _read_resolved_text(str(manifest_path))
+    if text is None:
+        return unresolved
+    data = _parse_toml(text)
+    if data is None:
+        return unresolved
+    return _pyproject_declared_names(data)
 
 
-def _pip_pyproject_direct_names(content):
-    """Package names declared in pyproject.toml's PEP 621 `[project]`
-    `dependencies` list, or Poetry's `[tool.poetry.dependencies]` /
-    `[tool.poetry.dev-dependencies]` tables -- a lightweight TOML-lite
-    scan, the same shape as the cargo path's own Cargo.toml scan (neither
-    pip-audit's nor cargo-audit's JSON carries a per-entry directness field
-    to read this from directly)."""
-    names = set()
-    current_table = None
-    in_dependencies_list = False
-    for raw_line in content.splitlines():
-        line = raw_line.split("#", 1)[0]
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith("[") and stripped.endswith("]"):
-            current_table = stripped.strip("[]").strip()
-            in_dependencies_list = False
-            continue
-        if current_table == "project":
-            if re.match(r"^dependencies\s*=\s*\[", stripped):
-                in_dependencies_list = True
-                stripped = re.sub(r"^dependencies\s*=\s*\[", "", stripped)
-            if in_dependencies_list:
-                for entry in re.findall(r'"([^"]+)"', stripped):
-                    name = _extract_pep508_name(entry)
-                    if name:
-                        names.add(name)
-                if "]" in stripped:
-                    in_dependencies_list = False
-                continue
-        if current_table in _POETRY_DEP_TABLES:
-            match = _POETRY_TABLE_KEY_RE.match(stripped)
-            if match and match.group(1).lower() != "python":
-                names.add(match.group(1))
-    return names
+def _pyproject_declared_names(data):
+    """The `DirectNames` declared by an already-parsed pyproject.toml table
+    (see `_pip_pyproject_direct_names`)."""
+    names = []
+    complete = True
+    declared = False  # a static project list or a Poetry dependency table exists
+
+    if "project" in data:
+        project = data["project"]
+        if not isinstance(project, dict):
+            complete = False
+        else:
+            if "dependencies" in project:
+                dependencies = project["dependencies"]
+                if isinstance(dependencies, list):
+                    declared = True
+                    for item in dependencies:
+                        name = _requirement_name(item)
+                        if name is None:
+                            complete = False
+                        else:
+                            names.append(name)
+                else:
+                    complete = False
+            if "dynamic" in project:
+                dynamic = project["dynamic"]
+                if not isinstance(dynamic, list):
+                    complete = False
+                elif "dependencies" in dynamic and "dependencies" not in project:
+                    complete = False
+
+    if "tool" in data:
+        tool = data["tool"]
+        if not isinstance(tool, dict):
+            complete = False
+        elif "poetry" in tool:
+            poetry = tool["poetry"]
+            if not isinstance(poetry, dict):
+                complete = False
+            else:
+                for table_name in _POETRY_DEP_TABLES:
+                    if table_name not in poetry:
+                        continue
+                    table = poetry[table_name]
+                    if not isinstance(table, dict):
+                        complete = False
+                        continue
+                    declared = True
+                    names.extend(key for key in table if canonical_pip_name(key) != "python")
+
+    if not declared:
+        complete = False
+    return DirectNames(names, complete=complete)
 
 
 # The file declaring a pip lockfile's DIRECT dependencies (a lockfile carries
@@ -1790,8 +1895,22 @@ def _pip_pipfile_direct_names(content):
     return names
 
 
+def _pip_direct_names_from_pyproject(manifest_file):
+    """True when the direct names of a pip scan unit with this target come
+    from pyproject.toml: the target is a pyproject.toml itself, or a lockfile
+    whose declaration file is a pyproject.toml (poetry.lock). A requirements
+    file or a Pipfile never does."""
+    basename = os.path.basename(manifest_file)
+    return _PIP_LOCKFILE_DECLARATIONS.get(basename, basename) == "pyproject.toml"
+
+
 def _pip_direct_dependency_names(project_root, manifest_file):
-    manifest_path = _pip_manifest_candidate(project_root, manifest_file)
+    try:
+        manifest_path = _pip_manifest_candidate(project_root, manifest_file)
+    except (OSError, ValueError):
+        manifest_path = None
+    if _pip_direct_names_from_pyproject(manifest_file):
+        return _pip_pyproject_direct_names(manifest_path)
     if not manifest_path:
         return set()
     try:
@@ -1800,8 +1919,6 @@ def _pip_direct_dependency_names(project_root, manifest_file):
     except (OSError, ValueError):
         return set()
     basename = os.path.basename(manifest_path)
-    if basename == "pyproject.toml":
-        return _pip_pyproject_direct_names(content)
     if basename == "Pipfile":
         return _pip_pipfile_direct_names(content)
     return _pip_requirements_direct_names(content)
@@ -1820,6 +1937,9 @@ def _pip_direct_dependency_names(project_root, manifest_file):
 
 PIP_LOCKFILE_UNCONVERTIBLE = "pip_lockfile_unconvertible"
 PIP_DIRECT_MANIFEST_NOT_FOUND = "pip_direct_manifest_not_found"
+# FR6: the unit's direct names come from pyproject.toml and tomllib is
+# unavailable at call time.
+PIP_TOML_PARSER_UNAVAILABLE = "pip_toml_parser_unavailable"
 
 _PEP503_SEPARATORS_RE = re.compile(r"[-_.]+")
 
@@ -2420,6 +2540,10 @@ def _scan_pip_lockfile(ecosystem, lockfile, project_root, executable_path):
     if not pip_declaration_found(project_root, lockfile):
         audit["reasons"].append(PIP_DIRECT_MANIFEST_NOT_FOUND)
         return audit
+    # FR6 / D4: after every check above, before anything is launched.
+    if _pip_direct_names_from_pyproject(lockfile) and tomllib is None:
+        audit["reasons"].append(PIP_TOML_PARSER_UNAVAILABLE)
+        return audit
 
     audit["excluded"] = excluded
     normalizer = NORMALIZERS.get("pip")
@@ -2866,6 +2990,12 @@ def _scan_pip_group(ecosystem, files, project_root, executable_path):
     result = _group_audit()
     result["undetermined"] = 0
     result["excluded"] = 0
+    # FR6 / D4: a unit whose direct names come from pyproject.toml cannot be
+    # judged without the TOML parser -- it does not complete and pip-audit is
+    # not started. A requirements-file unit never takes this skip.
+    if _pip_direct_names_from_pyproject(manifest_file) and tomllib is None:
+        result["reasons"].append(PIP_TOML_PARSER_UNAVAILABLE)
+        return result
     job = build_scan_job(ecosystem, manifest_file, project_root, executable_path)
     outcome, payload = run_ecosystem_command(job)
     if outcome == OUTCOME_NOT_COMPLETED:
@@ -2941,6 +3071,11 @@ def run_scan(project_root, changed_files, registry_path):
     - pip, when a group holds a poetry.lock / Pipfile.lock, audits that
       lockfile's own pins (`_scan_pip_lockfile`): its reasons travel the
       same path, and the findings carry the lockfile as `file`.
+    - pip, when tomllib is unavailable at call time: a unit whose direct
+      names come from pyproject.toml (the pyproject.toml unit itself, or a
+      poetry.lock unit that passed the lockfile checks) is not scanned and
+      reports `pip_toml_parser_unavailable`; a requirements-file unit never
+      does (FR6).
     - go: the Go normalizer returns, per unit, its findings, an
       undetermined-severity count and an optional not-completed reason
       (`go_direct_manifest_unreadable`). The counts are summed over every
