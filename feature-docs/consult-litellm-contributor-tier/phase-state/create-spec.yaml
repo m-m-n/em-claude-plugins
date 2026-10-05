@@ -1,14 +1,18 @@
 schema_version: 1
 feature: consult-litellm-contributor-tier
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: 295cb1d2fb326e8c0b3fc7b377174674e42f2086
-last_input_digest: null
-active_request_id: null
+base_revision: cca447060a92dce464acba29bd436f0c089ed580
+last_input_digest: sha256:156c12e36bbe42781688a15db7d5f146818e02170757dce0910d751537ff917a
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:156c12e36bbe42781688a15db7d5f146818e02170757dce0910d751537ff917a
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
