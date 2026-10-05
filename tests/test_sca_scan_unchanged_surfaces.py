@@ -397,10 +397,11 @@ class TestAC2EnvPinsKeepEveryEcosystemValue(unittest.TestCase):
 
     def test_ac2_the_child_environment_is_the_pass_through_keys_plus_the_pins(self):
         runner = {key: f"runner-{key}" for key in PASS_THROUGH_KEYS}
+        runner["PATH"] = os.path.join(os.path.abspath(os.sep), "runner-PATH")
         runner.update({"NPM_TOKEN": "decoy", "GOFLAGS": "-mod=mod"})
         for ecosystem, pins in PRE_CHANGE_ENV_PINS.items():
             with self.subTest(ecosystem=ecosystem):
-                expected = {key: f"runner-{key}" for key in PASS_THROUGH_KEYS}
+                expected = {key: runner[key] for key in PASS_THROUGH_KEYS}
                 expected.update(pins)
                 self.assertEqual(
                     SCAN.build_child_env({"ecosystem": ecosystem}, runner), expected
