@@ -462,6 +462,9 @@ step のいずれも実行する前に、その Classification gate を呼ぶ �
 step が続けて実行される。interactive はこの改訂で変更しない — ユーザーへ
 直接質問する既存の挙動のままであり、新しい interactive の質問は追加され
 ない。
+review 起点の rework がこの停止に至ったときに review の status に書く値と、
+この停止から run を再開する経路は、
+`references/review-phase.md` の Phase R5 の Spec-change gate abort (review-sourced rework) ブロックが定義しており、ここでは繰り返さない。
 
 一方、`create-spec.stalled` の選択肢 3（create-spec を `needs_update` として
 中断する）が設定する `needs_update` は正真正銘のユーザー介入待ちであり、
@@ -1041,6 +1044,13 @@ Step C 内の中断、そして implement / verify フェーズが定める終�
 - スタック: `{step} が {status} のままだよ。フェーズ出力を確認してね`
 - 中断: `{step} が {status} のため中断。再開するには /em-workflow:develop を実行してね`
 - YAML エラー: 内容と `git restore` 等のリカバリ案を報告
+
+停止条件 3 が `review` step の `failed` で発火して停止するときは、この
+報告と、batch では `resume_conditions` の値が、
+`references/review-phase.md` の Phase R5 の Legacy review-failure recovery ブロックが定める復旧手順を運ぶ。
+運ぶのは、そのブロックの所在と、ブロックが述べる内容の両方であり、所在
+だけを示すことは認めない（全文で運ぶ規則は
+`references/batch-terminal-line.md` が持つ）。ここでは手順の内容を繰り返さない。
 
 ## バッチ構造化結果
 
