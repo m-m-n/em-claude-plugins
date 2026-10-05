@@ -1,0 +1,25 @@
+feature: review-gate-abort-recovery
+collected_at: "2026-10-05T16:25:26+09:00"
+session_ids: [01a10af3-3a89-7153-aec8-3ce19faab4cb]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みでバケット 1 が 0.66（score 1.35）。full を採用した"
+    bases:
+      - basis: description_only
+        score: {"score": 1.66, "confidence": 0.66, "probabilities": {"0": 0.0, "1": 0.34, "2": 0.66, "3": 0.0}}
+        observed_at: "2026-10-05T14:55:50+09:00"
+      - basis: description_plus_code
+        score: {"score": 1.35, "confidence": 0.64, "probabilities": {"0": 0.0, "1": 0.66, "2": 0.34, "3": 0.0}}
+        observed_at: "2026-10-05T14:55:50+09:00"
+    pre_survey_estimate: {"files_expected": ["em-workflow/references/review-phase.md", "em-workflow/references/rework-task-synthesis.md", "em-workflow/references/question-resolution.md", "em-workflow/skills/develop/SKILL.md", "tests/test_rework_synthesis_contract.py", "tests/test_classification_gate.py", "tests/test_gate_outcome_packet_lifecycle.py"], "changed_lines_approx": 130, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 6, "body_change_kind": "wording_or_rule_addition", "change_containment": "multiple_modules", "caller_and_dependency_count": 25, "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium finding d810ddf805b293a8（origin-membership failure / malformed spec-change pairing abort 後に残る packet の再開時の扱いが未定義）が unresolved のまま残った。SPEC の範囲外の設計判断として人の判断に回している"
+  - "事前調査の files_expected は rework-task-synthesis.md / question-resolution.md と既存テスト 3 件を挙げたが、実際の変更は review-phase.md と develop SKILL.md と新規テスト 2 件だった。見積りの対象ファイルと実変更の差が大きい"

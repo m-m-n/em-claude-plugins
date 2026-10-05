@@ -1,0 +1,12 @@
+schema_version: 2
+feature: review-gate-abort-recovery
+tier: full
+bases:
+  - basis: description_only
+    score: {"score": 1.66, "confidence": 0.66, "probabilities": {"0": 0.0, "1": 0.34, "2": 0.66, "3": 0.0}}
+    observed_at: "2026-10-05T14:55:50+09:00"
+  - basis: description_plus_code
+    score: {"score": 1.35, "confidence": 0.64, "probabilities": {"0": 0.0, "1": 0.66, "2": 0.34, "3": 0.0}}
+    observed_at: "2026-10-05T14:55:50+09:00"
+pre_survey_estimate: {"files_expected": ["em-workflow/references/review-phase.md", "em-workflow/references/rework-task-synthesis.md", "em-workflow/references/question-resolution.md", "em-workflow/skills/develop/SKILL.md", "tests/test_rework_synthesis_contract.py", "tests/test_classification_gate.py", "tests/test_gate_outcome_packet_lifecycle.py"], "changed_lines_approx": 130, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "work_still_required_evidence": "HEAD fa502d0f08fb027922c14203184cd2eeae6e3a70 には中断後の復旧規定が不足している。develop/SKILL.md:423-425 は対象 step の特定時に failed を停止条件として評価し、521-600 の例外は verify と implement に限定される。question-resolution.md:164-170 は goal 欠如時の停止を規定し、284-295 は質問を obsolete にして再提示しない。review-phase.md:1004-1027 と rework-task-synthesis.md:200-211 は dispatch 前の review.status=pending を規定するが、中断後の両 status の保持・復旧は明記していない。履歴 5dc0f6c4 は両 review status を failed に変更し、2aca7787 は両方を pending に戻している。該当 feature は現在 completed。なお review-phase.md:927-928 の failed 予約は評価担当の perspective_runs 記録に適用され、review 全体の status の予約ではない。また 5dc0f6c4 当時は Classification gate 導入前であり、goal 欠如による停止例ではない。関連文書テスト 387 件は成功したが、中断から再開までの状態整合性を検査するテストは見つからなかった。HEAD での実行再現と、ファイルを作成する全件テストは未実施。数値は案(a)の保持・再入場規則を既存文書とテストに追加する場合の見積り。参照数25は、対象4文書を参照する他の em-workflow 内 Markdown 文書数。ファイル変更は行っていない。", "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 6, "body_change_kind": "wording_or_rule_addition", "change_containment": "multiple_modules", "caller_and_dependency_count": 25, "changes_external_contract": false, "changes_behavior": true}
+decided_at: "2026-10-05T14:55:50+09:00"
