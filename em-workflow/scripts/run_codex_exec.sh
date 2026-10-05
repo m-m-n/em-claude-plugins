@@ -15,6 +15,9 @@
 #                      `-p litellm -m MODEL` and drops --ignore-user-config,
 #                      because that flag suppresses the profile layering
 #                      `-p litellm` depends on. MODEL is passed verbatim.
+#                      The launch runs in a launch-dedicated Codex home that
+#                      holds only the user's litellm profile (see "Launch
+#                      home on the --litellm route" below).
 #
 # Model: --ignore-user-config skips ~/.codex/config.toml (auth is kept), so
 # with no -m flag Codex resolves its recommended default model (auto-track).
@@ -81,6 +84,8 @@ SCHEMA_FLAG=()
 PROFILE_FLAG=()
 # Cleared by --litellm: see the flag's entry below.
 USER_CONFIG_FLAG=(--ignore-user-config)
+# Set to 1 by --litellm: the launch then gets a Codex home of its own (below).
+LITELLM_ROUTE=0
 while [[ "${1:-}" == -* ]]; do
   case "$1" in
     -C)
@@ -107,8 +112,11 @@ while [[ "${1:-}" == -* ]]; do
       PROFILE_FLAG=(-p litellm -m "$2")
       # `-p litellm` layers ${CODEX_HOME:-$HOME/.codex}/litellm.config.toml
       # over the user config; --ignore-user-config suppresses that layering,
-      # so this path must not carry it.
+      # so this path must not carry it. Reading the user config is what lets
+      # a trust entry reach Codex, so the launch is given a Codex home of its
+      # own instead (see "Launch home on the --litellm route" below).
       USER_CONFIG_FLAG=()
+      LITELLM_ROUTE=1
       shift 2
       ;;
     *)
@@ -152,8 +160,24 @@ fi
 # Every launch registers scripts/codex-hook-interactive-guard.py (the copy next
 # to this wrapper) as a PreToolUse hook for Bash tool calls. A hook given by
 # -c has no persisted trust (Codex reports it as untrusted), so
-# --dangerously-bypass-hook-trust is what lets it run; the config-isolation
-# flags on the launch below stay exactly as they were.
+# --dangerously-bypass-hook-trust is what lets it run. That flag lifts the
+# hook-trust gate for every hook Codex loads, so what matters is which
+# configuration layers Codex loads. Observed on Codex 0.160.0
+# (feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md): the hook
+# tables of the working directory's .codex/config.toml and its
+# .codex/hooks.json (and those of the directories above it up to the project
+# root) are loaded only when the user-level Codex configuration marks the
+# project trusted -- or, on a launch that reads the user-level configuration,
+# when the sandbox is writable, because Codex then marks an unmarked project
+# trusted itself.
+#   - Default route: --ignore-user-config means no trust entry is read, so
+#     repository hooks did not run in either mode; that flag stays on the
+#     launch below, as does --ignore-rules.
+#   - --litellm route: repository hooks ran (project trusted in the user
+#     config; or untrusted with a writable sandbox). The launch therefore runs
+#     in a launch-dedicated Codex home (see "Launch home on the --litellm
+#     route" below); the wrapper's own PreToolUse registration here still
+#     fires and runs alongside any repository PreToolUse hook.
 # The path is derived from this script's own location, never from the caller's
 # working directory. The wrapper does not check that the file exists: when it
 # is missing, Codex runs the Bash call unguarded (fail-open by design).
@@ -203,9 +227,70 @@ HOOK_FLAG=(
   --dangerously-bypass-hook-trust
 )
 
+# --- Launch home on the --litellm route ---
+# The default route reads no user-level Codex configuration, so no project
+# trust reaches it. The --litellm route has to read it (the profile layers on
+# top of it), and with it the user's project trust entries -- which make Codex
+# load the reviewed repository's .codex/ hooks, outside the Codex sandbox and
+# with the hook-trust gate lifted above. A writable sandbox does the same on
+# its own: Codex records an unmarked working directory as trusted and loads it
+# in the same run. An explicit `untrusted` entry is respected in both cases.
+# So this route runs in a Codex home of its own, created per launch and
+# removed afterwards: it holds a copy of the user's litellm profile and a
+# config.toml marking the working directory -- in each spelling Codex may key
+# it by -- and every directory above it as `untrusted`. No other file and no
+# trust entry of the user's real Codex home reaches the launch, and the real
+# home is never written. Credentials stay in the environment (LITELLM_API_KEY)
+# and are never copied.
+
+# Prints, NUL-terminated, directory $1 (made absolute) and every directory
+# above it, once each, under the spellings Codex may key a project by: as
+# given, logical (`pwd` after cd) and physical (`pwd -P` after cd).
+untrusted_directories() {
+  local dir="$1" spelling d known found
+  local -a spellings chain
+  [[ "$dir" == /* ]] || dir="${PWD}/${dir}"
+  while [[ "$dir" == */ && "$dir" != "/" ]]; do dir="${dir%/}"; done
+  spellings=("$dir")
+  spelling="$(cd "$dir" 2>/dev/null && pwd)" || spelling=""
+  if [[ -n "$spelling" ]]; then spellings+=("$spelling"); fi
+  spelling="$(cd "$dir" 2>/dev/null && pwd -P)" || spelling=""
+  if [[ -n "$spelling" ]]; then spellings+=("$spelling"); fi
+  chain=()
+  for spelling in "${spellings[@]}"; do
+    d="$spelling"
+    while :; do
+      found=0
+      for known in ${chain[@]+"${chain[@]}"}; do
+        if [[ "$known" == "$d" ]]; then found=1; break; fi
+      done
+      if [[ $found -eq 0 ]]; then chain+=("$d"); fi
+      if [[ "$d" == "/" ]]; then break; fi
+      d="${d%/*}"
+      if [[ -z "$d" ]]; then d="/"; fi
+    done
+  done
+  printf '%s\0' "${chain[@]}"
+}
+
 OUTFILE="$(mktemp)"
 ERRFILE="$(mktemp)"
-trap 'rm -f "$OUTFILE" "$ERRFILE"' EXIT
+LAUNCH_HOME=""
+trap 'rm -f "$OUTFILE" "$ERRFILE"; if [[ -n "$LAUNCH_HOME" ]]; then rm -rf -- "$LAUNCH_HOME"; fi' EXIT
+
+if [[ "$LITELLM_ROUTE" -eq 1 ]]; then
+  USER_CODEX_HOME="${CODEX_HOME:-${HOME:-}/.codex}"
+  LAUNCH_HOME="$(mktemp -d "${TMPDIR:-/tmp}/codex-launch-home.XXXXXX")"
+  if [[ -f "${USER_CODEX_HOME}/litellm.config.toml" ]]; then
+    cp -- "${USER_CODEX_HOME}/litellm.config.toml" "${LAUNCH_HOME}/litellm.config.toml"
+  fi
+  {
+    while IFS= read -r -d '' untrusted_dir; do
+      printf '[projects.%s]\ntrust_level = "untrusted"\n\n' "$(toml_basic_string "$untrusted_dir")"
+    done < <(untrusted_directories "${WORKDIR_FLAG[1]:-$PWD}")
+  } > "${LAUNCH_HOME}/config.toml"
+  export CODEX_HOME="$LAUNCH_HOME"
+fi
 
 # Writes stdout to $OUTFILE and stderr to $ERRFILE separately, rather than
 # into one combined stream: the underlying CLI writes a large banner to

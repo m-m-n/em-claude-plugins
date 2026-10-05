@@ -1,0 +1,50 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 7380 tests OK; check-plugin-invariants.py: all PASS (before any edit)
+final_failures: []             # both commands re-executed after the edit (the record is a document the suite can read): 7380 tests OK; invariants all PASS
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/ and em-workflow/scripts/ by path (feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md,
+      codex-repo-hook-trust) and by basename (HOOK-TRUST-FINDINGS.md): the only hits are a docstring mention in
+      tests/test_codex_repo_hook_trust.py and comments in the wrappers; no existing test reads the record, so no
+      executable check in the repository covers this criterion, and the plan adds none (document criterion, verified by
+      inspection). An uncommitted ad-hoc inspection script outside the repository failed on the pre-task record
+      and passes on the final one; it is not a repository check.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same search as AC-1: no existing test reads the record, no executable check exists in the repository, and the plan
+      adds none (document criterion, verified by inspection). The same uncommitted ad-hoc script, not a repository
+      check, failed on the pre-task record and passes on the final one.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same search as AC-1: no existing test reads the record, no executable check exists in the repository, and the plan
+      adds none (document criterion, verified by inspection). The same uncommitted ad-hoc script, not a repository
+      check, failed on the pre-task record and passes on the final one.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same search as AC-1: no existing test reads the record. The criterion (matrix, verdicts and branch unchanged; only
+      the record in the diff) held before the edit, so no failing state could occur. Verified by diffing the record against
+      the base commit (sections 1, 6.1, 6.2, 7, 8, 12 and every run-log row are byte-identical) and by
+      git diff --name-only showing only the record plus this file.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same search as AC-1: no existing test reads the record. The record carried no credential value before the edit
+      either, so no failing state could occur. Verified by inspection and by the ad-hoc pattern scan (key-shaped tokens,
+      Bearer, a value assigned to LITELLM_API_KEY, and the value of the variable in this environment).
+  AC-6:
+    tests: [python3 -m unittest discover -s tests]
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing suite (tests/test_codex_repo_hook_trust.py and the
+      rest of tests/) detects regressions in what the repository ships; no red state occurred for this change, the suite
+      was green before and after (7380 tests OK both times).

@@ -125,8 +125,19 @@ fi
 # Every launch registers scripts/codex-hook-interactive-guard.py (the copy next
 # to this wrapper) as a PreToolUse hook for Bash tool calls. A hook given by
 # -c has no persisted trust (Codex reports it as untrusted), so
-# --dangerously-bypass-hook-trust is what lets it run; the config-isolation
-# flags on the launch below stay exactly as they were.
+# --dangerously-bypass-hook-trust is what lets it run. That flag lifts the
+# hook-trust gate for every hook Codex loads, so what matters is which
+# configuration layers Codex loads. Observed on Codex 0.160.0
+# (feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md): the hook
+# tables of the working directory's .codex/config.toml and its
+# .codex/hooks.json are loaded only when the user-level Codex configuration
+# marks the project trusted -- or, on a launch that reads the user-level
+# configuration, when the sandbox is writable, because Codex then marks an
+# unmarked project trusted itself. This wrapper has a single route and it
+# carries --ignore-user-config, so no trust entry is read and repository
+# hooks did not run in either mode; that flag stays on the launch below, as
+# does --ignore-rules. The wrapper's own PreToolUse registration here still
+# fires.
 # The path is derived from this script's own location, never from the caller's
 # working directory. The wrapper does not check that the file exists: when it
 # is missing, Codex runs the Bash call unguarded (fail-open by design).
