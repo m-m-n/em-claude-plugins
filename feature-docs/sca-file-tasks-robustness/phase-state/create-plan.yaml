@@ -2,19 +2,74 @@ schema_version: 1
 feature: sca-file-tasks-robustness
 phase: create-plan
 status: dispatching
-generation: 1
-base_revision: 85138ea89e9ab9f4a22d0331cb8be186bf7c56cc
-last_input_digest: sha256:9ff127c7d9016073cdb368dd9845273fd7d11858129f70ea94c965e7276c5633
-active_request_id: create-plan-run-0001
-packets: {}
-answers: {}
+generation: 2
+base_revision: 7c10615c2875ec337282c457821f27028807e93d
+last_input_digest: sha256:82e0ec9f63fa037003263b2a6663840d68a07308f386f55a8b665da1f54d9b3e
+active_request_id: create-plan-run-0002
+packets:
+  create-plan-q0001:
+    packet_id: create-plan-q0001
+    origin: orchestrator (planner IMPLEMENTATION.md open question)
+    questions:
+    - question_id: q-batch-mode-reporting
+      status: answered
+answers:
+  q-batch-mode-reporting:
+    question_id: q-batch-mode-reporting
+    packet_id: create-plan-q0001
+    answered_at: '2026-10-05T13:01:49+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - add-batch-mode-reporting
+    freeform: null
+    normalized_answer: 'add-batch-mode-reporting: SPEC FR5 requires ''triage filing incomplete'' with
+      the unattempted packages in R6 AND in the batch final result; R6 is withheld in batch and batch-mode.md''s
+      ## Reporting list plus audit-item source map is what the batch final report is assembled from. Add
+      one Reporting item and one source-map row pointing at reviews/roundN.yaml triage_filing.unattempted_packages
+      / failed_package, without restating their definitions (review-phase.md stays the definition owner).
+      Move batch-mode.md from Out of Scope into the plan and align acceptance criteria and VERIFICATION.'
+    resolution_note: 'Planner left this as an IMPLEMENTATION.md open question (not planned). Orchestrator
+      consulted Codex (readonly): Codex chose adding batch-mode.md now because FR5 explicitly requires
+      the batch final result, and no mechanism carries R6 text into the batch report otherwise; keep the
+      addition narrow to avoid definition duplication. Option not chosen: keep-review-phase-only + follow-up
+      task.'
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:9ff127c7d9016073cdb368dd9845273fd7d11858129f70ea94c965e7276c5633
+  output_digest: sha256:648b8c3a0416a6c3be52b4c23b3b2ef8f8e611012909546da14debdee8483b0e
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:82e0ec9f63fa037003263b2a6663840d68a07308f386f55a8b665da1f54d9b3e
   output_digest: null
-artifacts: []
-patches: []
+artifacts:
+- path: feature-docs/sca-file-tasks-robustness/IMPLEMENTATION.md
+  sha256: sha256:6bc1093ca865c57e02a014223e6a1e640262d05a83c3dd67e975fb6d82302de2
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/VERIFICATION.md
+  sha256: sha256:ed8658a9d3c7e26b70893166ed019af4791833ef700cd6264743a4f430b505b1
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/THREAT-MODEL.md
+  sha256: sha256:0946c9f49536248d53d984151d694fea939c3cddd5839ceb3d467e013c01fc15
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0001.md
+  sha256: sha256:8ea7975673eef075fcf0e55453a99dc00927467be694fea9397a7408240449e8
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0002.md
+  sha256: sha256:1f360ff945ca7530279f13cc3c86e0deeb8058c4a9bd9f55695b16d91c0f9ab1
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0003.md
+  sha256: sha256:14003b5c428e742e86df480b8ac37cb74756c32f5789909e94f936340fae2cae
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-file-tasks-robustness/tasks/task0004.md
+  sha256: sha256:2e6eabf0b86c3fef34d3f181a3ec79688ae81d362804a0e73ec29a4c5bcfea4b
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: superseded
+  base_input_digest: sha256:9ff127c7d9016073cdb368dd9845273fd7d11858129f70ea94c965e7276c5633
+  base_workflow_blob: 2831f98214ee9cab377d83e7452f392494faf1f3
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
