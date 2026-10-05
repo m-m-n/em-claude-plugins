@@ -1,11 +1,11 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 5be1e1bbaed7ff4f837b0973eeab91bed9cd0fde
 last_input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -31,7 +31,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: prelaunch-inprogress-routeback-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
   base_workflow_blob: 3ad5bab5d209f0a38f3d2612f766f977602f0616
 progress_fingerprint: null
