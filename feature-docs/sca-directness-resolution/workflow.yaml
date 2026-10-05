@@ -1,0 +1,257 @@
+schema_version: 1
+feature: sca-directness-resolution
+created: '2026-10-05'
+base_branch: main
+goal: '# SCA 軸: 直接依存の判定が 4 経路で取りこぼされ、advisory が黙って捨てられる
+
+
+  Notion: https://www.notion.so/3d43509ec8ee81cea4a3fd532c466a6f  (種別: バグ)
+
+
+  ## 現象 (必須)
+
+  直接依存の判定が 4 通りの経路で取りこぼされる。取りこぼされた advisory は transitive に分類され、`_passes_threshold` に黙って捨てられる。いずれも findings 0 件・`skipped: false`・診断情報なしで返るため、判定が失敗したこと自体が見えない。
+
+  **1. PEP 503 正規化がされていない**（`22e4dd8e811a5016`, `scan-dependencies.py:1495`）
+
+  `normalize_pip` は `is_direct = package in direct_names` を計算するが、`direct_names` はマニフェストから逐語コピーした名前、`package` は pip-audit が報告する名前。Python のパッケージ同一性は PEP 503 正規化（小文字化、`-` `_` `.` の連続を `-` に畳む）を要求するのに、どちらにも適用されていない。`Django==3.2.0` と宣言して pip-audit が `django` を報告すると transitive 扱いになる。cargo 側（1300 行）でも同じ完全一致比較を使っている。
+
+  **2. TOML の有効な宣言形式が見えない**（`05bd51e6d856646f`, `scan-dependencies.py:1242`）
+
+  - `_cargo_direct_dependency_names` は角括弧の行をすべてテーブルヘッダとして扱い、ドット区切りの最後のセグメントだけを残すため、`[dependencies.serde]` は `current_table = ''serde''` になり `_CARGO_DEP_TABLES` に入らない。サブテーブルで宣言された依存が全部落ちる
+
+  - キーの正規表現が宣言キーを記録するため、`alias = { package = ''real-name'', version = ''1'' }` のリネームでは `alias` が記録され、cargo-audit は `real-name` を報告する
+
+  - `_pip_pyproject_direct_names` はダブルクォートのみの正規表現で抽出するため、TOML のシングルクォート literal string が落ちる
+
+  **3. extras サフィックスで pyproject の依存配列パースが早期終了する**（`14912f8cfe1de920`, `scan-dependencies.py:1393`）
+
+  `in_dependencies_list` のステートマシンは `if '']'' in stripped` で終了するが、配列を閉じる括弧とクォート内の extras サフィックスの括弧を区別しない。`''requests[socks]>=2''` の次に `''django==3.2.0''` が来る配列では、`[socks]` の `]` が 2 行目でリストを終わらせ、`django` は `direct_names` に入らない。
+
+  **4. requirements の include を pip-audit は辿るが directness パーサは辿らない**（`3fdb743389932d5e`, `scan-dependencies.py:1344`）
+
+  `_pip_requirements_direct_names` は `-` で始まる行をすべてスキップするが、そこには `-r requirements/base.txt` と `-c constraints.txt` が含まれる。pip-audit は include を辿って参照先が宣言するものをすべて監査するのに、それらの名前は `direct_names` に届かない。宣言を委譲している `requirements.txt` では、pip-audit が報告するすべての advisory が directness False になる。
+
+  ## 再現手順 (必須)
+
+  1. `pyproject.toml` に `Django==3.2.0` を宣言（大文字始まり）した状態で、Django の advisory が出る環境で軸 2 を走らせる → findings 0 件
+
+  2. `Cargo.toml` に `[dependencies.serde]` 形式で宣言 → serde の advisory が transitive 扱いで落ちる
+
+  3. `dependencies = [''requests[socks]>=2'', ''django==3.2.0'']` → django が direct と判定されない
+
+  4. `requirements.txt` に `-r requirements/base.txt` だけを書く → base.txt 由来の advisory がすべて落ちる
+
+  ## 期待する挙動 (必須)
+
+  - 正規化ヘルパを 1 つ用意し（小文字化 + `re.sub(r''[-_.]+'', ''-'', name)`）、宣言側の名前とスキャナ報告名の両方に、pip / cargo 両経路で適用してからメンバシップ判定する
+
+  - マニフェストは実際の TOML パーサ（3.11+ の `tomllib`、使えない場合は明示的な skip reason）でパースする。Cargo の依存サブテーブルと `package=` リネームを実際の crate 名に解決し、依存文字列をクォート形式に依存せず読む
+
+  - `-r` / `--requirement` の include をプロジェクトルート内で再帰的に解決する（`_resolve_project_relative` を封じ込めに再利用し、循環検出を入れる）
+
+  - directness が解決できない場合は、transitive にデフォルトせず、カバレッジ不完全（`pip_directness_undetermined` 相当のカウント）として報告する
+
+  ## 完了の定義 (必須)
+
+  - [ ] 4 つの再現手順で advisory が落ちない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] directness を解決できないケースが、黙って transitive になるのではなく不完全カバレッジとして報告される
+
+  ## 該当箇所 (任意)
+
+  `em-workflow/scripts/scan-dependencies.py` の `normalize_pip`（1495）、`_cargo_direct_dependency_names`（1242）、`_pip_pyproject_direct_names` / `in_dependencies_list`（1393）、`_pip_requirements_direct_names`（1344）、および 1300 行の cargo 側比較
+
+  ## 実害・発生条件 (任意)
+
+  軸 2 は「direct dependency のみ / severity high 以上」を閾値にしているため、directness の誤判定はそのまま検出漏れになる。しかも skip としても報告されないので、軸が機能していないことに気づけない。
+
+  ---
+
+  出典: em-workflow レビュー round 2 の findings `22e4dd8e811a5016` / `05bd51e6d856646f` / `14912f8cfe1de920` / `3fdb743389932d5e`（いずれも medium）。閾値未満のため `unresolved` のまま残った残件。
+
+  関連 PR: https://github.com/m-m-n/em-claude-plugins/pull/27
+
+
+  ## 追加指示（起動者）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）。
+
+  - 不明点は Codex に相談し、相対的に良いと判断した案を採用する。
+
+  - その議論の内容を Notion に記録する。
+
+  '
+parent_branch: em-workflow/sca-directness-resolution/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.78
+      '3': 0.21
+    description_plus_code:
+      '0': 0.0
+      '1': 0.11
+      '2': 0.83
+      '3': 0.06
+  at: '2026-10-05T12:25:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 65c7e7605e4fc9c8c2b350ee9c84f42cf72b2710
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 画面や見た目の変更が無い。変更は em-workflow/scripts/scan-dependencies.py の直接依存の判定とそのテストに閉じる。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: fa502d0f08fb027922c14203184cd2eeae6e3a70
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Canonical name matching on the cargo path
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Cargo.toml direct names from a TOML parser
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: pyproject.toml direct names from a TOML parser
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: requirements include resolution
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Undetermined directness reported as a counts-only summary note
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Explicit skip when no TOML parser is available
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Regression tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Standard library only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: No reads outside the project root
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: No exception escapes scan
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Fixed tokens and counts only in summary / skip_reason
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: npm and go behavior unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Plugin version not edited
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

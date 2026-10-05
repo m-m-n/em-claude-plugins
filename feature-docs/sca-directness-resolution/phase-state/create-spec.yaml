@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-directness-resolution
 phase: create-spec
-status: awaiting_answers
+status: completed
 generation: 1
 base_revision: fafed0f15972d0a07ee5c8acb5b1dd7efcb79369
 last_input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
@@ -59,7 +59,19 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:8ee8cf357ccb7b956f886fa599338b4d4b230abfaa5843e6d20498a1b15fd6f2
+artifacts:
+- path: feature-docs/sca-directness-resolution/REQUIREMENTS.md
+  sha256: sha256:87d83cb1d902c8c5bc70b2877b9133b941752b68dfcd17744af8c574c7549561
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-directness-resolution/SPEC.md
+  sha256: sha256:2035dd76a43ec640b3f85a43cb0e806af8defba7c6f6cd4447dc7074d24f0d6c
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
