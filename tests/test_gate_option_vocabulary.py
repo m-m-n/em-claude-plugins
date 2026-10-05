@@ -1116,8 +1116,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `needs_update` is an authorized `spec_change` record on the same
     # terms as the SPEC-change transition's own. Same rationale: refresh,
     # don't remove.
+    #
+    # Refreshed again by prelaunch-inprogress-routeback/task0006 (FR12):
+    # the verbatim carry-over field list in "Re-planning task-id
+    # allocation" gains `routeback_failed_journal_line`, the
+    # orchestrator-only route-back record. Same rationale: refresh, don't
+    # remove.
     WORKFLOW_PATCH_SHA256 = (
-        "4a4f075844b960655fe882c49e8b0a78f6b91e8c5370743e1280d0b6f39c0a7e"
+        "e36584aeb348e9a1ae5a3f73dc8674c79d06800df4d0fe31e322ba91b441cda2"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -1239,8 +1245,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # C1). No executable-code line changes. PINNED_VALIDATOR_TEST_LINE
     # below is unaffected and still asserted. Same rationale: refresh,
     # don't remove.
+    #
+    # Refreshed again by prelaunch-inprogress-routeback/task0006 (FR13):
+    # `validate_task_entry` rejects a `tasks_patch.entries` entry carrying
+    # `routeback_failed_journal_line` (the orchestrator-only route-back
+    # record), in both `replace_all` and `append`. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh,
+    # don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "c92a6529b6d0f71a7b2e76ff988a6b7f17b212985b547aa3c6d72d829dd4c92a"
+        "6644900ffc609c08b3a578f997a30896974456d93aee2ef1acae618041cc3de8"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
