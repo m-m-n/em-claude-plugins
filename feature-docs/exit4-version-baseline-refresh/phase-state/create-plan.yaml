@@ -1,14 +1,18 @@
 schema_version: 1
 feature: exit4-version-baseline-refresh
 phase: create-plan
-status: initialized
+status: dispatching
 generation: 1
 base_revision: c14d3306019a07e3bff5c9470929b20227fcb0c5
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:e4819745cd468e1f56f4f10785d130896db31806ad610776c3be62903a730fa7
+active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:e4819745cd468e1f56f4f10785d130896db31806ad610776c3be62903a730fa7
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
