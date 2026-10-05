@@ -20,7 +20,7 @@ bases:
       '1': 0.81
       '2': 0.18
       '3': 0.0
-  observed_at: '2026-10-05T09:47:00+09:00'
+  observed_at: '2026-10-05T09:46:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.22
       '2': 0.75
       '3': 0.02
-  observed_at: '2026-10-05T09:58:00+09:00'
+  observed_at: '2026-10-05T09:49:30+09:00'
 pre_survey_estimate:
   files_expected:
   - feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md
@@ -88,4 +88,4 @@ pre_survey_estimate:
   caller_and_dependency_count: 8
   changes_external_contract: false
   changes_behavior: true
-decided_at: '2026-10-05T09:59:00+09:00'
+decided_at: '2026-10-05T09:50:00+09:00'
