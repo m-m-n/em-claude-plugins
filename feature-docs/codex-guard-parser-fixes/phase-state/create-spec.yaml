@@ -6,11 +6,98 @@ generation: 1
 base_revision: 7375ec7cb7feac57f8e2478083b76d2ff93d61f9
 last_input_digest: sha256:59ccbf1e2fa544a741a215cd75b1162ff949bf6559d9f732d13f253e85fae16a
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-05T09:58:00+09:00'
+    questions:
+    - question_id: cs.shell-c-lone-dash
+      status: answered
+    - question_id: cs.info-letters-scope
+      status: answered
+    - question_id: cs.group-stdin-scope
+      status: answered
+    - question_id: cs.old-requirements-doc
+      status: answered
+    - question_id: cs.design-step
+      status: answered
+answers:
+  cs.shell-c-lone-dash:
+    question_id: cs.shell-c-lone-dash
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - treat_as_double_dash
+    freeform: null
+    normalized_answer: 'treat_as_double_dash: shell -c followed by a lone ''-'' ends option parsing like
+      ''--''; the next word is judged as the -c string (bash -c - ''python3 -i'' is denied).'
+    resolution_note: 'Codex chose treat_as_double_dash: bash では単独の - は -- と同義（bash(1) OPTIONS）。現行は -c
+      直後を文字列とみなすため（guard.py:519）、- の次を判定しないと同じ回避経路が残る。変更はシェルの -c に限り、python3 - の許可（test:163）は保つ。 Options
+      not chosen: keep_as_operand. Consultation: entry codex (run_codex_exec.sh readonly) turn 1 answered.
+      Orchestrator judged the mapping onto the declared option_id (comparatively better). Opus escalation
+      not run.'
+    answered_at: '2026-10-05T10:02:16+09:00'
+  cs.info-letters-scope:
+    question_id: cs.info-letters-scope
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - shell_drop_h_and_v
+    freeform: null
+    normalized_answer: 'shell_drop_h_and_v: shells (bash/sh/zsh/dash/ksh) have no info short options (-h
+      and -V both removed); other interpreters keep their current info letters.'
+    resolution_note: 'Codex chose shell_drop_h_and_v: INFO_LETTERS="Vh"（guard.py:530）は全処理系の例外。zsh の -V
+      は NO_PROMPT_CR、dash の -V は行編集設定で、h だけ除くと同種の見逃しが残る。python の -h/-V（test:217）など他の処理系は今のまま保ち、変更をシェルに限る。
+      Options not chosen: shell_drop_h_only, redefine_all_families. Consultation: entry codex (run_codex_exec.sh
+      readonly) turn 1 answered. Orchestrator judged the mapping onto the declared option_id (comparatively
+      better). Opus escalation not run.'
+    answered_at: '2026-10-05T10:02:16+09:00'
+  cs.group-stdin-scope:
+    question_id: cs.group-stdin-scope
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - subshell_and_brace
+    freeform: null
+    normalized_answer: 'subshell_and_brace: both ( ) and { } groups propagate stdin connection (pipe on
+      the left, or stdin redirect after the closing token) to every inner command.'
+    resolution_note: 'Codex chose subshell_and_brace: 現行は区切りごとに入力情報をリセットする（guard.py:202）。{ } でも同じ誤拒否が起きるので単純なグループ構文を両方扱う。ループ・条件分岐までは広げず、判定不能は無出力で許可する原則（SPEC.md:43）を保つ。
+      Options not chosen: subshell_only, include_compound. Consultation: entry codex (run_codex_exec.sh
+      readonly) turn 1 answered. Orchestrator judged the mapping onto the declared option_id (comparatively
+      better). Opus escalation not run.'
+    answered_at: '2026-10-05T10:02:16+09:00'
+  cs.old-requirements-doc:
+    question_id: cs.old-requirements-doc
+    packet_id: create-spec-q0001
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - spec_only
+    freeform: null
+    normalized_answer: 'spec_only: fix SPEC.md FR7 (line 39) and the interpreter table note (line 126)
+      only; REQUIREMENTS.md is left as the historical record.'
+    resolution_note: 'Codex chose spec_only: SPEC.md が仕様の正本（workflow-schema.md:365）。完了の定義どおり SPEC.md の
+      FR7（:39）と表の注記（:126）を直し、REQUIREMENTS.md（:131, :345）は当時の記録として残す。 Options not chosen: spec_and_requirements.
+      Consultation: entry codex (run_codex_exec.sh readonly) turn 1 answered. Orchestrator judged the
+      mapping onto the declared option_id (comparatively better). Opus escalation not run.'
+    answered_at: '2026-10-05T10:02:16+09:00'
+  cs.design-step:
+    question_id: cs.design-step
+    packet_id: create-spec-q0001
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously: accept the analyst''s recommendation (skip the design step).'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously.
+    answered_at: '2026-10-05T10:02:16+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:59ccbf1e2fa544a741a215cd75b1162ff949bf6559d9f732d13f253e85fae16a
   output_digest: null
 artifacts: []
