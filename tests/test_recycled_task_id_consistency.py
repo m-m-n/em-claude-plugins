@@ -265,6 +265,19 @@ verbatim excerpts of this task's own base commit
 - test_note_phrase_present (TestI2bStep1NoEventClassificationNote) -> new
   wording ->
   test_i2b_note_matcher_flags_absence_in_pre_change_i2b_wording
+
+task0002 (prelaunch-inprogress-routeback) rewrites the I.2.a sentence that
+opens "Given I.2.c's route-back precondition" so it no longer claims
+`status: pending` combined with journal last event `launched` can never
+arise: it states when the combination arises and that the in-flight rule
+governs it. `test_unreachability_sentence_present`,
+`test_unreachability_sentence_cites_allocation_rule` and
+`test_unreachability_slice_anchors_survive` follow the wording: they anchor
+on UNREACHABILITY_TERMINAL_PHRASE instead of "can never arise.". The
+allocation-rule, no-`task0001` and no-"renumber" checks are kept. Every
+pre-change sample constant and the tests that run on samples (including the
+inline pre-change allocation-rule sample in `TestValidationDetectsRegressions`)
+describe historical text and stay unchanged.
 """
 
 import importlib.util
@@ -357,6 +370,12 @@ ONLY_SIDE_EFFECT_PHRASE = (
 
 # AC-5 (FR5) group: the I.2.a unreachability sentence's opening anchor.
 UNREACHABILITY_OPENING_ANCHOR = "Given I.2.c's route-back precondition"
+# prelaunch-inprogress-routeback/task0002: the sentence this anchor opens no
+# longer ends "can never arise." -- it states when `status: pending` +
+# journal last event `launched` arises and ends with this terminal phrase.
+UNREACHABILITY_TERMINAL_PHRASE = (
+    "the recycled-task-id carve-out above does not apply to it."
+)
 
 # AC-6 (FR6) group: the I.2.a scope sentence.
 HOOK_FILENAMES = (
@@ -900,6 +919,13 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
     re-planning `replace_all`'s allocation-rule guarantee together with
     `launched` and `pending`; the retained in-flight sentence survives.
 
+    prelaunch-inprogress-routeback/task0002: the sentence no longer claims
+    `status: pending` combined with journal last event `launched` can never
+    arise; it states when that combination arises and ends at
+    UNREACHABILITY_TERMINAL_PHRASE. The slice and its content checks below
+    follow that terminal phrase; they still pin the `replace_all` /
+    `launched` / `pending` tokens and the allocation-rule citation.
+
     task0013 (goal-vs-spec-divergence, review round 1 rework) replaces the
     sentence's premise: it no longer bases the reasoning on the planner's
     `replace_all` "renumbering tasks from `task0001`" (false once the
@@ -915,7 +941,9 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
 
     def test_unreachability_sentence_present(self):
         idx = self.section.index(UNREACHABILITY_OPENING_ANCHOR)
-        end = self.section.index("can never arise.", idx) + len("can never arise.")
+        end = self.section.index(UNREACHABILITY_TERMINAL_PHRASE, idx) + len(
+            UNREACHABILITY_TERMINAL_PHRASE
+        )
         sentence = self.section[idx:end]
         self.assertIn("replace_all", sentence)
         self.assertIn("launched", sentence)
@@ -923,7 +951,9 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
 
     def test_unreachability_sentence_cites_allocation_rule(self):
         idx = self.section.index(UNREACHABILITY_OPENING_ANCHOR)
-        end = self.section.index("can never arise.", idx) + len("can never arise.")
+        end = self.section.index(UNREACHABILITY_TERMINAL_PHRASE, idx) + len(
+            UNREACHABILITY_TERMINAL_PHRASE
+        )
         sentence = self.section[idx:end]
         self.assertIn("allocation rule", sentence)
         self.assertNotIn("task0001", sentence)
@@ -1031,7 +1061,8 @@ class TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct(
     correctly (I.2.c is below I.2.a, never "above"), and reads as one
     premise with a single causal construction. The paragraph's conclusion
     (the inheritance invariant and the failed-only carve-out scoping), the
-    in-flight sentence and the unreachability slice anchors all survive.
+    in-flight sentence and the unreachability slice anchors (the opening
+    anchor and UNREACHABILITY_TERMINAL_PHRASE) all survive.
 
     task0003 (routeback-admissibility-exits, verify round 2 / VF-1):
     `test_inheritance_invariant_conclusion_survives` is re-grounded --
@@ -1091,7 +1122,7 @@ class TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct(
 
     def test_unreachability_slice_anchors_survive(self):
         self.assertIn(UNREACHABILITY_OPENING_ANCHOR, self.i2a)
-        self.assertIn("can never arise.", self.i2a)
+        self.assertIn(UNREACHABILITY_TERMINAL_PHRASE, self.i2a)
 
 
 class TestStopHookBulletCitesClassificationTable(unittest.TestCase):

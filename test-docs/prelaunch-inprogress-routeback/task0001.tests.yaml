@@ -1,0 +1,50 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: Ran 7352 tests, OK
+final_failures: []             # re-executed after implementation: Ran 7382 tests (7352 + 30 new), OK; check-plugin-invariants.py exits 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_prelaunch_inprogress_launch_order.TestAC1LaunchStateCommitFollowsGateAndLaunchLoop.test_positions_strictly_increase_each_searched_after_the_previous
+      - tests.test_prelaunch_inprogress_launch_order.TestAC1LaunchStateCommitFollowsGateAndLaunchLoop.test_capture_follows_the_launch_loop_not_the_worktree_creation
+      - tests.test_prelaunch_inprogress_launch_order.TestAC1LaunchStateCommitFollowsGateAndLaunchLoop.test_commit_call_carries_the_captured_tip_in_the_same_code_span
+      - tests.test_prelaunch_inprogress_launch_order.TestAC6NewWordingMatchersFailOnPreChangeSample.test_ordering_fails_on_the_sample_because_the_commit_precedes_the_gate
+    red_confirmed: true
+    red_reason: "Run against the old document: AssertionError: 'journal re-read statement' is not None (ordering check), and AssertionError: 11095 not less than 6366 (the LAUNCH_TIP capture sat before the BACKGROUND launch loop)"
+  AC-2:
+    tests:
+      - tests.test_exit4_tip_argument_consistency
+      - tests.test_tip_capture_idiom_uniformity
+      - tests.test_protocol_git_ops_pass_destructive_guard
+      - tests.test_batch_quiet_output_phase_wiring
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing tests.test_exit4_tip_argument_consistency, tests.test_tip_capture_idiom_uniformity, tests.test_protocol_git_ops_pass_destructive_guard and tests.test_batch_quiet_output_phase_wiring detect the pinned I.2.a literals (capture/refresh/write/commit order, 'in this normative order', exit-4 citation, ONCE per entry, RECONCILE_TIP never reused, resume-guard to gate order, 'records' line break, marker-only sentence); no red state occurred for this change, they were green before and stayed green unmodified"
+  AC-3:
+    tests:
+      - tests.test_prelaunch_inprogress_launch_order.TestAC3WriteSetIsTheConfirmedLaunches
+      - tests.test_prelaunch_inprogress_launch_order.TestAC6NewWordingMatchersFailOnPreChangeSample.test_every_matcher_fails_on_the_pre_change_sample
+    red_confirmed: true
+    red_reason: "Run against the old document: AssertionError: 'naming every task in the write set' not found in the I.2.a text; the write-set definition, the three unconfirmed-launch causes, the partial-launch sentence and the launch-state commit term were all missing, and 'for EVERY task selected in this entry' was still present"
+  AC-4:
+    tests:
+      - tests.test_prelaunch_inprogress_launch_order.TestAC4EmptyWriteSetAndEndOfTurn
+      - tests.test_prelaunch_inprogress_launch_order.TestAC6IntroMatcherFailsOnPreChangeSample
+      - tests.test_prelaunch_inprogress_launch_order.TestAC6NewWordingMatchersFailOnPreChangeSample.test_sample_still_carries_the_phrases_the_absence_matchers_forbid
+    red_confirmed: true
+    red_reason: "Run against the old document: 'when the write set is empty' and 'the write and the commit are omitted' not found; '**End the turn** after the launch-state commit, or after its omission' not found; 'immediately after launching' still present in both I.2.a and the Step I.2 intro"
+  AC-5:
+    tests:
+      - tests.test_prelaunch_inprogress_launch_order.TestAC5JournalRereadAndExit4
+      - tests.test_prelaunch_inprogress_launch_order.TestAC6NewWordingMatchersFailOnPreChangeSample.test_every_matcher_holds_on_the_live_section
+    red_confirmed: true
+    red_reason: "Run against the old document: the journal re-read statement, 'on the retry, the journal is re-read again after the re-capture and refresh', the terminal-task exclusion, the second-exit-4 stop wording ('keeps the journal's launch records and the tasks' worktrees and branches', 'nothing is deleted or rolled back') and the citation 'the Branch & Worktree Model's exit-4 recovery' were all not found in I.2.a"
+  AC-6:
+    tests:
+      - tests.test_prelaunch_inprogress_launch_order.TestAC6NewWordingMatchersFailOnPreChangeSample
+      - tests.test_prelaunch_inprogress_launch_order.TestAC6IntroMatcherFailsOnPreChangeSample
+    red_confirmed: true
+    red_reason: "The module did not exist before this task; with the new module in place and the document still old, 44 subtests failed (every new-wording matcher failed on the live old text). The negative proofs and non-vacuity guards (sample-based) hold independent of the live document"
+  AC-7:
+    tests:
+      - tests.test_implement_routeback_gate
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing tests.test_implement_routeback_gate detects the I.2.c route-back gate and the Branch & Worktree Model exit-4 bullet; no red state occurred for this change. The byte-identity of Region P, I.2.c and the Branch & Worktree Model section was checked by comparing those sections of the task base and the working tree (all identical); the full suite and check-plugin-invariants.py pass"

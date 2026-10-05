@@ -59,11 +59,15 @@ FIXTURES_ROOT = (
 )
 
 # The verbatim field list task0023 fixes (Shared Components, "Re-planning
-# carry-over declaration", IMPLEMENTATION.md): the SAME ten fields must be
+# carry-over declaration", IMPLEMENTATION.md): the SAME eleven fields must be
 # named in workflow-patch.md's prose AND actually copied by apply_patch.
+# `routeback_failed_journal_line` is the eleventh (prelaunch-inprogress-
+# routeback task0006, FR12): the orchestrator-only route-back record that a
+# re-planning `replace_all` copies verbatim for carried task ids.
 CARRIED_RECORD_FIELDS = {
     "title", "plan", "files", "skills", "domains", "complexity",
     "requirements", "status", "branch", "notes",
+    "routeback_failed_journal_line",
 }
 
 
@@ -103,6 +107,9 @@ def _base_workflow(task0009_files=None, extra_tasks=None):
             "skills": [],
             "status": "merged",
             "title": "existing",
+            # The full record: the orchestrator-only route-back record
+            # holds an integer (FR12).
+            "routeback_failed_journal_line": 7,
         }
     }
     if extra_tasks:

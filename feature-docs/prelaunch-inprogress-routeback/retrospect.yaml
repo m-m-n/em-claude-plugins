@@ -1,0 +1,41 @@
+feature: prelaunch-inprogress-routeback
+collected_at: "2026-10-05T21:19:00+09:00"
+session_ids:
+  - 01a10bff-ac47-72c9-a30c-e55bd27e19ae
+signals:
+  review_critical_high:
+    - stable_id: 197991d271fd0f74
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: 起動後すぐ失敗したタスクが pending のまま残り、I.2.c の判断を経ずに再起動される
+      resolution: unresolved
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0006
+      files:
+        - tests/test_gate_option_vocabulary.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みでバケット 1（確信度 0.68）だが、事前調査で振る舞い変更とテスト未整備が判明し full と判定された"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.15, confidence: 0.82}
+        observed_at: "2026-10-05T18:24:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.28, confidence: 0.68}
+        observed_at: "2026-10-05T18:30:49+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: -1
+      new_files_needed: 0
+      covering_tests_exist: false
+      change_containment: single_module
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "round 1 の high は review-editor の Apply as-is が既存テスト 3 件を壊したため差し戻し、spec-change 経由の rework で解消した。needs-judgment の high は editor より rework に直接回すほうが早い可能性がある"
+  - "Phase R4 に editor 適用後のテスト回帰の扱いが無く、unlisted gate として Codex 相談で決めた"
+  - "Phase R2b で litellm reviewer の review_data_too_large を別ハーネスへ進めるかが未定義で、unlisted gate として決めた"
+  - "triage の ntd.sh タスク一覧取得が 2 ラウンドとも非 0 終了で report に縮退した"
