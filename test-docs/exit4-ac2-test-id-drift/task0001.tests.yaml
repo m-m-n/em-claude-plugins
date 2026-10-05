@@ -1,0 +1,55 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift.TestTargetRecordIds.test_ac2_holds_four_ids_and_the_fourth_is_the_replacement
+      - tests.test_exit4_ac2_test_id_drift.TestTargetRecordIds.test_stale_id_appears_nowhere_in_the_record
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_version_not_bumped_with_em_workflow
+    red_confirmed: true
+    red_reason: "Against the unfixed record, test_ac2_holds_four_ids_and_the_fourth_is_the_replacement failed with AssertionError: the fourth AC-2 ID read ...test_em_review_entry_has_no_version_key instead of ...test_em_review_entry_version_not_bumped_with_em_workflow, and test_stale_id_appears_nowhere_in_the_record failed with AssertionError: the stale ID unexpectedly found in the record. The replacement method itself already existed, so running it by name passed before and after."
+  AC-2:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift.TestAc2RedReasonWording.test_target_record_ac2_red_reason_matches_the_real_assertions
+      - tests.test_exit4_ac2_test_id_drift.TestAc2RedReasonWording.test_check_accepts_a_well_formed_value
+      - tests.test_exit4_ac2_test_id_drift.TestAc2RedReasonWording.test_check_rejects_a_missing_red_reason
+      - tests.test_exit4_ac2_test_id_drift.TestAc2RedReasonWording.test_check_rejects_an_empty_red_reason
+      - tests.test_exit4_ac2_test_id_drift.TestAc2RedReasonWording.test_check_rejects_the_pre_fix_value
+    red_confirmed: true
+    red_reason: "Against the unfixed record, test_target_record_ac2_red_reason_matches_the_real_assertions failed with AssertionError: AC-2 red_reason does not name the four AC-2 test method names (the old value named none of them and contained that entry is untouched). The check_* tests drive the checker with fixed synthetic records and passed on first run."
+  AC-3:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift.TestVersionBumpDocstringWording.test_docstring_carries_neither_stale_string
+      - tests.test_exit4_ac2_test_id_drift.TestVersionBumpDocstringWording.test_check_rejects_each_stale_string
+      - tests.test_exit4_ac2_test_id_drift.TestVersionBumpDocstringWording.test_check_rejects_an_empty_docstring
+      - tests.test_exit4_ac2_test_id_drift.TestVersionBumpDocstringWording.test_check_rejects_a_docstring_that_does_not_mention_ac2_and_ac4
+    red_confirmed: true
+    red_reason: "Against the unfixed docstring, test_docstring_carries_neither_stale_string failed with AssertionError: the module docstring still contains 'no `version` key'. The check_* tests drive the checker with fixed synthetic text and passed on first run."
+  AC-4:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift.TestTargetEnumeration.test_target_list_holds_only_the_task0002_record
+      - tests.test_exit4_ac2_test_id_drift.TestTargetRecordIds.test_per_ac_counts_match_the_record
+      - tests.test_exit4_ac2_test_id_drift.TestRecordedIdsResolve.test_every_id_in_every_target_record_resolves
+      - tests.test_exit4_ac2_test_id_drift.TestIdExtraction.test_block_list_and_inline_empty_list_are_read_in_file_order
+    red_confirmed: true
+    red_reason: "Against the unfixed record, test_every_id_in_every_target_record_resolves failed with AssertionError: 1 acceptance test ID(s) do not resolve: ...test_em_review_entry_has_no_version_key (TestMarketplaceEntryVersion defines no method test_em_review_entry_has_no_version_key). The enumeration, per-AC count and extractor tests were green from the start because the unfixed record already lists 11 IDs in the same shape."
+  AC-5:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift.TestAggregateCheck.test_message_lists_both_unresolvable_ids_and_not_the_resolvable_one
+    red_confirmed: false
+    red_reason: "Passed on first run: the test drives the aggregate check with fixed in-test IDs, so no failing state existed to observe, which is expected for this negative-proof style per the task plan test notes. It asserts both unresolvable IDs are in the message and the resolvable ID is not. As a post-hoc sanity check, not a red observed before implementation, a first-failure-only variant of the aggregate check made it fail."
+  AC-6:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift.TestResolutionJudge.test_stale_id_is_reported_unresolved
+      - tests.test_exit4_ac2_test_id_drift.TestResolutionJudge.test_stale_ids_module_part_and_class_part_both_resolve
+      - tests.test_exit4_ac2_test_id_drift.TestResolutionJudge.test_loader_gate_rejects_the_stale_id_that_the_loader_does_not_raise_for
+      - tests.test_exit4_ac2_test_id_drift.TestTargetRecordIds.test_extracted_ids_are_not_empty
+      - tests.test_exit4_ac2_test_id_drift.TestTargetRecordIds.test_extracted_ids_contain_the_replacement_id
+    red_confirmed: false
+    red_reason: "The negative proof, its module and class guard and the loader-gate test drive the judge with fixed inputs and passed on first run, so no red was observed for them; this is expected for negative proofs per the task plan test notes. test_extracted_ids_contain_the_replacement_id did fail against the unfixed record (AssertionError: the replacement ID not found in the extracted list), but the criterion's main claim, the stale-ID rejection, never went red."
+  AC-7:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift.TestModuleImports.test_every_import_is_a_standard_library_module
+    red_confirmed: false
+    red_reason: "The new module imported only standard-library modules from its first write, so test_every_import_is_a_standard_library_module passed on first run. The remaining items (diff limited to AC-2 test ID and red_reason plus the module docstring, no change under em-review/ em-workflow/ plugin-dev/ or marketplace.json, full suite exit 0) have no executable check that can be made to fail; they were verified with git diff --stat and by running python3 -m unittest discover -s tests (7395 tests, OK) and check-plugin-invariants.py. A search of tests/ for task0002.tests.yaml and test_exit4_tip_argument_version_bump found only this task's module and unrelated mentions in test_heredoc_stdin_guard_version_bump.py and test_codex_wrapper_fallback_removal_integrated_checks.py."
