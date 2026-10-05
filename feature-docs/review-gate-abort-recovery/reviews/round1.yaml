@@ -1,0 +1,91 @@
+round: 1
+executed_at: '2026-10-05T16:15:25+09:00'
+scope:
+  review_mode: diff
+  base_commit: 1592f337e8dbf86c90d2e1833a3d782609e1103a
+  head_commit: c2bb9b733f1cb24fd847a7ae908df75dc0b400c1
+  changed_files:
+  - em-workflow/references/review-phase.md
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/review-gate-abort-recovery/task0001.tests.yaml
+  - test-docs/review-gate-abort-recovery/task0002.tests.yaml
+  - tests/test_review_gate_abort_review_phase.py
+  - tests/test_review_gate_abort_skill_wiring.py
+  - tests/test_tier_record_schema_v2.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: d810ddf805b293a8
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 1065
+  title: Resume path leaves the still-issued packet of origin-membership and malformed-pairing aborts unaddressed
+  description: Spec-change gate abort (review-sourced rework) ブロックは、4 種の中断すべてに同じ再開経路を当てている（新しいラウンド → Completion gate → 通常の rework → interactive で spec-change の質問）。停止報告にも「interactive で /em-workflow:develop を実行すれば spec-change の判断に進む」と書かせている（1065-1076 行）。一方、packet を obsolete に閉じるのは Classification gate の Stop と Inapplicable だけ（question-resolution.md Classification gate step 11）。origin-membership failure と malformed spec-change pairing abort の後に packet がどの状態で残るかは、このブロックにも引用先にも書かれていない。E8f のテストも、obsolete の主張をこの 2 種に広げないよう意図的に絞っている。phase-state.md の Resume decision table は、phase-state が awaiting_answers の phase で未回答の question を再提示する。rework に再び入ったときに旧 packet の question が再提示されると、malformed pairing は両モードで final な abort なので同じ中断を繰り返す。その場合、停止報告が約束する経路には届かない。前提のうち「rework に再び入るとき既存の rework.yaml を再開するのか、新しく始めるのか」（rework-task-synthesis.md 側）は、読み取り予算 10 件を使い切ったため確認していない。そのため確信度は低めにしている。SPEC FR3 も obsolete の packet にしか触れておらず、実装は SPEC には沿っている。
+  suggestion: 2 種の abort の後に残る packet を再開時にどう扱うかを SSOT のどこかで明記する（obsolete にする / supersede する / 再提示しない のいずれか）。または、SC1 ブロックの再開経路と停止報告（E8・E9）の記述を Stop と Inapplicable に限る。どちらも SPEC の範囲を超える設計判断なので、直すかどうかは人が決める。
+  sources:
+  - claude:evaluator
+  confidence: 40
+  resolution: unresolved
+  resolution_reason: medium は auto-fix 候補外。SPEC の範囲を超える設計判断のため人の判断に回す
+evaluation:
+  round_summary: 'ラウンド 1（diff モード、cross_validation=true）。5 観点の reviewer（comprehensive#0, security#0, performance#0, architecture#0, spec#0）はすべて findings 0 件だった。critical/high の報告箇所は無いので、dismissed_sites も空にした。reviewer 出力に指示の差し込みは見つからなかった。evaluator 自身も changed_files 7 件すべてと、SPEC.md・question-resolution.md・phase-state.md を読んだ（検証用の読み取り 10 件で上限ちょうど）。確認できたこと: FR1〜FR6 と AC1〜AC5 に対応する記述がある。2 つのブロックは Phase R5 の batch 段落の後、R6 の前に置かれている。failed の予約宣言には適用範囲の一文が加わっている。SKILL.md の 2 箇所は引用だけで、値を繰り返していない。4 種のゲート中断の名前は question-resolution.md の定義と合っている。classification（decision: proceed|stop、追記型）の形は phase-state.md と合っている。exit-4 リカバリの引用先は Step B に実在する。tests/test_tier_record_schema_v2.py の REVIEW_PHASE_SHA256 は、現在の review-phase.md の sha256（64c2b08f…）と一致した。テストは実行していない。task0001・task0002 の記録では final_failures は空。観点ごとの状況: comprehensive=findings（medium 1 件。origin-membership failure と malformed pairing abort の後に残る packet の、再開時の扱いが書かれていない）、security=corroborated、performance=corroborated、architecture=corroborated、spec=corroborated。finding
+    にしなかった軽い観察が 3 つある。(1) Legacy review-failure recovery は「orchestrator が復旧する」と書く一方で、Step B の分岐を足さない。そのため、いつ・誰の指示で適用するかは、停止報告と resume_conditions を経由すると読むしかない。(2) classification は追記型なので、古い decision: stop が末尾に残ったまま別の理由で review が failed になった場合にも、条件が成り立ちうる。その結果は review の再実行なので、害は小さい。(3) interactive での Precedence reservation（reversible: false）による中断は 4 種に入っていないが、SPEC FR1 の対象の列挙とは一致している。'
+  recommended_action: complete
+  action_rationale: critical/high は 0 件で、Completion gate の条件（residual_critical_high == 0）を満たしている。残る medium 1 件は evaluator が自分で見つけたもので、確信度も低めにしている。直すには SPEC の範囲を超える設計判断（旧 packet の扱い）が要る。そのため、自動修正や追加ラウンドより、人の判断に回すのがよい。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-review-gate-abort-recovery-20261005T071518Z.md
