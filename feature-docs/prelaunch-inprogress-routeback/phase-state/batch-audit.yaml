@@ -38,3 +38,19 @@ records:
     chosen: A。Codex（run_codex_exec.sh readonly、turn 1 で収束）の理由: 設計判断が必要な high を未解決として残し rework-planner に文書とテストをまとめて計画させられる。
     B は既知のテスト失敗を含む修正をコミットし、整合性の回復を後続工程に依存させる。Opus escalation not run.'
   answered_at: '2026-10-05T19:35:36+09:00'
+- question_id: rework.spec-change.failed-before-launch-commit
+  packet_id: rework-q0001
+  source: batch-classification-gate
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: 'change-spec: SPEC を改訂して指摘 197991d271fd0f74 を完全に直す'
+  resolution_note: 'gate: rework.spec-change（routed arm → classification gate）。options: change-spec=SPEC を変えて完全に直す,
+    keep-spec-residual=SPEC を保ち部分的に直し残る経路を既知の残余として明記。chosen: change-spec。origin 検証: 197991d271fd0f74 は
+    reviews/round1.yaml に実在、bound set の category は comprehensive のみ、reversible:false の仮定なし。Codex（run_codex_exec.sh readonly、turn 1）の判定:
+    verdict (b) spec_gap、根拠 FR1,FR2,FR4,FR5,FR6,NFR2,AC1,AC3,AC5,AC8（すべて SPEC.md に実在）。要点: FR1・FR2 どおり未起動タスクに in_progress を書かず
+    ゴールは満たす。FR4・AC5 の終端除外が pending + failed を残し、FR5 で保持する carve-out が誤分類する。NFR2 がフック変更を禁じるため仕様の穴。
+    Claude も納得して proceed。Opus escalation not run。続けて spec-change 遷移（create-spec needs_update、create-plan/implement/review pending、
+    base_commit 保持、rework.yaml spec_change 記録）を実行し batch.review_rework_count を 1 にした。'
+  answered_at: '2026-10-05T19:43:07+09:00'
