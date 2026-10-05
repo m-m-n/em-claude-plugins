@@ -236,7 +236,8 @@ path, resolved by each implementer's parent-side-adoption protocol
 via flock).
 
 The loop alternates two phases across turns: a **launch phase** (the turn
-ends immediately after launching) and a **wake phase** (entered when an
+ends after the launches and the launch-state commit that follows them, or
+after that commit's omission) and a **wake phase** (entered when an
 implementer's `Task()` call returns / a subagent completion notification
 arrives). There is no synchronous fan-out-and-wait: the orchestrator never
 blocks a turn waiting on implementers; it launches, ends the turn, and
@@ -252,9 +253,23 @@ line-by-line and reconcile with workflow.yaml `tasks.*.status`. Select
 unlaunched tasks (no journal event yet and `status != merged`, ascending
 task-id order) up to `min(6 - in_flight_count, count(unlaunched))`.
 Recycled task id: workflow.yaml's status wins over a stale journal event
-here — a task whose workflow.yaml `status` is `pending` while the
-journal's last event for that id is `failed` counts as **unlaunched**, not
-failed. This carve-out is deliberately scoped to `failed` only, to stay
+here, but only for the one `failed` event that I.2.c's route back to
+planning reset. A task counts as **unlaunched** under this carve-out only
+when all three hold: its workflow.yaml `status` is `pending`, its journal
+last event is `failed`, and that event's physical line equals its
+`tasks.{T}.routeback_failed_journal_line` record (`references/workflow-schema.md`
+defines the record, cited here and not restated). Otherwise a `pending` +
+`failed` task is **failed**: the match fails when the record is absent,
+`null`, not in canonical form, or names a different line, and the task goes
+to I.2.c's failure handling below (batch: `implement.failed-task` in
+`references/batch-policies.yaml`) instead of being selected here. That
+includes a task route-backed before this record existed, which carries none.
+Nothing clears the record: a re-launched task that fails again has its last
+`failed` event on a new line, so it no longer matches. A task whose
+launch-state commit was not reached and which later fails becomes
+`pending` + `failed` as well; its `failed` event does not match the record,
+so the carve-out does not apply and the task is **failed**.
+This carve-out is deliberately scoped to `failed` only, to stay
 consistent with `queue_launch_guard.py`, which reads only the journal's
 last event (never workflow.yaml) and allows a post-`failed` launch as the
 legitimate retry path. A task whose journal last event is `launched` is
@@ -264,15 +279,24 @@ I.2.c's route back to planning is the only writer that resets a task's
 status to `pending`, and no re-planning pass ever re-issues a retired task
 id to a different task — `references/workflow-patch.md`'s re-planning
 task-id allocation rule (cited here, never restated) allocates every new
-id above the highest the feature has ever registered, so the `pending` +
-`failed` combination arises only from I.2.c's own reset of a task's own
-prior `failed` status, never from a task inheriting a different task's
-retired id. Given I.2.c's route-back precondition below, which admits only
+id above the highest the feature has ever registered, so a task never
+inherits a different task's retired id. The `pending` + `failed`
+combination has two origins, each a task's own: I.2.c's own reset of the
+task's own prior `failed` status, and a launched task that failed without
+reaching Step I.2.a's launch-state commit below, whether through an
+interruption or after a second exit 4, which leaves its status `pending`.
+The record match tells the two origins apart: only the route-back reset
+matches it. Given I.2.c's route-back precondition below, which admits only
 tasks with a terminal journal last event, and the allocation rule's
 guarantee that a `replace_all` never re-issues a retired id, a task can
-only ever carry its OWN journal's terminal event — so workflow.yaml
-`status: pending` combined with journal last event `launched` can never
-arise. Because Step I.2.c's route-back gate below blocks route-back
+only ever carry its OWN journal's terminal event — route-back alone
+therefore never produces workflow.yaml `status: pending` combined with
+journal last event `launched`; that combination arises between a task's
+launch and Step I.2.a's launch-state commit below, and also when that
+commit is not reached (an interruption, or a second exit 4). The
+in-flight rule stated just above governs that combination, cited here and
+not restated; the recycled-task-id carve-out above does not apply to it.
+Because Step I.2.c's route-back gate below blocks route-back
 whenever any task's journal last event is `merged` — read from the
 journal directly, independent of the ancestor check — that gate never
 admits route-back while such an event stands. No retired task id is ever
@@ -304,7 +328,8 @@ The other three queue hooks detect a task as **unlaunched** solely from the abse
 any journal event for that task id — never from `tasks.{T}.status`.
 `queue_stop_guard.py` is the exception: as described above, it also reads
 `tasks.{T}.status` to apply the recycled-task-id carve-out that reclassifies
-a `failed` + `pending` task as unlaunched. This is
+a `failed` + `pending` task as unlaunched, and that carve-out also requires
+the record match. This is
 narrower than the orchestrator's own selection rule above, which
 additionally excludes any task whose `status` reads `merged`; the hooks
 carry no equivalent exclusion. This divergence is recorded, not fixed:
@@ -340,62 +365,7 @@ git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
 ```
 
 Branch point = integration branch AT THIS MOMENT (includes every task merged
-so far). Write the launch state for ALL selected tasks in this normative
-order — the capture precedes the refresh, the refresh precedes the write,
-and the write precedes the commit:
-
-1. **capture** the tip —
-   `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`
-2. **refresh** the integration worktree to the branch —
-   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
-3. **write**, on the worktree just refreshed, `tasks.{T}.status =
-   in_progress` and `tasks.{T}.branch` into workflow.yaml for EVERY task
-   selected in this entry — one write set, not one per task
-4. **commit** that single write set with the captured tip as the third
-   argument — `commit-docs.sh {integration_worktree} "docs({feature}):
-   launch {T1}, {T2}, …"  "$LAUNCH_TIP"` (naming every task selected in
-   this entry; the third argument is `expected_base_tip`; exit-4
-   recovery: Branch & Worktree Model above — the "a second exit 4 stops
-   the phase" counter there is counted per commit attempt, i.e. per entry
-   into this sequence, not per task named in the commit)
-
-Capture precedes refresh, and refresh always targets the branch NAME,
-deliberately, guaranteeing two invariants. First, the refresh target is
-the branch name, never a captured SHA: a linked worktree's `HEAD` is an
-attached symref to the branch, so `git reset --hard <a captured SHA>`
-would move the BRANCH REF itself backward to that SHA, silently
-discarding any `merge-task.sh update-ref` that advanced the branch since
-the capture; `reset --hard em-workflow/{feature}/integration` moves the
-ref to where it already points and can never rewind it. Second, the
-capture precedes the refresh: if the branch advances in the window
-between the two, the refreshed tree holds the NEW (post-advance) tip
-while `$LAUNCH_TIP` holds the OLD one, so `commit-docs.sh`'s tip check
-is guaranteed to see the mismatch and exit 4 — entering the bounded
-exit-4 recovery — rather than silently committing a stale tree.
-Capturing afterwards with `rev-parse HEAD` would instead read the branch
-ref AT READ TIME, which could hand `commit-docs.sh` a tip the working
-tree was never built on and let the check pass while silently committing
-a stale tree.
-
-**Idiom split is transitional (NFR1)**: the four call sites that already
-pass a tip — Step I.1's baseline capture, Step I.2.b step 2's wake-phase
-capture, and Step I.2.c's two terminal-status captures — still refresh
-first and capture with `rev-parse HEAD`. The reasoning above
-supersedes that older idiom, but converting those four sites is out of
-scope here and is tracked as its own change; until it lands, the two
-shapes coexist by design. Read them as one mechanism mid-migration, not
-as a contradiction in this document, and write any NEW call site in the
-capture-first form above.
-
-**Refill (FR5)**: this sequence runs ONCE per entry into Step I.2.a —
-including the refill re-entry from Step I.2.b step 5 within the same
-turn — covering every task selected in that entry with a single capture,
-a single refresh, one write set, and one commit; a fresh `LAUNCH_TIP` is
-captured each time (i.e. on each such entry, not per task). `$RECONCILE_TIP`
-is never reused as this step's third argument: it is captured at Step I.2.b
-step 2, BEFORE Step I.2.b step 3's own commit advances the branch tip, so by
-the time the refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already
-stale.
+so far).
 
 **Resume guard**: before running `git worktree add -b` for task T, check
 whether `em-workflow/{feature}/{T}` and/or `$WT_ROOT/{T}` already exist (this
@@ -463,14 +433,136 @@ and the AC → test mapping with the observed red for each criterion. Build
 the path yourself and pass it — the implementer does not know `{feature}`
 and must not derive it from other paths.
 
-**End the turn** immediately after launching — no polling, no synchronous
-wait. In a `--batch` run, this turn's final assistant message is the
-marker line `references/batch-mode.md` defines and nothing else. The
-PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
+The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
 each allowed launch as a `launched` journal event as the call goes through
 (the only writer of `launched`); it also denies double-launching a task
 that is already in flight or already merged, as a net under the
 orchestrator's own bookkeeping.
+
+**Journal re-read and write set**: after the launch loop, re-read the latest
+journal (the same replay as at the top of this section, last event per
+task). The write set is the tasks selected in this entry whose journal last
+event is `launched` — the launches the journal confirms, the **in_progress
+part** — together with the failed launches of the **failed part** below.
+Both parts go into the one write set of this entry and the same
+launch-state commit:
+
+- **in_progress part**: a selected task whose re-read journal last event is
+  `launched`. It is written `in_progress`.
+- **failed part**: a selected task that meets two conditions. First, a
+  `launched` event for the task appears in the re-read journal after the
+  extent replayed at selection time (the **selection-time replay**, the
+  replay at the top of this section). Second, the re-read journal last
+  event is `failed`. Such a task launched in this entry and had already
+  failed by the time of the re-read. Its `tasks.{T}.status = failed` and
+  `tasks.{T}.branch` are written in the same write set and the same
+  launch-state commit, it is never written `in_progress`, and it is never
+  left `pending`.
+
+A selected task outside the write set is not written:
+
+- no `launched` appended after the selection-time replay → not in the write
+  set; the task stays `pending` in workflow.yaml. This covers a task
+  stopped at the approval gate, a task denied by the launch guard, a task
+  whose `Task()` never issued, and a task that was already `pending` +
+  `failed` at selection and did not launch this time;
+- last event `merged` → not in the write set; it is never written and is
+  left to I.2.b.
+
+A task with re-read last event `merged` or `failed` is never written
+`in_progress`; a last event `failed` is written only as the failed part
+above.
+
+A partial launch still yields exactly one write set and one commit, which
+hold the in_progress part and the failed part together.
+
+The launch-state write never sets or changes
+`tasks.{T}.routeback_failed_journal_line`.
+
+Write the launch state for the write set in this normative order — the
+capture precedes the refresh, the refresh precedes the write, and the
+write precedes the commit:
+
+1. **capture** the tip —
+   `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`
+2. **refresh** the integration worktree to the branch —
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
+3. **write**, on the worktree just refreshed, into workflow.yaml for every
+   task in the write set (not every selected task) — one write set, not one
+   per task: `tasks.{T}.status = in_progress` and `tasks.{T}.branch` for
+   each task of the in_progress part, and `tasks.{T}.status = failed` and
+   `tasks.{T}.branch` for each task of the failed part
+4. **commit** that single write set — the launch-state commit — with the
+   captured tip as the third argument —
+   `commit-docs.sh {integration_worktree} "docs({feature}): launch {T1},
+   {T2}, …"  "$LAUNCH_TIP"` (naming every task in the write set, both
+   parts; the third argument is `expected_base_tip`; exit-4 recovery: Branch &
+   Worktree Model above — the "a second exit 4 stops the phase" counter
+   there is counted per commit attempt, i.e. per entry into this sequence,
+   not per task named in the commit)
+
+Capture precedes refresh, and refresh always targets the branch NAME,
+deliberately, guaranteeing two invariants. First, the refresh target is
+the branch name, never a captured SHA: a linked worktree's `HEAD` is an
+attached symref to the branch, so `git reset --hard <a captured SHA>`
+would move the BRANCH REF itself backward to that SHA, silently
+discarding any `merge-task.sh update-ref` that advanced the branch since
+the capture; `reset --hard em-workflow/{feature}/integration` moves the
+ref to where it already points and can never rewind it. Second, the
+capture precedes the refresh: if the branch advances in the window
+between the two, the refreshed tree holds the NEW (post-advance) tip
+while `$LAUNCH_TIP` holds the OLD one, so `commit-docs.sh`'s tip check
+is guaranteed to see the mismatch and exit 4 — entering the bounded
+exit-4 recovery — rather than silently committing a stale tree.
+Capturing afterwards with `rev-parse HEAD` would instead read the branch
+ref AT READ TIME, which could hand `commit-docs.sh` a tip the working
+tree was never built on and let the check pass while silently committing
+a stale tree.
+
+**Idiom split is transitional (NFR1)**: the four call sites that already
+pass a tip — Step I.1's baseline capture, Step I.2.b step 2's wake-phase
+capture, and Step I.2.c's two terminal-status captures — still refresh
+first and capture with `rev-parse HEAD`. The reasoning above
+supersedes that older idiom, but converting those four sites is out of
+scope here and is tracked as its own change; until it lands, the two
+shapes coexist by design. Read them as one mechanism mid-migration, not
+as a contradiction in this document, and write any NEW call site in the
+capture-first form above.
+
+**Refill (FR5)**: this sequence runs ONCE per entry into Step I.2.a —
+including the refill re-entry from Step I.2.b step 5 within the same
+turn — covering the write set of that entry with a single capture, a
+single refresh, one write set, and one commit (at most one write set and
+one commit per entry); a fresh `LAUNCH_TIP` is captured each time (i.e. on
+each such entry, not per task). `$RECONCILE_TIP` is never reused as this
+step's third argument: it is captured at Step I.2.b step 2, BEFORE Step
+I.2.b step 3's own commit advances the branch tip, so by the time the
+refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already stale.
+
+**Empty write set**: when the write set is empty — only when both parts are
+empty, that is, no task is confirmed `launched` and no launched task has
+already failed at the re-read — the write and the commit are omitted, and
+the turn still ends after that omission.
+
+**exit 4**: the bounded recovery is the Branch & Worktree Model's exit-4
+recovery, cited here and not restated. Applied to the launch-state commit:
+on the retry, the journal is re-read again after the re-capture and refresh,
+and the write set is re-derived the same way: both parts are re-derived by
+the same rule, so a task that reached `failed` between the first attempt
+and the retry moves from the in_progress part to the failed part (an empty
+re-derived write set means no retry commit). A second exit 4 stops the
+phase with a report naming the call site (Step I.2.a's launch-state commit)
+and the tasks in the write set; the stop keeps the journal's launch records
+and the tasks' worktrees and branches — nothing is deleted or rolled back.
+The in_progress-part tasks then read `pending` with journal last event
+`launched` and are in-flight under the in-flight rule in the selection
+rules above (cited, not restated); a failed-part task reads `pending` with
+journal last event `failed`.
+
+**End the turn** after the launch-state commit, or after its omission when
+the write set is empty — no polling, no synchronous wait. In a `--batch`
+run, this turn's final assistant message is the marker line
+`references/batch-mode.md` defines and nothing else.
 
 ### I.2.b: Wake phase (on completion notification)
 
@@ -482,8 +574,12 @@ Triggered whenever a launched implementer's `Task()` call returns.
    I.2.a's selection condition, per the divergence discussion in I.2.a
    above; `launched` → in-flight; `merged` → merged; `failed` →
    failed — except that a task whose journal last event is `failed` AND
-   whose workflow.yaml `status` is `pending` is unlaunched instead, the
-   recycled-task-id rule in I.2.a above; a `launched` last event is always
+   whose workflow.yaml `status` is `pending` AND whose last `failed`
+   event's physical line equals its
+   `tasks.{T}.routeback_failed_journal_line` record is unlaunched instead,
+   the recycled-task-id rule in I.2.a above (a `pending` + `failed` task
+   without that match stays failed and goes to I.2.c's failure handling);
+   a `launched` last event is always
    in-flight regardless of workflow.yaml `status`) and cross-check against
    git actual state, trust-but-verify:
    - Worktree/branch existence, PLUS live-agent absence, for tasks the
@@ -991,7 +1087,14 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   this entry, so this adds no extra write and no extra commit — record
   each such task's failure reason (the implementer's report `notes`) in
   `tasks.{T}.notes`, and set `tasks.{T}.status` back to `pending` for
-  every task in that set — the
+  every task in that set, and for each task in that set that has a journal
+  event, set `tasks.{T}.routeback_failed_journal_line` to the physical line
+  of that task's last `failed` event (the record is defined in
+  `references/workflow-schema.md`; the line comes from the same journal
+  replay used for the gate and the reset-set decision, a task with no
+  journal event gets no record, and the route-back commit below commits
+  this item with the rest of the write set, adding no new write and no
+  new commit) — the
   gate above already established that no task is `merged` or
   `in_progress` at this point, so the result is that no task is left
   `merged` or `in_progress` or `failed`, which is exactly what makes the
@@ -1161,9 +1264,12 @@ Stop-hook bullet below cite it as this classification's source.
 
 - **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
   ends. Replays the journal and workflow.yaml, applying the same
-  recycled-task-id carve-out as I.2.a above — a task whose journal last
-  event is `failed` and whose workflow.yaml `status` reads `pending`
-  reclassifies as unlaunched, not failed; if refillable slots and
+  recycled-task-id carve-out as I.2.a above — a task is unlaunched only
+  when its workflow.yaml `status` reads `pending`, its journal last event
+  is `failed`, and that event's physical line equals its
+  `tasks.{T}.routeback_failed_journal_line` record; a `pending` + `failed`
+  task without that match is `failed`, and the hook does not block that
+  feature (exit 0). If refillable slots and
   unlaunched tasks exist and no task's reconciled state is `failed`, it
   BLOCKS (exit 2) naming the tasks to launch — catching a forgotten refill
   after a wake phase. Classification (hook classification table above):
