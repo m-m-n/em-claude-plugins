@@ -20,7 +20,9 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 HOOK_PATH = os.path.join(REPO_ROOT, "em-workflow", "hooks", "queue_stop_guard.py")
 
 
-def build_workflow_yaml(feature, implement_status, task_ids, task_statuses=None):
+def build_workflow_yaml(
+    feature, implement_status, task_ids, task_statuses=None, routeback_records=None
+):
     """`task_statuses` optionally maps a task id to the value written after
     its own `status:` line. A task id absent from the mapping keeps writing
     `status: pending` (today's fixed text) so every existing call site's
@@ -28,8 +30,16 @@ def build_workflow_yaml(feature, implement_status, task_ids, task_statuses=None)
     key entirely (the "absent status key" scenario); a mapped value of ""
     writes `status:` with no value after the colon (the "undeterminable"
     scenario, since a bare colon leaves nothing for a status reader to
-    capture)."""
+    capture).
+
+    `routeback_records` optionally maps a task id to the value written after
+    a `routeback_failed_journal_line:` line inside that task's own block. A
+    task id absent from the mapping (and every call that passes no mapping)
+    writes no such line, so the default output is unchanged. A recycled
+    task id is unlaunched only when this record equals the physical journal
+    line of its last `failed` event."""
     task_statuses = task_statuses or {}
+    routeback_records = routeback_records or {}
     lines = [
         "schema_version: 1",
         f"feature: {feature}",
@@ -83,6 +93,10 @@ def build_workflow_yaml(feature, implement_status, task_ids, task_statuses=None)
                 lines.append(f"    status: {status}")
         else:
             lines.append("    status: pending")
+        if task_id in routeback_records:
+            lines.append(
+                f"    routeback_failed_journal_line: {routeback_records[task_id]}"
+            )
         lines.append("    notes: null")
     return "\n".join(lines) + "\n"
 
@@ -114,9 +128,15 @@ class StopGuardFixture:
         )
         os.makedirs(self.docs_dir, exist_ok=True)
 
-    def write_workflow(self, implement_status, task_ids, task_statuses=None):
+    def write_workflow(
+        self, implement_status, task_ids, task_statuses=None, routeback_records=None
+    ):
         content = build_workflow_yaml(
-            self.docs_segment, implement_status, task_ids, task_statuses=task_statuses
+            self.docs_segment,
+            implement_status,
+            task_ids,
+            task_statuses=task_statuses,
+            routeback_records=routeback_records,
         )
         with open(self.workflow_path(), "w") as fh:
             fh.write(content)
@@ -514,16 +534,24 @@ class TestQueueStopGuardRetryAfterFailure(unittest.TestCase):
 
 class TestQueueStopGuardRecycledTaskId(unittest.TestCase):
     """Recycled-task-id carve-out: a `failed` journal last event whose
-    task's own workflow status still reads `pending` is a retired id from a
-    route-back re-plan, not a genuine failure."""
+    task's own workflow status still reads `pending` AND whose physical
+    journal line equals the task's `routeback_failed_journal_line` record is
+    the one `failed` event a route-back reset returned to `pending`, not a
+    genuine failure. The tests that expect the carve-out to apply carry a
+    matching record in their fixture (the `failed` event is journal line 1);
+    tests/test_queue_stop_guard_routeback_record.py covers the match rule
+    itself."""
 
     def test_retired_task_id_with_pending_status_is_unlaunched_and_blocks(self):
         # The residual `failed` event for task0001 must not suppress the
-        # feature once its own status is still `pending`.
+        # feature once its own status is still `pending` and its record
+        # names that event's line.
         with tempfile.TemporaryDirectory() as tmp:
             fx = StopGuardFixture(tmp)
             task_ids = ["task0001", "task0002", "task0003"]
-            fx.write_workflow("in_progress", task_ids)  # all default to pending
+            fx.write_workflow(
+                "in_progress", task_ids, routeback_records={"task0001": 1}
+            )  # all default to pending
             fx.write_journal([failed("task0001")])
 
             result = invoke_hook(tmp, DEFAULT_STDIN)
@@ -635,7 +663,9 @@ class TestQueueStopGuardRecycledTaskId(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             fx = StopGuardFixture(tmp)
             task_ids = [f"task{i:04d}" for i in range(1, 9)]  # 8 tasks
-            fx.write_workflow("in_progress", task_ids)  # all pending
+            fx.write_workflow(
+                "in_progress", task_ids, routeback_records={"task0001": 1}
+            )  # all pending
             # task0001 is a retired id (pending); task0006-8 in-flight ->
             # free_slots = 6 - 3 = 3; unlaunched = task0001..task0005 (5),
             # bounded ascending list = task0001, task0002, task0003.
@@ -663,7 +693,9 @@ class TestQueueStopGuardRecycledTaskId(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             fx = StopGuardFixture(tmp)
             task_ids = ["task0001", "task0002", "task0003"]
-            fx.write_workflow("in_progress", task_ids)  # all pending
+            fx.write_workflow(
+                "in_progress", task_ids, routeback_records={"task0001": 1}
+            )  # all pending
             fx.write_journal([failed("task0001")])  # retired id, reclassified unlaunched
 
             for i in range(1, 4):
