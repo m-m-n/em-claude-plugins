@@ -236,7 +236,8 @@ path, resolved by each implementer's parent-side-adoption protocol
 via flock).
 
 The loop alternates two phases across turns: a **launch phase** (the turn
-ends immediately after launching) and a **wake phase** (entered when an
+ends after the launches and the launch-state commit that follows them, or
+after that commit's omission) and a **wake phase** (entered when an
 implementer's `Task()` call returns / a subagent completion notification
 arrives). There is no synchronous fan-out-and-wait: the orchestrator never
 blocks a turn waiting on implementers; it launches, ends the turn, and
@@ -345,62 +346,7 @@ git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
 ```
 
 Branch point = integration branch AT THIS MOMENT (includes every task merged
-so far). Write the launch state for ALL selected tasks in this normative
-order — the capture precedes the refresh, the refresh precedes the write,
-and the write precedes the commit:
-
-1. **capture** the tip —
-   `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`
-2. **refresh** the integration worktree to the branch —
-   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
-3. **write**, on the worktree just refreshed, `tasks.{T}.status =
-   in_progress` and `tasks.{T}.branch` into workflow.yaml for EVERY task
-   selected in this entry — one write set, not one per task
-4. **commit** that single write set with the captured tip as the third
-   argument — `commit-docs.sh {integration_worktree} "docs({feature}):
-   launch {T1}, {T2}, …"  "$LAUNCH_TIP"` (naming every task selected in
-   this entry; the third argument is `expected_base_tip`; exit-4
-   recovery: Branch & Worktree Model above — the "a second exit 4 stops
-   the phase" counter there is counted per commit attempt, i.e. per entry
-   into this sequence, not per task named in the commit)
-
-Capture precedes refresh, and refresh always targets the branch NAME,
-deliberately, guaranteeing two invariants. First, the refresh target is
-the branch name, never a captured SHA: a linked worktree's `HEAD` is an
-attached symref to the branch, so `git reset --hard <a captured SHA>`
-would move the BRANCH REF itself backward to that SHA, silently
-discarding any `merge-task.sh update-ref` that advanced the branch since
-the capture; `reset --hard em-workflow/{feature}/integration` moves the
-ref to where it already points and can never rewind it. Second, the
-capture precedes the refresh: if the branch advances in the window
-between the two, the refreshed tree holds the NEW (post-advance) tip
-while `$LAUNCH_TIP` holds the OLD one, so `commit-docs.sh`'s tip check
-is guaranteed to see the mismatch and exit 4 — entering the bounded
-exit-4 recovery — rather than silently committing a stale tree.
-Capturing afterwards with `rev-parse HEAD` would instead read the branch
-ref AT READ TIME, which could hand `commit-docs.sh` a tip the working
-tree was never built on and let the check pass while silently committing
-a stale tree.
-
-**Idiom split is transitional (NFR1)**: the four call sites that already
-pass a tip — Step I.1's baseline capture, Step I.2.b step 2's wake-phase
-capture, and Step I.2.c's two terminal-status captures — still refresh
-first and capture with `rev-parse HEAD`. The reasoning above
-supersedes that older idiom, but converting those four sites is out of
-scope here and is tracked as its own change; until it lands, the two
-shapes coexist by design. Read them as one mechanism mid-migration, not
-as a contradiction in this document, and write any NEW call site in the
-capture-first form above.
-
-**Refill (FR5)**: this sequence runs ONCE per entry into Step I.2.a —
-including the refill re-entry from Step I.2.b step 5 within the same
-turn — covering every task selected in that entry with a single capture,
-a single refresh, one write set, and one commit; a fresh `LAUNCH_TIP` is
-captured each time (i.e. on each such entry, not per task). `$RECONCILE_TIP`
-is never reused as this step's third argument: it is captured at Step I.2.b
-step 2, BEFORE Step I.2.b step 3's own commit advances the branch tip, so by
-the time the refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already
-stale.
+so far).
 
 **Resume guard**: before running `git worktree add -b` for task T, check
 whether `em-workflow/{feature}/{T}` and/or `$WT_ROOT/{T}` already exist (this
@@ -468,14 +414,105 @@ and the AC → test mapping with the observed red for each criterion. Build
 the path yourself and pass it — the implementer does not know `{feature}`
 and must not derive it from other paths.
 
-**End the turn** immediately after launching — no polling, no synchronous
-wait. In a `--batch` run, this turn's final assistant message is the
-marker line `references/batch-mode.md` defines and nothing else. The
-PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
+The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
 each allowed launch as a `launched` journal event as the call goes through
 (the only writer of `launched`); it also denies double-launching a task
 that is already in flight or already merged, as a net under the
 orchestrator's own bookkeeping.
+
+**Journal re-read and write set**: after the launch loop, re-read the latest
+journal (the same replay as at the top of this section, last event per
+task). The write set is the tasks selected in this entry whose journal last
+event is `launched` — the launches the journal confirms. A selected task
+outside the write set is not written:
+
+- no event for the task (stopped at the approval gate, denied by the launch
+  guard, or `Task()` never issued) → not in the write set; the task stays
+  `pending` in workflow.yaml;
+- last event `merged` or `failed` (terminal) → not in the write set; never
+  written `in_progress`.
+
+A partial launch still yields exactly one write set and one commit.
+
+Write the launch state for the write set in this normative order — the
+capture precedes the refresh, the refresh precedes the write, and the
+write precedes the commit:
+
+1. **capture** the tip —
+   `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`
+2. **refresh** the integration worktree to the branch —
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
+3. **write**, on the worktree just refreshed, `tasks.{T}.status =
+   in_progress` and `tasks.{T}.branch` into workflow.yaml for every task
+   in the write set (not every selected task) — one write set, not one per
+   task
+4. **commit** that single write set — the launch-state commit — with the
+   captured tip as the third argument —
+   `commit-docs.sh {integration_worktree} "docs({feature}): launch {T1},
+   {T2}, …"  "$LAUNCH_TIP"` (naming every task in the write set; the
+   third argument is `expected_base_tip`; exit-4 recovery: Branch &
+   Worktree Model above — the "a second exit 4 stops the phase" counter
+   there is counted per commit attempt, i.e. per entry into this sequence,
+   not per task named in the commit)
+
+Capture precedes refresh, and refresh always targets the branch NAME,
+deliberately, guaranteeing two invariants. First, the refresh target is
+the branch name, never a captured SHA: a linked worktree's `HEAD` is an
+attached symref to the branch, so `git reset --hard <a captured SHA>`
+would move the BRANCH REF itself backward to that SHA, silently
+discarding any `merge-task.sh update-ref` that advanced the branch since
+the capture; `reset --hard em-workflow/{feature}/integration` moves the
+ref to where it already points and can never rewind it. Second, the
+capture precedes the refresh: if the branch advances in the window
+between the two, the refreshed tree holds the NEW (post-advance) tip
+while `$LAUNCH_TIP` holds the OLD one, so `commit-docs.sh`'s tip check
+is guaranteed to see the mismatch and exit 4 — entering the bounded
+exit-4 recovery — rather than silently committing a stale tree.
+Capturing afterwards with `rev-parse HEAD` would instead read the branch
+ref AT READ TIME, which could hand `commit-docs.sh` a tip the working
+tree was never built on and let the check pass while silently committing
+a stale tree.
+
+**Idiom split is transitional (NFR1)**: the four call sites that already
+pass a tip — Step I.1's baseline capture, Step I.2.b step 2's wake-phase
+capture, and Step I.2.c's two terminal-status captures — still refresh
+first and capture with `rev-parse HEAD`. The reasoning above
+supersedes that older idiom, but converting those four sites is out of
+scope here and is tracked as its own change; until it lands, the two
+shapes coexist by design. Read them as one mechanism mid-migration, not
+as a contradiction in this document, and write any NEW call site in the
+capture-first form above.
+
+**Refill (FR5)**: this sequence runs ONCE per entry into Step I.2.a —
+including the refill re-entry from Step I.2.b step 5 within the same
+turn — covering the write set of that entry with a single capture, a
+single refresh, one write set, and one commit (at most one write set and
+one commit per entry); a fresh `LAUNCH_TIP` is captured each time (i.e. on
+each such entry, not per task). `$RECONCILE_TIP` is never reused as this
+step's third argument: it is captured at Step I.2.b step 2, BEFORE Step
+I.2.b step 3's own commit advances the branch tip, so by the time the
+refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already stale.
+
+**Empty write set**: when the write set is empty (no confirmed launch, or
+every confirmed task already terminal at the re-read), the write and the
+commit are omitted.
+
+**exit 4**: the bounded recovery is the Branch & Worktree Model's exit-4
+recovery, cited here and not restated. Applied to the launch-state commit:
+on the retry, the journal is re-read again after the re-capture and refresh,
+and the write set is re-derived the same way (terminal tasks excluded; an
+empty re-derived write set means no retry commit). A second exit 4 stops the
+phase with a report naming the call site (Step I.2.a's launch-state commit)
+and the tasks in the write set; the stop keeps the journal's launch records
+and the tasks' worktrees and branches — nothing is deleted or rolled back.
+Those tasks then read `pending` with journal last event `launched` and are
+in-flight under the in-flight rule in the selection rules above (cited, not
+restated).
+
+**End the turn** after the launch-state commit, or after its omission when
+the write set is empty — no polling, no synchronous wait. In a `--batch`
+run, this turn's final assistant message is the marker line
+`references/batch-mode.md` defines and nothing else.
 
 ### I.2.b: Wake phase (on completion notification)
 
