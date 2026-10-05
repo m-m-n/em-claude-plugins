@@ -1,0 +1,20 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 7352 tests OK; check-plugin-invariants.py: all PASS
+final_failures: []             # re-executed after the SPEC edit: 7352 tests OK; check-plugin-invariants.py: all PASS
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only criterion (FR7 item of feature-docs/codex-interactive-guard-hook/SPEC.md). Searched tests/ by repository-relative path and by basename (SPEC.md): no existing test reads that SPEC file; the SPEC.md hits in tests/ reference other features' SPEC files or synthetic fixtures. The task plan adds no test module. No executable check was run before the edit, so no red state was observed. Verified after the edit by inspecting the FR7 line and a text search showing it no longer lists -V / -h as not denied for every interpreter."
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only criterion (interpreter-table note of the same SPEC). Same search result as AC-1: no existing test reads the earlier feature's SPEC.md. No executable red exists. Verified after the edit by inspecting the note and the text search showing the only remaining -h / -V mentions are the FR7 item and this note, both saying shell -h / -V are not among the not-denied options."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "Diff-scope criterion with no executable test in the suite. Verified after the edit with git diff --name-only against the merge-base (only feature-docs/codex-interactive-guard-hook/SPEC.md) and the full diff (only the FR7 item and the interpreter-table note). REQUIREMENTS.md and reviews/round1.yaml are unchanged."
+  AC-4:
+    tests: ["python3 -m unittest discover -s tests", "python3 em-workflow/scripts/check-plugin-invariants.py ."]
+    red_confirmed: false
+    red_reason: "Both commands were already green at the baseline (7352 tests OK, all invariants PASS) and stayed green after the edit; the criterion is a no-regression gate, so no red state occurred."
