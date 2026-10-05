@@ -278,9 +278,87 @@ CASES = [
     ("silent", "bash -c の展開を含む文字列", 'bash -c "python3 -i $X"'),
     ("silent", "bash -c の中の不正なクォート", "bash -c \"echo 'x\""),
     ("silent", "bash -c の中のクォート内", "bash -c 'echo \"python3 -i\"'"),
-    ("silent", "bash -cx は -c の値が x", "bash -cx 'python3 -i'"),
+    ("deny", "bash -cx は -c を値を取らない旗として読み、文字列を判定する", "bash -cx 'python3 -i'"),
     ("silent", "python3 -c の中身は評価しない", "python3 -c 'import os; os.system(\"python3 -i\")'"),
     ("silent", "bash -c の文字列が無い", "bash -c"),
+    # Shell -c is a flag that takes no value (FR1)
+    ("deny", "束の -ce の文字列を判定", "bash -ce 'python3 -i'"),
+    ("deny", "-c の後ろの -- のあとの文字列", "bash -c -- 'python3 -i'"),
+    ("deny", "-c の後ろの単独 - のあとの文字列", "bash -c - 'python3 -i'"),
+    ("deny", "束の中の i は対話", "bash -ci 'python3'"),
+    ("deny", "-c の後ろの別語の -i", "bash -c -i 'python3'"),
+    ("deny", "-co の値の後ろの文字列", "bash -co pipefail 'python3 -i'"),
+    ("deny", "-c の後ろの -o の値の後ろの文字列", "bash -c -o pipefail 'python3 -i'"),
+    ("deny", "sh -cx の文字列", "sh -cx 'python3'"),
+    ("deny", "-c の後ろの旗のあとの文字列", "bash -c -x 'python3 -i'"),
+    ("deny", "-oc の o は次の語を値に取り c は旗", "bash -oc pipefail 'python3 -i'"),
+    ("silent", "-c の文字列より後ろの -i は引数", "bash -c 'echo hi' -i"),
+    ("silent", "-c の文字列より後ろの -- と -i は引数", "bash -c 'echo hi' -- -i"),
+    ("silent", "bash -cx と無害な文字列", "bash -cx 'echo hi'"),
+    ("silent", "bash -c -- と無害な文字列", "bash -c -- 'echo hi'"),
+    ("silent", "bash -cx の文字列が無い", "bash -cx"),
+    ("silent", "bash -c - の文字列が無い", "bash -c -"),
+    ("silent", "bash -cx -- の文字列が無い", "bash -cx --"),
+    ("silent", "bash -cx と外側のパイプ", "echo | bash -cx python3"),
+    ("silent", "bash -cx と外側の入力", "bash -cx 'python3' < f"),
+    ("silent", "bash -cx の動的な文字列", 'bash -cx "$CMD"'),
+    ("silent", "bash -cx の文字列も 1 段だけ判定する", "bash -cx \"bash -c 'python3 -i'\""),
+    # Information short options belong to each interpreter (FR2)
+    ("deny", "bash -h は情報表示ではない", "bash -h"),
+    ("deny", "sh -h は情報表示ではない", "sh -h"),
+    ("deny", "zsh -h は情報表示ではない", "zsh -h"),
+    ("deny", "zsh -V は情報表示ではない", "zsh -V"),
+    ("deny", "dash -V は情報表示ではない", "dash -V"),
+    ("deny", "bash -V は情報表示ではない", "bash -V"),
+    # A command substitution inside double quotes is one chunk (FR3)
+    ("silent", "二重引用符内の置換の中の引用符", 'echo "$(echo "; python3 -i")"'),
+    ("silent", "二重引用符内のバッククォート", 'echo "`echo x`; python3 -i"'),
+    ("silent", "二重引用符内の算術展開", 'echo "$((1+2)); python3 -i"'),
+    ("silent", "二重引用符内の置換の中身は判定しない", 'echo "$(python3 -i)"'),
+    ("silent", "二重引用符内の閉じていない置換", 'echo "$(echo "'),
+    ("silent", "二重引用符内の閉じない置換と後ろの起動", 'echo "$(echo x"; python3 -i'),
+    ("silent", "置換の中の単一引用符の括弧", "echo \"$(echo ')'; python3 -i)\""),
+    ("deny", "置換を閉じたあとの引用符の外の起動", 'echo "$(echo x)"; python3 -i'),
+    ("deny", "置換の中の引用符を読み切ったあとの起動", 'echo "$(echo "x")"; python3 -i'),
+    ("deny", "置換の中のエスケープした引用符のあとの起動", 'echo "$(echo \\")"; python3 -i'),
+    # Groups pass their stdin connection down (FR4)
+    ("silent", "括弧のあとの入力リダイレクト", "(python3) < /dev/null"),
+    ("silent", "パイプの右側の括弧の中", "printf 'print(1)\\n' | (echo ignored; python3)"),
+    ("silent", "括弧のあとの 0<", "(python3) 0< f"),
+    ("silent", "括弧のあとの heredoc", "(python3) <<EOF\nprint(1)\nEOF"),
+    ("silent", "入れ子の括弧のあとの入力", "( (python3) ) < f"),
+    ("silent", "波括弧のあとの入力リダイレクト", "{ python3; } < /dev/null"),
+    ("silent", "パイプの右側の波括弧の中", "printf 'print(1)\\n' | { echo ignored; python3; }"),
+    ("silent", "パイプの右側の入れ子の括弧", "echo x | ( (python3) )"),
+    ("silent", "パイプの右側の入れ子の波括弧", "echo x | { echo a; { python3; }; }"),
+    ("deny", "括弧のあとの stderr のリダイレクトでは接続しない", "(python3) 2>/dev/null"),
+    ("deny", "括弧のあとの stdout のリダイレクトでは接続しない", "(python3) > out"),
+    ("deny", "括弧の右のパイプでは接続しない", "(python3) | cat"),
+    ("deny", "接続のある括弧でも -i は拒否", "(python3 -i) < /dev/null"),
+    ("deny", "パイプの右側の括弧でも -i は拒否", "echo x | (python3 -i)"),
+    ("deny", "波括弧のあとの stderr のリダイレクトでは接続しない", "{ python3; } 2>/dev/null"),
+    ("deny", "波括弧だけでは接続しない", "{ python3; }"),
+    ("deny", "グループの外の起動は接続しない", "echo x | (cat); python3"),
+    ("deny", "閉じたグループのあとの別コマンドは接続しない", "(cat) < f; python3"),
+    ("deny", "語の一部の波括弧はグループではない", "{a,b}; python3"),
+    ("silent", "引用符内の波括弧はグループではない", "echo '{'; echo '}'"),
+    ("silent", "語の一部の波括弧は引数", "echo {a,b}"),
+    ("silent", "関数定義の本体は実行しない", "f() { python3; }"),
+    ("silent", "閉じていない括弧は判定不能", "(python3"),
+    ("silent", "閉じていない波括弧は判定不能", "{ python3;"),
+    ("silent", "} がコマンドの位置に無い波括弧は判定不能", "{ python3 }"),
+    # A pending pipe survives empty lines (FR5)
+    ("silent", "パイプのあとの改行", "echo x |\npython3"),
+    ("silent", "パイプのあとの空行", "echo x |\n\npython3"),
+    ("silent", "パイプのあとのコメント", "echo x | # c\npython3"),
+    ("silent", "パイプのあとの heredoc 本文", "cat <<EOF |\nbody\nEOF\npython3"),
+    ("silent", "パイプのあとのコメント行", "echo x |\n# c\npython3"),
+    ("silent", "|& のあとの改行", "echo x |&\npython3"),
+    ("silent", "パイプのあとの改行と括弧", "echo x |\n(python3)"),
+    ("deny", "&& のあとの改行では接続しない", "echo x &&\npython3"),
+    ("deny", "|| のあとの改行では接続しない", "echo x ||\npython3"),
+    ("deny", "パイプのあとのリダイレクトだけの行では接続しない", "echo x |\n>out\npython3"),
+    ("deny", "パイプの右側のコマンドのあとの改行では接続しない", "echo x | cat\npython3"),
     # Words the hook cannot read (NFR2)
     ("silent", "変数のコマンド語", "$PY -i"),
     ("silent", "変数の引数", 'python3 "$@"'),
@@ -321,7 +399,7 @@ def payload_for(command):
     }
 
 
-def run_hook(path, payload, cwd=None, env=None):
+def run_hook(path, payload, cwd=None, env=None, timeout=None):
     data = payload if isinstance(payload, bytes) else (
         payload if isinstance(payload, str) else json.dumps(payload)
     )
@@ -333,6 +411,7 @@ def run_hook(path, payload, cwd=None, env=None):
         capture_output=True,
         cwd=cwd,
         env=env,
+        timeout=timeout,
     )
     return proc.returncode, proc.stdout.decode("utf-8"), proc.stderr.decode("utf-8")
 
@@ -478,6 +557,113 @@ class TestFailOpen(HookCopiesMixin, unittest.TestCase):
             code, out, err = run_hook(path, payload_for(command))
             self.assertEqual((code, err), (0, ""))
             self.assertIn("deny", out)
+
+
+class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
+    """Input the parser cannot follow ends as a verdict, never as an error
+    (NFR1, TM-3). The tests do not fix the verdict for deep input: they check
+    that the process ends in time with exit status 0, that standard output is
+    empty or exactly one deny object, and that nothing reaches standard error.
+    """
+
+    DEPTH = 6000  # the criteria ask for at least 5000 levels
+    TIMEOUT = 60
+
+    def assert_answers(self, path, command):
+        code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "", "nothing may reach standard error")
+        if out == "":
+            return
+        obj, end = json.JSONDecoder().raw_decode(out)
+        self.assertEqual(out[end:].strip(), "", "standard output holds one object")
+        self.assertEqual(obj["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def assert_every_copy_answers(self, command):
+        for plugin, path in self.for_each_copy():
+            self.assert_answers(path, command)
+
+    def test_an_unclosed_group_is_answered(self):
+        for command in ("(python3", "{ python3;", "( (python3)", "{ { python3; }"):
+            with self.subTest(command=command):
+                self.assert_every_copy_answers(command)
+
+    def test_substitutions_nested_deeply_inside_double_quotes_are_answered(self):
+        depth = self.DEPTH
+        inputs = {
+            "closed": 'echo ' + '"$(echo ' * depth + "x" + ')"' * depth,
+            "unclosed": 'echo ' + '"$(echo ' * depth,
+            "closed then a launch": 'echo ' + '"$(echo ' * depth + "x" + ')"' * depth + "; python3 -i",
+            "arithmetic": 'echo "' + "$((" * depth + "1" + "))" * depth + '"',
+            "backticks": 'echo "' + "`echo x`" * depth + '"',
+        }
+        for name, command in inputs.items():
+            with self.subTest(shape=name):
+                self.assert_every_copy_answers(command)
+
+    def test_groups_nested_deeply_are_answered(self):
+        depth = self.DEPTH
+        inputs = {
+            "parentheses": "(" * depth + "python3" + ")" * depth,
+            "unclosed parentheses": "(" * depth + "python3",
+            "braces": "{ " * depth + "python3" + "; }" * depth,
+            "unclosed braces": "{ " * depth + "python3;",
+            "connected": "(" * depth + "python3" + ")" * depth + " < /dev/null",
+        }
+        for name, command in inputs.items():
+            with self.subTest(shape=name):
+                self.assert_every_copy_answers(command)
+
+    def test_a_pipe_followed_by_many_empty_lines_is_answered(self):
+        depth = self.DEPTH
+        inputs = {
+            "blank lines": "echo x |" + "\n" * depth + "python3",
+            "comment lines": "echo x |" + "\n# c" * depth + "\npython3",
+            "after and-and": "echo x &&" + "\n" * depth + "python3",
+        }
+        for name, command in inputs.items():
+            with self.subTest(shape=name):
+                self.assert_every_copy_answers(command)
+
+
+def module_docstring(path):
+    """The module docstring with its line breaks and indentation folded into
+    single spaces, so a sentence is found wherever the text wraps."""
+    doc = ast.get_docstring(ast.parse(path.read_text(encoding="utf-8"))) or ""
+    return " ".join(doc.split())
+
+
+class TestGuardDocumentation(unittest.TestCase):
+    """The judgment procedure in the module docstring follows the parser
+    (FR6): the markers below are the sentences that name each behavior."""
+
+    DOCSTRING_MARKERS = (
+        # FR1
+        "`-c` takes no value",
+        # FR2
+        "shells have no information short option",
+        # FR3
+        "inside double quotes",
+        # FR4
+        "group",
+        "stdin redirect",
+        # FR5
+        "pending pipe",
+    )
+
+    def test_the_docstring_describes_the_new_behaviour(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for marker in self.DOCSTRING_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_no_text_makes_h_and_V_information_options_of_every_interpreter(self):
+        for plugin, path in HOOK_PATHS.items():
+            source = path.read_text(encoding="utf-8")
+            for stale in ("INFO_LETTERS", "in every family"):
+                with self.subTest(copy=plugin, stale=stale):
+                    self.assertNotIn(stale, source)
 
 
 def verdict_of(result):
