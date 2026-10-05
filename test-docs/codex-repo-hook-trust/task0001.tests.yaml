@@ -1,0 +1,136 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any file was touched in this worktree: OK, no failures inherited; check-plugin-invariants.py: all PASS
+final_failures: []             # re-executed after implementation (wrapper, THREAT-MODEL.md, findings record and the new test module in place): python3 -m unittest discover -s tests OK, 0 failures and 0 skipped (7380 tests, 28 of them the new module); check-plugin-invariants.py: all PASS
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      The criterion is about the content of the findings record
+      (feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md), a Markdown evidence document; the
+      task plan's Test Notes say no test parses the Markdown records. Searched tests/ (and
+      em-workflow/hooks/tests, em-workflow/scripts) by the repository-relative path
+      `feature-docs/codex-repo-hook-trust/HOOK-TRUST-FINDINGS.md` and by the basename
+      `HOOK-TRUST-FINDINGS`: the only hits are the new tests/test_codex_repo_hook_trust.py (a docstring
+      citation) and the wrapper comment; no existing test reads the record. No executable check
+      exists that could be made to fail, so no red was observed. The record was checked by
+      inspection against the criterion (version, source of the list, definitions, probe commands,
+      matrix, positive controls, same-key observation, verdicts, branch).
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Document criterion on the findings record (temporary HOME and CODEX_HOME for every probe,
+      no credential value). Same search as AC-1 (path and basename of the findings record): no
+      existing test reads it. The record was checked by inspection and by a pattern search for
+      credential-like values (none; the only credential is named LITELLM_API_KEY, by name). The
+      equivalent properties of the test module itself (temporary HOME and CODEX_HOME, sentinel
+      absent from output) are recorded under AC-5; they say nothing about the record's text, so
+      they are not listed here.
+  AC-3:
+    tests:
+      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_trusts_the_working_directory_readonly
+      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_trusts_the_working_directory_readwrite
+      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_without_trust_readonly
+      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_without_trust_readwrite
+      - test_codex_repo_hook_trust.TestRoutesNotObservedExecutingKeepTheirLaunch.test_codex_home_and_isolation_flags_are_exactly_as_before
+      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readonly_user_config_trusts_the_repository
+      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_user_config_trusts_the_repository
+      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_repository_not_trusted_by_the_user_config
+    red_confirmed: true
+    red_reason: >
+      Observed by running the new module against a copy of the em-workflow tree as committed before
+      the change (git archive of HEAD, wrapper path substituted): the four TS1 cases failed with
+      "CODEX_HOME is the user's Codex home, not a launch-dedicated home" and "directory <repo> is
+      not marked untrusted in the launch home", and the three TS2 cases failed with "repository
+      hooks ran through the wrapper (the control created: ['SessionStart', 'UserPromptSubmit'])".
+      All turned green after the launch change. The "non-executing routes keep their launch
+      composition" half
+      (TestRoutesNotObservedExecutingKeepTheirLaunch) passed from the start because it pins an
+      unchanged property. The post-change probe part of the criterion is recorded in section 9 of
+      the findings record and is a document check.
+  AC-4:
+    tests:
+      - test_codex_hook_wrapper_args
+      - test_consultation_harness_chain
+      - test_codex_wrapper_single_invocation
+      - test_codex_reviewer_temp_file_isolation
+      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_launch_composition_other_than_the_home_is_kept
+      - test_codex_repo_hook_trust.TestRoutesNotObservedExecutingKeepTheirLaunch.test_codex_home_and_isolation_flags_are_exactly_as_before
+    red_confirmed: false
+    red_reason: >
+      The contract in this criterion (guard registration, --ignore-rules, --ignore-user-config on
+      the default route, -p litellm -m MODEL, usage and flags, one codex exec, prompt last, no 2>&1
+      in the em-workflow wrapper, one 2>&1 and no --litellm in em-review) pre-exists and is pinned by
+      the four existing modules, which passed unchanged before and after the change; no red state
+      occurred for it. The TS1 composition case
+      (test_ts1_launch_composition_other_than_the_home_is_kept) was red on the pre-change wrapper,
+      but because its record also asserts the launch-dedicated home, not because of the
+      composition checks, so it is not evidence that those checks can fail.
+  AC-5:
+    tests:
+      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute
+      - test_codex_repo_hook_trust.TestSpecificationCheckIsNotVacuous
+      - test_codex_repo_hook_trust.TestCredentialValueStaysOutOfOutput
+    red_confirmed: true
+    red_reason: >
+      Observed against the pre-change wrapper copy (same run as AC-3). In
+      TestProtectiveSpecificationOnLitellmRoute 10 of the 11 cases failed (some through subTests,
+      with messages such as "the launch home has no config.toml" and "CODEX_HOME is the user's Codex
+      home, not a launch-dedicated home"); only the exit-code case passed.
+      TestSpecificationCheckIsNotVacuous.test_the_genuine_record_passes,
+      test_a_record_without_the_guard_registration_is_rejected and
+      test_the_stub_saw_the_temporary_home_and_codex_home failed on the pre-change launch. The
+      forged-record rejections (the user's own home, a trust entry, a missing untrusted marker, a
+      home outside the temporary directories, a missing profile) and the credential-sentinel cases
+      passed on the pre-change wrapper because they exercise the checker or a property that
+      pre-exists (the wrapper never prints the credential); they are the criterion's non-vacuity
+      and sentinel parts and are reported in unconfirmed_reds.
+  AC-6:
+    tests:
+      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readonly_user_config_trusts_the_repository
+      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_user_config_trusts_the_repository
+      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_repository_not_trusted_by_the_user_config
+      - test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_codex_absent_skips
+      - test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_other_codex_version_skips
+      - test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_control_without_marker_skips
+    red_confirmed: true
+    red_reason: >
+      TS2 on the pre-change wrapper copy: all three cases failed with "repository hooks ran through
+      the wrapper (the control created: ['SessionStart', 'UserPromptSubmit'])" (real Codex 0.160.0,
+      local stub backend, temporary HOME and CODEX_HOME), and passed after the change. The skip rule
+      (codex absent, other version, control without marker) was made to fail by temporarily removing
+      the version check and the no-marker skip from the TS2 class: the three
+      TestRealCodexCheckSkipsInsteadOfPassing cases failed ("1 != 0 : ..." for the child run, and
+      "'session id:' not found in ''" from the wrapper launch under the fake codex) and passed again
+      after the module was restored.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Document criterion on TB-3 of feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md and on
+      that feature's SPEC.md staying unchanged. Searched tests/ by the repository-relative path
+      `feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md` (no hit), by the basename
+      `THREAT-MODEL.md` and `THREAT-MODEL` (hits only in tests/test_threat_model_*.py and
+      tests/test_reviewer_roles_protocol.py, which read the plugin's agent, phase and template
+      documents, not this feature's file) and by `TB-3` (no hit). No existing test reads the
+      guard feature's THREAT-MODEL.md, and the task plan says no test parses these records, so no
+      executable check could be made to fail. Checked by inspection and by `git status` showing
+      SPEC.md untouched.
+  AC-8:
+    tests:
+      - test_codex_hook_wrapper_args
+      - test_consultation_harness_chain
+      - test_codex_wrapper_single_invocation
+      - test_codex_reviewer_temp_file_isolation
+    red_confirmed: false
+    red_reason: >
+      Two parts. (a) The suite outcome (python3 -m unittest discover -s tests, including the four
+      existing wrapper modules, TS3): these modules passed before the change and still pass; the
+      criterion asks for no regression, so no red state exists. Their expected fixed values did not
+      need to change, because the launch changed only in the CODEX_HOME value of the --litellm
+      route, which none of them pin. (b) The comment half (each wrapper's Interactive-guard hook
+      section states the FR1 result and matches the launch): searched tests/ for the text
+      `Interactive-guard hook` and for the wrapper paths; the existing modules read the wrapper
+      but none asserts on this comment text (they exclude comment lines when checking for 2>&1), so
+      no executable check exists that could fail on it. Checked by inspection against the launch.
