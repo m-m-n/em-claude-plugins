@@ -1,17 +1,64 @@
 schema_version: 1
 feature: sca-directness-resolution
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: fafed0f15972d0a07ee5c8acb5b1dd7efcb79369
 last_input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-05T12:38:00+09:00'
+    questions:
+    - question_id: requirement.directness-undetermined.reporting
+      status: answered
+    - question_id: requirement.declaration-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.directness-undetermined.reporting:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T12:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - summary_note
+    freeform: null
+    normalized_answer: 判定できなかった advisory は summary の件数注記で報告し、skipped は false のまま（既存の
+      severity_undetermined と同じ形）
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); Codex 推奨 summary_note（skipped が実行単位の未完了を表す契約を維持できる）。worker
+      推奨と一致。opus_escalation: false'
+  requirement.declaration-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T12:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - existing_plus_task
+    freeform: null
+    normalized_answer: 直接依存として数えるのは既存のテーブル + タスクに書かれた形式（サブテーブル、package= リネーム、クォート非依存、extras）だけ。Python
+      の依存グループは追加しない
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness codex, 1 turn); worker の暫定案は add_python_groups だったが、Codex は existing_plus_task
+      を推奨（依頼範囲は 4 経路の修正と既存対応の維持で、追加グループは明示されていない）。orchestrator はスコープを広げない方を相対的に良いと判断して採用。opus_escalation:
+      false'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-05T12:45:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は推奨どおり skip
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml select decide_autonomously'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:4096f44cc00893c4823a12e1556fe3c70bdd863f0648660b420e0acfd82f9b06
 artifacts: []
 patches: []
 progress_fingerprint: null
