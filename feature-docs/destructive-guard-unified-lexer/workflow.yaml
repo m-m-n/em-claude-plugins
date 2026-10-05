@@ -2,39 +2,69 @@ schema_version: 1
 feature: destructive-guard-unified-lexer
 created: '2026-10-05'
 base_branch: main
-goal: |
-  # destructive-guard: $'...' と ${...}・算術式の読み違いで破壊的コマンドが素通りする（review round 2 deferred high）
+goal: '# destructive-guard: $''...'' と ${...}・算術式の読み違いで破壊的コマンドが素通りする（review round 2 deferred high）
+
 
   Notion: https://www.notion.so/3ef3509ec8ee819cad1ff51ab63d4d83
 
+
   ## 脆弱性の概要 (必須)
-  `em-workflow/hooks/destructive-guard.py` が `$'...'`（ANSI-C 引用）と `${...}`・`$((...))`・`((...))`・`$[...]` の中身を bash と違う形で読む。その結果、後ろに続く破壊的コマンドを文の区切りごと隠したり、ヒアドキュメントの本文として捨てたりして、allow を返す。
+
+  `em-workflow/hooks/destructive-guard.py` が `$''...''`（ANSI-C 引用）と `${...}`・`$((...))`・`((...))`・`$[...]` の中身を bash と違う形で読む。その結果、後ろに続く破壊的コマンドを文の区切りごと隠したり、ヒアドキュメントの本文として捨てたりして、allow を返す。
+
   ## 参照 (必須)
+
   - CVE / GHSA ID: 該当なし
+
   - アドバイザリ URL: 該当なし
+
   - severity: high
+
   - 該当パッケージ: 該当なし
+
   - 現在のバージョン: em-workflow（feature `destructive-guard-heredoc-sink-gaps` の integration ブランチ `em-workflow/destructive-guard-heredoc-sink-gaps/integration`）
+
   - 修正済みバージョン: 無し
+
   ## 攻撃シナリオ (必須)
+
   エージェントが生成する Bash コマンドが次の形をとると、PreToolUse フックが allow を返して破壊的コマンドが実行される。どれも基準コミット（3efc2b9c）の時点から allow で、今回の変更による退行ではない。
-  - 4d76e1accb9e8fed: `cat $'\'' ; bash -s \' <<EOF` の後ろに git reset --hard を置く形。shlex が `$'...'` を普通の単一引用として読み、`;` を飲み込む
-  - 4d76e1accb9e8fed の別形: `echo $'\'' ' #' ;` の後ろに破壊的コマンドを置く形。`_blank_comments()` が `$'` を普通の `'` と読み、後ろの `#` から行末までをコメントとして消す
+
+  - 4d76e1accb9e8fed: `cat $''\'''' ; bash -s \'' <<EOF` の後ろに git reset --hard を置く形。shlex が `$''...''` を普通の単一引用として読み、`;` を飲み込む
+
+  - 4d76e1accb9e8fed の別形: `echo $''\'''' '' #'' ;` の後ろに破壊的コマンドを置く形。`_blank_comments()` が `$''` を普通の `''` と読み、後ろの `#` から行末までをコメントとして消す
+
   - e812ca2e1c631029: `echo ${x/<<EOF/}`・`echo $((1<<2))`・`((x=1<<2))`・`echo $[1<<2]` の後ろの行に破壊的コマンドを置き、区切り語の行で閉じる形。中の `<<` をヒアドキュメント演算子と読み、後続行を本文として捨てる
+
   - e812ca2e1c631029 の別形: `if ((1<<2)); then :; fi`（予約語の後ろの `((`）と `echo $[a[1]<<2]`（入れ子の `[ ]`）
+
   ## 影響範囲 (必須)
+
   無人実行（em-workflow の batch）を含め、hook が allow を返すので rm -rf や git reset --hard が確認なしで実行される。
+
   ## 完了の定義 (必須)
+
   - [ ] 攻撃シナリオが成立しない
+
   - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
   - [ ] 上の各形を deny ケースとして `em-workflow/hooks/tests/destructive-guard-cases.json` に足す
-  - [ ] review round 2 の loop 1 で入れた退行の防止ケース（`$$'`、`${x:-a #}`、`$${`、`rm -rf /tmp/safe$'\t'`、`"${x:-a(b}"`）が期待どおりのまま残る
+
+  - [ ] review round 2 の loop 1 で入れた退行の防止ケース（`$$''`、`${x:-a #}`、`$${`、`rm -rf /tmp/safe$''\t''`、`"${x:-a(b}"`）が期待どおりのまま残る
+
   - [ ] 既存の deny / ask ケースが 1 件も消えていない
+
   ## 該当箇所 (任意)
+
   - `em-workflow/hooks/destructive-guard.py` の `_lex_layout()`（shlex に渡す前の前処理）、`_blank_comments()`、`_OperatorContext.real_operators()`
+
   - 詳細は integration ブランチの `feature-docs/destructive-guard-heredoc-sink-gaps/reviews/round2.yaml`（stable_id で検索）
+
   ## 暫定緩和策 (任意)
+
   review round 2 では、個別に継ぎ足す修正（`_blank_ansi_c()` と param / arith / bracket のフレーム）を一度入れた。しかし、それまで deny だった形が allow になる退行が出たので撤回した。継ぎ足しをやめ、引用・コメント・展開の状態を 1 回のパスで追う字句解析にまとめて作り直すことを勧める。architecture の指摘 7e700e9f9906edc7（読み取りが `_OperatorContext`・`scan_structure()`・shlex の 3 か所に分かれている）も同じ根なので、あわせて扱う。
+
+  '
 parent_branch: em-workflow/destructive-guard-unified-lexer/integration
 tier: full
 tier_decision:
@@ -94,7 +124,39 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Unified single-pass lexer for destructive-guard
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -104,113 +166,174 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
+    - TS-8
+    - TS-16
   FR2:
     title: パラメータ展開の中の `<<` を演算子にしない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-8
+    - TS-16
   FR3:
     title: 算術式の中の `<<` を演算子にしない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-8
+    - TS-13
+    - TS-14
+    - TS-16
   FR4:
     title: 展開の中の置換の検査を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-13
   FR5:
     title: 閉じない文脈は開かない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-8
+    - TS-15
+    - TS-16
   FR6:
     title: 引用・コメント・展開の状態を 1 つの字句解析で決める
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   FR7:
     title: 位置追跡用の書き換えと検査用の値を分ける
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-5
   FR8:
     title: ヒアドキュメント本文を状態追跡から外し、位置を対応させる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-8
+    - TS-17
   FR9:
     title: 置換を拾う 3 つの方針を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-18
   FR10:
     title: 読み取りの一致を確かめるテスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-16
   FR11:
     title: 修正より前にケースを足す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-19
+    - TS-20
   FR12:
     title: 既存ケースを保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-6
   NFR1:
     title: 静的解析のみ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   NFR2:
     title: 依存を増やさない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR3:
     title: 性能
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+    - TS-12
   NFR4:
     title: 変更範囲
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
 batch:
   review_rework_count: 0
   verify_rework:
