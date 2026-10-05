@@ -1815,42 +1815,6 @@ def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
     return findings, undetermined
 
 
-class DirectNames(frozenset):
-    """The direct-dependency set of one scan unit: the declared names (as
-    written in the manifest, never canonicalized) plus whether every
-    declaration of the manifest was resolved. Immutable, and for every read an
-    existing caller performs on a plain name collection (membership test,
-    iteration, size, equality with a plain set of the same names) it behaves
-    exactly like an immutable set of those names. `complete` is read-only:
-    True means every declaration was resolved. A name collection without a
-    `complete` attribute is treated as complete (the legacy-value rule), so a
-    resolver returning one still works with a classifier that reads
-    completeness."""
-
-    __slots__ = ("_complete",)
-
-    def __new__(cls, names=(), complete=True):
-        instance = super().__new__(cls, names)
-        object.__setattr__(instance, "_complete", bool(complete))
-        return instance
-
-    @property
-    def complete(self):
-        return self._complete
-
-    def __setattr__(self, name, value):
-        raise AttributeError(f"{type(self).__name__} is immutable")
-
-    def __delattr__(self, name):
-        raise AttributeError(f"{type(self).__name__} is immutable")
-
-    def __reduce__(self):
-        return (type(self), (tuple(self), self._complete))
-
-    def __repr__(self):
-        return f"{type(self).__name__}({sorted(self, key=str)!r}, complete={self._complete})"
-
-
 # The leading PEP 508 name of a requirement string, accepted only when it is
 # followed by the end of the string, whitespace, an extras bracket, a version
 # operator, a parenthesis, a marker separator, a direct-reference marker or a
