@@ -41,6 +41,26 @@ stubbed `codex` first on PATH that appends its argv to a JSON-lines log --
 the subprocess-harness pattern tests/test_codex_wrapper_single_invocation.py
 already uses -- so the assertions are about the real launch, not about the
 script's text.
+
+Contributor-tier gating of the litellm entry (feature
+consult-litellm-contributor-tier, task0001). The consultation procedure used
+to carry one fixed example, `--litellm muse-spark`, and the orchestrator
+copied it literally instead of following the contributor-tier reading the
+procedure cites. The procedure now determines `contributor_consented` once
+per consultation (step 1) and picks the litellm invocation from it (step 2).
+The cases in TestConsultationProcedureChain that carry a "contributor-tier
+AC-n" comment pin that behavior on the document text:
+
+- AC-1: step 1 names `contributor_consented`, runs the consent-check command
+  pinned by tests/test_contributor_tier_criteria.py, runs it only when the
+  litellm entry is available and before the first turn, and states the
+  true / false rule.
+- AC-2: step 2 names `contributor_consented` and carries both invocations;
+  the standard form is matched as a standalone flag value, because it is a
+  prefix of the contributor form.
+- AC-3: the value is fixed for the whole consultation, including turns after
+  a mid-consultation move from codex to litellm.
+- AC-6: a failed check yields false even when the failed run printed a line.
 """
 
 import importlib.util
@@ -79,6 +99,38 @@ sys.exit(0)
 
 def _norm(text):
     return re.sub(r"\s+", " ", text)
+
+
+CONTRIBUTOR_TIER_CRITERIA_TESTS = (
+    REPO_ROOT / "tests" / "test_contributor_tier_criteria.py"
+)
+
+
+def _pinned_consent_check_command():
+    """CONSENT_CHECK_COMMAND exactly as tests/test_contributor_tier_criteria.py
+    pins it for review-phase.md Phase R0 and the registries. Loaded from that
+    file by path (so it works under both `discover -s tests` and
+    `-m unittest tests.<module>`) rather than re-typed here, so the
+    consultation procedure and the review phase cannot drift apart."""
+    spec = importlib.util.spec_from_file_location(
+        "_contributor_tier_criteria_pins", CONTRIBUTOR_TIER_CRITERIA_TESTS
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.CONSENT_CHECK_COMMAND
+
+
+def _between(text, start, end):
+    """The slice of `text` from `start` up to (not including) `end`."""
+    head = text.index(start)
+    return text[head : text.index(end, head + len(start))]
+
+
+# The standard-tier flag value is a prefix of the contributor-tier one, so a
+# plain substring check for it is satisfied by the contributor form alone. A
+# standalone occurrence is one not continued by another name character.
+STANDARD_INVOCATION = re.compile(r"--litellm muse-spark(?![\w\-])")
+CONTRIBUTOR_INVOCATION = "--litellm muse-spark-contributor"
 
 
 def _run_wrapper(*args):
@@ -191,6 +243,15 @@ class TestConsultationProcedureChain(unittest.TestCase):
         assert marker in cls.text
         cls.section = cls.text.split(marker, 1)[1]
         cls.norm_section = _norm(cls.section)
+        # Step ranges, cut from the whitespace-normalized section so line
+        # wrapping never matters. Step 1 runs up to the step 2 heading, step 2
+        # up to the step 3 heading, and the combined range up to step 3.
+        step_1 = "1. **Availability probe.**"
+        step_2 = "2. **Wrapper invocation.**"
+        step_3 = "3. **One turn per call.**"
+        cls.step_1 = _between(cls.norm_section, step_1, step_2)
+        cls.step_2 = _between(cls.norm_section, step_2, step_3)
+        cls.step_1_to_2 = _between(cls.norm_section, step_1, step_3)
 
     def test_probe_states_two_entries_in_order(self):
         # AC-5
@@ -318,6 +379,96 @@ class TestConsultationProcedureChain(unittest.TestCase):
             "when a consultation turn ran, which entry of the "
             "consultation's harness chain answered",
             _norm(self.text),
+        )
+
+    # -- Contributor-tier gating of the litellm entry ----------------------
+
+    def test_step_1_determines_contributor_consent_with_the_pinned_command(self):
+        # contributor-tier AC-1: the field name and the consent-check command
+        # that review-phase.md Phase R0 runs, identical to the pinned string.
+        self.assertIn("contributor_consented", self.step_1)
+        self.assertIn(_pinned_consent_check_command(), self.step_1)
+
+    def test_step_1_runs_the_check_only_for_an_available_entry_before_turn_one(
+        self,
+    ):
+        # contributor-tier AC-1: when the determination runs.
+        self.assertIn("this entry is judged available", self.step_1)
+        self.assertIn("before the consultation's first turn", self.step_1)
+
+    def test_step_1_states_the_true_and_false_rule(self):
+        # contributor-tier AC-1: one printed line is consent; nothing printed
+        # or a failure is not.
+        self.assertIn(
+            "true when the command succeeds and prints one line", self.step_1
+        )
+        self.assertIn("false when it prints nothing or fails", self.step_1)
+
+    def test_step_2_names_both_invocations_and_the_consent_value(self):
+        # contributor-tier AC-2: the field name, the contributor form for the
+        # true case and the standard form for the false case. The standard
+        # form is matched as a standalone value, not as a prefix.
+        self.assertIn("contributor_consented", self.step_2)
+        self.assertIn(CONTRIBUTOR_INVOCATION, self.step_2)
+        self.assertRegex(self.step_2, STANDARD_INVOCATION)
+
+    def test_step_2_ties_each_invocation_to_its_consent_value(self):
+        # contributor-tier AC-2: true selects the contributor model and false
+        # the standard one -- never the other way round.
+        self.assertIn(
+            "`--litellm muse-spark-contributor` when it is true", self.step_2
+        )
+        self.assertIn("`--litellm muse-spark` when it is false", self.step_2)
+
+    def test_step_2_standard_form_check_is_not_satisfied_by_the_contributor_form(
+        self,
+    ):
+        # contributor-tier AC-2, the prefix trap: the standard form is a
+        # prefix of the contributor form. Strip every standalone standard
+        # occurrence from the real step 2; what is left carries the
+        # contributor form alone, and the standard-form check must reject it.
+        contributor_only = STANDARD_INVOCATION.sub(
+            "--litellm <removed>", self.step_2
+        )
+        self.assertIn(CONTRIBUTOR_INVOCATION, contributor_only)
+        self.assertNotRegex(contributor_only, STANDARD_INVOCATION)
+        # The check itself: it rejects the contributor form alone and still
+        # accepts the standard form beside it.
+        self.assertIsNone(STANDARD_INVOCATION.search(CONTRIBUTOR_INVOCATION))
+        self.assertIsNotNone(
+            STANDARD_INVOCATION.search(
+                f"{CONTRIBUTOR_INVOCATION} then --litellm muse-spark."
+            )
+        )
+
+    def test_consent_value_is_fixed_for_the_whole_consultation(self):
+        # contributor-tier AC-3: one determination, reused by every litellm
+        # turn -- including turns after a mid-consultation move from codex to
+        # litellm -- and never re-determined per turn.
+        self.assertIn(
+            "every `litellm` turn of that consultation uses it",
+            self.step_1_to_2,
+        )
+        self.assertIn(
+            "including the turns after a mid-consultation move from `codex` "
+            "to `litellm`",
+            self.step_1_to_2,
+        )
+        self.assertIn("never re-determined per turn", self.step_1_to_2)
+
+    def test_a_failed_consent_check_yields_false_even_when_it_printed_a_line(
+        self,
+    ):
+        # contributor-tier AC-6 (THREAT-MODEL.md TM-1): failure takes
+        # precedence over the one-line rule, so a single-line error message
+        # is never read as consent.
+        self.assertIn(
+            "A failure takes precedence over the one-line rule", self.step_1
+        )
+        self.assertIn(
+            "a failed run that printed one line (for example a single-line "
+            "error message) still yields false",
+            self.step_1,
         )
 
 
