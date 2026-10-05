@@ -581,7 +581,11 @@ class TestFixedExpectations(unittest.TestCase):
     def test_same_text_gives_the_same_map(self):
         text = "echo ${x # ; $'a' $((1<<2)) <(y)\ncat <<EOF\nhi\nEOF\n$(z"
         first = H.lex_shell(text)
+        # A second, independent lexing: the memo the hook keeps must not be
+        # what makes the two maps equal.
+        H._LEX_CACHE.clear()
         second = H.lex_shell(text)
+        self.assertIsNot(first, second)
         self.assertEqual(first.as_tuple(), second.as_tuple())
 
 
@@ -713,12 +717,31 @@ class Analysis:
     def layout_regions(self):
         """The regions the layout layer cannot see into: every region of the
         stripped text except here-string operators and unterminated
-        substitutions (their text is read raw)."""
-        return [
-            r
-            for r in self.lex_s.regions
-            if r.kind != "here-string-operator" and self.region_closed(r)
+        substitutions (their text is read raw). A process substitution
+        counts by its body only: marking replaces the body and leaves `<(`
+        and `)` in the text as operator tokens (D5)."""
+        out = []
+        for r in self.lex_s.regions:
+            if r.kind == "here-string-operator" or not self.region_closed(r):
+                continue
+            if r.kind == "process-substitution":
+                r = r._replace(start=r.start + 2, end=r.end - 1)
+            out.append(r)
+        return out
+
+    def quote_ranges(self):
+        """Where a quote region or a quote delimiter sits in the stripped
+        text: every quote region not nested in a marked substitution, and the
+        quote characters of a quoted here-document delimiter."""
+        ranges = [
+            (r.start, r.end)
+            for i, r in enumerate(self.lex_s.regions)
+            if r.kind in QUOTE_KINDS and not self.has_closed_substitution_ancestor(i)
         ]
+        for op in self.lex_s.heredocs:
+            if op.quoted:
+                ranges.append((op.end - len(op.delimiter) - 2, op.end))
+        return ranges
 
     def in_region(self, regions, pos):
         return any(r.start <= pos < r.end for r in regions)
@@ -905,11 +928,7 @@ class TestStageAgreement(unittest.TestCase):
             except ValueError:
                 return
             regions = a.layout_regions()
-            quote_regions = [
-                (r.start, r.end)
-                for i, r in enumerate(a.lex_s.regions)
-                if r.kind in QUOTE_KINDS and not a.has_closed_substitution_ancestor(i)
-            ]
+            quote_regions = a.quote_ranges()
             for tok, start, end in raw:
                 s_start = a.marked.posmap.to_old(start)
                 s_end_kind = a.marked.posmap.to_old(end - 1) if end > start else s_start
@@ -928,16 +947,20 @@ class TestStageAgreement(unittest.TestCase):
                 self.assertEqual(tok.is_operator, expected_operator, msg=repr(text))
                 expected_quoted = any(q_s < hi and lo < q_e for q_s, q_e in quote_regions)
                 self.assertEqual(tok.quoted, expected_quoted, msg=repr(text))
+            # unresolved / substitution_only keep coming from the existing
+            # marker mechanism: a token whose value holds marker residue is
+            # unresolved (text beside the residue) or substitution_only
+            # (nothing but residue); any other token is neither.
             stripped = H._strip_unresolved_marks([t for t, _s, _e in raw])
             for (tok, start, end), done in zip(raw, stripped):
-                span = a.marked.text[start:end]
-                residue = H._MARK_RE.findall(span)
-                rest = H._MARK_RE.sub("", span)
-                if residue:
-                    self.assertEqual(done.substitution_only, rest == "" or not rest.strip("\x00\x01\x02"))
-                else:
-                    self.assertFalse(done.unresolved)
-                    self.assertFalse(done.substitution_only)
+                value = str(tok)
+                if H._MARK_RE.search(value):
+                    rest = H._MARK_RE.sub("", value)
+                    self.assertEqual(done.substitution_only, rest == "", msg=repr(value))
+                    self.assertEqual(done.unresolved, rest != "", msg=repr(value))
+                elif a.command.count("\x00") == 0:
+                    self.assertFalse(done.unresolved, msg=repr(value))
+                    self.assertFalse(done.substitution_only, msg=repr(value))
 
         self.each(check)
 
@@ -1258,7 +1281,9 @@ class TestUnclosedOpeners(unittest.TestCase):
     def test_same_command_gives_an_identical_map_and_decision(self):
         command = self.bulk("${", 6000)
         first = H.lex_shell(command)
+        H._LEX_CACHE.clear()
         second = H.lex_shell(command)
+        self.assertIsNot(first, second)
         self.assertEqual(first.as_tuple(), second.as_tuple())
         self.assertEqual(hook_verdict(command), hook_verdict(command))
 
