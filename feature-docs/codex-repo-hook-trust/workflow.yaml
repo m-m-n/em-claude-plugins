@@ -131,12 +131,10 @@ workflow:
   status: completed
   completed_at_commit: d91c263505896ae1594a32bba4be5fff0fa2a8fc
 - id: verify
-  status: in_progress
-  result: fail
-  failed_items:
-  - id: TS-8
-    note: HOOK-TRUST-FINDINGS.md section 2 records that `codex features list` (and codex --version / --help) ran without a temporary HOME/CODEX_HOME; on 0.160.0 `codex features list` reads $CODEX_HOME/config.toml, so the FR1 investigation read the user's real Codex home (NFR1). Tests themselves use temporary homes and pass.
-    category: security
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 3eeb2e49927528bce6ba468072f1acd85f35d4d5
 - id: retrospect
   status: pending
 tasks:
