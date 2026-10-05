@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-heredoc-syntax-error
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 9cb964a9062b22f218d02d38d0e0f8d31feb7f15
+last_input_digest: sha256:02aac92067c8251347d157c6ab1887ef5926757b67c809ae7cf0f3d40324e832
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:02aac92067c8251347d157c6ab1887ef5926757b67c809ae7cf0f3d40324e832
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
