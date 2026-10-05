@@ -504,7 +504,28 @@ class _TrackingLexer(shlex.shlex):
 # begin and end. strip_heredocs(), scan_structure(), the text _TrackingLexer
 # reads and tokens() all take those judgments from its map; none of them
 # classifies a character on its own. See IMPLEMENTATION.md ("Unified lexer
-# contract", postconditions P1-P9).
+# contract", postconditions P1-P12).
+#
+# Rework round 1 (task0002) -- three readings the lexer takes the way bash
+# does, so a destructive statement after them is never dropped as a heredoc
+# body or a comment (review findings 42180fe3cd060309, 6ad3de37b64392ec,
+# acf9e8aa8bb287ea):
+#
+#   P10 (FR3)  a reserved word is recognized directly after a closer (the `)`
+#              of a subshell group, the `}` of a brace group, the `))` of an
+#              arithmetic command, the `]]` of a conditional command, and
+#              `fi` / `done` / `esac`), and a recognized one sets command
+#              position exactly as at a command position; the `do` after
+#              `for NAME` / `select NAME` is one too; the position after
+#              `coproc NAME`, `function NAME` and `function NAME ()` is a
+#              command position. Grammar state: _LexFrame.rw, .kw, .cond.
+#   P11 (FR8)  a pending heredoc body begins after the first newline read
+#              while no region opened after its operator is still open; a
+#              backslash-newline never begins one. Each operator remembers
+#              the region sequence number it was registered at.
+#   P12 (FR6)  a process substitution stays part of its word: after its
+#              closing `)` the word continues, so a `#` right after it is no
+#              comment.
 #
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
@@ -616,13 +637,17 @@ class _LexFrame:
     `group` (shell rules); `dq`, `locale`, `sq`, `ansi`, `param`, `arith`,
     `bracket`. REGION is the region the frame owns and REG the region a child
     of this frame hangs under. The grammar state of the shell-rule kinds is
-    CMD (the next word is at a command position), CS (the case-construct
-    stack) and the little markers `time -p`, arithmetic `for`, function-name
-    and function-head tracking."""
+    CMD (the next word is at a command position), RW (P10: the next word
+    comes directly after a closer or a `for` / `select` name, so a reserved
+    word is recognized there although it is not a command position), CS (the
+    case-construct stack), COND (a `[[` opened at a command position awaits
+    its `]]`) and the little markers `time -p`, KW (the keyword the previous
+    word was: `for`, `select` or `coproc`), function-name and function-head
+    tracking."""
 
     __slots__ = (
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
-        "prev_plain", "time_p", "for_p", "fn_p",
+        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -636,8 +661,10 @@ class _LexFrame:
         self.depth = depth
         self.prev_plain = False
         self.time_p = False
-        self.for_p = False
+        self.kw = ""
         self.fn_p = False
+        self.rw = False
+        self.cond = False
 
 
 class _LexLines:
@@ -694,6 +721,17 @@ _LEX_CASE_PATTERN_STATES = ("pattern_first", "pattern_next", "pattern_rest")
 _LEX_COMMAND_KEEPERS = frozenset(
     {"if", "then", "elif", "else", "do", "while", "until", "time", "coproc", "!", "{"}
 )
+# The reserved words recognized directly after a closer (P10). Each is
+# handled afterwards exactly as at a command position.
+_LEX_AFTER_CLOSER_WORDS = frozenset(
+    {"then", "do", "else", "elif", "fi", "done", "esac", "}"}
+)
+# After `coproc`, a word that begins a compound command is not the coprocess
+# NAME; any other word is, and the position after it is a command position.
+_LEX_COPROC_COMPOUND = frozenset(
+    {"{", "if", "while", "until", "case", "for", "select", "function", "time",
+     "!", "[[", "coproc"}
+)
 _LEX_SPECIAL_PARAMETERS = "$?#!-@*0123456789"
 
 _LEX_CACHE = {}
@@ -744,9 +782,21 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
     ("restart", new_settled, new_reparen, iterations) when this pass learned
     of openers to settle; raises LexBudgetExceeded past BUDGET iterations.
 
-    The grammar state a shell-rule frame carries (CMD, CS and the small
+    The grammar state a shell-rule frame carries (CMD, RW, CS and the small
     markers on _LexFrame) is advanced one word at a time by word_transition():
-    it is what decides, by P3, whether a bare `((` is arithmetic."""
+    it is what decides, by P3 and P10, whether a bare `((` is arithmetic.
+
+    Here-document bodies (P6, P11). A real operator is queued in HD_PENDING
+    with the region sequence number it was registered at (HD_SEQS; every
+    pushed region gets the next number, RSEQ holds the numbers of the regions
+    open now). While operators are pending, HD_TRIGGER is the offset of the
+    next line start and no scan reads past it (LIMIT). When the lexer arrives
+    there, an operator takes its body from that line on exactly when no
+    region opened after it is still open -- the topmost open region's number
+    is not above its own -- and the newline just read was no backslash-newline
+    line continuation; otherwise the operator stays pending and the next line
+    start becomes the trigger. A region that encloses the operator was open
+    when it registered and so never defers it."""
     n = len(text)
     tail_start = min(settled) if settled else None
     regions = []  # [kind, start, end, parent, closed, nearest substitution ancestor]
@@ -756,14 +806,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
     stack = [_LexFrame("btop" if mode == "heredoc-body" else "top", 0, None, None, True)]
     iterations = 0
     i = 0
-    # Pending here-document bodies: the line holding the operators, the next
-    # line a body search starts at, where to jump to when that line ends, and
-    # the offset at which the line ends (the lexer never reads past it while
-    # a jump is pending, so no scan crosses into a body).
-    hd_line = None
-    hd_next = 0
-    hd_jump = None
+    hd_pending = []
+    hd_seqs = []
     hd_trigger = None
+    cont_at = -1
+    rseq = []
+    seq = 0
     limit = n
 
     def new_region(kind, start, f):
@@ -776,12 +824,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         return len(regions) - 1
 
     def push(f, kind, region_kind, start, cmd=False, depth=0):
+        nonlocal seq
         idx = new_region(region_kind, start, f)
         stack.append(_LexFrame(kind, start, idx, idx, cmd, depth))
+        seq += 1
+        rseq.append(seq)
 
     def close(f, end):
         regions[f.region][2] = end
         stack.pop()
+        rseq.pop()
         if f.kind == "sq":
             _lex_quote_candidates(
                 text, f.start + 1, end - 1, f.region, regions[f.region][5], candidates
@@ -793,14 +845,34 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
 
     def word_transition(f, w, end):
         """F's grammar state advances over one word: W is its text when it
-        is a plain, complete word, else None; END the offset after it."""
+        is a plain, complete word, else None; END the offset after it.
+
+        P10 (FR3). RW says the word comes directly after a closer (or after
+        the NAME of a `for` / `select`): a reserved word of
+        _LEX_AFTER_CLOSER_WORDS is recognized there and handled as at a
+        command position, any other word is an argument. `]]` closes a
+        conditional command opened at a command position (COND); `fi`,
+        `done`, `esac` and `}` at a command position are closers themselves
+        and set RW for the word after them; the word after `coproc` is the
+        coprocess NAME unless it begins a compound command, and the position
+        after the NAME -- like the one after `function NAME` -- is a command
+        position."""
         time_p = f.time_p
+        kw = f.kw
+        rw = f.rw
         f.time_p = False
-        f.for_p = False
+        f.kw = ""
+        f.rw = False
         f.prev_plain = False
         cs = f.cs
         top = cs[-1] if cs else None
-        if top == "await_subject":
+        if rw and not f.cmd and w in _LEX_AFTER_CLOSER_WORDS:
+            f.cmd = True
+        if f.cond and w == "]]":
+            f.cond = False
+            f.cmd = False
+            f.rw = True
+        elif top == "await_subject":
             cs[-1] = "await_in"
             f.cmd = False
         elif top == "await_in":
@@ -816,6 +888,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 else:
                     cs.pop()
                     f.cmd = False
+                    f.rw = True
             else:
                 cs[-1] = "pattern_rest"
         elif top == "pattern_rest":
@@ -823,22 +896,38 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         elif f.fn_p:
             f.fn_p = False
             f.cmd = True
+            f.prev_plain = True
         elif time_p and w == "-p":
             f.time_p = True
+        elif kw == "for" or kw == "select":
+            f.cmd = False
+            f.rw = True
+        elif kw == "coproc" and (w is None or w not in _LEX_COPROC_COMPOUND):
+            f.cmd = True
         elif f.cmd and w is not None:
-            if w == "esac" and cs:
-                cs.pop()
+            if w == "esac":
+                if cs:
+                    cs.pop()
                 f.cmd = False
+                f.rw = True
             elif w == "case":
                 cs.append("await_subject")
                 f.cmd = False
             elif w in _LEX_COMMAND_KEEPERS:
                 f.time_p = w == "time"
+                if w == "coproc":
+                    f.kw = "coproc"
             elif w == "function":
                 f.fn_p = True
                 f.cmd = False
-            elif w == "for":
-                f.for_p = True
+            elif w == "for" or w == "select":
+                f.kw = w
+                f.cmd = False
+            elif w == "fi" or w == "done" or w == "}":
+                f.cmd = False
+                f.rw = True
+            elif w == "[[":
+                f.cond = True
                 f.cmd = False
             else:
                 f.cmd = False
@@ -891,39 +980,65 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         return i + 1
 
     def register_operator(i, m):
-        nonlocal hd_line, hd_next, hd_jump, hd_trigger, limit
+        """A real here-document operator at I: queue it for a body (P11).
+        Its body is not looked up here -- where it begins depends on the
+        newlines read after it."""
+        nonlocal hd_trigger, limit
         op = [i, m.end(), m.group(2), bool(m.group(1)), None, None, None]
         ops.append(op)
         if lines is None:
             return
-        starts = lines.starts
-        line = bisect.bisect_right(starts, i) - 1
-        if hd_line != line:
-            hd_line = line
-            hd_next = line + 1
-            hd_jump = None
-            hd_trigger = starts[line + 1] if line + 1 < len(starts) else None
+        if not hd_pending:
+            starts = lines.starts
+            k = bisect.bisect_right(starts, i)
+            hd_trigger = starts[k] if k < len(starts) else None
             limit = hd_trigger if hd_trigger is not None else n
-        found_lines = lines.word_to_lines().get(m.group(2), ())
-        pos = bisect.bisect_left(found_lines, hd_next)
-        if pos < len(found_lines):
-            found = found_lines[pos]
-            op[4] = starts[hd_next]
-            op[5] = starts[found]
-            op[6] = starts[found + 1] if found + 1 < len(starts) else n
-            hd_next = found + 1
-            hd_jump = op[6]
+        hd_pending.append(op)
+        hd_seqs.append(seq)
 
     while i < n:
         iterations += 1
         if iterations > budget:
             raise LexBudgetExceeded()
         if hd_trigger is not None and i >= hd_trigger:
-            if hd_jump is not None and hd_jump > i:
-                i = hd_jump
-            hd_line = hd_trigger = hd_jump = None
-            limit = n
-            stack[-1].in_word = False
+            # A line start with here-document operators pending (P11). The
+            # operators whose registration-time regions are all that is
+            # open now (the pending list is in registration order, so they
+            # are a suffix of it) take their bodies from this line on, in
+            # operator order; the others -- and all of them after a
+            # backslash-newline -- wait for the next line start.
+            boundary = hd_trigger
+            starts = lines.starts
+            if boundary == cont_at:
+                cut = len(hd_pending)
+            else:
+                cut = bisect.bisect_left(hd_seqs, rseq[-1] if rseq else 0)
+            if cut < len(hd_pending):
+                hd_next = bisect.bisect_right(starts, boundary) - 1
+                jump = None
+                by_word = lines.word_to_lines()
+                for op in hd_pending[cut:]:
+                    found_lines = by_word.get(op[2], ())
+                    pos = bisect.bisect_left(found_lines, hd_next)
+                    if pos < len(found_lines):
+                        found = found_lines[pos]
+                        op[4] = starts[hd_next]
+                        op[5] = starts[found]
+                        op[6] = starts[found + 1] if found + 1 < len(starts) else n
+                        hd_next = found + 1
+                        jump = op[6]
+                del hd_pending[cut:]
+                del hd_seqs[cut:]
+                if jump is not None and jump > i:
+                    i = jump
+                stack[-1].in_word = False
+            if hd_pending:
+                k = bisect.bisect_right(starts, max(i, boundary))
+                hd_trigger = starts[k] if k < len(starts) else None
+                limit = hd_trigger if hd_trigger is not None else n
+            else:
+                hd_trigger = None
+                limit = n
             continue
         f = stack[-1]
         kind = f.kind
@@ -937,12 +1052,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             if c == "\n":
                 f.cmd = True
                 f.in_word = False
-                f.prev_plain = f.time_p = f.for_p = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
                 i += 1
                 continue
             if c == "\\":
                 if text.startswith("\n", i + 1):
+                    # A line continuation: it never starts a here-document body (P11).
                     i += 2
+                    cont_at = i
                     continue
                 start_word(f, i)
                 i += 2
@@ -967,7 +1085,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     cs[-1] = "pattern_next"
                 f.cmd = True
                 f.in_word = False
-                f.prev_plain = f.time_p = f.for_p = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
                 i += step
                 continue
             if c == "&" or c == "|":
@@ -983,7 +1102,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 else:
                     i += 1
                 f.cmd = True
-                f.prev_plain = f.time_p = f.for_p = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
                 continue
             if c == "(":
                 top_cs = f.cs[-1] if f.cs else None
@@ -996,10 +1116,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     if m is not None:
                         i = m.end()
                         f.cmd = True
-                        f.prev_plain = f.time_p = f.for_p = False
+                        f.prev_plain = f.time_p = False
+                        f.kw = ""
                         continue
                 if (
-                    (f.cmd or f.for_p)
+                    (f.cmd or f.kw == "for")
                     and text.startswith("((", i)
                     and top_cs not in _LEX_CASE_PATTERN_STATES
                 ):
@@ -1007,21 +1128,25 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         encountered.append(i)
                         f.in_word = True
                         f.cmd = False
-                        f.for_p = f.prev_plain = f.time_p = False
+                        f.kw = ""
+                        f.prev_plain = f.time_p = False
                         i += 2
                         continue
                     if i not in reparen:
-                        f.for_p = f.prev_plain = f.time_p = False
+                        f.kw = ""
+                        f.prev_plain = f.time_p = False
                         push(f, "arith", "arithmetic-command", i, depth=2)
                         i += 2
                         continue
-                f.for_p = f.prev_plain = f.time_p = False
+                f.kw = ""
+                f.prev_plain = f.time_p = False
                 stack.append(_LexFrame("group", i, None, f.reg, True))
                 i += 1
                 continue
             if c == ")":
                 f.in_word = False
-                f.prev_plain = f.time_p = f.for_p = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
                 top_cs = f.cs[-1] if f.cs else None
                 if top_cs in _LEX_CASE_PATTERN_STATES:
                     f.cs[-1] = "body"
@@ -1031,16 +1156,20 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     parent = stack[-1]
                     parent.cmd = False
                     parent.in_word = False
+                    parent.rw = True
                 elif kind == "cmdsub":
                     close(f, i + 1)
                 elif kind == "procsub":
+                    # P12: the process substitution is part of its word, as a
+                    # command substitution is; the word stays in progress.
                     close(f, i + 1)
-                    stack[-1].in_word = False
                 i += 1
                 continue
             if c == "<" or c == ">":
+                in_word = f.in_word
                 f.in_word = False
-                f.prev_plain = f.time_p = f.for_p = False
+                f.prev_plain = f.time_p = False
+                f.kw = ""
                 if c == "<":
                     if text.startswith("<<<", i):
                         idx = new_region("here-string-operator", i, f)
@@ -1056,12 +1185,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                             i += 2
                         continue
                     if text.startswith("<(", i) and (i == 0 or text[i - 1] not in "<>"):
+                        f.in_word = in_word
+                        start_word(f, i)
                         push(f, "procsub", "process-substitution", i, cmd=True)
                         i += 2
                         continue
                     i += 2 if (text.startswith("<&", i) or text.startswith("<>", i)) else 1
                     continue
                 if text.startswith(">(", i) and (i == 0 or text[i - 1] not in "<>"):
+                    f.in_word = in_word
+                    start_word(f, i)
                     push(f, "procsub", "process-substitution", i, cmd=True)
                     i += 2
                     continue
@@ -1191,6 +1324,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         parent = stack[-1]
                         parent.cmd = False
                         parent.in_word = False
+                        parent.rw = True
                     i = j + 2
                 else:
                     # The first close is not an adjacent `))`: read the opener
@@ -1270,10 +1404,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
 
 
 def lex_shell(text, mode="shell", bodies=True):
-    """The unified lexer (FR1-FR9; IMPLEMENTATION.md "Unified lexer
-    contract", P1-P9): ONE forward reading of TEXT that decides every quote,
-    comment, expansion and substitution range, every real here-document
-    operator, and the single-quote substitution candidates. Returns a LexMap.
+    """The unified lexer (FR1-FR9, and FR3 / FR6 / FR8 as reworked by P10-P12;
+    IMPLEMENTATION.md "Unified lexer contract", P1-P12): ONE forward reading
+    of TEXT that decides every quote, comment, expansion and substitution
+    range, every real here-document operator, and the single-quote
+    substitution candidates. Returns a LexMap.
 
     MODE is `shell` (the default) or `heredoc-body`: in `heredoc-body` mode,
     outside any substitution, quote characters, `$'`, `$"`, `#`, `<(` / `>(`
@@ -1282,7 +1417,10 @@ def lex_shell(text, mode="shell", bodies=True):
 
     BODIES (shell mode) says TEXT still holds its here-document bodies: the
     body lines of a real operator, through its delimiter line, are then
-    skipped (they change no lexer state) and reported on the operator. Pass
+    skipped (they change no lexer state) and reported on the operator. The
+    body begins on the line after the first newline read while no region
+    opened after the operator is still open, never after a backslash-newline
+    (P11). Pass
     False for a text whose bodies were already removed (strip_heredocs()'s
     output): its operators are still reported, but consume nothing, so the
     text after them is lexed as it stands.
