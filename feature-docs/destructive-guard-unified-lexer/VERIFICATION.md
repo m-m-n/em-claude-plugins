@@ -17,7 +17,7 @@
 
 ### Test Scenarios from SPEC.md
 
-TS-1 to TS-8 come from SPEC.md. TS-9 to TS-20 are added by the planner: TS-9 to TS-12 so that NFR1, NFR2, NFR4 and the unclosed-opener side of NFR3 each have a verifying test, and TS-13 to TS-20 for the create-plan plan review answers (PA1, PA4, Q3-procsub, Q3-single-quote-candidates, Q3-position-map, Q3-agreement-risk). Case numbers below refer to task0001's "Cases to append" list.
+TS-1 to TS-8 come from SPEC.md. TS-9 to TS-20 are added by the planner: TS-9 to TS-12 so that NFR1, NFR2, NFR4 and the unclosed-opener side of NFR3 each have a verifying test, and TS-13 to TS-20 for the create-plan plan review answers (PA1, PA4, Q3-procsub, Q3-single-quote-candidates, Q3-position-map, Q3-agreement-risk). Case numbers below refer to task0001's "Cases to append" list. TS-21 to TS-23 are added by rework round 1 (task0002) for review findings 42180fe3cd060309, 6ad3de37b64392ec and acf9e8aa8bb287ea; case numbers in those three rows refer to task0002's "Cases to append" list.
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -41,6 +41,9 @@ TS-1 to TS-8 come from SPEC.md. TS-9 to TS-20 are added by the planner: TS-9 to 
 | TS-18 | (planner-added, Q3-single-quote-candidates) Broad substitution search from lexer output: for every agreement-test command, honor_single_quotes=False spans equal the default spans plus the lexer's single-quote candidates; the candidate fixtures (balancing close, first-close rule, no close, backtick, unclosed backtick, inside an ANSI-C quote) hold (FR9) | Equal span sets; fixture ranges and recorded verdicts hold; the ~60KB case still denies within 10 seconds | Unit |
 | TS-19 | (planner-added, PA1) Commit order between workflow.yaml implement.base_commit and the integration HEAD (FR11) | The earliest commit that changes the cases file changes neither destructive-guard.py nor the agreement test, and its message lists the failing new cases; the commit that first adds the agreement test descends from it and does not change destructive-guard.py; every commit that changes destructive-guard.py descends from both | Integration (scripted git history check) |
 | TS-20 | (planner-added, PA1) Failure confirmation: copy destructive-guard.py as of implement.base_commit to a temporary path and run the case runner on that copy with the final cases file (the alternate-copy invocation in .claude/rules/hook-tests.md) (FR11) | FAIL for SPEC AC-1 forms 1-11 and for case 18; every case present at implement.base_commit passes | Integration |
+| TS-21 | (rework round 1, 42180fe3cd060309) Cases 1-13: a `((` after a reserved word read directly after a closer (`)`, `}`, `))`, `]]`, `fi`, `done`, `esac`), after `for NAME` / `select NAME` + `do`, after `coproc NAME` and after `function NAME [()]`, each followed by a destructive line; the matching fixed-expectation forms and the negative forms `echo then ((b))`, `echo ]] then ((b))`, `echo $(true) then ((b))`, `echo function f ((b))` in the agreement test; a roughly 60KB input of repeated `if (true) then ((1<<2)); fi` lines followed by a destructive line (FR3, FR10, FR11, NFR3) | deny for each case; an arithmetic-command region at that `((` and no real heredoc operator; no arithmetic-command region in the negative forms, whose verdicts stay as recorded at task0002's base; the 60KB input denies within 10 seconds | Unit (case suite, agreement test) |
+| TS-22 | (rework round 1, 6ad3de37b64392ec) Cases 14-19: a heredoc operator followed on its line by a double quote, single quote or `$(` running over a newline, or by a backslash-newline, then a destructive statement and the delimiter line; the allow control `cat <<'EOF'; echo "a\nb"\ngit reset --hard HEAD\nEOF`; a roughly 60KB input of repeated `cat <<EOF; echo "` / `"; :` / `EOF` groups followed by a destructive line (FR8, FR10, FR11, NFR3) | deny for cases 14-18 with one real heredoc operator whose body is empty; allow for case 19 with the body `git reset --hard HEAD`; the 60KB input denies within 10 seconds | Unit (case suite, agreement test) |
+| TS-23 | (rework round 1, acf9e8aa8bb287ea) Cases 20-23: `cat <(true)#; rm -rf /home/sakura/valuable`, `cat >(true)#; rm -rf /home/sakura/valuable`, `echo <(true)#x`, `cat <(true) #; rm -rf /home/sakura/valuable` (FR6, FR10, FR11) | deny, deny, allow, allow; no comment region after a `#` directly following a process substitution's `)`, a comment region after a blank | Unit (case suite, agreement test) |
 
 ## Code Quality Verification
 
@@ -67,26 +70,26 @@ TS-1 to TS-8 come from SPEC.md. TS-9 to TS-20 are added by the planner: TS-9 to 
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1, TS-3, TS-8, TS-16 |
 | FR2 | task0001 | TS-1, TS-8, TS-16 |
-| FR3 | task0001 | TS-1, TS-2, TS-3, TS-8, TS-13, TS-14, TS-16 |
+| FR3 | task0001, task0002 | TS-1, TS-2, TS-3, TS-8, TS-13, TS-14, TS-16, TS-21 |
 | FR4 | task0001 | TS-3, TS-13 |
 | FR5 | task0001 | TS-3, TS-8, TS-15, TS-16 |
-| FR6 | task0001 | TS-5; manual review below |
+| FR6 | task0001, task0002 | TS-5, TS-23; manual review below |
 | FR7 | task0001 | TS-4, TS-5 |
-| FR8 | task0001 | TS-5, TS-8, TS-17 |
+| FR8 | task0001, task0002 | TS-5, TS-8, TS-17, TS-22 |
 | FR9 | task0001 | TS-5, TS-18 |
-| FR10 | task0001 | TS-5, TS-16 |
-| FR11 | task0001 | TS-1, TS-2, TS-3, TS-13, TS-14, TS-15, TS-19, TS-20 |
-| FR12 | task0001 | TS-4, TS-6 |
+| FR10 | task0001, task0002 | TS-5, TS-16, TS-21, TS-22, TS-23 |
+| FR11 | task0001, task0002 | TS-1, TS-2, TS-3, TS-13, TS-14, TS-15, TS-19, TS-20, TS-21, TS-22, TS-23 |
+| FR12 | task0001, task0002 | TS-4, TS-6 |
 | NFR1 | task0001 | TS-9; manual review below |
 | NFR2 | task0001 | TS-10 |
-| NFR3 | task0001 | TS-7, TS-12 |
-| NFR4 | task0001 | TS-11 |
+| NFR3 | task0001, task0002 | TS-7, TS-12, TS-21, TS-22 |
+| NFR4 | task0001, task0002 | TS-11 |
 
 ## E2E Testing
 
 The hook case suite (workflow.yaml e2e_test_command) drives the hook through its stdin JSON / stdout contract.
 
-- [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` passes every case, each within 10 seconds (TS-1, TS-2, TS-3, TS-4, TS-6, TS-7, TS-13, TS-14, TS-15)
+- [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` passes every case, each within 10 seconds (TS-1, TS-2, TS-3, TS-4, TS-6, TS-7, TS-13, TS-14, TS-15, TS-21, TS-22, TS-23)
 
 ## Manual Testing (E2E Not Possible)
 
@@ -95,9 +98,9 @@ The hook case suite (workflow.yaml e2e_test_command) drives the hook through its
 ## Performance / Security Verification
 
 - NFR3: the ~60KB performance case returns deny within 10 seconds (TS-7). The unclosed-opener input returns a non-allow decision within 10 seconds (TS-12).
-- TM-1: The unified lexer reads ANSI-C, parameter-expansion and arithmetic contexts as bash does, recognizes a bare `((` only at real command positions, and never lets the re-read tail after an unclosed opener drop text as a comment or heredoc body. Checked by TS-1, TS-3, TS-14 and TS-15 (attack forms deny) and TS-8 and TS-16 (hand-written regions and verdicts, so a misread every layer shares still fails).
+- TM-1: The unified lexer reads ANSI-C, parameter-expansion and arithmetic contexts as bash does, recognizes a bare `((` only at real command positions, and never lets the re-read tail after an unclosed opener drop text as a comment or heredoc body. Checked by TS-1, TS-3, TS-14 and TS-15 (attack forms deny) and TS-8 and TS-16 (hand-written regions and verdicts, so a misread every layer shares still fails). Rework round 1: reserved words after closers and name-taking keywords (TS-21) and a `#` directly after a process substitution (TS-23).
 - TM-2: `$(...)` and backticks inside `${...}` and arithmetic are still extracted and scanned, and the broad search keeps its single-quote reach through the lexer's candidates. Checked by TS-3 (SPEC AC-7 forms 2 and 3 deny), TS-5 (spans agree with the lexer's substitution regions) and TS-18 (broad spans equal default spans plus candidates).
-- TM-3: Heredoc body lines change no lexer state, each body belongs to the statement holding its operator, and positions map between the three coordinates without assuming character-exact correspondence across markers. Checked by TS-1 (SPEC AC-1 form 1 deny), TS-2 (real heredoc after arithmetic stays allow), TS-5 (heredoc operator positions agree) and TS-17 (position-map contract).
+- TM-3: Heredoc body lines change no lexer state, each body belongs to the statement holding its operator, and positions map between the three coordinates without assuming character-exact correspondence across markers. Checked by TS-1 (SPEC AC-1 form 1 deny), TS-2 (real heredoc after arithmetic stays allow), TS-5 (heredoc operator positions agree) and TS-17 (position-map contract). Rework round 1: a body begins only after a newline read outside every region opened after its operator (TS-22).
 - TM-4: Inspection values are restored from the original text, so the mask character never reaches a value, and Tok provenance follows the original input. Checked by TS-5 (no mask character; values equal the shlex reading where nothing is masked) and TS-4 (`rm -rf /tmp/safe$'\t'` keeps its verdict).
 - TM-5: Every existing expectation, allow cases included, holds after the lexer change. Checked by TS-6 (full suite), TS-4 and TS-20 (every pre-existing case still passes on the base hook, so the cases file was only appended).
 - TM-6: Lexing stays linear, including settling unclosed openers and computing single-quote candidates, and an over-budget input falls back to the existing ask decision. Checked by TS-7, TS-12 and TS-18 (decisions within 10 seconds, never allow).
@@ -107,7 +110,7 @@ The hook case suite (workflow.yaml e2e_test_command) drives the hook through its
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 to TS-20) | 20 | 20 | 0 | 0 |
+| Test scenarios (TS-1 to TS-23) | 23 | 23 | 0 | 0 |
 | Success criteria (AC-1 to AC-7) | 7 | 7 | 0 | 0 |
 | Functional / non-functional requirements (FR1-FR12, NFR1-NFR4) | 16 | 16 | 0 | 2 (FR6, NFR1 review) |
 | E2E (hook case suite) | 1 | 0 | 1 | 0 |
