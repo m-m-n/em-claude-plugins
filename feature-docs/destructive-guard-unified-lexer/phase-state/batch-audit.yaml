@@ -31,3 +31,13 @@ records:
   freeform: null
   normalized_answer: 'strip_project_root_prefix: 評価者が返した所見 6 件の file は project_root を前置した絶対パスだった。project_root 接頭辞が完全一致し、realpath が changed_files の実ファイルと一致する場合に限り相対パスへ戻し、R3b の残りの検査をそのまま適用する。それ以外は棄却する。'
   resolution_note: 'gate: review phase R3b step 1（gate_id なし・未掲載の判断）。options: drop_absolute（字義どおり 6 件すべて棄却）/ strip_project_root_prefix。chosen: strip_project_root_prefix。Codex（run_codex_exec.sh readonly、1 ターン）の理由: R2 / R3a は入力パスを project_root 基準の絶対パスにするため、A は表現差だけで high 3 件を含む 6 件を捨て、完了判定を誤らせる。B は接頭辞と realpath の一致を条件にしたうえで .. / NUL / 存在確認と残りの R3b を通すので、所見を無条件には信用しない。ただし字義どおりの R3b は A を求めており、B は段階間の表現の不整合を補う限定的な解釈になる。Claude も同意した。Opus escalation not run.'
+- question_id: review.codex-nonjson-result-round2
+  packet_id: null
+  answered_at: '2026-10-06T03:10:00+09:00'
+  source: batch-precedent
+  answer_mode: single_select
+  selected_option_ids:
+  - accept_schema_valid
+  freeform: null
+  normalized_answer: 'accept_schema_valid: round 2 でも comprehensive#0 と security#0（いずれも codex-reviewer）が {findings: [], summary: "codex returned non-JSON output"} を返した。round 1 の review.codex-nonjson-result と同じ判断を適用し、スキーマ妥当な完了結果として扱い Claude fallback は出さない。'
+  resolution_note: 'gate: review phase R2b の結果判定（gate_id なし・未掲載の判断）。options: accept_schema_valid / treat_as_harness_failure。chosen: accept_schema_valid。同じ問い・同じ根拠（review-phase.md R2b「スキーマ妥当性が唯一の判定基準」）で round 1 に Codex 相談済みのため、Codex への再相談はせず先例を適用した。評価者への入力でこの 2 観点の Independent Inspection Duty を明示した。Opus escalation not run.'
