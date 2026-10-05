@@ -1,0 +1,66 @@
+feature: destructive-guard-unified-lexer
+collected_at: "2026-10-06T03:41:49+09:00"
+session_ids:
+  - 01a10c58-a701-705a-96ff-cf580865528c
+  - 01a10c73-a326-75d3-9f83-2d1283e25610
+  - 01a10c9b-6510-759d-a2c8-232533a20f16
+  - 01a10ce8-dca0-7770-a93f-6afcce503b41
+  - 01a10d2f-4bc7-7604-8169-b37ae60ab8c0
+  - 01a10d4c-35ba-71b4-9bb0-69f0caa0290c
+  - 01a10d5e-1aa8-7276-9074-f45322ac5c46
+signals:
+  review_critical_high:
+    - {stable_id: 42180fe3cd060309, category: security, file: em-workflow/hooks/destructive-guard.py, title: "コマンド位置の判定が bash より狭い（閉じ記号の後の予約語、for NAME do、function NAME()、coproc NAME の後ろの ((...))）", resolution: "rework (task0002)"}
+    - {stable_id: 6ad3de37b64392ec, category: security, file: em-workflow/hooks/destructive-guard.py, title: "演算子の行で開いた引用や置換が改行をまたぐと、実行される行をヒアドキュメント本文として読み飛ばす", resolution: "rework (task0002)"}
+    - {stable_id: acf9e8aa8bb287ea, category: security, file: em-workflow/hooks/destructive-guard.py, title: "プロセス置換の直後の # をコメントの開始と読み、後続の文を消す", resolution: "rework (task0002)"}
+    - {stable_id: 453963d025537b11, category: security, file: em-workflow/hooks/destructive-guard.py, title: "for ((...)) の直後の { を予約語と読まず、本体の ((1<<2)) の << をヒアドキュメント演算子と読む", resolution: deferred}
+    - {stable_id: 681fab61e1d9ff2c, category: security, file: em-workflow/hooks/destructive-guard.py, title: "time -- / time -p -- の後ろをコマンド位置と読まず、((1<<2)) の << をヒアドキュメント演算子と読む", resolution: deferred}
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - {perspective: performance, reason: "PreToolUse で毎回走るフックの字句解析を 1 パスの走査に作り直しており、入力長に対する計算量の退行が起き得るため"}
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み description_plus_code（score 1.87, confidence 0.78）を評価器が閾値表で full と判定した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 2.46
+          confidence: 0.49
+          probabilities: {'0': 0.0, '1': 0.02, '2': 0.49, '3': 0.49}
+        observed_at: "2026-10-05T22:55:45+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.87
+          confidence: 0.78
+          probabilities: {'0': 0.0, '1': 0.17, '2': 0.78, '3': 0.05}
+        observed_at: "2026-10-05T23:01:42+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/destructive-guard.py
+        - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: -1
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 8
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 14
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 2 の high 2 件（453963d025537b11 / 681fab61e1d9ff2c）は batch の review rework cap（1）到達で deferred になった。どちらもコマンド位置の判定の取りこぼしで、round 1 の 42180fe3cd060309 を直した task0002 の範囲の外側に残った同系統の穴"
+  - "medium の performance finding（round 1 の 551b3cec17ed0813、round 2 の 29bbf9032dd762a0：閉じない (( / $(( ごとの全文再走査で二乗）は 2 ラウンドとも unresolved のまま残った"
+  - "medium 9381769d7116fab2（代入語の配列添字 a[1<<2]= と英数字以外を含む区切り語）は round 1 の b739294836fa88ea から広がって unresolved のまま残った"
+  - "事前調査は新規ファイル 0 と見込んだが、計画で tests/test_destructive_guard_lexer_agreement.py が新設された"
+  - "implementer 報告（conflict_retries / deviations）が feature-docs に残らないため、retrospect の収集にセッションログの探索が要った"
