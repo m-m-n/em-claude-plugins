@@ -1,0 +1,24 @@
+feature: codex-guard-parser-fixes
+collected_at: "2026-10-05T11:22:58+09:00"
+session_ids: [01a109dd-9cd2-7551-ba1b-5d3ef600ccbe]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読みで score 1.85（バケット 1: 0.15 / 2: 0.85）となり、閾値表から full を採用した"
+    bases:
+      - basis: description_only
+        score: {"type": "score", "score": 1.5, "confidence": 0.5, "probabilities": {"0": 0.0, "1": 0.5, "2": 0.5, "3": 0.0}}
+        observed_at: "2026-10-05T09:46:25+09:00"
+      - basis: description_plus_code
+        score: {"type": "score", "score": 1.85, "confidence": 0.85, "probabilities": {"0": 0.0, "1": 0.15, "2": 0.85, "3": 0.0}}
+        observed_at: "2026-10-05T09:50:35+09:00"
+    pre_survey_estimate: {"files_expected": ["em-workflow/scripts/codex-hook-interactive-guard.py", "em-review/scripts/codex-hook-interactive-guard.py", "tests/test_codex_hook_interactive_guard.py", "feature-docs/codex-interactive-guard-hook/SPEC.md"], "changed_lines_approx": 100, "new_functions_needed": 0, "new_files_needed": [], "new_dependencies_needed": [], "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 9, "body_change_kind": "new_logic", "change_containment": "multiple_modules", "caller_and_dependency_count": 4, "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium 1 件（08a75f1657a9298e: 配列代入 a=() の後の改行を挟んだサブシェルを関数本体とみなす回帰）が unresolved のまま残った。medium は auto-fix の対象外"
