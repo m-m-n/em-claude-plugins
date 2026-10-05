@@ -187,7 +187,8 @@ tasks:
       - 6ad3de37b64392ec
       - acf9e8aa8bb287ea
       review_round: 1
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-unified-lexer/task0002
 requirements:
   FR1:
     title: ANSI-C 引用を bash と同じ範囲で読む
