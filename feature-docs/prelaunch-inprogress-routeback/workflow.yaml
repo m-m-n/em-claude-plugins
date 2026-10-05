@@ -190,7 +190,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/prelaunch-inprogress-routeback/task0002
 review:
