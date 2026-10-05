@@ -1,7 +1,7 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 5be1e1bbaed7ff4f837b0973eeab91bed9cd0fde
 last_input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
@@ -10,11 +10,30 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:d2a30e8abeb72fc9ac8eacc4ad68575b1e2fe13efedf23fc4164a145b24e765e
+artifacts:
+- path: feature-docs/prelaunch-inprogress-routeback/IMPLEMENTATION.md
+  sha256: sha256:686565abc756812688ef962f9289aebe23184fee3ac48bbb50b185bc2b783194
+  produced_by: create-plan-run-0001
+- path: feature-docs/prelaunch-inprogress-routeback/VERIFICATION.md
+  sha256: sha256:293076b651246995e457ae0ca1dc5823c9c0287823bfa01d03454bae6adc164e
+  produced_by: create-plan-run-0001
+- path: feature-docs/prelaunch-inprogress-routeback/THREAT-MODEL.md
+  sha256: sha256:e6ec65ab0b215bacb84281f3354bcec1d6f4feecb99d540af2a0e3d573e0d23d
+  produced_by: create-plan-run-0001
+- path: feature-docs/prelaunch-inprogress-routeback/tasks/task0001.md
+  sha256: sha256:3bc9d94c329d8c4971112ad38f5feea8933e0df76de1307f99b5fbb35ea05390
+  produced_by: create-plan-run-0001
+- path: feature-docs/prelaunch-inprogress-routeback/tasks/task0002.md
+  sha256: sha256:7fc82f478acab378b41915ed8922f2d6a1d46efa3bc27957e43bc46dadd95ba4
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: prelaunch-inprogress-routeback-p0001
+  status: validated
+  base_input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
+  base_workflow_blob: 3ad5bab5d209f0a38f3d2612f766f977602f0616
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
