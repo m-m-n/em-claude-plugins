@@ -24,7 +24,8 @@ Covers task0001 Acceptance Criteria
   containment survive.
 - AC-5 (FR5): the Branch & Worktree Model's exit-4 union-rule sentence
   names the `in_progress` union specifically; the I.2.a unreachability
-  sentence stays present and true.
+  sentence stays present (retargeted by prelaunch-inprogress-routeback/
+  task0002, see below).
 - AC-6 (FR6): I.2.a states the recursion invariant (no retired id can carry
   a `merged` last event under the widened gate), placed after the
   unreachability terminal, with the carve-out and in-flight sentence intact.
@@ -48,6 +49,17 @@ different task). `TestI2aRecursionInvariantPresent` is updated in place
 (name kept); the removed premise's absence is a new regression guard in
 `TestRegressionGuards`, proven against a captured pre-change sample in
 `TestValidationDetectsRegressions`.
+
+task0002 (prelaunch-inprogress-routeback) rewrites the I.2.a sentence that
+opens "Given I.2.c's route-back precondition" so it no longer claims
+`status: pending` combined with journal last event `launched` can never
+arise: it states when the combination arises and that the in-flight rule
+governs it. `test_i2a_unreachability_sentence_present_and_terminates_
+correctly` and `test_recursion_invariant_placed_after_unreachability_
+terminal` follow the wording: they anchor on
+UNREACHABILITY_TERMINAL_PHRASE instead of "can never arise.". Every
+pre-change sample constant (including SAMPLE_5_I2A_RECURSION and its
+non-vacuity guard) is history and stays unchanged.
 
 This module reads only `em-workflow/references/implement-phase.md`. It does
 not import from, and does not modify, any other test module; literals it
@@ -295,6 +307,12 @@ REJECTED_MERGED_RECONCILED_PHRASE = (
 # different task) instead of from the widened I.2.c gate, which is no
 # longer the only door into re-planning.
 UNREACHABILITY_OPENING_ANCHOR = "Given I.2.c's route-back precondition"
+# prelaunch-inprogress-routeback/task0002: the sentence this anchor opens no
+# longer ends "can never arise." -- it now states when `status: pending` +
+# journal last event `launched` arises and ends with this terminal phrase.
+UNREACHABILITY_TERMINAL_PHRASE = (
+    "the recycled-task-id carve-out above does not apply to it."
+)
 RECURSION_INVARIANT_PHRASE = (
     "No retired task id is ever re-issued, so a task whose workflow.yaml "
     "`status` is `pending` can never carry an inherited `merged` journal "
@@ -643,7 +661,10 @@ class TestCrossReferencesDescribeGateCorrectly(unittest.TestCase):
     """AC-5 / FR5: the Branch & Worktree Model's exit-4 union-rule sentence
     names the `in_progress` union specifically now that the gate has two
     unions; the rest of that bullet is unchanged; Step I.2.a's
-    unreachability sentence stays present and true."""
+    `pending` + `launched` sentence (rewritten by
+    prelaunch-inprogress-routeback/task0002 to state when the combination
+    arises; it keeps the `replace_all` citation) stays present, anchored on
+    UNREACHABILITY_OPENING_ANCHOR and UNREACHABILITY_TERMINAL_PHRASE."""
 
     @classmethod
     def setUpClass(cls):
@@ -668,8 +689,8 @@ class TestCrossReferencesDescribeGateCorrectly(unittest.TestCase):
         self,
     ):
         idx = self.i2a.index(UNREACHABILITY_OPENING_ANCHOR)
-        end = self.i2a.index("can never arise.", idx) + len(
-            "can never arise."
+        end = self.i2a.index(UNREACHABILITY_TERMINAL_PHRASE, idx) + len(
+            UNREACHABILITY_TERMINAL_PHRASE
         )
         sentence = self.i2a[idx:end]
         self.assertIn("replace_all", sentence)
@@ -681,9 +702,10 @@ class TestI2aRecursionInvariantPresent(unittest.TestCase):
     """AC-6 / FR6: I.2.a states that route-back's own recursion invariant --
     restated by task0013 (goal-vs-spec-divergence) as: no retired task id
     is ever re-issued, so a `pending` task can never carry an inherited
-    `merged` journal last event -- placed after the unreachability
-    terminal; the carve-out and the retained in-flight sentence stay
-    intact; the superseded widened-gate premise does not resurface."""
+    `merged` journal last event -- placed after the terminal phrase of
+    the `pending` + `launched` sentence (UNREACHABILITY_TERMINAL_PHRASE);
+    the carve-out and the retained in-flight sentence stay intact; the
+    superseded widened-gate premise does not resurface."""
 
     @classmethod
     def setUpClass(cls):
@@ -693,9 +715,9 @@ class TestI2aRecursionInvariantPresent(unittest.TestCase):
         self.assertIn(RECURSION_INVARIANT_PHRASE, self.i2a)
 
     def test_recursion_invariant_placed_after_unreachability_terminal(self):
-        idx_arise = self.i2a.index("can never arise.")
+        idx_terminal = self.i2a.index(UNREACHABILITY_TERMINAL_PHRASE)
         idx_invariant = self.i2a.index(RECURSION_INVARIANT_PHRASE)
-        self.assertLess(idx_arise, idx_invariant)
+        self.assertLess(idx_terminal, idx_invariant)
 
     def test_carve_out_still_scoped_to_failed_only(self):
         self.assertIn(
