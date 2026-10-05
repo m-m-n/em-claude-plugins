@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-absolute-executable-path
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: caa5e10f54bceba02b14bcb325d7c0256c3431fc
-last_input_digest: sha256:1ae81a2669ce8cca67e380c608cf56f4bb1e20b9ea360596d49481bff50a2674
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:584db35d37444a3e89898aff9cf06dcdbe3af207b6d32a13cd44922323a7cd7d
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -63,6 +63,10 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:1ae81a2669ce8cca67e380c608cf56f4bb1e20b9ea360596d49481bff50a2674
   output_digest: sha256:e3c202c280b386a4808cb87955832b8a7d6f3d8624be98f18bc51f5223e0e416
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:584db35d37444a3e89898aff9cf06dcdbe3af207b6d32a13cd44922323a7cd7d
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
