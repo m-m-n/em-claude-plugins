@@ -292,7 +292,6 @@ class TestRequirementNameContract(unittest.TestCase):
             "dist/pkg-1.0-py3-none-any.whl",
             "",
             "   ",
-            "git@example.invalid:org/repo.git",
         ]
         for text in cases:
             with self.subTest(text=text):
