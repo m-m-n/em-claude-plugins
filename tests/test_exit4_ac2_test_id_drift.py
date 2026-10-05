@@ -65,8 +65,9 @@ AC2_TEST_METHODS = (
 EXPECTED_ID_COUNTS = {"AC-1": 2, "AC-2": 4, "AC-3": 1, "AC-4": 4, "AC-5": 0}
 
 OBSERVED_RED_CLAUSE = (
-    "AssertionError: 44 not greater than 44 "
-    "(marketplace.json em-workflow entry still 0.1.44 before the bump)"
+    "AssertionError: (0, 1, 68) not greater than (0, 1, 68) "
+    "(marketplace.json em-workflow entry still 0.1.68, the pre-bump value at the "
+    "feature's diff base, before the bump; baseline patch 68)"
 )
 OLD_RED_REASON_PHRASE = "that entry is untouched"
 STALE_METHOD_NAME = "has_no_version_key"

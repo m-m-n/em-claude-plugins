@@ -1,0 +1,34 @@
+schema_version: 1
+feature: exit4-version-baseline-refresh
+phase: create-plan
+status: completed
+generation: 1
+base_revision: c14d3306019a07e3bff5c9470929b20227fcb0c5
+last_input_digest: sha256:e4819745cd468e1f56f4f10785d130896db31806ad610776c3be62903a730fa7
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:e4819745cd468e1f56f4f10785d130896db31806ad610776c3be62903a730fa7
+  output_digest: sha256:a460f9d10a4d73d2700f81488cc27a5df991df78de080f28f3f464692b614ce3
+artifacts:
+- path: feature-docs/exit4-version-baseline-refresh/tasks/task0001.md
+  sha256: sha256:b8bf62cd11ca89335e3d63cea5a9be50e9f986940bc6879a1ff3fef0a1f14f21
+  produced_by: create-plan-run-0001
+- path: feature-docs/exit4-version-baseline-refresh/VERIFICATION.md
+  sha256: sha256:20ff55d8ed6fb66d2b3252ad959a26035eba8e47aa42d0cbab6566cd8f58f989
+  produced_by: create-plan-run-0001
+- path: feature-docs/exit4-version-baseline-refresh/THREAT-MODEL.md
+  sha256: sha256:51c12be61edc0fe1cfc58891046829204af3fffce30701600eeaea06c334783b
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: exit4-version-baseline-refresh-p0001
+  status: applied
+  base_input_digest: sha256:e4819745cd468e1f56f4f10785d130896db31806ad610776c3be62903a730fa7
+  base_workflow_blob: 72ad252ee898b8cabe98b73e9e34bd8553135c16
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

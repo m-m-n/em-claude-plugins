@@ -1,0 +1,40 @@
+feature: exit4-version-baseline-refresh
+collected_at: "2026-10-05T19:06:00+09:00"
+session_ids: [01a10b85-95c0-74ef-9ce9-421938a2a384]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の読みがバケット 1（ルール追加 + テスト追加の小規模変更）に 0.94（confidence 0.93）で、reduced に決定した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 0.87, confidence: 0.87, probabilities: {'0': 0.13, '1': 0.87, '2': 0.0, '3': 0.0}}
+        observed_at: "2026-10-05T18:24:30+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 0.94, confidence: 0.93, probabilities: {'0': 0.06, '1': 0.94, '2': 0.0, '3': 0.0}}
+        observed_at: "2026-10-05T18:28:20+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - tests/test_exit4_tip_argument_version_bump.py
+        - test-docs/exit4-tip-argument/task0002.tests.yaml
+        - feature-docs/exit4-tip-argument/SPEC.md
+      changed_lines_approx: 13
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      body_change_kind: wording_or_rule_addition
+      change_containment: single_module
+      caller_and_dependency_count: 5
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査は feature-docs/exit4-tip-argument/SPEC.md も変更対象と見積もったが、計画では履歴記録として触らない判断（NFR4）になった。tier 判定の files_expected と実変更ファイルにずれがある"
