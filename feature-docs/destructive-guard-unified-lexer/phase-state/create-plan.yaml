@@ -1,0 +1,17 @@
+schema_version: 1
+feature: destructive-guard-unified-lexer
+phase: create-plan
+status: initialized
+generation: 1
+base_revision: ac776099d2b68914d9929792abbbf51f0d924cb7
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
