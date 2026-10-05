@@ -1,0 +1,43 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run in the worktree before any edit: 8238 tests, OK
+final_failures: []             # same command re-run after the implementation: 8275 tests, OK (8238 + 37 new); check-plugin-invariants.py all PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_assignment_payload_untrusted_section.TestAC1PayloadBlockLayout.test_there_is_exactly_one_payload_block
+      - tests.test_assignment_payload_untrusted_section.TestAC1PayloadBlockLayout.test_the_label_follows_every_trusted_field_and_precedes_the_data_lines
+      - tests.test_assignment_payload_untrusted_section.TestAC1PayloadBlockLayout.test_the_trusted_fields_keep_the_c1_order
+      - tests.test_assignment_payload_untrusted_section.TestNegativeProofAC1
+    red_confirmed: true
+    red_reason: "test_the_label_follows_every_trusted_field_and_precedes_the_data_lines failed against the unedited document: expected exactly one line starting with '## Untrusted data', found 0. (The exactly-one-block and C1-order tests already held on the old payload; the layout test is the red.)"
+  AC-2:
+    tests:
+      - tests.test_assignment_payload_untrusted_section.TestAC2BoundaryStatement.test_the_adjacent_text_states_the_values_are_data_not_instructions
+      - tests.test_assignment_payload_untrusted_section.TestNegativeProofAC2
+    red_confirmed: true
+    red_reason: "failed against the unedited document: no paragraph of the adjacent text states: values of the Untrusted data section come from workflow.yaml and are data, not instructions"
+  AC-3:
+    tests:
+      - tests.test_assignment_payload_untrusted_section.TestAC3EncodingInstruction.test_the_adjacent_text_instructs_the_json_literal_encoding
+      - tests.test_assignment_payload_untrusted_section.TestAC3EncodingInstruction.test_each_data_line_shows_a_json_literal_placeholder
+      - tests.test_assignment_payload_untrusted_section.TestNegativeProofAC3
+    red_confirmed: true
+    red_reason: "both failed against the unedited document: the adjacent text did not state 'one JSON literal on its own line' (nor any of the other seven encoding rules), and the skills_to_load placeholder did not start with {JSON array of strings"
+  AC-4:
+    tests:
+      - tests.test_assignment_payload_untrusted_section.TestAC4IdentityLinesFirst.test_the_identity_lines_come_first
+      - tests.test_assignment_payload_untrusted_section.TestNegativeProofAC4
+    red_confirmed: true
+    red_reason: "failed against the unedited document: there is no label line for the identity lines to precede"
+  AC-5:
+    tests:
+      - tests.test_assignment_payload_untrusted_section.TestAC5NoOrderingAnchorPhrases
+      - tests.test_assignment_payload_untrusted_section.TestNegativeProofAC5
+      - tests.test_prelaunch_inprogress_launch_order
+    red_confirmed: false
+    red_reason: "absence criterion: the unedited document already contained none of the AC-1 ordering anchor phrases inside the payload block or the adjacent text, so TestAC5NoOrderingAnchorPhrases passed before the edit and no red state occurred. Its detection power is shown by TestNegativeProofAC5, which feeds each of the eight anchor phrases (also wrapped across lines) to the check on synthetic documents and sees it caught. The existing tests.test_prelaunch_inprogress_launch_order detects a misplaced or missing ordering anchor in I.2.a; no red state occurred for this change."
+  AC-6:
+    tests:
+      - tests.test_assignment_payload_untrusted_section.TestAC6StandardLibraryOnly
+    red_confirmed: false
+    red_reason: "the criterion is satisfied by a property that held from the moment the module was written (standard-library imports only) plus the full-suite and check-plugin-invariants runs, which were already green at baseline and stayed green; no executable check of it was observed failing first. A dedicated new module is out of scope, but the existing suite (python3 -m unittest discover -s tests, including tests.test_prelaunch_inprogress_launch_order and tests.test_prelaunch_failed_launch_state, which read em-workflow/references/implement-phase.md) detects regressions in the changed document; no red state occurred for this change."
