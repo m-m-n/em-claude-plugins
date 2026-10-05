@@ -5,7 +5,7 @@ status: dispatching
 generation: 2
 base_revision: 1c9d23ece9f3e428ae6bc5accfc1262e5fbcf7b8
 last_input_digest: sha256:48cb59e2585f42e13eb0106110c80365ada04daf7995f44bfa547bbfc6f18b11
-active_request_id: create-spec-run-0005
+active_request_id: create-spec-run-0006
 packets:
   create-spec-q0001:
     status: answered
@@ -109,8 +109,12 @@ worker_runs:
   input_digest: sha256:458027fab44069cb591073b916989d1d4cfbb5a7014cc0e88c57cd970cc8bafe
   output_digest: null
 - request_id: create-spec-run-0005
-  status: dispatched
+  status: completed
   input_digest: sha256:3b5ec24eb08c79dfd44f5cf12f6968df1b85909d61322e08f3430ac10779672f
+  output_digest: sha256:c4a27f44c85ef9f4d8705991d90ade74a07957576d9f944d98b3307d564a3621
+- request_id: create-spec-run-0006
+  status: dispatched
+  input_digest: sha256:d2ff1512a140e741a34a372b314e99dadb54295a51a0980dd47c64721f3c2fae
   output_digest: null
 artifacts:
 - path: feature-docs/prelaunch-inprogress-routeback/REQUIREMENTS.md
