@@ -1,0 +1,94 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 7352 tests OK; check-plugin-invariants.py: all checks PASS, exit 0
+final_failures: []             # re-executed after implementation: 7371 tests OK (7352 + 19 new); check-plugin-invariants.py: all checks PASS, exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_finding_title_roundtrip.TestShortTitleWhitespaceCollapse
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before the collapse existed (new module run against the unmodified
+      script): test_ac1_each_whitespace_run_becomes_one_ascii_space failed for npm, cargo, pip
+      and go with both sources ("AssertionError: 'A\x0bB\x0cC\x85D\xa0E\u2029F' != 'A B C D E F'"
+      and "'\n\t Alpha \n\n Beta \r\n\t Gamma...' != 'Alpha Beta Gamma Delta Epsilon Zeta'");
+      the no-line-break, no-whitespace-other-than-single-space and
+      neither-starts-nor-ends-with-whitespace tests failed on the same inputs ("Lists differ:
+      ['\n', '\r', '\n', '\u2028'] != []", "True is not false"). The
+      package-and-advisory-id-untouched test and the description-not-collapsed test describe
+      behavior that pre-existed and were green before the change (regression guards for the
+      "what is not changed" design points).
+  AC-2:
+    tests:
+      - tests.test_sca_finding_title_roundtrip.TestRecoveryAfterCollapse
+      - tests.test_sca_finding_title_roundtrip.TestShortTitleWhitespaceCollapse
+      - tests.test_sca_finding_title_roundtrip.TestPipHeadlineBeforeCvssVector
+      - tests.test_sca_finding_title_roundtrip.TestWhitespaceOnlyAndOverLongShortTitles
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before the collapse existed: test_ac2_recovery_returns_the_original_pair_for_every_normalizer
+      and test_ac2_grouping_reports_no_malformed_entry_for_every_normalizer errored for npm,
+      cargo, pip and go with the multi-line source (FindingTitleError "title does not match the
+      finding text-encoding contract '{package}: {advisory_id} — {advisory short title}'"; the
+      same error reproduced directly on the unmodified script's _build_finding output). The
+      round-trip check is also applied (assertRoundTrips) inside every AC-3 and AC-4 test,
+      which failed for the same reason or on their own AC assertions.
+  AC-3:
+    tests:
+      - tests.test_sca_finding_title_roundtrip.TestPipHeadlineBeforeCvssVector
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before the collapse existed: test_ac3_a_multi_line_headline_yields_a_one_line_title_without_the_vector
+      failed on the title's line breaks (the unmodified script kept the pip headline's LF /
+      CRLF / TAB verbatim in the title). The description-keeps-its-line-breaks test describes
+      behavior that pre-existed and was green before the change.
+  AC-4:
+    tests:
+      - tests.test_sca_finding_title_roundtrip.TestWhitespaceOnlyAndOverLongShortTitles
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before the collapse existed: the whitespace-only test failed for npm, cargo
+      and go (title ended with the raw whitespace instead of " — "); pip passes it on the
+      unmodified script because its headline fallback to the advisory id already applies, and
+      that fallback is asserted unchanged. The over-long test failed for all four normalizers
+      (the truncated title still carried the source's line breaks) and the
+      over-the-cap-only-because-of-whitespace-runs test failed for all four normalizers and
+      all three sources (the title was truncated and ended with the "… [truncated]" marker
+      instead of equalling "<package>: <advisory id> — head tail").
+  AC-5:
+    tests:
+      - tests.test_sca_finding_title_roundtrip.TestFileTasksRoundTrip
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before the collapse existed: both
+      test_ac5_every_package_is_filed_as_a_task_through_a_standin_entry_point and
+      test_ac5_every_package_reaches_the_report_when_there_is_no_entry_point failed on
+      "Lists differ: [{'position': 0, 'reason': \"finding title ...\"}, ...] != []" -- the
+      four multi-line findings came back as malformed_findings and no package reached the
+      stand-in task create calls or the report.
+  AC-6:
+    tests:
+      - tests.test_sca_finding_title_roundtrip.TestWhitespaceInPackageOrAdvisoryStaysMalformed
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the unmodified script already classifies a title whose package
+      name or advisory id holds a line break (or whose advisory id holds a space) as malformed,
+      so test_ac6_a_package_name_with_a_line_break_is_still_malformed and
+      test_ac6_an_advisory_id_with_whitespace_is_still_malformed were green before the change
+      (regression guards against a fix that normalizes package / advisory id). Only
+      test_ac6_a_malformed_finding_does_not_hide_a_well_formed_one failed before the change,
+      and for the AC-1 reason (its well-formed finding carried a multi-line short title), not
+      for the AC-6 claim. Sensitivity was checked by a mutation, not a red state: with
+      _build_finding patched to also collapse package and advisory id, the three tests failed.
+  AC-7:
+    tests:
+      - tests.test_sca_finding_title_roundtrip.TestModuleImportsStandardLibraryOnly
+      - tests.test_sca_finding_title_roundtrip.TestShortTitleWhitespaceCollapse
+      - tests.test_sca_finding_title_roundtrip.TestRecoveryAfterCollapse
+    red_confirmed: false
+    red_reason: >-
+      Two parts. With the collapse step absent the AC-1 / AC-2 tests fail: observed in the red
+      phase (see AC-1 and AC-2 entries; 50 failures and 8 errors in the 19-test module before
+      the collapse existed). The standard-library-only import assertion
+      (test_ac7_this_module_imports_only_the_standard_library) was green on its first run
+      because the module was written with standard-library imports only; no failing state of
+      that assertion was observed.
