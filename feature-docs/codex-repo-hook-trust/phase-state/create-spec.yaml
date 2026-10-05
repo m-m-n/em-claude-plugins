@@ -1,0 +1,31 @@
+schema_version: 1
+feature: codex-repo-hook-trust
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 622211de129b09b59a2e253df7450a834edb02eb
+last_input_digest: sha256:dc6ef842ff7648cae04a994af73f84ca6b58349d84b638520b099300df548143
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:f065082a7f954bc82ff60ca10b724e3076fea19f7ac7ce88be1811db91ca94be
+  output_digest: sha256:f24d1a6bbbaaeef8b3236b7636173cf392b9150c90e8dcf5e0f174c285de64d4
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:dc6ef842ff7648cae04a994af73f84ca6b58349d84b638520b099300df548143
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-repo-hook-trust/REQUIREMENTS.md
+  sha256: sha256:e66a3c245e54d6471ddf72e756a3d2b3175bf14b85a43950b0e6a0fc163a5ff2
+  produced_by: create-spec-run-0002
+- path: feature-docs/codex-repo-hook-trust/SPEC.md
+  sha256: sha256:920c666fdd1d550c60059d2f44d768b3470cbb4a52b39c2c068f83cdd2f0d10e
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

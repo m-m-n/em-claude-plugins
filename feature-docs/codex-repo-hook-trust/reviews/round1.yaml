@@ -1,0 +1,47 @@
+round: 1
+executed_at: "2026-10-05T11:28:57+09:00"
+scope:
+  review_mode: diff
+  base_commit: 6e48db5b950b1b7215eb97c6a867fb02c818fbb2
+  head_commit: d91c263505896ae1594a32bba4be5fff0fa2a8fc
+  changed_files:
+  - em-review/scripts/run_codex_exec.sh
+  - em-workflow/scripts/run_codex_exec.sh
+  - feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md
+  - test-docs/codex-repo-hook-trust/task0001.tests.yaml
+  - tests/test_codex_repo_hook_trust.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "ラウンド1（diff、cross_validation=true）。5観点すべて completed。security / comprehensive / performance / spec は指摘なし、architecture は3件（high 2、medium 1）。evaluator は差分全体・SPEC.md・HOOK-TRUST-FINDINGS.md を自分で読み、architecture の3件をいずれも採用しなかった。(1) high『SPEC A3 と実装の乖離』: 誤検知。本機能の SPEC A5 が codex-interactive-guard-hook/SPEC.md を過去の記録として変えないと定めており、A3 の前提が崩れたことは TB-3 の Status 段落とラッパーコメントに記録済み。(2) high『Codex 0.160.0 の内部挙動への結合がスキップで隠れる』: low に格下げ。SPEC の TS2 と Edge Cases がバージョン不一致時のスキップを要求し、TS1（stub、常に実行）が出力する untrusted エントリ集合を固定している。版の限界は findings §12 と TB-3 末尾に明記済み。(3) medium『ラッパー重複』: 格下げ。重複は既存構造で、em-review は NFR3 により --litellm 経路を持たない。閾値未満の観察: 起動専用ホームは ${TMPDIR:-/tmp} 配下に作られ、readwrite の --litellm 起動ではサンドボックス内のコマンドがその config.toml を書き換えられる可能性がある（Codex がセッション開始後に信頼設定や hook を読み直すかは未確認、low 相当）。インジェクションの試みはなし。"
+  recommended_action: complete
+  action_rationale: "採用した medium 以上の指摘は0件。architecture の3件は SPEC A5、TS2 のスキップ要求、NFR3 と照らして誤検知または格下げとし dismissed_sites に記録。ほかの4観点の空の結果は変更ファイルを読んで裏付けた。"
+dismissed_sites:
+  - {file: feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md, line: 65, run_id: "architecture#0", reason: "false positive"}
+  - {file: em-workflow/scripts/run_codex_exec.sh, line: 249, run_id: "architecture#0", reason: "demoted"}
+  - {file: em-workflow/scripts/run_codex_exec.sh, line: 227, run_id: "architecture#0", reason: "demoted"}
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
