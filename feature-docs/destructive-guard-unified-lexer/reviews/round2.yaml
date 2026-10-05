@@ -1,0 +1,136 @@
+round: 2
+executed_at: '2026-10-06T03:17:54+09:00'
+scope:
+  review_mode: diff
+  base_commit: e69f212bcd3934e61ca3c8c023e2505df1c43ef4
+  head_commit: fb7df4887a1c3fe089cb9799ab437ad27bc50b26
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-unified-lexer/task0001.tests.yaml
+  - test-docs/destructive-guard-unified-lexer/task0002.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: PreToolUse で毎回走るフックの字句解析を 1 パスの走査に作り直しており、入力長に対する計算量の退行が起き得るため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 453963d025537b11
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 726
+  title: for ((...)) の直後の { を予約語と読まず、本体の ((1<<2)) の << をヒアドキュメント演算子と読む
+  description: P10 で閉じ記号の後に認める予約語の集合 _LEX_AFTER_CLOSER_WORDS（726 行）に `{` が無い。bash は算術 for（ARITH_FOR_EXPRS）の直後の `{` を本体の開始として受け付ける（`for ((;;)) { list; }`）。字句解析は算術 for の `))` を閉じたときに rw を立てるが、続く `{` を予約語と認めずコマンド位置にしないので、本体の `((1<<2))` を 2 つの括弧と読み、`<<2` を本物の演算子として登録する。`for ((i=0;i<1;i++)) { ((1<<2)); }\nrm -rf /home/sakura/valuable\n2`、`for ((;0;)){ ((1<<2)); }\nrm -rf /home/sakura/valuable\n2`、`if :; then for ((;0;)) { ((1<<2)); }; fi\nrm -rf /home/sakura/valuable\n2` でフックは allow を返し、bash 5.3.9 は 2 行目を実行する（rm を echo に置き換えて確認した）。FR3（コマンド位置には予約語の後ろと for ((...)) を含む）に反する。42180fe3cd060309 と同じ類で、task0002 の P10 が拾っていない形。基準コミットも allow なので退行ではない。
+  suggestion: 算術 for の `))` の直後（rw が立つ位置）では `{` も予約語として認め、コマンド位置にする。他の閉じ記号の後ろの `{` は bash でも構文エラーなので、`{` を _LEX_AFTER_CLOSER_WORDS に足しても安全側に倒れる。hook-tests.md に従い、直す前に上の形を deny ケースとして cases.json に足し、COMMAND_POSITION_FORMS にも加える。
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 681fab61e1d9ff2c
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 900
+  title: time -- / time -p -- の後ろをコマンド位置と読まず、((1<<2)) の << をヒアドキュメント演算子と読む
+  description: word_transition() は `time` の後ろの `-p` だけを受け付ける（900 行）。bash は `time` と `time -p` の後ろの `--` も TIMEIGN として受け付け、その後ろで予約語と `((` を認める（parse.y の special_case_tokens / reserved_word_acceptable）。字句解析は `--` を普通の引数として扱って cmd を偽にするので、`time -- ((1<<2))\nrm -rf /home/sakura/valuable\n2`、`time -p -- ((1<<2))\nrm -rf /home/sakura/valuable\n2`、`time -- ! ((1<<2))\nrm -rf /home/sakura/valuable\n2` でフックは allow を返し、bash 5.3.9 は 2 行目を実行する（echo で確認した）。FR3 に反する。基準コミットも allow なので退行ではない。
+  suggestion: time_p が立っている位置（`time` または `time -p` の直後）の `--` でも cmd を真のまま残す。直す前に上の 3 形を deny ケースとして cases.json と COMMAND_POSITION_FORMS に足す。
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 9381769d7116fab2
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1180
+  title: 代入語の配列添字 a[1<<2]= の中の << と、英数字以外を含む区切り語（<<END-X、<<E.X、<<E\X）を読み違え、bash が実行する行をヒアドキュメント本文として捨てる（round 1 から未解決）
+  description: round 1 の b739294836fa88ea（旧 1050 / 1051 行の統合、元 e69e7660d6daa738 を含む）は task0002 の対象外で、現 HEAD でも再現する。`a[1<<2]=x\nrm -rf /home/sakura/valuable\n2`、`cat <<END-X\nbody\nEND-X\nrm -rf /home/sakura/valuable\nEND`、`cat <<E.X\nbody\nE.X\nrm -rf /home/sakura/valuable\nE` はいずれも allow で、bash 5.3.9 は rm の行を実行する（echo で確認した）。round 1 に無かった別形として、引用除去で区切り語が変わる `cat <<E\X\nbody\nEX\nrm -rf /home/sakura/valuable\nE` も allow になる。HEREDOC_OP（154 行、`(\w+)`）が区切り語を途中で切り、1180 行でその演算子を登録する。基準コミットも allow。
+  suggestion: round 1 の提案どおり。代入として受け付けられる位置の `識別子[` は `]` までを対で読み、中の `<<` を演算子にしない（TS-8 の `a[1] <<EOF` とは区別する）。区切り語は次のメタ文字までの 1 語として読み、引用除去した値を区切り語にする。読み切れない形では本文を取らない（後ろを検査から外さない）読みに倒す（SPEC A3）。直す前に上の各形を deny ケースとして足す。
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium: rework cap reached (batch.review_rework_count=1); auto-fix candidate gate excludes medium'
+- stable_id: 29bbf9032dd762a0
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1332
+  title: )) で閉じない (( / $(( を 1 個見つけるたびに全文を読み直すため仕事量が二乗で増え、無害なコマンドが scan-budget の ask になる（round 1 から未解決、退行）
+  description: round 1 の 551b3cec17ed0813 は task0002 の対象外で、1332 行の restart（非隣接の閉じを見つけると opener を 1 個だけ持って全文を読み直す）は変わっていない。`x=$((echo N) | wc -c)` を 28 行（633 文字）並べると lex_shell() が LexBudgetExceeded になり、フックは ask を返す（CLAUDE_BATCH 下では deny）。100 行（2289 文字）でも同じ。`((cd /tmp/aN && ls) || echo no)` を 40 文並べても ask になる。基準コミットはどちらも allow なので、本差分による退行にあたる。NFR3（線形の計算量）に反する。task0002 で足した TestReworkLinearity は P10 / P11 の形だけを測り、この経路を測っていない。
+  suggestion: round 1 の提案どおり。非隣接の閉じを見つけたら全文からではなくその opener から局所的に読み直すか、1 パスで見つけた非隣接の opener をすべて集めてから restart する。k 個の `$((cmd) ...)` を並べた入力で work が n に比例することを TestUnclosedOpeners か TestReworkLinearity に足す。
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium: rework cap reached (batch.review_rework_count=1); auto-fix candidate gate excludes medium'
+evaluation:
+  round_summary: 'round 2（diff、cross_validation=true）。comprehensive#0 と security#0 は Codex の出力を解析できず分析 0 件、litellm の architecture / spec / performance はいずれも所見なしを返した。評価者が変更ファイルを直接読み、フックを実行して確かめた。run-destructive-guard.py は 628/628 pass、test_destructive_guard_lexer_agreement は 78 件 OK。cases.json は追加だけで既存ケースの削除はない。round 1 の high 3 件は解消を確認した: 42180fe3cd060309 は記載の 8 形と別形約 30 件が deny、6ad3de37b64392ec は記載の形と引用・$( )・`・${ }・$(( ))・$'''' / $"" をまたぐ形が deny（bash が構文エラーで止まる形だけ allow、bash で確認）、acf9e8aa8bb287ea は 2 形が deny で `echo <(true)#x` は allow。基準・round 1 時点・現 HEAD の 3 版を約 1,500 コマンドで比べ、round 1 時点より弱くなった 4 件はすべて bash で構文エラーになり何も実行しない形だった。現実的な無害コマンドでの誤爆は見つからなかった。一方、P10 と同じ類の抜け道が 2 件残っている（for ((...)) { と time -- / time -p --、どちらも基準でも allow）。medium 2 件（b739294836fa88ea、551b3cec17ed0813）は rework の対象外で、現 HEAD でも再現する。reviewer_outputs に指示の注入の試みはなかった。観点ごと: comprehensive: findings（Codex の分析 0 件、評価者自身の点検）。security: findings。architecture: corroborated。spec: findings（FR3 の抜け、NFR3 の退行が残る）。performance: findings（551b3cec17ed0813
+    の二乗経路が残り、レビュアーの「線形」の要約と食い違う）。'
+  recommended_action: rework
+  action_rationale: round 1 の high 3 件は解消したが、同じ FR3 の類の high 2 件（for ((...)) { と time --）が残り、medium 2 件も未解決のまま再現する。551b3cec17ed0813 は基準からの退行（無害なコマンドが ask、batch では deny）なので完了にはできない。4 件とも評価者が起こした所見で sources が空になり、自動修正では skip される見込みが高いため、rework を勧める。修正はどれも字句解析内の局所（726 行の集合、900 行の time_p、154 / 1180 行の区切り語と添字、1332 行の restart）に収まる。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+  note: high 2 件はいずれも sources == [claude:evaluator] のため batch で skip（R4 candidate gate）。medium 2 件は候補外
+residual_critical_high: 0
+deferred_critical_high: 2
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-unified-lexer-20261005T181715Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+unreviewed_perspectives: []

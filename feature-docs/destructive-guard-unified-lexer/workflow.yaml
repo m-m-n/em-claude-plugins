@@ -119,7 +119,8 @@ workflow:
   completed_at_commit: ca8d383c752c75a5fa57dee61825fe4fcb3b5ffe
   base_commit: e69f212bcd3934e61ca3c8c023e2505df1c43ef4
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: fb7df4887a1c3fe089cb9799ab437ad27bc50b26
 - id: verify
   status: pending
   result: null
@@ -383,8 +384,8 @@ requirements:
     tests:
     - TS-11
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -401,8 +402,8 @@ review:
     architecture: completed
     spec: completed
     performance: completed
-  residual_critical_high: 3
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 batch:
   review_rework_count: 1
   verify_rework:
