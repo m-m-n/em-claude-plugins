@@ -8,19 +8,8 @@ records:
   selected_option_ids:
   - commit_after_launch
   freeform: null
-  normalized_answer: 'commit_after_launch: I.2.a の capture/refresh/write/commit を承認ゲートと
-    Task() 起動ループの後ろに移し、journal に launched を確認できたタスクだけを in_progress としてまとめて 1 回でコミットする。補強:
-    (1) 一部だけ起動できた場合も、起動を確認できたタスクの集合でコミットする。起動ゼロならコミットを省略する。コミット処理の後にターンを終える。(2) 通常のコミット時も
-    exit 4 の再試行時も最新の journal を読み直し、既に終端（merged / failed）に達したタスクを in_progress に戻さない。2
-    回目の exit 4 で停止する場合も、起動記録と worktree を保持する。(3) I.2.a の『pending + launched は決して起きない』文を事実に合わせて書き直し、固定しているテストも直す。I.2.c
-    のゲート・リセット集合・掃除対象・exit-4 の証明は変えない。'
-  resolution_note: 'gate: create-spec.requirement-clarification（修正方式）。options: commit_after_launch=(b)
-    起動後にコミット, routeback_gate_carve_out=(a) I.2.c ゲートに除外規定。chosen: commit_after_launch。Codex（run_codex_exec.sh
-    readonly、entry codex、turn 1 で収束）の理由: (b) は残骸を発生源で無くし、I.2.c のゲート・リセット集合・削除対象の連動変更を避けられる。(a)
-    は起動ガードが fail-open で launched を記録せずに実装者が動いた場合、実行中の worktree を削除対象に含め得る（queue_launch_guard.py:241、implement-phase.md:1021）。(b)
-    で増える exit 4 は既存の『1 回再試行、2 回目で停止』で扱える。Codex の補強案のうち、部分起動・起動ゼロの扱いと exit 4 再試行時の読み直しは採用した。『launched
-    の記録に失敗したら起動を拒否する（queue_launch_guard を fail-closed にする）』案はフックの挙動変更でスコープが広がるため採らず、残るリスクとして別タスクに起票する。Opus
-    escalation not run.'
+  normalized_answer: 'commit_after_launch: I.2.a の capture/refresh/write/commit を承認ゲートと Task() 起動ループの後ろに移し、journal に launched を確認できたタスクだけを in_progress としてまとめて 1 回でコミットする。補強: (1) 一部だけ起動できた場合も、起動を確認できたタスクの集合でコミットする。起動ゼロならコミットを省略する。コミット処理の後にターンを終える。(2) 通常のコミット時も exit 4 の再試行時も最新の journal を読み直し、既に終端（merged / failed）に達したタスクを in_progress に戻さない。2 回目の exit 4 で停止する場合も、起動記録と worktree を保持する。(3) I.2.a の『pending + launched は決して起きない』文を事実に合わせて書き直し、固定しているテストも直す。I.2.c のゲート・リセット集合・掃除対象・exit-4 の証明は変えない。'
+  resolution_note: 'gate: create-spec.requirement-clarification（修正方式）。options: commit_after_launch=(b) 起動後にコミット, routeback_gate_carve_out=(a) I.2.c ゲートに除外規定。chosen: commit_after_launch。Codex（run_codex_exec.sh readonly、entry codex、turn 1 で収束）の理由: (b) は残骸を発生源で無くし、I.2.c のゲート・リセット集合・削除対象の連動変更を避けられる。(a) は起動ガードが fail-open で launched を記録せずに実装者が動いた場合、実行中の worktree を削除対象に含め得る（queue_launch_guard.py:241、implement-phase.md:1021）。(b) で増える exit 4 は既存の『1 回再試行、2 回目で停止』で扱える。Codex の補強案のうち、部分起動・起動ゼロの扱いと exit 4 再試行時の読み直しは採用した。『launched の記録に失敗したら起動を拒否する（queue_launch_guard を fail-closed にする）』案はフックの挙動変更でスコープが広がるため採らず、残るリスクとして別タスクに起票する。Opus escalation not run.'
   answered_at: '2026-10-05T18:52:00+09:00'
 - question_id: review.auto-fix-test-regression
   packet_id: null
@@ -29,14 +18,8 @@ records:
   selected_option_ids:
   - revert_and_rework
   freeform: null
-  normalized_answer: 'revert_and_rework: review round 1 loop 1 で review-editor が適用した修正（stable_id 197991d271fd0f74）を
-    バックアップから復元して abort し、R5 で residual high 1 件として batch auto-rework に回す。'
-  resolution_note: 'gate: review.auto-fix-test-regression（gate_id を持たない unlisted な判断点。Phase R4 は editor 適用後のテスト回帰の扱いを定めていない）。
-    状況: needs-judgment を batch 規定どおり Apply as-is で適用したところ python3 -m unittest discover -s tests が 3 件失敗した
-    （tests/test_prelaunch_inprogress_launch_order.py の AC-5 固定句消失 2 件、tests/test_prelaunch_inprogress_pending_launched.py の never-arise 主張禁止 1 件）。
-    options: A=修正を戻して abort し rework-planner に文書とテストをまとめて計画させる, B=修正を残してコミットし壊れたテストは再レビューと後続 rework に任せる。
-    chosen: A。Codex（run_codex_exec.sh readonly、turn 1 で収束）の理由: 設計判断が必要な high を未解決として残し rework-planner に文書とテストをまとめて計画させられる。
-    B は既知のテスト失敗を含む修正をコミットし、整合性の回復を後続工程に依存させる。Opus escalation not run.'
+  normalized_answer: 'revert_and_rework: review round 1 loop 1 で review-editor が適用した修正（stable_id 197991d271fd0f74）を バックアップから復元して abort し、R5 で residual high 1 件として batch auto-rework に回す。'
+  resolution_note: 'gate: review.auto-fix-test-regression（gate_id を持たない unlisted な判断点。Phase R4 は editor 適用後のテスト回帰の扱いを定めていない）。 状況: needs-judgment を batch 規定どおり Apply as-is で適用したところ python3 -m unittest discover -s tests が 3 件失敗した （tests/test_prelaunch_inprogress_launch_order.py の AC-5 固定句消失 2 件、tests/test_prelaunch_inprogress_pending_launched.py の never-arise 主張禁止 1 件）。 options: A=修正を戻して abort し rework-planner に文書とテストをまとめて計画させる, B=修正を残してコミットし壊れたテストは再レビューと後続 rework に任せる。 chosen: A。Codex（run_codex_exec.sh readonly、turn 1 で収束）の理由: 設計判断が必要な high を未解決として残し rework-planner に文書とテストをまとめて計画させられる。 B は既知のテスト失敗を含む修正をコミットし、整合性の回復を後続工程に依存させる。Opus escalation not run.'
   answered_at: '2026-10-05T19:35:36+09:00'
 - question_id: rework.spec-change.failed-before-launch-commit
   packet_id: rework-q0001
@@ -46,13 +29,7 @@ records:
   - change-spec
   freeform: null
   normalized_answer: 'change-spec: SPEC を改訂して指摘 197991d271fd0f74 を完全に直す'
-  resolution_note: 'gate: rework.spec-change（routed arm → classification gate）。options: change-spec=SPEC を変えて完全に直す,
-    keep-spec-residual=SPEC を保ち部分的に直し残る経路を既知の残余として明記。chosen: change-spec。origin 検証: 197991d271fd0f74 は
-    reviews/round1.yaml に実在、bound set の category は comprehensive のみ、reversible:false の仮定なし。Codex（run_codex_exec.sh readonly、turn 1）の判定:
-    verdict (b) spec_gap、根拠 FR1,FR2,FR4,FR5,FR6,NFR2,AC1,AC3,AC5,AC8（すべて SPEC.md に実在）。要点: FR1・FR2 どおり未起動タスクに in_progress を書かず
-    ゴールは満たす。FR4・AC5 の終端除外が pending + failed を残し、FR5 で保持する carve-out が誤分類する。NFR2 がフック変更を禁じるため仕様の穴。
-    Claude も納得して proceed。Opus escalation not run。続けて spec-change 遷移（create-spec needs_update、create-plan/implement/review pending、
-    base_commit 保持、rework.yaml spec_change 記録）を実行し batch.review_rework_count を 1 にした。'
+  resolution_note: 'gate: rework.spec-change（routed arm → classification gate）。options: change-spec=SPEC を変えて完全に直す, keep-spec-residual=SPEC を保ち部分的に直し残る経路を既知の残余として明記。chosen: change-spec。origin 検証: 197991d271fd0f74 は reviews/round1.yaml に実在、bound set の category は comprehensive のみ、reversible:false の仮定なし。Codex（run_codex_exec.sh readonly、turn 1）の判定: verdict (b) spec_gap、根拠 FR1,FR2,FR4,FR5,FR6,NFR2,AC1,AC3,AC5,AC8（すべて SPEC.md に実在）。要点: FR1・FR2 どおり未起動タスクに in_progress を書かず ゴールは満たす。FR4・AC5 の終端除外が pending + failed を残し、FR5 で保持する carve-out が誤分類する。NFR2 がフック変更を禁じるため仕様の穴。 Claude も納得して proceed。Opus escalation not run。続けて spec-change 遷移（create-spec needs_update、create-plan/implement/review pending、 base_commit 保持、rework.yaml spec_change 記録）を実行し batch.review_rework_count を 1 にした。'
   answered_at: '2026-10-05T19:43:07+09:00'
 - question_id: implement.wake-decline
   packet_id: null
@@ -63,3 +40,13 @@ records:
   normalized_answer: 'declined: tests/test_gate_option_vocabulary.py was not auto-added to task0006 files'
   resolution_note: 'task_id: task0006; declined deviation path tests/test_gate_option_vocabulary.py (refreshed WORKFLOW_PATCH_SHA256 / VALIDATE_WORKER_OUTPUT_SHA256 digests in TestFrozenMachineReadSurface). Missing evidence part: the identifier of an existing AC-n of task0006 plan or a registered requirement id was not named. Path shape check passed and the path is not under a workflow control path. Not auto-added; left to the containment check as an ordinary deviation.'
   answered_at: '2026-10-05T21:00:00+09:00'
+- question_id: review.chain-walk-non-retryable-skip
+  packet_id: null
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - advance_to_other_harness
+  freeform: null
+  normalized_answer: 'advance_to_other_harness: review round 2 で performance / spec の litellm reviewer が skip_reason=review_data_too_large を返したため、harness_unavailable と同様に別ハーネス（codex）の次エントリへ 1 hop 進めた。元の skip_reason は round2.yaml の perspective_runs に残した。'
+  resolution_note: 'gate: review.chain-walk-non-retryable-skip（gate_id を持たない unlisted な判断点。Phase R2b の表は review_data_too_large を retryable に挙げず「skip を保持」と読めるが、その根拠『全エントリが同じく失敗する』は自分で差分を取る codex には当てはまらない）。options: A=skip を保持し未レビュー扱い, B=別ハーネスの次エントリへ進める, C=skip を保持し Claude fallback を投入。chosen: B。Codex（run_codex_exec.sh readonly、turn 1 で収束）の理由: サイズ制限は litellm の入力方式に依存し codex なら読める可能性がある。2 hop 上限と別ハーネス規則を守れば逸脱は限定的。C は使える codex を残して『対象なし』扱いにするため根拠が弱い。A は未レビュー観点の開示規定とも噛み合わない。結果: performance#1 / spec#1 とも completed。Opus escalation not run.'
+  answered_at: '2026-10-05T21:12:03+09:00'
