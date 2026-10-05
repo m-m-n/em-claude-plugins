@@ -1,32 +1,78 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 2
 base_revision: 7e649aa6f53ab89f15487c8b2ac96814bdef7947
 last_input_digest: sha256:f63a4206ae4f08fb9d2deae962fc1eb4cf893036703316f66ed22b99681daf77
 active_request_id: create-plan-run-0002
 packets: {}
-answers: {}
+answers:
+  create-plan.assumption.A-P1:
+    packet_id: null
+    answered_at: '2026-10-05T20:45:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'The create-plan.existing-files gate (existing IMPLEMENTATION.md
+      / VERIFICATION.md / THREAT-MODEL.md / tasks/) was resolved without asking, following
+      the batch policy: merge. The three documents were rewritten via replace_own.
+      tasks/task0001.md and tasks/task0002.md were left untouched and are carried
+      as carried_task_ids.'
+  create-plan.assumption.A-P2:
+    packet_id: null
+    answered_at: '2026-10-05T20:45:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 'This plan pins the canonical form of routeback_failed_journal_line
+      more strictly than SPEC.md: ASCII digits only, first digit 1-9, no leading zero,
+      nothing but trailing whitespace after the value (an inline comment counts as
+      non-canonical). Every reader, the orchestrator and queue_stop_guard.py alike,
+      treats a non-canonical value as ''no record''.'
+  create-plan.assumption.A-P3:
+    packet_id: null
+    answered_at: '2026-10-05T20:45:00+09:00'
+    source: batch-assumption
+    answer_mode: assumption
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: Physical line counting treats LF as the only delimiter (CR
+      is never a delimiter). A final non-empty segment without a terminating LF counts
+      as one line.
 worker_runs:
 - request_id: create-plan-run-0001
   status: completed
   input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
   output_digest: sha256:d2a30e8abeb72fc9ac8eacc4ad68575b1e2fe13efedf23fc4164a145b24e765e
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:f63a4206ae4f08fb9d2deae962fc1eb4cf893036703316f66ed22b99681daf77
-  output_digest: null
+  output_digest: sha256:74a2c57568532885971e528ab645e6eceef7916e58247861c8f3b5bd12115769
 artifacts:
 - path: feature-docs/prelaunch-inprogress-routeback/IMPLEMENTATION.md
-  sha256: sha256:686565abc756812688ef962f9289aebe23184fee3ac48bbb50b185bc2b783194
-  produced_by: create-plan-run-0001
+  sha256: sha256:50e2261047ef282018337151565a99624baef735a105d8b44a0ead95a5dc95d1
+  produced_by: create-plan-run-0002
 - path: feature-docs/prelaunch-inprogress-routeback/VERIFICATION.md
-  sha256: sha256:293076b651246995e457ae0ca1dc5823c9c0287823bfa01d03454bae6adc164e
-  produced_by: create-plan-run-0001
+  sha256: sha256:d08b0205dd48136d1f4036d4cf94d42f09791f005c58989638501b184f662b32
+  produced_by: create-plan-run-0002
 - path: feature-docs/prelaunch-inprogress-routeback/THREAT-MODEL.md
-  sha256: sha256:e6ec65ab0b215bacb84281f3354bcec1d6f4feecb99d540af2a0e3d573e0d23d
-  produced_by: create-plan-run-0001
+  sha256: sha256:27548f85b5b583e821aec2dd0e48b4749a9ffac84dfcde8bbb99848bacff729e
+  produced_by: create-plan-run-0002
+- path: feature-docs/prelaunch-inprogress-routeback/tasks/task0003.md
+  sha256: sha256:1c43afa296ff488a97c58622b126c25da5ac66c88c18a966a10814ff676e73bf
+  produced_by: create-plan-run-0002
+- path: feature-docs/prelaunch-inprogress-routeback/tasks/task0004.md
+  sha256: sha256:6f49f4ad74a98fb45e21eff6d1022afb637e947d5bcf37dff0b172101d1350de
+  produced_by: create-plan-run-0002
+- path: feature-docs/prelaunch-inprogress-routeback/tasks/task0005.md
+  sha256: sha256:070b3770d04123f3b82a691ed4ef2d415e6f71faa81c6070194e6575371e9b93
+  produced_by: create-plan-run-0002
+- path: feature-docs/prelaunch-inprogress-routeback/tasks/task0006.md
+  sha256: sha256:1af2be7ac175d215c3c6489c2846c39658de4cf56991168799a0677fd1dc629f
+  produced_by: create-plan-run-0002
 - path: feature-docs/prelaunch-inprogress-routeback/tasks/task0001.md
   sha256: sha256:3bc9d94c329d8c4971112ad38f5feea8933e0df76de1307f99b5fbb35ea05390
   produced_by: create-plan-run-0001
@@ -38,6 +84,10 @@ patches:
   status: applied
   base_input_digest: sha256:db1541fe0ee757d0f844d962daa2aa42d38b30bc53d1dd4e53e11357c370442a
   base_workflow_blob: 3ad5bab5d209f0a38f3d2612f766f977602f0616
+- patch_id: prelaunch-inprogress-routeback-p0002
+  status: validated
+  base_input_digest: sha256:f63a4206ae4f08fb9d2deae962fc1eb4cf893036703316f66ed22b99681daf77
+  base_workflow_blob: f70dd095234c9d67c342b27098f14d40e9eb25a2
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
