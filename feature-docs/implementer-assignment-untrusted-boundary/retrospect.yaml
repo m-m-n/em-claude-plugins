@@ -1,0 +1,61 @@
+feature: implementer-assignment-untrusted-boundary
+collected_at: "2026-10-06T01:10:00+09:00"
+session_ids:
+  - 01a10c98-15b1-776e-b62c-9732f01f8800
+  - 01a10ca9-09e6-7680-b9fa-0f39d6b9123f
+  - 01a10cb6-c241-73d9-baaf-d830deeb48a1
+  - 01a10cc5-57b8-72d1-8849-a5ef942e18d5
+  - 01a10ccd-37ba-74a5-b18a-265362733f6e
+  - 01a10cd2-69d9-74ad-8c36-38052ded7e56
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み description_plus_code（score 1.34, confidence 0.59）を評価器が閾値表で full と判定した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 0.49
+          confidence: 0.51
+          probabilities: {'0': 0.7, '1': 0.13, '2': 0.17, '3': 0.0}
+        observed_at: "2026-10-06T00:02:00+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.34
+          confidence: 0.59
+          probabilities: {'0': 0.03, '1': 0.6, '2': 0.37, '3': 0.0}
+        observed_at: "2026-10-06T00:08:30+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/implement-phase.md
+        - em-workflow/agents/implementer.md
+        - em-workflow/skills/worktree-task-workflow/SKILL.md
+        - tests/test_worker_contract_docs.py
+      changed_lines_approx: 80
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules:
+        - em-workflow/skills/worktree-task-workflow
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 4
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "description_only（score 0.49）と description_plus_code（score 1.34）の読みが大きく離れた。コード調査で、キューフック 3 本が割当て本文を読むことが判明したのが効いた"
+  - "事前調査の files_expected は既存テスト tests/test_worker_contract_docs.py への追記を見込んだが、実際は新規テストファイル 4 つに分かれた"
+  - "review round 1 は 4 観点すべて指摘 0 件。評価者は補足として、フック回帰テストのラベル行の文言が本番文書と違う点を挙げたが指摘にしなかった"
+  - "implementer 報告（conflict_retries / deviations）が feature-docs に残らないため、retrospect の収集にセッションログの探索が要った（前回 feature と同じ）"
