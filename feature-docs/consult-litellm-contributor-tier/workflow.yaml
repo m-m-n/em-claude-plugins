@@ -98,7 +98,8 @@ workflow:
   completed_at_commit: ed12cbdf4daf91b183f47e81b37e3ffc84263092
   base_commit: 68686d3a918e939ba1094ff6ff75e0ba8476dbe2
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: b301997388ff14e0f8ea2f23134e802b65741943
 - id: verify
   status: pending
   result: null
@@ -131,8 +132,11 @@ tasks:
     notes: null
     branch: em-workflow/consult-litellm-contributor-tier/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
