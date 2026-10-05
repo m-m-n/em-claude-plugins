@@ -1,7 +1,7 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 2
 base_revision: 1c9d23ece9f3e428ae6bc5accfc1262e5fbcf7b8
 last_input_digest: sha256:48cb59e2585f42e13eb0106110c80365ada04daf7995f44bfa547bbfc6f18b11
@@ -16,11 +16,11 @@ packets:
     - question_id: design-step.skip
       status: answered
   create-spec-q0002:
-    status: issued
+    status: answered
     issued_at: '2026-10-05T19:58:00+09:00'
     questions:
     - question_id: requirement.routeback-reset-confirmation
-      status: unanswered
+      status: answered
 answers:
   create-spec.feature-identity:
     question_id: create-spec.feature-identity
@@ -64,6 +64,33 @@ answers:
     freeform: null
     normalized_answer: 'decide_autonomously: design step を skip する（UI 変更なし）'
     answered_at: '2026-10-05T18:52:00+09:00'
+  requirement.routeback-reset-confirmation:
+    question_id: requirement.routeback-reset-confirmation
+    packet_id: create-spec-q0002
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - routeback_reset_record
+    freeform: null
+    normalized_answer: 'routeback_reset_record: I.2.c の route-back write set に、リセットした各タスクの確認記録
+      tasks.{T}.routeback_failed_journal_line（任意項目。同じ feature の journal.jsonl 内で、その時点の最終
+      failed イベントを指す 1 始まりの物理行番号。空行・不正行も数える。未設定・null は記録なし）を加え、既存の route-back コミットで確定する。carve-out
+      の条件は pending・journal 最終 failed・その行番号が記録と一致の 3 つで、I.2.a / I.2.b step 1 / Stop-hook
+      箇条 / queue_stop_guard.py を同じ条件に揃える。記録の欠落・不正・不一致は failed として I.2.c に回す（アップグレード前のリセット済みタスクも同じ）。記録は起動時・通常の状態更新では書き換えない。補強:
+      workflow-schema.md に項目を定義、workflow-patch.md の replace_all で既存タスクから引き継ぐ項目一覧に追加（preserve
+      の許可項目は増やさない）、記録の writer を I.2.c のオーケストレーターに限りワーカーの tasks_patch からの設定を validate-worker-output.py
+      で拒否、NFR1 は I.2.c の記録追加を許し NFR2 はフック・schema・patch 契約・検証スクリプトとテストを含める。'
+    resolution_note: 'gate: create-spec.requirement-clarification（policy action codex_consultation,
+      record_as_assumption）。options: routeback_reset_record / worktree_absence / git_history_orchestrator_only。chosen:
+      routeback_reset_record。Codex（run_codex_exec.sh readonly、entry codex、turn 1 で収束）の理由:
+      pending + failed だけでは route-back リセットと起動後失敗を区別できない（implement-phase.md:423-433）。記録をリセットと同じコミットに入れれば
+      worktree 再作成後や削除前中断でも判定が保たれ（同:340-366, 1026-1068）、tasks.{T} 配下なら replace_all
+      の既存タスク引き継ぎ規則で保持できる（workflow-patch.md:144-149, 240-244）。オーケストレーターとフックが同じファイルで照合でき、フックのプロセス起動禁止とも両立する（queue_stop_guard.py:383-408,
+      tests/test_queue_stop_guard.py:707-714）。退けた案: worktree_absence は I.2.a が起動前に
+      worktree を作るため確認済みリセットを識別できず削除前中断も誤分類する。git_history_orchestrator_only はフックと判定が食い違い起動漏れ検出が効かない。Claude
+      も根拠を確認して同意（I.2.c の残余文も正しいまま残る）。変更範囲が workflow-schema.md / workflow-patch.md
+      / validate-worker-output.py に広がる点は受け入れた。Opus escalation not run.'
+    answered_at: '2026-10-05T20:10:00+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
