@@ -1,0 +1,59 @@
+schema_version: 2
+feature: implementer-assignment-untrusted-boundary
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.49
+    confidence: 0.51
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.7
+      '1': 0.13
+      '2': 0.17
+      '3': 0.0
+  observed_at: '2026-10-06T00:02:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.34
+    confidence: 0.59
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.03
+      '1': 0.6
+      '2': 0.37
+      '3': 0.0
+  observed_at: '2026-10-06T00:08:30+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - tests/test_worker_contract_docs.py
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/skills/worktree-task-workflow
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 4
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: main を確認した。implement-phase.md:400-418 は両項目を割当て本文へ直接展開し、未信頼データとして分離する指示がない。implementer.md:246-250 と skills/worktree-task-workflow/SKILL.md:129-134 には既存のデータ扱い規則があるが、後者は呼出し本文を指示源に含め、expected_files の境界を明示していない。contracts/worker-envelope.md:27-36 は implementer を適用対象から除外し、同:113-127 の規則は割当てに接続されていない。tests/test_worker_contract_docs.py:681-719 の未信頼入力検証も implementer を含まない。攻撃成立は実行検証していない。数量は境界・上位規則・検証を追加する案の概算。呼出し本文の読取側は implementer と hooks/queue_launch_guard.py:62、queue_agent_index.py:121、queue_failure_net.py:228 の3箇所を確認した
+decided_at: '2026-10-06T00:08:43+09:00'
