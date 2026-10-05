@@ -1,0 +1,152 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_scan_dependencies_pyproject_directness.TestPyprojectDirectNames.test_single_quoted_entries_with_extras_give_requests_and_django
+      - test_scan_dependencies_pyproject_directness.TestPyprojectDirectNames.test_double_quoted_entries_give_the_same_names
+      - test_scan_dependencies_pyproject_directness.TestPyprojectDirectNames.test_environment_markers_and_direct_references_yield_their_names
+      - test_scan_dependencies_pyproject_directness.TestPyprojectDirectNames.test_a_scan_reports_a_finding_for_each_declared_package
+      - test_scan_dependencies_pyproject_directness.TestPyprojectDirectNames.test_a_scan_in_a_subdirectory_resolves_the_manifest_there
+      - test_scan_dependencies_pyproject_directness.TestRequirementName.test_the_name_as_written_for_each_following_form
+      - test_scan_dependencies_pyproject_directness.TestDirectNamesContract.test_it_reads_like_an_immutable_set_of_the_names
+    red_confirmed: true
+    red_reason: >-
+      Run before any change to scan-dependencies.py. The through-the-scan test
+      failed on behavior: with pip-audit reporting high-severity advisories for
+      requests, django and urllib3, "AssertionError: Lists differ: [] != ['django',
+      'requests']" (the pre-change parser read only double-quoted strings, so
+      the single-quoted spelling produced no findings). The resolver-level
+      tests failed because the pre-change resolver took manifest content, not
+      a location, and returned a plain set: "Items in the second set but not
+      the first: 'django' 'requests'". The shared-component tests errored with
+      "module has no attribute 'DirectNames'" / "'_requirement_name'".
+  AC-2:
+    tests:
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_poetry_dependencies_and_dev_dependencies_are_direct_except_python
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_python_is_excluded_however_it_is_spelled
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_a_poetry_table_next_to_a_static_project_list_adds_up
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_a_poetry_table_holding_only_python_declares_zero_names_completely
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_names_only_in_non_declaration_tables_are_not_direct
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_a_manifest_declaring_only_non_declaration_tables_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_malformed_non_declaration_tables_never_affect_completeness
+      - test_scan_dependencies_pyproject_directness.TestPoetryAndNonDeclarationTables.test_a_scan_does_not_report_a_package_only_in_an_optional_table
+    red_confirmed: true
+    red_reason: >-
+      Run before any change to scan-dependencies.py. The resolver-level tests
+      failed because the pre-change resolver took manifest content and
+      returned a plain set: "Items in the second set but not the first:
+      'django' 'pytest' 'requests'" for the Poetry tables, and
+      "AttributeError: 'set' object has no attribute 'complete'" for the
+      only-non-declaration-tables case. The scan-level test failed on the
+      single-quoted project list ("Lists differ: [] != ['a']": no finding
+      for the declared package). The Poetry-table reads failed only because
+      the resolver input changed from content to a location; the pre-change
+      scanner already read Poetry tables from content.
+  AC-3:
+    tests:
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_dynamic_dependencies_without_a_static_list_are_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_dynamic_dependencies_keep_the_names_that_were_resolved
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_dynamic_without_dependencies_does_not_make_the_set_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_neither_a_static_list_nor_a_poetry_table_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_invalid_toml_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_content_that_is_not_utf8_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_a_missing_file_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_an_unresolvable_location_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_a_directory_in_place_of_the_manifest_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_an_unreadable_manifest_is_incomplete
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_an_item_with_no_name_is_incomplete_and_the_others_are_still_read
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_scan_unit_with_dynamic_dependencies_is_not_skipped
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_scan_unit_without_any_declaration_is_not_skipped
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_scan_unit_with_invalid_toml_is_not_skipped
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_scan_unit_with_an_unreadable_manifest_is_not_skipped
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_a_poetry_lock_unit_reads_the_sibling_pyproject_through_the_same_resolver
+      - test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_a_pyproject_outside_the_project_root_is_incomplete
+    red_confirmed: true
+    red_reason: >-
+      Run before any change to scan-dependencies.py. The resolver-level tests
+      failed with "AttributeError: 'set' object has no attribute 'complete'"
+      (the pre-change resolver had no completeness) and, for the
+      names-still-returned case, "Items in the second set but not the first:
+      'django'". The four scan-unit-not-skipped tests were already green
+      before the change (a pyproject unit was never skipped for an
+      unresolvable declaration); they pin that this task keeps it so and are
+      not part of the observed red.
+  AC-4:
+    tests:
+      - test_scan_dependencies_pyproject_directness.TestUnexpectedShapes.test_a_non_string_list_item_is_incomplete_and_the_rest_is_read
+      - test_scan_dependencies_pyproject_directness.TestUnexpectedShapes.test_every_unexpected_shape_is_incomplete_without_raising
+      - test_scan_dependencies_pyproject_directness.TestUnexpectedShapes.test_unexpected_shapes_keep_the_names_that_were_resolved
+      - test_scan_dependencies_pyproject_directness.TestUnexpectedShapes.test_a_malformed_poetry_table_next_to_a_static_list_makes_the_set_incomplete
+      - test_scan_dependencies_pyproject_directness.TestUnexpectedShapes.test_a_scan_returns_normally_for_each_unexpected_shape
+      - test_scan_dependencies_pyproject_directness.TestUnexpectedShapes.test_a_scan_returns_normally_for_a_non_string_item
+      - test_scan_dependencies_pyproject_directness.TestRequirementName.test_it_never_raises_for_a_non_string
+    red_confirmed: true
+    red_reason: >-
+      Run before any change to scan-dependencies.py. Each unexpected shape
+      failed with "AttributeError: 'set' object has no attribute 'complete'";
+      the non-string-item scan test failed with "Lists differ: [] !=
+      ['django']" (the pre-change parser read only double-quoted strings,
+      and that list is single-quoted). test_a_scan_returns_normally_for_each_unexpected_shape
+      was already green (the pre-change text scanner never raised); it pins
+      the no-exception requirement and is not part of the observed red.
+  AC-5:
+    tests:
+      - test_scan_dependencies_pyproject_directness.TestTomlParserUnavailable.test_a_pyproject_unit_is_skipped_with_the_fixed_token_and_pip_audit_is_not_started
+      - test_scan_dependencies_pyproject_directness.TestTomlParserUnavailable.test_the_summary_names_only_fixed_tokens
+      - test_scan_dependencies_pyproject_directness.TestTomlParserUnavailable.test_a_requirements_unit_in_the_same_scan_completes
+      - test_scan_dependencies_pyproject_directness.TestTomlParserUnavailable.test_the_skip_follows_the_binding_at_call_time
+      - test_scan_dependencies_pyproject_directness.TestTomlParserUnavailable.test_a_poetry_lock_unit_that_passes_the_lockfile_checks_is_skipped
+      - test_scan_dependencies_pyproject_directness.TestTomlParserUnavailable.test_without_the_skip_condition_the_same_lockfile_unit_launches
+    red_confirmed: true
+    red_reason: >-
+      Run before any change to scan-dependencies.py. With the module's tomllib
+      binding replaced by None the pyproject unit was not skipped and
+      pip-audit was launched: "AssertionError: False is not true : {'findings':
+      [], 'summary': 'Scanned pip; 0 finding(s) at or above threshold.',
+      'skipped': False, 'skip_reason': None, ...}". The lockfile-unit and
+      mixed-scan variants failed the same way, and the call-time and summary
+      tests failed with "None != 'pip_toml_parser_unavailable'".
+      test_without_the_skip_condition_the_same_lockfile_unit_launches
+      failed with "Lists differ: [] != ['django']": the pre-change parser
+      read no direct name from the single-quoted project list, so no finding
+      was produced.
+  AC-6:
+    tests:
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_an_unconvertible_poetry_lock_keeps_its_token
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_an_unconvertible_pipfile_lock_keeps_its_token
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_a_toml_declaration_that_cannot_be_read_without_the_parser_keeps_its_token
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_a_missing_declaration_keeps_its_token_with_the_parser
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_the_lockfile_checks_run_before_the_parser_skip
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_a_pipfile_lock_unit_never_reports_the_parser_skip
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_a_requirements_unit_never_reports_the_parser_skip
+      - test_scan_dependencies_pyproject_directness.TestLockfileTokensWithoutTomllib.test_requirements_units_in_subdirectories_never_report_the_parser_skip
+      - test_sca_pip_lockfile_audit.TestDependenciesAndModuleLoading.test_a_poetry_lock_target_is_unconvertible_without_the_toml_parser
+      - test_sca_pip_lockfile_audit.TestDependenciesAndModuleLoading.test_a_toml_declaration_file_is_not_found_without_the_toml_parser
+    red_confirmed: false
+    red_reason: >-
+      A preservation criterion: the lockfile tokens and the requirements-unit
+      behavior existed before this change, so every check passed before the
+      implementation and no red state occurred. The existing
+      test_sca_pip_lockfile_audit tests listed already detect the two lockfile
+      tokens without the parser; the new tests add the ordering of the checks
+      against the new skip and the requirements-unit case. Nothing could be
+      made to fail first without the new skip existing.
+  AC-7:
+    tests:
+      - test_scan_dependencies_pyproject_directness.TestStandardLibraryOnly.test_the_script_imports_only_the_standard_library_beyond_its_optional_yaml
+      - test_scan_dependencies_pyproject_directness.TestStandardLibraryOnly.test_this_module_imports_only_the_standard_library
+      - test_scan_dependencies_pyproject_directness.TestStandardLibraryOnly.test_tomllib_is_imported_only_through_the_guarded_import
+      - test_scan_dependencies_pyproject_directness.TestStandardLibraryOnly.test_the_script_still_loads_when_the_toml_parser_is_unavailable
+      - test_sca_pip_lockfile_audit.TestDependenciesAndModuleLoading.test_the_script_imports_only_the_standard_library_beyond_its_optional_yaml
+    red_confirmed: false
+    red_reason: >-
+      The verifiable outcome is the full suite staying green with a script
+      that imports nothing outside the standard library; the import checks
+      passed before the implementation (the script already imported tomllib
+      only through the guarded import) and no red state occurred for this
+      criterion. The existing test_sca_pip_lockfile_audit import check detects
+      the same behavior. test_the_script_still_loads_when_the_toml_parser_is_unavailable
+      failed before the change only on the new resolver contract (the
+      resolver result had no completeness).
