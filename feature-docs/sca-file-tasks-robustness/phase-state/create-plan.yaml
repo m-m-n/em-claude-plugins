@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-file-tasks-robustness
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 2
 base_revision: 7c10615c2875ec337282c457821f27028807e93d
 last_input_digest: sha256:82e0ec9f63fa037003263b2a6663840d68a07308f386f55a8b665da1f54d9b3e
