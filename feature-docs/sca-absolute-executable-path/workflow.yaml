@@ -146,7 +146,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/sca-absolute-executable-path/task0002
 review:
   status: pending
