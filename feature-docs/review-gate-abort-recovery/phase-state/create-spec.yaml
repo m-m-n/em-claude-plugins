@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 3058404c3e96445f99a370b98ee2a77a5cf135da
 last_input_digest: sha256:91f3b01209c028fb91baf9be9a60ca65e2680913e21cf0fe4618581ed51450e0
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -105,10 +105,16 @@ worker_runs:
   input_digest: sha256:47e07d897557a00d4001d4dea582b4f39b083c2524a93a0353e4a0bdcaf77e1e
   output_digest: sha256:0bddb41f72e9c75f079313d2d0d6099403f5572bdf5955a629a791ab0841180e
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:91f3b01209c028fb91baf9be9a60ca65e2680913e21cf0fe4618581ed51450e0
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/review-gate-abort-recovery/REQUIREMENTS.md
+  sha256: sha256:f00ee0c056d059444893acfbfe1d350b140d0b3c8e43ed71710da3a2c4bc0190
+  produced_by: create-spec-run-0004
+- path: feature-docs/review-gate-abort-recovery/SPEC.md
+  sha256: sha256:dcfa254f621fc633b057f9b4d0d594cb476a667ef2f3a52b46b2752298c00a50
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
