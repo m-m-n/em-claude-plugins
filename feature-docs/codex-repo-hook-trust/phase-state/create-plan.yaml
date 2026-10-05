@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-repo-hook-trust
 phase: create-plan
-status: in_progress
+status: completed
 generation: 1
 base_revision: 4f6c8e58bffcc64ab861b07b5c64bcc5192424e0
 last_input_digest: sha256:be58d501825aaae05e76631f46c7109198eb875bdf8d054b4069349af93f8aac
