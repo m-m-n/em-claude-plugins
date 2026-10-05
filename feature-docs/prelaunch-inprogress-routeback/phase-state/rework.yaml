@@ -39,7 +39,7 @@ spec_change:
   origin_kind: review
   origin_id: 197991d271fd0f74
   recorded_at_commit: cbfd334ab11f7610d2b535ac20e9d6f4418e6830
-  consumed: false
+  consumed: true
   replan_authorized: true
 classification:
   - classifier: codex

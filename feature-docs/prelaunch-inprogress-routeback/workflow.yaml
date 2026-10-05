@@ -122,7 +122,7 @@ workflow:
   artifacts:
   - REQUIREMENTS.md
   - SPEC.md
-  status: needs_update
+  status: in_progress
 - id: design
   artifacts:
   - DESIGN.md
