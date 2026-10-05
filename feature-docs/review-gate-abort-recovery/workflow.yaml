@@ -161,7 +161,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: b036e562c2ecb539ffb88e992a8c172e38293912
 tasks:
   task0001:
     title: 'review-phase.md Phase R5: gate-abort status rule, resume path, legacy recovery'
