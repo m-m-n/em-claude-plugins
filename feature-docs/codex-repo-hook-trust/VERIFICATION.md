@@ -35,6 +35,7 @@ other branch are reported as not applicable, never as passed.
 | TS-12 | No credentials in records or output (NFR5) | The findings record and the TB-3 update contain no credential value; TS-1's sentinel check passes; when LITELLM_API_KEY is set in the verification environment, a count-only search finds its value nowhere in the test run output | Unit + Inspection |
 | TS-13 | No plugin version change written (NFR6) | IMPLEMENTATION.md, the task plans and their Acceptance Criteria state no plugin version change; the integrated diff modifies neither plugin's .claude-plugin/plugin.json nor .claude-plugin/marketplace.json | Inspection |
 | TS-14 | Plugin invariants | `python3 em-workflow/scripts/check-plugin-invariants.py .` exits 0 | Integration |
+| TS-15 | Isolation of every Codex invocation the findings record relies on (NFR1; rework of TS-8) | Every Codex invocation the findings record cites as evidence — `codex --version`, `codex --help` and any subcommand help, `codex features list`, any other Codex subcommand, the probes, the positive controls and the post-change probes — is shown with HOME and CODEX_HOME set to temporary directories; no fact in the record (reported version, location and event list and its source, feature state, results) is derived from an invocation without them; any mention of the earlier non-isolated invocations is labelled superseded and none of their output is cited; the record states whether each re-derived fact is unchanged, and its result matrix, per-route verdicts and branch are unchanged | Inspection |
 
 ## Code Quality Verification
 - Format: none configured (format_command is empty for both components)
@@ -54,17 +55,17 @@ other branch are reported as not applicable, never as passed.
 ### Functional Requirements Coverage
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-4 |
-| FR2 | task0001 | TS-4 |
+| FR1 | task0001, task0002 | TS-4 |
+| FR2 | task0001, task0002 | TS-4 |
 | FR3 | task0001 | TS-1, TS-2, TS-5 |
 | FR4 | task0001 | TS-6 |
 | FR5 | task0001 | TS-1, TS-2 |
 | FR6 | task0001 | TS-7 |
-| NFR1 | task0001 | TS-8 |
+| NFR1 | task0001, task0002 | TS-8, TS-15 |
 | NFR2 | task0001 | TS-9 |
 | NFR3 | task0001 | TS-3, TS-10 |
 | NFR4 | task0001 | TS-11 |
-| NFR5 | task0001 | TS-12 |
+| NFR5 | task0001, task0002 | TS-12 |
 | NFR6 | task0001 | TS-13 |
 
 ## Manual Testing (E2E Not Possible)
@@ -73,16 +74,17 @@ other branch are reported as not applicable, never as passed.
 - [ ] TS-6: read TB-3 and the Rationale of feature-docs/codex-interactive-guard-hook/THREAT-MODEL.md against the record
 - [ ] TS-7: read both wrapper comments against the record and the argv each wrapper builds
 - [ ] TS-9, TS-11, TS-13: inspect imports and the integrated diff
+- [ ] TS-15: read every Codex command line in the findings record (section 2 included) and confirm each shows temporary HOME and CODEX_HOME, that no cited output comes from a non-isolated invocation, and that the result matrix, per-route verdicts and branch are unchanged in the task0002 diff
 
 ## Performance / Security Verification
 - TM-1: protective specification on every executing route, or positively controlled evidence that no route executes repository hooks — checked by TS-1, TS-2, TS-4, TS-5 and TS-6
 - TM-2: the wrapper's own guard registration stays on every route, the same-key override is recorded, and any guard-off route is recorded in TB-3 — checked by TS-1, TS-4, TS-6 and TS-10
 - TM-3: no credential value in the findings record, the TB-3 update or wrapper/test output — checked by TS-1 (sentinel) and TS-12
-- TM-4: every probe and test launch uses temporary HOME and CODEX_HOME — checked by TS-1, TS-2 and TS-8
+- TM-4: every probe and test launch uses temporary HOME and CODEX_HOME — checked by TS-1, TS-2, TS-8 and TS-15
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 14 | 4 fully (TS-1, TS-2, TS-3, TS-14) + 3 partly (TS-8, TS-10, TS-12) | 0 | 7 fully (TS-4, TS-5, TS-6, TS-7, TS-9, TS-11, TS-13) + 3 partly (TS-8, TS-10, TS-12) |
+| Test scenarios | 15 | 4 fully (TS-1, TS-2, TS-3, TS-14) + 3 partly (TS-8, TS-10, TS-12) | 0 | 8 fully (TS-4, TS-5, TS-6, TS-7, TS-9, TS-11, TS-13, TS-15) + 3 partly (TS-8, TS-10, TS-12) |
 | Success criteria | 5 | 2 (AC2, AC4) | 0 | 3 (AC1, AC3, AC5) + AC2 partly |
 | Security (TM-n) | 4 | 4 partly (TM-1, TM-2, TM-3, TM-4) | 0 | 4 partly (TM-1, TM-2, TM-3, TM-4) |
