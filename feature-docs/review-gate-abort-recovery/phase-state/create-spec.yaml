@@ -4,11 +4,11 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 3058404c3e96445f99a370b98ee2a77a5cf135da
-last_input_digest: sha256:d3d5410385ed890be8acb7ac9475023e26f3b4cb815798a94ab953d8854d21bd
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:47e07d897557a00d4001d4dea582b4f39b083c2524a93a0353e4a0bdcaf77e1e
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
-    status: issued
+    status: answered
     issued_at: '2026-10-05T15:05:26+09:00'
     questions:
     - question_id: requirement.recovery-approach
@@ -20,7 +20,13 @@ packets:
     - question_id: requirement.resume-path
       status: answered
     - question_id: design-step.decision
-      status: issued
+      status: obsolete
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-10-05T15:10:18+09:00'
+    questions:
+    - question_id: design-step.decision
+      status: answered
 answers:
   requirement.recovery-approach:
     packet_id: create-spec-q0001
@@ -74,19 +80,33 @@ answers:
     resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
       true (harness codex, 1 turn); mapped to option rerun_review_round; record_as_assumption:
       true; Codex: obsolete packet の再提示禁止（question-resolution.md）と整合し、新しい再開分岐を作らずに済む'
+  design-step.decision:
+    packet_id: create-spec-q0002
+    answered_at: '2026-10-05T15:10:18+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'decide_autonomously (design_step_recommendation: skip)'
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml option_id
+      decide_autonomously; adopts worker recommendation skip'
 worker_runs:
 - request_id: create-spec-run-0001
   status: invalid_input
   input_digest: sha256:1fb80a0b449e4a41b4ba4ff954fb9c109f84ca093f7cc7dd494259d99a4565c0
   output_digest: sha256:5fb31000283999f327ae3b25b7230d931e87d132a61fa48c21d85f07987977a2
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:d3d5410385ed890be8acb7ac9475023e26f3b4cb815798a94ab953d8854d21bd
+  output_digest: sha256:0beb2f74df34047a041426f00ab99c04369e2d827f8ef7f02b7fb63f5f890f48
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:47e07d897557a00d4001d4dea582b4f39b083c2524a93a0353e4a0bdcaf77e1e
   output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-spec-run-0001: validate-worker-output.py gate_id error: create-spec.design-step
-  requires option_id decide_autonomously to be offered'
+last_error: null
