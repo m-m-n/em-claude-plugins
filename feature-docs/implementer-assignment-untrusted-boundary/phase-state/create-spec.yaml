@@ -1,7 +1,7 @@
 schema_version: 1
 feature: implementer-assignment-untrusted-boundary
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 2e456776f77a8518797e7bffc2c313ea95349a39
 last_input_digest: sha256:4805262b3838ef740adea4d1e64e48a0d8f5710153874d2d0d5f7c05a60c220b
@@ -91,5 +91,4 @@ patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-spec-run-0001: validate-worker-output gate_id error (create-spec.design-step
-  lacked decide_autonomously); re-dispatched as create-spec-run-0002'
+last_error: null
