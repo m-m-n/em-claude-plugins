@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-repo-hook-trust
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 622211de129b09b59a2e253df7450a834edb02eb
+last_input_digest: sha256:f065082a7f954bc82ff60ca10b724e3076fea19f7ac7ce88be1811db91ca94be
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:f065082a7f954bc82ff60ca10b724e3076fea19f7ac7ce88be1811db91ca94be
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
