@@ -228,12 +228,13 @@ tasks:
     notes: null
     branch: em-workflow/sca-directness-resolution/task0003
 review:
-  status: in_progress
+  status: completed
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   residual_critical_high: 0
   needs_rework: false
 requirements:
