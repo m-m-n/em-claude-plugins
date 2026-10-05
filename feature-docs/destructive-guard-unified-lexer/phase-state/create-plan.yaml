@@ -1,14 +1,18 @@
 schema_version: 1
 feature: destructive-guard-unified-lexer
 phase: create-plan
-status: initialized
+status: dispatching
 generation: 1
 base_revision: ac776099d2b68914d9929792abbbf51f0d924cb7
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:ae1e1ac46a20376aea6820e7a4ddea9836a3123ccb6917c67567979e01831854
+active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:ae1e1ac46a20376aea6820e7a4ddea9836a3123ccb6917c67567979e01831854
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
