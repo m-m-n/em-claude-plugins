@@ -182,7 +182,7 @@ tasks:
     complexity: low
     requirements:
     - FR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-guard-parser-fixes/task0002
 review:
