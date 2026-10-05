@@ -168,9 +168,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0001
   task0002:
     title: Rewrite the I.2.a pending + launched sentence and the tests pinned to it
     plan: tasks/task0002.md
@@ -190,9 +190,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/prelaunch-inprogress-routeback/task0002
 review:
   status: pending
   rounds_completed: 0
