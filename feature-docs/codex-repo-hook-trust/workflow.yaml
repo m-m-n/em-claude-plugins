@@ -169,7 +169,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-repo-hook-trust/task0001
 review:
