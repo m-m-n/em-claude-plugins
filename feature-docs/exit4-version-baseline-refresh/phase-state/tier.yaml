@@ -1,0 +1,64 @@
+schema_version: 2
+feature: exit4-version-baseline-refresh
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.87
+    confidence: 0.87
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.13
+      '1': 0.87
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-05T18:24:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 0.94
+    confidence: 0.93
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.06
+      '1': 0.9400000000000001
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-05T18:28:20+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_exit4_tip_argument_version_bump.py
+  - test-docs/exit4-tip-argument/task0002.tests.yaml
+  - feature-docs/exit4-tip-argument/SPEC.md
+  changed_lines_approx: 13
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 対象6ファイルは存在する。tests/test_exit4_tip_argument_version_bump.py:57
+    の基準値は44、:157 の拒否用サンプルは0.1.44、:97 は数値タプルで比較する。02aff93の両登録ファイルはgit showで0.1.68と確認した。現在の10テストは成功し、読取結果だけをメモリ内で両方0.1.68に置き換えても10テストが成功した。メモリ内で基準値68・拒否用サンプル0.1.68に変更すると0.1.68で2テストが失敗し、0.1.69と現行版では成功した。mainの現行版はem-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27とも0.3.16。旧基準への参照は対象テスト8行、task0002.tests.yaml:10/:18/:23、SPEC.md:59/:153の計13行に残る。.claude/rules/core-plugin-version-bump.md:3/:8/:11はpatchを実装時に変更せずmainへのpush時に自動更新する規則を定め、:12/:14は手動更新をminor・majorに限定しpatch更新を仕様・受け入れ条件に書かないとしている。.github/workflows/plugin-version-bump.yml:89/:96/:101/:125/:128は手動変更済みなら省略し、それ以外はpatchを加算して両登録先を更新し、PR経由でマージする。基準比較の呼出元は対象テスト:115/:133/:167の3か所、読取先はJSON登録ファイル2個。ファイル変更は行っていない
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 0
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-05T18:28:40+09:00'
