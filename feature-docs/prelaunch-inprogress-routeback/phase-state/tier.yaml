@@ -1,0 +1,72 @@
+schema_version: 2
+feature: prelaunch-inprogress-routeback
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.15
+    confidence: 0.82
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.82
+      '2': 0.16
+      '3': 0.01
+  observed_at: '2026-10-05T18:24:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.28
+    confidence: 0.68
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.69
+      '2': 0.29
+      '3': 0.0
+  observed_at: '2026-10-05T18:30:49+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - tests/test_implement_routeback_gate.py
+  - tests/test_routeback_reset_scope_consistency.py
+  changed_lines_approx: -1
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 手順上、不具合は残っている。em-workflow/references/implement-phase.md:351
+    と同ファイル:354 は選択した全タスクの in_progress を一括で書き込み、承認処理（同ファイル:412）と起動ループ（同ファイル:425）より前にコミットする。launched
+    は起動呼び出し時に記録される（同ファイル:469）。起動記録がないタスクは未起動に分類されるが（同ファイル:479）、完了時の更新対象は merged／failed
+    であり（同ファイル:774）、未起動タスクの in_progress を戻す規則はない。一部の起動後に失敗すると補充を停止し（同ファイル:904）、workflow.yaml
+    の in_progress だけでも再計画への経路を拒否する（同ファイル:925、同ファイル:1050）。起動記録がないタスクは経路を塞がないという同ファイル:937
+    の記述は、この独立した拒否条件と整合していない。既存テストは書き込み・コミットの順序（tests/test_exit4_tip_argument_consistency.py:234）と残存
+    in_progress による拒否（tests/test_implement_routeback_gate.py:978）を検証するが、この組合せの再発を検出するテストは調査範囲で確認できなかった。また、経路の判定だけを変更しても、現在の状態リセット対象は
+    failed の集合に限られ（em-workflow/references/implement-phase.md:985）、残存 in_progress は再計画側でも拒否される（em-workflow/references/workflow-patch.md:128、em-workflow/scripts/validate-worker-output.py:1504）。確認した呼出元・依存先5箇所は
+    develop（em-workflow/skills/develop/SKILL.md:709）、commit-docs（em-workflow/references/implement-phase.md:355）、起動フック（同ファイル:469）、終了フック（em-workflow/hooks/queue_stop_guard.py:417）、再計画の検証処理（em-workflow/scripts/validate-worker-output.py:1504）。files_expected
+    は既存の修正候補を示す。修正方式と変更行数は未確定で、-1 は不明を示す。追加テスト件数の0は今回追加していないことを示し、必要件数の確定値ではない。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-05T18:31:30+09:00'
