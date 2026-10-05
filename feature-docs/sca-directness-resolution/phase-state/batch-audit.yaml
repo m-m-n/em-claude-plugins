@@ -1,0 +1,34 @@
+schema_version: 1
+feature: sca-directness-resolution
+records:
+- question_id: requirement.directness-undetermined.reporting
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-05T12:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - summary_note
+  freeform: null
+  normalized_answer: 判定できなかった advisory は summary の件数注記で報告し、skipped は false のまま（既存の
+    severity_undetermined と同じ形）
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+    true (harness codex, 1 turn); Codex 推奨 summary_note（skipped が実行単位の未完了を表す契約を維持できる）。worker
+    推奨と一致。opus_escalation: false'
+  gate_id: create-spec.requirement-clarification
+  phase: create-spec
+- question_id: requirement.declaration-scope
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-05T12:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - existing_plus_task
+  freeform: null
+  normalized_answer: 直接依存として数えるのは既存のテーブル + タスクに書かれた形式（サブテーブル、package= リネーム、クォート非依存、extras）だけ。Python
+    の依存グループは追加しない
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+    true (harness codex, 1 turn); worker の暫定案は add_python_groups だったが、Codex は existing_plus_task
+    を推奨（依頼範囲は 4 経路の修正と既存対応の維持で、追加グループは明示されていない）。orchestrator はスコープを広げない方を相対的に良いと判断して採用。opus_escalation:
+    false'
+  gate_id: create-spec.requirement-clarification
+  phase: create-spec
