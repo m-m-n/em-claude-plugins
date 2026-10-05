@@ -164,6 +164,7 @@ tasks:
     files:
     - em-workflow/references/review-phase.md
     - tests/test_review_gate_abort_review_phase.py
+    - tests/test_tier_record_schema_v2.py
     skills: []
     domains:
     - api-contract
@@ -181,7 +182,7 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-gate-abort-recovery/task0001
   task0002:
