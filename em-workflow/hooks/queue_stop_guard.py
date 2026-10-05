@@ -13,12 +13,23 @@ boundary).
 
 Decision (per the first in-progress feature, stable ordering by feature
 name, that has refillable work):
-  - Any task's last journal event is `failed`, UNLESS that task's own
-    workflow.yaml status still reads exactly `pending` (the task's own id,
+  - A task whose last journal event is `failed` is classified by a
+    three-condition match. It is treated as unlaunched (the task's own id,
     returned from `failed` to `pending` by route-back, per
-    references/workflow-patch.md's "Re-planning task-id allocation") ->
-    exit 0 (no block; user decision pending). Such a task is instead
-    treated as unlaunched.
+    references/workflow-patch.md's "Re-planning task-id allocation") only
+    when all three hold: (1) its own workflow.yaml status reads exactly
+    `pending`; (2) its last journal event is `failed`; (3) the physical
+    line of that event in the journal equals the task's
+    `routeback_failed_journal_line` record in its own workflow.yaml block.
+    Any other task whose last event is `failed` is failed -> exit 0 (no
+    block; user decision pending).
+  - The record is read only from the task's own `taskNNNN:` block, first
+    occurrence wins, and counts only as an unquoted decimal integer of
+    ASCII digits whose first digit is 1-9, optionally followed by trailing
+    whitespace. An absent, null or otherwise non-canonical value is no
+    record. Journal lines are delimited by LF only (a CR never starts a
+    line); blank, malformed, unknown-event and invalid-task-id lines
+    advance the line count but never become a task's event.
   - No unlaunched tasks, or no free slot (>= MAX_PARALLEL_IMPLEMENTERS
     in-flight) -> exit 0.
   - Otherwise -> BLOCK: exit 2, stderr names the feature, the free-slot
@@ -63,6 +74,14 @@ STEP_STATUS_RE = re.compile(r"^\s*status:\s*(\S+)\s*$")
 TASKS_SECTION_RE = re.compile(r"^tasks:\s*$")
 TASK_KEY_RE = re.compile(r"^\s+(task[0-9]+):\s*$")
 TASK_STATUS_RE = re.compile(r"^\s+status:\s*(\S+)\s*$")
+# The route-back record, read from a task's own block only. The key match
+# and the canonical-value match are both ASCII-only: a non-ASCII digit or
+# whitespace character never qualifies.
+ROUTEBACK_RECORD_KEY = "routeback_failed_journal_line"
+ROUTEBACK_RECORD_LINE_RE = re.compile(
+    r"^\s+" + ROUTEBACK_RECORD_KEY + r":(.*)$", re.ASCII
+)
+ROUTEBACK_RECORD_VALUE_RE = re.compile(r"^[ \t]+([1-9][0-9]*)\s*$", re.ASCII)
 
 KNOWN_EVENTS = ("launched", "merged", "failed")
 
@@ -138,23 +157,20 @@ def task_ids_from_workflow(workflow_yaml_path):
     return ids
 
 
-def task_statuses_from_workflow(workflow_yaml_path):
-    """Per-task workflow status, scoped to each task's own indented block
-    under the top-level `tasks:` mapping (D2 — the recycled-task-id
-    carve-out's discriminator). A status value is attributed to a task id
-    only while the scan is strictly inside the lines belonging to that
-    task's own `taskNNNN:` key — never a workflow-step's `status:` line,
-    never another task's. A task id with no status line inside its own
-    block (key absent, or the value after the colon undeterminable) is
-    simply absent from the returned mapping; callers treat that the same
-    as any other non-`pending` classification (D1)."""
+def iter_task_block_lines(workflow_yaml_path):
+    """Yield (task_id, line) for every line strictly inside a task's own
+    indented block under the top-level `tasks:` mapping (D2). A line is
+    attributed to a task id only while the scan is inside the lines
+    belonging to that task's own `taskNNNN:` key -- never a workflow-step
+    line, never another task's, never a line at or above the task key's own
+    indent. The key line itself is not yielded. An unreadable file yields
+    nothing."""
     try:
         with open(workflow_yaml_path, encoding="utf-8", errors="replace") as fh:
             lines = fh.readlines()
     except OSError:
-        return {}
+        return
 
-    statuses = {}
     in_tasks = False
     current_task = None
     current_task_indent = None
@@ -193,14 +209,56 @@ def task_statuses_from_workflow(workflow_yaml_path):
         if current_task is None:
             continue
 
+        yield current_task, line
+
+
+def task_statuses_from_workflow(workflow_yaml_path):
+    """Per-task workflow status, scoped to each task's own indented block
+    under the top-level `tasks:` mapping (D2 -- the carve-out's
+    discriminator). A task id with no status line inside its own block (key
+    absent, or the value after the colon undeterminable) is simply absent
+    from the returned mapping; callers treat that the same as any other
+    non-`pending` classification (D1)."""
+    statuses = {}
+    for task_id, line in iter_task_block_lines(workflow_yaml_path):
         status_match = TASK_STATUS_RE.match(line)
-        if status_match and current_task not in statuses:
-            statuses[current_task] = status_match.group(1)
+        if status_match and task_id not in statuses:
+            statuses[task_id] = status_match.group(1)
     return statuses
 
 
+def task_routeback_records_from_workflow(workflow_yaml_path):
+    """Per-task `routeback_failed_journal_line` record, read from each task's
+    own block only (the same scoping as the status read). Within a block the
+    first occurrence of the key wins, and only the canonical form is a
+    record: an unquoted run of ASCII digits whose first digit is 1-9,
+    optionally followed by trailing whitespace. The returned value is that
+    digit string, never an int. A task id whose first occurrence is absent,
+    `null`, empty or otherwise non-canonical is absent from the mapping."""
+    records = {}
+    seen = set()
+    for task_id, line in iter_task_block_lines(workflow_yaml_path):
+        if task_id in seen:
+            continue
+        key_match = ROUTEBACK_RECORD_LINE_RE.match(line)
+        if not key_match:
+            continue
+        seen.add(task_id)
+        value_match = ROUTEBACK_RECORD_VALUE_RE.match(key_match.group(1))
+        if value_match:
+            records[task_id] = value_match.group(1)
+    return records
+
+
 def read_journal(journal_path):
-    """Last event per task.
+    """Last event per task, as {task: (event, physical_line)}.
+
+    `physical_line` is the 1-based line number of that event in the file.
+    Lines are delimited by LF only (a CR never starts a new line, so the
+    file is read as bytes), and a final non-empty segment without a
+    terminating LF counts as a line. Blank lines, malformed lines, lines
+    with an unknown event and lines with an invalid task id advance the
+    counter but never become a task's event.
 
     - Journal file absent but its directory exists (implement phase started,
       no launch recorded yet): return {} — every declared task counts as
@@ -210,8 +268,8 @@ def read_journal(journal_path):
       evaluable; fail-open and skip it.
     """
     try:
-        with open(journal_path, encoding="utf-8", errors="replace") as fh:
-            lines = fh.readlines()
+        with open(journal_path, "rb") as fh:
+            raw = fh.read()
     except FileNotFoundError:
         if os.path.isdir(os.path.dirname(journal_path)):
             return {}
@@ -219,14 +277,18 @@ def read_journal(journal_path):
     except OSError:
         return None
 
+    segments = raw.split(b"\n")
+    if segments and segments[-1] == b"":
+        segments.pop()  # the file's last LF terminates a line, it adds none
+
     last = {}
-    for line in lines:
-        line = line.strip()
+    for line_number, segment in enumerate(segments, start=1):
+        line = segment.decode("utf-8", errors="replace").strip()
         if not line:
             continue
         try:
             record = json.loads(line)
-        except ValueError:
+        except (ValueError, RecursionError):
             continue  # malformed line: skip (fail-safe read)
         if not isinstance(record, dict):
             continue
@@ -236,7 +298,7 @@ def read_journal(journal_path):
             continue
         if event not in KNOWN_EVENTS:
             continue
-        last[task] = event
+        last[task] = (event, line_number)
     return last
 
 
@@ -393,22 +455,33 @@ def evaluate_feature(candidate):
         return None
 
     unlaunched, in_flight, failed = [], [], []
-    task_statuses = None  # lazily read: only needed when a `failed` last
-    # event is actually present, so the common (no-failure) path costs no
-    # extra pass over workflow.yaml (D2, NFR4).
+    # Lazily read: only needed when a `failed` last event is actually
+    # present, so the common (no-failure) path costs no extra pass over
+    # workflow.yaml (D2, NFR4).
+    task_statuses = None
+    task_records = None
     for task_id in task_ids:
-        state = last_events.get(task_id)
-        if state is None:
+        last_event = last_events.get(task_id)
+        if last_event is None:
             unlaunched.append(task_id)
-        elif state == "launched":
+            continue
+        state, event_line = last_event
+        if state == "launched":
             in_flight.append(task_id)
         elif state == "failed":
             if task_statuses is None:
                 task_statuses = task_statuses_from_workflow(workflow_yaml_path)
-            if task_statuses.get(task_id) == "pending":
-                # Recycled-task-id carve-out (D1): the journal's `failed`
-                # event is residual from before a route-back re-plan reset
-                # this task's own workflow status back to pending.
+                task_records = task_routeback_records_from_workflow(
+                    workflow_yaml_path
+                )
+            if (
+                task_statuses.get(task_id) == "pending"
+                and task_records.get(task_id) == str(event_line)
+            ):
+                # Recycled-task-id carve-out (D1): the journal's last event
+                # is the one `failed` event a route-back reset returned to
+                # `pending`, identified by the task's own record. Any other
+                # `pending` + `failed` task is genuinely failed.
                 unlaunched.append(task_id)
             else:
                 failed.append(task_id)
