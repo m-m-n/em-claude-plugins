@@ -61,7 +61,17 @@ worker_runs:
   status: completed
   input_digest: sha256:db6deb82b0a00a4b60c7dea04d8b9d6f492afcdb106cb351bd6f4fdf0653bf4c
   output_digest: sha256:2a3256518cf5578e71f8a2d37c5e6aa098b254dfeed608934ec1f4f59d76065c
-artifacts: []
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: sha256:cf59a1b0cb7b5de4de6b50ff213dd7f1288860cfcf1b791f2dc1c6a582c59651
+  output_digest: null
+artifacts:
+- path: feature-docs/destructive-guard-unified-lexer/REQUIREMENTS.md
+  sha256: sha256:5ed4ce070f356e14176d3f3c4bbc9bacc56c865afa35f786fdca06242ef17b60
+  produced_by: create-spec-run-0004
+- path: feature-docs/destructive-guard-unified-lexer/SPEC.md
+  sha256: sha256:8c62c0c1fccf645fbcad0ede14cfed1028cc941af11b7f6c956665469480a070
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
