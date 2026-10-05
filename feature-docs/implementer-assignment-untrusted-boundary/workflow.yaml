@@ -131,7 +131,8 @@ workflow:
   failed_items: []
   completed_at_commit: c680bdb222a36cb9d333419157b778df2eaf965b
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: a2e4e1a160edeed6bf918e797c43123f66a2d307
 tasks:
   task0001:
     title: Assignment payload with an untrusted data section
