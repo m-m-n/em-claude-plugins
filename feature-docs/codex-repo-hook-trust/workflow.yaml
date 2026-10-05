@@ -136,7 +136,7 @@ workflow:
   failed_items: []
   completed_at_commit: 3eeb2e49927528bce6ba468072f1acd85f35d4d5
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Probe working-directory Codex hooks on every wrapper route and close the gap
