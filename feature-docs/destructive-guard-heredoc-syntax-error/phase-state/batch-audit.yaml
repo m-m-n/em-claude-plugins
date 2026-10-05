@@ -26,3 +26,23 @@ records:
     -a を含める、エラー後の配列状態の解除、EC4〜EC6 の allow 維持）をすべて採った。残るリスク: 配列の祖先があるだけで抑止すると置換内の本物のヒアドキュメントで誤爆する。Opus
     escalation not run.'
   answered_at: '2026-10-06T07:58:00+09:00'
+- question_id: create-plan.discarded-line-end
+  packet_id: null
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - physical_newline
+  freeform: null
+  normalized_answer: 'physical_newline: 捨てられる行は、配列内の直接位置の << / <<- の後の最初の物理改行で終わる。その後に開いた引用・置換・コメント内の引用符・行末の
+    \ による継続は行を延ばさない。宣言組み込みは declare / typeset / local / export / readonly のすべてを対象にする（引数として読まれる
+    NAME=( / NAME+=( に限る）。task0001.md の Terms / Behavior 3・5 / AC-2 / AC-2b（新設）/ Test
+    Notes と VERIFICATION.md の TS-2 を書き換えた。'
+  resolution_note: 'gate: create-plan の計画レビュー（gate_id なし、orchestrator が planner の解釈
+    3 点を確認）。options: token_level_newline（planner 案）/ physical_newline。chosen: physical_newline。Codex（run_codex_exec.sh
+    readonly、1 ターン）が Bash 5.3.9 で bash -c・/dev/stdin・標準入力の 3 通りを実測: x=( <<A " 改行 echo
+    RAN2 改行 " で RAN2 が実行され、$( と行末 \ と # " でも次行が実行された。planner 案では 2 行目を引用内として扱い、現行フックでも同形の
+    rm -rf は allow だった（抜け道）。orchestrator も bash 5.3.9 で 3 形を再現して同意。宣言組み込み 4 種（typeset
+    -a / 関数内 local / export / readonly）も行を捨てて次行を実行したので含めた。残るリスク: リセット後も _MarkedText
+    が残す " を _TrackingLexer が読み直す恐れ（Behavior 5 に明記）、別の bash バージョンは未測定。planner の解釈 1（捨てられる行の後続演算子にも本文を取らせない）は判定を厳しくする方向なので変更なし。Opus
+    escalation not run.'
+  answered_at: '2026-10-06T08:35:00+09:00'
