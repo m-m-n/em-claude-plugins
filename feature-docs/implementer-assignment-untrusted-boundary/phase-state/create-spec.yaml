@@ -1,0 +1,21 @@
+schema_version: 1
+feature: implementer-assignment-untrusted-boundary
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 2e456776f77a8518797e7bffc2c313ea95349a39
+last_input_digest: sha256:2861b658855631b184f4b0d06f30522bc61255d9a9ba2211aaef54be6109dc00
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:2861b658855631b184f4b0d06f30522bc61255d9a9ba2211aaef54be6109dc00
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
