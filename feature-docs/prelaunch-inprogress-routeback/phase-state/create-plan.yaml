@@ -1,11 +1,11 @@
 schema_version: 1
 feature: prelaunch-inprogress-routeback
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 2
 base_revision: 7e649aa6f53ab89f15487c8b2ac96814bdef7947
 last_input_digest: sha256:f63a4206ae4f08fb9d2deae962fc1eb4cf893036703316f66ed22b99681daf77
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-plan.assumption.A-P1:
