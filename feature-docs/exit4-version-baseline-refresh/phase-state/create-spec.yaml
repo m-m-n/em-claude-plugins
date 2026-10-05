@@ -6,9 +6,91 @@ generation: 1
 base_revision: 2d11cfd679f56bf3ee761baf0f2cc3e0291096b3
 last_input_digest: sha256:d1e549afc812dcf07fe5ffbf6d0c52f4b89fd41dcd18079b4dad7760f0e3bb6c
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-run-q0001:
+    iteration: 1
+    questions:
+    - approach.module-treatment
+    - scope.historical-records
+    - testing.recurrence-detection
+    - scope.sibling-finding-ac2
+    - design-step.recommendation
+answers:
+  approach.module-treatment:
+    packet_id: create-spec-run-q0001
+    answered_at: '2026-10-05T18:41:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - refresh_baseline
+    freeform: null
+    normalized_answer: BASELINE_PATCH を 68、FORGED_PRE_BUMP_VERSION を "0.1.68" に更新し、docstring
+      とコメントを新しい baseline に揃える
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation; codex_consulted: true (turn 1, harness codex); mapped to
+      an existing option_id. Codex の理由: 実際の変更前の値（02aff93 で両レジストリ 0.1.68 を git で確認）に合わせれば
+      0.1.68 を拒否し 0.1.69 と現行 0.3.16 を受け入れる。採らなかった選択肢: drop_baseline_keep_equality（変更前の値を拒否する条件を失う）、retire_module（一致確認も失う）。リスク:
+      固定した過去の基準値なので今後の更新漏れまでは検出しない'
+  scope.historical-records:
+    packet_id: create-spec-run-q0001
+    answered_at: '2026-10-05T18:41:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - tests_yaml_only
+    freeform: null
+    normalized_answer: test-docs/exit4-tip-argument/task0002.tests.yaml の AC-1/AC-2/AC-3
+      の red_reason だけを新 baseline に揃える。SPEC.md FR6 と tasks/task0002.md は当時の記録として残す
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation; codex_consulted: true (turn 1, harness codex); mapped to
+      an existing option_id. Codex の理由: テストに対応する実行記録を直し、統合済みの仕様と計画は当時の記録として残せる。採らなかった選択肢:
+      all_listed（過去の仕様に具体的な版番号の記述を書き足し、version 規約とぶつかる）、none（テストと実行記録の食い違いが残る）。リスク:
+      仕様・計画の古い値との食い違いが残る。red_reason には再確認した結果を書く'
+  testing.recurrence-detection:
+    packet_id: create-spec-run-q0001
+    answered_at: '2026-10-05T18:41:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - real_sample_plus_tie
+    freeform: null
+    normalized_answer: FORGED_PRE_BUMP_VERSION を実際の bump 前の値 0.1.68 にして negative proof
+      に使い、加えて FORGED_PRE_BUMP_VERSION の patch が BASELINE_PATCH と一致することを検査するテストを足す。標準ライブラリのみ、git
+      は使わない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation; codex_consulted: true (turn 1, harness codex); mapped to
+      an existing option_id. Codex の理由: 変更前の値を拒否する確認に加え、試験用の値と基準値が別々に変更されるずれを検出でき、git
+      履歴にも依存しない。採らなかった選択肢: real_sample_only（両値のずれを検出できない）、git_derived_baseline（浅い
+      clone で失敗する）。リスク: 両方を同じ誤った値に変えると検出できない'
+  scope.sibling-finding-ac2:
+    packet_id: create-spec-run-q0001
+    answered_at: '2026-10-05T18:41:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exclude
+    freeform: null
+    normalized_answer: round 2 の別指摘 4773e33be20e67f4（AC-2 の存在しないテスト名）はこの feature に含めない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation; codex_consulted: true (turn 1, harness codex); mapped to
+      an existing option_id. Codex の理由: 独立した指摘なので今回の修正範囲を限定できる。採らなかった選択肢: include（別の不具合の修正で完了条件が広がる）。リスク:
+      AC-2 の旧テスト名が解決できないまま残る'
+  design-step.recommendation:
+    packet_id: create-spec-run-q0001
+    answered_at: '2026-10-05T18:41:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design ステップは skipped。requirements-analyst の推奨（skip）をそのまま採用
+    resolution_note: 'gate: create-spec.design-step; references/batch-policies.yaml
+      -> option_id: decide_autonomously（推奨 option skip を採用）'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:d1e549afc812dcf07fe5ffbf6d0c52f4b89fd41dcd18079b4dad7760f0e3bb6c
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
