@@ -1,0 +1,218 @@
+schema_version: 1
+feature: implementer-assignment-untrusted-boundary
+created: '2026-10-06'
+base_branch: main
+goal: |
+  # implement-phase.md の実装者割当て本文が project_commands / expected_files を未信頼データの境界なしに展開する（要確認）
+
+  Notion タスク: https://www.notion.so/3f03509ec8ee818a9cd3ecb3231a4c4f （種別: セキュリティ）
+
+  ## 脆弱性の概要 (必須)
+  `em-workflow/references/implement-phase.md` の実装者割当て本文が、リポジトリ由来の `project_commands` と作業者由来の `expected_files` を、未信頼データとしての境界や指示なしに Task の本文へ展開している（reviewer の主張。未検証）。
+  ## 参照 (必須)
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: medium
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: em-workflow（main）
+  - 修正済みバージョン: 無し
+  ## 攻撃シナリオ (必須)
+  値に「Read で秘密情報を取得して報告に含める」などの指示を混ぜると、実装者への指示として渡される。Bash のコマンド承認は Read / Write による作業範囲の逸脱を防がない。
+  ## 影響範囲 (必須)
+  実装者サブエージェントが読めるファイルの内容が報告経由で外へ出る可能性。
+  ## 完了の定義 (必須)
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  ## 該当箇所 (任意)
+  `em-workflow/references/implement-phase.md:411`〜416（2026-07-04 のコミット e5458a24f から変わっていない）
+  出典: feature `prelaunch-inprogress-routeback` の review round 2、security reviewer の 2 件目。評価者は今回の差分の範囲外として不採用にした。まず主張が成り立つかの確認から行う。
+  ## 暫定緩和策 (任意)
+  値を構造化して信頼済みの指示から分離し、値に含まれる指示には従わないことを実装者の上位指示で明示する。
+
+  ## 追加の指示（起動時）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+  - その議論の内容を Notion に記録する。
+  - 実装完了後、integration ブランチを push し、base_branch へ gh pr create で PR を作る。ブランチはローカル・リモートとも残す（自動マージしない）。
+parent_branch: em-workflow/implementer-assignment-untrusted-boundary/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.7
+      '1': 0.13
+      '2': 0.17
+      '3': 0.0
+    description_plus_code:
+      '0': 0.03
+      '1': 0.6
+      '2': 0.37
+      '3': 0.0
+  at: '2026-10-06T00:08:43+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 1fc18565018eccf58092376fb728bcdccb95553f
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: '画面を持たない変更（プラグインの参照文書・エージェントとスキルのプロンプト・テストのみ）。requirements-analyst の推奨、batch: decide_autonomously'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Labelled untrusted-data section in the assignment payload
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR2:
+    title: One-line JSON string rendering
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR3:
+    title: Hook-parsed identity lines stay first
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+    - TS3
+    - TS4
+  FR4:
+    title: Implementer data-not-instructions rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+  FR5:
+    title: Instruction-source definition narrowed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR6:
+    title: Regression tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+  NFR1:
+    title: Standard-library unittest only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: No plugin version change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: check-plugin-invariants passes; no '# Task assignment' line in agents
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  NFR4:
+    title: Full unittest suite passes without changing existing assertions
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  NFR5:
+    title: worker-envelope.md, queue hooks, bash_guard, approval store unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: No raw byte equality claim beyond the existing verbatim rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: AC-1 ordering anchor phrases not used in the new payload text
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
