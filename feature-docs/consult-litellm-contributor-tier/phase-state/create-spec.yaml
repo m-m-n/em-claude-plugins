@@ -1,7 +1,7 @@
 schema_version: 1
 feature: consult-litellm-contributor-tier
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: cca447060a92dce464acba29bd436f0c089ed580
 last_input_digest: sha256:2e9db4fec08291fa56c4a3d3f03766adf7af74d1c4ded936b30d956fc1bd2154
