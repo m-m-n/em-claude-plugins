@@ -1179,10 +1179,15 @@ class TestTheNewExecutionLocationIsDocumented(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# build_scan_jobs keeps its grouping contract (it never prepares anything).
+# sca-file-tasks-robustness task0004 (FR6): `build_scan_jobs` returns plans,
+# not built jobs, and prepares nothing. The working directory of the jobs a
+# run builds from them is checked on `build_scan_job` (a job without prepared
+# inputs is rejected; the prepared directory becomes the cwd) and on
+# `run_scan` (the npm / cargo scanner's cwd is its own isolation directory,
+# go's the group directory).
 # ---------------------------------------------------------------------------
 
-class TestBuildScanJobsNeedsThePreparedInputsOfNpmAndCargoGroups(unittest.TestCase):
+class TestBuildScanJobsReturnsPlans(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
@@ -1197,26 +1202,45 @@ class TestBuildScanJobsNeedsThePreparedInputsOfNpmAndCargoGroups(unittest.TestCa
         self.addCleanup(patcher.stop)
         self.registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
 
-    def test_jobs_of_npm_and_cargo_groups_run_in_the_prepared_directories(self):
-        prepared = {
-            "a/package.json": prepared_inputs("npm"),
-            "Cargo.toml": prepared_inputs("cargo"),
-        }
-        jobs, reasons = SCAN.build_scan_jobs(
-            self.registry, ["a/package.json", "Cargo.toml"], "/proj", prepared_inputs=prepared
+    def test_npm_and_cargo_groups_yield_plans_in_registry_then_directory_order(self):
+        plans, reasons = SCAN.build_scan_jobs(
+            self.registry, ["a/package.json", "Cargo.toml"], "/proj"
         )
         self.assertEqual(reasons, [])
+        self.assertEqual(
+            [(p.ecosystem["ecosystem"], p.directory, p.target) for p in plans],
+            [("npm", "a", "a/package.json"), ("cargo", "", "Cargo.toml")],
+        )
+
+    def test_a_job_for_the_target_of_an_npm_or_cargo_plan_needs_the_prepared_inputs(self):
+        plans, _ = SCAN.build_scan_jobs(self.registry, ["package.json", "Cargo.toml"], "/proj")
+        for plan in plans:
+            name = plan.ecosystem["ecosystem"]
+            with self.subTest(ecosystem=name):
+                with self.assertRaises(SCAN.JobConstructionError):
+                    SCAN.build_scan_job(plan.ecosystem, plan.target, "/proj", plan.executable)
+
+    def test_the_job_of_an_npm_or_cargo_plan_runs_in_the_prepared_directory(self):
+        plans, _ = SCAN.build_scan_jobs(
+            self.registry, ["a/package.json", "Cargo.toml"], "/proj"
+        )
+        prepared = {"npm": prepared_inputs("npm"), "cargo": prepared_inputs("cargo")}
+        jobs = [
+            SCAN.build_scan_job(
+                p.ecosystem, p.target, "/proj", p.executable,
+                prepared_inputs=prepared[p.ecosystem["ecosystem"]],
+            )
+            for p in plans
+        ]
         self.assertEqual([(j["ecosystem"], j["cwd"]) for j in jobs], [("npm", "/iso/npm"), ("cargo", "/iso/cargo")])
         self.assertEqual([j["manifest"] for j in jobs], ["a/package.json", "Cargo.toml"])
 
-    def test_a_group_without_prepared_inputs_yields_no_job_with_the_project_root_as_cwd(self):
-        with self.assertRaises(SCAN.JobConstructionError):
-            SCAN.build_scan_jobs(self.registry, ["package.json"], "/proj")
-
-    def test_go_jobs_need_no_prepared_inputs(self):
-        jobs, reasons = SCAN.build_scan_jobs(self.registry, ["svc/go.mod"], "/proj")
+    def test_the_job_of_a_go_plan_needs_no_prepared_inputs_and_runs_in_the_group_directory(self):
+        plans, reasons = SCAN.build_scan_jobs(self.registry, ["svc/go.mod"], "/proj")
         self.assertEqual(reasons, [])
-        self.assertEqual([j["cwd"] for j in jobs], ["/proj/svc"])
+        (plan,) = plans
+        job = SCAN.build_scan_job(plan.ecosystem, plan.target, "/proj", plan.executable)
+        self.assertEqual(job["cwd"], "/proj/svc")
 
 
 # ---------------------------------------------------------------------------
