@@ -1562,36 +1562,153 @@ def _cvss_severity_band(vector):
     return "none"
 
 
+class DirectNames(frozenset):
+    """The direct-dependency set of ONE scan unit: the declared names, as
+    written in the manifest after `package =` / workspace rename resolution
+    and never canonicalized, plus whether the manifest was resolved in full.
+
+    Immutable, and for every read an existing caller performs on a plain name
+    collection (membership, iteration, size, equality with a plain set of the
+    same names) it behaves exactly like an immutable set of those names.
+    `complete` is true when every declaration of the manifest was resolved; a
+    consumer that is handed a name collection WITHOUT a `complete` attribute
+    treats it as complete (`_names_complete`)."""
+
+    __slots__ = ("_complete",)
+
+    def __new__(cls, names=(), complete=True):
+        instance = super().__new__(cls, names)
+        instance._complete = bool(complete)
+        return instance
+
+    @property
+    def complete(self):
+        return self._complete
+
+    def __reduce__(self):
+        return (type(self), (tuple(self), self._complete))
+
+
+def _names_complete(direct_names):
+    """The legacy-value rule: a name collection that has no `complete`
+    attribute is treated as complete."""
+    return bool(getattr(direct_names, "complete", True))
+
+
 _CARGO_DEP_TABLES = {"dependencies", "dev-dependencies", "build-dependencies"}
+
+CARGO_TOML_PARSER_UNAVAILABLE = "cargo_toml_parser_unavailable"
+
+
+def _cargo_entry_name(key, value, workspace_dependencies):
+    """The direct-dependency name of one dependency entry (key `key`, parsed
+    value `value`) and whether the entry was understood: the string
+    `package` of a table entry; for a table entry with `workspace = true` the
+    string `package` of the same manifest's `[workspace.dependencies]` entry
+    `key` when it has one; otherwise the key. A `package` that is not a string
+    is an unexpected shape: no name is taken from it and the entry is not
+    understood."""
+    if isinstance(value, dict):
+        if "package" in value:
+            package = value["package"]
+            if isinstance(package, str):
+                return package, True
+            return None, False
+        if value.get("workspace") is True:
+            inherited = workspace_dependencies.get(key)
+            if isinstance(inherited, dict) and "package" in inherited:
+                package = inherited["package"]
+                if isinstance(package, str):
+                    return package, True
+                return key, False
+            return key, True
+    return key, True
+
+
+def _cargo_dependency_tables(data):
+    """Every dependency table of a parsed Cargo.toml -- the three tables at the
+    top level and under each `target.<cfg>` table -- as `(tables, understood)`:
+    `understood` is false when a table, `target` or a `target.<cfg>` entry
+    that has to be a table is not one."""
+    tables = []
+    understood = True
+    sources = [data]
+    if "target" in data:
+        target = data["target"]
+        if isinstance(target, dict):
+            for config in target.values():
+                if isinstance(config, dict):
+                    sources.append(config)
+                else:
+                    understood = False
+        else:
+            understood = False
+    for source in sources:
+        for table_name in sorted(_CARGO_DEP_TABLES):
+            if table_name not in source:
+                continue
+            table = source[table_name]
+            if isinstance(table, dict):
+                tables.append(table)
+            else:
+                understood = False
+    return tables, understood
+
+
+def _cargo_workspace_view(data):
+    """`(workspace_dependencies, complete)` of a parsed Cargo.toml's
+    `[workspace]` table: its `[workspace.dependencies]` table (empty when
+    absent or not a table), and false when the table lists members (their
+    manifests are not read) or has an unexpected shape."""
+    if "workspace" not in data:
+        return {}, True
+    workspace = data["workspace"]
+    if not isinstance(workspace, dict):
+        return {}, False
+    complete = True
+    if "members" in workspace:
+        members = workspace["members"]
+        if not isinstance(members, list) or members:
+            complete = False
+    workspace_dependencies = workspace.get("dependencies", {})
+    if not isinstance(workspace_dependencies, dict):
+        return {}, False
+    return workspace_dependencies, complete
 
 
 def _cargo_direct_dependency_names(manifest_path):
-    """Package names declared in Cargo.toml's [dependencies],
-    [dev-dependencies] and [build-dependencies] tables (including their
-    target-specific forms, e.g. target.'cfg(unix)'.dependencies) -- a
-    lightweight TOML-lite scan rather than a full parser, since cargo
-    audit's JSON output carries no per-entry "is_direct" field to read
-    directness from directly."""
-    names = set()
+    """The direct-dependency names declared by the Cargo.toml at
+    `manifest_path`, parsed with tomllib, as a `DirectNames`; never raises.
+
+    Read: `dependencies`, `dev-dependencies` and `build-dependencies` at the
+    top level and under every `target.<cfg>` table (the sub-table form
+    `[dependencies.serde]` is an ordinary entry of the parsed table). An
+    entry's name is its `package` (also through a `workspace = true` entry
+    renamed in the same manifest's `[workspace.dependencies]`), else its key;
+    `[workspace.dependencies]` entries are not direct names by themselves.
+
+    The result is incomplete when the manifest cannot be resolved, read or
+    parsed (no tomllib included), when its `[workspace]` lists members -- the
+    member manifests are not read -- and for any unexpected shape; the names
+    resolved up to that point stay in the set."""
+    incomplete = DirectNames((), complete=False)
     try:
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    except OSError:
-        return names
-    current_table = None
-    for line in content.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if stripped.startswith("[") and stripped.endswith("]"):
-            section = stripped.strip("[]").strip()
-            current_table = section.rsplit(".", 1)[-1]
-            continue
-        if current_table in _CARGO_DEP_TABLES:
-            match = re.match(r'^"?([A-Za-z0-9_.\-]+)"?\s*=', stripped)
-            if match:
-                names.add(match.group(1))
-    return names
+        text = _read_resolved_text(manifest_path) if manifest_path else None
+        data = _parse_toml(text) if text is not None else None
+        if data is None:
+            return incomplete
+        workspace_dependencies, complete = _cargo_workspace_view(data)
+        tables, understood = _cargo_dependency_tables(data)
+        names = set()
+        for table in tables:
+            for key, value in table.items():
+                name, entry_understood = _cargo_entry_name(key, value, workspace_dependencies)
+                if name is not None:
+                    names.add(name)
+                understood = understood and entry_understood
+        return DirectNames(names, complete=complete and understood)
+    except Exception:
+        return incomplete
 
 
 def _resolve_project_relative(project_root, rel_path):
@@ -1628,24 +1745,57 @@ def _cargo_manifest_candidate(project_root, manifest_file):
     return _resolve_project_relative(project_root, candidate_rel)
 
 
+# The qualitative bands a cargo advisory's severity can be determined as: the
+# CVSS v3 bands `_cvss_severity_band` derives from the advisory's vector, or
+# the same words in the entry's own `severity` field. Anything else is a
+# severity that cannot be determined.
+_CARGO_KNOWN_SEVERITIES = frozenset({"critical", "high", "medium", "low", "none"})
+
+
 def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
+    """Turns one completed cargo-audit payload into
+    `(findings, directness_undetermined)`.
+
+    Directness of each advisory, in this order: a payload entry carrying
+    `is_direct` decides itself and is never undetermined; a reported name
+    whose canonical form (`canonical_pip_name`) equals the canonical form of a
+    name declared in the unit's Cargo.toml is direct; otherwise it is
+    transitive when the declared set is complete. Under an incomplete set an
+    advisory whose severity is determined and below the threshold is dropped
+    without being counted; any other is undetermined -- no finding, not
+    transitive, counted exactly once in `directness_undetermined` (counts
+    only: nothing taken from the manifest or the advisory is reported)."""
     findings = []
+    undetermined = 0
     entries = ((data.get("vulnerabilities") or {}).get("list")) or []
     manifest_path = _cargo_manifest_candidate(project_root, manifest_file)
-    direct_names = _cargo_direct_dependency_names(manifest_path) if manifest_path else set()
+    direct_names = (
+        _cargo_direct_dependency_names(manifest_path)
+        if manifest_path
+        else DirectNames((), complete=False)
+    )
+    declared = {canonical_pip_name(name) for name in direct_names}
+    names_complete = _names_complete(direct_names)
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         advisory = entry.get("advisory") or {}
         package = (entry.get("package") or {}).get("name", "unknown")
-        if "is_direct" in entry:
-            is_direct = bool(entry.get("is_direct"))
-        else:
-            is_direct = package in direct_names
         raw_severity = _cvss_severity_band(advisory.get("cvss"))
         if raw_severity is None:
             raw_severity = entry.get("severity")
         mapped = _map_severity(ecosystem, raw_severity)
+        if "is_direct" in entry:
+            is_direct = bool(entry.get("is_direct"))
+        elif canonical_pip_name(package) in declared:
+            is_direct = True
+        elif names_complete:
+            is_direct = False
+        else:
+            severity_known = isinstance(raw_severity, str) and raw_severity in _CARGO_KNOWN_SEVERITIES
+            if not severity_known or _passes_threshold(ecosystem, True, mapped):
+                undetermined += 1
+            continue
         if not _passes_threshold(ecosystem, is_direct, mapped):
             continue
         patched_versions = (entry.get("versions") or {}).get("patched") or []
@@ -1662,7 +1812,7 @@ def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
                 severity=mapped,
             )
         )
-    return findings
+    return findings, undetermined
 
 
 # ---------------------------------------------------------------------------
@@ -2823,6 +2973,10 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
                     )
                 except JobConstructionError:
                     return unbindable
+                if name == "cargo" and tomllib is None:
+                    # FR6: the unit's directness comes from Cargo.toml, which
+                    # cannot be parsed here -- the scanner is not launched.
+                    return _group_audit(reasons=[CARGO_TOML_PARSER_UNAVAILABLE])
                 outcome, payload = run_ecosystem_command(job)
         except IsolationError:
             return _group_audit(reasons=[f"{name}_isolation_failed"])
@@ -2843,9 +2997,11 @@ def _scan_bound_group(ecosystem, directory, files, project_root, real_root, exec
             return _group_audit(reasons=[reason])
         return _group_audit(findings=findings, completed=True, undetermined=undetermined)
     if name == "cargo":
-        findings = normalizer(ecosystem, payload, target, project_root)
-    else:
-        findings = normalizer(ecosystem, payload, target)
+        findings, directness_undetermined = normalizer(ecosystem, payload, target, project_root)
+        audit = _group_audit(findings=findings, completed=True)
+        audit["directness_undetermined"] = directness_undetermined
+        return audit
+    findings = normalizer(ecosystem, payload, target)
     return _group_audit(findings=findings, completed=True)
 
 
@@ -2888,6 +3044,23 @@ def _scan_pip_group(ecosystem, files, project_root, executable_path):
         result["undetermined"] += pip_skip["count"]
     result["completed"] = True
     return result
+
+
+def _undetermined_directness_notes(pip_count, cargo_count):
+    """The FR5 summary notes for the advisories whose directness could not be
+    decided: the pip note (when `pip_count` is above 0) followed by the cargo
+    note (when `cargo_count` is above 0), each with its leading space and
+    `advisory` / `advisories` by count; empty when both are 0. Counts only --
+    never a name, a path or advisory text (NFR4)."""
+    notes = ""
+    for ecosystem, count in (("pip", pip_count), ("cargo", cargo_count)):
+        if count > 0:
+            noun = "advisory" if count == 1 else "advisories"
+            notes += (
+                f" {count} {ecosystem} {noun} with undetermined directness "
+                f"({ecosystem}_directness_undetermined)."
+            )
+    return notes
 
 
 def run_scan(project_root, changed_files, registry_path):
@@ -2948,6 +3121,13 @@ def run_scan(project_root, changed_files, registry_path):
       `N go advisory|advisories with undetermined severity
       (go_severity_undetermined).` after the pip notes. It is a note, never
       a skip reason.
+    - directness: each pip / cargo unit reports `directness_undetermined`,
+      the number of advisories it could not classify as direct or transitive
+      (absent means 0). The counts are summed per ecosystem and
+      `_undetermined_directness_notes` appends the counts-only notes after
+      every pre-existing note, pip before cargo. They are notes, never skip
+      reasons. A cargo unit whose Cargo.toml cannot be parsed because tomllib
+      is unavailable reports `cargo_toml_parser_unavailable` instead.
     """
     registry = load_registry(registry_path)
     selected = select_ecosystems(registry, changed_files)
@@ -2965,6 +3145,8 @@ def run_scan(project_root, changed_files, registry_path):
     pip_severity_undetermined_total = 0
     pip_unpinnable_total = 0
     go_severity_undetermined_total = 0
+    pip_directness_undetermined_total = 0
+    cargo_directness_undetermined_total = 0
     for ecosystem in selected:
         name = ecosystem.get("ecosystem", "unknown")
         validation_error = validate_ecosystem_entry(ecosystem)
@@ -2984,12 +3166,15 @@ def run_scan(project_root, changed_files, registry_path):
                 audit = _scan_pip_group(ecosystem, files, project_root, executable_path)
                 pip_severity_undetermined_total += audit["undetermined"]
                 pip_unpinnable_total += audit["excluded"]
+                pip_directness_undetermined_total += audit.get("directness_undetermined", 0)
             else:
                 audit = _scan_bound_group(
                     ecosystem, directory, files, project_root, real_root, executable_path
                 )
                 if name == "go":
                     go_severity_undetermined_total += audit["undetermined"]
+                if name == "cargo":
+                    cargo_directness_undetermined_total += audit.get("directness_undetermined", 0)
             all_findings.extend(audit["findings"])
             skip_reasons.update(audit["reasons"])
             if audit["completed"]:
@@ -3024,7 +3209,16 @@ def run_scan(project_root, changed_files, registry_path):
             f" {go_severity_undetermined_total} go {noun} with undetermined "
             f"severity (go_severity_undetermined)."
         )
-    summary_notes = undetermined_note + unpinnable_note + go_undetermined_note
+    # D3: the directness notes come after every pre-existing note, pip before
+    # cargo; counts only, and never a skip reason.
+    summary_notes = (
+        undetermined_note
+        + unpinnable_note
+        + go_undetermined_note
+        + _undetermined_directness_notes(
+            pip_directness_undetermined_total, cargo_directness_undetermined_total
+        )
+    )
 
     if skip_reasons:
         ordered_reasons = sorted(skip_reasons)
