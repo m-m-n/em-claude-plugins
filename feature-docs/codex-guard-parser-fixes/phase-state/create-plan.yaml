@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-parser-fixes
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 9c6f7b6bc8e9f8444b8dfa03b7c35d6f8d1ce99b
 last_input_digest: sha256:f6eafd573bd6fbb662750d99ea85b7362b558afb1530257e18b26fb2e6ef34a3
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
