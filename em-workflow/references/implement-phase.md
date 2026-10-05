@@ -253,9 +253,23 @@ line-by-line and reconcile with workflow.yaml `tasks.*.status`. Select
 unlaunched tasks (no journal event yet and `status != merged`, ascending
 task-id order) up to `min(6 - in_flight_count, count(unlaunched))`.
 Recycled task id: workflow.yaml's status wins over a stale journal event
-here — a task whose workflow.yaml `status` is `pending` while the
-journal's last event for that id is `failed` counts as **unlaunched**, not
-failed. This carve-out is deliberately scoped to `failed` only, to stay
+here, but only for the one `failed` event that I.2.c's route back to
+planning reset. A task counts as **unlaunched** under this carve-out only
+when all three hold: its workflow.yaml `status` is `pending`, its journal
+last event is `failed`, and that event's physical line equals its
+`tasks.{T}.routeback_failed_journal_line` record (`references/workflow-schema.md`
+defines the record, cited here and not restated). Otherwise a `pending` +
+`failed` task is **failed**: the match fails when the record is absent,
+`null`, not in canonical form, or names a different line, and the task goes
+to I.2.c's failure handling below (batch: `implement.failed-task` in
+`references/batch-policies.yaml`) instead of being selected here. That
+includes a task route-backed before this record existed, which carries none.
+Nothing clears the record: a re-launched task that fails again has its last
+`failed` event on a new line, so it no longer matches. A task whose
+launch-state commit was not reached and which later fails becomes
+`pending` + `failed` as well; its `failed` event does not match the record,
+so the carve-out does not apply and the task is **failed**.
+This carve-out is deliberately scoped to `failed` only, to stay
 consistent with `queue_launch_guard.py`, which reads only the journal's
 last event (never workflow.yaml) and allows a post-`failed` launch as the
 legitimate retry path. A task whose journal last event is `launched` is
@@ -265,10 +279,14 @@ I.2.c's route back to planning is the only writer that resets a task's
 status to `pending`, and no re-planning pass ever re-issues a retired task
 id to a different task — `references/workflow-patch.md`'s re-planning
 task-id allocation rule (cited here, never restated) allocates every new
-id above the highest the feature has ever registered, so the `pending` +
-`failed` combination arises only from I.2.c's own reset of a task's own
-prior `failed` status, never from a task inheriting a different task's
-retired id. Given I.2.c's route-back precondition below, which admits only
+id above the highest the feature has ever registered, so a task never
+inherits a different task's retired id. The `pending` + `failed`
+combination has two origins, each a task's own: I.2.c's own reset of the
+task's own prior `failed` status, and a launched task that failed without
+reaching Step I.2.a's launch-state commit below, whether through an
+interruption or after a second exit 4, which leaves its status `pending`.
+The record match tells the two origins apart: only the route-back reset
+matches it. Given I.2.c's route-back precondition below, which admits only
 tasks with a terminal journal last event, and the allocation rule's
 guarantee that a `replace_all` never re-issues a retired id, a task can
 only ever carry its OWN journal's terminal event — route-back alone
@@ -310,7 +328,8 @@ The other three queue hooks detect a task as **unlaunched** solely from the abse
 any journal event for that task id — never from `tasks.{T}.status`.
 `queue_stop_guard.py` is the exception: as described above, it also reads
 `tasks.{T}.status` to apply the recycled-task-id carve-out that reclassifies
-a `failed` + `pending` task as unlaunched. This is
+a `failed` + `pending` task as unlaunched, and that carve-out also requires
+the record match. This is
 narrower than the orchestrator's own selection rule above, which
 additionally excludes any task whose `status` reads `merged`; the hooks
 carry no equivalent exclusion. This divergence is recorded, not fixed:
@@ -524,8 +543,12 @@ Triggered whenever a launched implementer's `Task()` call returns.
    I.2.a's selection condition, per the divergence discussion in I.2.a
    above; `launched` → in-flight; `merged` → merged; `failed` →
    failed — except that a task whose journal last event is `failed` AND
-   whose workflow.yaml `status` is `pending` is unlaunched instead, the
-   recycled-task-id rule in I.2.a above; a `launched` last event is always
+   whose workflow.yaml `status` is `pending` AND whose last `failed`
+   event's physical line equals its
+   `tasks.{T}.routeback_failed_journal_line` record is unlaunched instead,
+   the recycled-task-id rule in I.2.a above (a `pending` + `failed` task
+   without that match stays failed and goes to I.2.c's failure handling);
+   a `launched` last event is always
    in-flight regardless of workflow.yaml `status`) and cross-check against
    git actual state, trust-but-verify:
    - Worktree/branch existence, PLUS live-agent absence, for tasks the
@@ -1033,7 +1056,14 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   this entry, so this adds no extra write and no extra commit — record
   each such task's failure reason (the implementer's report `notes`) in
   `tasks.{T}.notes`, and set `tasks.{T}.status` back to `pending` for
-  every task in that set — the
+  every task in that set, and for each task in that set that has a journal
+  event, set `tasks.{T}.routeback_failed_journal_line` to the physical line
+  of that task's last `failed` event (the record is defined in
+  `references/workflow-schema.md`; the line comes from the same journal
+  replay used for the gate and the reset-set decision, a task with no
+  journal event gets no record, and the route-back commit below commits
+  this item with the rest of the write set, adding no new write and no
+  new commit) — the
   gate above already established that no task is `merged` or
   `in_progress` at this point, so the result is that no task is left
   `merged` or `in_progress` or `failed`, which is exactly what makes the
@@ -1203,9 +1233,12 @@ Stop-hook bullet below cite it as this classification's source.
 
 - **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
   ends. Replays the journal and workflow.yaml, applying the same
-  recycled-task-id carve-out as I.2.a above — a task whose journal last
-  event is `failed` and whose workflow.yaml `status` reads `pending`
-  reclassifies as unlaunched, not failed; if refillable slots and
+  recycled-task-id carve-out as I.2.a above — a task is unlaunched only
+  when its workflow.yaml `status` reads `pending`, its journal last event
+  is `failed`, and that event's physical line equals its
+  `tasks.{T}.routeback_failed_journal_line` record; a `pending` + `failed`
+  task without that match is `failed`, and the hook does not block that
+  feature (exit 0). If refillable slots and
   unlaunched tasks exist and no task's reconciled state is `failed`, it
   BLOCKS (exit 2) naming the tasks to launch — catching a forgotten refill
   after a wake phase. Classification (hook classification table above):
