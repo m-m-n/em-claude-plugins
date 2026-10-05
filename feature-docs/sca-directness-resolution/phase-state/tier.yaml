@@ -1,0 +1,71 @@
+schema_version: 2
+feature: sca-directness-resolution
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 2.2
+    confidence: 0.77
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.78
+      '3': 0.21
+  observed_at: '2026-10-05T12:19:04+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.95
+    confidence: 0.84
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.11
+      '2': 0.83
+      '3': 0.06
+  observed_at: '2026-10-05T12:25:01+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_sca_scan_normalization.py
+  - tests/test_sca_pip_lockfile_audit.py
+  changed_lines_approx: 300
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: pip の名前正規化は em-workflow/scripts/scan-dependencies.py:1827、:2123、:2134
+    で実装済みで、tests/test_sca_pip_lockfile_audit.py:1335、:1342 に回帰テストがある。一方、Cargo は em-workflow/scripts/scan-dependencies.py:1588
+    でテーブル名の最後の部分だけを残し、:1591 で宣言キーを抽出し、:1644 で名前を正規化せず比較している。pyproject は :1737 でダブルクォートだけを抽出し、:1741
+    で文字列内の extras を含む任意の ] によって配列読み取りを終了する。requirements は :1689 で -r を含むオプション行を捨て、:1807
+    でも参照先を読み取らない。直接依存の宣言を読み取れない場合は :1796、:1801 で空集合になり、:2159 の診断は重要度不明だけを扱う。書き込みを伴わない模擬実行で、Cargo
+    のサブテーブル・リネーム・名前表記差、pip のシングルクォート・複数行 extras・include について findings=0、skipped=false、skip_reason=null、直接依存判定の診断なしを確認した。1行のダブルクォート配列では
+    extras に続く django を検出できた。既存テストは tests/test_sca_scan_normalization.py:706、:899
+    で通常形式を確認しているが、残る再現条件と直接依存判定失敗の診断は検証していない。両正規化関数の直近の呼出元は em-workflow/scripts/scan-dependencies.py:2439、:2846、:2885
+    の3関数で、直近の内部依存関数は重複を除いて10関数ある
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 14
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 13
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-05T12:25:30+09:00'
