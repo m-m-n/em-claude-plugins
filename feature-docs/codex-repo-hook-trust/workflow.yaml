@@ -1,0 +1,202 @@
+schema_version: 1
+feature: codex-repo-hook-trust
+created: '2026-10-05'
+base_branch: main
+goal: |
+  # --dangerously-bypass-hook-trust がリポジトリ側 Codex 設定の hook を信頼確認なしで動かすかを確かめ、塞ぐ
+
+  Notion: https://www.notion.so/3ef3509ec8ee81b3b0adf398dadc1bbf
+  種別: セキュリティ
+
+  ## 脆弱性の概要 (必須)
+  `run_codex_exec.sh`（em-workflow / em-review）が `codex exec` に付ける `--dangerously-bypass-hook-trust` が、ラッパーが渡す hook だけでなく、レビュー対象リポジトリ側の Codex 設定にある hook まで信頼確認なしで実行させる可能性がある。Codex 0.160.0 で実挙動を確認していない（THREAT-MODEL.md の TB-3 の未解決事項）。
+  ## 参照 (必須)
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: medium
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: Codex CLI 0.160.0
+  - 修正済みバージョン: 無し
+  ## 攻撃シナリオ (必須)
+  レビュー対象のリポジトリが作業ディレクトリ側の Codex 設定（`.codex/` 等）に hook を持ち込む。`--litellm` 経路はユーザー設定を読むため、そのプロジェクトが信頼済みだと、持ち込まれた hook が信頼確認なしに Codex レビュアーの環境で実行される。
+  ## 影響範囲 (必須)
+  レビューを実行するユーザーの権限で、レビュー対象リポジトリが用意した任意のコマンドが hook として実行されうる。em-workflow の review フェーズ・em-review の Codex レビュアーの両経路が該当する。
+  ## 完了の定義 (必須)
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  - [ ] 既定経路と `--litellm` 経路のそれぞれで、作業ディレクトリ側の hook 定義が実行されるかを Codex 0.160.0 で確かめた記録がある
+  - [ ] 実行される場合はその層を読まない起動に変え、リポジトリ側の hook が実行されないことを確かめるテストがある。実行されない場合は THREAT-MODEL.md の TB-3 に記録する
+  ## 該当箇所 (任意)
+  - `em-workflow/scripts/run_codex_exec.sh:203`（`HOOK_FLAG` の組み立て）
+  - `em-review/scripts/run_codex_exec.sh`（同じ構成）
+  - review round 1 の指摘 4f3a287a7676c073。PR https://github.com/m-m-n/em-claude-plugins/pull/86 の push 時の自動セキュリティ確認も同じ点を指摘した
+  ## 暫定緩和策 (任意)
+  信頼していないリポジトリに対して Codex レビュアーを走らせない。
+
+  ## 追加指示（起動者）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）。
+  - 不明点は Codex に相談し、相対的に良いと判断した案を採用する。
+  - その議論の内容を Notion に記録する。
+parent_branch: em-workflow/codex-repo-hook-trust/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.81
+      '2': 0.18
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.22
+      '2': 0.75
+      '3': 0.02
+  at: '2026-10-05T09:50:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 7b4bb81b4a1809bece929b7da7415eb88b4b31d4
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない変更（シェルラッパー、テスト、脅威モデルの記録）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Codex 0.160.0 での実挙動の確認
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 確認結果の記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 実行される経路の起動を変える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 実行されない場合の TB-3 への記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: リポジトリ側 hook の非実行を確かめるテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: ラッパーのコメントの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 利用者の ~/.codex を読み書きしない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: テストは Python 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 既存のラッパー契約の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 両ラッパーを同じ変更で更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 認証情報を出力に含めない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: version 変更を書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
