@@ -1,0 +1,203 @@
+schema_version: 1
+feature: destructive-guard-heredoc-syntax-error
+created: '2026-10-06'
+base_branch: main
+goal: '# destructive-guard: bash が構文エラーで捨てる行の << をヒアドキュメントと読み、次の行の破壊的コマンドを素通りさせる
+
+
+  Notion タスク: https://www.notion.so/3f03509ec8ee817c89dfd4ea5d181743 （種別: セキュリティ）
+
+
+  ## 脆弱性の概要
+
+  `em-workflow/hooks/destructive-guard.py` が、bash が構文エラーで捨てる行の中の `<<` をヒアドキュメント演算子と読み、続く行を本文として検査から外す。bash は構文エラーの行を捨てて次の行を実行するので、破壊的コマンドが allow のまま実行される。
+
+
+  ## 参照
+
+  - CVE / GHSA ID: 該当なし
+
+  - severity: medium
+
+  - 現在のバージョン: em-workflow（feature `destructive-guard-unified-lexer` の integration ブランチ。現在は main にマージ済み）
+
+  - 修正済みバージョン: 無し
+
+
+  ## 攻撃シナリオ
+
+  エージェントが生成する Bash コマンドが `x=( <<EOF` の行の後ろに `rm -rf ...` の行を置き、`EOF` の行で閉じる形をとると、フックは allow を返し、bash は rm を実行する。基準コミット（e69f212）のフックでも allow で、退行ではない。
+
+
+  ## 影響範囲
+
+  無人実行（em-workflow の batch）を含め、hook が allow を返すので rm -rf や git reset --hard が確認なしで実行される。
+
+
+  ## 完了の定義
+
+  - [ ] 攻撃シナリオが成立しない
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  - [ ] 上の形を deny ケースとして `em-workflow/hooks/tests/destructive-guard-cases.json` に足す
+
+  - [ ] 既存の deny / ask ケースが 1 件も消えていない
+
+
+  ## 該当箇所
+
+  - `em-workflow/hooks/destructive-guard.py` の `lex_shell()` / `_lex_pass()`（ヒアドキュメント演算子の登録）
+
+  - 詳細は `feature-docs/destructive-guard-unified-lexer/reviews/round1.yaml` の `evaluation.round_summary`
+
+  '
+parent_branch: em-workflow/destructive-guard-heredoc-syntax-error/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.91
+      '2': 0.09
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.9400000000000001
+      '2': 0.06
+      '3': 0.0
+  at: '2026-10-06T07:47:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: fa3aeab6313a86f6a5398ec0fe87fd46aace6239
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 画面を持たない PreToolUse フックの字句解析の修正
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  failed_kind: null
+  base_commit: null
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 配列の複合代入の括弧内にある `<<` を演算子として登録しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 同じ行で先に登録された演算子にも本文を取らせない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 配列エラーの後に配列状態を解除する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 置換・引用の中や閉じた配列の後にある `<<` は従来どおり扱う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 再発防止ケースを cases.json に追加する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 既存ケースを保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 判定を下す場所を 1 か所に保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 作業量の上限を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 判定は厳しくなる方向にだけ動かす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: テストを走らせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
