@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-parser-fixes
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 7375ec7cb7feac57f8e2478083b76d2ff93d61f9
 last_input_digest: sha256:59ccbf1e2fa544a741a215cd75b1162ff949bf6559d9f732d13f253e85fae16a
