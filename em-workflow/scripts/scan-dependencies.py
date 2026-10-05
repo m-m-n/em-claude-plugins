@@ -1410,6 +1410,15 @@ def _passes_threshold(ecosystem, is_direct, mapped_severity):
     return mapped_severity in ("critical", "high")
 
 
+def _collapse_short_title(title):
+    """The advisory short title with every maximal run of whitespace
+    (whatever `str.isspace()` accepts -- LF, CR, TAB, VT, FF, NEL, no-break
+    space, U+2028, U+2029, U+3000 and the rest) replaced by ONE ASCII space,
+    and leading / trailing whitespace removed. A short title that is only
+    whitespace collapses to the empty string (no fallback is added here)."""
+    return " ".join(str(title).split())
+
+
 def _build_finding(*, manifest_file, package, advisory_id, title, affected_range,
                     fixed_version, summary, severity):
     """IMPLEMENTATION.md "Finding text-encoding contract": `title` is
@@ -1418,8 +1427,16 @@ def _build_finding(*, manifest_file, package, advisory_id, title, affected_range
     `suggestion` is prose only (D4 -- never diff-shaped, so a vulnerability
     finding can never be classified auto-applicable). Every advisory-sourced
     string passes through `truncate_untrusted()` -- the SAME helper
-    `file_tasks` uses, per IMPLEMENTATION.md's single-helper contract."""
-    title_text = truncate_untrusted(f"{package}: {advisory_id} — {title}")
+    `file_tasks` uses, per IMPLEMENTATION.md's single-helper contract.
+
+    The short title is whitespace-collapsed (`_collapse_short_title`) BEFORE
+    the title is composed and truncated, so the title is one line that
+    `recover_package_advisory` can always parse back. `package` and
+    `advisory_id` are passed through untouched, as are the description and
+    suggestion."""
+    title_text = truncate_untrusted(
+        f"{package}: {advisory_id} — {_collapse_short_title(title)}"
+    )
     description_parts = []
     if affected_range:
         description_parts.append(f"affected: {affected_range}")
