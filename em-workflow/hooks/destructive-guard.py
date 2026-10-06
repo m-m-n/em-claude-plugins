@@ -2245,8 +2245,18 @@ def _lex_pass(
             # must not read it as an escape of the newline.
             idx = new_region(LEX_DISCARDED_CONTINUATION, end - 1, stack[-1])
             regions[idx][2] = end
+        # A backtick substitution open now keeps its frame and its extent: the
+        # discarded line ends inside it, and only what was opened above its
+        # frame is cleared. The extent was fixed when it opened and the
+        # backtick that ends it still ends it.
+        keep = 1
+        if state.bt_end is not None:
+            for k in range(len(stack) - 1, 0, -1):
+                if stack[k].kind == "backtick":
+                    keep = k + 1
+                    break
         cut_quotes = []
-        for f in stack[1:]:
+        for f in stack[keep:]:
             if f.kind in ("param", "arith", "bracket", "ansi"):
                 discard_unclosed.append(f.start)
             if f.region is None:
@@ -2282,10 +2292,14 @@ def _lex_pass(
                     if text[region[1]] == "$"
                     else region[1] + 1
                 )
-        del stack[1:]
-        del rseq[:]
-        state.bt_end = None
-        base = stack[0]
+        dropped = sum(1 for f in stack[keep:] if f.kind not in ("group", "array"))
+        del stack[keep:]
+        if dropped:
+            del rseq[len(rseq) - dropped:]
+        if keep == 1:
+            del rseq[:]
+            state.bt_end = None
+        base = stack[-1]
         base.cmd = True
         base.cs = []
         base.in_word = False
