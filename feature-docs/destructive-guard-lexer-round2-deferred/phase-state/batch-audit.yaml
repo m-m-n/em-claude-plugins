@@ -1,0 +1,31 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-deferred
+records:
+- question_id: create-spec.requirement-clarification
+  packet_id: null
+  answered_at: '2026-10-06T20:33:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 A / Q2 A / Q3 A / Q4 A
+  normalized_answer: 'Q1 c8c16caba82d6238: consolidate the tail-open predicate only,
+    no _lex_pass split (A3). Q2 52bfa0f59d1ea852: stop opening ${ / $(( / $[ / ((
+    / case in the tail, not an ask (A4); also apply to _shape_leading() case state.
+    Q3 1fcae1f76f2a20f0: model ${ cmd; } / ${| cmd; } as command substitution closed
+    by a reserved-word }, update unittest expectations, keep cases.json (A7/A8); extraction
+    must cover unclosed bodies and the | offset. Q4 e959ba60bde865a4 / aa735aa95be36542:
+    \n-only line boundary and space/tab-only blanks across the lexer, including _tokenize_marked()
+    in both modes.'
+  resolution_note: 'gate: orchestrator-raised clarification of four analyst assumptions
+    (A3, A4, A7/A8, FR3/FR6 approach) requested by the launch instruction to consult
+    Codex on unclear points; options: Q1 A consolidate predicate / B also split _lex_pass
+    / C local fixes only; Q2 A do not open in tail / B ask on unreadable delimiter;
+    Q3 A model funsub as command substitution / B ask on ${ +blank; Q4 A \n-only boundaries
+    and space/tab blanks / B ask on any such char; choice: A for all four; not chosen:
+    Q1 B,C; Q2 B; Q3 B; Q4 B; key points: Q1 splitting while fixing widens verification
+    (state restore at :1176); Q2 B turns cases.json FR4.1/FR4.2 deny into ask, and
+    case state is also kept in _shape_leading() (:6056); Q3 A matches the bash manual
+    and reaches the existing body inspection, but extraction (:3995) must handle unclosed
+    bodies and the ${| offset; Q4 A matches bash blank/line definitions, B would ask
+    on ordinary text; Codex verified ${ printf SAFE; } / ${|REPLY=SAFE; } / x\r# behaviour
+    with bash; codex_consulted: true (harness codex, 1 turn); opus_escalation: false'
