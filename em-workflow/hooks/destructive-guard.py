@@ -588,24 +588,49 @@ class _TrackingLexer(shlex.shlex):
 #              under `<<-` it does once its leading tabs are removed.
 #              _LexLines.close_lines() is that index, one pass per kind.
 #
-# Round 2 deferred (destructive-guard-lexer-round2-deferred, task0005, FR7;
-# review finding 1fcae1f76f2a20f0).
+# Round 2 deferred (destructive-guard-lexer-round2-deferred, task0001, FR2 and
+# FR8; review finding 52bfa0f59d1ea852 and the tail-gate part of
+# c8c16caba82d6238).
 #
-#   Command form of `${` (FR7)  bash 5.3 runs `${ cmd; }` and `${|cmd; }` as a
-#              command substitution whose content is read as commands. `${`
-#              directly followed by a space, a tab, a newline or `|` is that
-#              form (decided before anything else about a `${`; every other
-#              `${` is the parameter form, read as before). It opens a
-#              `bracecmd` frame -- shell rules, content at a command position
-#              -- and a `brace-command-substitution` region, one of the
-#              substitution kinds and not masked. It is never settled and never
-#              refused by a tail source: an unclosed one is no UNOPENED offset
-#              and sets no tail start, it runs to the end of the text (or of the
-#              discarded line it was opened on). A `}` at a position where a
-#              reserved word is recognized (the start of the content, after `;`,
-#              `&`, a newline or a closer) is a token of its own and closes the
-#              innermost form, unless it closes a `{` group opened inside it
-#              (_LexFrame.braces); a `}` anywhere else closes nothing.
+#   Tail gate (FR8)  every question the pass asks about its tail -- may this
+#              opener open here -- is answered by one function of the pass,
+#              tail_gate(), for an opener kind and its offset. A tail-start
+#              opener (a comment, a here-document operator, a subscript, an
+#              array's discarded-line trigger) is refused from the tail start
+#              on; a tail-source opener (a quote, `$'`, `$"`, the parameter
+#              form of `${`, `$((`, `$[`, a `((` at a command position, a case
+#              construct) once a `<<` whose delimiter word cannot be read has
+#              been met. `$(`, a backtick, a process substitution and the
+#              command form of `${` are never asked about. The tail start's own
+#              bookkeeping is not a question and stays out of the gate.
+#   After a tail source (FR2)  no parameter-form `${`, `$((`, `$[` or `((` at
+#              a command position opens: the characters stay literal text, the
+#              offset is listed in UNOPENED, and reading goes on after them as
+#              after a settled opener. A `case` word opens no case construct --
+#              in the pass, and in statement shaping for a statement that begins
+#              at or after the chunk's tail start (_shape_leading()'s TAIL): it
+#              is the statement's command word.
+#
+# Round 2 deferred (destructive-guard-lexer-round2-deferred, task0003, FR3 and
+# FR5; review findings e959ba60bde865a4 and 2b52be5874de85f4).
+#
+#   Line separator (FR3)  a line ends at `\n` only, as in bash 5.3: the line
+#              index (_LexLines) starts a line at offset 0 and right after each
+#              `\n`, and a delimiter word ends at a metacharacter only (space,
+#              tab, newline, `;`, `|`, `&`, `(`, `)`, `<`, `>`). `\r`, `\x0b`,
+#              `\x0c`, `\x1c`-`\x1e`, `\x85`, U+2028 and U+2029 are characters of
+#              the word, quoted or not, and of the delimiter value; "on the
+#              operator's line" means before the next `\n`.
+#   Joined close line (FR5)  a body of an unquoted delimiter ends at a line
+#              that equals the delimiter value once it is joined with the lines
+#              it continues into (a backslash-newline removed: the line before
+#              ends with an odd number of backslashes), under `<<-` once the
+#              joined line's leading tabs are removed; the close extent runs to
+#              the end of the last joined line, and the next body starts after
+#              it. The first line of a body is always a candidate: bash reads
+#              every body afresh. A quoted delimiter joins nothing. The index
+#              is _LexJoinedLines, one pass per operator flavour, and the first
+#              line of a body inside a run costs the delimiter's length.
 #
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
@@ -664,16 +689,8 @@ LexCandidate = collections.namedtuple(
     "LexCandidate", ["quote", "start", "end", "enclosing"]
 )
 
-# The region kind of the bash 5.3 command form of `${` (`${ cmd; }`,
-# `${|cmd; }`): a command substitution that `}` closes.
-LEX_BRACE_COMMAND_SUBSTITUTION = "brace-command-substitution"
 LEX_SUBSTITUTION_KINDS = frozenset(
-    {
-        "command-substitution",
-        "backtick-substitution",
-        "process-substitution",
-        LEX_BRACE_COMMAND_SUBSTITUTION,
-    }
+    {"command-substitution", "backtick-substitution", "process-substitution"}
 )
 LEX_QUOTE_KINDS = frozenset(
     {"single-quote", "double-quote", "ansi-c-quote", "locale-quote"}
@@ -729,16 +746,15 @@ class LexMap:
       runs to the end of the text unterminated -- or to the end of a
       discarded line (P13), where an open quote is only a `discarded-quote`
       region over its opening character, and a backslash that ends the line a
-      `discarded-continuation` region (both hidden from shlex). The bash 5.3
-      command form of `${` (`${ cmd; }`, `${|cmd; }`) is a substitution of
-      kind `brace-command-substitution`; unclosed, it too runs to the end of
-      its extent and is never settled (no UNOPENED offset, no TAIL_START).
+      `discarded-continuation` region (both hidden from shlex).
     - HEREDOCS: LexHeredoc for every real here-document operator in text
       order: START/END span the `<<` / `<<-` through its delimiter word;
       DELIMITER is that word with its quotes removed (_read_heredoc_delimiter())
       and QUOTED whether it held a quote character (`'`, `"` or `\\`);
       BODY_START/BODY_END the body lines and CLOSE_END the end of the
-      delimiter line (all None when the delimiter line never appears, when
+      delimiter line (the last of its physical lines when an unquoted
+      delimiter's line is joined from several; all None when the delimiter
+      line never appears, when
       the operator sits on a discarded line (P13), or when the map was made
       without body skipping). An operator whose delimiter word cannot be read
       is not reported at all and takes no body; it is a tail source instead
@@ -747,11 +763,13 @@ class LexMap:
       substitutions the broad search reads inside the single-quote or
       ansi-c-quote region with index QUOTE; ENCLOSING is the index of the
       substitution region around that quote, or None.
-    - UNOPENED: offsets of the openers settled as not opened (P4), and of the
+    - UNOPENED: offsets of the openers settled as not opened (P4), of the
       `'` / `"` characters a tail source leaves literal (no quote region opens
-      from a `<<` whose delimiter word cannot be read on); TAIL_START the
-      earliest settled opener or such a `<<` (the re-read tail starts there),
-      None without either.
+      from a `<<` whose delimiter word cannot be read on), and of the
+      expansion openers the tail gate refuses after one (the parameter form of
+      `${`, `$((`, `$[`, a `((` at a command position; round 2 deferred,
+      task0001); TAIL_START the earliest settled opener or such a `<<` (the
+      re-read tail starts there), None without either.
     - WORK / ROUNDS: loop iterations and passes it cost (P7)."""
 
     __slots__ = (
@@ -782,12 +800,9 @@ class LexMap:
 class _LexFrame:
     """One open context on the lexer's stack. KIND is `top`, `btop` (the
     literal top level of a heredoc body), `cmdsub`, `backtick`, `procsub`,
-    `group`, `bracecmd` (the command form of `${`; BRACES counts the `{`
-    groups opened in it and not yet closed; IN_BT says the frames directly
-    below it, as far as they are command forms, end in a backtick frame, so a
-    backtick ends it) (shell rules); `dq`, `locale`, `sq`, `ansi`, `param`,
-    `arith`, `bracket`. REGION is the region the frame owns and REG the region
-    a child of this frame hangs under. The grammar state of the shell-rule kinds is
+    `group` (shell rules); `dq`, `locale`, `sq`, `ansi`, `param`, `arith`,
+    `bracket`. REGION is the region the frame owns and REG the region a child
+    of this frame hangs under. The grammar state of the shell-rule kinds is
     CMD (the next word is at a command position), RW (P10: the next word
     comes directly after a closer or a `for` / `select` name, so a reserved
     word is recognized there although it is not a command position), CS (the
@@ -813,7 +828,8 @@ class _LexFrame:
     is the array context (shell rules, but its words are elements, never
     commands): it opens at that `(` and closes at its matching `)`. SUB_AT
     (the offset of the `[` of a `NAME[` word at an assignment position, which
-    opens a subscript right after the word's first run), and the kinds
+    opens a subscript right after the word's first run, or when the pass
+    reaches it past the line continuations the name holds), and the kinds
     `subscript` (a bracketed subscript read to its matching `]`; NAMED says it
     follows `NAME`, so the `=(` after it can open an array) owns an
     `array-subscript` region, unless it is BOUND: a subscript in an argument
@@ -827,7 +843,6 @@ class _LexFrame:
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
         "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "asg", "decl",
         "arr_end", "redir", "rd_cmd", "nosub", "sub_at", "sub_bound", "named", "bound", "snap",
-        "braces", "in_bt",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -855,8 +870,6 @@ class _LexFrame:
         self.sub_bound = False
         self.named = False
         self.bound = False
-        self.braces = 0
-        self.in_bt = False
         # An `arith` frame: a _LexResumeSnapshot of what the pass held when
         # the frame was pushed, to resume from there when its first close is
         # not an adjacent `))`.
@@ -865,31 +878,53 @@ class _LexFrame:
 
 class _LexLines:
     """Line index of a text for here-document body lookup: START offsets of
-    every line (str.splitlines() rules, as strip_heredocs() always used) and,
-    built on first use of each kind, the close-line index (NFR3):
-    close_lines(DASH) maps a delimiter value to the lines that close a body
-    with it, one pass over the lines per kind. A line closes the body of a
-    `<<` operator when the line, its line end removed, equals the delimiter
+    every line and, built on first use of each kind, the close-line indexes
+    (NFR3). A line ends at `\\n` only, as in bash 5.3: the line starts are
+    offset 0 and the offset right after each `\\n` that does not end the text,
+    never after `\\r`, `\\x0b`, `\\x0c`, `\\x1c`-`\\x1e`, `\\x85`, U+2028 or
+    U+2029 (which str.splitlines() would split at).
+
+    close_lines(DASH) maps a delimiter value to the physical lines that close
+    a body with it, one pass over the lines per kind: a line closes the body of
+    a `<<` operator when the line, its line end removed, equals the delimiter
     value; of a `<<-` operator when it does once its leading tabs are removed
     too (bash 5.3). The key of a line is therefore the line itself (DASH
     false) or the line without its leading tabs (DASH true), so a value that
-    holds blanks is looked up like any other."""
+    holds blanks is looked up like any other. This is the close-line rule of a
+    quoted delimiter word.
 
-    __slots__ = ("text", "starts", "_close_lines")
+    close_lines(DASH, JOINED=True) is the index of an unquoted delimiter word
+    (_LexJoinedLines): bash joins the lines it reads for such a body at every
+    backslash-newline before it compares one with the delimiter.
+
+    find_close() is the lookup the lexer pass uses: the line a body starting
+    at a given line closes at, for either rule."""
+
+    __slots__ = ("text", "starts", "_close_lines", "_joined_lines")
 
     def __init__(self, text):
         starts = []
-        total = 0
-        for line in text.splitlines(keepends=True):
-            starts.append(total)
-            total += len(line)
+        n = len(text)
+        if n:
+            starts.append(0)
+            at = text.find("\n")
+            while at != -1 and at + 1 < n:
+                starts.append(at + 1)
+                at = text.find("\n", at + 1)
         self.text = text
         self.starts = starts
         self._close_lines = [None, None]
+        self._joined_lines = [None, None]
 
-    def close_lines(self, dash):
+    def close_lines(self, dash, joined=False):
         """{key: [indexes of the lines with that key, in order]} for a `<<-`
-        operator (DASH true) or a `<<` operator (DASH false)."""
+        operator (DASH true) or a `<<` operator (DASH false). With JOINED the
+        indexes are those of the lines an unquoted delimiter's close line can
+        start at, the key the line joined with the lines it continues into
+        (the _LexJoinedLines keys); without it every physical line is a
+        candidate, as a quoted delimiter has it."""
+        if joined:
+            return self._joined(dash).keys
         kind = 1 if dash else 0
         mapping = self._close_lines[kind]
         if mapping is None:
@@ -908,6 +943,144 @@ class _LexLines:
             self._close_lines[kind] = mapping
         return mapping
 
+    def _joined(self, dash):
+        kind = 1 if dash else 0
+        index = self._joined_lines[kind]
+        if index is None:
+            index = self._joined_lines[kind] = _LexJoinedLines(self, dash)
+        return index
+
+    def find_close(self, dash, value, quoted, first):
+        """The close line of a body that starts at line FIRST, for the
+        delimiter VALUE of a `<<-` (DASH) or `<<` operator whose word is
+        QUOTED or not: (the line the close line starts at, the last physical
+        line it extends over), or None when no line closes the body. A quoted
+        delimiter's close line is one physical line; an unquoted one may be
+        several, joined at backslash-newline."""
+        if first >= len(self.starts):
+            return None
+        if quoted:
+            found = self.close_lines(dash).get(value, ())
+            pos = bisect.bisect_left(found, first)
+            if pos < len(found):
+                return found[pos], found[pos]
+            return None
+        return self._joined(dash).find(value, first)
+
+
+class _LexJoinedLines:
+    """The close lines of an unquoted delimiter word, for one operator flavour
+    (DASH: `<<-`), read in one pass over the lines of a _LexLines.
+
+    bash reads the lines of an unquoted-delimiter body with every
+    backslash-newline removed: a line that ends with an odd number of
+    backslashes (and a newline) continues into the next line, the last of
+    those backslashes and the newline dropped. A RUN is a maximal series of
+    lines joined that way; its joined text J is what bash compares with the
+    delimiter value (under `<<-` once the leading tabs of J are removed). A
+    line is a candidate for a close line when it starts a run, and the first
+    line of a body is one wherever it sits in a run: bash starts reading every
+    body afresh, so the line before a body's first line (a quoted delimiter's
+    close line, for one) never joins it.
+
+    KEYS maps the key of a run (J, or J without its leading tabs) to the
+    indexes of the lines the runs start at. The rest serves the one candidate
+    that is not a run start, the first line of a body inside a run, without
+    reading the run again: RUN_OF (a line's run), HEADS / LASTS / TEXTS (a
+    run's first line, last line and J), OFFSET (where a line's own text starts
+    in J) and LEAD (under `<<-`: how many tabs J has from that offset on). The
+    rest of the run from such a line equals the delimiter value exactly when
+    its length, less the leading tabs, is the value's and the value is at
+    that place of J: work proportional to the value's length, however many
+    continuation lines follow."""
+
+    __slots__ = ("keys", "run_of", "heads", "lasts", "texts", "offset", "lead")
+
+    def __init__(self, lines, dash):
+        text = lines.text
+        starts = lines.starts
+        n = len(text)
+        count = len(starts)
+        keys = {}
+        run_of = [0] * count
+        offset = [0] * count
+        lead = [0] * count if dash else None
+        heads = []
+        lasts = []
+        texts = []
+        pieces = []
+        size = 0
+        head = 0
+
+        def end_run(last):
+            joined = "".join(pieces)
+            key = joined.lstrip("\t") if dash else joined
+            keys.setdefault(key, []).append(head)
+            heads.append(head)
+            lasts.append(last)
+            texts.append(joined)
+            if dash:
+                # The tabs J has from each line's own text on, read from the
+                # end of the run: a line of nothing but tabs adds its own to
+                # the tabs the rest of the run starts with.
+                after = 0
+                for k in range(len(pieces) - 1, -1, -1):
+                    piece = pieces[k]
+                    rest = piece.lstrip("\t")
+                    after = len(piece) - len(rest) if rest else len(piece) + after
+                    lead[head + k] = after
+
+        for idx in range(count):
+            s = starts[idx]
+            e = starts[idx + 1] if idx + 1 < count else n
+            has_newline = e > s and text[e - 1] == "\n"
+            if has_newline:
+                e -= 1
+            raw = text[s:e]
+            continues = has_newline and (len(raw) - len(raw.rstrip("\\"))) % 2 == 1
+            piece = raw[:-1] if continues else raw
+            run_of[idx] = len(heads)
+            offset[idx] = size
+            pieces.append(piece)
+            size += len(piece)
+            if not continues:
+                end_run(idx)
+                head = idx + 1
+                pieces = []
+                size = 0
+        if pieces:
+            # The text ends right after a backslash-newline: bash reads end
+            # of input as the continued line's end, so the run ends here.
+            end_run(count - 1)
+        self.keys = keys
+        self.run_of = run_of
+        self.heads = heads
+        self.lasts = lasts
+        self.texts = texts
+        self.offset = offset
+        self.lead = lead
+
+    def find(self, value, first):
+        """(line the close line starts at, the last line it extends over) for
+        a body whose first line is FIRST, or None."""
+        run = self.run_of[first]
+        if self.heads[run] != first:
+            # The first line is inside a run: it is a candidate all the same,
+            # joined with the rest of its run.
+            at = self.offset[first]
+            if self.lead is not None:
+                at += self.lead[first]
+            joined = self.texts[run]
+            if len(joined) - at == len(value) and joined.startswith(value, at):
+                return first, self.lasts[run]
+        found = self.keys.get(value)
+        if found:
+            pos = bisect.bisect_left(found, first)
+            if pos < len(found):
+                head = found[pos]
+                return head, self.lasts[self.run_of[head]]
+        return None
+
 
 _LEX_WS = re.compile(r"[ \t\r]+")
 _LEX_WORD_RUN = re.compile(r"[^ \t\r\n;|&()<>\"'`$\\]+")
@@ -920,33 +1093,24 @@ _LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
 # A BOUND subscript (a declaration-builtin argument) ends with its word at an
 # unquoted blank or metacharacter as well.
 _LEX_SUBSCRIPT_BOUND_SPECIAL = re.compile(r"[\\'\"$`\[\] \t\r\n;|&()<>]")
-# The line breaks str.splitlines() splits a text at -- the lines _LexLines
-# indexes. A here-document delimiter word never spans one.
-_LEX_LINE_BREAKS = frozenset("\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
-_LEX_LINE_BREAK = re.compile(r"[\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]")
+# A line ends at `\n` only (bash 5.3): `\r`, `\x0b`, `\x0c`, `\x1c`-`\x1e`, `\x85`,
+# U+2028 and U+2029 are ordinary characters, in a delimiter word and in the line
+# index alike. A here-document delimiter word ends at a metacharacter only.
 _LEX_DELIM_BLANKS = re.compile(r"[ \t]*")
 # A run of delimiter word characters read without a decision: everything but
-# a metacharacter (blank, line break, `;|&()<>`) and the characters that open
+# a metacharacter (space, tab, newline, `;|&()<>`) and the characters that open
 # an escape, a quote, an expansion or a substitution.
-_LEX_DELIM_RUN = re.compile(
-    r"[^ \t\r\n\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029;|&()<>\\'\"`$]+"
-)
+_LEX_DELIM_RUN = re.compile(r"[^ \t\n;|&()<>\\'\"`$]+")
 # Inside double quotes: the characters that need a decision.
-_LEX_DELIM_DQ_SPECIAL = re.compile(
-    r"[\\\"$`\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]"
-)
+_LEX_DELIM_DQ_SPECIAL = re.compile(r"[\\\"$`\n]")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
 _LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
 _LEX_WORD_END = frozenset(" \t\r\n;|&()<>")
 _LEX_SHELL_KINDS = frozenset(
-    {"top", "cmdsub", "group", "procsub", "backtick", "array", "bracecmd"}
+    {"top", "cmdsub", "group", "procsub", "backtick", "array"}
 )
-# What directly follows the `${` of the bash 5.3 command form (`${ cmd; }`,
-# `${<tab>cmd; }`, `${<newline>cmd<newline>}`, `${|cmd; }`); any other `${` is
-# the parameter form.
-_LEX_BRACE_COMMAND_FOLLOW = " \t\n|"
 # The start of an assignment word (`NAME=`, `NAME+=`); a word that is nothing
 # more is the one a compound-assignment parenthesis follows.
 _LEX_ASSIGN_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\+?=")
@@ -954,6 +1118,31 @@ _LEX_ASSIGN_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\+?=")
 # the matching `]` by a `subscript` frame, and the `=` or `+=` after that `]`
 # makes the word an assignment word.
 _LEX_SUBSCRIPTED_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\[")
+# The two parts of that test when the name holds line continuations: a whole
+# name, and the name characters that follow a continuation.
+_LEX_NAME_ONLY = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_LEX_NAME_CHARS = re.compile(r"[A-Za-z0-9_]*")
+
+
+def _lex_subscript_open(text, start, end, first):
+    """The offset in TEXT of the `[` that opens the subscript of a `NAME[`
+    word, or -1 when the word is no such word. FIRST is the plain run the word
+    starts with, TEXT[START:END]; the word's leading characters are tested
+    with every backslash-newline pair removed, as bash removes them before it
+    reads the word (round 2 deferred, FR4), and the `[` is reported at its
+    offset in TEXT, the pairs included. A run that is a whole name followed
+    by a continuation is read on through the pairs and the name characters
+    between them: every character is read once, so the work is proportional
+    to the length of the name."""
+    m = _LEX_SUBSCRIPTED_NAME.match(first)
+    if m is not None:
+        return start + m.end() - 1
+    if not text.startswith("\\\n", end) or _LEX_NAME_ONLY.fullmatch(first) is None:
+        return -1
+    at = end
+    while text.startswith("\\\n", at):
+        at = _LEX_NAME_CHARS.match(text, at + 2).end()
+    return at if at < len(text) and text[at] == "[" else -1
 # The builtins bash parses assignment arguments for: after one of them a
 # `NAME=(` word opens an array compound assignment. `eval` and `let` are
 # assignment-argument builtins in the parser, `alias` is an assignment builtin.
@@ -967,6 +1156,37 @@ _LEX_EXTGLOB_PREFIXES = "?*+@!"
 # the construct, so `$(case x in x) :;; esac)` closes at its last `)`), and
 # PATTERN_REST once the pattern's first word is past.
 _LEX_CASE_PATTERN_STATES = ("pattern_first", "pattern_next", "pattern_rest")
+# The tail gate (round 2 deferred, task0001, FR8): the one question the lexer
+# pass asks about its tail -- may an opener of this kind, at this offset, open
+# -- in the two classes its answer comes in. A TAIL-START opener is refused
+# from the tail start on: the earliest settled opener, or the first `<<` whose
+# delimiter word cannot be read. A TAIL-SOURCE opener is refused once a `<<`
+# whose delimiter word cannot be read (a tail source) has been met. `$(`, a
+# backtick, a process substitution and the command form `${ ` / `${|` are
+# never asked about: they run their content as commands, so refusing one would
+# turn commands bash runs into arguments of the command before it.
+_LEX_TAIL_START_OPENERS = frozenset(
+    {
+        "comment",
+        "heredoc-operator",
+        "assignment-subscript",
+        "array-subscript",
+        "discarded-line",
+    }
+)
+_LEX_TAIL_SOURCE_OPENERS = frozenset(
+    {
+        "single-quote",
+        "double-quote",
+        "ansi-c-quote",
+        "locale-quote",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+        "case-construct",
+    }
+)
 # Words after which the next word is still at a command position (P3).
 _LEX_COMMAND_KEEPERS = frozenset(
     {"if", "then", "elif", "else", "do", "while", "until", "time", "coproc", "!", "{"}
@@ -1039,19 +1259,23 @@ def _read_heredoc_delimiter(text, i):
     read -- then the `<<` is no operator and takes no body (NFR6, SPEC A3).
 
     The word runs from after the operator and its blanks to the next unquoted
-    metacharacter (blank, line break, `;`, `|`, `&`, `(`, `)`, `<`, `>`);
-    quoted segments and backslash escapes are part of it. DELIMITER is the
-    word with its quotes removed (`END-X` -> `END-X`, `E\\X` -> `EX`, `E"X"` ->
-    `EX`, `'E-X'` -> `E-X`, `\\EOF` -> `EOF`); a `$` that starts no expansion
+    metacharacter (space, tab, newline, `;`, `|`, `&`, `(`, `)`, `<`, `>`);
+    quoted segments and backslash escapes are part of it, and every other
+    character is a character of the word (`\\r`, `\\x0b`, `\\x0c`,
+    `\\x1c`-`\\x1e`, `\\x85`, U+2028 and U+2029 included: bash 5.3 breaks a
+    line at `\\n` only). DELIMITER is the word with its quotes removed
+    (`END-X` -> `END-X`, `E\\X` -> `EX`, `E"X"` -> `EX`, `'E-X'` -> `E-X`,
+    `\\EOF` -> `EOF`); a `$` that starts no expansion
     stays a character of it (`E$X` -> `E$X`: nothing is expanded). QUOTED is
     True exactly when the word holds a `'`, `"` or `\\`: the body is then
     literal. Inside double quotes a backslash removes itself only before
     `$`, a backtick, `"` and `\\`.
 
     Unreadable: no word before a metacharacter or the end of the text; a
-    quote that does not close on the operator's line (nor does a backslash
-    before a line break); a command substitution, a backtick, `${`, `$((`,
-    `$[`, `$'` or `$"` in the word. The `<<` is then no operator and a tail
+    quote that does not close on the operator's line, that is before the next
+    newline (nor does a backslash before a newline); a command substitution, a
+    backtick, `${`, `$((`, `$[`, `$'` or `$"` in the word. The `<<` is then no
+    operator and a tail
     source: _lex_pass() opens no comment, quote region or operator from it on,
     so every following line stays subject to inspection."""
     n = len(text)
@@ -1068,7 +1292,7 @@ def _read_heredoc_delimiter(text, i):
         c = text[q]
         if c == "\\":
             nxt = text[q + 1 : q + 2]
-            if nxt == "" or nxt in _LEX_LINE_BREAKS:
+            if nxt == "" or nxt == "\n":
                 return None
             parts.append(nxt)
             quoted = True
@@ -1077,7 +1301,7 @@ def _read_heredoc_delimiter(text, i):
             close = text.find("'", q + 1)
             if close == -1:
                 return None
-            if _LEX_LINE_BREAK.search(text, q + 1, close) is not None:
+            if text.find("\n", q + 1, close) != -1:
                 return None
             parts.append(text[q + 1 : close])
             quoted = True
@@ -1096,7 +1320,7 @@ def _read_heredoc_delimiter(text, i):
                     break
                 if d == "\\":
                     nxt = text[j + 1 : j + 2]
-                    if nxt == "" or nxt in _LEX_LINE_BREAKS:
+                    if nxt == "" or nxt == "\n":
                         return None
                     parts.append(nxt if nxt in '$`"\\' else "\\" + nxt)
                     r = j + 2
@@ -1363,6 +1587,25 @@ def _lex_pass(
             state.iterations, None, False,
         )
 
+    def tail_gate(opener, offset):
+        """The tail gate: whether an opener of kind OPENER (one of
+        _LEX_TAIL_START_OPENERS or _LEX_TAIL_SOURCE_OPENERS) at OFFSET may open
+        in the pass state as it stands. A tail-start opener may not from the
+        tail start on (OFFSET is where the opener begins; for an assignment-
+        word subscript, where its word begins); a tail-source opener may not
+        once a tail source has been met, wherever it lies. This is the only
+        place of the pass that compares an offset with the tail start or tests
+        the tail source for an opener's sake; what keeps the two up to date
+        (the initial tail start, a tail source being met, the end of a
+        discarded line) is the pass's own bookkeeping and stays where it is.
+        A refused opener is literal text, and the caller lists it in
+        UNOPENED."""
+        if opener in _LEX_TAIL_SOURCE_OPENERS:
+            return state.tail_source is None
+        if opener in _LEX_TAIL_START_OPENERS:
+            return state.tail_start is None or offset < state.tail_start
+        raise ValueError("unknown opener kind: %r" % (opener,))
+
     def new_region(kind, start, f):
         parent = f.reg
         if parent is None:
@@ -1478,7 +1721,10 @@ def _lex_pass(
         directly sets ARR_END to its end: that `(` opens an array compound
         assignment. P14: a `NAME[` word in either position sets SUB_AT to the
         offset of its `[`, where a subscript frame opens; its `]` followed by
-        `=(` / `+=(` sets ARR_END."""
+        `=(` / `+=(` sets ARR_END. The `NAME[` test reads the word's leading
+        characters with every backslash-newline pair removed
+        (_lex_subscript_open(), round 2 deferred FR4), so a name that holds
+        continuations opens its subscript at the original offset of the `[`."""
         if f.redir:
             # The target word of a redirection: it is no command or
             # assignment word and leaves the grammar state as it was.
@@ -1553,17 +1799,16 @@ def _lex_pass(
                     cs.pop()
                 f.cmd = False
                 f.rw = True
-            elif w == "case":
+            elif w == "case" and tail_gate("case-construct", end - len(w)):
+                # After a tail source the gate refuses the construct: the
+                # word is read as the ordinary command word it falls through
+                # to below, and the words after it are arguments.
                 cs.append("await_subject")
                 f.cmd = False
             elif w in _LEX_COMMAND_KEEPERS:
                 f.time_p = 1 if w == "time" else 0
                 if w == "coproc":
                     f.kw = "coproc"
-                elif w == "{" and f.kind == "bracecmd":
-                    # A `{` group opened inside a command form: the `}` that
-                    # closes it is not the form's own (FR7).
-                    f.braces += 1
             elif w == "function":
                 f.fn_p = True
                 f.cmd = False
@@ -1582,38 +1827,40 @@ def _lex_pass(
         else:
             f.cmd = False
         array_word = False
-        sub_name = None
+        sub_open = -1
         if (
             first is not None
             and state.discard_end is None
             and not nosub
-            and (state.tail_start is None or end - len(first) < state.tail_start)
+            and tail_gate("assignment-subscript", end - len(first))
         ):
             # No subscript is read from the tail start on (round 2 residuals,
-            # FR3): its `[` stays literal there, as every opener does.
-            sub_name = _LEX_SUBSCRIPTED_NAME.match(first)
+            # FR3): its `[` stays literal there, as every opener does. The
+            # word's own start offset is the one compared with it, whatever
+            # line continuations the name holds (round 2 deferred, FR4).
+            sub_open = _lex_subscript_open(text, end - len(first), end, first)
         if assign_pos:
             if first is not None and _LEX_ASSIGN_WORD.match(first):
                 f.asg = True
                 f.decl = False
                 array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
-            elif sub_name is not None:
+            elif sub_open >= 0:
                 # `NAME[`: an assignment word when the `=` / `+=` follows the
                 # subscript's `]`, which close_subscript() finds out; until
                 # then it is taken for one, and the subscript opens at its `[`.
                 f.asg = True
                 f.decl = False
-                f.sub_at = end - len(first) + sub_name.end() - 1
+                f.sub_at = sub_open
                 f.sub_bound = False
             else:
                 f.asg = False
                 f.decl = w in _LEX_DECLARATION_BUILTINS
         elif decl_pos:
-            if sub_name is not None:
+            if sub_open >= 0:
                 # In a declaration-builtin argument bash reads the word with
                 # the ordinary word rules: the subscript is BOUND, ending with
                 # the word at an unquoted blank or metacharacter.
-                f.sub_at = end - len(first) + sub_name.end() - 1
+                f.sub_at = sub_open
                 f.sub_bound = True
             else:
                 array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
@@ -1647,27 +1894,15 @@ def _lex_pass(
             word_transition(f, None, i)
             f.in_word = True
 
-    def reserved_position(f):
-        """Whether the next word of the shell-rule frame F sits where bash
-        recognizes a reserved word: at a command position, or directly after a
-        closer (`)`, `fi`, `done`, `esac`, `}`) -- the positions at which
-        word_transition() takes a `}` for a closer. A redirection read at the
-        command position, a case subject or pattern, and the name after
-        `for` / `select` / `coproc` / `function` are none of them."""
-        if f.redir or f.rd_cmd or f.fn_p or f.kw:
-            return False
-        cs = f.cs
-        if cs and cs[-1] != "body":
-            return False
-        return f.cmd or f.rw
-
     def dollar(i, f, in_quotes, body_literal):
         """The `$` at I: open the expansion it starts, or consume the special
         parameter it names; returns the offset to continue at (P1-P3)."""
         c2 = text[i + 1] if i + 1 < n else ""
         if c2 == "(":
             if text.startswith("(", i + 2):
-                if i in settled:
+                if i in settled or not tail_gate("arithmetic-expansion", i):
+                    # Settled as unclosed, or refused after a tail source:
+                    # literal text either way, read on after it.
                     encountered.append(i)
                     return i + 3
                 if not as_two_parentheses(i):
@@ -1676,24 +1911,15 @@ def _lex_pass(
             push(f, "cmdsub", "command-substitution", i, cmd=True)
             return i + 2
         if c2 == "{":
-            if i + 2 < n and text[i + 2] in _LEX_BRACE_COMMAND_FOLLOW:
-                # The bash 5.3 command form `${ cmd; }` / `${|cmd; }` (FR7):
-                # decided before any settle or tail decision. Its content is
-                # read as commands from a command position; it is never
-                # settled and never refused. A `${|` is read from after the
-                # `|`.
-                push(f, "bracecmd", LEX_BRACE_COMMAND_SUBSTITUTION, i, cmd=True)
-                stack[-1].in_bt = f.kind == "backtick" or (
-                    f.kind == "bracecmd" and f.in_bt
-                )
-                return i + 3 if text[i + 2] == "|" else i + 2
-            if i in settled:
+            # The parameter form: the command form `${ ` / `${|` is decided
+            # before this point (task0005) and is never refused.
+            if i in settled or not tail_gate("parameter-expansion", i):
                 encountered.append(i)
                 return i + 2
             push(f, "param", "parameter-expansion", i)
             return i + 2
         if c2 == "[":
-            if i in settled:
+            if i in settled or not tail_gate("bracket-arithmetic", i):
                 encountered.append(i)
                 return i + 2
             push(f, "bracket", "bracket-arithmetic", i, depth=1)
@@ -1702,12 +1928,12 @@ def _lex_pass(
             if i in settled:
                 encountered.append(i)
                 return i + 2
-            if state.tail_source is None:
+            if tail_gate("ansi-c-quote", i):
                 push(f, "ansi", "ansi-c-quote", i)
                 return i + 2
         if (
             c2 == '"' and not in_quotes and not body_literal
-            and state.tail_source is None
+            and tail_gate("locale-quote", i)
         ):
             push(f, "locale", "locale-quote", i)
             return i + 2
@@ -1852,17 +2078,19 @@ def _lex_pass(
                 jump = None
                 for op in hd_pending[cut:]:
                     # `<<-` removes leading tabs from a line before it is
-                    # compared with the delimiter, `<<` compares the line.
-                    found_lines = lines.close_lines(
-                        text.startswith("-", op[0] + 2)
-                    ).get(op[2], ())
-                    pos = bisect.bisect_left(found_lines, hd_next)
-                    if pos < len(found_lines):
-                        found = found_lines[pos]
+                    # compared with the delimiter, `<<` compares the line; an
+                    # unquoted delimiter compares the line joined with the
+                    # lines it continues into, and the close extent ends at
+                    # the last of them.
+                    found = lines.find_close(
+                        text.startswith("-", op[0] + 2), op[2], op[3], hd_next
+                    )
+                    if found is not None:
+                        close_first, close_last = found
                         op[4] = starts[hd_next]
-                        op[5] = starts[found]
-                        op[6] = starts[found + 1] if found + 1 < len(starts) else n
-                        hd_next = found + 1
+                        op[5] = starts[close_first]
+                        op[6] = starts[close_last + 1] if close_last + 1 < len(starts) else n
+                        hd_next = close_last + 1
                         jump = op[6]
                 del hd_pending[cut:]
                 del hd_seqs[cut:]
@@ -1909,7 +2137,7 @@ def _lex_pass(
                 start_word(f, i)
                 i += 2
                 continue
-            if c == "#" and not f.in_word and (state.tail_start is None or i < state.tail_start):
+            if c == "#" and not f.in_word and tail_gate("comment", i):
                 end = text.find("\n", i, state.limit)
                 if end == -1:
                     end = state.limit
@@ -1924,7 +2152,7 @@ def _lex_pass(
                     step = 2
                 else:
                     step = 1
-                if kind == "array" and state.discard_end is None and (state.tail_start is None or i < state.tail_start):
+                if kind == "array" and state.discard_end is None and tail_gate("discarded-line", i):
                     # `;` directly in an array compound assignment: a syntax
                     # error; this line is the discarded line (P13).
                     begin_discard(i)
@@ -1940,7 +2168,7 @@ def _lex_pass(
                 i += step
                 continue
             if c == "&" or c == "|":
-                if kind == "array" and state.discard_end is None and (state.tail_start is None or i < state.tail_start):
+                if kind == "array" and state.discard_end is None and tail_gate("discarded-line", i):
                     # `&` / `|` directly in an array compound assignment: a
                     # syntax error; this line is the discarded line (P13).
                     begin_discard(i)
@@ -1999,7 +2227,7 @@ def _lex_pass(
                     # A parenthesis inside an array compound assignment is a
                     # syntax error in bash as well: this line is the
                     # discarded line, and no operator on it gets a body (P13).
-                    if state.discard_end is None and (state.tail_start is None or i < state.tail_start):
+                    if state.discard_end is None and tail_gate("discarded-line", i):
                         begin_discard(i)
                     i += 1
                     continue
@@ -2025,7 +2253,7 @@ def _lex_pass(
                     and not f.cmd
                     and text[i - 1] == "="
                     and state.discard_end is None
-                    and (state.tail_start is None or i < state.tail_start)
+                    and tail_gate("discarded-line", i)
                 ):
                     # A `(` right after the `=` of a declaration-builtin
                     # argument that is no `NAME=` / `NAME[...]=` word (a BOUND
@@ -2040,7 +2268,10 @@ def _lex_pass(
                     and text.startswith("((", i)
                     and top_cs not in _LEX_CASE_PATTERN_STATES
                 ):
-                    if i in settled:
+                    if i in settled or not tail_gate("arithmetic-command", i):
+                        # Settled as unclosed, or refused after a tail
+                        # source: the two characters are literal text that
+                        # starts a word and ends the command position.
                         encountered.append(i)
                         f.in_word = True
                         f.cmd = False
@@ -2099,7 +2330,7 @@ def _lex_pass(
                 f.kw = ""
                 if c == "<":
                     if text.startswith("<<<", i):
-                        if kind == "array" and state.discard_end is None and (state.tail_start is None or i < state.tail_start):
+                        if kind == "array" and state.discard_end is None and tail_gate("discarded-line", i):
                             begin_discard(i)
                         mark_redirect(f)
                         idx = new_region("here-string-operator", i, f)
@@ -2119,7 +2350,7 @@ def _lex_pass(
                             i += 2
                             continue
                         word = None
-                        if state.tail_start is None or i < state.tail_start:
+                        if tail_gate("heredoc-operator", i):
                             word = _read_heredoc_delimiter(text, i)
                             if word is None:
                                 # A delimiter word that cannot be read: no
@@ -2144,7 +2375,7 @@ def _lex_pass(
                         push(f, "procsub", "process-substitution", i, cmd=True)
                         i += 2
                         continue
-                    if kind == "array" and state.discard_end is None and (state.tail_start is None or i < state.tail_start):
+                    if kind == "array" and state.discard_end is None and tail_gate("discarded-line", i):
                         begin_discard(i)
                     mark_redirect(f)
                     i += 2 if (text.startswith("<&", i) or text.startswith("<>", i)) else 1
@@ -2155,7 +2386,7 @@ def _lex_pass(
                     push(f, "procsub", "process-substitution", i, cmd=True)
                     i += 2
                     continue
-                if kind == "array" and state.discard_end is None and (state.tail_start is None or i < state.tail_start):
+                if kind == "array" and state.discard_end is None and tail_gate("discarded-line", i):
                     begin_discard(i)
                 mark_redirect(f)
                 i += 2 if (
@@ -2164,7 +2395,7 @@ def _lex_pass(
                 continue
             if c == "'":
                 start_word(f, i)
-                if state.tail_source is None:
+                if tail_gate("single-quote", i):
                     push(f, "sq", "single-quote", i)
                 else:
                     encountered.append(i)
@@ -2172,7 +2403,7 @@ def _lex_pass(
                 continue
             if c == '"':
                 start_word(f, i)
-                if state.tail_source is None:
+                if tail_gate("double-quote", i):
                     push(f, "dq", "double-quote", i)
                 else:
                     encountered.append(i)
@@ -2187,43 +2418,23 @@ def _lex_pass(
                     close(f, i + 1)
                     i += 1
                     continue
-                if kind == "bracecmd" and f.in_bt:
-                    # A backtick substitution ends at the next unescaped
-                    # backtick, whatever it holds (bash reads the content as
-                    # a script only afterwards): a command form opened in it
-                    # and still open here ends unclosed at this backtick, which
-                    # the backtick frame below then closes -- the substitution
-                    # and the word it is part of stay what bash reads (FR7).
-                    region = regions[f.region]
-                    region[2] = i
-                    region[4] = False
-                    stack.pop()
-                    rseq.pop()
-                    continue
                 start_word(f, i)
                 push(f, "backtick", "backtick-substitution", i, cmd=True)
-                i += 1
-                continue
-            if (
-                c == "}"
-                and kind == "bracecmd"
-                and not f.in_word
-                and reserved_position(f)
-            ):
-                # In a command form (FR7) a `}` where a reserved word is
-                # recognized is a token of its own, whatever follows it: it
-                # closes a `{` group opened in the form, else the form itself.
-                # (Anywhere else it is an ordinary character of its word.)
-                if f.braces:
-                    f.braces -= 1
-                    word_transition(f, "}", i + 1, "}")
-                else:
-                    close(f, i + 1)
                 i += 1
                 continue
             run = _LEX_WORD_RUN.match(text, i, state.limit)
             end = run.end()
             if f.in_word:
+                if i <= f.sub_at < end:
+                    # The `[` of a `NAME[` word whose name held line
+                    # continuations (FR4): word_transition() found it past the
+                    # pairs, and this run, read after the last of them, holds
+                    # it. The subscript opens at the `[` in the original text.
+                    at = f.sub_at
+                    f.sub_at = -1
+                    open_bare(f, "subscript", at, True, f.sub_bound)
+                    i = at + 1
+                    continue
                 i = end
                 continue
             if (
@@ -2241,11 +2452,13 @@ def _lex_pass(
                 i = end
                 continue
             complete = end >= n or text[end] in _LEX_WORD_END
+            f.sub_at = -1
             word_transition(f, text[i:end] if complete else None, end, text[i:end])
             f.in_word = True
-            if f.sub_at >= 0:
+            if 0 <= f.sub_at < end:
                 # A `NAME[` word at an assignment position: its subscript
-                # opens at the `[` (P14).
+                # opens at the `[` (P14). A `[` past this run, after line
+                # continuations in the name, opens when the pass reaches it.
                 at = f.sub_at
                 f.sub_at = -1
                 open_bare(f, "subscript", at, True, f.sub_bound)
@@ -2255,7 +2468,7 @@ def _lex_pass(
                 kind == "array"
                 and text[i] == "["
                 and state.discard_end is None
-                and (state.tail_start is None or i < state.tail_start)
+                and tail_gate("array-subscript", i)
             ):
                 # An element of an array that starts with `[`: a subscript.
                 open_bare(f, "subscript", i)
@@ -2318,13 +2531,13 @@ def _lex_pass(
                 close(f, j + 1)
                 i = j + 1
             elif c == "'":
-                if state.tail_source is None:
+                if tail_gate("single-quote", j):
                     push(f, "sq", "single-quote", j)
                 else:
                     encountered.append(j)
                 i = j + 1
             elif c == '"':
-                if state.tail_source is None:
+                if tail_gate("double-quote", j):
                     push(f, "dq", "double-quote", j)
                 else:
                     encountered.append(j)
@@ -2383,13 +2596,13 @@ def _lex_pass(
                         push(parent, "cmdsub", "command-substitution", f.start, cmd=True)
                         i = f.start + 2
             elif c == "'":
-                if state.tail_source is None:
+                if tail_gate("single-quote", j):
                     push(f, "sq", "single-quote", j)
                 else:
                     encountered.append(j)
                 i = j + 1
             elif c == '"':
-                if state.tail_source is None:
+                if tail_gate("double-quote", j):
                     push(f, "dq", "double-quote", j)
                 else:
                     encountered.append(j)
@@ -2419,13 +2632,13 @@ def _lex_pass(
                     close(f, j + 1)
                 i = j + 1
             elif c == "'":
-                if state.tail_source is None:
+                if tail_gate("single-quote", j):
                     push(f, "sq", "single-quote", j)
                 else:
                     encountered.append(j)
                 i = j + 1
             elif c == '"':
-                if state.tail_source is None:
+                if tail_gate("double-quote", j):
                     push(f, "dq", "double-quote", j)
                 else:
                     encountered.append(j)
@@ -2473,13 +2686,13 @@ def _lex_pass(
                 if f.depth == 0:
                     close_subscript(f, i)
             elif c == "'":
-                if state.tail_source is None:
+                if tail_gate("single-quote", j):
                     push(f, "sq", "single-quote", j)
                 else:
                     encountered.append(j)
                 i = j + 1
             elif c == '"':
-                if state.tail_source is None:
+                if tail_gate("double-quote", j):
                     push(f, "dq", "double-quote", j)
                 else:
                     encountered.append(j)
@@ -2519,13 +2732,13 @@ def _lex_pass(
                 if f.depth == 0:
                     close_bare(f)
             elif c == "'":
-                if state.tail_source is None:
+                if tail_gate("single-quote", j):
                     push(f, "sq", "single-quote", j)
                 else:
                     encountered.append(j)
                 i = j + 1
             elif c == '"':
-                if state.tail_source is None:
+                if tail_gate("double-quote", j):
                     push(f, "dq", "double-quote", j)
                 else:
                     encountered.append(j)
@@ -2644,14 +2857,14 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     text after them is lexed as it stands.
 
     TEXT is any string, including one with unbalanced quotes or unclosed
-    openers (P4: an opener among the parameter form `${`, `$((`, `$[`, `((`
-    and `$'` that never closes is not a region, its characters are literal,
-    and the text from the earliest such opener on is read without any `<<`
-    operator and without any comment; the command form `${ ` / `${|` is no
-    such opener: it is a substitution that stays open to the end of the
-    text). A `<<` whose delimiter word cannot be read is a tail source
-    too: from it on no comment, no quote region and no operator opens, and the
-    quote characters left literal are listed in UNOPENED. The same TEXT, MODE
+    openers (P4: an opener among `${`, `$((`, `$[`, `((` and `$'` that never
+    closes is not a region, its characters are literal, and the text from the
+    earliest such opener on is read without any `<<` operator and without
+    any comment). A `<<` whose delimiter word cannot be read is a tail source
+    too: from it on no comment, no quote region, no operator, no parameter-form
+    `${`, `$((`, `$[`, no `((` at a command position and no case construct
+    opens (`$(` and backticks still do), and the quote characters and the
+    expansion openers left literal are listed in UNOPENED. The same TEXT, MODE
     and BODIES always give the same map;
     nothing is read from disk and nothing is evaluated (P7). Raises
     LexBudgetExceeded when the work bound is exceeded.
@@ -2879,24 +3092,39 @@ class _MarkedText:
     - MASK_RANGES: the (start, end) ranges of TEXT that VIEW masks, sorted.
       Values are restored from them by position, never by searching a text
       for the mask character.
+    - SUBSCRIPT_RANGES: the (start, end) ranges of TEXT that are the array
+      subscripts the lexer read (the `array-subscript` regions), sorted. A
+      subscript read across a newline is one word: the parse-failure path of
+      _lex_layout() splits a chunk outside them only.
+    - TAIL_START: the lexer's tail start for SOURCE (LexMap.tail_start) as an
+      offset of TEXT -- a tail inside a replaced substitution lands on that
+      substitution's marker -- or None without one. Statement shaping compares
+      it with where each statement of TEXT begins (round 2 deferred, task0001).
 
     Built from the lexer's map of SOURCE alone: no stage that reads VIEW
     classifies a character itself."""
 
     __slots__ = (
         "source", "text", "posmap", "view", "mask_char", "mask_ranges",
-        "_mask_starts", "_quote_starts", "_quote_ends",
+        "subscript_ranges", "tail_start", "_mask_starts", "_quote_starts",
+        "_quote_ends",
     )
 
     def __init__(self, source, text, posmap):
         lexmap = lex_shell(source, "shell", False)
+        self.tail_start = (
+            None if lexmap.tail_start is None else posmap.to_new(lexmap.tail_start)[1]
+        )
         masked = []
         blanked = []
         quoted = []
+        subscripts = []
         for region in lexmap.regions:
             kind = region.kind
             if kind in LEX_MASKED_KINDS:
                 masked.append((region.start, region.end))
+                if kind == "array-subscript":
+                    subscripts.append((region.start, region.end))
             elif kind == "comment":
                 blanked.append((region.start, region.end))
             if kind in LEX_QUOTE_KINDS:
@@ -2915,6 +3143,7 @@ class _MarkedText:
                 quoted.append((_heredoc_word_start(source, op.start), op.end))
         mask_ranges = _map_copy_ranges(posmap, _merge_ranges(masked))
         blank_ranges = _map_copy_ranges(posmap, _merge_ranges(blanked))
+        subscript_ranges = _map_copy_ranges(posmap, _merge_ranges(subscripts))
         quote_ranges = []
         for lo, hi in _merge_ranges(quoted):
             start = posmap.to_new(lo)
@@ -2934,6 +3163,7 @@ class _MarkedText:
         self.view = "".join(chars)
         self.mask_char = mask_char
         self.mask_ranges = mask_ranges
+        self.subscript_ranges = subscript_ranges
         self._mask_starts = [lo for lo, _hi in mask_ranges]
         self._quote_starts = [lo for lo, _hi in quote_ranges]
         self._quote_ends = [hi for _lo, hi in quote_ranges]
@@ -3108,6 +3338,32 @@ def _lex_segments_with_ends(chunk):
     return segments, seg_ends
 
 
+def _split_outside_subscripts(text, ranges):
+    """SEGMENT_SPLIT.split(TEXT), except that a separator inside one of RANGES
+    -- sorted, disjoint (start, end) ranges of TEXT, the array subscripts the
+    lexer read (_MarkedText.subscript_ranges) -- does not split. The
+    parse-failure path of _lex_layout() splits by this: a subscript that
+    closes on a later line is one word (`a[1` + newline + `]=x`), and
+    each half read alone is a subscript the lexer cannot settle, which would
+    turn the lines after it into an `ask` instead of the verdict they have
+    (round 2 deferred, FR1). With no RANGES it is SEGMENT_SPLIT.split(TEXT)."""
+    if not ranges:
+        return SEGMENT_SPLIT.split(text)
+    out = []
+    start = 0
+    k = 0
+    for m in SEGMENT_SPLIT.finditer(text):
+        pos = m.start()
+        while k < len(ranges) and ranges[k][1] <= pos:
+            k += 1
+        if k < len(ranges) and ranges[k][0] <= pos:
+            continue
+        out.append(text[start:pos])
+        start = m.end()
+    out.append(text[start:])
+    return out
+
+
 def _lex_layout(chunk, track):
     """lex_segments()'s one lexing pass: (segments, layout, operators).
     SEGMENTS is lex_segments()'s own return value, unchanged.
@@ -3147,7 +3403,7 @@ def _lex_layout(chunk, track):
     except ValueError:
         return [
             (tokens(seg), False, None)
-            for seg in SEGMENT_SPLIT.split(text)
+            for seg in _split_outside_subscripts(text, marked.subscript_ranges)
             if seg.strip()
         ], None, None
 
@@ -3955,15 +4211,11 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
     (destructive-guard-unified-lexer layer 3). Returns (spans, parent_of,
     unmatched, opaque, containing_span):
 
-    - SPANS: every `$( … )`/`` ` … ` ``/`<( … )`/`>( … )`/`${ … }`/`${| … }`
-      span found, at every nesting level -- inside a parameter expansion, an
-      arithmetic expansion or a double-quoted string included (FR4). A process
-      substitution is a substitution (D5): its span starts at the `<` or `>`,
-      and its body is its own chunk. So is the bash 5.3 command form of `${`
-      (`${ cmd; }`, `${|cmd; }`; _span_inner() gives its inner text); one
-      that is never closed is in UNMATCHED like any other, and
-      _unclosed_command_forms() gives the inner text statements() still
-      inspects.
+    - SPANS: every `$( … )`/`` ` … ` ``/`<( … )`/`>( … )` span found, at every
+      nesting level -- inside a parameter expansion, an arithmetic expansion
+      or a double-quoted string included (FR4). A process substitution is a
+      substitution (D5): its span starts at the `<` or `>`, and its body is
+      its own chunk.
     - PARENT_OF: {span: its immediate enclosing span, or None} -- a span
       strictly containing it with nothing tighter in between.
     - UNMATCHED: start offsets of an opener never closed by end of text.
@@ -4099,68 +4351,26 @@ def _top_level_spans(spans, parent_of):
 
 def _span_inner(text, span):
     """(inner text, its own start offset in TEXT) for SPAN, a (start, end)
-    pair from scan_structure(). The inner text is what lies between the
-    opener and the closing character: after the backtick, `$(`, `<(` / `>(`,
-    `${` or `${|`, before the closing `)`, backtick or `}`."""
+    pair from scan_structure()."""
     start, end = span
     if text[start] == "`":
         return text[start + 1 : end - 1], start + 1
-    if text.startswith("${|", start):
-        return text[start + 3 : end - 1], start + 3
     return text[start + 2 : end - 1], start + 2
-
-
-def _unclosed_command_forms(text, mode="shell"):
-    """[(inner text, start offset of the opener in TEXT)] for every OUTERMOST
-    command form `${ ...` / `${|...` of TEXT that is never closed (the
-    bash 5.3 form is a syntax error then, but its content is still inspected,
-    SPEC F7), in ascending offset order. The inner text runs from after the
-    opener (`${`, or `${|`) to the end of the form's extent -- the end of the
-    text, or of the discarded line the form was opened on. A form inside
-    another unclosed form is not listed: its text is inside the outer one's,
-    and is found when that inner text is scanned in turn. Reads the lexer's
-    map of TEXT (the one scan_structure() reads), so it costs one pass over
-    the regions."""
-    regions = lex_shell(text, mode, False).regions
-    inside = [False] * len(regions)
-    out = []
-    for index, region in enumerate(regions):
-        parent = region.parent
-        within = parent is not None and (
-            inside[parent]
-            or (
-                regions[parent].kind == LEX_BRACE_COMMAND_SUBSTITUTION
-                and not regions[parent].closed
-            )
-        )
-        inside[index] = within
-        if (
-            region.kind == LEX_BRACE_COMMAND_SUBSTITUTION
-            and not region.closed
-            and not within
-        ):
-            piped = text.startswith("${|", region.start)
-            opener_end = region.start + (3 if piped else 2)
-            out.append((text[opener_end : region.end], region.start))
-    return out
 
 
 # --- Component 5: substitutions in an unquoted-delimiter heredoc body ------
 
 
 def _extract_heredoc_body_substitutions(text):
-    """Every OUTERMOST `$( … )`/`` ` … ` ``/`${ … }`/`${| … }` in TEXT (an
-    unquoted-delimiter heredoc body), found by Component 1's own scanner in
-    `heredoc-body` mode rather than a separate ad hoc parse -- so a `)` that
-    closes a case pattern or sits inside a quoted string, however deep the
-    nesting, never ends the span early. Returns (bodies, needs_whole_body);
-    NEEDS_WHOLE_BODY is True when an opener is never closed, so the caller
-    falls back to scanning the whole text rather than silently dropping the
-    unresolved tail. Each returned body is queued as its own chunk by the
-    caller; nested levels are found in turn when THAT chunk is scanned next.
-    The caller also queues the content of an unclosed command form
-    (_unclosed_command_forms()) separately in that case, since the whole text
-    read as shell hides it behind a quote or `#` before it.
+    """Every OUTERMOST `$( … )`/`` ` … ` `` in TEXT (an unquoted-delimiter
+    heredoc body), found by Component 1's own scanner in `heredoc-body`
+    mode rather than a separate ad hoc parse -- so a `)` that closes a case
+    pattern or sits inside a quoted string, however deep the nesting, never
+    ends the span early. Returns (bodies, needs_whole_body); NEEDS_WHOLE_BODY
+    is True when an opener is never closed, so the caller falls back to
+    scanning the whole text rather than silently dropping the unresolved
+    tail. Each returned body is queued as its own chunk by the caller;
+    nested levels are found in turn when THAT chunk is scanned next.
 
     BODIES is a list of (inner text, start offset in TEXT of the whole
     substitution — its `$(` or backtick), in ascending offset order: the
@@ -4340,6 +4550,25 @@ def _skipped_words_make_undetermined(words_only, lead, shaped_words, word, args)
     return skipped.env_split or any(_skipped_word_has_sink(w) for w in skipped.words)
 
 
+def _statements_in_tail(marked, starts, count):
+    """For each of the COUNT statements of MARKED's lexing, whether it begins
+    at or after the chunk's tail start (round 2 deferred, task0001, FR2): the
+    lexer's tail start for the chunk's text (_MarkedText.TAIL_START, an offset
+    of the marked text) against STARTS, where each statement begins in that
+    same marked text (_lex_layout()'s layout; None when there is none). A
+    statement in the tail opens no case construct with `case`
+    (_shape_leading()'s TAIL), the way the lexer opens none after a tail
+    source. Without a layout nothing says where a statement begins, so every
+    statement is taken to lie in a tail the chunk has -- the reading that
+    keeps more of it inspected."""
+    tail = marked.tail_start
+    if tail is None:
+        return [False] * count
+    if starts is None:
+        return [True] * count
+    return [start >= tail for start in starts]
+
+
 def _build_statement_table(chunk, marked_chunk):
     """Component 3. ONE lexing pass of MARKED_CHUNK (CHUNK with every
     top-level substitution already blanked by _mark_substitutions()),
@@ -4356,9 +4585,10 @@ def _build_statement_table(chunk, marked_chunk):
     heredoc operator starts each statement holds (both None when they are
     unavailable), in MARKED_CHUNK's own coordinates."""
     segments, starts, operators = _lex_layout(marked_chunk, True)
+    in_tail = _statements_in_tail(marked_chunk, starts, len(segments))
     case_stack = []
     table = []
-    for toks, lexed, sep in segments:
+    for index, (toks, lexed, sep) in enumerate(segments):
         stripped = _strip_unresolved_marks(toks)
         if lexed:
             fused = _split_fused_closer_redirects(stripped)
@@ -4368,7 +4598,7 @@ def _build_statement_table(chunk, marked_chunk):
             # case-tracking state this statement actually started in (see
             # _leading_group_closer()'s own docstring).
             case_stack_before = list(case_stack)
-            lead = _shape_leading(words_only, case_stack)
+            lead = _shape_leading(words_only, case_stack, in_tail[index])
             shaped_words = _shaped_remainder(words_only, lead)
             ends_case_item = bool(
                 sep and any(term in sep for term in (";;", ";&", ";|"))
@@ -5639,18 +5869,18 @@ def statements(command):
         top_spans = _top_level_spans(legacy_spans, legacy_parent_of)
         chunk_subs = [_span_inner(chunk, span)[0] for span in top_spans]
         offset = len(all_subs)
-        # An unclosed command form `${ cmd` (bash 5.3 reports a syntax error)
-        # stays inspected (SPEC F7): the text after its opener is queued as its
-        # own chunk, like a substitution body. Only the outermost one of a
-        # nest is queued; each level queues the rest of its text in turn, and
-        # the relative scan budget above answers a deep nest with the
-        # scan-budget ask.
-        unclosed_forms = _unclosed_command_forms(chunk)
         # The chunk's one lexing: its statements are walked further down, and
         # SEG_ENDS (where each statement's separator starts) lets a heredoc
         # body queued below be anchored between the right two statements.
         marked_chunk = _mark_substitutions(chunk, top_spans, offset)
         segments, seg_ends = _lex_segments_with_ends(marked_chunk)
+        # Where each statement begins in the marked text: the end of the
+        # separator before it (the same offsets _lex_layout() reports).
+        seg_starts = (
+            None if seg_ends is None
+            else [0] + [end + len(seg[2]) for end, seg in zip(seg_ends, segments[:-1])]
+        )
+        in_tail = _statements_in_tail(marked_chunk, seg_starts, len(segments))
         if heredocs:
             # Component 2/3 (task0001): each heredoc is judged on its own
             # destination, not on whether a sink word appears ANYWHERE in
@@ -5732,18 +5962,6 @@ def statements(command):
                         # whole body as the scan target rather than silently
                         # dropping it.
                         pending.append((record.body, body_anchor, None))
-                        # An unclosed command form `${ cmd` in the body stays
-                        # inspected as well, read as the body reads it (a
-                        # quote or `#` before it opens nothing there), not
-                        # only as the whole-body chunk above reads it (SPEC
-                        # F7). `${|` is read from after the `|`.
-                        for inner, opener in _unclosed_command_forms(
-                            record.body, "heredoc-body"
-                        ):
-                            if inner.strip():
-                                pending.append(
-                                    (inner, body_anchor + ((opener, 0, 0),), None)
-                                )
                     else:
                         for body, offset_in_body in bodies:
                             if body.strip():
@@ -5773,16 +5991,6 @@ def statements(command):
                         offset + i,
                     )
                 )
-        for k, (body, _opener) in enumerate(unclosed_forms):
-            if body.strip():
-                pending.append(
-                    (
-                        body,
-                        anchor
-                        + ((_AFTER_EVERYTHING, _AFTER_EVERYTHING, len(chunk_subs) + k),),
-                        None,
-                    )
-                )
         all_subs.extend(chunk_subs)
         quoted_segments = lex_segments(_mark_quoted_substitutions(chunk, top_spans))
         # task0001: case-pattern/body state, scoped to this one chunk only.
@@ -5793,7 +6001,7 @@ def statements(command):
             if lexed:
                 fused = _split_fused_closer_redirects(toks)
                 words_only, redirects = split_redirects(fused, lexed)
-                lead = _shape_leading(words_only, case_stack)
+                lead = _shape_leading(words_only, case_stack, in_tail[seg_index])
                 shaped_words = _shaped_remainder(words_only, lead)
                 statement_overrides = not override_seen and _overrides_command_name(
                     words_only, lead, shaped_words
@@ -6125,7 +6333,7 @@ def _split_fused_closer_redirects(toks):
     return out
 
 
-def _shape_leading(toks, case_stack):
+def _shape_leading(toks, case_stack, tail=False):
     """Advance past every construct that can sit at command position:
     grouping and compound-construct syntax (task0001 FR1/FR2 — the
     subshell opener `(` as an unquoted operator token only, the
@@ -6217,6 +6425,14 @@ def _shape_leading(toks, case_stack):
     leaves CASE_STACK's top at whichever pattern state this scan reached
     when it hit the end of TOKS without finding the closing `)`).
 
+    TAIL (round 2 deferred, task0001, FR2) says the statement begins at or
+    after the chunk's tail start (see _statements_in_tail()): a `case` word is
+    then no keyword and opens no case construct -- it is the statement's
+    command word, as the lexer reads it after a tail source -- so a line bash
+    runs is never taken for a case pattern. A construct opened before the tail
+    is read, and closed by its `esac`, as ever: nothing here changes how
+    CASE_STACK is read.
+
     Returns the index in TOKS where the scan stops: either the token that
     starts the shaped remainder, or len(TOKS) when every token in this
     statement was consumed as pure syntax (no command here — task0001 FR2
@@ -6290,7 +6506,7 @@ def _shape_leading(toks, case_stack):
             case_stack.pop()
             i += 1
             continue
-        if t == "case" and not blocked and not quoted:
+        if t == "case" and not blocked and not quoted and not tail:
             case_stack.append("await_subject")
             i += 1
             continue
