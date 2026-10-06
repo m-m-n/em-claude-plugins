@@ -171,7 +171,8 @@ tasks:
     - FR8
     - NFR5
     - NFR6
-    status: pending
+    status: merged
+    branch: em-workflow/destructive-guard-lexer-round2-residuals/task0001
     notes: null
   task0002:
     title: 代入語の配列添字の中の << を演算子と読まない
@@ -192,7 +193,8 @@ tasks:
     - NFR1
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-lexer-round2-residuals/task0002
     notes: null
   task0003:
     title: ヒアドキュメントの区切り語を語全体から決める
@@ -213,7 +215,8 @@ tasks:
     - NFR1
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-lexer-round2-residuals/task0003
     notes: null
   task0004:
     title: 隣接しない )) で閉じる (( / $(( の読み直しを線形にする
@@ -237,7 +240,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-lexer-round2-residuals/task0004
     notes: null
 review:
   status: pending
