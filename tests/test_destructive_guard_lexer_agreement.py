@@ -19,6 +19,8 @@ Layout:
   candidates and the unopened openers of every fixed-expectation form.
 - TestFixedVerdicts: the hook's verdict for every fixed form, every benign
   control and every attack form (AC-1, AC-2, AC-7 of the SPEC).
+- TestTimeOptions: `time -p` takes no second `-p` as an option; the word is
+  the command word (review round 1, finding 48e1f462b0dd164f).
 - TestStageAgreement: the stage agreement properties (a)-(f) over every
   cases.json command, every attack form, every benign control and every fixed
   form.
@@ -261,6 +263,27 @@ COMMAND_POSITION_EXTRA_REGIONS = {
 TIME_OPTION_END_FORMS = [
     "time -- -p ((1<<2))",
     "time -- -- ((1<<2))",
+]
+
+# `time` options as bash 5.3 reads them (review round 1, task0006, finding
+# 48e1f462b0dd164f). Directly after `time`, `-p` and `--` are options;
+# directly after `time -p`, only `--` is. A second `-p` is therefore the
+# command word: it ends the command position, so the `a[1<<2]=x` after it is
+# an argument and its `<<` a real here-document operator (bash reports `-p` as
+# not found and closes the body at the line `2]=x`).
+TIME_P_REPEATED_FORM = "time -p -p a[1<<2]=x"
+# The same form followed by a body line `'`, its close line and a destructive
+# line: the command text of this task's case-table entry.
+TIME_P_REPEATED_CASE = TIME_P_REPEATED_FORM + "\n'\n2]=x\nrm -rf /home/sakura/valuable\n'"
+# Where the command word is not at a command position, so the `((` after it
+# opens no arithmetic command (bash rejects the line; only the lexical reading
+# is pinned, as for TIME_OPTION_END_FORMS).
+TIME_P_REPEATED_ARITHMETIC_FORM = "time -p -p ((1<<2))"
+# One `-p`, or `--`, before the assignment word: it is still at a command
+# position, `a[1<<2]` is a subscript and no operator is registered.
+TIME_OPTION_SUBSCRIPT_FORMS = [
+    "time -p a[1<<2]=x",
+    "time -- a[1<<2]=x",
 ]
 
 # `((` that is not arithmetic: no arithmetic-command region. The verdict is
@@ -916,6 +939,91 @@ class TestFixedVerdicts(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# `time` options (review round 1, task0006, finding 48e1f462b0dd164f).
+# ---------------------------------------------------------------------------
+
+# Every case this task appends to the case table begins its label with this.
+TIME_OPTION_LABEL = "48e1f462b0dd164f round2-residuals "
+TIME_OPTION_CASE_FLOOR = 627
+
+
+def array_subscript_regions(lexmap):
+    return sorted((r.start, r.end) for r in lexmap.regions if r.kind == "array-subscript")
+
+
+class TestTimeOptions(unittest.TestCase):
+    def test_a_second_p_after_time_p_is_the_command_word_and_the_operator_is_real(self):
+        # AC-2, AC-3: `-p` after `time -p` is no option, so `a[1<<2]=x` is an
+        # argument: no subscript region, one here-document operator at its
+        # `<<` that takes the body `'` and closes at `2]=x`.
+        text = TIME_P_REPEATED_CASE
+        lexmap = H.lex_shell(text)
+        self.assertEqual(array_subscript_regions(lexmap), [])
+        self.assertEqual(len(lexmap.heredocs), 1)
+        op = lexmap.heredocs[0]
+        self.assertEqual(op.start, text.index("<<"))
+        self.assertEqual((op.delimiter, op.quoted), ("2]=x", False))
+        self.assertEqual(heredoc_body(text, op), "'\n")
+        self.assertEqual(text[op.body_end : op.close_end], "2]=x")
+
+    def test_the_same_form_with_the_shared_tail_registers_the_operator_too(self):
+        text = TIME_P_REPEATED_FORM + TAIL
+        lexmap = H.lex_shell(text)
+        self.assertEqual(array_subscript_regions(lexmap), [])
+        self.assertEqual([(op.delimiter, op.quoted) for op in lexmap.heredocs], [("2]=x", False)])
+
+    def test_a_second_p_after_time_p_ends_the_command_position(self):
+        # AC-3: the `((` after the command word `-p` is not at a command
+        # position, so it is no arithmetic command.
+        text = TIME_P_REPEATED_ARITHMETIC_FORM + TAIL
+        lexmap = H.lex_shell(text)
+        self.assertNotIn("arithmetic-command", [r.kind for r in lexmap.regions])
+        self.assertEqual(actual_regions(lexmap), [])
+
+    def test_one_p_or_a_double_dash_keeps_the_subscript_and_registers_no_operator(self):
+        # AC-3: the assignment word is still at a command position.
+        for form in TIME_OPTION_SUBSCRIPT_FORMS:
+            with self.subTest(form=form):
+                text = form + TAIL
+                lexmap = H.lex_shell(text)
+                self.assertEqual(lexmap.heredocs, [])
+                self.assertEqual(array_subscript_regions(lexmap), [span_of(text, "[1<<2]")])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_the_repeated_p_case_is_denied_in_both_modes(self):
+        # AC-2: without and with CLAUDE_BATCH, an unattended run is not let
+        # through either.
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                got, reason = hook_verdict(TIME_P_REPEATED_CASE, batch=batch)
+                self.assertEqual(
+                    got,
+                    "deny",
+                    msg="%r batch=%s -> %s %s" % (TIME_P_REPEATED_CASE, batch, got, reason),
+                )
+
+    def test_the_subscript_forms_still_deny_the_destructive_tail_in_both_modes(self):
+        for form in TIME_OPTION_SUBSCRIPT_FORMS:
+            for batch in (False, True):
+                with self.subTest(form=form, batch=batch):
+                    got, reason = hook_verdict(form + TAIL, batch=batch)
+                    self.assertEqual(got, "deny", msg="%r -> %s %s" % (form, got, reason))
+
+    def test_the_case_is_in_the_case_table_after_the_base_entries(self):
+        # AC-1, AC-6: found by label and command text, never by a fixed
+        # index; it comes after the 627 entries that exist at the feature
+        # base, and only one entry carries it.
+        located = [
+            (index, want)
+            for index, (want, label, cmd) in enumerate(case_commands())
+            if cmd == TIME_P_REPEATED_CASE and label.startswith(TIME_OPTION_LABEL)
+        ]
+        self.assertEqual(len(located), 1)
+        self.assertGreaterEqual(located[0][0], TIME_OPTION_CASE_FLOOR)
+        self.assertEqual(located[0][1], "deny")
+
+
+# ---------------------------------------------------------------------------
 # Stage agreement properties (a)-(f).
 # ---------------------------------------------------------------------------
 
@@ -1030,6 +1138,12 @@ def all_commands():
     for text, *_rest in CONTEXT_FORMS:
         add(text)
     for form in COMMAND_POSITION_FORMS:
+        add(form + TAIL)
+    for form in (
+        TIME_P_REPEATED_FORM,
+        TIME_P_REPEATED_ARITHMETIC_FORM,
+        *TIME_OPTION_SUBSCRIPT_FORMS,
+    ):
         add(form + TAIL)
     for text, *_rest in NON_ARITHMETIC_FORMS:
         add(text)
