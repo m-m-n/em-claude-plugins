@@ -262,8 +262,8 @@ tasks:
     - FR8
     - NFR5
     - NFR6
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-lexer-round2-residuals/task0005
     notes: null
     provenance:
       source: review
@@ -290,8 +290,8 @@ tasks:
     - FR8
     - NFR5
     - NFR6
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-lexer-round2-residuals/task0006
     notes: null
     provenance:
       source: review
@@ -315,8 +315,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-lexer-round2-residuals/task0007
     notes: null
     provenance:
       source: review
