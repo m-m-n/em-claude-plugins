@@ -722,9 +722,11 @@ _LEX_COMMAND_KEEPERS = frozenset(
     {"if", "then", "elif", "else", "do", "while", "until", "time", "coproc", "!", "{"}
 )
 # The reserved words recognized directly after a closer (P10). Each is
-# handled afterwards exactly as at a command position.
+# handled afterwards exactly as at a command position. `{` is one of them for
+# the group a `for ((...)) {` header opens; after any other closer it is read
+# the same way, which can only remove a here-document operator, never add one.
 _LEX_AFTER_CLOSER_WORDS = frozenset(
-    {"then", "do", "else", "elif", "fi", "done", "esac", "}"}
+    {"then", "do", "else", "elif", "fi", "done", "esac", "}", "{"}
 )
 # After `coproc`, a word that begins a compound command is not the coprocess
 # NAME; any other word is, and the position after it is a command position.
@@ -856,7 +858,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         and set RW for the word after them; the word after `coproc` is the
         coprocess NAME unless it begins a compound command, and the position
         after the NAME -- like the one after `function NAME` -- is a command
-        position."""
+        position. Directly after `time`, or after `time -p`, a `-p` keeps the
+        `time` option marker and a `--` ends the options: the command
+        position stays and the marker is cleared."""
         time_p = f.time_p
         kw = f.kw
         rw = f.rw
@@ -899,6 +903,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             f.prev_plain = True
         elif time_p and w == "-p":
             f.time_p = True
+        elif time_p and w == "--":
+            # The end of `time`'s options: the command position is kept and
+            # F.TIME_P, cleared above, stays cleared, so no later `-p` or `--`
+            # is an option.
+            pass
         elif kw == "for" or kw == "select":
             f.cmd = False
             f.rw = True
