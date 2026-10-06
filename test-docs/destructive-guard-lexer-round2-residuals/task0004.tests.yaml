@@ -1,20 +1,34 @@
 task_id: task0004
-# Conflict cycle 1 (parent-side adoption of em-workflow/hooks/tests/destructive-guard-cases.json): the suite was
-# re-run right after the adoption, before this task's case block was re-appended. Its only failures are this
-# task's own placement test, whose three subtests look for the FR5 cases the adoption had just dropped from the
-# file. The original baseline (before any change) was empty: 8422 tests OK, run-destructive-guard.py 628/628.
+# Conflict cycle 2 (parent-side adoption of em-workflow/hooks/destructive-guard.py and
+# em-workflow/hooks/tests/destructive-guard-cases.json, after task0001 and task0003 had merged into the parent):
+# the suite was re-run right after the adoption, before this task's case block and hook change were
+# re-applied. Its only failures are this task's own tests, which need the FR5 cases and the lexer change the
+# adoption had just dropped: every other test of the suite passed. The original baseline (before any change)
+# was empty: 8422 tests OK, run-destructive-guard.py 628/628.
 baseline_failures:
-  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_sit_in_the_case_table_after_the_base_entries (subtests L28, L100, S40)
-# Re-executed after the cases were re-appended on the updated parent: python3 -m unittest discover -s tests
-# 8436 tests OK (skipped=1); run-destructive-guard.py 637/637; tests.test_destructive_guard_lexer_agreement 92 tests OK.
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_sit_in_the_case_table_after_the_base_entries
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_get_allow_with_and_without_batch
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_every_known_command_reads_as_the_whole_text_restart_reads_it
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_generated_forms_read_as_the_whole_text_restart_reads_them
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_nested_generated_forms_read_as_the_whole_text_restart_reads_them
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_nested_quoted_and_here_document_pending_forms_have_these_maps
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_a_candidate_inside_a_span_that_is_read_twice_is_listed_once
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_a_roughly_60kb_input_gets_allow_within_the_time_limit
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_exceeding_the_work_bound_is_an_ask_never_an_allow
+  - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_is_linear_for_closes_that_are_not_adjacent
+# Re-executed after the cases and the lexer change were re-applied on the updated parent:
+# python3 -m unittest discover -s tests: 8462 tests OK (skipped=1); run-destructive-guard.py 640/640;
+# tests.test_destructive_guard_lexer_agreement 118 tests OK.
 final_failures: []
 acceptance_tests:
   AC-1:
     # History check (case-table commit 604cc012 precedes every commit that changes
     # em-workflow/hooks/destructive-guard.py); the executable part is the runner.
-    # After the conflict cycle the block was appended again, after the parent's six
-    # round 2 cases, in the "re-implement on updated parent" commit; the hook change
-    # needed no re-application (it merged without conflict).
+    # After a conflict cycle the block was appended again, after the parent's round 2
+    # cases, in a "re-implement on updated parent" commit; the hook change
+    # needed no re-application in cycle 1 (it merged without conflict). In cycle 2 the
+    # case block was appended again (commit before the hook change was re-applied), then the
+    # hook change was re-applied on the parent's version.
     tests:
       - em-workflow/hooks/tests/run-destructive-guard.py (cases labelled 29bbf9032dd762a0 round2-residuals FR5.1, FR5.2, FR5.3)
       - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_sit_in_the_case_table_after_the_base_entries
