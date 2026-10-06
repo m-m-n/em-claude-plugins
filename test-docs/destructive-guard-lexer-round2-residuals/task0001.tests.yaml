@@ -1,0 +1,47 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: 8422 tests, OK (skipped=1); run-destructive-guard.py 628/628
+final_failures: []             # re-executed after the hook change: discover -s tests 8425 tests OK (skipped=1); run-destructive-guard.py 634/634; lexer agreement module 81 tests OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_cases_come_only_after_the_base_entries
+      - em-workflow/hooks/tests/run-destructive-guard.py (cases 453963d025537b11 FR1.1-FR1.3, 681fab61e1d9ff2c FR2.1-FR2.3)
+    red_confirmed: true
+    red_reason: "Case table committed first (bc13bf60) and run-destructive-guard.py then printed 628/634 with six 'FAIL deny ... got=allow' lines, before any commit that changes destructive-guard.py. The placement test was written after the cases existed; run against the base-commit case table (cases absent) it fails with 'AssertionError: 0 != 1' for each of the six forms. The commit order itself is a git history property (git log shows bc13bf60, adc71f6f, then the hook commit)."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_command_position_arithmetic
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_command_position_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_round2_command_position_forms_are_denied_in_both_modes
+    red_confirmed: true
+    red_reason: "Before the hook change the for-forms failed with \"Lists differ: [('arithmetic-command', 4, 19)] != [('arithmetic-command', 4, 19), ('arithmetic-command', 22, 30)]\" (body ((1<<2)) not read as an arithmetic command) and \"'allow' != 'deny'\" for both batch=False and batch=True."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_command_position_arithmetic
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_command_position_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_round2_command_position_forms_are_denied_in_both_modes
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_no_time_option_follows_a_double_dash
+    red_confirmed: true
+    red_reason: "Positive half (time-forms with TAIL): before the hook change \"Lists differ: [] != [('arithmetic-command', 8, 16)]\" and \"'allow' != 'deny'\" in both modes. Negative half (time -- -p / time -- -- without TAIL, test_no_time_option_follows_a_double_dash): already green before the change, because the base reading already treated the word after -- as a plain word; it is kept as a guard against over-accepting options after --, no red state occurred for it."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_command_position_arithmetic
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_command_position_forms_are_denied
+    red_confirmed: true
+    red_reason: "With the six forms added to COMMAND_POSITION_FORMS (and the header regions to COMMAND_POSITION_EXTRA_REGIONS) both tests failed before the hook change: 6 subtests each, 'Lists differ' for the lexical test and \"'allow' != 'deny'\" for the verdict test."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "bash 5.3.9 rejects both 'for x { ((1<<2)); }' and 'select x { ((1<<2)); }' with a syntax error near '{' (checked with bash -c and as a script file, echo in place of rm; the line after the form is never executed, exit 2), so per the criterion no case is added and nothing is added to COMMAND_POSITION_FORMS. No red exists for a case that is not added. No existing test covers these two forms (searched tests/ and em-workflow/hooks/tests/ by path em-workflow/hooks/destructive-guard.py, basename destructive-guard.py and the literal forms). Observed manually that the hook denies both with TAIL after the change, as a consequence of the fail-safe reading of { after the name."
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_cases_come_only_after_the_base_entries
+    red_confirmed: true
+    red_reason: "The test was written after the cases were committed; run against the base-commit case table (cases absent, the state before this task's block) it fails 'AssertionError: 0 != 1' for each of the six forms (len(located) == 0). Observed by running the test with CASES_JSON pointed at the base table."
+  AC-7:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract
+    red_confirmed: false
+    red_reason: "A no-regression / append-only criterion: the existing cases and the TestStageAgreement / TestModuleContract suites were green before the task and stay green (634/634, 81 tests); the existing test_existing_cases_stay_in_place_and_new_ones_come_after and test_rework_cases_are_appended_after_every_earlier_entry detect a moved or edited entry; no red state occurred for this criterion. The first 627 entries were also compared against the base commit (equal)."
