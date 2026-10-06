@@ -673,9 +673,10 @@ class _LexFrame:
     comes directly after a closer or a `for` / `select` name, so a reserved
     word is recognized there although it is not a command position), CS (the
     case-construct stack), COND (a `[[` opened at a command position awaits
-    its `]]`) and the little markers `time -p`, KW (the keyword the previous
-    word was: `for`, `select` or `coproc`), function-name and function-head
-    tracking. `subscript` is the frame of an array subscript (round 2
+    its `]]`) and the little markers TIME_P (0; 1 directly after `time`, where
+    `-p` and `--` are options; 2 directly after `time -p`, where only `--`
+    is), KW (the keyword the previous word was: `for`, `select` or `coproc`),
+    function-name and function-head tracking. `subscript` is the frame of an array subscript (round 2
     residuals, FR3): read like `bracket`, region kind `array-subscript`. ASG
     and RD are the assignment-position tracking of a shell-rule frame, kept
     apart from the grammar state above and consulted only to decide whether a
@@ -1042,9 +1043,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
         and set RW for the word after them; the word after `coproc` is the
         coprocess NAME unless it begins a compound command, and the position
         after the NAME -- like the one after `function NAME` -- is a command
-        position. Directly after `time`, or after `time -p`, a `-p` keeps the
-        `time` option marker and a `--` ends the options: the command
-        position stays and the marker is cleared."""
+        position. Directly after `time` a `-p` is an option (the command
+        position stays and the marker records that it was seen) and a `--`
+        ends the options; directly after `time -p` only `--` is an option, so
+        any other word -- a second `-p` included -- is the command word and
+        ends the command position like every other command word. In every
+        case a `--` keeps the command position and clears the marker."""
         time_p = f.time_p
         kw = f.kw
         rw = f.rw
@@ -1085,8 +1089,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             f.fn_p = False
             f.cmd = True
             f.prev_plain = True
-        elif time_p and w == "-p":
-            f.time_p = True
+        elif time_p == 1 and w == "-p":
+            # The one `-p` `time` takes: the command position is kept and
+            # F.TIME_P records it, so only a `--` can follow as an option.
+            f.time_p = 2
         elif time_p and w == "--":
             # The end of `time`'s options: the command position is kept and
             # F.TIME_P, cleared above, stays cleared, so no later `-p` or `--`
@@ -1107,7 +1113,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 cs.append("await_subject")
                 f.cmd = False
             elif w in _LEX_COMMAND_KEEPERS:
-                f.time_p = w == "time"
+                f.time_p = 1 if w == "time" else 0
                 if w == "coproc":
                     f.kw = "coproc"
             elif w == "function":
