@@ -1,7 +1,7 @@
 schema_version: 1
 feature: validator-scenario-id-format
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: b014905062fb86ca2df44203f81bd957d1fa902c
 last_input_digest: sha256:fee33c9221b43ee040fb9bbc8a1d70717f63bbcfc40bf811522fe1c1adacd792
