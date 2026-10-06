@@ -1595,14 +1595,17 @@ CARRIAGE_RETURN_CASES = [
 # without it: (command, verdict, verdict under CLAUDE_BATCH). Each one reaches
 # a different reader of the words: a bypass flag, an option, a reserved word,
 # the command word of a here-string payload, a substitution-only target, a
-# safe target, a grouping closer, a redirect target, a separator.
+# safe target, a grouping closer, a redirect target, a separator. The one
+# exception is a delete target of the safe-delete exception: bash deletes the
+# name with its `\r`, so `./build\r` is not the build artifact `./build`
+# (destructive-guard-lexer-round2-deferred task0008, D7).
 CARRIAGE_RETURN_MATCHING_FORMS = [
     ("claude --dangerously-skip-permissions\r", "deny", "deny"),
     ("find /home/sakura -name '*.log' -delete\r", "deny", "deny"),
     ("case x in x) ((1<<2));; esac\r\nrm -rf /home/sakura/valuable\r\n2\r", "deny", "deny"),
     ("command <<< 'rm -rf /home/sakura/x' bash\r", "deny", "deny"),
     ("rm -rf $(cat list)\r", "ask", "deny"),
-    ("rm -rf ./build\r", "allow", "allow"),
+    ("rm -rf ./build\r", "deny", "deny"),
     ("( rm -rf /tmp/x )\r", "allow", "allow"),
     ("echo x > ~/.claude/settings.json\r\n", "ask", "deny"),
     ("rm -rf /home/sakura/valuable;\r\necho done\r\n", "deny", "deny"),
@@ -1816,6 +1819,217 @@ class TestCarriageReturnIsNotABlank(unittest.TestCase):
                 self.assertLessEqual(
                     large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
                 )
+
+
+# ---------------------------------------------------------------------------
+# A trailing `\r` is part of the delete target (destructive-guard-lexer-round2-
+# deferred task0008, review round 1 finding b0f7592cd79e75ea, FR6, FR9-FR11,
+# NFR4-NFR7, D7). The decision layer disregards a `\r` at the end of a word
+# when it matches names, options and separators, but the safe-delete exception
+# reads the target the way bash passes it to `rm`, `\r` included.
+# ---------------------------------------------------------------------------
+
+TRAILING_CR_STABLE_ID = "b0f7592cd79e75ea"
+TRAILING_CR_LABEL = TRAILING_CR_STABLE_ID + " round2-deferred "
+# The first index a block appended for this feature can have (D3).
+TRAILING_CR_CASE_FLOOR = 769
+TRAILING_CR_CASES = [
+    ("R1.CR1", "deny", "rm -rf build\\\r"),
+    ("R1.CR2", "deny", "rm -rf build\r"),
+    ("R1.CR3", "deny", "rm -rf \"build\r\"\n'"),
+    ("R1.CR4", "deny", "rm -rf ./node_modules\r\n"),
+    ("R1.CR5", "allow", "rm -rf /tmp/x\r"),
+]
+# The four spellings of a build-artifact name N with a `\r` at its end: bare,
+# with `./`, backslash-escaped and quoted. `\r` is replaced by `x` to get the
+# command the verdict must agree with.
+TRAILING_CR_SPELLINGS = [
+    "rm -rf %s\r",
+    "rm -rf ./%s\r",
+    "rm -rf %s\\\r",
+    'rm -rf "%s\r"',
+]
+# Statement shapes a target travels through before the safe-delete exception
+# reads it: wrappers, grouping, a redirect, a separator, a payload.
+TRAILING_CR_SHAPES = [
+    "sudo rm -rf build\r",
+    "env A=1 rm -rf build\r",
+    "time rm -rf build\r",
+    "( rm -rf build\r )",
+    "{ rm -rf build\r; }",
+    "rm -rf build\r > /dev/null",
+    "rm -rf build\r; echo done",
+    "echo a && rm -rf ./build\r",
+    "bash -c 'rm -rf build\r'",
+    "rm -rf -- build\r",
+    "rm -fr node_modules\r\ndist\r\n",
+]
+# Targets that are safe with their `\r`, so the verdict stays allow: a proper
+# descendant of a build artifact or of a scratch root.
+TRAILING_CR_SAFE_FORMS = [
+    "rm -rf build/out\r",
+    "rm -rf ./node_modules/.cache\r",
+    "rm -rf /tmp/x\r",
+    "rm -rf /var/tmp/x\r",
+    "rm -rf tmp/x\r",
+    "rm -rf .cache/x\r",
+]
+
+
+def decision_in_process(command, batch):
+    """The decision H.run() gives COMMAND, in this process (the lexer cache is
+    the caller's to clear)."""
+    payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": command}})
+    out = io.StringIO()
+    with mock.patch.dict(os.environ):
+        os.environ.pop("CLAUDE_BATCH", None)
+        if batch:
+            os.environ["CLAUDE_BATCH"] = "1"
+        with mock.patch.object(sys, "stdin", io.StringIO(payload)):
+            with mock.patch.object(sys, "stdout", out):
+                try:
+                    H.run()
+                except SystemExit:
+                    pass
+    return json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"]
+
+
+class TestTrailingCarriageReturnIsPartOfTheDeleteTarget(unittest.TestCase):
+    def both_modes(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    # AC-1, AC-6 (FR9, FR10, FR11): the block is in the case table after the
+    # feature base, in order, and nothing below the floor carries the id.
+    def test_the_cases_are_appended_after_the_base_entries_in_order(self):
+        cases = case_commands()
+        indexes = []
+        for tag, want, command in TRAILING_CR_CASES:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if cmd == command
+                    and w == want
+                    and label.startswith(TRAILING_CR_LABEL + tag + " ")
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], TRAILING_CR_CASE_FLOOR)
+                indexes.append(located[0])
+        self.assertEqual(indexes, list(range(indexes[0], indexes[0] + len(indexes))))
+
+    def test_no_label_below_the_floor_carries_the_stable_id(self):
+        for index, (_want, label, _cmd) in enumerate(case_commands()):
+            if index < TRAILING_CR_CASE_FLOOR:
+                self.assertNotIn(TRAILING_CR_STABLE_ID, label, msg=index)
+
+    # AC-2 (FR6, NFR6): the five cases of the plan.
+    def test_cases_one_to_four_are_denied_and_case_five_is_allowed(self):
+        for tag, want, command in TRAILING_CR_CASES:
+            with self.subTest(tag=tag):
+                self.assertEqual(self.both_modes(command), (want, want))
+
+    # Test notes: case 3 is the fallback-path pin, the other cases are read by
+    # the tokenizer.
+    def test_case_three_is_read_by_the_fallback_word_split(self):
+        segments = H.lex_segments(TRAILING_CR_CASES[2][2])
+        self.assertFalse(any(lexed for _words, lexed, _sep in segments))
+
+    def test_the_other_cases_are_read_by_the_tokenizer(self):
+        for tag, _want, command in TRAILING_CR_CASES:
+            if tag == "R1.CR3":
+                continue
+            with self.subTest(tag=tag):
+                segments = H.lex_segments(command)
+                self.assertTrue(all(lexed for _words, lexed, _sep in segments))
+
+    # AC-3 (FR6, NFR6): every build-artifact name, in every spelling of the
+    # `\r`, is judged like the same name with a letter in its place.
+    def test_a_build_artifact_with_a_carriage_return_is_judged_as_with_a_letter(self):
+        for name in sorted(H.SAFE_DELETE_BUILD_ARTIFACTS):
+            for spelling in TRAILING_CR_SPELLINGS:
+                command = spelling % name
+                letter = command.replace("\r", "x")
+                with self.subTest(command=command):
+                    got = self.both_modes(command)
+                    self.assertEqual(got, self.both_modes(letter))
+                    self.assertEqual(got, ("deny", "deny"))
+
+    def test_a_scratch_root_target_keeps_the_verdict_it_has_without_the_return(self):
+        for command in ("rm -rf /tmp/x", "rm -rf /var/tmp/x"):
+            with self.subTest(command=command):
+                with_cr = self.both_modes(command + "\r")
+                self.assertEqual(with_cr, self.both_modes(command))
+                self.assertEqual(with_cr, ("allow", "allow"))
+
+    def test_a_target_that_is_safe_with_its_carriage_return_stays_allowed(self):
+        for command in TRAILING_CR_SAFE_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("allow", "allow"))
+
+    def test_the_names_without_a_carriage_return_stay_allowed(self):
+        for name in sorted(H.SAFE_DELETE_BUILD_ARTIFACTS):
+            for command in ("rm -rf %s" % name, "rm -rf ./%s" % name):
+                with self.subTest(command=command):
+                    self.assertEqual(self.both_modes(command), ("allow", "allow"))
+
+    def test_a_scratch_root_itself_with_a_carriage_return_is_not_safe(self):
+        for command in ("rm -rf /tmp\r", "rm -rf /var/tmp\r", "rm -rf tmp\r"):
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("deny", "deny"))
+
+    # The target travels through every statement shape before the exception
+    # reads it.
+    def test_the_target_keeps_its_carriage_return_through_every_statement_shape(self):
+        for command in TRAILING_CR_SHAPES:
+            letter = command.replace("\r", "x")
+            with self.subTest(command=command):
+                got = self.both_modes(command)
+                self.assertEqual(got, self.both_modes(letter))
+                self.assertEqual(got, ("deny", "deny"))
+
+    # AC-4 (FR6, NFR6, NFR7): what the destructive rules match is unchanged;
+    # only the safe-delete exception reads the `\r`.
+    def test_the_matched_words_still_disregard_the_trailing_carriage_return(self):
+        self.assertEqual(shaped_words_of("rm -rf build\r"), [["rm", "-rf", "build"]])
+        self.assertEqual(
+            shaped_words_of("rm -rf build\\\r"), [["rm", "-rf", "build"]]
+        )
+        self.assertEqual(
+            shaped_words_of("rm -rf \"build\r\"\n'"),
+            [["rm", "-rf", "build"], ["'"]],
+        )
+
+    def test_a_denied_command_with_a_trailing_carriage_return_stays_denied(self):
+        for command in (
+            "rm -rf /home/sakura/valuable\r",
+            "rm -rf /home/sakura/valuable\\\r",
+            "rm -rf ~\r",
+            "rm -rf /\r",
+            "git reset --hard\r",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("deny", "deny"))
+
+    def test_a_trailing_carriage_return_keeps_an_asked_target_asked(self):
+        for command in ("rm -rf $(cat list)\r", "rm -rf $X\r", "rm -rf build/*$X\r"):
+            with self.subTest(command=command):
+                got = self.both_modes(command)
+                self.assertEqual(got, self.both_modes(command[:-1]))
+                self.assertEqual(got, ("ask", "deny"))
+
+    # AC-5 (NFR4): the same decision on two consecutive evaluations, the second
+    # after clearing the lexer cache.
+    def test_the_decision_is_the_same_after_clearing_the_lexer_cache(self):
+        self.addCleanup(H._LEX_CACHE.clear)
+        for tag, want, command in TRAILING_CR_CASES:
+            for batch in (False, True):
+                with self.subTest(tag=tag, batch=batch):
+                    H._LEX_CACHE.clear()
+                    first = decision_in_process(command, batch)
+                    H._LEX_CACHE.clear()
+                    second = decision_in_process(command, batch)
+                    self.assertEqual(first, second)
+                    self.assertEqual(first, want)
 
 
 # ---------------------------------------------------------------------------
