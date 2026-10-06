@@ -2513,7 +2513,10 @@ class TestHeredocFallbackAndCloseLines(unittest.TestCase):
     def test_no_operator_is_opened_after_an_unreadable_word(self):
         command = "cat <<E${x}\ncat <<EOF\nrm -rf /home/sakura/valuable\nEOF\n"
         lexmap = self.check_tail_reading(command)
-        self.assertEqual(list(lexmap.unopened), [])
+        # No quote character is left literal; the `${` of `E${x}` lies after
+        # the tail source and is the one opener the gate refuses (round 2
+        # deferred, task0001, FR2).
+        self.assertEqual(list(lexmap.unopened), [command.index("${x}")])
         self.assertEqual(hook_verdict(command)[0], "deny")
 
     def test_an_earlier_operator_keeps_its_body(self):
@@ -2935,6 +2938,16 @@ class TestTailSourceOpenersAndTailGate(unittest.TestCase):
                 continue
             exempt = False
             walker = node
+            parent = parents[node]
+            if (
+                isinstance(parent, ast.Call)
+                and isinstance(parent.func, ast.Name)
+                and parent.func.id == "_LexPassResult"
+                and node in parent.args
+            ):
+                # The pass hands its tail source to its caller in the result:
+                # a report, not a decision.
+                continue
             while walker is not root:
                 if walker is gates[0]:
                     exempt = True
@@ -3912,6 +3925,7 @@ class TestModuleContract(unittest.TestCase):
                 self.assertEqual(len(found), 1)
                 self.assertGreaterEqual(found[0], DEFERRED_BASE_CASE_COUNT)
                 located.append(found[0])
+        self.assertEqual(len(located), len(TAIL_SOURCE_FORMS))
         self.assertEqual(located, list(range(located[0], located[0] + len(located))))
 
 
