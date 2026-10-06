@@ -1683,6 +1683,38 @@ def _lex_pass(
                 text, f.start + 2, end - 1, f.region, regions[f.region][5], candidates
             )
 
+    def unwind_to_bracecmd(i):
+        """A backtick at I met above a command form `${ ...; }` opened inside
+        a backtick substitution: the backtick ends that substitution whatever
+        is still open in the form, so every frame above the form ends
+        unclosed here and the form is on top again (its own branch ends it).
+        Each frame leaves the way the other unclosed ends do: region end at I,
+        CLOSED False, and its region sequence number dropped with it (the
+        group and array frames have none). Returns whether it unwound."""
+        k = len(stack) - 1
+        while k > 0:
+            fk = stack[k]
+            if fk.kind == "backtick":
+                return False
+            if fk.kind == "bracecmd" and fk.in_bt:
+                break
+            k -= 1
+        if k <= 0 or k == len(stack) - 1:
+            return False
+        while len(stack) - 1 > k:
+            fu = stack.pop()
+            if fu.kind not in ("group", "array") and rseq:
+                rseq.pop()
+            if fu.region is not None:
+                region = regions[fu.region]
+                region[2] = i
+                region[4] = False
+                if fu.kind == "sq":
+                    _lex_quote_candidates(
+                        text, fu.start + 1, i, fu.region, region[5], candidates
+                    )
+        return True
+
     def open_bare(f, kind, start, named=False, bound=False):
         """P14: a `subscript` (at its `[`) or `extglob` (at its `(`) frame on
         top of F. An `extglob` frame, and a BOUND subscript (a declaration-
@@ -2496,6 +2528,8 @@ def _lex_pass(
                     close(f, i + 1)
                     i += 1
                     continue
+                if kind != "bracecmd" and unwind_to_bracecmd(i):
+                    continue
                 if kind == "bracecmd" and f.in_bt:
                     # A backtick substitution ends at the next unescaped
                     # backtick, whatever it holds (bash reads the content as
@@ -2599,6 +2633,8 @@ def _lex_pass(
                 i = j + 1
             elif c == "$":
                 i = dollar(j, f, True, False)
+            elif unwind_to_bracecmd(j):
+                i = j
             else:
                 push(f, "backtick", "backtick-substitution", j, cmd=True)
                 i = j + 1
@@ -3502,10 +3538,14 @@ def _disregard_trailing_cr(words):
         if not word.endswith("\r") or getattr(word, "is_operator", False):
             out.append(word)
             continue
+        if getattr(word, "quoted", False):
+            # A quoted word's CR may be part of the name bash passes on
+            # (`rm -rf "build\r"`); keep it so a safe-target exception
+            # cannot match a different name.
+            out.append(word)
+            continue
         stripped = word.rstrip("\r")
         if not stripped:
-            if getattr(word, "quoted", False):
-                out.append(word)
             continue
         if isinstance(word, Tok):
             matched = Tok(stripped)
@@ -4514,8 +4554,15 @@ def _span_inner(text, span):
     start, end = span
     if text[start] == "`":
         return text[start + 1 : end - 1], start + 1
-    if text.startswith("${|", start):
-        return text[start + 3 : end - 1], start + 3
+    if text.startswith("${", start):
+        # Bash removes backslash-newline before reading: the inner text begins
+        # after any run of them following `${`, and after a `|` that follows.
+        k = start + 2
+        while text.startswith("\\\n", k):
+            k += 2
+        if k < len(text) and text[k] == "|":
+            k += 1
+        return text[k : max(end - 1, k)], k
     return text[start + 2 : end - 1], start + 2
 
 
@@ -4548,8 +4595,11 @@ def _unclosed_command_forms(text, mode="shell"):
             and not region.closed
             and not within
         ):
-            piped = text.startswith("${|", region.start)
-            opener_end = region.start + (3 if piped else 2)
+            opener_end = region.start + 2
+            while text.startswith("\\\n", opener_end):
+                opener_end += 2
+            if opener_end < len(text) and text[opener_end] == "|":
+                opener_end += 1
             out.append((text[opener_end : region.end], region.start))
     return out
 
