@@ -1,13 +1,13 @@
 task_id: task0001
-baseline_failures: []          # refreshed after the parent-side adoption (parent 1bb83144, task0002 merged), before the hook change was re-applied: discover -s tests 8594 tests, the only failures were this task's own new and rewritten tests and its five cases (not inherited); run-destructive-guard.py 786/791, the five misses being its own cases. At the original task base: 8554 tests OK (skipped=1), 774/774
-final_failures: []             # re-executed after the hook change was re-applied on the adopted parent: discover -s tests 8594 tests OK (skipped=1); run-destructive-guard.py 791/791; lexer agreement module 250 tests OK
+baseline_failures: []          # refreshed after the latest parent-side adoption (parent fd39bf43, task0002 and task0003 merged), before the hook change was re-applied: discover -s tests 8629 tests, the only failures were this task's own new and rewritten tests and its five cases (not inherited); run-destructive-guard.py 802/807, the five misses being its own cases. At the original task base: 8554 tests OK (skipped=1), 774/774
+final_failures: []             # re-executed after the hook change was re-applied on the adopted parent: discover -s tests 8629 tests OK (skipped=1); run-destructive-guard.py 807/807; lexer agreement module 285 tests OK
 acceptance_tests:
   AC-1:
     tests:
       - em-workflow/hooks/tests/run-destructive-guard.py (cases 52bfa0f59d1ea852 round2-deferred FR2.1-FR2.5)
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
     red_confirmed: true
-    red_reason: "Case table committed first (9691a3c6) and run-destructive-guard.py then printed 774/779 with five 'FAIL deny ... FR2.1 .. FR2.5 ... got=allow' lines, before any commit that changes destructive-guard.py. After the conflict with task0002 the block was re-appended after the parent's entries (3632cbaa) before the hook change was re-applied, and the runner again printed 786/791 with the same five FAIL lines. The commit order itself is a git history property (git log shows the case commit, then the tests, then the hook commit; after adoption the re-append commit precedes the re-applied hook commit)."
+    red_reason: "Case table committed first (9691a3c6) and run-destructive-guard.py then printed 774/779 with five 'FAIL deny ... FR2.1 .. FR2.5 ... got=allow' lines, before any commit that changes destructive-guard.py. After the conflict with task0002 the block was re-appended after the parent's entries (3632cbaa) before the hook change was re-applied, and the runner again printed 786/791 with the same five FAIL lines (a second adoption after task0003 merged: re-appended again before the hook change, 802/807 with the same five FAIL lines). The commit order itself is a git history property (git log shows the case commit, then the tests, then the hook commit; after adoption the re-append commit precedes the re-applied hook commit)."
   AC-2:
     tests:
       - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_the_openers_after_an_unreadable_word_are_literal_text
