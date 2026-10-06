@@ -115,8 +115,8 @@ workflow:
   status: completed
   completed_at_commit: 3f28b2c0c92a0f09c33c9bad9212ce8ee87d6e9e
 - id: implement
-  status: in_progress
-  completed_at_commit: 0189677be4c7d5b4a7c93ec7de083d1d83c0409c
+  status: completed
+  completed_at_commit: 37dde67a6cb73d03213b479103d6f8d7fc5afb0c
   failed_kind: null
   base_commit: d1f3077dbfce58a59f8289c42e3e2b0089cac229
 - id: review
