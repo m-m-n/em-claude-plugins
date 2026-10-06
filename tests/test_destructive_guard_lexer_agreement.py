@@ -28,7 +28,12 @@ Layout:
 - TestHeredocBodies: nothing written inside a real heredoc body opens
   anything for the command text after its delimiter line.
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
-- TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11).
+- TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11), and
+  the linear work of `((` / `$((` openers that close without an adjacent `))`.
+- TestNonAdjacentCloseRereading: those openers (review round 2, finding
+  29bbf9032dd762a0): the case-table allow cases, map equivalence with the
+  whole-text-restart reading, hand-written maps of the nested, double-quoted
+  and here-document-pending forms, the ~60KB input and the budget decision.
 - TestModuleContract: the replaced readers are gone; standard library only.
 
 Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
@@ -41,14 +46,17 @@ PROCESS_SUBSTITUTION_FORMS and HEREDOC_BODY_START_FORMS.
 import ast
 import bisect
 import importlib.util
+import io
 import json
 import os
+import random
 import re
 import shlex
 import subprocess
 import sys
 import time
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK = os.path.join(ROOT, "em-workflow", "hooks", "destructive-guard.py")
@@ -1509,6 +1517,40 @@ class TestUnclosedOpeners(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# `((` / `$((` openers that close without an adjacent `))` (review round 2,
+# finding 29bbf9032dd762a0): the unit forms, shared by the linearity test of
+# TestReworkLinearity and by TestNonAdjacentCloseRereading.
+# ---------------------------------------------------------------------------
+
+NON_ADJACENT_STABLE_ID = "29bbf9032dd762a0"
+
+
+def expansion_lines(count):
+    """COUNT lines `x=$((echo N) | wc -c)`, N the line number, joined by a
+    newline with no trailing newline."""
+    return "\n".join("x=$((echo %d) | wc -c)" % n for n in range(count))
+
+
+def command_lines(count):
+    """COUNT statements `((cd /tmp/aN && ls) || echo no)`, N the statement
+    number, joined by a newline with no trailing newline."""
+    return "\n".join("((cd /tmp/a%d && ls) || echo no)" % n for n in range(count))
+
+
+# The three inputs of the review record: L28 and L100 are 633 and 2289
+# characters; S40 is forty statements.
+NON_ADJACENT_FORMS = {
+    "L28": expansion_lines(28),
+    "L100": expansion_lines(100),
+    "S40": command_lines(40),
+}
+NON_ADJACENT_UNITS = {
+    "arithmetic expansion": expansion_lines,
+    "arithmetic command": command_lines,
+}
+
+
+# ---------------------------------------------------------------------------
 # Rework round 1: the two ~60KB inputs (task0002 AC-6, NFR3).
 # ---------------------------------------------------------------------------
 
@@ -1560,6 +1602,250 @@ class TestReworkLinearity(unittest.TestCase):
                 small = H.lex_shell(unit * 200)
                 large = H.lex_shell(unit * 400)
                 self.assertLessEqual(large.work, 2.5 * small.work + 100)
+
+    def test_lexing_work_is_linear_for_closes_that_are_not_adjacent(self):
+        # AC-3 (FR5, FR7, NFR1): every line holds a `((` / `$((` whose first
+        # close is a lone `)`; doubling the lines at most about doubles the
+        # work, and the work stays within the work bound.
+        for name, build in NON_ADJACENT_UNITS.items():
+            with self.subTest(form=name):
+                small = H.lex_shell(build(200))
+                large_text = build(400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+
+# ---------------------------------------------------------------------------
+# `((` / `$((` read as two parentheses when the close is not adjacent (task0004
+# of destructive-guard-lexer-round2-residuals, FR5-FR8, NFR1-NFR5, TM-4).
+# ---------------------------------------------------------------------------
+
+# Maps written out by hand (D6): text, regions as (kind, literal[, n]), real
+# here-document operators as (delimiter, quoted, body). Each form holds an
+# opener that closes without an adjacent `))`, read as two parentheses.
+NON_ADJACENT_MAP_FORMS = [
+    # An opener nested in another's span: the inner one is read as two
+    # parentheses first; the outer one then closes without an adjacent `))`
+    # as well, runs to the end of the text and stays unclosed.
+    (
+        "$(( $((echo a) ) )",
+        [
+            ("command-substitution", "$(( $((echo a) ) )"),
+            ("command-substitution", "$((echo a) )"),
+        ],
+        [],
+    ),
+    # The outer opener closes with an adjacent `))` around the inner one.
+    (
+        "$(( $((echo a) | cat) ))",
+        [
+            ("arithmetic-expansion", "$(( $((echo a) | cat) ))"),
+            ("command-substitution", "$((echo a) | cat)"),
+        ],
+        [],
+    ),
+    # Inside double quotes.
+    (
+        'echo "$((echo a) | wc -c)"',
+        [
+            ("double-quote", '"$((echo a) | wc -c)"'),
+            ("command-substitution", "$((echo a) | wc -c)"),
+        ],
+        [],
+    ),
+    # The span crosses a line start while an earlier operator is pending: the
+    # open substitution defers the body to the line after its close.
+    (
+        "cat <<EOF; echo $((echo a\n) | wc -c)\nbody\nEOF\necho done",
+        [("command-substitution", "$((echo a\n) | wc -c)")],
+        [("EOF", False, "body\n")],
+    ),
+    # An operator registered inside the span takes its body there: the
+    # substitution that encloses it never defers it.
+    (
+        "echo $((cat <<EOF\nbody\nEOF\n) | wc -c)\necho done",
+        [("command-substitution", "$((cat <<EOF\nbody\nEOF\n) | wc -c)")],
+        [("EOF", False, "body\n")],
+    ),
+]
+
+# Tokens the generated forms are built from.
+NON_ADJACENT_TOKENS = [
+    "$((", "((", "(", ")", "))", ")", " ", " ", "a", "echo a", "\n", '"', "'",
+    "`", "<<E", "\nE\n", "$(", "${", "}", ";", "|", "&&", "#", "$'", "x=",
+    "$[", "]", "cat ", "if ", "then ", "fi", "\\", "$", "<(",
+]
+
+
+def lexical_reading(lexmap):
+    """The parts of a lexical map that carry its meaning."""
+    return (
+        tuple(lexmap.regions),
+        tuple(lexmap.heredocs),
+        tuple(lexmap.candidates),
+        tuple(lexmap.unopened),
+        lexmap.tail_start,
+    )
+
+
+def whole_text_restart_reading(text, mode="shell", bodies=True):
+    """The reading today's whole-text restart gives, driven over the pass
+    function with no work limit: every `((` / `$((` whose first close is not
+    an adjacent `))` is added to the openers read as two parentheses and the
+    whole text is read again; every unclosed opener is settled the same way.
+    Returns what lexical_reading() returns."""
+    if bodies and (mode != "shell" or "<<" not in text):
+        bodies = False
+    lines = H._LexLines(text) if bodies else None
+    settled = set()
+    reparen = set()
+    while True:
+        result = H._lex_pass(text, mode, settled, reparen, lines, 1 << 60)
+        if result[0] == "done":
+            break
+        settled.update(result[1])
+        reparen.update(result[2])
+    _, regions, ops, candidates, encountered, _iterations = result
+    return (
+        tuple(H.LexRegion(k, s, e, parent, closed) for k, s, e, parent, closed, _a in regions),
+        tuple(H.LexHeredoc(*op) for op in ops),
+        tuple(sorted(candidates, key=lambda c: (c.start, c.end))),
+        tuple(sorted(encountered)),
+        min(settled) if settled else None,
+    )
+
+
+def generated_forms(count, seed=29):
+    rng = random.Random(seed)
+    forms = []
+    for _ in range(count):
+        size = rng.randint(3, 16)
+        forms.append("".join(rng.choice(NON_ADJACENT_TOKENS) for _ in range(size)))
+    return forms
+
+
+class TestNonAdjacentCloseRereading(unittest.TestCase):
+    """A `((` / `$((` whose first close is a lone `)` is read as two
+    parentheses without reading the whole text again for every such opener:
+    the lexical map stays what the whole-text restart gives, the work stays
+    linear, and a bound overflow is an ask, never an allow."""
+
+    def check_same_reading(self, text, mode="shell", bodies=True):
+        got = lexical_reading(H.lex_shell(text, mode, bodies))
+        want = whole_text_restart_reading(text, mode, bodies)
+        self.assertEqual(got, want, msg=repr(text))
+
+    def test_the_review_inputs_sit_in_the_case_table_after_the_base_entries(self):
+        # AC-1, AC-7: located by label and command text, never by a fixed index.
+        cases = case_commands()
+        for name, form in NON_ADJACENT_FORMS.items():
+            with self.subTest(form=name):
+                found = [
+                    i
+                    for i, (_want, label, cmd) in enumerate(cases)
+                    if cmd == form and label.startswith(NON_ADJACENT_STABLE_ID)
+                ]
+                self.assertEqual(len(found), 1)
+                self.assertGreaterEqual(found[0], 627)
+                self.assertEqual(cases[found[0]][0], "allow")
+        # No entry of the first 627 carries this finding's stable_id.
+        for _want, label, _cmd in cases[:627]:
+            self.assertNotIn(NON_ADJACENT_STABLE_ID, label)
+
+    def test_the_review_inputs_get_allow_with_and_without_batch(self):
+        # AC-2 (FR5, TM-4)
+        for name, form in NON_ADJACENT_FORMS.items():
+            for batch in (False, True):
+                with self.subTest(form=name, batch=batch):
+                    decision, reason = hook_verdict(form, batch=batch)
+                    self.assertEqual(decision, "allow", msg=reason[:200])
+
+    def test_every_known_command_reads_as_the_whole_text_restart_reads_it(self):
+        # AC-4: the case table and every fixed form of this module, in each
+        # mode the hook reads a chunk in.
+        for command in all_commands():
+            with self.subTest(command=command[:80]):
+                self.check_same_reading(command, "shell", True)
+                self.check_same_reading(command, "shell", False)
+                self.check_same_reading(command, "heredoc-body", False)
+
+    def test_generated_forms_read_as_the_whole_text_restart_reads_them(self):
+        for command in generated_forms(4000):
+            with self.subTest(command=command):
+                self.check_same_reading(command, "shell", True)
+                self.check_same_reading(command, "heredoc-body", False)
+
+    def test_nested_quoted_and_here_document_pending_forms_have_these_maps(self):
+        # AC-4: hand-written expectations (D6), and the same map after the
+        # lexer cache is cleared.
+        for text, regions, heredocs in NON_ADJACENT_MAP_FORMS:
+            with self.subTest(text=text):
+                first = H.lex_shell(text)
+                self.assertEqual(
+                    actual_regions(first), expected_regions(text, regions), msg=repr(text)
+                )
+                got = [(op.delimiter, op.quoted, heredoc_body(text, op)) for op in first.heredocs]
+                self.assertEqual(got, heredocs, msg=repr(text))
+                self.assertEqual(list(first.unopened), [])
+                self.assertIsNone(first.tail_start)
+                self.check_same_reading(text)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(text)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    def test_a_roughly_60kb_input_gets_allow_within_the_time_limit(self):
+        # AC-5 (NFR2)
+        lines = []
+        size = 0
+        while size < 60000:
+            line = "x=$((echo %d) | wc -c)" % len(lines)
+            lines.append(line)
+            size += len(line) + 1
+        command = "\n".join(lines)
+        self.assertGreater(len(command), 50000)
+        start = time.monotonic()
+        decision, reason = hook_verdict(command)
+        self.assertEqual(decision, "allow", msg=reason[:200])
+        self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+    def run_hook_in_process(self, command, batch):
+        """H.run() with the payload on a substituted stdin and the batch
+        variable set or cleared; returns (decision, exit code)."""
+        payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": command}})
+        out = io.StringIO()
+        with mock.patch.dict(os.environ):
+            os.environ.pop("CLAUDE_BATCH", None)
+            if batch:
+                os.environ["CLAUDE_BATCH"] = "1"
+            with mock.patch.object(sys, "stdin", io.StringIO(payload)):
+                with mock.patch.object(sys, "stdout", out):
+                    with self.assertRaises(SystemExit) as exit_info:
+                        H.run()
+        decision = json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"]
+        return decision, exit_info.exception.code
+
+    def test_exceeding_the_work_bound_is_an_ask_never_an_allow(self):
+        # AC-6 (NFR3, TM-4): the same input is within its bound under the
+        # real work factor and exceeds it under a lowered one.
+        command = expansion_lines(200)
+        self.addCleanup(H._LEX_CACHE.clear)
+        H._LEX_CACHE.clear()
+        normal = H.lex_shell(command)
+        self.assertLessEqual(normal.work, H.LEX_WORK_FACTOR * len(command) + 1024)
+        self.assertGreater(normal.work, 1024)
+        self.assertEqual(self.run_hook_in_process(command, batch=False), ("allow", 0))
+        with mock.patch.object(H, "LEX_WORK_FACTOR", 0):
+            H._LEX_CACHE.clear()
+            with self.assertRaises(H.LexBudgetExceeded):
+                H.lex_shell(command)
+            H._LEX_CACHE.clear()
+            self.assertEqual(self.run_hook_in_process(command, batch=False), ("ask", 0))
+            H._LEX_CACHE.clear()
+            self.assertEqual(self.run_hook_in_process(command, batch=True), ("deny", 0))
 
 
 # ---------------------------------------------------------------------------
