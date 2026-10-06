@@ -1,0 +1,40 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-residuals
+phase: rework
+status: in_progress
+generation: 1
+base_revision: 698fdffd756a2f07b1daaebcf0f42b7660e1e0b7
+last_input_digest: sha256:ed8e35fe724ee3c66674ce72063d22afcd1301267520c8350645275fb898cd86
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: completed
+  input_digest: sha256:ed8e35fe724ee3c66674ce72063d22afcd1301267520c8350645275fb898cd86
+  output_digest: sha256:d6d8441f328e34ccbc3a51aa3022822da46901cade99205b966b5a7bad87a970
+artifacts:
+- path: feature-docs/destructive-guard-lexer-round2-residuals/tasks/task0005.md
+  sha256: sha256:452a01b07c85005531ef2f216ee09dca8a0264ce98a12e5f095cdfe0f6756bd9
+  produced_by: rework-run-0001
+- path: feature-docs/destructive-guard-lexer-round2-residuals/tasks/task0006.md
+  sha256: sha256:f069ef3ef357c1b67934dda958639e0c86af8783dc46ea1b1902283226d2c019
+  produced_by: rework-run-0001
+- path: feature-docs/destructive-guard-lexer-round2-residuals/tasks/task0007.md
+  sha256: sha256:3ce058fe06ee23c55a22384b3b87923640b8d2936f8b0f262194a3bdc21fbe1e
+  produced_by: rework-run-0001
+- path: feature-docs/destructive-guard-lexer-round2-residuals/IMPLEMENTATION.md
+  sha256: sha256:3fb9af83b859c4a00ffdfb34b29c4a1f40eec83d68fd7d8434ac80a034adf654
+  produced_by: rework-run-0001
+- path: feature-docs/destructive-guard-lexer-round2-residuals/VERIFICATION.md
+  sha256: sha256:5b9704e0748c337509e0c4d8fdccf6beb3ea0425a23870d13065e1928322b930
+  produced_by: rework-run-0001
+patches:
+- patch_id: rework-r1-p0001
+  status: validated
+  base_input_digest: sha256:ed8e35fe724ee3c66674ce72063d22afcd1301267520c8350645275fb898cd86
+  base_workflow_blob: 04fcde66f2e829500ff07ea8cbed8bdc01e8c39d
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
