@@ -1,0 +1,51 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: 8554 tests, OK (skipped=1); run-destructive-guard.py 774/774
+final_failures: []             # re-executed after the hook change: discover -s tests 8579 tests OK (skipped=1); run-destructive-guard.py 779/779; lexer agreement module 235 tests OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py (cases 52bfa0f59d1ea852 round2-deferred FR2.1-FR2.5)
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
+    red_confirmed: true
+    red_reason: "Case table committed first (9691a3c6) and run-destructive-guard.py then printed 774/779 with five 'FAIL deny ... FR2.1 .. FR2.5 ... got=allow' lines, before any commit that changes destructive-guard.py. The commit order itself is a git history property (git log shows 9691a3c6 for the cases, 6c5f6f2c for the tests, then the hook commit)."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_the_openers_after_an_unreadable_word_are_literal_text
+    red_confirmed: true
+    red_reason: "Before the hook change, for the four forms with ${ / $(( / $[ / (( on the second line: \"Lists differ: [('parameter-expansion', 7), ('arithmetic-expansion', ...), ...] != []\" (the openers after the unreadable word opened regions and UNOPENED did not list them)."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_a_case_word_after_an_unreadable_word_is_a_command_word
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_a_case_word_after_an_unreadable_word_opens_none_in_the_lexer
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_the_destination_table_shapes_statements_the_same_way
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_a_case_construct_opened_before_the_tail_source_still_closes_at_esac
+    red_confirmed: true
+    red_reason: "Case 5 before the hook change: \"['case', 'x', 'in'] not found in [['cat'], [], [], [], []]\" (statements() read the rm line as a case pattern), \"Lists differ: ['${x}', '$(case x in a) true;; esac)'] != ['$(case x in a)']\" in the lexer, and the destination-table subtest failed for case 5. The second half (the construct opened before the tail source still closes at esac, test_a_case_construct_opened_before_the_tail_source_still_closes_at_esac and the CASE_BEFORE_FORM subtest of the table test) was already green before the change: the behavior pre-existed and the tests guard it; no red state occurred for that half."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_substitutions_still_open_after_an_unreadable_word
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_quote_characters_of_the_tail_are_listed_and_hidden_from_shlex
+    red_confirmed: true
+    red_reason: "The rewritten expectation of test_quote_characters_of_the_tail_are_listed_and_hidden_from_shlex (no region, UNOPENED also lists the ${ of E${x}) failed before the hook change with \"Lists differ: ['parameter-expansion'] != []\". The first half ($( and a backtick still open after the tail source; test_substitutions_still_open_after_an_unreadable_word) was green before the change: that behavior pre-existed and the test guards it; no red state occurred for it."
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_the_tail_is_decided_only_inside_the_gate
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_every_listed_site_calls_the_gate
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_the_two_classes_of_the_gate
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts
+    red_confirmed: true
+    red_reason: "Before the hook change the three gate tests failed: \"0 != 1 : one gate function inside the pass\", \"0 not greater than or equal to 6\" / \"... to 7\" / \"... to 1\" per opener kind, and \"AttributeError: module 'destructive_guard_under_test' has no attribute '_LEX_TAIL_START_OPENERS'\". The pre-existing agreement tests (whole-text-restart map equivalence, discarded-line and subscript tests) are the unchanged guards of the pure refactor and passed before and after."
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
+    red_confirmed: true
+    red_reason: "The test was written after the cases were committed; run against the first 773 entries only (cases absent, the table before this task's block) it fails 'AssertionError: 0 != 1' for each of the five forms. Observed by running the test with CASES_JSON pointed at that base table. The base length is 773, not the 769 the plan states: the table at the feature base holds 773 entries (indexes 0-772; the entries at 768-772 are the 1baa909f9b288847 and 19edf404b5cbeb2b cases of round2-residuals)."
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTailSourceOpenersAndTailGate.test_lexing_work_is_linear_in_repeated_tail_source_forms
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract
+    red_confirmed: false
+    red_reason: "The linearity bound passed before the change: the lexer's work for the five forms repeated 200 and 400 times was already within the bounds, and the change keeps it; no red state occurred. The digest check of the base entries (no entry removed, edited or reordered) fails on any such change by construction, but was not observed failing. The three suites (run-destructive-guard.py, tests.test_destructive_guard_lexer_agreement, discover -s tests) pass after the change."
