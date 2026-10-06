@@ -687,7 +687,7 @@ class _LexFrame:
     __slots__ = (
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
         "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "asg", "decl",
-        "arr_end",
+        "arr_end", "redir",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -708,6 +708,7 @@ class _LexFrame:
         self.asg = False
         self.decl = False
         self.arr_end = -1
+        self.redir = False
 
 
 class _LexLines:
@@ -937,6 +938,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         (DECL) is in declaration-argument position. A `NAME=` / `NAME+=` word
         in either position that a `(` follows directly sets ARR_END to its
         end: that `(` opens an array compound assignment."""
+        if f.redir:
+            # The target word of a redirection: it is no command or
+            # assignment word and leaves the grammar state as it was.
+            f.redir = False
+            f.prev_plain = False
+            return
         time_p = f.time_p
         kw = f.kw
         rw = f.rw
@@ -1170,6 +1177,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         base.cond = False
         base.asg = base.decl = False
         base.arr_end = -1
+        base.redir = False
         limit = n
         discard_end = None
 
@@ -1237,6 +1245,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             if c == "\n":
                 f.cmd = kind != "array"
                 f.in_word = False
+                f.redir = False
                 f.prev_plain = f.time_p = False
                 f.kw = ""
                 i += 1
@@ -1275,13 +1284,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     cs[-1] = "pattern_next"
                 f.cmd = kind != "array"
                 f.in_word = False
+                f.redir = False
                 f.prev_plain = f.time_p = False
                 f.kw = ""
                 i += step
                 continue
             if c == "&" or c == "|":
                 f.in_word = False
+                f.redir = False
                 if c == "&" and text.startswith("&>", i):
+                    f.redir = True
                     i += 3 if text.startswith("&>>", i) else 2
                     continue
                 if c == "|" and f.cs and f.cs[-1] in _LEX_CASE_PATTERN_STATES:
@@ -1350,6 +1362,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 continue
             if c == ")":
                 f.in_word = False
+                f.redir = False
                 f.prev_plain = f.time_p = False
                 f.kw = ""
                 top_cs = f.cs[-1] if f.cs else None
@@ -1382,6 +1395,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 f.kw = ""
                 if c == "<":
                     if text.startswith("<<<", i):
+                        f.redir = True
                         idx = new_region("here-string-operator", i, f)
                         regions[idx][2] = i + 3
                         i += 3
@@ -1411,6 +1425,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         push(f, "procsub", "process-substitution", i, cmd=True)
                         i += 2
                         continue
+                    f.redir = True
                     i += 2 if (text.startswith("<&", i) or text.startswith("<>", i)) else 1
                     continue
                 if text.startswith(">(", i) and (i == 0 or text[i - 1] not in "<>"):
@@ -1419,6 +1434,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     push(f, "procsub", "process-substitution", i, cmd=True)
                     i += 2
                     continue
+                f.redir = True
                 i += 2 if (
                     text.startswith(">>", i) or text.startswith(">&", i) or text.startswith(">|", i)
                 ) else 1
