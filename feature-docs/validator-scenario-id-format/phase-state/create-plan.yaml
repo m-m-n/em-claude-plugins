@@ -1,11 +1,11 @@
 schema_version: 1
 feature: validator-scenario-id-format
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 3dc4c4e0cac107a831df29cdbcaff4543db14648
 last_input_digest: sha256:9195c3e204106b583ea1265cb02feeac73a3d618558cd391ced305a816388c5b
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
