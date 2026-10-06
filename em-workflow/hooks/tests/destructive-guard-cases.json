@@ -646,5 +646,11 @@
   ["deny", "acf9e8aa8bb287ea unified-lexer P12.1 <(true) の直後の # は語の一部でコメントでなく、後続の rm -rf は deny", "cat <(true)#; rm -rf /home/sakura/valuable"],
   ["deny", "acf9e8aa8bb287ea unified-lexer P12.2 >(true) の直後の # は語の一部でコメントでなく、後続の rm -rf は deny", "cat >(true)#; rm -rf /home/sakura/valuable"],
   ["allow", "acf9e8aa8bb287ea unified-lexer P12.3 <(true)#x は一つの語で、echo の引数として allow", "echo <(true)#x"],
-  ["allow", "acf9e8aa8bb287ea unified-lexer P12.4 <(true) の後ろの空白に続く # はコメントで、その後の rm -rf は実行されず allow", "cat <(true) #; rm -rf /home/sakura/valuable"]
+  ["allow", "acf9e8aa8bb287ea unified-lexer P12.4 <(true) の後ろの空白に続く # はコメントで、その後の rm -rf は実行されず allow", "cat <(true) #; rm -rf /home/sakura/valuable"],
+  ["deny", "453963d025537b11 round2-residuals FR1.1 for ((;;)) の直後の { は予約語で、後ろの ((1<<2)) はコマンド位置の算術式として読まれ、後続の rm -rf は deny", "for ((i=0;i<1;i++)) { ((1<<2)); }\nrm -rf /home/sakura/valuable\n2"],
+  ["deny", "453963d025537b11 round2-residuals FR1.2 for ((;0;)){ の隣接した { も予約語で、後ろの ((1<<2)) はコマンド位置の算術式として読まれ、後続の rm -rf は deny", "for ((;0;)){ ((1<<2)); }\nrm -rf /home/sakura/valuable\n2"],
+  ["deny", "453963d025537b11 round2-residuals FR1.3 if の中の for ((;0;)) { も予約語で、後ろの ((1<<2)) はコマンド位置の算術式として読まれ、後続の rm -rf は deny", "if :; then for ((;0;)) { ((1<<2)); }; fi\nrm -rf /home/sakura/valuable\n2"],
+  ["deny", "681fab61e1d9ff2c round2-residuals FR2.1 time -- の後ろはコマンド位置で、((1<<2)) は算術式として読まれ、後続の rm -rf は deny", "time -- ((1<<2))\nrm -rf /home/sakura/valuable\n2"],
+  ["deny", "681fab61e1d9ff2c round2-residuals FR2.2 time -p -- の後ろはコマンド位置で、((1<<2)) は算術式として読まれ、後続の rm -rf は deny", "time -p -- ((1<<2))\nrm -rf /home/sakura/valuable\n2"],
+  ["deny", "681fab61e1d9ff2c round2-residuals FR2.3 time -- ! の後ろはコマンド位置で、((1<<2)) は算術式として読まれ、後続の rm -rf は deny", "time -- ! ((1<<2))\nrm -rf /home/sakura/valuable\n2"]
 ]
