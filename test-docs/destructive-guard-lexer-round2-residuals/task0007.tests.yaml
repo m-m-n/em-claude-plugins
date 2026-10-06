@@ -1,0 +1,64 @@
+task_id: task0007
+# Recorded before any change (python3 -m unittest discover -s tests): Ran 8487 tests, OK (skipped=1).
+baseline_failures: []
+# Re-executed after the implementation: python3 -m unittest discover -s tests, Ran 8500 tests, OK (skipped=1);
+# python3 -m unittest tests.test_destructive_guard_lexer_agreement, 156 tests OK;
+# python3 em-workflow/hooks/tests/run-destructive-guard.py, 678/678 passed.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_restore_returns_every_declared_field_to_its_captured_value
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_the_snapshot_declares_at_least_the_state_a_resume_takes_back
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_restore_cuts_the_collections_in_place
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_the_fields_a_resume_does_not_restore_are_left_as_they_are
+    red_confirmed: true
+    red_reason: "Before the hook change the new test class errored: AttributeError: module 'destructive_guard_under_test' has no attribute '_LexPassState' (every test that builds a pass state) and no attribute '_LexResumeSnapshot' (the declared-fields test). Mutation checks on the finished code: restoring a collection by rebinding instead of cutting it in place, or moving a restored field (seq) into the not-restored list, each made these tests fail."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_every_pass_state_field_is_in_exactly_one_list
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_a_pass_state_field_added_without_classification_is_found
+    red_confirmed: true
+    red_reason: "Before the hook change both tests errored: AttributeError: module 'destructive_guard_under_test' has no attribute '_LexResumeSnapshot' (and '_LexPassState'). Mutation check on the finished code: removing cont_at from the snapshot's restored list without naming it elsewhere made the first test fail on the unclassified field."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_pending_entries_and_sequence_records_are_restored_independently
+    red_confirmed: true
+    red_reason: "Before the hook change all four subtests (pending/sequence lengths 3/2, 1/4, 0/2, 2/0) errored: AttributeError: module 'destructive_guard_under_test' has no attribute '_LexPassState'. Mutation check on the finished code: recording the pending-entry length as the extent of the sequence records made the 3/2 subtest fail (the sequence records were cut to the wrong length)."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_the_pass_names_its_new_opener_and_leaves_the_given_set_alone
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_openers_already_given_are_read_as_two_parentheses_and_not_named_again
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_the_given_set_is_not_changed_by_a_pass_that_names_several_openers
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_an_ending_pass_returns_the_openers_it_found_before_it_ended
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_the_whole_text_restart_reading_returns_its_opener_the_same_way
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_the_final_map_is_the_one_the_combined_set_gives
+    red_confirmed: true
+    red_reason: "Before the hook change the pass returned a positional tuple and added to the given set in place: test_openers_already_given_are_read_as_two_parentheses_and_not_named_again failed with AssertionError: Items in the first set but not the second: 25 (the given set had grown), test_the_given_set_is_not_changed_by_a_pass_that_names_several_openers failed the same way (offsets 5, 9, 36 added to {10000}), and the others errored: AttributeError: 'tuple' object has no attribute 'status'."
+  AC-5:
+    # Search by repository-relative path (em-workflow/hooks/destructive-guard.py) and by basename
+    # (destructive-guard.py) over tests/ found the lexer agreement module, which loads the hook by path
+    # and drives lex_shell() and the whole-text-restart reference over every case-table command.
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_every_known_command_reads_as_the_whole_text_restart_reads_it
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_generated_forms_read_as_the_whole_text_restart_reads_them
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_nested_generated_forms_read_as_the_whole_text_restart_reads_them
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_nested_quoted_and_here_document_pending_forms_have_these_maps
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_a_candidate_inside_a_span_that_is_read_twice_is_listed_once
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_a_roughly_60kb_input_gets_allow_within_the_time_limit
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_exceeding_the_work_bound_is_an_ask_never_an_allow
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_grows_linearly_with_the_input
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_is_linear_for_closes_that_are_not_adjacent
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_same_command_gives_an_identical_map_and_decision
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing map-equivalence, linearity, budget-exceeded and determinism tests of tests.test_destructive_guard_lexer_agreement detect any change of the lexical map, the work counted or the decision; no red state occurred for this change (a refactor with no observable change: they passed on the base and pass unchanged after it). Their only edit is the whole-text-restart driver, which now reads the pass result by field name; their expectations are untouched. Mutation checks on the finished code (a collection rebound instead of cut in place; rseq left out of the restored collections) made the equivalence tests fail, which shows they would catch a resume that restores the wrong state."
+  AC-6:
+    # Search by path and basename (destructive-guard-cases.json, destructive-guard.py) over tests/ and
+    # em-workflow/hooks/tests/ found the module below and the runner.
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged detects an edited, removed or reordered case-table entry (digest of the first 627 entries), and the runner and the module's stage-agreement and module-contract tests detect a changed verdict or module shape; no red state occurred for this change (the case table is not edited and no verdict changes: git diff shows no change to em-workflow/hooks/tests/destructive-guard-cases.json)."
