@@ -527,6 +527,15 @@ class _TrackingLexer(shlex.shlex):
 #              closing `)` the word continues, so a `#` right after it is no
 #              comment.
 #
+# destructive-guard-heredoc-syntax-error adds one more reading:
+#
+#   P13        a `<<` written directly inside an array compound assignment
+#              (`x=( <<EOF`) is a syntax error in bash, which drops that
+#              physical line and runs the next one. It is no operator here,
+#              and the line it is on takes no body (_lex_pass(), "Discarded
+#              line"); the lines after it are command lines. Grammar state:
+#              _LexFrame.asg, .decl, .arr_end and the frame kind `array`.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -567,6 +576,21 @@ LEX_SUBSTITUTION_KINDS = frozenset(
 LEX_QUOTE_KINDS = frozenset(
     {"single-quote", "double-quote", "ansi-c-quote", "locale-quote"}
 )
+# The two region kinds of a discarded line (destructive-guard-heredoc-syntax-
+# error): a direct-position `<<` in an array compound assignment makes bash
+# drop the rest of that physical line and read the next one as a fresh command
+# line (see _lex_pass(), "Discarded line"). What the map keeps of the dropped
+# line is read as ordinary commands, except what shlex would read across the
+# line end, which is hidden from it as the two kinds below say; both are in
+# LEX_MASKED_KINDS and cover nothing but the hidden characters:
+#   discarded-quote         the opening quote character (`"`, `'`, or `$"`) of
+#                           a quote still open at the line end -- the quote is
+#                           no region any more, and the text after the opener
+#                           stays command text;
+#   discarded-continuation  a backslash that ends the line, which is no line
+#                           continuation for shlex either.
+LEX_DISCARDED_QUOTE = "discarded-quote"
+LEX_DISCARDED_CONTINUATION = "discarded-continuation"
 # Regions that are inert for statement-separator counting at the top level.
 LEX_OPAQUE_KINDS = LEX_QUOTE_KINDS | LEX_SUBSTITUTION_KINDS | frozenset(
     {
@@ -586,6 +610,8 @@ LEX_MASKED_KINDS = frozenset(
         "arithmetic-expansion",
         "bracket-arithmetic",
         "arithmetic-command",
+        LEX_DISCARDED_QUOTE,
+        LEX_DISCARDED_CONTINUATION,
     }
 )
 
@@ -596,12 +622,16 @@ class LexMap:
     - REGIONS: LexRegion(kind, start, end, parent, closed) in order of start;
       END is exclusive, PARENT the index of the immediately enclosing region
       (None at the top level), CLOSED False for a quote or substitution that
-      runs to the end of the text unterminated.
+      runs to the end of the text unterminated -- or to the end of a
+      discarded line (P13), where an open quote is only a `discarded-quote`
+      region over its opening character, and a backslash that ends the line a
+      `discarded-continuation` region (both hidden from shlex).
     - HEREDOCS: LexHeredoc for every real here-document operator in text
       order: START/END span the `<<` / `<<-` through its delimiter word;
       BODY_START/BODY_END the body lines and CLOSE_END the end of the
-      delimiter line (all None when the delimiter line never appears, or the
-      map was made without body skipping).
+      delimiter line (all None when the delimiter line never appears, when
+      the operator sits on a discarded line (P13), or when the map was made
+      without body skipping).
     - CANDIDATES: LexCandidate(quote, start, end, enclosing) -- P8: the
       substitutions the broad search reads inside the single-quote or
       ansi-c-quote region with index QUOTE; ENCLOSING is the index of the
@@ -643,11 +673,21 @@ class _LexFrame:
     case-construct stack), COND (a `[[` opened at a command position awaits
     its `]]`) and the little markers `time -p`, KW (the keyword the previous
     word was: `for`, `select` or `coproc`), function-name and function-head
-    tracking."""
+    tracking. ASG (every word since the command position was an assignment
+    word, so the next one is still in assignment position), DECL (the command
+    word was a declaration builtin, so its words are in declaration-argument
+    position) and ARR_END (the offset of the `(` that would open an array
+    compound assignment: the end of the `NAME=` / `NAME+=` word just read in
+    one of those positions) are the grammar state that tells an array
+    compound assignment's `(` from every other parenthesis. The kind `array`
+    is the array context (shell rules, but its words are elements, never
+    commands): it opens at that `(` and closes at its matching `)`; a
+    parenthesis inside it nests as `array` too."""
 
     __slots__ = (
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
-        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond",
+        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "asg", "decl",
+        "arr_end",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -665,6 +705,9 @@ class _LexFrame:
         self.fn_p = False
         self.rw = False
         self.cond = False
+        self.asg = False
+        self.decl = False
+        self.arr_end = -1
 
 
 class _LexLines:
@@ -711,7 +754,15 @@ _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
 _LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
 _LEX_WORD_END = frozenset(" \t\r\n;|&()<>")
-_LEX_SHELL_KINDS = frozenset({"top", "cmdsub", "group", "procsub", "backtick"})
+_LEX_SHELL_KINDS = frozenset(
+    {"top", "cmdsub", "group", "procsub", "backtick", "array"}
+)
+# The start of an assignment word (`NAME=`, `NAME+=`, `NAME[sub]=`); a word
+# that is nothing more is the one a compound-assignment parenthesis follows.
+_LEX_ASSIGN_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=")
+_LEX_DECLARATION_BUILTINS = frozenset(
+    {"declare", "typeset", "local", "export", "readonly"}
+)
 # Case-construct states while a pattern is being read: PATTERN_FIRST right
 # after `in`, PATTERN_NEXT right after a `;;` (where a bare `esac` always ends
 # the construct, so `$(case x in x) :;; esac)` closes at its last `)`), and
@@ -796,7 +847,26 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
     is not above its own -- and the newline just read was no backslash-newline
     line continuation; otherwise the operator stays pending and the next line
     start becomes the trigger. A region that encloses the operator was open
-    when it registered and so never defers it."""
+    when it registered and so never defers it.
+
+    Discarded line (P13). A `<<` / `<<-` whose innermost open context is an
+    array compound assignment (kind `array`: the `(` of `NAME=(` / `NAME+=(`
+    at an assignment position, or of the same word as an argument of
+    `declare` / `typeset` / `local` / `export` / `readonly`) is a syntax
+    error in bash. Bash drops the rest of that physical line and reads the
+    next line as a fresh command line, so the `<<` is no operator and the
+    line it is on -- through the first newline after it, whatever a quote,
+    substitution, comment or backslash-newline opened on it would do -- is
+    DISCARDED (DISCARD_END is that newline's offset): no operator on it takes
+    a body (the ones registered before the `<<` stay in the map without one --
+    the pending record is emptied, never re-read -- and the later ones are not
+    registered at all), and at the newline every open context is cleared by
+    end_discard() -- a quote or substitution still open there ends at the
+    newline with CLOSED False, an open expansion that has no such end is
+    settled as not opened like an unterminated one at the end of the text --
+    and the next line is read at the top level, command position. A `<<` in a
+    context nested in the array (a substitution, a quote) is not at that
+    position and is read as before."""
     n = len(text)
     tail_start = min(settled) if settled else None
     regions = []  # [kind, start, end, parent, closed, nearest substitution ancestor]
@@ -813,6 +883,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
     rseq = []
     seq = 0
     limit = n
+    discard_end = None
+    discard_unclosed = []
 
     def new_region(kind, start, f):
         parent = f.reg
@@ -843,9 +915,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 text, f.start + 2, end - 1, f.region, regions[f.region][5], candidates
             )
 
-    def word_transition(f, w, end):
+    def word_transition(f, w, end, first=None):
         """F's grammar state advances over one word: W is its text when it
-        is a plain, complete word, else None; END the offset after it.
+        is a plain, complete word, else None; END the offset after it; FIRST
+        the plain run the word starts with (None for a word that starts with
+        a quote, an expansion or an escape).
 
         P10 (FR3). RW says the word comes directly after a closer (or after
         the NAME of a `for` / `select`): a reserved word of
@@ -856,7 +930,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         and set RW for the word after them; the word after `coproc` is the
         coprocess NAME unless it begins a compound command, and the position
         after the NAME -- like the one after `function NAME` -- is a command
-        position."""
+        position.
+
+        P13. A word at a command position or after assignment words only
+        (ASG) is in assignment position; one after a declaration builtin
+        (DECL) is in declaration-argument position. A `NAME=` / `NAME+=` word
+        in either position that a `(` follows directly sets ARR_END to its
+        end: that `(` opens an array compound assignment."""
         time_p = f.time_p
         kw = f.kw
         rw = f.rw
@@ -868,6 +948,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         top = cs[-1] if cs else None
         if rw and not f.cmd and w in _LEX_AFTER_CLOSER_WORDS:
             f.cmd = True
+        assign_pos = f.cmd or f.asg
+        decl_pos = f.decl and not f.cmd
+        if f.cmd:
+            f.asg = False
+            f.decl = False
         if f.cond and w == "]]":
             f.cond = False
             f.cmd = False
@@ -934,6 +1019,19 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 f.prev_plain = True
         else:
             f.cmd = False
+        array_word = False
+        if assign_pos:
+            if first is not None and _LEX_ASSIGN_WORD.match(first):
+                f.asg = True
+                f.decl = False
+                array_word = w is not None and _LEX_ASSIGN_WORD.fullmatch(w)
+            else:
+                f.asg = False
+                f.decl = w in _LEX_DECLARATION_BUILTINS
+        elif decl_pos:
+            array_word = w is not None and _LEX_ASSIGN_WORD.fullmatch(w)
+        if array_word and end < n and text[end] == "(":
+            f.arr_end = end
 
     def start_word(f, i):
         if not f.in_word:
@@ -996,10 +1094,97 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         hd_pending.append(op)
         hd_seqs.append(seq)
 
+    def begin_discard(i):
+        """The `<<` at I is at direct position in an array: the line it is on
+        becomes the discarded line. No scan reads past its newline (LIMIT).
+        The operators still pending -- the line's own before the `<<`, and
+        any an earlier line left waiting -- are dropped without a body, now:
+        the pending record is emptied, nothing is re-read, and no line start
+        before the newline can hand out a body."""
+        nonlocal discard_end, hd_trigger, limit
+        newline = text.find("\n", i)
+        discard_end = n if newline == -1 else newline
+        del hd_pending[:]
+        del hd_seqs[:]
+        hd_trigger = None
+        limit = discard_end
+
+    def end_discard():
+        """The discarded line ends (at DISCARD_END): every open context is
+        cleared and the next line is read at the top level, command position.
+        The openers of the expansions that cannot end at the newline are
+        collected in DISCARD_UNCLOSED: the pass goes on, and at its end they
+        are settled together with the rest, so many discarded lines cost no
+        more passes than one."""
+        nonlocal discard_end, limit
+        end = discard_end
+        if text[end - 1] == "\\" and not (
+            regions and regions[-1][0] == "comment" and regions[-1][2] == end
+        ):
+            # A backslash ends the line (inside a quote it consumed the
+            # newline, in a word it never began a continuation): the view
+            # must not read it as an escape of the newline.
+            idx = new_region(LEX_DISCARDED_CONTINUATION, end - 1, stack[-1])
+            regions[idx][2] = end
+        cut_quotes = []
+        for f in stack[1:]:
+            if f.kind in ("param", "arith", "bracket", "ansi"):
+                discard_unclosed.append(f.start)
+            if f.region is None:
+                continue
+            region = regions[f.region]
+            region[2] = end
+            region[4] = False
+            if f.kind == "sq":
+                _lex_quote_candidates(text, f.start + 1, end, f.region, region[5], candidates)
+            if f.kind in ("sq", "dq", "locale"):
+                cut_quotes.append(f.region)
+        if cut_quotes:
+            # A quote still open at the newline is no quote: its region
+            # shrinks to the opening character (hidden from shlex) and what
+            # it held belongs to the region around it, so the text after the
+            # opener is read as the commands it is. The stack is ordered, so
+            # one pass over the regions after the first quote does it.
+            hoist = {}
+            for q in cut_quotes:
+                parent = regions[q][3]
+                hoist[q] = hoist.get(parent, parent)
+            for k in range(cut_quotes[0] + 1, len(regions)):
+                parent = regions[k][3]
+                if parent in hoist:
+                    regions[k][3] = hoist[parent]
+            for q in cut_quotes:
+                region = regions[q]
+                region[0] = LEX_DISCARDED_QUOTE
+                region[2] = region[1] + (2 if text.startswith('$"', region[1]) else 1)
+        del stack[1:]
+        del rseq[:]
+        base = stack[0]
+        base.cmd = True
+        base.cs = []
+        base.in_word = False
+        base.prev_plain = base.time_p = False
+        base.kw = ""
+        base.fn_p = False
+        base.rw = False
+        base.cond = False
+        base.asg = base.decl = False
+        base.arr_end = -1
+        limit = n
+        discard_end = None
+
     while i < n:
         iterations += 1
         if iterations > budget:
             raise LexBudgetExceeded()
+        if discard_end is not None and i >= discard_end:
+            # The newline that ends the discarded line (a backslash or a quote
+            # may have consumed it already): everything open is cleared and
+            # the next line starts at the top level.
+            newline = discard_end
+            end_discard()
+            i = max(i, newline + 1)
+            continue
         if hd_trigger is not None and i >= hd_trigger:
             # A line start with here-document operators pending (P11). The
             # operators whose registration-time regions are all that is
@@ -1050,7 +1235,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 f.in_word = False
                 continue
             if c == "\n":
-                f.cmd = True
+                f.cmd = kind != "array"
                 f.in_word = False
                 f.prev_plain = f.time_p = False
                 f.kw = ""
@@ -1058,6 +1243,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 continue
             if c == "\\":
                 if text.startswith("\n", i + 1):
+                    if i + 1 == discard_end:
+                        # The discarded line's own newline: no continuation;
+                        # the line ends here (see the end of the line below).
+                        i += 1
+                        continue
                     # A line continuation: it never starts a here-document body (P11).
                     i += 2
                     cont_at = i
@@ -1083,7 +1273,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 cs = f.cs
                 if step > 1 and cs and cs[-1] == "body":
                     cs[-1] = "pattern_next"
-                f.cmd = True
+                f.cmd = kind != "array"
                 f.in_word = False
                 f.prev_plain = f.time_p = False
                 f.kw = ""
@@ -1101,7 +1291,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     i += 2
                 else:
                     i += 1
-                f.cmd = True
+                f.cmd = kind != "array"
                 f.prev_plain = f.time_p = False
                 f.kw = ""
                 continue
@@ -1109,6 +1299,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 top_cs = f.cs[-1] if f.cs else None
                 f.in_word = False
                 if top_cs == "pattern_first" or top_cs == "pattern_next":
+                    i += 1
+                    continue
+                if kind == "array":
+                    # A parenthesis inside an array compound assignment is a
+                    # syntax error in bash as well, and the `<<` it holds
+                    # keeps the position of the array (P13).
+                    stack.append(_LexFrame("array", i, None, f.reg))
                     i += 1
                     continue
                 if f.prev_plain:
@@ -1119,6 +1316,14 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         f.prev_plain = f.time_p = False
                         f.kw = ""
                         continue
+                if f.arr_end == i:
+                    # The `(` right after a `NAME=` / `NAME+=` word at an
+                    # assignment or declaration-argument position (P13).
+                    f.kw = ""
+                    f.prev_plain = f.time_p = False
+                    stack.append(_LexFrame("array", i, None, f.reg))
+                    i += 1
+                    continue
                 if (
                     (f.cmd or f.kw == "for")
                     and text.startswith("((", i)
@@ -1157,6 +1362,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     parent.cmd = False
                     parent.in_word = False
                     parent.rw = True
+                elif kind == "array":
+                    # The array compound assignment ends; its word is whole,
+                    # and the assignment position it was read in stays.
+                    stack.pop()
+                    stack[-1].in_word = False
                 elif kind == "cmdsub":
                     close(f, i + 1)
                 elif kind == "procsub":
@@ -1177,6 +1387,17 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         i += 3
                         continue
                     if text.startswith("<<", i):
+                        if discard_end is not None:
+                            # On the discarded line: no operator (P13).
+                            i += 2
+                            continue
+                        if kind == "array" and (tail_start is None or i < tail_start):
+                            # Direct position in an array compound assignment:
+                            # a syntax error, no operator; this line is the
+                            # discarded line (P13).
+                            begin_discard(i)
+                            i += 2
+                            continue
                         m = HEREDOC_OP.match(text, i)
                         if m is not None and (tail_start is None or i < tail_start):
                             register_operator(i, m)
@@ -1231,7 +1452,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 i = end
                 continue
             complete = end >= n or text[end] in _LEX_WORD_END
-            word_transition(f, text[i:end] if complete else None, end)
+            word_transition(f, text[i:end] if complete else None, end, text[i:end])
             f.in_word = True
             i = end
             continue
@@ -1389,7 +1610,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             push(f, "backtick", "backtick-substitution", j, cmd=True)
             i = j + 1
 
-    unclosed = [f.start for f in stack[1:] if f.kind in ("param", "arith", "bracket", "ansi")]
+    if discard_end is not None:
+        # The text ends inside the discarded line.
+        end_discard()
+    unclosed = discard_unclosed + [
+        f.start for f in stack[1:] if f.kind in ("param", "arith", "bracket", "ansi")
+    ]
     if unclosed:
         return ("restart", unclosed, [], iterations)
     for f in stack[1:]:
@@ -1405,7 +1631,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
 
 def lex_shell(text, mode="shell", bodies=True):
     """The unified lexer (FR1-FR9, and FR3 / FR6 / FR8 as reworked by P10-P12;
-    IMPLEMENTATION.md "Unified lexer contract", P1-P12): ONE forward reading
+    IMPLEMENTATION.md "Unified lexer contract", P1-P13): ONE forward reading
     of TEXT that decides every quote, comment, expansion and substitution
     range, every real here-document operator, and the single-quote
     substitution candidates. Returns a LexMap.
