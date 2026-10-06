@@ -736,5 +736,9 @@
   ["deny", "heredoc-syntax-error T2 E-14 extglob の括弧のある配列の後ろの <<'EOF' は、extglob を使えない読みでは演算子にならず、続く git reset --hard は deny", "x=(@(a|b) c); cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["allow", "heredoc-syntax-error T2 E-15 引用符つきの引数の eval と let と alias は配列を開かず、後ろのヒアドキュメントは従来どおり本文を取り allow", "eval \"x=(\"; let \"y=(\"; alias z='w=('; cat <<'EOF'\ngit reset --hard HEAD\nEOF"],
   ["allow", "heredoc-syntax-error T2 E-16 builtin を前置した declare は範囲外の形で、現在の判定は allow", "builtin declare x=( <<EOF\ngit reset --hard HEAD\nEOF"],
-  ["allow", "heredoc-syntax-error T2 E-17 command を前置した declare は範囲外の形で、現在の判定は allow", "command declare x=( <<EOF\ngit reset --hard HEAD\nEOF"]
+  ["allow", "heredoc-syntax-error T2 E-17 command を前置した declare は範囲外の形で、現在の判定は allow", "command declare x=( <<EOF\ngit reset --hard HEAD\nEOF"],
+  ["ask", "f34ee27bc8c323b1 外側と内側の eval が同じ接頭辞 x=(@ を持ち、間で extglob を切り替えても、別の解析単位として数えて ask", "eval 'x=(@(a))\nshopt -s extglob\neval \"x=(@(b))\"'"],
+  ["ask", "f34ee27bc8c323b1 内側の eval の接頭辞が外側と違う y=(@ のときも、同じく ask", "eval 'x=(@(a))\nshopt -s extglob\neval \"y=(@(b))\"'"],
+  ["ask", "f34ee27bc8c323b1 同じ接頭辞 x=(@ を持つ兄弟の eval の間で extglob を切り替えても、別の解析単位として数えて ask", "eval 'x=(@(a))'; shopt -s extglob; eval 'x=(@(b))'"],
+  ["ask", "f34ee27bc8c323b1 外側と内側の bash -c が同じ接頭辞 x=(@ を持ち、間で extglob を切り替えても、別の解析単位として数えて ask", "bash -c 'x=(@(a))\nshopt -s extglob\nbash -c \"x=(@(b))\"'"]
 ]

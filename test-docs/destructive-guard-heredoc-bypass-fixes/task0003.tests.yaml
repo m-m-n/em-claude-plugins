@@ -1,0 +1,76 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests: Ran 8434 tests, OK (skipped=1); run-destructive-guard.py: 718/718 passed
+final_failures: []             # re-executed after the implementation: unittest discover Ran 8434 tests OK (skipped=1); run-destructive-guard.py 722/722 passed
+acceptance_tests:
+  AC-1:
+    tests:
+      - "run-destructive-guard.py::f34ee27bc8c323b1 外側と内側の eval が同じ接頭辞 x=(@ を持ち、間で extglob を切り替えても、別の解析単位として数えて ask"
+      - "run-destructive-guard.py::f34ee27bc8c323b1 同じ接頭辞 x=(@ を持つ兄弟の eval の間で extglob を切り替えても、別の解析単位として数えて ask"
+      - "run-destructive-guard.py::f34ee27bc8c323b1 外側と内側の bash -c が同じ接頭辞 x=(@ を持ち、間で extglob を切り替えても、別の解析単位として数えて ask"
+    red_confirmed: true
+    red_reason: >-
+      With the entries appended and the hook unchanged, run-destructive-guard.py
+      reported 719/722 passed and FAIL for the outer/inner eval entry (and for
+      the sibling-eval and bash -c variants): "got=allow [destructive-guard]
+      破壊的なパターンに一致しない。" while the expected verdict is ask.
+  AC-2:
+    tests:
+      - "run-destructive-guard.py::f34ee27bc8c323b1 内側の eval の接頭辞が外側と違う y=(@ のときも、同じく ask"
+    red_confirmed: false
+    red_reason: >-
+      The entry passed before any implementation (the hook already returned ask
+      because the differing prefixes gave two distinct units). It is the guard
+      against an identity that depends on the prefix text, as the task plan's
+      Test Notes say; no red state exists for it.
+  AC-3:
+    tests:
+      - "run-destructive-guard.py::heredoc-syntax-error T2 AC-4.7 配列の中の @(foo|bar) の後のヒアドキュメントは、どちらの読みでも破壊的なコマンドを含まず allow"
+      - "run-destructive-guard.py::every pre-existing case-table entry (717 entries, deny 413 / ask 120 unchanged)"
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing case-table
+      runner (run-destructive-guard.py over destructive-guard-cases.json)
+      detects any pre-existing entry whose verdict changes, T2 AC-4.7 included;
+      no red state occurred for this change (every pre-existing entry stayed
+      green before and after). The 717 pre-existing entries were also compared
+      against HEAD: identical, in order, with the deny count 413 and the ask
+      count 120 not lower (ask is now 124 with the four new entries).
+  AC-4:
+    tests:
+      - test_destructive_guard_lexer_agreement.TestUnclosedOpeners
+      - test_destructive_guard_lexer_agreement.TestReworkLinearity
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing linearity tests
+      in tests/test_destructive_guard_lexer_agreement.py detect a super-linear
+      lexer or a changed work bound; they are unchanged and pass, and no red
+      state occurred for this change. The unit identity is the pair (chunk
+      origin position, line offset) that statements() already holds when it
+      lexes the chunk, recorded once per chunk from the lexing it performs
+      anyway (no second pass over the input, one set entry per line holding
+      an extended-glob parenthesis).
+  AC-5:
+    tests:
+      - test_destructive_guard_lexer_agreement.TestStageAgreement
+      - test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestStageAgreement and TestStageAgreementUnderExtglobOn read every
+      case-table command, so they cover the four new entries (all four contain
+      an extended-pattern parenthesis and enter the extglob-on class); the file
+      is unmodified. They were first run with the new entries after the
+      implementation was in place, so no red state occurred for this change.
+  AC-6:
+    tests:
+      - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      - "python3 -m unittest discover -s tests"
+    red_confirmed: true
+    red_reason: >-
+      With the AC-1 entries appended and the hook unchanged, run-destructive-
+      guard.py failed (719/722 passed, FAIL lines for the AC-1 entry and its
+      variants), so the runner half of this criterion was observed red. The
+      unittest discover half was only run after the implementation (no red
+      observed for it), and the no-new-import part is checked by the existing
+      TestModuleContract (test_hook_and_test_import_only_the_standard_library),
+      which passed in that run.
