@@ -1,13 +1,13 @@
 task_id: task0002
-baseline_failures: []          # python3 -m unittest discover -s tests at the task base: Ran 8422 tests, OK (skipped=1)
-final_failures: []             # re-run after the implementation: Ran 8447 tests, OK (skipped=1); run-destructive-guard.py 652/652
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: Ran 8422 tests, OK (skipped=1); refreshed after the parent-side adoption (task0001 and task0003 merged in): the only failing tests were this task's own new ones (TestArraySubscripts, FR3 cases), none inherited
+final_failures: []             # re-run after the re-implementation on the updated parent: Ran 8476 tests, OK (skipped=1); run-destructive-guard.py 675/675
 acceptance_tests:
   AC-1:
     tests:
       - "em-workflow/hooks/tests/run-destructive-guard.py: case '9381769d7116fab2 round2-residuals FR3.1 ...' (a[1<<2]=x + TAIL)"
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_cases_are_appended_after_the_earlier_entries_and_all_deny
     red_confirmed: true
-    red_reason: "After the case-table commit (3231daf2) and before any change to destructive-guard.py, run-destructive-guard.py printed 'FAIL deny 9381769d7116fab2 round2-residuals FR3.1 ... got=allow' (628/652 passed, the 24 appended deny cases failing). The history order (case commit, then test commit, then hook commit) is what git log of the task branch shows; the unit test that pins the label / index placement was written after the cases and passed from the start."
+    red_reason: "After the case-table commit (3231daf2) and before any change to destructive-guard.py, run-destructive-guard.py printed 'FAIL deny 9381769d7116fab2 round2-residuals FR3.1 ... got=allow' (628/652 passed, the 24 appended deny cases failing). The history order on the task branch is: case commit, test commit, hook commit; after the merge conflict the parent's version was adopted and the case block was re-appended in its own commit (664919e0) before the commit that re-applies the hook change. The unit test that pins the label / index placement was written after the cases and passed from the start."
   AC-2:
     tests:
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_subscript_of_an_assignment_word_is_one_region_and_no_operator
@@ -20,12 +20,12 @@ acceptance_tests:
     red_reason: "Before the implementation test_subscript_of_an_assignment_word_is_one_region_and_no_operator failed with 'AssertionError: Lists differ: [LexHeredoc(start=3, end=6, delimiter='2', ...)] != []': lex_shell() registered the << of a[1<<2]=x as a here-document operator and reported no array-subscript region."
   AC-3:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: cases '9381769d7116fab2 round2-residuals FR3.1' to 'FR3.24'"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: cases '9381769d7116fab2 round2-residuals FR3.1' to 'FR3.38'"
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_each_appended_case_is_read_without_an_operator_and_denied_in_both_modes
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_each_subscript_form_denies_the_destructive_tail_in_both_modes
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_declaration_builtin_arguments_keep_the_operator
     red_confirmed: true
-    red_reason: "run-destructive-guard.py failed all 24 appended deny cases with 'got=allow' before the implementation; test_each_appended_case_is_read_without_an_operator_and_denied_in_both_modes failed for every FR3.n label. The bash 5.3.9 outcome of every edge form (echo substituted for rm) is in the task report; the declaration-builtin forms are the ones bash does not execute past, so they are pinned by test_declaration_builtin_arguments_keep_the_operator and are not deny cases."
+    red_reason: "run-destructive-guard.py failed all 24 appended deny cases with 'got=allow' before the implementation. After task0003 (whole-word delimiter) was merged in, 23 of the 24 stopped failing at the verdict level, because their final line 2 no longer closes a delimiter such as 2]=x; 14 cases (FR3.25 to FR3.38) were therefore added whose last line is the delimiter the lexer reads, and the runner failed those plus FR3.18 (15 FAIL, 660/675) before the hook change was re-applied. test_each_appended_case_is_read_without_an_operator_and_denied_in_both_modes failed for every FR3.n label (the lexer reported a here-document operator). The bash 5.3.9 outcome of every edge form (echo substituted for rm) is in the task report; the declaration-builtin forms are the ones bash does not execute past, so they are pinned by test_declaration_builtin_arguments_keep_the_operator and are not deny cases."
   AC-4:
     tests:
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_existing_context_form_cat_a1_heredoc_is_unchanged
@@ -52,8 +52,8 @@ acceptance_tests:
     red_reason: "The work bound already held before the change (the old lexer read no subscript and was linear), so test_lexing_work_is_linear_for_closed_and_unclosed_subscripts passed from the start and no red state occurred for the bound itself (test_many_unclosed_subscripts_settle_in_a_bounded_number_of_readings failed before only on tail_start, which is AC-5's settle). The three tests guard against one re-read per subscript opener; sensitivity was checked by mutation: keeping subscript recognition after the tail start made them error with LexBudgetExceeded."
   AC-7:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (652/652)"
-      - "tests.test_destructive_guard_lexer_agreement (103 tests, including TestStageAgreement and TestModuleContract)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py (675/675)"
+      - "tests.test_destructive_guard_lexer_agreement (132 tests, including TestStageAgreement and TestModuleContract)"
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_cases_are_appended_after_the_earlier_entries_and_all_deny
     red_confirmed: false
-    red_reason: "A regression guard: the existing case table and the existing agreement tests are the check and they stayed green; no red state occurred. The only textual change to a pre-existing entry is the comma JSON needs after the former last entry (P12.4); its content is unchanged. The task's cases sit at indexes 627 to 650, found by label and command text."
+    red_reason: "A regression guard: the existing case table and the existing agreement tests are the check and they stayed green; no red state occurred. The only textual change to a pre-existing entry is the comma JSON needs after the former last entry (P12.4); its content is unchanged. The task's cases sit at indexes 636 to 673 (after the parent's blocks of task0001 and task0003), found by label and command text, not by absolute index."
