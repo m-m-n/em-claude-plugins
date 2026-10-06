@@ -519,41 +519,30 @@ class _TrackingLexer(shlex.shlex):
 #              closing `)` the word continues, so a `#` right after it is no
 #              comment.
 #
-# Round 2 residuals (destructive-guard-lexer-round2-residuals, task0002,
-# FR3; review finding 9381769d7116fab2, first half).
-#
-#   Array subscript (FR3)  where bash 5.3 accepts an assignment -- a command
-#              position, the position directly after a leading assignment
-#              word, and after redirections that stand before the first word
-#              -- a word that so far is an identifier followed by `[` reads
-#              through the matching `]` as an `array-subscript` region (read
-#              like `$[`: quotes, `$` expansions, backticks and backslash
-#              escapes nest; nothing inside opens a `<<` operator, a comment
-#              or a command position), and the word goes on after the `]`.
-#              Everywhere else -- an argument, the arguments of `declare` /
-#              `local` / `export` / `readonly` / `typeset`, a position after a
-#              redirection that follows a word -- bash registers the `<<`, so
-#              the reading stays as it was. A subscript whose `]` is not on
-#              its own line, or that never closes, is settled as not opened
-#              (P4): its `[` is literal and no `<<` operator or comment is
-#              read from there on, which keeps the following lines inspected.
-#              No subscript is read from the tail start on, so settling one
-#              never costs a pass for the later `name[`. The assignment
-#              position is tracked in _LexFrame.asg / .rd, apart from the
-#              command / after-closer state (which it never changes).
-#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
-# such opener settled as "not opened"; likewise a `((` / `$((` whose first
-# close is not an adjacent `))` is read again as two parentheses. Every
-# opener settled this way is remembered, so a pass never rescans because of an
-# opener it has already settled, and all unclosed openers found by one pass
-# are settled together -- `${` repeated twenty thousand times costs two passes,
-# not twenty thousand. The total number of loop iterations over all passes is
-# counted; past LEX_WORK_FACTOR times the text length (plus a floor) the
-# lexer raises LexBudgetExceeded and the hook issues its scan-budget "ask"
-# decision, never an "allow".
+# such opener settled as "not opened". Every opener settled this way is
+# remembered, so a pass never rescans because of an opener it has already
+# settled, and all unclosed openers found by one pass are settled together --
+# `${` repeated twenty thousand times costs two passes, not twenty thousand.
+#
+# A `((` / `$((` whose first close is not an adjacent `))` is read as two
+# parentheses (review round 2, finding 29bbf9032dd762a0), and that is found out
+# only at its close. The pass does not start over for it: nothing before the
+# opener, and no frame below it, changes while it is open, so the pass notes
+# the few counters and offsets it holds when it pushes the opener, takes them
+# back at the close and resumes at the opener, now read as two parentheses.
+# That is the very reading a whole-text restart with the opener added gives,
+# for the cost of the opener's span alone (read as arithmetic, then as two
+# parentheses): any number of openers one after another, or inside one span,
+# cost a constant number of reads of their spans. Only a chain of openers each
+# nested in the next, every one closing without an adjacent `))`, reads the
+# inner spans once more per level of the chain. The total number of loop
+# iterations over all passes and re-reads is counted; past
+# LEX_WORK_FACTOR times the text length (plus a floor) the lexer raises
+# LexBudgetExceeded and the hook issues its scan-budget "ask" decision, never
+# an "allow".
 
 LEX_WORK_FACTOR = 8
 _LEX_WORK_FLOOR = 1024
@@ -590,7 +579,6 @@ LEX_OPAQUE_KINDS = LEX_QUOTE_KINDS | LEX_SUBSTITUTION_KINDS | frozenset(
         "arithmetic-expansion",
         "bracket-arithmetic",
         "arithmetic-command",
-        "array-subscript",
     }
 )
 # Regions whose content shlex would read differently from bash: the masked
@@ -602,7 +590,6 @@ LEX_MASKED_KINDS = frozenset(
         "arithmetic-expansion",
         "bracket-arithmetic",
         "arithmetic-command",
-        "array-subscript",
     }
 )
 
@@ -663,18 +650,11 @@ class _LexFrame:
     case-construct stack), COND (a `[[` opened at a command position awaits
     its `]]`) and the little markers `time -p`, KW (the keyword the previous
     word was: `for`, `select` or `coproc`), function-name and function-head
-    tracking. `subscript` is the frame of an array subscript (round 2
-    residuals, FR3): read like `bracket`, region kind `array-subscript`. ASG
-    and RD are the assignment-position tracking of a shell-rule frame, kept
-    apart from the grammar state above and consulted only to decide whether a
-    `name[` opens a subscript: ASG is 0, 1 when the next word follows a
-    leading assignment word, or 2 while only redirections have been read
-    since the command position; RD says the next word is the target of a
-    redirection read at the command position (2) or elsewhere (1)."""
+    tracking."""
 
     __slots__ = (
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
-        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "asg", "rd",
+        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "snap",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -692,8 +672,9 @@ class _LexFrame:
         self.fn_p = False
         self.rw = False
         self.cond = False
-        self.asg = 0
-        self.rd = 0
+        # An `arith` frame: what the pass held when the frame was pushed, to
+        # resume from there when its first close is not an adjacent `))`.
+        self.snap = None
 
 
 class _LexLines:
@@ -735,12 +716,6 @@ _LEX_DQ_SPECIAL = re.compile(r"[\\\"$`]")
 _LEX_PARAM_SPECIAL = re.compile(r"[\\'\"$`}]")
 _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
 _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
-# Array subscripts (FR3): a word that so far is an identifier and a `[`, a
-# word that is an assignment (`name=` / `name+=`), and the file-descriptor
-# prefix of a redirection (`2>`, `{fd}>`).
-_LEX_SUBSCRIPT_HEAD = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\[")
-_LEX_ASSIGNMENT_WORD = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\+?=")
-_LEX_FD_WORD = re.compile(r"[0-9]+|\{[A-Za-z_][A-Za-z_0-9]*\}")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
@@ -923,15 +898,22 @@ def _read_heredoc_delimiter(text, i):
     return q, "".join(parts), quoted
 
 
-def _lex_pass(text, mode, settled, reparen, lines, budget):
+def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
     """ONE left-to-right pass of lex_shell(). SETTLED are the openers earlier
     passes settled as not opened (P4) and REPAREN the `((` / `$((` openers
-    earlier passes found to close without an adjacent `))`, which are read as
-    two parentheses; LINES is the line index when here-document bodies are to
-    be skipped (None otherwise). Returns
+    found to close without an adjacent `))`, which are read as two
+    parentheses; LINES is the line index when here-document bodies are to be
+    skipped (None otherwise). Returns
     ("done", regions, ops, candidates, unopened, iterations) or
     ("restart", new_settled, new_reparen, iterations) when this pass learned
     of openers to settle; raises LexBudgetExceeded past BUDGET iterations.
+
+    An opener that closes without an adjacent `))` is added to REPAREN
+    (modified in place) and the pass resumes at it, read as two parentheses
+    (see "Work bound" above); it never ends the pass. WHOLE_RESTART turns
+    that off for the reference reading the agreement test compares with: the
+    pass then ends with ("restart", [], [opener], iterations) at the first
+    such close, and the caller reads the whole text again.
 
     The grammar state a shell-rule frame carries (CMD, RW, CS and the small
     markers on _LexFrame) is advanced one word at a time by word_transition():
@@ -976,8 +958,21 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
 
     def push(f, kind, region_kind, start, cmd=False, depth=0):
         nonlocal seq
+        snap = None
+        if kind == "arith":
+            # What resuming from this opener restores. The frames below it
+            # are not touched while it is open, and every operator pending
+            # now stays pending (a region opened after it is open), so the
+            # lengths of the growing lists and the here-document scalars are
+            # all there is to take back.
+            snap = (
+                len(regions), len(candidates), len(encountered), len(ops),
+                len(hd_pending), hd_trigger, limit, cont_at, seq,
+            )
         idx = new_region(region_kind, start, f)
-        stack.append(_LexFrame(kind, start, idx, idx, cmd, depth))
+        frame = _LexFrame(kind, start, idx, idx, cmd, depth)
+        frame.snap = snap
+        stack.append(frame)
         seq += 1
         rseq.append(seq)
 
@@ -1097,18 +1092,6 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         if not f.in_word:
             word_transition(f, None, i)
             f.in_word = True
-            # A word that begins with a quote, an expansion or an escape is no
-            # assignment word; as a redirection target it keeps a leading
-            # redirection list going (FR3).
-            f.asg = 2 if f.rd == 2 else 0
-            f.rd = 0
-
-    def mark_redirect(f):
-        """A redirection operator was read: the next word is its target. A
-        redirection read at the command position, or among redirections
-        only, keeps the assignment position for the word after the target;
-        one that follows a word or an assignment word does not (bash 5.3)."""
-        f.rd = 2 if (f.cmd or f.asg == 2) else 1
 
     def dollar(i, f, in_quotes, body_literal):
         """The `$` at I: open the expansion it starts, or consume the special
@@ -1263,7 +1246,6 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             if c == "&" or c == "|":
                 f.in_word = False
                 if c == "&" and text.startswith("&>", i):
-                    mark_redirect(f)
                     i += 3 if text.startswith("&>>", i) else 2
                     continue
                 if c == "|" and f.cs and f.cs[-1] in _LEX_CASE_PATTERN_STATES:
@@ -1346,7 +1328,6 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     if text.startswith("<<<", i):
                         idx = new_region("here-string-operator", i, f)
                         regions[idx][2] = i + 3
-                        mark_redirect(f)
                         i += 3
                         continue
                     if text.startswith("<<", i):
@@ -1355,12 +1336,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                             word = _read_heredoc_delimiter(text, i)
                         if word is not None:
                             register_operator(i, word)
-                            # The delimiter word is part of the operator: no
-                            # target word follows.
-                            f.asg = 2 if (f.cmd or f.asg == 2) else 0
                             i = word[0]
                         else:
-                            mark_redirect(f)
                             i += 2
                         continue
                     if text.startswith("<(", i) and (i == 0 or text[i - 1] not in "<>"):
@@ -1369,7 +1346,6 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         push(f, "procsub", "process-substitution", i, cmd=True)
                         i += 2
                         continue
-                    mark_redirect(f)
                     i += 2 if (text.startswith("<&", i) or text.startswith("<>", i)) else 1
                     continue
                 if text.startswith(">(", i) and (i == 0 or text[i - 1] not in "<>"):
@@ -1378,7 +1354,6 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     push(f, "procsub", "process-substitution", i, cmd=True)
                     i += 2
                     continue
-                mark_redirect(f)
                 i += 2 if (
                     text.startswith(">>", i) or text.startswith(">&", i) or text.startswith(">|", i)
                 ) else 1
@@ -1412,48 +1387,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 i = end
                 continue
             complete = end >= n or text[end] in _LEX_WORD_END
-            # Where bash accepts an assignment (FR3): at a command position,
-            # directly after a leading assignment word, and after
-            # redirections that stand before the first word. Read before the
-            # grammar state moves on; it changes nothing about that state.
-            accept = f.cmd or f.asg != 0
-            lead = f.cmd or f.asg == 2
             word_transition(f, text[i:end] if complete else None, end)
             f.in_word = True
-            redirect = f.rd
-            f.rd = 0
-            if redirect:
-                # The target of a redirection is no assignment word and holds
-                # no subscript.
-                f.asg = 2 if redirect == 2 else 0
-                accept = False
-            elif accept and _LEX_ASSIGNMENT_WORD.match(text, i, end):
-                f.asg = 1
-            elif (
-                lead
-                and end < n
-                and text[end] in "<>"
-                and _LEX_FD_WORD.fullmatch(text, i, end)
-            ):
-                # `2>file`, `{fd}>file`: the fd prefix belongs to the
-                # redirection that follows, not to the command.
-                f.asg = 2
-            else:
-                f.asg = 0
-            if accept:
-                m = _LEX_SUBSCRIPT_HEAD.match(text, i, end)
-                if m is not None:
-                    # `name[` at an assignment position: the subscript runs
-                    # to the matching `]` and no `<<` inside it is an operator
-                    # (a `[` settled as not opened, or after the tail start,
-                    # is literal text).
-                    bracket = m.end() - 1
-                    if bracket in settled:
-                        encountered.append(bracket)
-                    elif tail_start is None or bracket < tail_start:
-                        push(f, "subscript", "array-subscript", bracket, depth=1)
-                        i = bracket + 1
-                        continue
             i = end
             continue
 
@@ -1547,10 +1482,35 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         parent.in_word = False
                         parent.rw = True
                     i = j + 2
+                elif whole_restart:
+                    return ("restart", [], [f.start], iterations)
                 else:
                     # The first close is not an adjacent `))`: read the opener
-                    # as two parentheses (P4) in a new pass.
-                    return ("restart", [], [f.start], iterations)
+                    # as two parentheses (P4). Take back what the pass held
+                    # at the opener and resume there: nothing before the
+                    # opener, and nothing in the frames below it, has changed.
+                    reparen.add(f.start)
+                    (n_regions, n_candidates, n_encountered, n_ops, n_pending,
+                     hd_trigger, limit, cont_at, seq) = f.snap
+                    is_command = regions[f.region][0] == "arithmetic-command"
+                    del regions[n_regions:]
+                    del candidates[n_candidates:]
+                    del encountered[n_encountered:]
+                    del ops[n_ops:]
+                    del hd_pending[n_pending:]
+                    del hd_seqs[n_pending:]
+                    stack.pop()
+                    rseq.pop()
+                    parent = stack[-1]
+                    if is_command:
+                        # `((`: two nested groups.
+                        stack.append(_LexFrame("group", f.start, None, parent.reg, True))
+                        i = f.start + 1
+                    else:
+                        # `$((`: a command substitution whose body starts
+                        # with a group.
+                        push(parent, "cmdsub", "command-substitution", f.start, cmd=True)
+                        i = f.start + 2
             elif c == "'":
                 push(f, "sq", "single-quote", j)
                 i = j + 1
@@ -1564,7 +1524,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                 i = j + 1
             continue
 
-        if kind == "bracket" or kind == "subscript":
+        if kind == "bracket":
             m = _LEX_BRACKET_SPECIAL.search(text, i, limit)
             if m is None:
                 i = limit
@@ -1579,23 +1539,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             elif c == "]":
                 f.depth -= 1
                 if f.depth == 0:
-                    if kind == "subscript":
-                        if text.find("\n", f.start, j) != -1:
-                            # A subscript that is not closed on its own line
-                            # is handled as unclosed: bash reads it across
-                            # lines, but its extent is not relied on here
-                            # (NFR6). Every subscript still open lies around
-                            # this one, so the earliest of them settles all.
-                            first = min(g.start for g in stack if g.kind == "subscript")
-                            return ("restart", [first], [], iterations)
-                        close(f, j + 1)
-                        # The word goes on after the `]`; it is an assignment
-                        # word when `=` or `+=` follows.
-                        stack[-1].asg = (
-                            1 if text.startswith("=", j + 1) or text.startswith("+=", j + 1) else 0
-                        )
-                    else:
-                        close(f, j + 1)
+                    close(f, j + 1)
                 i = j + 1
             elif c == "'":
                 push(f, "sq", "single-quote", j)
@@ -1626,9 +1570,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             push(f, "backtick", "backtick-substitution", j, cmd=True)
             i = j + 1
 
-    unclosed = [
-        f.start for f in stack[1:] if f.kind in ("param", "arith", "bracket", "ansi", "subscript")
-    ]
+    unclosed = [f.start for f in stack[1:] if f.kind in ("param", "arith", "bracket", "ansi")]
     if unclosed:
         return ("restart", unclosed, [], iterations)
     for f in stack[1:]:
@@ -1665,9 +1607,8 @@ def lex_shell(text, mode="shell", bodies=True):
     text after them is lexed as it stands.
 
     TEXT is any string, including one with unbalanced quotes or unclosed
-    openers (P4: an opener among `${`, `$((`, `$[`, `((`, `$'` and the `[` of
-    an array subscript that never closes -- or does not close on its own line
-    -- is not a region, its characters are literal, and the text from the
+    openers (P4: an opener among `${`, `$((`, `$[`, `((` and `$'` that never
+    closes is not a region, its characters are literal, and the text from the
     earliest such opener on is read without any `<<` operator and without
     any comment). The same TEXT, MODE and BODIES always give the same map;
     nothing is read from disk and nothing is evaluated (P7). Raises
@@ -1693,6 +1634,9 @@ def lex_shell(text, mode="shell", bodies=True):
     rounds = 0
     while True:
         rounds += 1
+        # A pass ends early only to settle unclosed openers (RESULT[1]); the
+        # openers that close without an adjacent `))` are added to REPAREN by
+        # the pass itself, which resumes at each of them (RESULT[2] is empty).
         result = _lex_pass(text, mode, settled, reparen, lines, budget - used)
         if result[0] == "done":
             break
