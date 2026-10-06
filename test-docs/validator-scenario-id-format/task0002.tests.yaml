@@ -1,0 +1,33 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 8828 tests OK (skipped=1)
+final_failures: []             # re-executed after the SKILL.md edit: python3 -m unittest discover -s tests, 8828 tests OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only wording in em-workflow/skills/plan-writing/SKILL.md. The task plan's Test Notes assign AC-1 to AC-6 to review (VERIFICATION.md TS-8) and say no new test is written for the SKILL.md wording. Searched tests/ by the path em-workflow/skills/plan-writing/SKILL.md, by the basename SKILL.md and by the tokens TS-n / TSn / TS13 / TS-13: the existing tests that read this file (tests/test_threat_model_template.py, tests/test_failed_items_category.py and the plan-version tests) check the threat-model section placement, the template's Performance / Security part, the vocabulary terms and the version handling, and none reads a scenario ID rule; no existing test covers this criterion, so no executable red exists."
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only wording; same plan assignment to review (TS-8) and same search result as AC-1: no existing test reads a scenario ID rule in plan-writing/SKILL.md, so no executable red exists."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only wording; same plan assignment to review (TS-6, TS-8) and same search result as AC-1: no existing test covers the literal-string comparison statement in plan-writing/SKILL.md, so no executable red exists."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only wording (the rule names the TS-n and TSn forms and states they are the only two); same plan assignment to review (TS-8) and same search result as AC-1: no existing test covers it, so no executable red exists."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Structural property of the document (rule prose after the closing fence of the VERIFICATION.md template, template block untouched); the plan assigns it to review. Searched tests/ by path and basename: the existing tests that read the template section (tests/test_threat_model_template.py TestVerificationTemplateAndChecklist, tests/test_failed_items_category.py test_verification_format_template_has_no_restated_vocabulary) slice from the template heading to the Pre-Save heading, so prose inside or outside the fence is not distinguished; no existing test covers this criterion. Checked by reading git diff: 12 inserted lines, all after the closing fence."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "Change-set property, no executable check that can fail first. No existing test covers it (same search as AC-1). Checked by git diff --stat: one file changed (em-workflow/skills/plan-writing/SKILL.md), 12 insertions, 0 deletions."
+  AC-7:
+    tests:
+      - "python3 -m unittest discover -s tests"
+    red_confirmed: false
+    red_reason: "The full suite was already green at baseline (8828 tests OK, skipped=1), so the check could not be made to fail before the change; it is a regression guard. The existing tests that read plan-writing/SKILL.md (tests/test_threat_model_template.py, tests/test_failed_items_category.py, tests/test_plan_version_plan_writing.py) detect structural or vocabulary regressions in this file; no red state occurred for this change. Re-run after the edit: 8828 tests OK."
