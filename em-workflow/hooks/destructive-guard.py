@@ -196,7 +196,7 @@ def _heredoc_delimiter(raw):
 
 
 _HEREDOC_OP_HEAD = re.compile(r"<<-?(?!<)[ \t]*")
-_HEREDOC_PLAIN = re.compile(r"[^\s;|&()<>'\"\\`$]+")
+_HEREDOC_PLAIN = re.compile(r"[^ \t\n;|&()<>'\"\\`$]+")
 _HEREDOC_DQ_SPECIAL = re.compile(r"[\"\\]")
 
 
@@ -222,6 +222,9 @@ def _heredoc_operator(text, i):
         if plain is not None:
             out.append(plain.group())
             p = plain.end()
+            if plain.group()[-1] in "@!+*?" and text[p : p + 1] == "(":
+                # extglob `@(`, `!(`, ...: bash reads through the `)`.
+                return p, None, False
             continue
         c = text[p]
         if c == "\\":
@@ -259,14 +262,11 @@ def _heredoc_operator(text, i):
             quoted = True
             p = k.end()
         elif c == "`":
-            j = text.find("`", p + 1)
-            if j < 0:
-                return p, None, False
-            out.append(text[p : j + 1])
-            p = j + 1
+            # A backquoted span is read differently by bash: unreadable.
+            return p, None, False
         elif c == "$":
             nxt = text[p + 1 : p + 2]
-            if nxt in ("(", "{", "'"):
+            if nxt in ("(", "{", "'", "["):
                 return p, None, False
             if nxt == '"':
                 p += 1
@@ -277,6 +277,10 @@ def _heredoc_operator(text, i):
             break
     if p == start:
         return None
+    if "\n" in text[start:p]:
+        # A word spanning physical lines (backslash-newline, or a newline
+        # inside quotes) would put the body start mid-line: unreadable.
+        return p, None, False
     delimiter = "".join(out)
     if not delimiter:
         return None
