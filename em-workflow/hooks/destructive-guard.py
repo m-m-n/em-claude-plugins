@@ -553,9 +553,11 @@ class _TrackingLexer(shlex.shlex):
 # A `((` / `$((` whose first close is not an adjacent `))` is read as two
 # parentheses (review round 2, finding 29bbf9032dd762a0), and that is found out
 # only at its close. The pass does not start over for it: nothing before the
-# opener, and no frame below it, changes while it is open, so the pass notes
-# the few counters and offsets it holds when it pushes the opener, takes them
-# back at the close and resumes at the opener, now read as two parentheses.
+# opener, and no frame below it, changes while it is open, so the pass takes a
+# _LexResumeSnapshot of its state (a _LexPassState) when it pushes the opener,
+# restores it at the close and resumes at the opener, now read as two
+# parentheses. The openers it reads that way are part of what the pass
+# returns; the set it was given is not changed.
 # That is the very reading a whole-text restart with the opener added gives,
 # for the cost of the opener's span alone (read as arithmetic, then as two
 # parentheses): any number of openers one after another, or inside one span,
@@ -706,8 +708,9 @@ class _LexFrame:
         self.cond = False
         self.asg = 0
         self.rd = 0
-        # An `arith` frame: what the pass held when the frame was pushed, to
-        # resume from there when its first close is not an adjacent `))`.
+        # An `arith` frame: a _LexResumeSnapshot of what the pass held when
+        # the frame was pushed, to resume from there when its first close is
+        # not an adjacent `))`.
         self.snap = None
 
 
@@ -938,22 +941,136 @@ def _read_heredoc_delimiter(text, i):
     return q, "".join(parts), quoted
 
 
+class _LexPassState:
+    """The state ONE pass of _lex_pass() builds up and moves as it reads. The
+    pass keeps all of it in this one record, under these names, so the fields
+    can be enumerated (`__slots__`) and every one of them is classified by
+    _LexResumeSnapshot: restored by a resume, or named as not restored.
+
+    Collections that grow: REGIONS (the lexical map under construction, one
+    `[kind, start, end, parent, closed, nearest substitution ancestor]` list
+    per region), CANDIDATES (single-quote substitution candidates), ENCOUNTERED
+    (the settled openers the pass read as literal text), OPS (the here-document
+    operators, each `[start, end, delimiter, quoted, body_start, body_end,
+    close_end]`), STACK (the open contexts, bottom first), RSEQ (the sequence
+    numbers of the regions open now), HD_PENDING (the operators waiting for a
+    body, in registration order) and HD_SEQS (the region sequence number each
+    pending operator was registered at). The pass holds each of these lists
+    under its own name as well: they are only ever changed in place.
+
+    Scalars: HD_TRIGGER (the offset of the line start at which the pending
+    operators are looked at again, None without any), LIMIT (the offset no scan
+    reads past: the trigger, or the end of the text), CONT_AT (the offset after
+    the last backslash-newline continuation, -1 for none) and SEQ (the last
+    region sequence number given out).
+
+    ITERATIONS counts the loop iterations of the pass, and REPAREN_FOUND the
+    `((` / `$((` openers the pass found to close without an adjacent `))`.
+
+    The scan position of the loop is not a field: it is the loop's own cursor,
+    and a resume sets it to the opener's offset."""
+
+    __slots__ = (
+        "regions", "candidates", "encountered", "ops", "stack", "rseq",
+        "hd_pending", "hd_seqs", "hd_trigger", "limit", "cont_at", "seq",
+        "iterations", "reparen_found",
+    )
+
+    def __init__(self, root, n):
+        self.regions = []
+        self.candidates = []
+        self.encountered = []
+        self.ops = []
+        self.stack = [root]
+        self.rseq = []
+        self.hd_pending = []
+        self.hd_seqs = []
+        self.hd_trigger = None
+        self.limit = n
+        self.cont_at = -1
+        self.seq = 0
+        self.iterations = 0
+        self.reparen_found = set()
+
+
+class _LexResumeSnapshot:
+    """What the pass takes back when a `((` / `$((` opener, pushed as
+    arithmetic, turns out to close without an adjacent `))` (see "Work bound"
+    above): captured when the opener is pushed, restored at its first close.
+    Capture and restore are the only code that reads these fields of a
+    _LexPassState for a resume, and the three lists below are the only place
+    that says which field is restored how -- a field of _LexPassState that is
+    in none of them (or in two) fails the completeness test.
+
+    COLLECTIONS are cut back, in place, each to the length it had when the
+    snapshot was captured; every one has its own recorded length, so two
+    collections never rest on the assumption that they grow together. The
+    entries before that length are not changed while the opener is open: every
+    operator pending at the opener stays pending (a region opened after it is
+    open), and the frames below it are not touched. SCALARS are set back to
+    their captured values. NOT_RESTORED are the fields a resume deliberately
+    keeps as they are: ITERATIONS, because the work of reading a span twice is
+    counted, and REPAREN_FOUND, because it is what the resume itself learned."""
+
+    COLLECTIONS = (
+        "regions", "candidates", "encountered", "ops", "stack", "rseq",
+        "hd_pending", "hd_seqs",
+    )
+    SCALARS = ("hd_trigger", "limit", "cont_at", "seq")
+    NOT_RESTORED = ("iterations", "reparen_found")
+
+    __slots__ = ("_extents", "_values")
+
+    def __init__(self, extents, values):
+        self._extents = extents
+        self._values = values
+
+    @classmethod
+    def capture(cls, state):
+        return cls(
+            tuple(len(getattr(state, name)) for name in cls.COLLECTIONS),
+            tuple(getattr(state, name) for name in cls.SCALARS),
+        )
+
+    def restore(self, state):
+        for name, extent in zip(self.COLLECTIONS, self._extents):
+            del getattr(state, name)[extent:]
+        for name, value in zip(self.SCALARS, self._values):
+            setattr(state, name, value)
+
+
+# What one pass returns: STATUS is "done" (the map parts are set) or "restart"
+# (they are None: the pass ended to have the openers in SETTLE settled as not
+# opened); REPAREN lists the openers the pass newly read as two parentheses.
+# The pass never changes the opener sets it was given; the caller adds SETTLE
+# and REPAREN to them for the next pass.
+_LexPassResult = collections.namedtuple(
+    "_LexPassResult",
+    [
+        "status", "regions", "ops", "candidates", "encountered", "settle",
+        "reparen", "iterations",
+    ],
+)
+
+
 def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
     """ONE left-to-right pass of lex_shell(). SETTLED are the openers earlier
     passes settled as not opened (P4) and REPAREN the `((` / `$((` openers
     found to close without an adjacent `))`, which are read as two
-    parentheses; LINES is the line index when here-document bodies are to be
-    skipped (None otherwise). Returns
-    ("done", regions, ops, candidates, unopened, iterations) or
-    ("restart", new_settled, new_reparen, iterations) when this pass learned
-    of openers to settle; raises LexBudgetExceeded past BUDGET iterations.
+    parentheses; neither set is changed. LINES is the line index when
+    here-document bodies are to be skipped (None otherwise). Returns a
+    _LexPassResult: status "done" with the map parts, or status "restart" when
+    this pass learned of openers to settle (SETTLE); either way its REPAREN
+    holds the openers this pass newly found to close without an adjacent `))`.
+    Raises LexBudgetExceeded past BUDGET iterations.
 
-    An opener that closes without an adjacent `))` is added to REPAREN
-    (modified in place) and the pass resumes at it, read as two parentheses
-    (see "Work bound" above); it never ends the pass. WHOLE_RESTART turns
-    that off for the reference reading the agreement test compares with: the
-    pass then ends with ("restart", [], [opener], iterations) at the first
-    such close, and the caller reads the whole text again.
+    An opener that closes without an adjacent `))` is added to the pass's own
+    set of found openers and the pass resumes at it, read as two parentheses
+    (see "Work bound" above, and _LexResumeSnapshot for what the resume takes
+    back); it never ends the pass. WHOLE_RESTART turns that off for the
+    reference reading the agreement test compares with: the pass then ends
+    with status "restart" and that opener as its REPAREN at the first such
+    close, and the caller reads the whole text again.
 
     The grammar state a shell-rule frame carries (CMD, RW, CS and the small
     markers on _LexFrame) is advanced one word at a time by word_transition():
@@ -972,20 +1089,30 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
     when it registered and so never defers it."""
     n = len(text)
     tail_start = min(settled) if settled else None
-    regions = []  # [kind, start, end, parent, closed, nearest substitution ancestor]
-    ops = []
-    candidates = []
-    encountered = []
-    stack = [_LexFrame("btop" if mode == "heredoc-body" else "top", 0, None, None, True)]
-    iterations = 0
+    state = _LexPassState(
+        _LexFrame("btop" if mode == "heredoc-body" else "top", 0, None, None, True), n
+    )
+    # The collections of the state, held under their own names (a resume cuts
+    # them back in place, never rebinds them).
+    regions = state.regions
+    ops = state.ops
+    candidates = state.candidates
+    encountered = state.encountered
+    stack = state.stack
+    rseq = state.rseq
+    hd_pending = state.hd_pending
+    hd_seqs = state.hd_seqs
+    new_reparen = state.reparen_found
     i = 0
-    hd_pending = []
-    hd_seqs = []
-    hd_trigger = None
-    cont_at = -1
-    rseq = []
-    seq = 0
-    limit = n
+
+    def as_two_parentheses(opener):
+        return opener in reparen or opener in new_reparen
+
+    def ending(settle):
+        return _LexPassResult(
+            "restart", None, None, None, None, tuple(settle), frozenset(new_reparen),
+            state.iterations,
+        )
 
     def new_region(kind, start, f):
         parent = f.reg
@@ -997,24 +1124,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
         return len(regions) - 1
 
     def push(f, kind, region_kind, start, cmd=False, depth=0):
-        nonlocal seq
-        snap = None
-        if kind == "arith":
-            # What resuming from this opener restores. The frames below it
-            # are not touched while it is open, and every operator pending
-            # now stays pending (a region opened after it is open), so the
-            # lengths of the growing lists and the here-document scalars are
-            # all there is to take back.
-            snap = (
-                len(regions), len(candidates), len(encountered), len(ops),
-                len(hd_pending), hd_trigger, limit, cont_at, seq,
-            )
+        # What resuming from an arithmetic opener takes back is captured
+        # before anything of the opener is pushed.
+        snap = _LexResumeSnapshot.capture(state) if kind == "arith" else None
         idx = new_region(region_kind, start, f)
         frame = _LexFrame(kind, start, idx, idx, cmd, depth)
         frame.snap = snap
         stack.append(frame)
-        seq += 1
-        rseq.append(seq)
+        state.seq += 1
+        rseq.append(state.seq)
 
     def close(f, end):
         regions[f.region][2] = end
@@ -1154,7 +1272,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 if i in settled:
                     encountered.append(i)
                     return i + 3
-                if i not in reparen:
+                if not as_two_parentheses(i):
                     push(f, "arith", "arithmetic-expansion", i, depth=2)
                     return i + 3
             push(f, "cmdsub", "command-substitution", i, cmd=True)
@@ -1189,7 +1307,6 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
         WORD = (end, delimiter, quoted): queue it for a body (P11). Its body
         is not looked up here -- where it begins depends on the newlines read
         after it."""
-        nonlocal hd_trigger, limit
         op = [i, word[0], word[1], word[2], None, None, None]
         ops.append(op)
         if lines is None:
@@ -1197,25 +1314,25 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
         if not hd_pending:
             starts = lines.starts
             k = bisect.bisect_right(starts, i)
-            hd_trigger = starts[k] if k < len(starts) else None
-            limit = hd_trigger if hd_trigger is not None else n
+            state.hd_trigger = starts[k] if k < len(starts) else None
+            state.limit = state.hd_trigger if state.hd_trigger is not None else n
         hd_pending.append(op)
-        hd_seqs.append(seq)
+        hd_seqs.append(state.seq)
 
     while i < n:
-        iterations += 1
-        if iterations > budget:
+        state.iterations += 1
+        if state.iterations > budget:
             raise LexBudgetExceeded()
-        if hd_trigger is not None and i >= hd_trigger:
+        if state.hd_trigger is not None and i >= state.hd_trigger:
             # A line start with here-document operators pending (P11). The
             # operators whose registration-time regions are all that is
             # open now (the pending list is in registration order, so they
             # are a suffix of it) take their bodies from this line on, in
             # operator order; the others -- and all of them after a
             # backslash-newline -- wait for the next line start.
-            boundary = hd_trigger
+            boundary = state.hd_trigger
             starts = lines.starts
-            if boundary == cont_at:
+            if boundary == state.cont_at:
                 cut = len(hd_pending)
             else:
                 cut = bisect.bisect_left(hd_seqs, rseq[-1] if rseq else 0)
@@ -1240,11 +1357,11 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 stack[-1].in_word = False
             if hd_pending:
                 k = bisect.bisect_right(starts, max(i, boundary))
-                hd_trigger = starts[k] if k < len(starts) else None
-                limit = hd_trigger if hd_trigger is not None else n
+                state.hd_trigger = starts[k] if k < len(starts) else None
+                state.limit = state.hd_trigger if state.hd_trigger is not None else n
             else:
-                hd_trigger = None
-                limit = n
+                state.hd_trigger = None
+                state.limit = n
             continue
         f = stack[-1]
         kind = f.kind
@@ -1252,7 +1369,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
         if kind in _LEX_SHELL_KINDS:
             c = text[i]
             if c in " \t\r":
-                i = _LEX_WS.match(text, i, limit).end()
+                i = _LEX_WS.match(text, i, state.limit).end()
                 f.in_word = False
                 continue
             if c == "\n":
@@ -1266,15 +1383,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 if text.startswith("\n", i + 1):
                     # A line continuation: it never starts a here-document body (P11).
                     i += 2
-                    cont_at = i
+                    state.cont_at = i
                     continue
                 start_word(f, i)
                 i += 2
                 continue
             if c == "#" and not f.in_word and (tail_start is None or i < tail_start):
-                end = text.find("\n", i, limit)
+                end = text.find("\n", i, state.limit)
                 if end == -1:
-                    end = limit
+                    end = state.limit
                 idx = new_region("comment", i, f)
                 regions[idx][2] = end
                 i = end
@@ -1319,7 +1436,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                     i += 1
                     continue
                 if f.prev_plain:
-                    m = _LEX_FUNCTION_HEAD.match(text, i, limit)
+                    m = _LEX_FUNCTION_HEAD.match(text, i, state.limit)
                     if m is not None:
                         i = m.end()
                         f.cmd = True
@@ -1339,7 +1456,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                         f.prev_plain = f.time_p = False
                         i += 2
                         continue
-                    if i not in reparen:
+                    if not as_two_parentheses(i):
                         f.kw = ""
                         f.prev_plain = f.time_p = False
                         push(f, "arith", "arithmetic-command", i, depth=2)
@@ -1441,7 +1558,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 push(f, "backtick", "backtick-substitution", i, cmd=True)
                 i += 1
                 continue
-            run = _LEX_WORD_RUN.match(text, i, limit)
+            run = _LEX_WORD_RUN.match(text, i, state.limit)
             end = run.end()
             if f.in_word:
                 i = end
@@ -1493,9 +1610,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             continue
 
         if kind == "dq" or kind == "locale":
-            m = _LEX_DQ_SPECIAL.search(text, i, limit)
+            m = _LEX_DQ_SPECIAL.search(text, i, state.limit)
             if m is None:
-                i = limit
+                i = state.limit
                 continue
             j = m.start()
             c = text[j]
@@ -1512,18 +1629,18 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             continue
 
         if kind == "sq":
-            j = text.find("'", i, limit)
+            j = text.find("'", i, state.limit)
             if j == -1:
-                i = limit
+                i = state.limit
             else:
                 close(f, j + 1)
                 i = j + 1
             continue
 
         if kind == "ansi":
-            m = _LEX_ANSI_SPECIAL.search(text, i, limit)
+            m = _LEX_ANSI_SPECIAL.search(text, i, state.limit)
             if m is None:
-                i = limit
+                i = state.limit
                 continue
             j = m.start()
             if text[j] == "\\":
@@ -1534,9 +1651,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             continue
 
         if kind == "param":
-            m = _LEX_PARAM_SPECIAL.search(text, i, limit)
+            m = _LEX_PARAM_SPECIAL.search(text, i, state.limit)
             if m is None:
-                i = limit
+                i = state.limit
                 continue
             j = m.start()
             c = text[j]
@@ -1559,9 +1676,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             continue
 
         if kind == "arith":
-            m = _LEX_ARITH_SPECIAL.search(text, i, limit)
+            m = _LEX_ARITH_SPECIAL.search(text, i, state.limit)
             if m is None:
-                i = limit
+                i = state.limit
                 continue
             j = m.start()
             c = text[j]
@@ -1583,24 +1700,17 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                         parent.rw = True
                     i = j + 2
                 elif whole_restart:
-                    return ("restart", [], [f.start], iterations)
+                    new_reparen.add(f.start)
+                    return ending(())
                 else:
                     # The first close is not an adjacent `))`: read the opener
                     # as two parentheses (P4). Take back what the pass held
-                    # at the opener and resume there: nothing before the
-                    # opener, and nothing in the frames below it, has changed.
-                    reparen.add(f.start)
-                    (n_regions, n_candidates, n_encountered, n_ops, n_pending,
-                     hd_trigger, limit, cont_at, seq) = f.snap
+                    # at the opener, the opener's own frame included, and
+                    # resume there: nothing before the opener, and nothing in
+                    # the frames below it, has changed.
+                    new_reparen.add(f.start)
                     is_command = regions[f.region][0] == "arithmetic-command"
-                    del regions[n_regions:]
-                    del candidates[n_candidates:]
-                    del encountered[n_encountered:]
-                    del ops[n_ops:]
-                    del hd_pending[n_pending:]
-                    del hd_seqs[n_pending:]
-                    stack.pop()
-                    rseq.pop()
+                    f.snap.restore(state)
                     parent = stack[-1]
                     if is_command:
                         # `((`: two nested groups.
@@ -1625,9 +1735,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             continue
 
         if kind == "bracket" or kind == "subscript":
-            m = _LEX_BRACKET_SPECIAL.search(text, i, limit)
+            m = _LEX_BRACKET_SPECIAL.search(text, i, state.limit)
             if m is None:
-                i = limit
+                i = state.limit
                 continue
             j = m.start()
             c = text[j]
@@ -1647,7 +1757,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                             # (NFR6). Every subscript still open lies around
                             # this one, so the earliest of them settles all.
                             first = min(g.start for g in stack if g.kind == "subscript")
-                            return ("restart", [first], [], iterations)
+                            return ending((first,))
                         close(f, j + 1)
                         # The word goes on after the `]`; it is an assignment
                         # word when `=` or `+=` follows.
@@ -1672,9 +1782,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
 
         # `btop`: the literal top level of a heredoc body -- only the `$`
         # expansions, backticks and backslash escapes mean anything.
-        m = _LEX_BODY_SPECIAL.search(text, i, limit)
+        m = _LEX_BODY_SPECIAL.search(text, i, state.limit)
         if m is None:
-            i = limit
+            i = state.limit
             continue
         j = m.start()
         c = text[j]
@@ -1690,7 +1800,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
         f.start for f in stack[1:] if f.kind in ("param", "arith", "bracket", "ansi", "subscript")
     ]
     if unclosed:
-        return ("restart", unclosed, [], iterations)
+        return ending(unclosed)
     for f in stack[1:]:
         if f.region is not None:
             regions[f.region][2] = n
@@ -1699,7 +1809,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 _lex_quote_candidates(
                     text, f.start + 1, n, f.region, regions[f.region][5], candidates
                 )
-    return ("done", regions, ops, candidates, encountered, iterations)
+    return _LexPassResult(
+        "done", regions, ops, candidates, encountered, (), frozenset(new_reparen),
+        state.iterations,
+    )
 
 
 def lex_shell(text, mode="shell", bodies=True):
@@ -1753,17 +1866,19 @@ def lex_shell(text, mode="shell", bodies=True):
     rounds = 0
     while True:
         rounds += 1
-        # A pass ends early only to settle unclosed openers (RESULT[1]); the
-        # openers that close without an adjacent `))` are added to REPAREN by
-        # the pass itself, which resumes at each of them (RESULT[2] is empty).
+        # A pass ends early only to settle unclosed openers (RESULT.SETTLE);
+        # it resumes by itself at each opener that closes without an adjacent
+        # `))`, and returns those (RESULT.REPAREN) for the passes after it.
         result = _lex_pass(text, mode, settled, reparen, lines, budget - used)
-        if result[0] == "done":
+        if result.status == "done":
             break
-        used += result[3]
-        settled.update(result[1])
-        reparen.update(result[2])
-    _, regions, ops, candidates, encountered, iterations = result
-    used += iterations
+        used += result.iterations
+        settled.update(result.settle)
+        reparen.update(result.reparen)
+    regions, ops, candidates, encountered = (
+        result.regions, result.ops, result.candidates, result.encountered
+    )
+    used += result.iterations
     # The re-read tail starts at the earliest opener settled as not opened:
     # it is the very rule the final pass applied (no `<<` operator, no
     # comment from there on).
