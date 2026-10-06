@@ -1,0 +1,153 @@
+round: 1
+executed_at: '2026-10-06T15:58:05+09:00'
+scope:
+  review_mode: diff
+  base_commit: 9e3140acd9beb2edb3b92df2b9c76e6ac7724b1b
+  head_commit: f6eec9218d7294feda1f856aaa40ba33da8fba82
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-lexer-round2-residuals/task0001.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0004.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: task0004 が字句解析の読み直しを線形化し、仕事量の上限と線形性テストを足しているため
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+  degraded: true
+findings:
+- stable_id: 1baa909f9b288847
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 851
+  title: '読み取れない区切り語の <<（演算子なし扱い）の後ろを通常のシェルとして字句解析するため、本文中の # や引用が bash の実行する行を隠す（<<E${x} は deny→allow の退行）'
+  description: '_read_heredoc_delimiter() が None を返すと、1390 行付近で << は演算子を登録せず i+=2 で通常の字句解析を続ける。bash がヒアドキュメントとして読む本文を、ガードはシェル文として読み、本文中の # をコメント、'' を引用の開始として扱う。結果として bash が実行する行がコメント/引用の中に入り allow になる。評価者が両版のフックと bash 5.3.9（無害な echo に置換）で確認した再現: (1) cat <<E${x}\n# $(rm -rf /home/sakura/valuable)\nE\nE${x} は変更前 deny → 変更後 allow（通常・CLAUDE_BATCH=1 とも）。bash は E${x} を字面のまま区切り語にし、本文の $( ) を実行する（comprehensive#0 が報告した退行、ここに統合）。(2) cat <<E`x`\n''\nE`x`\nrm -rf /home/sakura/valuable\n'' は両版とも allow、bash は E`x` 行で本文を閉じて次の行を実行する。SPEC FR4・A3・NFR6 は「区切り語を読み切れない形では本文を取らず、後ろの行を検査から外さない」を求めているが、このフォールバックではその保証が成り立たない。'
+  suggestion: 直す前に (1)(2) の形（# コメント版と引用版）を deny ケースとして destructive-guard-cases.json の末尾に足す。そのうえで、<<（<<< でない）の区切り語を読み切れないときは、その位置から後ろを P4 の tail と同じ読み方（引用・コメント・演算子の領域を開かない）にして後続行をすべてコマンドとして検査するか、scan-budget と同じ ask（batch では deny）にする。あわせて、bash 5.3 が字面のまま区切り語にする形（${x} など）は評価せずに字面で区切り語として読む案も検討する（形ごとに bash で確認する）。
+  sources:
+  - claude:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'auto-fix skipped: prose fix needs cases.json additions and test-expectation edits beyond the single-file review-editor (hook-tests rule); routed to batch rework (Codex consulted, choice B)'
+- stable_id: 19edf404b5cbeb2b
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2549
+  title: '閉じ行の判定が前後の空白を許すため本文を bash より早く閉じ、残りの本文行の # コメントで bash が実行する命令置換を隠す（END-X 等で deny→allow の退行）'
+  description: '_delimiter_line_word() は行の前後の空白・タブを取り除いて区切り語と比べる。bash 5.3 は << では行全体の完全一致、<<- では先頭タブの除去だけを行うので、空白付きの行では本文は閉じない。評価者が両版と bash 5.3.9 で確認した再現: cat <<END-X\n END-X\n# $(rm -rf /home/sakura/valuable)\nEND\nEND-X は変更前 deny → 変更後 allow（通常・CLAUDE_BATCH=1 とも）。bash では本文は最後の END-X まで続き、引用されていない本文の $( ) が実行される。同じ仕組みは英数字だけの区切り語でも元からあり（cat <<END\n END\n# $(rm -rf /home/sakura/valuable)\nEND は両版とも allow、bash は実行する）、今回の変更で非英数字の区切り語にも広がった。SPEC の Edge Cases は「広い側は本文を早く終える側なので維持してよい」としているが、早く閉じると残りの本文行がシェル文として読まれ、# や '' で後続を隠せるため安全側ではない（NFR6 に反する）。追加テスト test_close_line_is_the_delimiter_with_optional_blanks_only がこの規則を期待値として固定している。関連（low、R3b でゲート除外）: 空白を含む引用区切り語 cat <<E'' X'' は閉じ行が索引に載らず allow→deny の誤検知になる。'
+  suggestion: '直す前に上の 2 形を deny ケースとして足す。閉じ行の比較を演算子ごとに bash と同じにする: << は行（末尾の改行を除く）と区切り語の完全一致、<<- は先頭のタブだけを除いて完全一致。_LexLines.word_to_lines() の索引もそれに合わせ（空白を含む区切り語も引けるようにする）、test_close_line_is_the_delimiter_with_optional_blanks_only を新しい規則に書き換える。既存の allow ケースで字下げした閉じ行に頼っているものがないか run-destructive-guard.py で確認する。'
+  sources:
+  - codex:comprehensive
+  confidence: 92
+  resolution: unresolved
+  resolution_reason: 'auto-fix skipped: prose fix needs cases.json additions and test-expectation edits beyond the single-file review-editor (hook-tests rule); routed to batch rework (Codex consulted, choice B)'
+- stable_id: 48e1f462b0dd164f
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1088
+  title: time -p の後ろの 2 つめの -p をオプションとして読み続けるため、bash が引数として読む name[ を添字として読み、<< 演算子を落として後続行を隠す
+  description: 'word_transition() は time_p が立っている間、何個目の -p でもオプションとして扱いコマンド位置を保つ。bash 5.3 では -p が TIMEOPT になるのは time の直後だけで、time -p の後ろでは -- だけが TIMEIGN になり、2 つめの -p はコマンド名になる。FR3 の添字読みは f.cmd が真の位置で name[ を添字として開くため、この食い違いの位置では bash が登録する << をガードは登録しない。評価者が確認した再現: time -p -p a[1<<2]=x\n''\n2]=x\nrm -rf /home/sakura/valuable\n'' は通常・CLAUDE_BATCH=1 とも allow。bash 5.3.9 では「-p: command not found」の後、2]=x 行で本文が閉じて次の行が実行される（echo で確認）。変更前も allow（別の経路）だったので新規の退行ではないが、SPEC の Edge Cases が time -p -p を「bash は 2 つめの -p を語として読む」と明記しており、FR2 で同じ分岐を直した今回の範囲に入る。'
+  suggestion: 直す前に上の形を deny ケースとして足す。time の直後は -p（TIMEOPT）と --（TIMEIGN）、time -p の直後は -- だけをオプションとし、それ以外の語（2 つめの -p を含む）はコマンド名として扱いコマンド位置を終える。time -p -p に続く添字形のテストを COMMAND_POSITION_FORMS 相当の固定期待に足す。
+  sources:
+  - claude:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'auto-fix skipped: prose fix needs cases.json additions and test-expectation edits beyond the single-file review-editor (hook-tests rule); routed to batch rework (Codex consulted, choice B)'
+- stable_id: 956849b341a5150b
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 998
+  title: Fragile snapshot coupling for in-pass reparen resume
+  description: Non-adjacent-)) handling relies on in-place mutation of the shared reparen set plus a positional 9-tuple snapshot (lengths of regions/candidates/encountered/ops/hd_pending plus scalars) captured in push() and manually truncated/restored at close. The restore truncates both hd_pending and hd_seqs from len(hd_pending), assuming they stay lockstep; adding any new growing list or scalar requires updating capture and restore in two distant sites or state silently corrupts. Whole-text-restart reference path (whole_restart flag) doubles the control-flow variants of the same logic.
+  suggestion: Replace the positional tuple with a named snapshot object with save/restore methods colocated in one place, and make reparen an explicit return value instead of in-place mutation.
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'auto-fix skipped: prose fix needs cases.json additions and test-expectation edits beyond the single-file review-editor (hook-tests rule); routed to batch rework (Codex consulted, choice B); lifted by the evaluator accountability floor (evaluator restated it at line 1008 as low)'
+evaluation:
+  round_summary: 'round 1（diff、cross_validation=true）。security の主走行 security#0（codex）は非 JSON 出力で failed、security#fallback が観点を引き継いだ。reviewer 出力に指示の注入は見当たらなかった。評価者は変更前後のフックを実行し、bash 5.3.9 で無害な echo に置き換えて挙動を確かめた。run-destructive-guard.py は 678/678、lexer agreement は 143 件すべて成功（AC5）。case 表は末尾への追加だけで既存ケースの削除・並べ替えはない（FR6/FR8）。確認できた見逃しは 3 件で、いずれも bash が実行する破壊的コマンドに allow を返す: 読み取れない区切り語のフォールバック（<<E${x} は deny→allow の退行）、空白を許す閉じ行（<<END-X で deny→allow の退行）、time -p -p（元からの見逃しで SPEC の Edge Cases に明記）。dismissed: comprehensive#0 の line 927 は security の区切り語の指摘に統合（duplicate）。architecture#0 の line 842（_lex_pass の肥大）は demoted。performance#0 の line 876 は false positive（72KB の入力で 8ms、<<" の 15000 回繰り返しで 0.17s）。architecture#0 の line 998（スナップショットの脆さ）は評価者が line 1008 の low として再記述したため、R3b の accountability floor で high のまま持ち上げた。spec — reviewer の空の結果は裏付けられず、FR4/A3/NFR6 と Edge Cases の time -p -p が未対応（security / comprehensive の指摘として持ち越し）。'
+  recommended_action: auto_fix
+  action_rationale: high 3 件はいずれも bash が実行する破壊的コマンドへの allow で、うち 2 件は今回の変更による退行のため、このままでは完了にできない。修正箇所は局所的で、各指摘に再現入力があり、hook-tests の規則どおり先に deny ケースを足してから直せる。直し方も SPEC の FR2・FR4・A3・NFR6 の範囲に収まる。閉じ行の修正では test_close_line_is_the_delimiter_with_optional_blanks_only の書き換えと、既存の allow ケースの確認が必要。修正後にもう 1 ラウンドで確かめるのがよい。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 927
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 842
+  run_id: architecture#0
+  reason: demoted
+- file: em-workflow/hooks/destructive-guard.py
+  line: 876
+  run_id: performance#0
+  reason: false positive
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 4
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-lexer-round2-residuals-20261006T065716Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
