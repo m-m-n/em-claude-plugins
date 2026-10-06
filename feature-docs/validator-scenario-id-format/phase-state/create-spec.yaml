@@ -1,12 +1,20 @@
 schema_version: 1
 feature: validator-scenario-id-format
 phase: create-spec
-status: in_progress
+status: awaiting_answers
 generation: 1
 base_revision: b014905062fb86ca2df44203f81bd957d1fa902c
-last_input_digest: null
+last_input_digest: sha256:0bc3931aa321ab5164f16fb31a1f010b6642e8c7f3f0a36fc1b64e464f5b89f2
 active_request_id: null
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-07T08:31:44+09:00'
+    questions:
+    - question_id: requirement.scenario-id-format-rule
+      status: answered
+    - question_id: design-step.decision
+      status: answered
 answers:
   create-spec.feature-identity:
     question_id: create-spec.feature-identity
@@ -18,7 +26,34 @@ answers:
     freeform: null
     normalized_answer: 'feature name derived from the task description: validator-scenario-id-format'
     answered_at: '2026-10-07T08:26:54+09:00'
-worker_runs: []
+  requirement.scenario-id-format-rule:
+    question_id: requirement.scenario-id-format-rule
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-07T08:31:44+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - hyphen_canonical_accept_both
+    freeform: null
+    normalized_answer: plan-writing/SKILL.md states TS-n (TS, hyphen, digits) as the
+      form new VERIFICATION.md files use, and states that TSn (no hyphen) is also
+      a valid scenario ID the validator recognizes; IDs stay literal strings (TS13
+      and TS-13 are distinct). No other agent or contract text changes.
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-07T08:31:44+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'accept the design_step_recommendation: skip (no UI)'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:0bc3931aa321ab5164f16fb31a1f010b6642e8c7f3f0a36fc1b64e464f5b89f2
+  output_digest: sha256:5c93912f2aa030e0a72c311fa776cf3c823cbb2c16460268e0a1f62b6a221745
 artifacts: []
 patches: []
 progress_fingerprint: null
