@@ -793,9 +793,16 @@
   ["deny", "19edf404b5cbeb2b round2-residuals FR4.3 <<END-X の本文は空白で字下げした END-X の行で閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<END-X\n END-X\n# $(rm -rf /home/sakura/valuable)\nEND\nEND-X"],
   ["deny", "19edf404b5cbeb2b round2-residuals FR4.4 <<END の本文は空白で字下げした END の行で閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<END\n END\n# $(rm -rf /home/sakura/valuable)\nEND"],
   ["allow", "19edf404b5cbeb2b round2-residuals FR4.5 引用した空白入りの区切り語 E' X' は E X の行で閉じ、本文は allow", "cat <<E' X'\nhello\nE X"],
-  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.1 読めない区切り語 E${x} の << の後ろの ${ はパラメータ展開を開かず、その後ろの rm -rf は deny", "cat <<E${x}\n${\nE${x}\nrm -rf /home/sakura/valuable\n}"],
-  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.2 読めない区切り語 E${x} の << の後ろの $(( は算術展開を開かず、その後ろの rm -rf は deny", "cat <<E${x}\n$((\nE${x}\nrm -rf /home/sakura/valuable\n))"],
-  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.3 読めない区切り語 E${x} の << の後ろの $[ は括弧算術を開かず、その後ろの rm -rf は deny", "cat <<E${x}\n$[\nE${x}\nrm -rf /home/sakura/valuable\n]"],
-  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.4 読めない区切り語 E${x} の << の後ろのコマンド位置の (( は算術コマンドを開かず、その後ろの rm -rf は deny", "cat <<E${x}\n((\nE${x}\nrm -rf /home/sakura/valuable\n))"],
-  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.5 読めない区切り語 E${x} の << の後ろの case x in は case のパターン状態を開かず、その後ろの rm -rf は deny", "cat <<E${x}\ncase x in\nE${x}\nrm -rf /home/sakura/valuable\nesac"]
+  ["deny", "5753be9288beab27 round2-deferred FR1.1 次の行で閉じる添字 a[1 ] の後の cat <<E は here-document で、本文の ' は引用を開かず、後続の rm -rf は deny", "a[1\n]=x\ncat <<E\n'\nE\nrm -rf /home/sakura/valuable\n'"],
+  ["deny", "5753be9288beab27 round2-deferred FR1.2 次の行で閉じる添字 a[1 ] の後の cat <<E は here-document で、本文の \" は引用を開かず、後続の rm -rf は deny", "a[1\n]=x\ncat <<E\n\"\nE\nrm -rf /home/sakura/valuable\n\""],
+  ["deny", "5753be9288beab27 round2-deferred FR1.3 次の行で閉じる添字 a[1 ] の後の cat <<E は here-document で、本文の ${ は展開を開かず、後続の rm -rf は deny", "a[1\n]=x\ncat <<E\n${\nE\nrm -rf /home/sakura/valuable\n}"],
+  ["deny", "5753be9288beab27 round2-deferred FR1.4 次の行で閉じる添字 a[1 ] の後の ; cat <<E は here-document で、本文の ' は引用を開かず、後続の rm -rf は deny", "a[1\n]=x; cat <<E\n'\nE\nrm -rf /home/sakura/valuable\n'"],
+  ["deny", "5753be9288beab27 round2-deferred FR1.5 添字の中の $( ) が次の行で閉じる a[$(echo 1 )] の後の cat <<E は here-document で、本文の ' は引用を開かず、後続の rm -rf は deny", "a[$(echo 1\n)]=x\ncat <<E\n'\nE\nrm -rf /home/sakura/valuable\n'"],
+  ["deny", "5753be9288beab27 round2-deferred FR1.6 入れ子の添字 a[b[1 ]] が次の行で閉じる a[b[1 ]] の後の cat <<E は here-document で、本文の ' は引用を開かず、後続の rm -rf は deny", "a[b[1\n]]=x\ncat <<E\n'\nE\nrm -rf /home/sakura/valuable\n'"],
+  ["deny", "e25427e2a8b1dddf round2-deferred FR4.1 名前の途中の行継続 a\\ 改行 [1<<2]=x でも添字は開き、<< は演算子でなく、後続の rm -rf は deny", "a\\\n[1<<2]=x\nrm -rf /home/sakura/valuable\n2]=x"],
+  ["deny", "e25427e2a8b1dddf round2-deferred FR4.2 名前の途中の行継続 ab\\ 改行 c[1<<2]=x でも添字は開き、<< は演算子でなく、後続の rm -rf は deny", "ab\\\nc[1<<2]=x\nrm -rf /home/sakura/valuable\n2]=x"],
+  ["deny", "e25427e2a8b1dddf round2-deferred FR4.3 添字の中の行継続 a[1\\ 改行 <<2]=x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1\\\n<<2]=x\nrm -rf /home/sakura/valuable\n2]=x"],
+  ["deny", "e25427e2a8b1dddf round2-deferred FR4.4 添字の ] の直前の行継続 a[1<<2\\ 改行 ]=x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1<<2\\\n]=x\nrm -rf /home/sakura/valuable\n2]=x"],
+  ["deny", "e25427e2a8b1dddf round2-deferred FR4.5 ] と = の間の行継続 a[1<<2]\\ 改行 =x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1<<2]\\\n=x\nrm -rf /home/sakura/valuable\n2]=x"],
+  ["ask", "e25427e2a8b1dddf round2-deferred FR4.6 名前の途中の行継続の後の ] が来ない添字 a\\ 改行 [1<<2 は閉じていない添字として ask（バッチでは deny）", "a\\\n[1<<2\nrm -rf /home/sakura/valuable"]
 ]
