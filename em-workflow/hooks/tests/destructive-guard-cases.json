@@ -792,5 +792,9 @@
   ["deny", "1baa909f9b288847 round2-residuals FR4.2 読めない区切り語 E`x` の << の後ろの ' は引用を開かず、その後ろの rm -rf は deny", "cat <<E`x`\n'\nE`x`\nrm -rf /home/sakura/valuable\n'"],
   ["deny", "19edf404b5cbeb2b round2-residuals FR4.3 <<END-X の本文は空白で字下げした END-X の行で閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<END-X\n END-X\n# $(rm -rf /home/sakura/valuable)\nEND\nEND-X"],
   ["deny", "19edf404b5cbeb2b round2-residuals FR4.4 <<END の本文は空白で字下げした END の行で閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<END\n END\n# $(rm -rf /home/sakura/valuable)\nEND"],
-  ["allow", "19edf404b5cbeb2b round2-residuals FR4.5 引用した空白入りの区切り語 E' X' は E X の行で閉じ、本文は allow", "cat <<E' X'\nhello\nE X"]
+  ["allow", "19edf404b5cbeb2b round2-residuals FR4.5 引用した空白入りの区切り語 E' X' は E X の行で閉じ、本文は allow", "cat <<E' X'\nhello\nE X"],
+  ["deny", "aa735aa95be36542 round2-deferred FR6.1 \\r の直後の # は語の一部で、コメントとして後続の rm -rf を隠さず deny", "echo x\r# ; rm -rf /home/sakura/valuable"],
+  ["deny", "aa735aa95be36542 round2-deferred FR6.2 語末の \\r があっても rm -rf /home/sakura/valuable は deny のまま", "rm -rf /home/sakura/valuable\r"],
+  ["deny", "aa735aa95be36542 round2-deferred FR6.3 語末の \\r があっても git reset --hard は deny のまま", "git reset --hard\r"],
+  ["allow", "aa735aa95be36542 round2-deferred FR6.4 CRLF 行末の無害なコマンドは allow のまま", "echo hi\r\necho done\r\n"]
 ]
