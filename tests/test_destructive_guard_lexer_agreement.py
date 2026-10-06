@@ -4398,6 +4398,648 @@ class TestBraceCommandStageAgreement(TestStageAgreement):
 
 
 # ---------------------------------------------------------------------------
+# Backtick substitution extent (destructive-guard-lexer-round2-deferred
+# task0006, review round 1: findings e79128f331828941, e6478d6af2a50e57,
+# 31165687b890b8bc and d1d035263eb03a8a). A backtick substitution ends at the
+# next unescaped backtick, found before its content is read; no comment, quote,
+# expansion, subscript or command form opened inside it carries the reading
+# past that backtick.
+# ---------------------------------------------------------------------------
+
+BACKTICK_STABLE_IDS = (
+    "e79128f331828941",
+    "e6478d6af2a50e57",
+    "31165687b890b8bc",
+    "d1d035263eb03a8a",
+)
+# The first index a block appended by a task of this feature can sit at.
+BACKTICK_BLOCK_FLOOR = 769
+
+# The ten cases of the task plan: tag -> (stable_id, verdict, command).
+BACKTICK_CASES = {
+    "R1.BT1": ("e79128f331828941", "deny", "echo `rm -rf src #`"),
+    "R1.BT2": ("e79128f331828941", "deny", "echo `true #`; git reset --hard"),
+    "R1.BT3": ("e79128f331828941", "deny", 'echo `echo "`; echo `rm -rf src`'),
+    "R1.BT4": ("e6478d6af2a50e57", "deny", "echo `${ echo ${x`; echo `rm -rf src #}`"),
+    "R1.BT5": ("e6478d6af2a50e57", "deny", "echo `${ echo $((x`; echo `rm -rf src #))`"),
+    "R1.BT6": ("e6478d6af2a50e57", "deny", "echo `${ echo $[x`; echo `rm -rf src #]`"),
+    "R1.BT7": ("e6478d6af2a50e57", "deny", "echo `${ a[x`; echo `rm -rf src #]`"),
+    "R1.BT8": ("31165687b890b8bc", "deny", "`${ echo '\\` ignored'; }`git reset --hard"),
+    "R1.BT9": ("d1d035263eb03a8a", "deny", '`"${ echo # `git reset --hard'),
+    "R1.BT10": ("e79128f331828941", "allow", "echo `date # note`; echo done"),
+}
+BACKTICK_TAGS = ["R1.BT%d" % n for n in range(1, 11)]
+
+# The openers of AC-3, and the three places the substitution is put in.
+BACKTICK_OPENERS = ["#", "'", '"', "$'", "${", "${ ", "$((", "$[", "$(", "a[", "@("]
+
+
+def backtick_opener_forms(opener):
+    """The three commands of AC-3 for OPENER: the substitution at the top
+    level, inside double quotes and inside a command substitution."""
+    inner = "`" + opener + " x`"
+    return [
+        "echo " + inner + "; " + RM_VALUABLE,
+        'echo "' + inner + '"; ' + RM_VALUABLE,
+        "echo $(echo " + inner + "); " + RM_VALUABLE,
+    ]
+
+
+def all_backtick_opener_forms():
+    return [form for opener in BACKTICK_OPENERS for form in backtick_opener_forms(opener)]
+
+
+# An extended-glob parenthesis opened inside an array inside a substitution,
+# read as the pattern group it is with `shopt -s extglob`.
+BACKTICK_EXTGLOB_FORM = "echo `x=(a@( x`; " + RM_VALUABLE
+
+# Where a backtick substitution is opened, one form per kind of context the
+# lexer opens one in; `{}` is where the substitution goes.
+BACKTICK_CONTAINER_FORMS = [
+    ("double quotes", 'echo "a {} b"; ' + RM_VALUABLE),
+    ("parameter expansion", "echo ${y:-{}}; " + RM_VALUABLE),
+    ("arithmetic expansion", "echo $((1 + {})); " + RM_VALUABLE),
+    ("bracket arithmetic", "echo $[1 + {}]; " + RM_VALUABLE),
+    ("array subscript", "a[{}]=1; " + RM_VALUABLE),
+    ("command form", "echo ${ echo {}; }; " + RM_VALUABLE),
+    ("process substitution", "cat <(echo {}); " + RM_VALUABLE),
+    ("command substitution", "echo $(echo {}); " + RM_VALUABLE),
+    ("group", "( echo {} ); " + RM_VALUABLE),
+    ("array", "x=( {} ); " + RM_VALUABLE),
+]
+BACKTICK_CONTAINED = ["`# x`", '`" x`', "`' x`", "`${ x`", "`$(( x`"]
+
+# The forms whose extent depends on the backslashes before a backtick: (command,
+# which of the command's backticks, counted from 1, ends the substitution the
+# first one opens). A backtick that follows an odd number of backslashes is
+# escaped.
+BACKTICK_ESCAPE_FORMS = [
+    ("echo `echo \\\\`; " + RM_VALUABLE, 2),
+    ("echo `echo \\` x`; " + RM_VALUABLE, 3),
+    ("echo `echo \\\\\\` x`; " + RM_VALUABLE, 3),
+    ("echo `echo \\\\\\\\`; " + RM_VALUABLE, 2),
+    ("echo `a\\`b\\`c`; " + RM_VALUABLE, 4),
+]
+
+
+def next_unescaped_backtick(text, start):
+    """The offset of the first backtick after the one at START that no
+    backslash pair, read from START + 1 on, takes as its second character; -1
+    for none. A plain scan, written apart from the hook's index."""
+    k = start + 1
+    n = len(text)
+    while k < n:
+        c = text[k]
+        if c == "\\":
+            k += 2
+        elif c == "`":
+            return k
+        else:
+            k += 1
+    return -1
+
+
+def backtick_regions(lexmap):
+    return [r for r in lexmap.regions if r.kind == "backtick-substitution"]
+
+
+def backtick_shaped_words(command):
+    """The shaped words of every statement the hook reads in COMMAND. A chunk
+    whose subscript never closes (the content of an `a[ x` substitution) is
+    left out of the scan, as the hook's own judgment leaves it out."""
+    return [
+        words for _t, _toks, _lexed, words, *_rest in H.statements(command, [])
+    ]
+
+
+def backtick_cases():
+    """{tag: (stable_id, verdict, command, index)} of the cases this task
+    appended, found by label (never by an absolute index)."""
+    found = {}
+    for index, (want, label, cmd) in enumerate(case_commands()):
+        for stable_id in BACKTICK_STABLE_IDS:
+            prefix = stable_id + " round2-deferred R1.BT"
+            if label.startswith(prefix):
+                tag = label.split(" ")[2]
+                assert tag not in found, tag
+                found[tag] = (stable_id, want, cmd, index)
+    return found
+
+
+def backtick_forms():
+    """Every command the extent tests read, the duplicates left out."""
+    forms = [command for _id, _want, command in BACKTICK_CASES.values()]
+    forms += all_backtick_opener_forms()
+    forms += [BACKTICK_EXTGLOB_FORM]
+    forms += [form for form, _ordinal in BACKTICK_ESCAPE_FORMS]
+    for _name, container in BACKTICK_CONTAINER_FORMS:
+        forms += [container.replace("{}", inner) for inner in BACKTICK_CONTAINED]
+    seen = []
+    for form in forms:
+        if form not in seen:
+            seen.append(form)
+    return seen
+
+
+class TestBacktickExtent(unittest.TestCase):
+    def verdicts(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    def assert_both_modes(self, command, want):
+        self.assertEqual(self.verdicts(command), (want, want), msg=repr(command))
+
+    def assert_one_extent(self, command, lexmap=None):
+        """AC-3: one closed backtick substitution that ends right after the
+        command's second backtick, every region opened inside it ending at or
+        before that backtick."""
+        lexmap = H.lex_shell(command) if lexmap is None else lexmap
+        regions = backtick_regions(lexmap)
+        self.assertEqual(len(regions), 1, msg=repr(command))
+        (backtick,) = regions
+        first = command.index("`")
+        second = command.index("`", first + 1)
+        self.assertEqual(backtick.start, first, msg=repr(command))
+        self.assertTrue(backtick.closed, msg=repr(command))
+        self.assertEqual(backtick.end, second + 1, msg=repr(command))
+        for region in lexmap.regions:
+            if backtick.start < region.start < backtick.end:
+                self.assertLessEqual(region.end, second, msg=(command, region))
+        return backtick
+
+    # AC-1, AC-7: the cases are in the case table, after the feature base.
+    def test_the_cases_are_in_the_case_table_after_the_base(self):
+        found = backtick_cases()
+        self.assertEqual(sorted(found, key=BACKTICK_TAGS.index), BACKTICK_TAGS)
+        for tag, (stable_id, want, command, index) in found.items():
+            with self.subTest(tag=tag):
+                self.assertEqual((stable_id, want, command), BACKTICK_CASES[tag])
+                self.assertGreaterEqual(index, BACKTICK_BLOCK_FLOOR)
+        indexes = [found[tag][3] for tag in BACKTICK_TAGS]
+        self.assertEqual(indexes, list(range(indexes[0], indexes[0] + len(indexes))))
+
+    def test_the_cases_label_follows_the_rework_label_rule(self):
+        labels = {index: label for index, (_w, label, _c) in enumerate(case_commands())}
+        for tag, (stable_id, _want, _command, index) in backtick_cases().items():
+            with self.subTest(tag=tag):
+                self.assertTrue(
+                    labels[index].startswith("%s round2-deferred %s " % (stable_id, tag)),
+                    msg=labels[index],
+                )
+                self.assertGreater(len(labels[index].split(" ", 3)[3]), 0)
+
+    def test_no_label_below_the_block_floor_carries_one_of_the_stable_ids(self):
+        for index, (_want, label, _cmd) in enumerate(case_commands()[:BACKTICK_BLOCK_FLOOR]):
+            for stable_id in BACKTICK_STABLE_IDS:
+                self.assertNotIn(stable_id, label, msg="index %d" % index)
+
+    # AC-2: cases 1 to 10 in both modes.
+    def test_cases_1_to_9_are_deny_and_case_10_is_allow_in_both_modes(self):
+        for tag in BACKTICK_TAGS:
+            _id, want, command = BACKTICK_CASES[tag]
+            with self.subTest(tag=tag):
+                self.assert_both_modes(command, want)
+
+    def test_in_cases_1_2_3_and_10_the_substitution_ends_at_the_next_backtick(self):
+        for tag in ("R1.BT1", "R1.BT2", "R1.BT3", "R1.BT10"):
+            command = BACKTICK_CASES[tag][2]
+            with self.subTest(tag=tag):
+                lexmap = H.lex_shell(command)
+                for region in backtick_regions(lexmap):
+                    self.assertTrue(region.closed)
+                    self.assertEqual(
+                        region.end, command.index("`", region.start + 1) + 1
+                    )
+                self.assertGreaterEqual(len(backtick_regions(lexmap)), 1)
+
+    def test_case_2_has_a_statement_after_the_substitution_with_the_destructive_words(self):
+        command = BACKTICK_CASES["R1.BT2"][2]
+        shaped = backtick_shaped_words(command)
+        self.assertTrue(
+            any(words[:3] == ["git", "reset", "--hard"] for words in shaped),
+            msg=repr(shaped),
+        )
+
+    def test_case_3_reads_the_second_substitution_as_a_substitution(self):
+        command = BACKTICK_CASES["R1.BT3"][2]
+        lexmap = H.lex_shell(command)
+        regions = backtick_regions(lexmap)
+        self.assertEqual(
+            [command[r.start : r.end] for r in regions], ['`echo "`', "`rm -rf src`"]
+        )
+        self.assertTrue(all(r.closed for r in regions))
+        (quote,) = [r for r in lexmap.regions if r.kind == "double-quote"]
+        self.assertFalse(quote.closed)
+        self.assertEqual(quote.end, regions[0].end - 1)
+
+    # AC-3: every opener, in each of three places.
+    def test_every_opener_ends_with_the_substitution(self):
+        for opener in BACKTICK_OPENERS:
+            for command in backtick_opener_forms(opener):
+                with self.subTest(command=command):
+                    self.assert_one_extent(command)
+
+    def test_every_opener_leaves_the_statement_after_it_shaped_as_rm(self):
+        for opener in BACKTICK_OPENERS:
+            for command in backtick_opener_forms(opener):
+                with self.subTest(command=command):
+                    shaped = backtick_shaped_words(command)
+                    self.assertTrue(
+                        any(words and words[0] == "rm" for words in shaped),
+                        msg=repr(shaped),
+                    )
+
+    def test_every_opener_is_deny_in_both_modes(self):
+        for opener in BACKTICK_OPENERS:
+            for command in backtick_opener_forms(opener):
+                with self.subTest(command=command):
+                    self.assert_both_modes(command, "deny")
+
+    def test_an_extended_glob_group_opened_inside_the_substitution_ends_with_it(self):
+        lexmap = H.lex_shell(BACKTICK_EXTGLOB_FORM, extglob=True)
+        self.assert_one_extent(BACKTICK_EXTGLOB_FORM, lexmap)
+        self.assert_both_modes(BACKTICK_EXTGLOB_FORM, "deny")
+
+    def test_an_unclosed_expansion_inside_the_substitution_is_literal_text(self):
+        # The parameter form, arithmetic, bracket arithmetic and `$'` that
+        # never close are settled as not opened, as at the end of the text.
+        for opener in ("${", "$((", "$[", "$'"):
+            command = "echo `" + opener + "x`; " + RM_VALUABLE
+            with self.subTest(opener=opener):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(
+                    [r.kind for r in lexmap.regions], ["backtick-substitution"]
+                )
+                self.assertEqual(list(lexmap.unopened), [command.index(opener)])
+
+    # AC-3 (FR7): every context a substitution opens in.
+    def test_the_extent_holds_in_every_context_the_lexer_opens_one_in(self):
+        for name, container in BACKTICK_CONTAINER_FORMS:
+            for inner in BACKTICK_CONTAINED:
+                command = container.replace("{}", inner)
+                with self.subTest(context=name, command=command):
+                    lexmap = H.lex_shell(command)
+                    regions = backtick_regions(lexmap)
+                    self.assertEqual(len(regions), 1)
+                    (backtick,) = regions
+                    self.assertTrue(backtick.closed)
+                    self.assertEqual(
+                        backtick.end, command.index("`", backtick.start + 1) + 1
+                    )
+                    self.assertEqual(command[backtick.start : backtick.end], inner)
+                    for region in lexmap.regions:
+                        if backtick.start < region.start < backtick.end:
+                            self.assertLessEqual(region.end, backtick.end - 1)
+
+    def test_a_statement_after_a_substitution_in_every_context_is_still_inspected(self):
+        for name, container in BACKTICK_CONTAINER_FORMS:
+            command = container.replace("{}", "`# x`")
+            with self.subTest(context=name):
+                self.assert_both_modes(command, "deny")
+
+    def test_a_substitution_in_the_literal_top_level_of_a_heredoc_body(self):
+        for inner in BACKTICK_CONTAINED:
+            body = "a " + inner + " b\n$(echo c)\n"
+            with self.subTest(inner=inner):
+                lexmap = H.lex_shell(body, "heredoc-body")
+                regions = lexmap.regions
+                backtick = [r for r in regions if r.kind == "backtick-substitution"]
+                self.assertEqual(len(backtick), 1)
+                self.assertEqual(body[backtick[0].start : backtick[0].end], inner)
+                self.assertTrue(backtick[0].closed)
+                (cmdsub,) = [r for r in regions if r.kind == "command-substitution"]
+                self.assertEqual(body[cmdsub.start : cmdsub.end], "$(echo c)")
+                self.assertTrue(cmdsub.closed)
+
+    # AC-4: the backslashes before a backtick.
+    def test_the_backtick_after_two_backslashes_ends_the_extent(self):
+        command = "echo `echo \\\\`; " + RM_VALUABLE
+        (backtick,) = backtick_regions(H.lex_shell(command))
+        self.assertTrue(backtick.closed)
+        self.assertEqual(backtick.end, command.index("`", 6) + 1)
+        self.assertEqual(command[backtick.start : backtick.end], "`echo \\\\`")
+        self.assert_both_modes(command, "deny")
+
+    def test_the_backtick_after_one_backslash_does_not_end_the_extent(self):
+        command = "echo `echo \\` x`; " + RM_VALUABLE
+        (backtick,) = backtick_regions(H.lex_shell(command))
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], "`echo \\` x`")
+        self.assertEqual(backtick.end, [i for i, c in enumerate(command) if c == "`"][2] + 1)
+        self.assert_both_modes(command, "deny")
+
+    def test_an_odd_run_of_backslashes_escapes_the_backtick_and_an_even_run_does_not(self):
+        for command, ordinal in BACKTICK_ESCAPE_FORMS:
+            with self.subTest(command=command):
+                end = [i for i, c in enumerate(command) if c == "`"][ordinal - 1]
+                (backtick,) = backtick_regions(H.lex_shell(command))
+                self.assertTrue(backtick.closed)
+                self.assertEqual(backtick.end, end + 1)
+                self.assertEqual(next_unescaped_backtick(command, backtick.start), end)
+                self.assert_both_modes(command, "deny")
+
+    def test_an_escaped_backtick_in_a_single_quote_does_not_end_the_extent(self):
+        # Case 8: the quote holds the escaped backtick, and the substitution
+        # ends after its `}`: the command after it is the statement's.
+        command = BACKTICK_CASES["R1.BT8"][2]
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], command[: command.index("}`") + 2])
+        (form,) = [r for r in lexmap.regions if r.kind == BRACE_KIND]
+        self.assertTrue(form.closed)
+        (quote,) = [r for r in lexmap.regions if r.kind == "single-quote"]
+        self.assertTrue(quote.closed)
+        self.assertEqual(command[quote.start : quote.end], "'\\` ignored'")
+
+    def test_a_substitution_without_a_closing_backtick_runs_to_the_end(self):
+        for command in ("echo `rm -rf src #", "echo `rm -rf src \\`", "echo `echo \"a"):
+            with self.subTest(command=command):
+                (backtick,) = backtick_regions(H.lex_shell(command))
+                self.assertFalse(backtick.closed)
+                self.assertEqual(backtick.end, len(command))
+
+    def test_an_unclosed_substitution_is_the_same_reading_as_before(self):
+        # The extent of a substitution with no closing backtick is the end of
+        # the text: what it holds is read as it was.
+        command = "echo `echo ${ x\nrm -rf src"
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertFalse(backtick.closed)
+        (form,) = [r for r in lexmap.regions if r.kind == BRACE_KIND]
+        self.assertFalse(form.closed)
+        self.assertEqual((form.end, backtick.end), (len(command), len(command)))
+        self.assert_both_modes(command, "deny")
+
+    # A subscript left open inside a substitution ends with its extent; the
+    # chunk that holds the substitution's body does not read, and is left out.
+    def test_a_subscript_open_at_the_extent_ends_unclosed_and_the_command_reads_fine(self):
+        command = "echo `a[ x`; " + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        (subscript,) = [r for r in lexmap.regions if r.kind == "array-subscript"]
+        self.assertFalse(subscript.closed)
+        self.assertEqual(subscript.end, backtick.end - 1)
+
+    def test_a_chunk_whose_subscript_never_closes_is_left_out_when_asked_to(self):
+        command = "echo `a[ x`; " + RM_VALUABLE
+        unsettled = []
+        shaped = [words for _t, _k, _l, words, *_r in H.statements(command, unsettled)]
+        self.assertEqual([words[0] for words in shaped], ["echo", "rm"])
+        self.assertEqual(len(unsettled), 1)
+        self.assertIsInstance(unsettled[0], H.LexUnmatchedSubscript)
+        with self.assertRaises(H.LexUnmatchedSubscript):
+            list(H.statements(command))
+
+    def test_the_command_itself_is_never_left_out(self):
+        unsettled = []
+        with self.assertRaises(H.LexUnmatchedSubscript):
+            list(H.statements("a[1<<2\n" + RM_VALUABLE, unsettled))
+        self.assertEqual(unsettled, [])
+
+    def test_an_unreadable_chunk_asks_unless_the_rest_is_a_deny(self):
+        # Nothing else in the command is a `deny`: the text cannot be settled,
+        # so the answer is the `ask` of an unmatched subscript (a `deny` in a
+        # batch run), never an `allow`.
+        for command in ("echo `a[ x`; echo done", "echo `${ a[x`; echo `echo done`"):
+            with self.subTest(command=command):
+                decision, reason = hook_verdict(command)
+                self.assertEqual(decision, "ask")
+                self.assertIn("unmatched-subscript", reason)
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_deny_found_in_the_rest_wins_over_the_unreadable_chunk(self):
+        for command in (
+            "echo `a[ x`; git reset --hard",
+            "echo `a[ x`; " + RM_VALUABLE,
+            "echo `${ a[x`; echo `" + RM_VALUABLE + "`",
+        ):
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "deny")
+
+    # AC-4: the here-document in the extent.
+    def test_the_heredoc_of_case_E_7_has_its_body_inside_the_extent(self):
+        matching = [
+            (want, cmd)
+            for want, label, cmd in case_commands()
+            if "heredoc-syntax-error E-7 配列内のバッククォート置換" in label
+        ]
+        self.assertEqual(len(matching), 1)
+        want, command = matching[0]
+        self.assertEqual(want, "allow")
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "git reset --hard HEAD\n")
+        self.assertGreaterEqual(op.body_start, backtick.start)
+        self.assertLessEqual(op.close_end, backtick.end - 1)
+        self.assert_both_modes(command, "allow")
+
+    def test_a_delimiter_line_after_the_extent_gives_the_operator_no_body(self):
+        # The substitution ends at the backtick on the second line: bash reads
+        # the content `cat <<E` and the first line only; the lines after the
+        # backtick are commands, never the body of the operator.
+        command = "echo `cat <<E\nfoo` bar\nE\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<E\nfoo`")
+        (op,) = lexmap.heredocs
+        self.assertIsNone(op.body_start)
+        self.assertIsNone(op.body_end)
+        self.assertIsNone(op.close_end)
+        self.assert_both_modes(command, "deny")
+
+    def test_a_delimiter_line_inside_the_extent_closes_the_body(self):
+        command = "echo `cat <<E\nfoo\nE\n` bar\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<E\nfoo\nE\n`")
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "foo\n")
+        self.assertEqual(op.close_end, backtick.end - 1)
+        self.assert_both_modes(command, "deny")
+
+    def test_an_operator_on_the_closing_line_takes_no_body_from_after_the_extent(self):
+        command = "echo `cat <<E ` bar\nfoo\nE\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<E `")
+        (op,) = lexmap.heredocs
+        self.assertIsNone(op.body_start)
+        self.assertIsNone(op.close_end)
+        self.assert_both_modes(command, "deny")
+
+    def test_an_operator_before_the_substitution_takes_its_body_after_the_substitution(self):
+        command = "cat <<A; echo `x\ny` z\nbody\nA\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertEqual(command[backtick.start : backtick.end], "`x\ny`")
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "body\n")
+        self.assertGreater(op.body_start, backtick.end)
+
+    def test_a_delimiter_word_that_runs_past_the_extent_is_not_read_as_a_word(self):
+        # The quote that holds the delimiter does not close before the
+        # backtick that ends the substitution: bash reads `cat <<'E` only,
+        # and the commands after the backtick are its own.
+        command = "echo `cat <<'E`; " + RM_VALUABLE + "; echo 'x'"
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<'E`")
+        self.assertEqual(list(lexmap.heredocs), [])
+        self.assert_both_modes(command, "deny")
+
+    # The index of unescaped backticks.
+    def test_every_backtick_substitution_ends_where_a_plain_scan_ends_it(self):
+        commands = backtick_forms() + [
+            command for command in all_commands() if "`" in command
+        ]
+        checked = 0
+        for command in commands:
+            lexmap = H.lex_shell(command)
+            for region in backtick_regions(lexmap):
+                checked += 1
+                found = next_unescaped_backtick(command, region.start)
+                with self.subTest(command=command[:80], start=region.start):
+                    if region.closed:
+                        self.assertEqual(region.end, found + 1)
+                    else:
+                        self.assertTrue(found == -1 or found >= region.end)
+        self.assertGreater(checked, 100)
+
+    def test_no_region_opened_inside_a_substitution_ends_after_it(self):
+        commands = backtick_forms() + [
+            command for command in all_commands() if "`" in command
+        ]
+        for command in commands:
+            lexmap = H.lex_shell(command)
+            for backtick in backtick_regions(lexmap):
+                limit = backtick.end - 1 if backtick.closed else backtick.end
+                for region in lexmap.regions:
+                    if backtick.start < region.start < backtick.end:
+                        with self.subTest(command=command[:80], region=region.kind):
+                            self.assertLessEqual(region.end, limit)
+
+    def test_the_extent_of_each_substitution_costs_no_rescan(self):
+        # Many substitutions that each end at the next backtick: the extents
+        # are one index of the text, never one search per backtick.
+        text = "echo `# x`; " * 3000
+        small = H.lex_shell(text[: len(text) // 2])
+        large = H.lex_shell(text)
+        self.assertLessEqual(large.work, 2.5 * small.work + 100)
+        self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(text) + 1024)
+
+    # AC-5: determinism and the whole-text-restart equivalence.
+    def test_the_map_is_the_same_after_clearing_the_lexer_cache(self):
+        for command in backtick_forms():
+            with self.subTest(command=command):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    def test_every_form_reads_as_the_whole_text_restart_reads_it(self):
+        for command in backtick_forms():
+            for mode, bodies in (("shell", True), ("shell", False), ("heredoc-body", False)):
+                with self.subTest(command=command, mode=mode, bodies=bodies):
+                    H._LEX_CACHE.clear()
+                    got = lexical_reading(H.lex_shell(command, mode, bodies))
+                    want = whole_text_restart_reading(command, mode, bodies)
+                    self.assertEqual(got, want)
+
+    def test_the_pass_state_has_a_classified_field_for_the_extent(self):
+        unclassified, repeated = classification_gaps(H._LexPassState)
+        self.assertEqual((unclassified, repeated), (set(), set()))
+
+    def test_a_resume_inside_a_substitution_restores_its_extent(self):
+        # `$((` closing without an adjacent `))` inside a backtick substitution
+        # is read again as two parentheses; the substitution still ends at its
+        # backtick, and what follows is read at the outer level.
+        for command in (
+            "echo `echo $((echo a) | wc -c)`; " + RM_VALUABLE,
+            "echo `((echo a) | wc -c) #`; " + RM_VALUABLE,
+            "echo `echo $((echo a) | wc -c) \"`; " + RM_VALUABLE,
+        ):
+            with self.subTest(command=command):
+                self.assert_one_extent(command)
+                self.assert_both_modes(command, "deny")
+
+    # AC-6: work.
+    def test_lexing_work_is_linear_for_every_case_repeated(self):
+        for tag in BACKTICK_TAGS:
+            command = BACKTICK_CASES[tag][2]
+            with self.subTest(tag=tag):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_lexing_work_is_linear_for_a_backtick_in_double_quotes_repeated(self):
+        for unit in ('"`#" ', '"`\'" '):
+            with self.subTest(unit=unit):
+                small = H.lex_shell("\n".join([unit] * 200))
+                large_text = "\n".join([unit] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_lexing_work_is_linear_for_every_opener_form_repeated(self):
+        for command in all_backtick_opener_forms():
+            with self.subTest(command=command):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_repeated_substitutions_get_a_decision_in_time(self):
+        for unit in ("echo `true #`; ", "echo `echo \"`; ", "echo `${ a[x`; "):
+            command = unit * (60000 // len(unit)) + RM_VALUABLE
+            with self.subTest(unit=unit):
+                start = time.monotonic()
+                decision, _reason = hook_verdict(command)
+                self.assertEqual(decision, "deny")
+                self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+    # AC-7: the hook's own pieces the extent replaces are gone.
+    def test_the_command_form_specific_backtick_handling_is_gone(self):
+        with open(HOOK, encoding="utf-8") as f:
+            source = f.read()
+        for name in ("unwind_to_bracecmd", "in_bt_form", "in_bt"):
+            self.assertNotIn(name, source)
+        self.assertNotIn("in_bt", H._LexFrame.__slots__)
+
+
+class TestBacktickExtentStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement over the
+    ten cases and every form of the extent tests: the lexer's regions, the
+    structure scan, marking, the layout layer and the position maps agree on a
+    substitution that ends at its next backtick."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.commands = [form for form in backtick_forms() if _lexer_reads(form)]
+
+    def test_the_forms_are_there_to_check(self):
+        for tag in BACKTICK_TAGS:
+            with self.subTest(tag=tag):
+                self.assertIn(BACKTICK_CASES[tag][2], self.commands)
+        for command in all_backtick_opener_forms():
+            with self.subTest(command=command):
+                self.assertIn(command, self.commands)
+
+
+# ---------------------------------------------------------------------------
 # `((` / `$((` openers that close without an adjacent `))` (review round 2,
 # finding 29bbf9032dd762a0): the unit forms, shared by the linearity test of
 # TestReworkLinearity and by TestNonAdjacentCloseRereading.
