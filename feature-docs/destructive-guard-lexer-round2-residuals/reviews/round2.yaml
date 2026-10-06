@@ -1,0 +1,209 @@
+round: 2
+executed_at: '2026-10-06T17:21:21+09:00'
+scope:
+  review_mode: diff
+  base_commit: 9e3140acd9beb2edb3b92df2b9c76e6ac7724b1b
+  head_commit: f04dc0260371c24499bce42c16de47cb9ce92acc
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-lexer-round2-residuals/task0001.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0004.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0005.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0006.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0007.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: task0004 が字句解析の読み直しを線形化し、仕事量の上限と線形性テストを足しているため
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 5753be9288beab27
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1846
+  title: 'F1: 行をまたいで閉じる配列添字を「開いていない」扱いにした後、<< は演算子にしないのに引用と ${ は開くため、bash が実行する行を隠す（deny→allow の退行）'
+  description: 'task0002 は、] が同じ行で閉じない添字を P4 の tail として settle する（1840-1847 行）。tail では << を演算子として登録しない（1568 行）が、tail_source は立たないので '' / " / ${ は通常どおり開く。bash 5.3 は添字を行をまたいで読み、その後ろの <<E を本物のヒアドキュメントにする。ガードは本文を文として読むので、本文の '' や ${ が閉じ行と次の行を領域に取り込む。評価者が両版のフックと bash 5.3.9（rm を echo に置換）で確認した（表記は cases.json の JSON 文字列）: `a[1\n]=x\ncat <<E\n''\nE\nrm -rf /home/sakura/valuable\n''` は base 9e3140ac で deny、現行で allow（通常・CLAUDE_BATCH=1 とも）。bash では rm の行が実行される。" 版、${ 版（閉じは }）、`a[1\n]=x; cat <<E...`、`a[$(echo 1\n)]=x\ncat <<E...`、`a[b[1\n]]=x\ncat <<E...` も同じ結果。THREAT-MODEL の TM-2「settle 後は << を読まないので後続行は検査対象に残る（NFR6）」が成り立たない。cases.json の FR3.18 / FR3.24 は settle 直後の行だけを確かめていて、この形を固定していない。'
+  suggestion: 直す前に、上の ' 版・" 版・${ 版を deny ケースとして cases.json の末尾に足す。直し方は次のどちらか。(a) 行をまたぐ添字で settle したら tail_source も立て（読めない区切り語と同じ扱い）、その位置から後ろは引用・${・$((・$[・(( を開かない。(b) bash と同じく行をまたいで添字を読み、その後ろの << は通常どおり登録する。F2 の修正と合わせて、tail で開いてよい領域の判定を一か所にまとめるとよい。
+  sources:
+  - claude:security
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached; auto-fix skipped (prose fix needs cases.json additions before the fix per hook-tests rule; Codex consulted, choice B)'
+- stable_id: 52bfa0f59d1ea852
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1576
+  title: 'F2: 1baa909f の修正が不十分: 読めない区切り語の tail でも ${ / $(( / $[ / (( と case の状態が開き、bash が実行する行を隠す'
+  description: 'task0005 の tail source は、コメント・引用・<< 演算子・添字だけを止めている（1609 / 1617 / 1741 / 1747 / 1806 / 1812 / 1858 / 1864 行の tail_source の判定）。dollar() の ${ / $(( / $[、コマンド位置の ((、case ... in のパターン状態は tail でも開く。bash 5.3 は E${x} などを字面のまま区切り語にして本文を行単位で読むので、本文の開き記号は閉じ行より後ろに及ばない。評価者の確認: `cat <<E${x}\n${\nE${x}\nrm -rf /home/sakura/valuable\n}` と、${ を $(( / $[ / (( / case x in に替えた 4 形（閉じはそれぞれ )) / ] / )) / esac）は、現行・base とも allow（通常・batch とも）。bash 5.3.9 では rm の行が実行される。base でも allow なので退行ではない。ただし round 1 の 1baa909f（FR4・A3・NFR6、TM-3）が求めた「後ろの行をすべて検査対象に残す」がこの形で成り立たない。round 1 の # 版と '' 版は現行で deny になっていることを確認した。comprehensive#fallback の同じ指摘をここに統合した。'
+  suggestion: 直す前に上の 5 形を deny ケースとして足す。tail source から後ろでは、行をまたいで中身を不透明にする領域（${、$((、$[、((）と case のパターン状態を開かない。または、読めない区切り語の << を見つけたら scan-budget と同じ ask（batch では deny）にする。正当な用途ではまず出ない形で、bash との差を形ごとに追い続けずに済む。
+  sources:
+  - claude:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached; auto-fix skipped (prose fix needs cases.json additions before the fix per hook-tests rule; Codex consulted, choice B)'
+- stable_id: e959ba60bde865a4
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 810
+  title: 'F3: \r・\x0b・\x0c・\x85・\u2028 などを区切り語の終わりと行の境界にしているため、bash（\n だけ）と本文の範囲がずれて実行行を読み飛ばす'
+  description: '_LEX_DELIM_RUN（810 行）と _LEX_LINE_BREAKS（804 行）は str.splitlines() の改行すべてで区切り語を終え、_LexLines（756 行）も splitlines で本文の開始行と閉じ行を決める。bash 5.3 はこれらを語の文字として扱い、行は \n でしか分けない。評価者の確認（現行・base とも allow、通常・batch とも。bash 5.3.9 では echo に置き換えた行が実行される）: `cat <<EOF\r; rm -rf /home/sakura/valuable\nEOF`（\r を \x0b・\u2028 にしても同じ）、`cat <<END \r; rm -rf /home/sakura/valuable\nEND`、`cat <<END\nx\rEND\n# $(rm -rf /home/sakura/valuable)\nEND`、`cat <<E\rX\nE\n# $(rm -rf /home/sakura/valuable)\nE\rX`、CRLF 行末の `cat <<EOF\r\nx\r\nEOF\r\nrm -rf /home/sakura/valuable\nEOF`。退行ではないが、FR4 の「区切り語は次のメタ文字までの 1 語」と、round 1 の 19edf404 の「閉じ行は bash 5.3 が閉じる位置だけ」が成り立たない。comprehensive#fallback の line 756 の指摘をここに統合した。'
+  suggestion: 直す前に上の形を deny ケースとして足す。区切り語の終わりはメタ文字（空白・タブ・\n・;|&()<>）だけにし、\r などは語の文字に含める。本文の開始と閉じ行の索引は \n だけで行を分ける。_LexLines を共有するほかの読み手（strip_heredocs() など）が splitlines の行を前提にしていないかも確かめる。
+  sources:
+  - claude:security
+  confidence: 93
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached; auto-fix skipped (prose fix needs cases.json additions before the fix per hook-tests rule; Codex consulted, choice B)'
+- stable_id: e25427e2a8b1dddf
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1671
+  title: 'F4: 識別子の途中の行継続（a\<改行>[1<<2]=x）を添字として読まず、語全体で読むようになった区切り語 2]=x が閉じ行に一致して後続行を本文に取り込む（deny→allow の退行）'
+  description: 'bash は字句解析の前に \<改行> を取り除くので、a\<改行>[1<<2]=x は代入語 a[1<<2]=x になり、<< はヒアドキュメントにならない。ガードの添字判定は _LEX_SUBSCRIPT_HEAD.match(text, i, end)（1671 行）で語の連続部分だけを見るため、a の直後の \ で切れて添字として開かず、<<2]=x を演算子として登録する。base は区切り語が \w+（2）だったので閉じ行 2]=x に一致せず deny だった。task0003 で区切り語を語全体で読むようになり、閉じ行が一致して後続の rm の行が本文扱いになった。評価者の確認（表記は cases.json の JSON 文字列）: `a\\\n[1<<2]=x\nrm -rf /home/sakura/valuable\n2]=x` と `ab\\\nc[1<<2]=x\nrm -rf /home/sakura/valuable\n2]=x` は base で deny、現行で allow（通常・batch とも）。bash 5.3.9 では rm の行が実行される。'
+  suggestion: 直す前に上の 2 形を deny ケースとして足す。代入を受け付ける位置の語では、\<改行> の組を取り除いた文字列で「識別子と [」を判定する（閉じが同じ行に無ければ既存どおり settle）。] の直前や = の直前など、ほかの継続の位置もケースで固定する。添字の判定から漏れた形は語全体の区切り語と組み合わさると allow になる点を、ケースの説明に残す。
+  sources:
+  - claude:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached; auto-fix skipped (prose fix needs cases.json additions before the fix per hook-tests rule; Codex consulted, choice B)'
+- stable_id: 2b52be5874de85f4
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 763
+  title: 'F5: 引用なしの区切り語の本文で bash が行う \<改行> の連結を閉じ行の判定が考慮せず、本文を早く閉じて # が命令置換を隠す'
+  description: '引用のない区切り語では、bash は本文を読むときに \<改行> を取り除いて次の物理行とつなげてから区切り語と比べる。close_lines()（763 行）は物理行ごとに比べるので、連結された行の後半にある END でも本文を閉じる。評価者の確認（表記は cases.json の JSON 文字列）: `cat <<END\nfoo\\\nEND\n# $(rm -rf /home/sakura/valuable)\nEND` と <<- 版（閉じ候補の行を \tEND にした形）は、現行・base とも allow（通常・batch とも）。bash 5.3.9 では本文が fooEND として続き、$( ) が実行される。引用した区切り語では連結が起きないので、その場合のガードの読みは正しい。退行ではないが、round 1 の 19edf404 の修正が掲げる「bash と同じ所でだけ閉じる」がこの形で成り立たない。'
+  suggestion: 直す前に上の 2 形を deny ケースとして足す。QUOTED が偽の演算子では、奇数個のバックスラッシュで終わる行の次の行を閉じ行の候補から外す。正確には、連結後の論理行の先頭だけを索引に載せ、<<- では連結後に先頭のタブを除いて比べる。
+  sources:
+  - claude:comprehensive
+  confidence: 92
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached; auto-fix skipped (prose fix needs cases.json additions before the fix per hook-tests rule; Codex consulted, choice B)'
+- stable_id: aa735aa95be36542
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 785
+  title: 'F6:（既存・差分外）\r を空白として扱うため、bash では語の一部になる # をコメントとして読み、同じ行の後続コマンドを隠す'
+  description: '_LEX_WS（785 行）、_LEX_WORD_RUN / _LEX_WORD_END、1431 行付近の空白判定が \r を語の区切りにしている。bash の空白は空白とタブだけで、\r は語の文字になる。評価者の確認: `echo x\r# ; rm -rf /home/sakura/valuable` は現行・base とも allow（通常・batch とも）。bash 5.3.9 では rm の位置に置いた echo が実行される。文字 1 つの迂回で影響は大きい。reviewer は high としたが、今回の差分（_LEX_WS の行は変更なし）と SPEC の範囲（ヒアドキュメントの区切り語・閉じ行・添字・算術 for・time）の外にある既存の見逃しなので、この機能の完了条件から外して medium に下げた。消さずに、別の機能として起票すること。'
+  suggestion: 直す前に deny ケースとして足す。_LEX_WS・空白判定・_LEX_WORD_RUN / _LEX_WORD_END から \r を外し、マスク後の文字列を読む shlex の whitespace とも揃える。F3 の改行の集合の修正と同じ機能で扱うと、\r の扱いが一か所で揃う。
+  sources:
+  - claude:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: not a completion blocker; left for follow-up task'
+- stable_id: 1fcae1f76f2a20f0
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1333
+  title: F7:（既存・差分外）bash 5.3 の ${ cmd; } / ${| cmd; }（現在のシェルでの命令置換）をパラメータ展開として読むため、中の破壊的コマンドを検査しない
+  description: 'dollar() は ${ をすべて parameter-expansion として開く（1333-1337 行）。bash 5.3 では ${ の直後が空白・タブ・改行・| のとき、中身をコマンドとして実行する。評価者の確認: `echo ${ rm -rf /home/sakura/valuable; }`、`echo ${|rm -rf /home/sakura/valuable; }`、`echo ${\nrm -rf /home/sakura/valuable\n}`、本文の `cat <<E\n${ rm -rf /home/sakura/valuable; }\nE` は、現行・base とも allow（通常・batch とも）。bash 5.3.9 では中身が実行される。対象のシェル（bash 5.3）への素直な迂回で影響は大きい。reviewer は high としたが、今回の差分と SPEC の範囲の外にある既存の見逃しなので、この機能の完了条件から外して medium に下げた。消さずに、別の機能として起票すること。'
+  suggestion: 直す前に上の形を deny ケースとして足す。${ の直後が空白・タブ・改行・| のときは、cmd=True のコマンド置換に相当するフレームを開き、; または改行の後の } で閉じる。これで中身がコマンドとして検査される。本文モード（btop）の ${ も同じ扱いにする。
+  sources:
+  - claude:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: not a completion blocker; left for follow-up task'
+- stable_id: c8c16caba82d6238
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1101
+  title: 'F8: _lex_pass が約 800 行の 1 関数に添字・区切り語・閉じ行・非隣接の閉じの読み直し・tail を抱え、関心どうしの組み合わせで退行が出ている'
+  description: '_lex_pass（1101-1908 行）は、この差分で配列添字、語全体の区切り語の読み取り、閉じ行の索引、非隣接の閉じでの読み直し、tail source を同じループに足した。git の履歴には task0002 / task0003 / task0004 / task0005 で親側の採用と再実装が繰り返し残っている。tail で開いてよい領域の判定も 8 か所の個別の `if state.tail_source is None` に散っていて、F2 は ${ / $(( / case の側でこの判定が抜けたことによる。今回の 2 件の退行（F1: 添字の settle と本文の引用、F4: 添字の判定と語全体の区切り語）も、別々に実装した関心の組み合わせで起きている。reviewer は high としたが、直接の不具合は F1・F2・F4 として別に挙げているので、保守性の指摘として medium に下げた。同じ reviewer の _LexFrame の混在（689 行、medium）は具体的な失敗の形が無く、スナップショットの項目一覧の二重管理（980 行、medium）は tests の classification_gaps() が未分類の項目を検出するため、取り上げていない。'
+  suggestion: まず tail で開いてよい領域の判定（F1・F2 に共通）を一か所にまとめる。そのうえで、添字の読み取り、ヒアドキュメント演算子の登録と本文の解決、非隣接の閉じでの読み直しを、パスの状態を受け取る小さな関数に分け、_lex_pass は文字の振り分けとカーソルの移動に絞る。退行の修正と同時に大きく動かすと検証が難しくなるので、退行を直してから分ける。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 55
+  resolution: deferred
+  resolution_reason: 'medium: not a completion blocker; left for follow-up task'
+evaluation:
+  round_summary: 'round 2（diff、cross_validation=true）。codex の主走行 security#0 と comprehensive#0 は非 JSON 出力で failed、security#fallback と comprehensive#fallback が観点を引き継いだ。reviewer 出力に指示の注入は見当たらなかった。評価者は変更前（9e3140ac）と現行のフックを通常・CLAUDE_BATCH=1 で実行し、bash 5.3.9 で rm を無害な echo に置き換えて挙動を確かめた。run-destructive-guard.py は 684/684、lexer agreement は 190 件すべて成功（AC5）。cases.json は 627 件の後ろへの追加だけ（683 件）で、各タスクのケースのコミットは修正のコミットより前（AC4 / FR6 / FR8）。AC1 の 10 形は通常・batch とも deny。round 1 の 4 件: 19edf404（字下げした閉じ行）と 48e1f462（time -p -p）は現行で deny、956849b3 は名前付きスナップショットに置き換わった。1baa909f は # 版と '' 版が deny になったが、${ / $(( / $[ / (( / case の形が allow のまま（F2）。新たに確認した high は 5 件で、いずれも bash が実行する破壊的コマンドに allow を返す: 今回の変更による deny→allow の退行 2 件（F1 行をまたぐ添字の後のヒアドキュメント、F4 識別子の途中の行継続と語全体の区切り語）、SPEC の範囲にある既存の見逃し 3 件（F2、F3 \n 以外の改行、F5 本文の行継続）。F6（\r を空白扱い）と F7（bash 5.3 の ${ cmd; }）は実際に迂回できるが、差分と SPEC の範囲の外の既存の見逃しなので medium に下げた。別の機能として起票が要る。F8 は architecture の high を medium に下げた。dismissed: comprehensive#fallback の line 1576 は F2、line 756
+    は F3 に統合（duplicate）。観点ごとの確認: security — findings。comprehensive — findings。architecture — corroborated。spec — findings（reviewer の空の結果は裏付けられない。FR4 / A3 / NFR6 と TM-2 / TM-3 が F1〜F5 で成り立たない）。performance — corroborated（約 50KB の入力 5 種でフック 1 回 0.16〜0.32 秒）。'
+  recommended_action: rework
+  action_rationale: high 5 件はいずれも bash 5.3.9 が実行する破壊的コマンドに allow を返す見逃しで、うち 2 件（F1・F4）は今回の変更による deny→allow の退行、1 件（F2）は round 1 の 1baa909f の修正不足。このままでは完了にできない。どれも hook-tests の規則で先に cases.json へ deny ケースを足してから直す必要があり、auto_fix ではなく rework で直す。F1 と F2 は tail で開いてよい領域を揃える同じ修正で片付く。読めない区切り語や、行をまたぐ添字の後ろの << は ask（batch では deny）に倒す案も比べるとよい。F6・F7（medium）はこの機能の外の既存の見逃しとして別に起票する。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 1576
+  run_id: comprehensive#fallback
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 756
+  run_id: comprehensive#fallback
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
