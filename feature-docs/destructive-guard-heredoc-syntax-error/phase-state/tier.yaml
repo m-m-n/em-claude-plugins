@@ -1,0 +1,12 @@
+schema_version: 2
+feature: destructive-guard-heredoc-syntax-error
+tier: reduced
+bases:
+  - basis: description_only
+    score: {"type": "score", "score": 1.09, "confidence": 0.9, "legend": {"0": "Only a wording or rule-text change: no new logic, and no test change.", "1": "A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "New logic, a change reaching across several modules, or a change to an external contract.", "3": "A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.0, "1": 0.91, "2": 0.09, "3": 0.0}, "expectation_clear": 0.9}
+    observed_at: "2026-10-06T07:43:00+09:00"
+  - basis: description_plus_code
+    score: {"type": "score", "score": 1.06, "confidence": 0.93, "legend": {"0": "Only a wording or rule-text change: no new logic, and no test change.", "1": "A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "New logic, a change reaching across several modules, or a change to an external contract.", "3": "A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.0, "1": 0.9400000000000001, "2": 0.06, "3": 0.0}, "expectation_clear": 0.86}
+    observed_at: "2026-10-06T07:47:30+09:00"
+pre_survey_estimate: {"files_expected": ["em-workflow/hooks/destructive-guard.py", "em-workflow/hooks/tests/destructive-guard-cases.json"], "changed_lines_approx": 0, "new_functions_needed": 0, "new_files_needed": [], "new_dependencies_needed": [], "covering_tests_exist": false, "spillover_modules": [], "work_still_required": true, "work_still_required_evidence": "HEAD 84ec109でpython3 em-workflow/hooks/destructive-guard.pyにPreToolUse JSON（tool_input.command=\"x=( <<EOF\\nrm -rf /tmp/some-dir\\nEOF\"）を渡すと、終了コード0・permissionDecision=\"allow\"を返した。rm行はヒアドキュメント本文として除去された。/tmp/some-dirの削除は単独でもallowだが、git reset --hard HEADは単独deny、同じ形ではallowだった。cases.jsonの627件に該当形はなく、deny346件・ask117件を含む既存試験は628/628成功した", "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 0, "body_change_kind": "new_logic", "change_containment": "single_module", "caller_and_dependency_count": 0, "changes_external_contract": false, "changes_behavior": true}
+decided_at: "2026-10-06T07:47:40+09:00"
