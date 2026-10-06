@@ -3,9 +3,9 @@
 ## Overview
 **Feature**: destructive-guard-lexer-round2-deferred / **SPEC.md**: `feature-docs/destructive-guard-lexer-round2-deferred/SPEC.md` / **IMPLEMENTATION.md**: `feature-docs/destructive-guard-lexer-round2-deferred/IMPLEMENTATION.md` / **THREAT-MODEL.md**: `feature-docs/destructive-guard-lexer-round2-deferred/THREAT-MODEL.md`
 
-This document covers the integrated verification after all five tasks are
-merged. Task-level acceptance criteria live in `tasks/task0001.md` to
-`tasks/task0005.md`.
+This document covers the integrated verification after all eight tasks are
+merged (task0006 to task0008 come from review round 1). Task-level
+acceptance criteria live in `tasks/task0001.md` to `tasks/task0008.md`.
 
 ## Build Verification
 - Command: none (workflow.yaml `project.components.main.build_command` is empty; the hook is a Python script with no build step).
@@ -44,6 +44,9 @@ means without `CLAUDE_BATCH` and with `CLAUDE_BATCH=1`.
 | TS-16 | Continuation joining edges (SPEC F5 and planner-found forms): `cat <<END\nfoo\\\\\nEND\nRM\nEND`, `cat <<'END'\nfoo\\\nEND\nRM\nEND`, `cat <<END\nfoo\\\nbar\nEND\necho done`, `cat <<END\nfoo\nEN\\\nD\nRM\nEND`, `cat <<-END\nfoo\n\tEN\\\nD\nRM\nEND`, `cat <<'A\\' <<B\nA\\\nB\nRM\nB` | the first two close at the third line and deny; the third is allow; the joined close lines `EN\\\nD` close the body at the `D` line and the RM line is outside every body (deny); in the last form the second body's first line `B` closes it (deny); all in both modes | Unit (+ case runner for the forms in the case table) |
 | TS-17 | Command-form edges (SPEC F7): `echo ${ RM` (unclosed), `echo ${ echo }`, `echo ${x} ${x:-y} ${#x}`, `cat <<'E'\n${ RM; }\nE`, `echo "${ RM; }"`, `echo ${x:-${ RM; }}`, `echo ${ { RM; }; }`, and the existing entries labelled `heredoc-syntax-error E-12`, `T2 AC-5.5`, `T2 AC-5.7` | the unclosed form runs to the end, is inspected and denies; `}` as an argument closes nothing; parameter forms stay parameter-expansion regions and allow; the quoted body stays literal and allows; the double-quoted, nested and inner-brace-group forms deny; the three existing discarded-line entries stay deny, the command form closing at the discarded line's newline | Unit + case runner |
 | TS-18 | Tail edges (SPEC F2, D4): `cat <<E${x}\necho $(RM)`, ``cat <<E${x}\necho `RM` ``, `cat <<E${x}\necho ${ RM; }`, `case x in x) cat <<E${x};; esac\nRM`, `cat <<E${x}\n"a\n$'b\n$"c\nRM\n"` | `$(`, backticks and the command form open after the tail source and deny; the case construct opened before the tail keeps its shaping and the RM statement's shaped words begin with `rm` (deny); the quote-character form has no region and its `${` is in UNOPENED (deny); all in both modes | Unit |
+| TS-19 | Backtick extent (review round 1 rework, task0006): the ten `R1.BT` cases (``echo `rm -rf src #` ``, ``echo `true #`; git reset --hard``, ``echo `echo \"`; echo `rm -rf src` ``, the `${x` / `$((x` / `$[x` / `a[x` forms inside `${ ` inside a backtick, ``` `${ echo '\\` ignored'; }`git reset --hard ```, ``` `\"${ echo # `git reset --hard ```, ``echo `date # note`; echo done``); ``echo `O x`; RM`` for O in `#`, `'`, `"`, `$'`, `${`, `${ `, `$((`, `$[`, `$(`, `a[`, `@(`, bare, in double quotes and in `$(`; escaped and even-backslash backticks; the entry labelled `heredoc-syntax-error E-7` | the nine reproductions and every `O` form deny, ``echo `date # note`; echo done`` and E-7 allow, in both modes; each backtick region is closed right after the next unescaped backtick and every region inside it ends at or before it; work linear (400 ≤ 2.5 × 200 + 100) | Unit + case runner |
+| TS-20 | Line continuations (review round 1 rework, task0007): the nine `R1.LC` cases (`echo $\\\n{ git reset --hard; }` bare, in double quotes and in an unquoted body; `echo ${\|\\\nRM; }`, `echo ${ \\\nRM; }`, `\\\nRM`, `r\\\nm -rf /home/sakura/valuable`, `echo $(\\\nRM)`, `echo a\\\nb 'c\\\nd'`); `$\\\n(`, `$(\\\n(`, `$\\\n[`, `$\\\n{x}`; the tokenizer over `r\\\nm -rf x` and `a 'b\\\nc'` | the eight reproductions deny and the last allow, in both modes; each `$\\\n` opener reports its region kind starting at the `$` (the tail gate unchanged); the tokenizer yields `rm` spanning offsets 0 to 4 and keeps the single-quoted pair; work linear | Unit + case runner |
+| TS-21 | Trailing `\r` on delete targets (review round 1 rework, task0008): the five `R1.CR` cases (`rm -rf build\\\r`, `rm -rf build\r`, `rm -rf \"build\r\"\n'`, `rm -rf ./node_modules\r\n`, `rm -rf /tmp/x\r`); every build-artifact name with an unquoted, escaped and quoted trailing `\r`; the agreement-test matching form `rm -rf ./build\r` | the first four deny and `rm -rf /tmp/x\r` allow, in both modes; each build-artifact form has the verdict of the same command with `\r` replaced by `x`; `rm -rf ./build\r` is deny in both modes; `RM\r`, `git reset --hard\r` stay deny and `echo hi\r` stays allow | Unit + case runner |
 
 ## Code Quality Verification
 - Format: none configured (workflow.yaml `format_command` is empty).
@@ -68,19 +71,19 @@ means without `CLAUDE_BATCH` and with `CLAUDE_BATCH=1`.
 | FR3 | task0003 | TS-3, TS-8, TS-15 |
 | FR4 | task0002 | TS-4, TS-8 |
 | FR5 | task0003 | TS-5, TS-8, TS-16 |
-| FR6 | task0004 | TS-6, TS-8, TS-15 |
-| FR7 | task0005 | TS-7, TS-8, TS-17 |
+| FR6 | task0004, task0008 | TS-6, TS-8, TS-15, TS-21 |
+| FR7 | task0005, task0006, task0007 | TS-7, TS-8, TS-17, TS-19, TS-20 |
 | FR8 | task0001 | TS-11, TS-18 |
-| FR9 | task0001, task0002, task0003, task0004, task0005 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7, TS-12 |
-| FR10 | task0001, task0002, task0003, task0004, task0005 | TS-10, TS-12 |
-| FR11 | task0001, task0002, task0003, task0004, task0005 | TS-8, TS-12 |
-| NFR1 | task0001, task0002, task0003, task0004, task0005 | TS-9 |
+| FR9 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7, TS-12, TS-19, TS-20, TS-21 |
+| FR10 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-10, TS-12 |
+| FR11 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-8, TS-12 |
+| NFR1 | task0001, task0002, task0003, task0004, task0005, task0006, task0007 | TS-9, TS-19, TS-20 |
 | NFR2 | task0005 | TS-13 |
 | NFR3 | task0005 | TS-14 |
-| NFR4 | task0001, task0002, task0003, task0004, task0005 | TS-8 |
-| NFR5 | task0001, task0002, task0003, task0004, task0005 | TS-10 |
-| NFR6 | task0001, task0002, task0003, task0004, task0005 | TS-15, TS-16, TS-17, TS-18 |
-| NFR7 | task0001, task0002, task0003, task0004, task0005 | TS-10, TS-15, TS-17 |
+| NFR4 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-8 |
+| NFR5 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-10 |
+| NFR6 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-15, TS-16, TS-17, TS-18, TS-19, TS-20, TS-21 |
+| NFR7 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-10, TS-15, TS-17 |
 
 ## E2E Testing
 The project's E2E command (workflow.yaml `e2e_test_command`) runs every
@@ -99,15 +102,15 @@ case-table entry through the hook's stdin / stdout contract.
 - TM-3: a `NAME[` whose name holds line continuations opens a subscript, so its `<<` is no operator and no whole-word delimiter swallows the following lines — checked by TS-4.
 - TM-4: delimiter words end only at metacharacters and lines only at `\n`, so bodies cover exactly the lines bash reads — checked by TS-3 and TS-15.
 - TM-5: unquoted close lines are matched on continuation-joined lines, with the first-line rule, so a body neither closes early nor late — checked by TS-5 and TS-16.
-- TM-6: `\r` is a word character in the lexer and the tokenizer, so `#` after it opens no comment, and a trailing `\r` keeps existing deny verdicts — checked by TS-6 and TS-15.
-- TM-7: the content of `${ cmd; }` / `${| cmd; }`, closed or not, is inspected as commands at every level — checked by TS-7 and TS-17.
+- TM-6: `\r` is a word character in the lexer and the tokenizer, so `#` after it opens no comment, and a trailing `\r` keeps existing deny verdicts and never makes a delete target safe — checked by TS-6, TS-15 and TS-21.
+- TM-7: the content of `${ cmd; }` / `${| cmd; }`, closed or not, is inspected as commands at every level, a backtick substitution ends at the next unescaped backtick, and line continuations neither hide an opener nor split a command word — checked by TS-7, TS-17, TS-19 and TS-20.
 - TM-8: the new readings keep the lexer linear and every bound overflow is ask (deny in batch), never allow or a timeout — checked by TS-9, TS-13 and TS-14.
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Test scenarios (TS-1 to TS-18) | 18 | 18 | 0 | 0 |
+| Test scenarios (TS-1 to TS-21) | 21 | 21 | 0 | 0 |
 | SPEC success criteria (AC1 to AC5) | 5 | 5 | 0 | 0 |
 | E2E (case table runner) | 1 | 0 | 1 | 0 |
 | Manual (bash 5.3 spot check) | 1 | 0 | 0 | 1 |
