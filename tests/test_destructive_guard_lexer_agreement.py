@@ -39,6 +39,11 @@ Layout:
   29bbf9032dd762a0): the case-table allow cases, map equivalence with the
   whole-text-restart reading, hand-written maps of the nested, double-quoted
   and here-document-pending forms, the ~60KB input and the budget decision.
+- TestResumeSnapshot: the state a non-adjacent-close resume saves and restores
+  is one named snapshot type over one pass-state record, every field of the
+  record is classified, and the pass returns the openers it newly reads as two
+  parentheses instead of changing the set it was given (rework round 1,
+  task0007, finding 956849b341a5150b).
 - TestModuleContract: the replaced readers are gone; standard library only.
 
 Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
@@ -2482,16 +2487,18 @@ def whole_text_restart_reading(text, mode="shell", bodies=True):
         result = H._lex_pass(
             text, mode, settled, reparen, lines, 1 << 60, whole_restart=True
         )
-        if result[0] == "done":
+        if result.status == "done":
             break
-        settled.update(result[1])
-        reparen.update(result[2])
-    _, regions, ops, candidates, encountered, _iterations = result
+        settled.update(result.settle)
+        reparen.update(result.reparen)
     return (
-        tuple(H.LexRegion(k, s, e, parent, closed) for k, s, e, parent, closed, _a in regions),
-        tuple(H.LexHeredoc(*op) for op in ops),
-        tuple(sorted(candidates, key=lambda c: (c.start, c.end))),
-        tuple(sorted(encountered)),
+        tuple(
+            H.LexRegion(k, s, e, parent, closed)
+            for k, s, e, parent, closed, _a in result.regions
+        ),
+        tuple(H.LexHeredoc(*op) for op in result.ops),
+        tuple(sorted(result.candidates, key=lambda c: (c.start, c.end))),
+        tuple(sorted(result.encountered)),
         min(settled) if settled else None,
     )
 
@@ -2722,6 +2729,202 @@ class TestNonAdjacentCloseRereading(unittest.TestCase):
             self.assertEqual(self.run_hook_in_process(command, batch=False), ("ask", 0))
             H._LEX_CACHE.clear()
             self.assertEqual(self.run_hook_in_process(command, batch=True), ("deny", 0))
+
+
+# ---------------------------------------------------------------------------
+# Resume snapshot and the pass result (rework round 1, task0007; review finding
+# 956849b341a5150b).
+# ---------------------------------------------------------------------------
+
+
+def classification_gaps(state_cls):
+    """(fields of STATE_CLS in no list, fields in more than one list) over the
+    pass-state record's enumerable fields and the snapshot type's lists."""
+    snapshot = H._LexResumeSnapshot
+    fields = set()
+    for cls in state_cls.__mro__:
+        fields.update(getattr(cls, "__slots__", ()))
+    listed = (
+        list(snapshot.COLLECTIONS) + list(snapshot.SCALARS) + list(snapshot.NOT_RESTORED)
+    )
+    unclassified = fields - set(listed)
+    repeated = {name for name in listed if listed.count(name) > 1}
+    return unclassified, repeated
+
+
+class TestResumeSnapshot(unittest.TestCase):
+    """One named snapshot type captures and restores what the non-adjacent
+    close resume takes back; every field of the pass state is either restored
+    through it or named in its not-restored list; a pass returns the openers it
+    newly reads as two parentheses and leaves the set it was given alone."""
+
+    SNAPSHOT = property(lambda self: H._LexResumeSnapshot)
+
+    def make_state(self):
+        return H._LexPassState(H._LexFrame("top", 0, None, None, True), 50)
+
+    def run_pass(self, text, reparen, settled=None, whole_restart=False, bodies=True):
+        lines = H._LexLines(text) if bodies and "<<" in text else None
+        return H._lex_pass(
+            text, "shell", set() if settled is None else settled, reparen, lines,
+            1 << 60, whole_restart=whole_restart,
+        )
+
+    # AC-1
+    def test_restore_returns_every_declared_field_to_its_captured_value(self):
+        state = self.make_state()
+        for name in self.SNAPSHOT.SCALARS:
+            setattr(state, name, ("captured", name))
+        for name in self.SNAPSHOT.COLLECTIONS:
+            getattr(state, name).extend([("kept", name, k) for k in range(3)])
+        want = {name: list(getattr(state, name)) for name in self.SNAPSHOT.COLLECTIONS}
+        want.update({name: getattr(state, name) for name in self.SNAPSHOT.SCALARS})
+        snapshot = self.SNAPSHOT.capture(state)
+        for name in self.SNAPSHOT.COLLECTIONS:
+            getattr(state, name).append(("added", name))
+            getattr(state, name).append(("added again", name))
+        for name in self.SNAPSHOT.SCALARS:
+            setattr(state, name, ("changed", name))
+        snapshot.restore(state)
+        for name in self.SNAPSHOT.COLLECTIONS + self.SNAPSHOT.SCALARS:
+            with self.subTest(field=name):
+                self.assertEqual(getattr(state, name), want[name])
+
+    def test_the_snapshot_declares_at_least_the_state_a_resume_takes_back(self):
+        # AC-1: the iteration above is only as good as the declared fields.
+        restored = set(self.SNAPSHOT.COLLECTIONS) | set(self.SNAPSHOT.SCALARS)
+        self.assertLessEqual(
+            {"regions", "candidates", "encountered", "ops", "hd_pending", "hd_seqs",
+             "hd_trigger", "limit", "cont_at", "seq"},
+            restored,
+        )
+
+    def test_restore_cuts_the_collections_in_place(self):
+        # The pass holds the collections under their own names: a restore that
+        # rebinds one would leave the pass writing to a list the state no
+        # longer holds.
+        state = self.make_state()
+        held = {name: getattr(state, name) for name in self.SNAPSHOT.COLLECTIONS}
+        snapshot = self.SNAPSHOT.capture(state)
+        for name in self.SNAPSHOT.COLLECTIONS:
+            getattr(state, name).append(object())
+        snapshot.restore(state)
+        for name in self.SNAPSHOT.COLLECTIONS:
+            with self.subTest(field=name):
+                self.assertIs(getattr(state, name), held[name])
+
+    def test_the_fields_a_resume_does_not_restore_are_left_as_they_are(self):
+        state = self.make_state()
+        snapshot = self.SNAPSHOT.capture(state)
+        state.iterations += 7
+        state.reparen_found.add(11)
+        snapshot.restore(state)
+        self.assertEqual(state.iterations, 7)
+        self.assertEqual(state.reparen_found, {11})
+
+    # AC-2
+    def test_every_pass_state_field_is_in_exactly_one_list(self):
+        unclassified, repeated = classification_gaps(H._LexPassState)
+        self.assertEqual(unclassified, set())
+        self.assertEqual(repeated, set())
+        fields = set(H._LexPassState.__slots__)
+        restored = set(self.SNAPSHOT.COLLECTIONS) | set(self.SNAPSHOT.SCALARS)
+        not_restored = set(self.SNAPSHOT.NOT_RESTORED)
+        self.assertEqual(fields, restored | not_restored)
+        self.assertEqual(restored & not_restored, set())
+
+    def test_a_pass_state_field_added_without_classification_is_found(self):
+        class WithNewField(H._LexPassState):
+            __slots__ = ("added_later",)
+
+        unclassified, repeated = classification_gaps(WithNewField)
+        self.assertEqual(unclassified, {"added_later"})
+        self.assertEqual(repeated, set())
+
+    # AC-3
+    def test_pending_entries_and_sequence_records_are_restored_independently(self):
+        for pending_count, seq_count in ((3, 2), (1, 4), (0, 2), (2, 0)):
+            with self.subTest(pending=pending_count, seqs=seq_count):
+                state = self.make_state()
+                state.hd_pending.extend(["op%d" % k for k in range(pending_count)])
+                state.hd_seqs.extend([10 + k for k in range(seq_count)])
+                want_pending = list(state.hd_pending)
+                want_seqs = list(state.hd_seqs)
+                snapshot = self.SNAPSHOT.capture(state)
+                state.hd_pending.extend(["late-op-a", "late-op-b"])
+                state.hd_seqs.extend([90, 91, 92])
+                snapshot.restore(state)
+                self.assertEqual(state.hd_pending, want_pending)
+                self.assertEqual(state.hd_seqs, want_seqs)
+
+    # AC-4
+    def test_the_pass_names_its_new_opener_and_leaves_the_given_set_alone(self):
+        text = "x=$((echo a) | wc -c)"
+        opener = text.index("$((")
+        given = set()
+        result = self.run_pass(text, given)
+        self.assertEqual(result.status, "done")
+        self.assertEqual(given, set())
+        self.assertEqual(set(result.reparen), {opener})
+
+    def test_openers_already_given_are_read_as_two_parentheses_and_not_named_again(self):
+        text = "x=$((echo a) | wc -c); y=$((echo b) | wc -c)"
+        first = text.index("$((")
+        second = text.index("$((", first + 1)
+        given = {first}
+        result = self.run_pass(text, given)
+        self.assertEqual(given, {first})
+        self.assertEqual(set(result.reparen), {second})
+
+    def test_the_given_set_is_not_changed_by_a_pass_that_names_several_openers(self):
+        text = "echo $(( $((echo a) | cat) | wc -c) $((echo b) | wc -c)"
+        given = {10_000}
+        result = self.run_pass(text, given)
+        self.assertEqual(given, {10_000})
+        self.assertEqual(
+            sorted(result.reparen),
+            [m.start() for m in re.finditer(re.escape("$(("), text)],
+        )
+
+    def test_an_ending_pass_returns_the_openers_it_found_before_it_ended(self):
+        # The pass that ends to settle an unclosed opener also found one that
+        # closes without an adjacent `))`; the caller gets both.
+        text = "x=$((echo a) | wc -c); echo ${y"
+        given = set()
+        result = self.run_pass(text, given)
+        self.assertEqual(result.status, "restart")
+        self.assertEqual(given, set())
+        self.assertEqual(list(result.settle), [text.index("${")])
+        self.assertEqual(set(result.reparen), {text.index("$((")})
+
+    def test_the_whole_text_restart_reading_returns_its_opener_the_same_way(self):
+        text = "x=$((echo a) | wc -c)"
+        given = set()
+        result = self.run_pass(text, given, whole_restart=True)
+        self.assertEqual(result.status, "restart")
+        self.assertEqual(given, set())
+        self.assertEqual(list(result.settle), [])
+        self.assertEqual(set(result.reparen), {text.index("$((")})
+
+    def test_the_final_map_is_the_one_the_combined_set_gives(self):
+        # lex_shell() combines what each pass returns: the map of a text with
+        # the opener in the given set equals the map without it, the pass
+        # having found the opener itself.
+        text = "x=$((echo a) | wc -c)\necho done"
+        H._LEX_CACHE.clear()
+        self.addCleanup(H._LEX_CACHE.clear)
+        from_lexer = lexical_reading(H.lex_shell(text))
+        given = {text.index("$((")}
+        result = self.run_pass(text, given)
+        self.assertEqual(result.status, "done")
+        self.assertEqual(set(result.reparen), set())
+        self.assertEqual(
+            tuple(
+                H.LexRegion(k, s, e, parent, closed)
+                for k, s, e, parent, closed, _a in result.regions
+            ),
+            from_lexer[0],
+        )
 
 
 # ---------------------------------------------------------------------------
