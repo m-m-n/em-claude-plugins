@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-lexer-round2-residuals
 phase: rework
-status: in_progress
+status: completed
 generation: 1
 base_revision: 698fdffd756a2f07b1daaebcf0f42b7660e1e0b7
 last_input_digest: sha256:ed8e35fe724ee3c66674ce72063d22afcd1301267520c8350645275fb898cd86
@@ -31,7 +31,7 @@ artifacts:
   produced_by: rework-run-0001
 patches:
 - patch_id: rework-r1-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:ed8e35fe724ee3c66674ce72063d22afcd1301267520c8350645275fb898cd86
   base_workflow_blob: 04fcde66f2e829500ff07ea8cbed8bdc01e8c39d
 progress_fingerprint: null
