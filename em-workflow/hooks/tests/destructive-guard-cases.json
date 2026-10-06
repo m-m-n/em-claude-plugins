@@ -646,5 +646,8 @@
   ["deny", "acf9e8aa8bb287ea unified-lexer P12.1 <(true) の直後の # は語の一部でコメントでなく、後続の rm -rf は deny", "cat <(true)#; rm -rf /home/sakura/valuable"],
   ["deny", "acf9e8aa8bb287ea unified-lexer P12.2 >(true) の直後の # は語の一部でコメントでなく、後続の rm -rf は deny", "cat >(true)#; rm -rf /home/sakura/valuable"],
   ["allow", "acf9e8aa8bb287ea unified-lexer P12.3 <(true)#x は一つの語で、echo の引数として allow", "echo <(true)#x"],
-  ["allow", "acf9e8aa8bb287ea unified-lexer P12.4 <(true) の後ろの空白に続く # はコメントで、その後の rm -rf は実行されず allow", "cat <(true) #; rm -rf /home/sakura/valuable"]
+  ["allow", "acf9e8aa8bb287ea unified-lexer P12.4 <(true) の後ろの空白に続く # はコメントで、その後の rm -rf は実行されず allow", "cat <(true) #; rm -rf /home/sakura/valuable"],
+  ["deny", "9381769d7116fab2 round2-residuals FR4.1 <<END-X の区切り語は END-X の語全体で、本文は END-X の行で閉じ、その後ろの rm -rf は deny", "cat <<END-X\nbody\nEND-X\nrm -rf /home/sakura/valuable\nEND"],
+  ["deny", "9381769d7116fab2 round2-residuals FR4.2 <<E.X の区切り語は E.X の語全体で、本文は E.X の行で閉じ、その後ろの rm -rf は deny", "cat <<E.X\nbody\nE.X\nrm -rf /home/sakura/valuable\nE"],
+  ["deny", "9381769d7116fab2 round2-residuals FR4.3 <<E\\X の区切り語は引用除去して EX で、本文は EX の行で閉じ、その後ろの rm -rf は deny", "cat <<E\\X\nbody\nEX\nrm -rf /home/sakura/valuable\nE"]
 ]
