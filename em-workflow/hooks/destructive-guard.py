@@ -873,8 +873,12 @@ class _LexLines:
         return mapping
 
 
-_LEX_WS = re.compile(r"[ \t\r]+")
-_LEX_WORD_RUN = re.compile(r"[^ \t\r\n;|&()<>\"'`$\\]+")
+# Blanks of the shell-rule frames are space and tab only, as in bash 5.3
+# (destructive-guard-lexer-round2-deferred FR6): they end a word, are skipped
+# between words, leave the next character at a word start and end a bound
+# subscript. A `\r` is an ordinary word character in all of these roles.
+_LEX_WS = re.compile(r"[ \t]+")
+_LEX_WORD_RUN = re.compile(r"[^ \t\n;|&()<>\"'`$\\]+")
 _LEX_DQ_SPECIAL = re.compile(r"[\\\"$`]")
 _LEX_PARAM_SPECIAL = re.compile(r"[\\'\"$`}]")
 _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
@@ -883,7 +887,7 @@ _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
 _LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
 # A BOUND subscript (a declaration-builtin argument) ends with its word at an
 # unquoted blank or metacharacter as well.
-_LEX_SUBSCRIPT_BOUND_SPECIAL = re.compile(r"[\\'\"$`\[\] \t\r\n;|&()<>]")
+_LEX_SUBSCRIPT_BOUND_SPECIAL = re.compile(r"[\\'\"$`\[\] \t\n;|&()<>]")
 # The line breaks str.splitlines() splits a text at -- the lines _LexLines
 # indexes. A here-document delimiter word never spans one.
 _LEX_LINE_BREAKS = frozenset("\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
@@ -903,7 +907,7 @@ _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
 _LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
-_LEX_WORD_END = frozenset(" \t\r\n;|&()<>")
+_LEX_WORD_END = frozenset(" \t\n;|&()<>")
 _LEX_SHELL_KINDS = frozenset(
     {"top", "cmdsub", "group", "procsub", "backtick", "array"}
 )
@@ -1813,7 +1817,7 @@ def _lex_pass(
 
         if kind in _LEX_SHELL_KINDS:
             c = text[i]
-            if c in " \t\r":
+            if c in " \t":
                 i = _LEX_WS.match(text, i, state.limit).end()
                 f.in_word = False
                 continue
@@ -2901,11 +2905,14 @@ def _tokenize_marked(marked, layout=True):
     a quote region or quote delimiter of any kind. Raises ValueError when the
     view does not tokenize (an unclosed quote, a trailing backslash)."""
     view = marked.view
+    # Space and tab are the blanks, as in the lexer (FR6); `\r` is a word
+    # character in both modes. The plain-word mode also splits at a newline.
     if layout:
         lex = _TrackingLexer(view, posix=True, punctuation_chars=PUNCTUATION)
-        lex.whitespace = " \t\r"
+        lex.whitespace = " \t"
     else:
         lex = _TrackingLexer(view, posix=True)
+        lex.whitespace = " \t\n"
     lex.whitespace_split = True
     lex.commenters = ""
     whitespace = lex.whitespace
@@ -2958,7 +2965,8 @@ def lex_segments(chunk):
     text (`.is_operator` cannot do this for a word: neither a bare nor a
     quoted letter-word ever enters the punctuation-sticky state). A Tok's
     value is the text of its span: characters hidden from shlex are given
-    back, so no value holds the mask character.
+    back, so no value holds the mask character. A carriage return at the end
+    of a word is not part of its value (_disregard_trailing_cr(), task0004).
 
     SEP (task0001, case-pattern tracking) is the raw separator text that
     ended this statement (possibly fused with an adjacent separator, e.g.
@@ -3007,6 +3015,44 @@ def _lex_segments_with_ends(chunk):
     return segments, seg_ends
 
 
+def _disregard_trailing_cr(words):
+    r"""The words of one statement as the destructive rules match them
+    (destructive-guard-lexer-round2-deferred, task0004, FR6): a `\r` at the
+    end of a word is disregarded.
+
+    The lexer and the tokenizer take space and tab as the only blanks, as
+    bash 5.3 does, so in a command text with CRLF line ends a `\r` stays at
+    the end of the last word of a line (`git reset --hard\r`) and is a word of
+    its own after a separator or a blank (`ls;\r`). Left in the words, it
+    would stop a command name, an option, a target, a reserved word or a
+    substitution-only word from matching, and a denied command would become an
+    allowed one. Only a `\r` at the very end of a word goes: the words the
+    lexer and the tokenizer read, and the offsets they report, keep it, and so
+    does a `\r` inside a word.
+
+    A word without a trailing `\r` is returned as the object it is. A changed
+    word is a copy that keeps every attribute of its token. An operator is
+    never changed. A word that is nothing but `\r` is a run of blanks when it
+    is not quoted, so it is dropped; a quoted one is kept as it is."""
+    out = []
+    for word in words:
+        if not word.endswith("\r") or getattr(word, "is_operator", False):
+            out.append(word)
+            continue
+        stripped = word.rstrip("\r")
+        if not stripped:
+            if getattr(word, "quoted", False):
+                out.append(word)
+            continue
+        if isinstance(word, Tok):
+            matched = Tok(stripped)
+            matched.__dict__.update(word.__dict__)
+            out.append(matched)
+        else:
+            out.append(stripped)
+    return out
+
+
 def _lex_layout(chunk, track):
     """lex_segments()'s one lexing pass: (segments, layout, operators).
     SEGMENTS is lex_segments()'s own return value, unchanged.
@@ -3045,7 +3091,7 @@ def _lex_layout(chunk, track):
         toks = _tokenize_marked(marked)
     except ValueError:
         return [
-            (tokens(seg), False, None)
+            (_disregard_trailing_cr(tokens(seg)), False, None)
             for seg in SEGMENT_SPLIT.split(text)
             if seg.strip()
         ], None, None
@@ -3121,6 +3167,7 @@ def _lex_layout(chunk, track):
                         operators.setdefault(len(out), []).append(seg_start + k)
                         k = seg.find("<<", k + 1)
     out.append((current, True, None))
+    out = [(_disregard_trailing_cr(words), lexed, sep) for words, lexed, sep in out]
     if not confirmed or len(starts) != len(out):
         return out, None, None
     return out, starts, operators
