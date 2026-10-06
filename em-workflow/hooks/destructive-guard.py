@@ -632,6 +632,25 @@ class _TrackingLexer(shlex.shlex):
 #              is _LexJoinedLines, one pass per operator flavour, and the first
 #              line of a body inside a run costs the delimiter's length.
 #
+# Round 2 deferred (destructive-guard-lexer-round2-deferred, task0005, FR7;
+# review finding 1fcae1f76f2a20f0).
+#
+#   Command form of `${` (FR7)  bash 5.3 runs `${ cmd; }` and `${|cmd; }` as a
+#              command substitution whose content is read as commands. `${`
+#              directly followed by a space, a tab, a newline or `|` is that
+#              form (decided before anything else about a `${`; every other
+#              `${` is the parameter form, read as before). It opens a
+#              `bracecmd` frame -- shell rules, content at a command position
+#              -- and a `brace-command-substitution` region, one of the
+#              substitution kinds and not masked. It is never settled and never
+#              refused by a tail source: an unclosed one is no UNOPENED offset
+#              and sets no tail start, it runs to the end of the text (or of the
+#              discarded line it was opened on). A `}` at a position where a
+#              reserved word is recognized (the start of the content, after `;`,
+#              `&`, a newline or a closer) is a token of its own and closes the
+#              innermost form, unless it closes a `{` group opened inside it
+#              (_LexFrame.braces); a `}` anywhere else closes nothing.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -689,8 +708,16 @@ LexCandidate = collections.namedtuple(
     "LexCandidate", ["quote", "start", "end", "enclosing"]
 )
 
+# The region kind of the bash 5.3 command form of `${` (`${ cmd; }`,
+# `${|cmd; }`): a command substitution that `}` closes.
+LEX_BRACE_COMMAND_SUBSTITUTION = "brace-command-substitution"
 LEX_SUBSTITUTION_KINDS = frozenset(
-    {"command-substitution", "backtick-substitution", "process-substitution"}
+    {
+        "command-substitution",
+        "backtick-substitution",
+        "process-substitution",
+        LEX_BRACE_COMMAND_SUBSTITUTION,
+    }
 )
 LEX_QUOTE_KINDS = frozenset(
     {"single-quote", "double-quote", "ansi-c-quote", "locale-quote"}
@@ -746,7 +773,10 @@ class LexMap:
       runs to the end of the text unterminated -- or to the end of a
       discarded line (P13), where an open quote is only a `discarded-quote`
       region over its opening character, and a backslash that ends the line a
-      `discarded-continuation` region (both hidden from shlex).
+      `discarded-continuation` region (both hidden from shlex). The bash 5.3
+      command form of `${` (`${ cmd; }`, `${|cmd; }`) is a substitution of
+      kind `brace-command-substitution`; unclosed, it too runs to the end of
+      its extent and is never settled (no UNOPENED offset, no TAIL_START).
     - HEREDOCS: LexHeredoc for every real here-document operator in text
       order: START/END span the `<<` / `<<-` through its delimiter word;
       DELIMITER is that word with its quotes removed (_read_heredoc_delimiter())
@@ -800,9 +830,12 @@ class LexMap:
 class _LexFrame:
     """One open context on the lexer's stack. KIND is `top`, `btop` (the
     literal top level of a heredoc body), `cmdsub`, `backtick`, `procsub`,
-    `group` (shell rules); `dq`, `locale`, `sq`, `ansi`, `param`, `arith`,
-    `bracket`. REGION is the region the frame owns and REG the region a child
-    of this frame hangs under. The grammar state of the shell-rule kinds is
+    `group`, `bracecmd` (the command form of `${`; BRACES counts the `{`
+    groups opened in it and not yet closed; IN_BT says the frames directly
+    below it, as far as they are command forms, end in a backtick frame, so a
+    backtick ends it) (shell rules); `dq`, `locale`, `sq`, `ansi`, `param`,
+    `arith`, `bracket`. REGION is the region the frame owns and REG the region
+    a child of this frame hangs under. The grammar state of the shell-rule kinds is
     CMD (the next word is at a command position), RW (P10: the next word
     comes directly after a closer or a `for` / `select` name, so a reserved
     word is recognized there although it is not a command position), CS (the
@@ -843,6 +876,7 @@ class _LexFrame:
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
         "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "asg", "decl",
         "arr_end", "redir", "rd_cmd", "nosub", "sub_at", "sub_bound", "named", "bound", "snap",
+        "braces", "in_bt",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -870,6 +904,8 @@ class _LexFrame:
         self.sub_bound = False
         self.named = False
         self.bound = False
+        self.braces = 0
+        self.in_bt = False
         # An `arith` frame: a _LexResumeSnapshot of what the pass held when
         # the frame was pushed, to resume from there when its first close is
         # not an adjacent `))`.
@@ -1109,8 +1145,12 @@ _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
 _LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
 _LEX_WORD_END = frozenset(" \t\r\n;|&()<>")
 _LEX_SHELL_KINDS = frozenset(
-    {"top", "cmdsub", "group", "procsub", "backtick", "array"}
+    {"top", "cmdsub", "group", "procsub", "backtick", "array", "bracecmd"}
 )
+# What directly follows the `${` of the bash 5.3 command form (`${ cmd; }`,
+# `${<tab>cmd; }`, `${<newline>cmd<newline>}`, `${|cmd; }`); any other `${` is
+# the parameter form.
+_LEX_BRACE_COMMAND_FOLLOW = " \t\n|"
 # The start of an assignment word (`NAME=`, `NAME+=`); a word that is nothing
 # more is the one a compound-assignment parenthesis follows.
 _LEX_ASSIGN_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\+?=")
@@ -1809,6 +1849,10 @@ def _lex_pass(
                 f.time_p = 1 if w == "time" else 0
                 if w == "coproc":
                     f.kw = "coproc"
+                elif w == "{" and f.kind == "bracecmd":
+                    # A `{` group opened inside a command form: the `}` that
+                    # closes it is not the form's own (FR7).
+                    f.braces += 1
             elif w == "function":
                 f.fn_p = True
                 f.cmd = False
@@ -1894,6 +1938,20 @@ def _lex_pass(
             word_transition(f, None, i)
             f.in_word = True
 
+    def reserved_position(f):
+        """Whether the next word of the shell-rule frame F sits where bash
+        recognizes a reserved word: at a command position, or directly after a
+        closer (`)`, `fi`, `done`, `esac`, `}`) -- the positions at which
+        word_transition() takes a `}` for a closer. A redirection read at the
+        command position, a case subject or pattern, and the name after
+        `for` / `select` / `coproc` / `function` are none of them."""
+        if f.redir or f.rd_cmd or f.fn_p or f.kw:
+            return False
+        cs = f.cs
+        if cs and cs[-1] != "body":
+            return False
+        return f.cmd or f.rw
+
     def dollar(i, f, in_quotes, body_literal):
         """The `$` at I: open the expansion it starts, or consume the special
         parameter it names; returns the offset to continue at (P1-P3)."""
@@ -1911,6 +1969,17 @@ def _lex_pass(
             push(f, "cmdsub", "command-substitution", i, cmd=True)
             return i + 2
         if c2 == "{":
+            if i + 2 < n and text[i + 2] in _LEX_BRACE_COMMAND_FOLLOW:
+                # The bash 5.3 command form `${ cmd; }` / `${|cmd; }` (FR7):
+                # decided before any settle or tail decision. Its content is
+                # read as commands from a command position; it is never
+                # settled and never refused. A `${|` is read from after the
+                # `|`.
+                push(f, "bracecmd", LEX_BRACE_COMMAND_SUBSTITUTION, i, cmd=True)
+                stack[-1].in_bt = f.kind == "backtick" or (
+                    f.kind == "bracecmd" and f.in_bt
+                )
+                return i + 3 if text[i + 2] == "|" else i + 2
             # The parameter form: the command form `${ ` / `${|` is decided
             # before this point (task0005) and is never refused.
             if i in settled or not tail_gate("parameter-expansion", i):
@@ -2418,8 +2487,38 @@ def _lex_pass(
                     close(f, i + 1)
                     i += 1
                     continue
+                if kind == "bracecmd" and f.in_bt:
+                    # A backtick substitution ends at the next unescaped
+                    # backtick, whatever it holds (bash reads the content as
+                    # a script only afterwards): a command form opened in it
+                    # and still open here ends unclosed at this backtick, which
+                    # the backtick frame below then closes -- the substitution
+                    # and the word it is part of stay what bash reads (FR7).
+                    region = regions[f.region]
+                    region[2] = i
+                    region[4] = False
+                    stack.pop()
+                    rseq.pop()
+                    continue
                 start_word(f, i)
                 push(f, "backtick", "backtick-substitution", i, cmd=True)
+                i += 1
+                continue
+            if (
+                c == "}"
+                and kind == "bracecmd"
+                and not f.in_word
+                and reserved_position(f)
+            ):
+                # In a command form (FR7) a `}` where a reserved word is
+                # recognized is a token of its own, whatever follows it: it
+                # closes a `{` group opened in the form, else the form itself.
+                # (Anywhere else it is an ordinary character of its word.)
+                if f.braces:
+                    f.braces -= 1
+                    word_transition(f, "}", i + 1, "}")
+                else:
+                    close(f, i + 1)
                 i += 1
                 continue
             run = _LEX_WORD_RUN.match(text, i, state.limit)
@@ -2857,10 +2956,12 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     text after them is lexed as it stands.
 
     TEXT is any string, including one with unbalanced quotes or unclosed
-    openers (P4: an opener among `${`, `$((`, `$[`, `((` and `$'` that never
-    closes is not a region, its characters are literal, and the text from the
-    earliest such opener on is read without any `<<` operator and without
-    any comment). A `<<` whose delimiter word cannot be read is a tail source
+    openers (P4: an opener among the parameter form `${`, `$((`, `$[`, `((`
+    and `$'` that never closes is not a region, its characters are literal,
+    and the text from the earliest such opener on is read without any `<<`
+    operator and without any comment; the command form `${ ` / `${|` is no
+    such opener: it is a substitution that stays open to the end of the
+    text). A `<<` whose delimiter word cannot be read is a tail source
     too: from it on no comment, no quote region, no operator, no parameter-form
     `${`, `$((`, `$[`, no `((` at a command position and no case construct
     opens (`$(` and backticks still do), and the quote characters and the
@@ -4211,11 +4312,15 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
     (destructive-guard-unified-lexer layer 3). Returns (spans, parent_of,
     unmatched, opaque, containing_span):
 
-    - SPANS: every `$( … )`/`` ` … ` ``/`<( … )`/`>( … )` span found, at every
-      nesting level -- inside a parameter expansion, an arithmetic expansion
-      or a double-quoted string included (FR4). A process substitution is a
-      substitution (D5): its span starts at the `<` or `>`, and its body is
-      its own chunk.
+    - SPANS: every `$( … )`/`` ` … ` ``/`<( … )`/`>( … )`/`${ … }`/`${| … }`
+      span found, at every nesting level -- inside a parameter expansion, an
+      arithmetic expansion or a double-quoted string included (FR4). A process
+      substitution is a substitution (D5): its span starts at the `<` or `>`,
+      and its body is its own chunk. So is the bash 5.3 command form of `${`
+      (`${ cmd; }`, `${|cmd; }`; _span_inner() gives its inner text); one
+      that is never closed is in UNMATCHED like any other, and
+      _unclosed_command_forms() gives the inner text statements() still
+      inspects.
     - PARENT_OF: {span: its immediate enclosing span, or None} -- a span
       strictly containing it with nothing tighter in between.
     - UNMATCHED: start offsets of an opener never closed by end of text.
@@ -4351,26 +4456,68 @@ def _top_level_spans(spans, parent_of):
 
 def _span_inner(text, span):
     """(inner text, its own start offset in TEXT) for SPAN, a (start, end)
-    pair from scan_structure()."""
+    pair from scan_structure(). The inner text is what lies between the
+    opener and the closing character: after the backtick, `$(`, `<(` / `>(`,
+    `${` or `${|`, before the closing `)`, backtick or `}`."""
     start, end = span
     if text[start] == "`":
         return text[start + 1 : end - 1], start + 1
+    if text.startswith("${|", start):
+        return text[start + 3 : end - 1], start + 3
     return text[start + 2 : end - 1], start + 2
+
+
+def _unclosed_command_forms(text, mode="shell"):
+    """[(inner text, start offset of the opener in TEXT)] for every OUTERMOST
+    command form `${ ...` / `${|...` of TEXT that is never closed (the
+    bash 5.3 form is a syntax error then, but its content is still inspected,
+    SPEC F7), in ascending offset order. The inner text runs from after the
+    opener (`${`, or `${|`) to the end of the form's extent -- the end of the
+    text, or of the discarded line the form was opened on. A form inside
+    another unclosed form is not listed: its text is inside the outer one's,
+    and is found when that inner text is scanned in turn. Reads the lexer's
+    map of TEXT (the one scan_structure() reads), so it costs one pass over
+    the regions."""
+    regions = lex_shell(text, mode, False).regions
+    inside = [False] * len(regions)
+    out = []
+    for index, region in enumerate(regions):
+        parent = region.parent
+        within = parent is not None and (
+            inside[parent]
+            or (
+                regions[parent].kind == LEX_BRACE_COMMAND_SUBSTITUTION
+                and not regions[parent].closed
+            )
+        )
+        inside[index] = within
+        if (
+            region.kind == LEX_BRACE_COMMAND_SUBSTITUTION
+            and not region.closed
+            and not within
+        ):
+            piped = text.startswith("${|", region.start)
+            opener_end = region.start + (3 if piped else 2)
+            out.append((text[opener_end : region.end], region.start))
+    return out
 
 
 # --- Component 5: substitutions in an unquoted-delimiter heredoc body ------
 
 
 def _extract_heredoc_body_substitutions(text):
-    """Every OUTERMOST `$( … )`/`` ` … ` `` in TEXT (an unquoted-delimiter
-    heredoc body), found by Component 1's own scanner in `heredoc-body`
-    mode rather than a separate ad hoc parse -- so a `)` that closes a case
-    pattern or sits inside a quoted string, however deep the nesting, never
-    ends the span early. Returns (bodies, needs_whole_body); NEEDS_WHOLE_BODY
-    is True when an opener is never closed, so the caller falls back to
-    scanning the whole text rather than silently dropping the unresolved
-    tail. Each returned body is queued as its own chunk by the caller;
-    nested levels are found in turn when THAT chunk is scanned next.
+    """Every OUTERMOST `$( … )`/`` ` … ` ``/`${ … }`/`${| … }` in TEXT (an
+    unquoted-delimiter heredoc body), found by Component 1's own scanner in
+    `heredoc-body` mode rather than a separate ad hoc parse -- so a `)` that
+    closes a case pattern or sits inside a quoted string, however deep the
+    nesting, never ends the span early. Returns (bodies, needs_whole_body);
+    NEEDS_WHOLE_BODY is True when an opener is never closed, so the caller
+    falls back to scanning the whole text rather than silently dropping the
+    unresolved tail. Each returned body is queued as its own chunk by the
+    caller; nested levels are found in turn when THAT chunk is scanned next.
+    The caller also queues the content of an unclosed command form
+    (_unclosed_command_forms()) separately in that case, since the whole text
+    read as shell hides it behind a quote or `#` before it.
 
     BODIES is a list of (inner text, start offset in TEXT of the whole
     substitution — its `$(` or backtick), in ascending offset order: the
@@ -5869,6 +6016,13 @@ def statements(command):
         top_spans = _top_level_spans(legacy_spans, legacy_parent_of)
         chunk_subs = [_span_inner(chunk, span)[0] for span in top_spans]
         offset = len(all_subs)
+        # An unclosed command form `${ cmd` (bash 5.3 reports a syntax error)
+        # stays inspected (SPEC F7): the text after its opener is queued as its
+        # own chunk, like a substitution body. Only the outermost one of a
+        # nest is queued; each level queues the rest of its text in turn, and
+        # the relative scan budget above answers a deep nest with the
+        # scan-budget ask.
+        unclosed_forms = _unclosed_command_forms(chunk)
         # The chunk's one lexing: its statements are walked further down, and
         # SEG_ENDS (where each statement's separator starts) lets a heredoc
         # body queued below be anchored between the right two statements.
@@ -5962,6 +6116,18 @@ def statements(command):
                         # whole body as the scan target rather than silently
                         # dropping it.
                         pending.append((record.body, body_anchor, None))
+                        # An unclosed command form `${ cmd` in the body stays
+                        # inspected as well, read as the body reads it (a
+                        # quote or `#` before it opens nothing there), not
+                        # only as the whole-body chunk above reads it (SPEC
+                        # F7). `${|` is read from after the `|`.
+                        for inner, opener in _unclosed_command_forms(
+                            record.body, "heredoc-body"
+                        ):
+                            if inner.strip():
+                                pending.append(
+                                    (inner, body_anchor + ((opener, 0, 0),), None)
+                                )
                     else:
                         for body, offset_in_body in bodies:
                             if body.strip():
@@ -5989,6 +6155,16 @@ def statements(command):
                         body,
                         anchor + ((_AFTER_EVERYTHING, _AFTER_EVERYTHING, i),),
                         offset + i,
+                    )
+                )
+        for k, (body, _opener) in enumerate(unclosed_forms):
+            if body.strip():
+                pending.append(
+                    (
+                        body,
+                        anchor
+                        + ((_AFTER_EVERYTHING, _AFTER_EVERYTHING, len(chunk_subs) + k),),
+                        None,
                     )
                 )
         all_subs.extend(chunk_subs)
