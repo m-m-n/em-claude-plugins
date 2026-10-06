@@ -51,6 +51,10 @@ Layout:
   (destructive-guard-heredoc-syntax-error task0002, P14): array subscripts,
   eval / let / alias arrays, and the two readings of an extended-glob
   parenthesis inside an array, read by the lexer and by its consumers.
+- TestSubscriptRound2Deferred (destructive-guard-lexer-round2-deferred
+  task0002, FR1, FR4): a here-document after a subscript that closes on a
+  later line, and line continuations inside the name of a subscripted
+  assignment word.
 
 Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
 words after closers and name-taking keywords), P11 (where a heredoc body
@@ -3829,6 +3833,269 @@ class TestArraySubscriptAndExtglobReadings(unittest.TestCase):
                 except H.LexBudgetExceeded:
                     continue
                 self.assertEqual(off, on)
+
+
+# ---------------------------------------------------------------------------
+# destructive-guard-lexer-round2-deferred task0002: a here-document after a
+# subscript that closes on a later line (FR1, finding 5753be9288beab27), and
+# line continuations inside the name of a subscripted assignment word (FR4,
+# finding e25427e2a8b1dddf).
+# ---------------------------------------------------------------------------
+
+DEFERRED_SUBSCRIPT_RM = "rm -rf /home/sakura/valuable"
+# The case table holds at least this many entries before any case of this
+# feature (the blocks of the five tasks follow in merge order): each case of
+# this task is found by label and command text at this index or later.
+DEFERRED_SUBSCRIPT_CASE_FLOOR = 769
+DEFERRED_SUBSCRIPT_FR1_LABEL = "5753be9288beab27 round2-deferred FR1."
+DEFERRED_SUBSCRIPT_FR4_LABEL = "e25427e2a8b1dddf round2-deferred FR4."
+
+# (tag, command): the subscript of the assignment word closes on a later line,
+# and the `<<E` after it is a real here-document operator in bash 5.3 whose
+# body holds a quote or `${` that must not take the close line and the lines
+# after it. All deny.
+DEFERRED_SUBSCRIPT_FR1_FORMS = [
+    ("FR1.1", "a[1\n]=x\ncat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+    ("FR1.2", 'a[1\n]=x\ncat <<E\n"\nE\n' + DEFERRED_SUBSCRIPT_RM + '\n"'),
+    ("FR1.3", "a[1\n]=x\ncat <<E\n${\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n}"),
+    ("FR1.4", "a[1\n]=x; cat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+    ("FR1.5", "a[$(echo 1\n)]=x\ncat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+    ("FR1.6", "a[b[1\n]]=x\ncat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+]
+
+# (tag, command, want): a line continuation inside the name or the subscript of
+# an assignment word. Forms 1 and 2 open the subscript after a continuation in
+# the name; 3 to 5 put one inside the subscript, before its `]` and between the
+# `]` and the `=` (already read across a continuation: pinned); 6 never closes
+# the subscript.
+DEFERRED_SUBSCRIPT_FR4_FORMS = [
+    ("FR4.1", "a\\\n[1<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.2", "ab\\\nc[1<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.3", "a[1\\\n<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.4", "a[1<<2\\\n]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.5", "a[1<<2]\\\n=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.6", "a\\\n[1<<2\n" + DEFERRED_SUBSCRIPT_RM, "ask"),
+]
+
+
+def deferred_subscript_command(tag):
+    for form in DEFERRED_SUBSCRIPT_FR1_FORMS + DEFERRED_SUBSCRIPT_FR4_FORMS:
+        if form[0] == tag:
+            return form[1]
+    raise KeyError(tag)
+
+
+def array_subscript_spans(lexmap):
+    return sorted((r.start, r.end) for r in lexmap.regions if r.kind == "array-subscript")
+
+
+class TestSubscriptRound2Deferred(unittest.TestCase):
+    # AC-5: the twelve cases, found by label and command text.
+    def test_the_twelve_cases_are_in_the_case_table_after_the_floor(self):
+        cases = case_commands()
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (want, label, cmd) in enumerate(cases)
+                    if label.startswith(DEFERRED_SUBSCRIPT_FR1_LABEL + tag[4:] + " ")
+                    and cmd == command
+                    and want == "deny"
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], DEFERRED_SUBSCRIPT_CASE_FLOOR)
+        for tag, command, want in DEFERRED_SUBSCRIPT_FR4_FORMS:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if label.startswith(DEFERRED_SUBSCRIPT_FR4_LABEL + tag[4:] + " ")
+                    and cmd == command
+                    and w == want
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], DEFERRED_SUBSCRIPT_CASE_FLOOR)
+
+    def test_the_labels_of_the_missed_detection_forms_carry_the_allow_risk_note(self):
+        labels = {
+            label.split(" ")[2]: label
+            for _want, label, _cmd in case_commands()
+            if label.startswith(DEFERRED_SUBSCRIPT_FR4_LABEL)
+        }
+        for tag in ("FR4.3", "FR4.4", "FR4.5"):
+            with self.subTest(tag=tag):
+                label = labels[tag]
+                self.assertIn("2]=x", label)
+                self.assertIn("allow", label)
+
+    # AC-2: the six FR1 forms.
+    def test_a_here_document_after_a_subscript_closed_on_a_later_line_is_an_operator(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(len(lexmap.heredocs), 1)
+                op = lexmap.heredocs[0]
+                self.assertEqual(command[op.start : op.end], "<<E")
+                self.assertEqual((op.delimiter, op.quoted), ("E", False))
+                operator_line_end = command.index("\n", op.end)
+                self.assertEqual(op.body_start, operator_line_end + 1)
+                self.assertEqual(command[op.body_end : op.close_end], "E\n")
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(lexmap.unopened, [])
+
+    def test_the_subscript_runs_across_the_newline_and_no_region_covers_the_rm_line(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                lexmap = H.lex_shell(command)
+                first_newline = command.index("\n")
+                spans = array_subscript_spans(lexmap)
+                self.assertEqual(spans[0][0], command.index("["))
+                self.assertLess(spans[0][0], first_newline)
+                self.assertGreater(spans[0][1], first_newline)
+                self.assertEqual(command[spans[0][1] - 1], "]")
+                rm_start = command.index(DEFERRED_SUBSCRIPT_RM)
+                rm_end = rm_start + len(DEFERRED_SUBSCRIPT_RM)
+                for region in lexmap.regions:
+                    self.assertTrue(
+                        region.end <= rm_start or region.start >= rm_end,
+                        msg="%s %r covers the rm line" % (tag, region),
+                    )
+
+    def test_the_fr1_map_is_identical_after_clearing_the_lexer_cache(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    def test_the_fr1_forms_deny_in_both_modes(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_chunk_that_does_not_parse_keeps_a_multi_line_subscript_in_one_segment(self):
+        # The lone quote after the rm line makes the masked view fail to
+        # tokenize, so the statement layer splits the chunk itself (the
+        # parse-failure path of _lex_layout()). The subscript the lexer read
+        # across the newline is no place to split: cut there, `a[1` is a
+        # subscript the lexer cannot settle and the hook answers `ask`.
+        command = "a[1\n]=x\ncat <<E\n" + DEFERRED_SUBSCRIPT_RM + "\n'"
+        segments, starts, _operators = H._lex_layout(command, False)
+        self.assertIsNone(starts)
+        words = [toks for toks, _lexed, _sep in segments]
+        self.assertEqual(words[0], ["a[1\n]=x"])
+        self.assertIn(DEFERRED_SUBSCRIPT_RM.split(), words)
+
+    # AC-3: the name holds a line continuation.
+    def test_a_continuation_in_the_name_opens_the_subscript_at_its_bracket(self):
+        for tag in ("FR4.1", "FR4.2"):
+            with self.subTest(tag=tag):
+                command = deferred_subscript_command(tag)
+                lexmap = H.lex_shell(command)
+                self.assertEqual(lexmap.heredocs, [])
+                spans = array_subscript_spans(lexmap)
+                self.assertEqual(spans[0][0], command.index("["))
+                self.assertLess(spans[0][0], command.index("<<"))
+                self.assertGreater(spans[0][1], command.index("<<"))
+                self.assertEqual(command[spans[0][0] : spans[0][1]], "[1<<2]")
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    # AC-4: continuations inside the subscript, and a subscript that never closes.
+    def test_a_continuation_inside_the_subscript_or_before_the_equals_sign_is_no_operator(self):
+        for tag in ("FR4.3", "FR4.4", "FR4.5"):
+            with self.subTest(tag=tag):
+                command = deferred_subscript_command(tag)
+                self.assertEqual(H.lex_shell(command).heredocs, [])
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_continuation_then_a_subscript_that_never_closes_asks(self):
+        command = deferred_subscript_command("FR4.6")
+        with self.assertRaises(H.LexUnmatchedSubscript):
+            H.lex_shell(command)
+        self.assertEqual(hook_verdict(command)[0], "ask")
+        self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_continuation_in_a_declaration_argument_reads_as_without_it(self):
+        with_continuation = "declare a\\\n[1<<2]=x\nbody\n2]=x"
+        without = "declare a[1<<2]=x\nbody\n2]=x"
+        got = H.lex_shell(with_continuation)
+        want = H.lex_shell(without)
+        self.assertEqual(len(got.heredocs), len(want.heredocs))
+        self.assertEqual(len(got.heredocs), 1)
+        for a, b in zip(got.heredocs, want.heredocs):
+            self.assertEqual((a.delimiter, a.quoted), (b.delimiter, b.quoted))
+            # The removed backslash-newline pair is two characters, so every
+            # extent after it is two further on.
+            self.assertEqual(
+                (a.start, a.end, a.body_start, a.body_end, a.close_end),
+                (b.start + 2, b.end + 2, b.body_start + 2, b.body_end + 2, b.close_end + 2),
+            )
+        self.assertEqual(
+            sorted(r.kind for r in got.regions), sorted(r.kind for r in want.regions)
+        )
+
+    def test_a_name_without_a_subscript_after_continuations_opens_none(self):
+        # Only the `[` after the name opens a subscript: a continued name that
+        # a `=` or a blank follows is an ordinary word.
+        for command in (
+            "a\\\nb=1 cat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'",
+            "a\\\nb cat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'",
+            "cat a\\\n[1<<2]\n" + DEFERRED_SUBSCRIPT_RM + "\n2]",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(array_subscript_spans(H.lex_shell(command)), [])
+
+    # AC-6: linear work.
+    def test_lexing_work_is_linear_for_every_form_repeated(self):
+        forms = [(tag, command) for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS]
+        forms += [(tag, command) for tag, command, _want in DEFERRED_SUBSCRIPT_FR4_FORMS]
+        for tag, unit in forms:
+            with self.subTest(tag=tag):
+                small_text = "\n".join([unit] * 200)
+                large_text = "\n".join([unit] * 400)
+                try:
+                    small = H.lex_shell(small_text)
+                    large = H.lex_shell(large_text)
+                except H.LexUnmatchedSubscript:
+                    # A subscript that never closes is settled by the hook's
+                    # own `ask` once the whole text is read: the exact type
+                    # (not the work bound's) says the bound was not hit.
+                    self.assertEqual(tag, "FR4.6")
+                    for text in (small_text, large_text):
+                        with self.assertRaises(H.LexUnmatchedSubscript):
+                            H.lex_shell(text)
+                    continue
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_lexing_work_is_linear_for_a_name_holding_many_continuations(self):
+        for subscript in ("[1]=x", "[1<<2]=x", "=x"):
+            with self.subTest(tail=subscript):
+                small_text = "a" + "\\\na" * 200 + subscript
+                large_text = "a" + "\\\na" * 400 + subscript
+                small = H.lex_shell(small_text)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+        opened = H.lex_shell("a" + "\\\na" * 400 + "[1<<2]=x\n2]=x")
+        self.assertEqual(opened.heredocs, [])
+        self.assertEqual(len(array_subscript_spans(opened)), 1)
+
+    def test_a_name_holding_many_continuations_is_read_in_time_by_the_hook(self):
+        command = "a" + "\\\na" * 400 + "[1<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x"
+        start = time.monotonic()
+        self.assertEqual(hook_verdict(command)[0], "deny")
+        self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
 
 
 class TestStageAgreementUnderExtglobOn(TestStageAgreement):
