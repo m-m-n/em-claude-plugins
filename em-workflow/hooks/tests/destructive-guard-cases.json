@@ -802,5 +802,6 @@
   ["allow", "1fcae1f76f2a20f0 round2-deferred FR7.7 引用した区切り語の本文の ${ rm -rf ...; } は文字のままで allow", "cat <<'E'\n${ rm -rf /home/sakura/valuable; }\nE"],
   ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.8 二重引用符の中の ${ cmd; } も bash 5.3 では実行されるので、中身の rm -rf は deny", "echo \"${ rm -rf /home/sakura/valuable; }\""],
   ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.9 パラメータ展開の中に入れ子にした ${ cmd; } も実行されるので、中身の rm -rf は deny", "echo ${x:-${ rm -rf /home/sakura/valuable; }}"],
-  ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.10 ${ の中の { } のグループの } では閉じず、最後の } で閉じる命令置換の中の rm -rf は deny", "echo ${ { rm -rf /home/sakura/valuable; }; }"]
+  ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.10 ${ の中の { } のグループの } では閉じず、最後の } で閉じる命令置換の中の rm -rf は deny", "echo ${ { rm -rf /home/sakura/valuable; }; }"],
+  ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.11 バッククォートの中で開いた ${ は閉じなくても次のバッククォートで終わり、直前の語に続く git reset --hard は deny（bash は置換の中身だけを構文エラーにして git を実行する）", "git reset --hard`${ x`"]
 ]
