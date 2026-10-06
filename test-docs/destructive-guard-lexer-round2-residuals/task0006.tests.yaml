@@ -1,0 +1,45 @@
+task_id: task0006
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: 8487 tests, OK (skipped=1); run-destructive-guard.py was not run at the base (the case table then held 677 entries)
+final_failures: []             # re-executed after the hook change: discover -s tests 8494 tests OK (skipped=1); run-destructive-guard.py 679/679; lexer agreement module 150 tests OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py (case 48e1f462b0dd164f round2-residuals FR2.1)
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_the_case_is_in_the_case_table_after_the_base_entries
+    red_confirmed: true
+    red_reason: "Case table committed first (fb8e31bc) and run-destructive-guard.py then printed 678/679 with 'FAIL deny 48e1f462b0dd164f round2-residuals FR2.1 ... got=allow', before any commit that changes destructive-guard.py (git log shows fb8e31bc, e9a31eb3, then the hook commit). The placement test was written after the case existed, so it was never observed red; the runner failure is the observed red. The commit order itself is a git history property."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_a_second_p_after_time_p_is_the_command_word_and_the_operator_is_real
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_the_repeated_p_case_is_denied_in_both_modes
+    red_confirmed: true
+    red_reason: "Before the hook change the lexical test failed with 'Lists differ: [(12, 18)] != []' (a[1<<2] read as an array-subscript region, no operator) and the verdict test with \"'allow' != 'deny'\" for batch=False and batch=True."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_the_same_form_with_the_shared_tail_registers_the_operator_too
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_a_second_p_after_time_p_ends_the_command_position
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_one_p_or_a_double_dash_keeps_the_subscript_and_registers_no_operator
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_the_subscript_forms_still_deny_the_destructive_tail_in_both_modes
+    red_confirmed: true
+    red_reason: "Repeated-p half: before the hook change 'Lists differ: [(12, 18)] != []' (subscript read, no operator) and \"'arithmetic-command' unexpectedly found\" for time -p -p ((1<<2)). Control half (time -p a[1<<2]=x and time -- a[1<<2]=x keep the subscript and register no operator, and still deny): already green before the change because the base reading handled those forms; they guard against over-narrowing the option rule, and no red state occurred for them."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_command_position_arithmetic
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations.test_no_time_option_follows_a_double_dash
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_command_position_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_round2_command_position_forms_are_denied_in_both_modes
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests above detect a changed reading of every COMMAND_POSITION_FORMS entry (time -p -- ((1<<2)), time -- ! ((1<<2)) included) and of time -- -p / time -- -- ((1<<2)); no red state occurred for this change (they were green before and after, as the criterion requires)."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Confirmed on bash 5.3.9 with echo in place of rm (bash -c with the form time -p -p a[1<<2]=x, a body line ', the line 2]=x and an echo line: bash printed '-p: command not found', closed the body at 2]=x and ran the echo line). It is a probe of the shell, independent of the hook, so no hook-side check can be made to fail first. Searched tests/ and em-workflow/hooks/tests/ by path em-workflow/hooks/destructive-guard.py and basename destructive-guard.py: no existing test runs bash on these forms."
+  AC-6:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
+      - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_the_case_is_in_the_case_table_after_the_base_entries
+    red_confirmed: true
+    red_reason: "The runner part was observed red: 678/679 before the hook change (the new case got=allow), 679/679 after. The remaining parts (no pre-existing entry removed, edited or reordered; index 627 or later; the project suite green) are held by existing tests that were green before and after (the BASE_ENTRIES_DIGEST check over the first 627 entries, TestStageAgreement, TestModuleContract, discover -s tests); no red state occurred for them."

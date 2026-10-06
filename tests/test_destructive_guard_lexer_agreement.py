@@ -964,7 +964,7 @@ class TestTimeOptions(unittest.TestCase):
         self.assertEqual(op.start, text.index("<<"))
         self.assertEqual((op.delimiter, op.quoted), ("2]=x", False))
         self.assertEqual(heredoc_body(text, op), "'\n")
-        self.assertEqual(text[op.body_end : op.close_end], "2]=x")
+        self.assertEqual(text[op.body_end : op.close_end], "2]=x\n")
 
     def test_the_same_form_with_the_shared_tail_registers_the_operator_too(self):
         text = TIME_P_REPEATED_FORM + TAIL
