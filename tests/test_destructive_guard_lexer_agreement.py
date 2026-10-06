@@ -30,6 +30,10 @@ Layout:
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
 - TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11).
 - TestModuleContract: the replaced readers are gone; standard library only.
+- TestArraySubscriptAndExtglobReadings, TestStageAgreementUnderExtglobOn
+  (destructive-guard-heredoc-syntax-error task0002, P14): array subscripts,
+  eval / let / alias arrays, and the two readings of an extended-glob
+  parenthesis inside an array, read by the lexer and by its consumers.
 
 Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
 words after closers and name-taking keywords), P11 (where a heredoc body
@@ -1655,6 +1659,141 @@ class TestModuleContract(unittest.TestCase):
             self.assertIn(finding, label)
         self.assertEqual(block[0][2], "if (true) then ((1<<2)); fi" + TAIL)
         self.assertEqual(block[22][2], "cat <(true) #; rm -rf /home/sakura/valuable")
+
+
+# ---------------------------------------------------------------------------
+# destructive-guard-heredoc-syntax-error task0002 (P14): array subscripts,
+# eval / let / alias, and extended-glob parentheses inside an array. The case
+# table pins the verdicts; these pin what the lexer itself reads.
+# ---------------------------------------------------------------------------
+
+# Where a `<<EOF` right after the array would be a heredoc operator in bash.
+SUBSCRIPT_ARRAY_FORMS = [
+    "eval x=( <<EOF\nbody\nEOF",
+    "let x=( <<EOF\nbody\nEOF",
+    "alias x=( <<EOF\nbody\nEOF",
+    'x["0"]=( <<EOF\nbody\nEOF',
+    "x[$i]=( <<EOF\nbody\nEOF",
+    "x['k']=( <<EOF\nbody\nEOF",
+    "x[a b]=( <<EOF\nbody\nEOF",
+    "x[0]+=( <<EOF\nbody\nEOF",
+    "x[$(echo ])]=( <<EOF\nbody\nEOF",
+    "eval x[a b]=( <<EOF\nbody\nEOF",
+    "x=( [a b]=c <<EOF\nbody\nEOF",
+    "x=([1<<2]=foo <<EOF\nbody\nEOF",
+]
+
+# Forms whose `<<` the lexer must read as part of a subscript, so the one real
+# operator is the one that follows.
+SUBSCRIPT_OPERATOR_FORMS = [
+    "x=([1<<2]=foo); cat <<'EOF'\nbody\nEOF",
+    "x=([1 <<2]=foo [3]=bar); cat <<'EOF'\nbody\nEOF",
+    "x[1<<2]=5; cat <<'EOF'\nbody\nEOF",
+    'x["k"]=v; cat <<\'EOF\'\nbody\nEOF',
+    "let x=1; cat <<'EOF'\nbody\nEOF",
+    "alias ll='ls -l'; cat <<'EOF'\nbody\nEOF",
+]
+
+EXTGLOB_ARRAY_FORM = re.compile(r"=\([^\n]*[?*+@!]\(")
+
+
+class TestArraySubscriptAndExtglobReadings(unittest.TestCase):
+    def test_a_subscript_or_assignment_builtin_array_is_an_array_context(self):
+        # The `<<EOF` directly in the array is no operator, so the lexer
+        # registers no heredoc at all and the line after it is a command line.
+        for text in SUBSCRIPT_ARRAY_FORMS:
+            with self.subTest(text=text):
+                self.assertEqual(list(H.lex_shell(text).heredocs), [])
+
+    def test_a_shift_in_a_subscript_is_no_heredoc_operator(self):
+        for text in SUBSCRIPT_OPERATOR_FORMS:
+            with self.subTest(text=text):
+                heredocs = H.lex_shell(text).heredocs
+                self.assertEqual(len(heredocs), 1)
+                op = heredocs[0]
+                self.assertEqual((op.delimiter, heredoc_body(text, op)), ("EOF", "body\n"))
+                self.assertGreater(op.start, text.index(";"))
+
+    def test_an_unmatched_subscript_cannot_be_settled(self):
+        for text in (
+            "x[0=( <<EOF\necho hi\nEOF",
+            "x=([foo <<EOF\necho hi\nEOF",
+            "x[${",
+        ):
+            with self.subTest(text=text):
+                with self.assertRaises(H.LexUnmatchedSubscript):
+                    H.lex_shell(text)
+                # It is an unsettled text for every caller that already
+                # handles the work bound.
+                with self.assertRaises(H.LexBudgetExceeded):
+                    H.lex_shell(text)
+
+    def test_the_extended_glob_reading_decides_whether_the_line_is_discarded(self):
+        text = "x=(@(foo)); cat <<'A'\nbody\nA"
+        off = H.lex_shell(text, "shell", True, False)
+        on = H.lex_shell(text, "shell", True, True)
+        self.assertEqual(list(off.heredocs), [])
+        self.assertEqual(len(on.heredocs), 1)
+        self.assertEqual(heredoc_body(text, on.heredocs[0]), "body\n")
+
+    def test_a_bare_parenthesis_in_an_array_discards_the_line_under_both_readings(self):
+        text = "x=(a (b)); cat <<'A'\nbody\nA"
+        for extglob in (False, True):
+            with self.subTest(extglob=extglob):
+                self.assertEqual(
+                    list(H.lex_shell(text, "shell", True, extglob).heredocs), []
+                )
+
+    def test_a_lexing_that_met_an_extended_glob_parenthesis_says_so(self):
+        H._lex_extglob_met = False
+        H.lex_shell("x=(a b); cat <<'A'\nbody\nA")
+        H.lex_shell("x=(a (b)); cat <<'A'\nbody\nA")
+        H.lex_shell("echo @(a|b)")
+        self.assertFalse(H._lex_extglob_met)
+        H.lex_shell("x=(a@(b|c))")
+        self.assertTrue(H._lex_extglob_met)
+        H._lex_extglob_met = False
+
+    def test_the_reading_in_force_is_the_default_and_part_of_the_cache_key(self):
+        text = "x=(@(foo)); cat <<'A'\nbody\nA"
+        try:
+            H._lex_extglob = True
+            self.assertEqual(len(H.lex_shell(text).heredocs), 1)
+            H._lex_extglob = False
+            self.assertEqual(list(H.lex_shell(text).heredocs), [])
+        finally:
+            H._lex_extglob = False
+            H._lex_extglob_met = False
+
+    def test_the_two_readings_leave_a_command_without_such_a_parenthesis_alone(self):
+        for text in SUBSCRIPT_OPERATOR_FORMS + SUBSCRIPT_ARRAY_FORMS:
+            with self.subTest(text=text):
+                try:
+                    off = H.lex_shell(text, "shell", True, False).as_tuple()
+                    on = H.lex_shell(text, "shell", True, True).as_tuple()
+                except H.LexBudgetExceeded:
+                    continue
+                self.assertEqual(off, on)
+
+
+class TestStageAgreementUnderExtglobOn(TestStageAgreement):
+    """The stage-agreement checks over every case-table command that holds an
+    extended-glob parenthesis in an array, with the lexer reading it as the
+    pattern group `shopt -s extglob` makes it (P14): the second reading the
+    hook judges such a command under must agree with its consumers as well."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.commands = [c for c in all_commands() if EXTGLOB_ARRAY_FORM.search(c)]
+        H._lex_extglob = True
+
+    @classmethod
+    def tearDownClass(cls):
+        H._lex_extglob = False
+        H._lex_extglob_met = False
+
+    def test_the_forms_are_there_to_check(self):
+        self.assertGreaterEqual(len(self.commands), 7)
 
 
 if __name__ == "__main__":
