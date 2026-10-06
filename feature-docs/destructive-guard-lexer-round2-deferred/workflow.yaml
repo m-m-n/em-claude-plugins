@@ -128,7 +128,7 @@ workflow:
   base_commit: 60f7ea47dc957a73eee8be32a79a44a16f1f5123
   completed_at_commit: 464f23e22617f2ebf298efeffd90a5ed1eef9d3c
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -266,6 +266,16 @@ tasks:
     branch: em-workflow/destructive-guard-lexer-round2-deferred/task0005
 review:
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: 毎回の Bash 呼び出しで走る字句解析に、読み直し・行連結の走査が増えたため、入力長に対する計算量の悪化を確認する
+    cross_validation: true
 requirements:
   FR1:
     title: 行をまたいで閉じる配列添字の後のヒアドキュメントで後続行を隠さない（5753be9288beab27）
