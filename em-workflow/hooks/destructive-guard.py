@@ -1244,6 +1244,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             f.redir = False
             f.prev_plain = False
             return
+        if logical is not None and logical[4]:
+            # A complete logical word (line continuation after the first
+            # run) is the word the reserved-word classification reads.
+            w = logical[0]
         time_p = f.time_p
         kw = f.kw
         rw = f.rw
