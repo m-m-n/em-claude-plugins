@@ -1,0 +1,105 @@
+task_id: task0002
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 8414 tests, OK (skipped=1); python3 em-workflow/hooks/tests/run-destructive-guard.py -> 669/669 passed
+final_failures: []             # re-executed after the implementation (a different run from the baseline): python3 -m unittest discover -s tests -> Ran 8434 tests, OK (skipped=1); python3 em-workflow/hooks/tests/run-destructive-guard.py -> 718/718 passed (717 table entries + the unattended-demotion check)
+acceptance_tests:
+  AC-1:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5"
+    red_confirmed: true
+    red_reason: >-
+      With the cases appended and the hook unchanged (the HEAD copy of
+      destructive-guard.py), AC-1.1 (eval), AC-1.2 (let) and AC-1.3 (alias)
+      returned allow where deny was expected: the `<<EOF` after the NAME=( of an
+      eval / let / alias argument was registered as a heredoc operator and the
+      git lines were taken as its body. AC-1.4 and AC-1.5 (the allow cases for
+      `let x=1` and `alias ll='ls -l'`) already passed before the change and
+      guard against opening an array where none opens.
+  AC-2:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-2.1, AC-2.2, AC-2.3, AC-2.4, AC-2.5, AC-2.6, AC-2.7, AC-2.8"
+    red_confirmed: true
+    red_reason: >-
+      Unchanged HEAD hook: AC-2.1 (x["0"]=( ), AC-2.2 (x[$i]=( ), AC-2.3
+      (x['k']=( ) and AC-2.4 (x[a b]=( ) returned allow where deny was expected,
+      and AC-2.6 (x[0=( with a benign follow-up) returned allow where ask was
+      expected. AC-2.5 (x[0]+=( , a plain subscript the old name pattern already
+      read) and the allow cases AC-2.7 / AC-2.8 already passed before the
+      change.
+  AC-3:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-3.1, AC-3.2, AC-3.3"
+    red_confirmed: true
+    red_reason: >-
+      Unchanged HEAD hook: AC-3.1 returned allow where deny was expected (the
+      `<<` in the element subscript made the line a discarded line, so
+      `cat <<'true'` took the lines `A` / `git reset --hard HEAD` as its body)
+      and AC-3.2 returned deny where allow was expected (the same discarded
+      line left the later `cat <<'EOF'` unregistered). AC-3.3 (a direct `<<`
+      after the subscript's `]`) already returned deny and pins that the
+      subscript rule does not suppress it.
+  AC-4:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-4.1, AC-4.2, AC-4.3, AC-4.4, AC-4.5, AC-4.6, AC-4.7"
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscriptAndExtglobReadings.test_the_extended_glob_reading_decides_whether_the_line_is_discarded
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
+    red_confirmed: true
+    red_reason: >-
+      Unchanged HEAD hook: AC-4.1 to AC-4.5 (the five prefixes @ ? * + !)
+      returned allow where deny was expected (the `(` discarded the line, so
+      `cat <<'true'` hid the git line). AC-4.6 (deny: the extglob-off reading's
+      discarded line makes the git line a command) and AC-4.7 (the benign
+      allow) already passed before the change; AC-4.7 was expected to fail by
+      the plan, but the discarded-line reading judged `hello` / `EOF` as benign
+      commands too. Together the five red entries need the extglob-on reading
+      and AC-4.6 needs the extglob-off one, so the pair pins the stricter-of-two
+      verdict.
+  AC-5:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-5.1, AC-5.2, AC-5.3, AC-5.4, AC-5.5, AC-5.6, AC-5.7, AC-5.8, AC-5.9"
+    red_confirmed: true
+    red_reason: >-
+      All nine cases already pass with the committed round-1 fixes: they record
+      behavior that exists and must survive this task's changes. Each fix was
+      reverted in a local scratch copy (nothing committed) and the failing
+      entries observed, every one allow where deny was expected: the leading
+      `<` / fd-number / {fd} redirect handling (the word_transition() redirect
+      flag, the digit test, the {fd} test) fails AC-5.1, AC-5.2 and AC-5.3; the
+      bare `(` discarding the line fails AC-5.6; dropping the tail_start
+      condition on the array `<<` fails AC-5.7; not resetting the redirect flag
+      on a `(` push fails AC-5.8 and on a `((` push fails AC-5.9. AC-5.8 and
+      AC-5.9 carry "リダイレクトの印は ( / (( の push で消える" in their labels.
+      AC-5.4 and AC-5.5, the forms the criterion lists, still pass with their
+      fix reverted, so they do not pin it by themselves; AC-5.6 and AC-5.7 do.
+  AC-6:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (all 718 checks)"
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
+      - "python3 -m unittest discover -s tests (all 8434 tests)"
+    red_confirmed: true
+    red_reason: >-
+      The case runner, one of the two commands of the criterion, was observed
+      failing before the implementation: with the new entries appended and the
+      HEAD copy of the hook, 21 of them FAILed (see AC-1 to AC-4). The 668
+      pre-existing entries are identical in the new table (verified by parsing
+      the JSON and comparing the first 668 entries; deny 378 -> 413, ask 118 ->
+      120, allow 168 -> 180, so deny plus ask went from 496 to 533) and both
+      commands pass after the change.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement (all 98 tests, including TestStageAgreement over every table command and TestStageAgreementUnderExtglobOn over the extended-glob forms read under extglob on)
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscriptAndExtglobReadings
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_budget_exceeded_is_an_ask_never_an_allow
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error E-9, E-10 (scan-budget ask), T2 AC-2.6, T2 E-11 (unmatched subscript ask)"
+    red_confirmed: true
+    red_reason: >-
+      TestArraySubscriptAndExtglobReadings and TestStageAgreementUnderExtglobOn
+      were run against the HEAD copy of the hook (a scratch copy of the test
+      module pointed at it) and failed: the lexer had no LexUnmatchedSubscript
+      and no EXTGLOB reading (TypeError / AttributeError), and the array
+      forms registered heredoc operators. The existing agreement suite, the
+      budget test and the runner's 10 s limit passed before and after, so no
+      red exists for those parts. The statement "no array, subscript or
+      extended-glob classification in strip_heredocs(), scan_structure(),
+      _TrackingLexer or tokens()" is checked by reading the diff (only
+      lex_shell() / _lex_pass() and their helpers, decide() and the entry
+      point run() / main() changed), which is not an executable check.
