@@ -8,24 +8,41 @@ records:
   answer_mode: freeform
   selected_option_ids: []
   freeform: Q1 A / Q2 A / Q3 A / Q4 A
-  normalized_answer: 'Q1 c8c16caba82d6238: consolidate the tail-open predicate only,
-    no _lex_pass split (A3). Q2 52bfa0f59d1ea852: stop opening ${ / $(( / $[ / ((
-    / case in the tail, not an ask (A4); also apply to _shape_leading() case state.
-    Q3 1fcae1f76f2a20f0: model ${ cmd; } / ${| cmd; } as command substitution closed
-    by a reserved-word }, update unittest expectations, keep cases.json (A7/A8); extraction
-    must cover unclosed bodies and the | offset. Q4 e959ba60bde865a4 / aa735aa95be36542:
-    \n-only line boundary and space/tab-only blanks across the lexer, including _tokenize_marked()
-    in both modes.'
-  resolution_note: 'gate: orchestrator-raised clarification of four analyst assumptions
-    (A3, A4, A7/A8, FR3/FR6 approach) requested by the launch instruction to consult
-    Codex on unclear points; options: Q1 A consolidate predicate / B also split _lex_pass
-    / C local fixes only; Q2 A do not open in tail / B ask on unreadable delimiter;
-    Q3 A model funsub as command substitution / B ask on ${ +blank; Q4 A \n-only boundaries
-    and space/tab blanks / B ask on any such char; choice: A for all four; not chosen:
-    Q1 B,C; Q2 B; Q3 B; Q4 B; key points: Q1 splitting while fixing widens verification
-    (state restore at :1176); Q2 B turns cases.json FR4.1/FR4.2 deny into ask, and
-    case state is also kept in _shape_leading() (:6056); Q3 A matches the bash manual
-    and reaches the existing body inspection, but extraction (:3995) must handle unclosed
-    bodies and the ${| offset; Q4 A matches bash blank/line definitions, B would ask
-    on ordinary text; Codex verified ${ printf SAFE; } / ${|REPLY=SAFE; } / x\r# behaviour
-    with bash; codex_consulted: true (harness codex, 1 turn); opus_escalation: false'
+  normalized_answer: 'Q1 c8c16caba82d6238: consolidate the tail-open predicate only, no _lex_pass split
+    (A3). Q2 52bfa0f59d1ea852: stop opening ${ / $(( / $[ / (( / case in the tail, not an ask (A4); also
+    apply to _shape_leading() case state. Q3 1fcae1f76f2a20f0: model ${ cmd; } / ${| cmd; } as command
+    substitution closed by a reserved-word }, update unittest expectations, keep cases.json (A7/A8); extraction
+    must cover unclosed bodies and the | offset. Q4 e959ba60bde865a4 / aa735aa95be36542: \n-only line
+    boundary and space/tab-only blanks across the lexer, including _tokenize_marked() in both modes.'
+  resolution_note: 'gate: orchestrator-raised clarification of four analyst assumptions (A3, A4, A7/A8,
+    FR3/FR6 approach) requested by the launch instruction to consult Codex on unclear points; options:
+    Q1 A consolidate predicate / B also split _lex_pass / C local fixes only; Q2 A do not open in tail
+    / B ask on unreadable delimiter; Q3 A model funsub as command substitution / B ask on ${ +blank; Q4
+    A \n-only boundaries and space/tab blanks / B ask on any such char; choice: A for all four; not chosen:
+    Q1 B,C; Q2 B; Q3 B; Q4 B; key points: Q1 splitting while fixing widens verification (state restore
+    at :1176); Q2 B turns cases.json FR4.1/FR4.2 deny into ask, and case state is also kept in _shape_leading()
+    (:6056); Q3 A matches the bash manual and reaches the existing body inspection, but extraction (:3995)
+    must handle unclosed bodies and the ${| offset; Q4 A matches bash blank/line definitions, B would
+    ask on ordinary text; Codex verified ${ printf SAFE; } / ${|REPLY=SAFE; } / x\r# behaviour with bash;
+    codex_consulted: true (harness codex, 1 turn); opus_escalation: false'
+- question_id: create-plan.plan-clarification
+  packet_id: null
+  answered_at: '2026-10-06T21:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 A / Q2 A (scoped)
+  normalized_answer: 'Q1 IMPLEMENTATION.md D4: in the tail, refuse only the parameter form of ${; keep
+    opening the command form (${ followed by space/tab/newline/|) like $( per SPEC F2. Q2 task0004: disregard
+    a trailing \r only when matching destructive rules; the safe-delete exception (e.g. dist / node_modules
+    targets) must use the original word, so `dist\r` is not treated as `dist`.'
+  resolution_note: 'gate: orchestrator-raised clarification of two planner judgments (D4, task0004 trailing-\r
+    rule) requested by the launch instruction to consult Codex on unclear points; options: Q1 A open command-form
+    ${ in tail / B refuse every ${ in tail literally; Q2 A ignore trailing \r for destructive matching
+    / B ask on any word containing \r / C nothing special; choice: Q1 A, Q2 A limited to destructive-rule
+    matching; not chosen: Q1 B, Q2 B, C; key points: Q1 B makes the funsub body arguments of the preceding
+    command and hides a command bash runs (consistent with FR7 and F2, SPEC.md:67/:182); FR2 should be
+    read with the command-form exception; Q2 B turns harmless `echo hi\r` into ask (deny in batch, destructive-guard.py:384);
+    C flips `git reset --hard\r` to allow (:6425); caveat: do not apply trailing-\r stripping to the safe-delete
+    exception check (:6581) — carry this to the task0004 implementer and reviewer; codex_consulted: true
+    (harness codex, 1 turn); opus_escalation: false'
