@@ -542,6 +542,23 @@ class _TrackingLexer(shlex.shlex):
 #              position is tracked in _LexFrame.asg / .rd, apart from the
 #              command / after-closer state (which it never changes).
 #
+# Rework round 1 (destructive-guard-lexer-round2-residuals, task0005, FR4;
+# review findings 1baa909f9b288847 and 19edf404b5cbeb2b).
+#
+#   Unreadable delimiter word (FR4)  a `<<` whose delimiter word cannot be read
+#              (_read_heredoc_delimiter()) registers no operator and is a tail
+#              source: from it on no comment, no quote region (`'`, `"`, `$'`,
+#              `$"`) and no further `<<` operator is opened, so every line
+#              after it stays subject to inspection. The quote characters left
+#              literal are reported in the map's UNOPENED (the masked view
+#              hides them from shlex) and the map's TAIL_START is the earlier
+#              of this `<<` and the settle channel's. The pass state is
+#              _lex_pass()'s TAIL_SOURCE, taken back by a resumed `((`.
+#   Close line (FR4)  a line ends a body only where bash 5.3 ends it: under
+#              `<<` it equals the delimiter value (its line end removed),
+#              under `<<-` it does once its leading tabs are removed.
+#              _LexLines.close_lines() is that index, one pass per kind.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -633,13 +650,17 @@ class LexMap:
       BODY_START/BODY_END the body lines and CLOSE_END the end of the
       delimiter line (all None when the delimiter line never appears, or the
       map was made without body skipping). An operator whose delimiter word
-      cannot be read is not reported at all and takes no body.
+      cannot be read is not reported at all and takes no body; it is a tail
+      source instead (TAIL_START, and no quote region opens from it on).
     - CANDIDATES: LexCandidate(quote, start, end, enclosing) -- P8: the
       substitutions the broad search reads inside the single-quote or
       ansi-c-quote region with index QUOTE; ENCLOSING is the index of the
       substitution region around that quote, or None.
-    - UNOPENED: offsets of the openers settled as not opened (P4); TAIL_START
-      the earliest of them (the re-read tail starts there), None without any.
+    - UNOPENED: offsets of the openers settled as not opened (P4), and of the
+      `'` / `"` characters a tail source leaves literal (no quote region opens
+      from a `<<` whose delimiter word cannot be read on); TAIL_START the
+      earliest settled opener or such a `<<` (the re-read tail starts there),
+      None without either.
     - WORK / ROUNDS: loop iterations and passes it cost (P7)."""
 
     __slots__ = (
@@ -714,10 +735,16 @@ class _LexFrame:
 class _LexLines:
     """Line index of a text for here-document body lookup: START offsets of
     every line (str.splitlines() rules, as strip_heredocs() always used) and,
-    built on first use, WORD_TO_LINES -- every line that is nothing but one
-    blank-free word, per _delimiter_line_word(), indexed by that word (NFR3)."""
+    built on first use of each kind, the close-line index (NFR3):
+    close_lines(DASH) maps a delimiter value to the lines that close a body
+    with it, one pass over the lines per kind. A line closes the body of a
+    `<<` operator when the line, its line end removed, equals the delimiter
+    value; of a `<<-` operator when it does once its leading tabs are removed
+    too (bash 5.3). The key of a line is therefore the line itself (DASH
+    false) or the line without its leading tabs (DASH true), so a value that
+    holds blanks is looked up like any other."""
 
-    __slots__ = ("text", "starts", "_word_to_lines")
+    __slots__ = ("text", "starts", "_close_lines")
 
     def __init__(self, text):
         starts = []
@@ -727,21 +754,28 @@ class _LexLines:
             total += len(line)
         self.text = text
         self.starts = starts
-        self._word_to_lines = None
+        self._close_lines = [None, None]
 
-    def word_to_lines(self):
-        if self._word_to_lines is None:
+    def close_lines(self, dash):
+        """{key: [indexes of the lines with that key, in order]} for a `<<-`
+        operator (DASH true) or a `<<` operator (DASH false)."""
+        kind = 1 if dash else 0
+        mapping = self._close_lines[kind]
+        if mapping is None:
             mapping = {}
             starts = self.starts
             text = self.text
             last = len(starts) - 1
             for idx, s in enumerate(starts):
                 e = starts[idx + 1] if idx < last else len(text)
-                word = _delimiter_line_word(text[s:e])
-                if word is not None:
-                    mapping.setdefault(word, []).append(idx)
-            self._word_to_lines = mapping
-        return self._word_to_lines
+                if e > s and text[e - 1] == "\n":
+                    e -= 1
+                key = text[s:e]
+                if dash:
+                    key = key.lstrip("\t")
+                mapping.setdefault(key, []).append(idx)
+            self._close_lines[kind] = mapping
+        return mapping
 
 
 _LEX_WS = re.compile(r"[ \t\r]+")
@@ -866,8 +900,9 @@ def _read_heredoc_delimiter(text, i):
     Unreadable: no word before a metacharacter or the end of the text; a
     quote that does not close on the operator's line (nor does a backslash
     before a line break); a command substitution, a backtick, `${`, `$((`,
-    `$[`, `$'` or `$"` in the word. The text after the `<<` is then lexed as
-    it is for any `<<` that registers no operator."""
+    `$[`, `$'` or `$"` in the word. The `<<` is then no operator and a tail
+    source: _lex_pass() opens no comment, quote region or operator from it on,
+    so every following line stays subject to inspection."""
     n = len(text)
     start = _heredoc_word_start(text, i)
     parts = []
@@ -944,7 +979,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
     found to close without an adjacent `))`, which are read as two
     parentheses; LINES is the line index when here-document bodies are to be
     skipped (None otherwise). Returns
-    ("done", regions, ops, candidates, unopened, iterations) or
+    ("done", regions, ops, candidates, unopened, iterations, tail_source) --
+    TAIL_SOURCE the offset of the first `<<` whose delimiter word could not be
+    read, None without one -- or
     ("restart", new_settled, new_reparen, iterations) when this pass learned
     of openers to settle; raises LexBudgetExceeded past BUDGET iterations.
 
@@ -971,7 +1008,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
     start becomes the trigger. A region that encloses the operator was open
     when it registered and so never defers it."""
     n = len(text)
-    tail_start = min(settled) if settled else None
+    # TAIL_START: from this offset on no comment, no `<<` operator and no
+    # array subscript is opened. It is the earliest settled opener
+    # (SETTLED_TAIL) until a `<<` whose delimiter word cannot be read is met:
+    # that `<<` (TAIL_SOURCE) is a tail source of its own, from which on no
+    # quote region is opened either (rework round 1, task0005). TAIL_SOURCE is
+    # part of the pass state a resumed `((` / `$((` takes back.
+    settled_tail = min(settled) if settled else None
+    tail_start = settled_tail
+    tail_source = None
     regions = []  # [kind, start, end, parent, closed, nearest substitution ancestor]
     ops = []
     candidates = []
@@ -1007,7 +1052,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             # all there is to take back.
             snap = (
                 len(regions), len(candidates), len(encountered), len(ops),
-                len(hd_pending), hd_trigger, limit, cont_at, seq,
+                len(hd_pending), hd_trigger, limit, cont_at, seq, tail_source,
             )
         idx = new_region(region_kind, start, f)
         frame = _LexFrame(kind, start, idx, idx, cmd, depth)
@@ -1175,9 +1220,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             if i in settled:
                 encountered.append(i)
                 return i + 2
-            push(f, "ansi", "ansi-c-quote", i)
-            return i + 2
-        if c2 == '"' and not in_quotes and not body_literal:
+            if tail_source is None:
+                push(f, "ansi", "ansi-c-quote", i)
+                return i + 2
+        if c2 == '"' and not in_quotes and not body_literal and tail_source is None:
             push(f, "locale", "locale-quote", i)
             return i + 2
         if c2 and c2 in _LEX_SPECIAL_PARAMETERS:
@@ -1222,9 +1268,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
             if cut < len(hd_pending):
                 hd_next = bisect.bisect_right(starts, boundary) - 1
                 jump = None
-                by_word = lines.word_to_lines()
                 for op in hd_pending[cut:]:
-                    found_lines = by_word.get(op[2], ())
+                    # `<<-` removes leading tabs from a line before it is
+                    # compared with the delimiter, `<<` compares the line.
+                    found_lines = lines.close_lines(
+                        text.startswith("-", op[0] + 2)
+                    ).get(op[2], ())
                     pos = bisect.bisect_left(found_lines, hd_next)
                     if pos < len(found_lines):
                         found = found_lines[pos]
@@ -1388,6 +1437,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                         word = None
                         if tail_start is None or i < tail_start:
                             word = _read_heredoc_delimiter(text, i)
+                            if word is None:
+                                # A delimiter word that cannot be read: no
+                                # operator, and the text from here on is read
+                                # as a tail (no comment, quote region or
+                                # operator opens), so a line bash 5.3 would
+                                # run as a command is never hidden by one.
+                                tail_source = tail_start = i
                         if word is not None:
                             register_operator(i, word)
                             # The delimiter word is part of the operator: no
@@ -1420,12 +1476,18 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 continue
             if c == "'":
                 start_word(f, i)
-                push(f, "sq", "single-quote", i)
+                if tail_source is None:
+                    push(f, "sq", "single-quote", i)
+                else:
+                    encountered.append(i)
                 i += 1
                 continue
             if c == '"':
                 start_word(f, i)
-                push(f, "dq", "double-quote", i)
+                if tail_source is None:
+                    push(f, "dq", "double-quote", i)
+                else:
+                    encountered.append(i)
                 i += 1
                 continue
             if c == "$":
@@ -1546,10 +1608,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 close(f, j + 1)
                 i = j + 1
             elif c == "'":
-                push(f, "sq", "single-quote", j)
+                if tail_source is None:
+                    push(f, "sq", "single-quote", j)
+                else:
+                    encountered.append(j)
                 i = j + 1
             elif c == '"':
-                push(f, "dq", "double-quote", j)
+                if tail_source is None:
+                    push(f, "dq", "double-quote", j)
+                else:
+                    encountered.append(j)
                 i = j + 1
             elif c == "$":
                 i = dollar(j, f, False, False)
@@ -1591,7 +1659,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                     # opener, and nothing in the frames below it, has changed.
                     reparen.add(f.start)
                     (n_regions, n_candidates, n_encountered, n_ops, n_pending,
-                     hd_trigger, limit, cont_at, seq) = f.snap
+                     hd_trigger, limit, cont_at, seq, tail_source) = f.snap
+                    tail_start = settled_tail if tail_source is None else tail_source
                     is_command = regions[f.region][0] == "arithmetic-command"
                     del regions[n_regions:]
                     del candidates[n_candidates:]
@@ -1612,10 +1681,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                         push(parent, "cmdsub", "command-substitution", f.start, cmd=True)
                         i = f.start + 2
             elif c == "'":
-                push(f, "sq", "single-quote", j)
+                if tail_source is None:
+                    push(f, "sq", "single-quote", j)
+                else:
+                    encountered.append(j)
                 i = j + 1
             elif c == '"':
-                push(f, "dq", "double-quote", j)
+                if tail_source is None:
+                    push(f, "dq", "double-quote", j)
+                else:
+                    encountered.append(j)
                 i = j + 1
             elif c == "$":
                 i = dollar(j, f, False, False)
@@ -1658,10 +1733,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                         close(f, j + 1)
                 i = j + 1
             elif c == "'":
-                push(f, "sq", "single-quote", j)
+                if tail_source is None:
+                    push(f, "sq", "single-quote", j)
+                else:
+                    encountered.append(j)
                 i = j + 1
             elif c == '"':
-                push(f, "dq", "double-quote", j)
+                if tail_source is None:
+                    push(f, "dq", "double-quote", j)
+                else:
+                    encountered.append(j)
                 i = j + 1
             elif c == "$":
                 i = dollar(j, f, False, False)
@@ -1699,7 +1780,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
                 _lex_quote_candidates(
                     text, f.start + 1, n, f.region, regions[f.region][5], candidates
                 )
-    return ("done", regions, ops, candidates, encountered, iterations)
+    return ("done", regions, ops, candidates, encountered, iterations, tail_source)
 
 
 def lex_shell(text, mode="shell", bodies=True):
@@ -1729,7 +1810,10 @@ def lex_shell(text, mode="shell", bodies=True):
     an array subscript that never closes -- or does not close on its own line
     -- is not a region, its characters are literal, and the text from the
     earliest such opener on is read without any `<<` operator and without
-    any comment). The same TEXT, MODE and BODIES always give the same map;
+    any comment). A `<<` whose delimiter word cannot be read is a tail source
+    too: from it on no comment, no quote region and no operator opens, and the
+    quote characters left literal are listed in UNOPENED. The same TEXT, MODE
+    and BODIES always give the same map;
     nothing is read from disk and nothing is evaluated (P7). Raises
     LexBudgetExceeded when the work bound is exceeded.
 
@@ -1762,13 +1846,16 @@ def lex_shell(text, mode="shell", bodies=True):
         used += result[3]
         settled.update(result[1])
         reparen.update(result[2])
-    _, regions, ops, candidates, encountered, iterations = result
+    _, regions, ops, candidates, encountered, iterations, tail_source = result
     used += iterations
-    # The re-read tail starts at the earliest opener settled as not opened:
-    # it is the very rule the final pass applied (no `<<` operator, no
+    # The re-read tail starts at the earliest opener settled as not opened or
+    # at the `<<` whose delimiter word could not be read, whichever comes
+    # first: it is the very rule the final pass applied (no `<<` operator, no
     # comment from there on).
     unopened = sorted(encountered)
     tail_start = min(settled) if settled else None
+    if tail_source is not None and (tail_start is None or tail_source < tail_start):
+        tail_start = tail_source
     lex_map = LexMap(
         [LexRegion(kind, s, e, parent, closed) for kind, s, e, parent, closed, _anc in regions],
         [LexHeredoc(*op) for op in ops],
@@ -1953,6 +2040,10 @@ class _MarkedText:
         for pos in lexmap.unopened:
             if source.startswith("$'", pos):
                 masked.append((pos + 1, pos + 2))
+            elif source[pos] in "'\"":
+                # A quote character left literal by a tail source (rework
+                # round 1, task0005): shlex must not open a quote at it.
+                masked.append((pos, pos + 1))
         for op in lexmap.heredocs:
             if op.quoted:
                 # The quote characters of `<<'EOF'` are quote delimiters of
@@ -2532,24 +2623,6 @@ class HeredocRecord:
         self.op_start = op_start
         self.op_end = op_end
         self.quoted = quoted
-
-
-def _delimiter_line_word(line):
-    r"""The word LINE closes a heredoc with: LINE -- its own trailing newline,
-    if any, removed -- without its leading and trailing spaces and tabs, when
-    what remains holds no space or tab; None otherwise. The remainder is any
-    run of non-blank characters (`END`, `END-X`, `E.X`), and a line closes the
-    body of an operator exactly when it equals that operator's delimiter. The
-    allowance for blanks around the word is the one the single-pattern strip
-    always had, for `<<` and `<<-` alike (wider than bash, which it only makes
-    end a body earlier). A delimiter holding a blank has no word to be found
-    by, so it never finds a close line.
-    """
-    text = line[:-1] if line.endswith("\n") else line
-    word = text.strip(" \t")
-    if " " in word or "\t" in word:
-        return None
-    return word
 
 
 def _strip_heredocs_mapped(chunk):
