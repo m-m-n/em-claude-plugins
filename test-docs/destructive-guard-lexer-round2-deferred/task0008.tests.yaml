@@ -1,0 +1,83 @@
+task_id: task0008
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 8692 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation: 8707 tests, OK (skipped=1); run-destructive-guard.py 827/827; must be subset of baseline_failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_the_cases_are_appended_after_the_base_entries_in_order
+    red_confirmed: true
+    red_reason: >-
+      The placement test was run against the case table of the feature base
+      (the five cases absent) and failed with "0 != 1" for each of R1.CR1 to
+      R1.CR5. The commit order itself (cases commit 8eedef59 before the commit
+      that changes destructive-guard.py) is a git history property that no
+      executable check can fail; it is read off `git log` on the task branch.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_cases_one_to_four_are_denied_and_case_five_is_allowed
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_case_three_is_read_by_the_fallback_word_split
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_the_other_cases_are_read_by_the_tokenizer
+      - python3 em-workflow/hooks/tests/run-destructive-guard.py (cases R1.CR1 to R1.CR5)
+    red_confirmed: true
+    red_reason: >-
+      With the cases appended and the hook unchanged, run-destructive-guard.py
+      reported FAIL for R1.CR1 to R1.CR4 (got=allow, want deny) and the
+      unittest subtests R1.CR1 to R1.CR4 failed the same way. Case 5 (allow,
+      /tmp/x CR) and the two path-reading tests were green before the change:
+      that behaviour pre-existed and is pinned, not driven.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_a_build_artifact_with_a_carriage_return_is_judged_as_with_a_letter
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_a_scratch_root_target_keeps_the_verdict_it_has_without_the_return
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_a_target_that_is_safe_with_its_carriage_return_stays_allowed
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_a_scratch_root_itself_with_a_carriage_return_is_not_safe
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_the_target_keeps_its_carriage_return_through_every_statement_shape
+    red_confirmed: true
+    red_reason: >-
+      Before the change the first and the last test failed for every
+      build-artifact name N in the spellings `N CR`, `./N CR` and `N \ CR`
+      (verdict allow, the letter variant is deny) and for every statement
+      shape of TRAILING_CR_SHAPES. The quoted spelling `"N CR"` already
+      denied on the tokenizer path (the fallback-path spelling is case 3),
+      and the scratch-root, descendant and root-itself tests were green
+      before: that behaviour pre-existed and is pinned.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_the_commands_keep_their_verdict_with_a_trailing_carriage_return
+      - tests.test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_trailing_carriage_return_keeps_a_denied_command_denied
+      - tests.test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_harmless_command_with_carriage_return_line_ends_stays_allowed
+      - tests.test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_trailing_carriage_return_is_no_part_of_a_matched_word
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_the_matched_words_still_disregard_the_trailing_carriage_return
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_a_denied_command_with_a_trailing_carriage_return_stays_denied
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_a_trailing_carriage_return_keeps_an_asked_target_asked
+    red_confirmed: true
+    red_reason: >-
+      After rewriting the matching-forms entry `rm -rf ./build CR` to
+      deny / deny, test_the_commands_keep_their_verdict_with_a_trailing_carriage_return
+      failed for that command (the hook still allowed it). The three tests
+      named in AC-4 and the other matching-forms entries were green before
+      and after, unchanged.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_the_decision_is_the_same_after_clearing_the_lexer_cache
+    red_confirmed: true
+    red_reason: >-
+      The test also asserts each decision against the plan's expectation, and
+      failed for R1.CR1 to R1.CR4 in both modes before the change. The
+      determinism half (same decision before and after clearing the lexer
+      cache) held before the change; this task does not touch the cache.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_the_cases_are_appended_after_the_base_entries_in_order
+      - tests.test_destructive_guard_lexer_agreement.TestTrailingCarriageReturnIsPartOfTheDeleteTarget.test_no_label_below_the_floor_carries_the_stable_id
+      - python3 em-workflow/hooks/tests/run-destructive-guard.py
+      - python3 -m unittest tests.test_destructive_guard_lexer_agreement
+      - python3 -m unittest discover -s tests
+    red_confirmed: true
+    red_reason: >-
+      The placement test failed against the case table without the block (see
+      AC-1). test_no_label_below_the_floor_carries_the_stable_id is a guard
+      that holds with or without the block, so it has no red state of its
+      own. No pre-existing case-table entry was edited (the diff of the table
+      is the five appended lines plus the comma on the former last line), and
+      every pre-existing case keeps its verdict: the runner passes 827/827.
