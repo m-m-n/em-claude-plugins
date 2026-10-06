@@ -144,14 +144,6 @@ REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|<>|>&|<&|&>>?)\d*")
 # `<<<`, which are read-only) and must join the write-target set.
 READWRITE_REDIRECT = re.compile(r"\d*<>\d*")
 
-# A here-document operator on its own -- the opening `<<`/`<<-` plus its
-# delimiter word, quoted or not -- matched per line rather than swallowing
-# the body in one regex: several operators can share a line (task0001 FR3),
-# and each operator's own body/delimiter-line search is now a separate,
-# index-assisted lookup (see strip_heredocs()) rather than backtracking
-# regex match. `<<<` (a here-string, not a here-document) stays excluded by
-# the negative lookahead, unchanged from before this task.
-HEREDOC_OP = re.compile(r"<<-?(?!<)[ \t]*(['\"]?)(\w+)\1")
 # Commands that run what arrives on stdin, so a here-doc body aimed at one is
 # not data but code, and has to be scanned like any other statement.
 SHELL_SINK = re.compile(r"\b(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
@@ -599,9 +591,12 @@ class LexMap:
       runs to the end of the text unterminated.
     - HEREDOCS: LexHeredoc for every real here-document operator in text
       order: START/END span the `<<` / `<<-` through its delimiter word;
+      DELIMITER is that word with its quotes removed (_read_heredoc_delimiter())
+      and QUOTED whether it held a quote character (`'`, `"` or `\\`);
       BODY_START/BODY_END the body lines and CLOSE_END the end of the
       delimiter line (all None when the delimiter line never appears, or the
-      map was made without body skipping).
+      map was made without body skipping). An operator whose delimiter word
+      cannot be read is not reported at all and takes no body.
     - CANDIDATES: LexCandidate(quote, start, end, enclosing) -- P8: the
       substitutions the broad search reads inside the single-quote or
       ansi-c-quote region with index QUOTE; ENCLOSING is the index of the
@@ -670,8 +665,8 @@ class _LexFrame:
 class _LexLines:
     """Line index of a text for here-document body lookup: START offsets of
     every line (str.splitlines() rules, as strip_heredocs() always used) and,
-    built on first use, WORD_TO_LINES -- every line that is nothing but a
-    bare word, per _delimiter_line_word(), indexed by that word (NFR3)."""
+    built on first use, WORD_TO_LINES -- every line that is nothing but one
+    blank-free word, per _delimiter_line_word(), indexed by that word (NFR3)."""
 
     __slots__ = ("text", "starts", "_word_to_lines")
 
@@ -711,6 +706,21 @@ _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
 _LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
 _LEX_WORD_END = frozenset(" \t\r\n;|&()<>")
+# The line breaks str.splitlines() splits a text at -- the lines _LexLines
+# indexes. A here-document delimiter word never spans one.
+_LEX_LINE_BREAKS = frozenset("\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
+_LEX_LINE_BREAK = re.compile(r"[\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]")
+_LEX_DELIM_BLANKS = re.compile(r"[ \t]*")
+# A run of delimiter word characters read without a decision: everything but
+# a metacharacter (blank, line break, `;|&()<>`) and the characters that open
+# an escape, a quote, an expansion or a substitution.
+_LEX_DELIM_RUN = re.compile(
+    r"[^ \t\r\n\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029;|&()<>\\'\"`$]+"
+)
+# Inside double quotes: the characters that need a decision.
+_LEX_DELIM_DQ_SPECIAL = re.compile(
+    r"[\\\"$`\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]"
+)
 _LEX_SHELL_KINDS = frozenset({"top", "cmdsub", "group", "procsub", "backtick"})
 # Case-construct states while a pattern is being read: PATTERN_FIRST right
 # after `in`, PATTERN_NEXT right after a `;;` (where a bare `esac` always ends
@@ -770,6 +780,105 @@ def _lex_quote_candidates(text, lo, hi, quote_index, enclosing, out):
                 continue
             out.append(LexCandidate(quote_index, j, c + 1, enclosing))
             p = c + 1
+
+
+def _heredoc_word_start(text, i):
+    """The offset at which the delimiter word of the `<<` / `<<-` at I
+    begins: after the operator and the blanks (spaces and tabs) following it."""
+    p = i + 2
+    if text.startswith("-", p):
+        p += 1
+    return _LEX_DELIM_BLANKS.match(text, p).end()
+
+
+def _read_heredoc_delimiter(text, i):
+    """The delimiter word of the here-document operator at I (`<<` / `<<-`,
+    never `<<<`), as (END, DELIMITER, QUOTED), or None when the word cannot be
+    read -- then the `<<` is no operator and takes no body (NFR6, SPEC A3).
+
+    The word runs from after the operator and its blanks to the next unquoted
+    metacharacter (blank, line break, `;`, `|`, `&`, `(`, `)`, `<`, `>`);
+    quoted segments and backslash escapes are part of it. DELIMITER is the
+    word with its quotes removed (`END-X` -> `END-X`, `E\\X` -> `EX`, `E"X"` ->
+    `EX`, `'E-X'` -> `E-X`, `\\EOF` -> `EOF`); a `$` that starts no expansion
+    stays a character of it (`E$X` -> `E$X`: nothing is expanded). QUOTED is
+    True exactly when the word holds a `'`, `"` or `\\`: the body is then
+    literal. Inside double quotes a backslash removes itself only before
+    `$`, a backtick, `"` and `\\`.
+
+    Unreadable: no word before a metacharacter or the end of the text; a
+    quote that does not close on the operator's line (nor does a backslash
+    before a line break); a command substitution, a backtick, `${`, `$((`,
+    `$[`, `$'` or `$"` in the word. The text after the `<<` is then lexed as
+    it is for any `<<` that registers no operator."""
+    n = len(text)
+    start = _heredoc_word_start(text, i)
+    parts = []
+    quoted = False
+    q = start
+    while q < n:
+        m = _LEX_DELIM_RUN.match(text, q)
+        if m is not None:
+            parts.append(m.group())
+            q = m.end()
+            continue
+        c = text[q]
+        if c == "\\":
+            nxt = text[q + 1 : q + 2]
+            if nxt == "" or nxt in _LEX_LINE_BREAKS:
+                return None
+            parts.append(nxt)
+            quoted = True
+            q += 2
+        elif c == "'":
+            close = text.find("'", q + 1)
+            if close == -1:
+                return None
+            if _LEX_LINE_BREAK.search(text, q + 1, close) is not None:
+                return None
+            parts.append(text[q + 1 : close])
+            quoted = True
+            q = close + 1
+        elif c == '"':
+            r = q + 1
+            while True:
+                m = _LEX_DELIM_DQ_SPECIAL.search(text, r)
+                if m is None:
+                    return None
+                j = m.start()
+                d = text[j]
+                parts.append(text[r:j])
+                if d == '"':
+                    q = j + 1
+                    break
+                if d == "\\":
+                    nxt = text[j + 1 : j + 2]
+                    if nxt == "" or nxt in _LEX_LINE_BREAKS:
+                        return None
+                    parts.append(nxt if nxt in '$`"\\' else "\\" + nxt)
+                    r = j + 2
+                elif d == "$":
+                    if text[j + 1 : j + 2] in ("(", "{", "["):
+                        return None
+                    parts.append("$")
+                    r = j + 1
+                else:
+                    # A backtick, or a line break: the quote does not close
+                    # on the operator's line.
+                    return None
+            quoted = True
+        elif c == "$":
+            if text[q + 1 : q + 2] in ("(", "{", "[", "'", '"'):
+                return None
+            parts.append("$")
+            q += 1
+        elif c == "`":
+            return None
+        else:
+            break
+    if q == start:
+        return None
+    return q, "".join(parts), quoted
 
 
 def _lex_pass(text, mode, settled, reparen, lines, budget):
@@ -979,12 +1088,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             return i + 2
         return i + 1
 
-    def register_operator(i, m):
-        """A real here-document operator at I: queue it for a body (P11).
-        Its body is not looked up here -- where it begins depends on the
-        newlines read after it."""
+    def register_operator(i, word):
+        """A real here-document operator at I, its delimiter word read as
+        WORD = (end, delimiter, quoted): queue it for a body (P11). Its body
+        is not looked up here -- where it begins depends on the newlines read
+        after it."""
         nonlocal hd_trigger, limit
-        op = [i, m.end(), m.group(2), bool(m.group(1)), None, None, None]
+        op = [i, word[0], word[1], word[2], None, None, None]
         ops.append(op)
         if lines is None:
             return
@@ -1177,10 +1287,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         i += 3
                         continue
                     if text.startswith("<<", i):
-                        m = HEREDOC_OP.match(text, i)
-                        if m is not None and (tail_start is None or i < tail_start):
-                            register_operator(i, m)
-                            i = m.end()
+                        word = None
+                        if tail_start is None or i < tail_start:
+                            word = _read_heredoc_delimiter(text, i)
+                        if word is not None:
+                            register_operator(i, word)
+                            i = word[0]
                         else:
                             i += 2
                         continue
@@ -1654,7 +1766,7 @@ class _MarkedText:
             if op.quoted:
                 # The quote characters of `<<'EOF'` are quote delimiters of
                 # the delimiter word, though not a region of their own.
-                quoted.append((op.end - len(op.delimiter) - 2, op.end))
+                quoted.append((_heredoc_word_start(source, op.start), op.end))
         mask_ranges = _map_copy_ranges(posmap, _merge_ranges(masked))
         blank_ranges = _map_copy_ranges(posmap, _merge_ranges(blanked))
         quote_ranges = []
@@ -2232,17 +2344,21 @@ class HeredocRecord:
 
 
 def _delimiter_line_word(line):
-    r"""The bare word LINE closes a heredoc with, if LINE -- its own
-    trailing newline, if any, ignored -- is nothing but optional leading/
-    trailing spaces/tabs around a run of word characters; None otherwise.
-    Matches the closing-line shape the single-pattern strip this replaces
-    always accepted (`^[ \t]*WORD[ \t]*$`), for both `<<` and `<<-` alike --
-    this task does not change that (task plan Design, "current handling
-    stays" for delimiter lines).
+    r"""The word LINE closes a heredoc with: LINE -- its own trailing newline,
+    if any, removed -- without its leading and trailing spaces and tabs, when
+    what remains holds no space or tab; None otherwise. The remainder is any
+    run of non-blank characters (`END`, `END-X`, `E.X`), and a line closes the
+    body of an operator exactly when it equals that operator's delimiter. The
+    allowance for blanks around the word is the one the single-pattern strip
+    always had, for `<<` and `<<-` alike (wider than bash, which it only makes
+    end a body earlier). A delimiter holding a blank has no word to be found
+    by, so it never finds a close line.
     """
     text = line[:-1] if line.endswith("\n") else line
-    m = re.match(r"^[ \t]*(\w+)[ \t]*$", text)
-    return m.group(1) if m else None
+    word = text.strip(" \t")
+    if " " in word or "\t" in word:
+        return None
+    return word
 
 
 def _strip_heredocs_mapped(chunk):
