@@ -853,6 +853,14 @@ _LEX_CACHE = {}
 _LEX_CACHE_LIMIT = 16
 
 
+def _lex_original_offset(starts, offsets, k):
+    """The offset in the original input of the character at index K of a
+    logical word (see _lex_pass() logical_word()) made of runs that begin at
+    the indexes STARTS of it and at the offsets OFFSETS of the input."""
+    run = bisect.bisect_right(starts, k) - 1
+    return offsets[run] + (k - starts[run])
+
+
 def _lex_quote_candidates(text, lo, hi, quote_index, enclosing, out):
     """P8: the candidate substitutions inside the quote content TEXT[LO:HI],
     appended to OUT as LexCandidate. Left to right: a `$(` closes at the `)`
@@ -935,6 +943,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     and the next line is read at the top level, command position. A `<<` in a
     context nested in the array (a substitution, a quote) is not at that
     position and is read as before.
+
+    Logical word. bash removes every backslash-newline before it splits words,
+    so a word at an assignment or declaration-argument position is judged on
+    its logical word: the leading plain text with each in-word line
+    continuation skipped (logical_word()). The assignment-word judgment
+    (`NAME=`, `NAME+=`, `NAME[`) and the command-name classification
+    (declaration builtins, `eval` / `let` / `alias`) read it, while ARR_END and
+    SUB_AT stay offsets in the original text. A word with no in-word line
+    continuation is judged on its first plain run, as before.
 
     Subscripts and extended-glob parentheses (P14). A word at an assignment
     position that starts with `NAME[`, and a word inside an array that starts
@@ -1030,8 +1047,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             op_at = after
             while text.startswith("\\\n", op_at):
                 op_at += 2
-            if text.startswith("+=", op_at):
-                op_at += 2
+            if text.startswith("+", op_at):
+                # A line continuation may also separate the `+` from the `=`.
+                op_at += 1
+                while text.startswith("\\\n", op_at):
+                    op_at += 2
+                op_at = op_at + 1 if text.startswith("=", op_at) else -1
             elif text.startswith("=", op_at):
                 op_at += 1
             else:
@@ -1044,11 +1065,78 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             elif op_at < 0:
                 parent.asg = False
 
-    def word_transition(f, w, end, first=None):
+    def logical_word(i, end):
+        """The logical word of the word whose first plain run is TEXT[I:END]
+        when a backslash-newline follows that run directly: bash removes every
+        backslash-newline before it splits words, so the plain text goes on
+        across them. Returns None when no line continuation follows (the
+        logical word is the run itself); else the tuple (TEXT, LSTARTS,
+        OSTARTS, LAST_END, COMPLETE): the logical plain text -- the runs
+        joined with each skipped backslash-newline dropped -- LSTARTS the
+        index in it where each run begins and OSTARTS the offset in the
+        original input of the same run, LAST_END the offset after the last
+        run, and COMPLETE whether the plain text ends at a word boundary.
+        Any other boundary (a quote, an expansion, an operator, a blank, an
+        escape that is no continuation) ends the plain text as it does
+        without continuations. A backslash-newline whose newline ends the
+        discarded line is no continuation (the main loop reads it the same
+        way). The text is read once, left to right, and every step is counted
+        against the work bound of the pass."""
+        nonlocal iterations
+        stop = n if discard_end is None else discard_end
+        parts = None
+        lstarts = None
+        ostarts = None
+        size = end - i
+        last_end = end
+        q = end
+        while True:
+            p = q
+            while p + 2 <= stop and text.startswith("\\\n", p):
+                p += 2
+                iterations += 1
+            if p == q:
+                break
+            iterations += 1
+            if iterations > budget:
+                raise LexBudgetExceeded()
+            m = _LEX_WORD_RUN.match(text, p, stop)
+            if m is None:
+                # No plain run after the continuations: the plain text ends.
+                q = p
+                break
+            q = m.end()
+            if parts is None:
+                parts = [text[i:end]]
+                lstarts = [0]
+                ostarts = [i]
+            lstarts.append(size)
+            ostarts.append(p)
+            parts.append(text[p:q])
+            size += q - p
+            last_end = q
+        if q == end:
+            return None
+        if parts is None:
+            return (text[i:end], [0], [i], end, q >= n or text[q] in _LEX_WORD_END)
+        return (
+            "".join(parts), lstarts, ostarts, last_end,
+            q >= n or text[q] in _LEX_WORD_END,
+        )
+
+    def word_transition(f, w, end, first=None, logical=None):
         """F's grammar state advances over one word: W is its text when it
         is a plain, complete word, else None; END the offset after it; FIRST
         the plain run the word starts with (None for a word that starts with
-        a quote, an expansion or an escape).
+        a quote, an expansion or an escape); LOGICAL the logical word (see
+        logical_word()) when a line continuation follows FIRST and the word
+        is at a position where it is judged, else None.
+
+        The assignment-word judgment and the command-name classification read
+        the logical word: the leading plain text with every line continuation
+        bash removes skipped. For a word without one they read FIRST and W,
+        as they always did. The offsets the judgment records (ARR_END,
+        SUB_AT) stay offsets in the original input.
 
         P10 (FR3). RW says the word comes directly after a closer (or after
         the NAME of a `for` / `select`): a reserved word of
@@ -1157,35 +1245,57 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 f.prev_plain = True
         else:
             f.cmd = False
+        # The word the assignment-word judgment and the command-name
+        # classification read: the logical word when a line continuation
+        # follows the first run, else the first run itself. An index in it
+        # maps to its offset in the original input through LW_STARTS and
+        # LW_OFFSETS (_lex_original_offset()).
+        if logical is None:
+            lw = first
+            lw_end = end
+            name = w
+        else:
+            lw, lw_starts, lw_offsets, lw_end, lw_complete = logical
+            name = lw if lw_complete else None
         array_word = False
         sub_name = None
-        if first is not None and discard_end is None:
-            sub_name = _LEX_SUBSCRIPTED_NAME.match(first)
+        if lw is not None and discard_end is None:
+            sub_name = _LEX_SUBSCRIPTED_NAME.match(lw)
         if assign_pos:
-            if first is not None and _LEX_ASSIGN_WORD.match(first):
+            if lw is not None and _LEX_ASSIGN_WORD.match(lw):
                 f.asg = True
                 f.decl = False
-                array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
+                array_word = _LEX_ASSIGN_WORD.fullmatch(lw)
             elif sub_name is not None:
                 # `NAME[`: an assignment word when the `=` / `+=` follows the
                 # subscript's `]`, which close_subscript() finds out; until
                 # then it is taken for one, and the subscript opens at its `[`.
                 f.asg = True
                 f.decl = False
-                f.sub_at = end - len(first) + sub_name.end() - 1
+                if logical is None:
+                    f.sub_at = end - len(first) + sub_name.end() - 1
+                else:
+                    f.sub_at = _lex_original_offset(
+                        lw_starts, lw_offsets, sub_name.end() - 1
+                    )
             else:
                 f.asg = False
-                f.decl = w in _LEX_DECLARATION_BUILTINS
+                f.decl = name in _LEX_DECLARATION_BUILTINS
         elif decl_pos:
             if sub_name is not None:
-                f.sub_at = end - len(first) + sub_name.end() - 1
+                if logical is None:
+                    f.sub_at = end - len(first) + sub_name.end() - 1
+                else:
+                    f.sub_at = _lex_original_offset(
+                        lw_starts, lw_offsets, sub_name.end() - 1
+                    )
             else:
-                array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
+                array_word = lw is not None and _LEX_ASSIGN_WORD.fullmatch(lw)
         if array_word:
             # Line continuations between the `=` and the `(` are removed by
             # bash before it reads the word: skip them, keeping the offset
             # of the `(` in the original text.
-            paren = end
+            paren = lw_end
             while text.startswith("\\\n", paren):
                 paren += 2
             if paren < n and text[paren] == "(":
@@ -1668,6 +1778,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             run = _LEX_WORD_RUN.match(text, i, limit)
             end = run.end()
             if f.in_word:
+                if f.sub_at >= 0 and i <= f.sub_at < end:
+                    # The `[` of a `NAME[` word whose `NAME` a line
+                    # continuation separates from it: the subscript opens
+                    # here, in the run the logical word reaches it in.
+                    at = f.sub_at
+                    f.sub_at = -1
+                    open_bare(f, "subscript", at, True)
+                    i = at + 1
+                    continue
                 i = end
                 continue
             if (
@@ -1685,9 +1804,22 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 i = end
                 continue
             complete = end >= n or text[end] in _LEX_WORD_END
-            word_transition(f, text[i:end] if complete else None, end, text[i:end])
+            logical = None
+            if (
+                not complete
+                and (f.cmd or f.asg or f.decl)
+                and not f.redir
+                and text.startswith("\\\n", end)
+            ):
+                # A line continuation follows the run at a position where the
+                # word is judged as an assignment word or a command name: the
+                # judgment reads the logical word.
+                logical = logical_word(i, end)
+            word_transition(
+                f, text[i:end] if complete else None, end, text[i:end], logical
+            )
             f.in_word = True
-            if f.sub_at >= 0:
+            if 0 <= f.sub_at < end:
                 # A `NAME[` word at an assignment position: its subscript
                 # opens at the `[` (P14).
                 at = f.sub_at
