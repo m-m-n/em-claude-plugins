@@ -923,14 +923,21 @@ class Analysis:
     def quote_ranges(self):
         """Where a quote region or a quote delimiter sits in the stripped
         text: every quote region not nested in a marked substitution, and the
-        quote characters of a quoted here-document delimiter."""
+        quote characters of a quoted here-document delimiter that is not
+        inside a marked substitution either (the marker residue that stands
+        for the substitution holds neither: they belong to its own chunk)."""
         ranges = [
             (r.start, r.end)
             for i, r in enumerate(self.lex_s.regions)
             if r.kind in QUOTE_KINDS and not self.has_closed_substitution_ancestor(i)
         ]
+        closed_substitutions = [
+            r
+            for r in self.lex_s.regions
+            if r.kind in SUBSTITUTION_KINDS and r.closed
+        ]
         for op in self.lex_s.heredocs:
-            if op.quoted:
+            if op.quoted and not self.in_region(closed_substitutions, op.start):
                 ranges.append((op.end - len(op.delimiter) - 2, op.end))
         return ranges
 
@@ -978,7 +985,18 @@ def all_commands():
         add(text)
     for text, *_rest in CANDIDATE_FORMS:
         add(text)
-    return commands
+    # A command beyond the lexer's work bound is not read by any stage (the
+    # hook answers it with the scan-budget ask, which the case table pins), so
+    # there is no map to compare the stages against.
+    return [command for command in commands if _lexer_reads(command)]
+
+
+def _lexer_reads(command):
+    try:
+        H.lex_shell(command, "shell")
+    except H.LexBudgetExceeded:
+        return False
+    return True
 
 
 class TestStageAgreement(unittest.TestCase):
