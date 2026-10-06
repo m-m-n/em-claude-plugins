@@ -798,6 +798,7 @@ _LEX_DQ_SPECIAL = re.compile(r"[\\\"$`]")
 _LEX_PARAM_SPECIAL = re.compile(r"[\\'\"$`}]")
 _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
 _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
+_LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
@@ -1164,8 +1165,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 f.sub_at = end - len(first) + sub_name.end() - 1
             else:
                 array_word = w is not None and _LEX_ASSIGN_WORD.fullmatch(w)
-        if array_word and end < n and text[end] == "(":
-            f.arr_end = end
+        if array_word:
+            # Line continuations between the `=` and the `(` are removed by
+            # bash before it reads the word: skip them, keeping the offset
+            # of the `(` in the original text.
+            paren = end
+            while text.startswith("\\\n", paren):
+                paren += 2
+            if paren < n and text[paren] == "(":
+                f.arr_end = paren
 
     def start_word(f, i):
         if not f.in_word:
@@ -1407,6 +1415,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                     step = 2
                 else:
                     step = 1
+                if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
+                    # `;` directly in an array compound assignment: a syntax
+                    # error; this line is the discarded line (P13).
+                    begin_discard(i)
                 cs = f.cs
                 if step > 1 and cs and cs[-1] == "body":
                     cs[-1] = "pattern_next"
@@ -1418,6 +1430,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 i += step
                 continue
             if c == "&" or c == "|":
+                if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
+                    # `&` / `|` directly in an array compound assignment: a
+                    # syntax error; this line is the discarded line (P13).
+                    begin_discard(i)
                 f.in_word = False
                 f.redir = False
                 if c == "&" and text.startswith("&>", i):
@@ -1443,10 +1459,21 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                     i += 1
                     continue
                 if kind == "array":
+                    # The logical previous character: backslash-newline line
+                    # continuations are removed before bash reads the word.
+                    prev_j = i - 1
+                    while prev_j >= 1 and text[prev_j] == "\n" and text[prev_j - 1] == "\\":
+                        k = prev_j - 1
+                        while k >= 0 and text[k] == "\\":
+                            k -= 1
+                        if (prev_j - 1 - k) % 2 == 0:
+                            break
+                        prev_j -= 2
                     if (
                         in_word
                         and discard_end is None
-                        and text[i - 1] in _LEX_EXTGLOB_PREFIXES
+                        and prev_j >= 0
+                        and text[prev_j] in _LEX_EXTGLOB_PREFIXES
                     ):
                         # An extended-glob parenthesis (P14): valid with
                         # extglob on, a syntax error with it off. The reading
@@ -1540,6 +1567,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 f.kw = ""
                 if c == "<":
                     if text.startswith("<<<", i):
+                        if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
+                            begin_discard(i)
                         f.redir = True
                         idx = new_region("here-string-operator", i, f)
                         regions[idx][2] = i + 3
@@ -1570,6 +1599,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                         push(f, "procsub", "process-substitution", i, cmd=True)
                         i += 2
                         continue
+                    if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
+                        begin_discard(i)
                     f.redir = True
                     i += 2 if (text.startswith("<&", i) or text.startswith("<>", i)) else 1
                     continue
@@ -1579,6 +1610,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                     push(f, "procsub", "process-substitution", i, cmd=True)
                     i += 2
                     continue
+                if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
+                    begin_discard(i)
                 f.redir = True
                 i += 2 if (
                     text.startswith(">>", i) or text.startswith(">&", i) or text.startswith(">|", i)
@@ -1786,7 +1819,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             # A subscript (P14), read the way bash matches `[` ... `]`: only
             # quotes, expansions, backquotes, backslash escapes and nested
             # brackets mean anything; a blank, `<<` or `;` is part of it.
-            m = _LEX_BRACKET_SPECIAL.search(text, i, limit)
+            m = _LEX_SUBSCRIPT_SPECIAL.search(text, i, limit)
             if m is None:
                 i = limit
                 continue
@@ -1794,6 +1827,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             c = text[j]
             if c == "\\":
                 i = j + 2
+            elif c == "<" or c == ">":
+                if text.startswith("(", j + 1) and (j == 0 or text[j - 1] not in "<>"):
+                    # A process substitution runs inside a subscript too.
+                    push(f, "procsub", "process-substitution", j, cmd=True)
+                    i = j + 2
+                else:
+                    i = j + 1
             elif c == "[":
                 f.depth += 1
                 i = j + 1
