@@ -59,6 +59,10 @@ Layout:
   task0002, FR1, FR4): a here-document after a subscript that closes on a
   later line, and line continuations inside the name of a subscripted
   assignment word.
+- TestLineContinuationBeforeOpenersAndInWords, TestLineContinuationStageAgreement
+  (destructive-guard-lexer-round2-deferred task0007, review round 1): the `$`
+  openers found past backslash-newline pairs, and the word split that takes
+  every pair out that bash removes, with its offsets kept in the original text.
 
 Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
 words after closers and name-taking keywords), P11 (where a heredoc body
@@ -1411,8 +1415,12 @@ class TestStageAgreement(unittest.TestCase):
             for tok, start, end in raw:
                 if tok.is_operator or any(p in masked for p in range(start, end)):
                     continue
+                # The tokenizer splits the view with the backslash-newline
+                # pairs bash removes taken out (round 2 deferred, task0007):
+                # the reading to compare with is shlex's of the span without
+                # them.
                 self.assertEqual(
-                    shlex_words(a.marked.text[start:end]),
+                    shlex_words(without_line_continuations(a.marked.text[start:end])),
                     [str(tok)],
                     msg=repr(a.marked.text[start:end]),
                 )
@@ -1587,14 +1595,17 @@ CARRIAGE_RETURN_CASES = [
 # without it: (command, verdict, verdict under CLAUDE_BATCH). Each one reaches
 # a different reader of the words: a bypass flag, an option, a reserved word,
 # the command word of a here-string payload, a substitution-only target, a
-# safe target, a grouping closer, a redirect target, a separator.
+# safe target, a grouping closer, a redirect target, a separator. The one
+# exception is a delete target of the safe-delete exception: bash deletes the
+# name with its `\r`, so `./build\r` is not the build artifact `./build`
+# (destructive-guard-lexer-round2-deferred task0008, D7).
 CARRIAGE_RETURN_MATCHING_FORMS = [
     ("claude --dangerously-skip-permissions\r", "deny", "deny"),
     ("find /home/sakura -name '*.log' -delete\r", "deny", "deny"),
     ("case x in x) ((1<<2));; esac\r\nrm -rf /home/sakura/valuable\r\n2\r", "deny", "deny"),
     ("command <<< 'rm -rf /home/sakura/x' bash\r", "deny", "deny"),
     ("rm -rf $(cat list)\r", "ask", "deny"),
-    ("rm -rf ./build\r", "allow", "allow"),
+    ("rm -rf ./build\r", "deny", "deny"),
     ("( rm -rf /tmp/x )\r", "allow", "allow"),
     ("echo x > ~/.claude/settings.json\r\n", "ask", "deny"),
     ("rm -rf /home/sakura/valuable;\r\necho done\r\n", "deny", "deny"),
@@ -1611,6 +1622,35 @@ def shlex_words(text):
     lex.commenters = ""
     lex.whitespace = " \t\n"
     return list(lex)
+
+
+def without_line_continuations(text):
+    """TEXT with every backslash-newline pair removed that bash removes: the
+    ones outside single quotes. Hand-written here, for the segments the
+    checks read, which hold no other region than a quote or an escape."""
+    out = []
+    i = 0
+    single = double = False
+    while i < len(text):
+        c = text[i]
+        if single:
+            single = c != "'"
+            out.append(c)
+            i += 1
+        elif c == "\\":
+            if text.startswith("\n", i + 1):
+                i += 2
+            else:
+                out.append(text[i : i + 2])
+                i += 2
+        else:
+            if c == "'" and not double:
+                single = True
+            elif c == '"':
+                double = not double
+            out.append(c)
+            i += 1
+    return "".join(out)
 
 
 def region_kinds(lexmap):
@@ -1779,6 +1819,217 @@ class TestCarriageReturnIsNotABlank(unittest.TestCase):
                 self.assertLessEqual(
                     large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
                 )
+
+
+# ---------------------------------------------------------------------------
+# A trailing `\r` is part of the delete target (destructive-guard-lexer-round2-
+# deferred task0008, review round 1 finding b0f7592cd79e75ea, FR6, FR9-FR11,
+# NFR4-NFR7, D7). The decision layer disregards a `\r` at the end of a word
+# when it matches names, options and separators, but the safe-delete exception
+# reads the target the way bash passes it to `rm`, `\r` included.
+# ---------------------------------------------------------------------------
+
+TRAILING_CR_STABLE_ID = "b0f7592cd79e75ea"
+TRAILING_CR_LABEL = TRAILING_CR_STABLE_ID + " round2-deferred "
+# The first index a block appended for this feature can have (D3).
+TRAILING_CR_CASE_FLOOR = 769
+TRAILING_CR_CASES = [
+    ("R1.CR1", "deny", "rm -rf build\\\r"),
+    ("R1.CR2", "deny", "rm -rf build\r"),
+    ("R1.CR3", "deny", "rm -rf \"build\r\"\n'"),
+    ("R1.CR4", "deny", "rm -rf ./node_modules\r\n"),
+    ("R1.CR5", "allow", "rm -rf /tmp/x\r"),
+]
+# The four spellings of a build-artifact name N with a `\r` at its end: bare,
+# with `./`, backslash-escaped and quoted. `\r` is replaced by `x` to get the
+# command the verdict must agree with.
+TRAILING_CR_SPELLINGS = [
+    "rm -rf %s\r",
+    "rm -rf ./%s\r",
+    "rm -rf %s\\\r",
+    'rm -rf "%s\r"',
+]
+# Statement shapes a target travels through before the safe-delete exception
+# reads it: wrappers, grouping, a redirect, a separator, a payload.
+TRAILING_CR_SHAPES = [
+    "sudo rm -rf build\r",
+    "env A=1 rm -rf build\r",
+    "time rm -rf build\r",
+    "( rm -rf build\r )",
+    "{ rm -rf build\r; }",
+    "rm -rf build\r > /dev/null",
+    "rm -rf build\r; echo done",
+    "echo a && rm -rf ./build\r",
+    "bash -c 'rm -rf build\r'",
+    "rm -rf -- build\r",
+    "rm -fr node_modules\r\ndist\r\n",
+]
+# Targets that are safe with their `\r`, so the verdict stays allow: a proper
+# descendant of a build artifact or of a scratch root.
+TRAILING_CR_SAFE_FORMS = [
+    "rm -rf build/out\r",
+    "rm -rf ./node_modules/.cache\r",
+    "rm -rf /tmp/x\r",
+    "rm -rf /var/tmp/x\r",
+    "rm -rf tmp/x\r",
+    "rm -rf .cache/x\r",
+]
+
+
+def decision_in_process(command, batch):
+    """The decision H.run() gives COMMAND, in this process (the lexer cache is
+    the caller's to clear)."""
+    payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": command}})
+    out = io.StringIO()
+    with mock.patch.dict(os.environ):
+        os.environ.pop("CLAUDE_BATCH", None)
+        if batch:
+            os.environ["CLAUDE_BATCH"] = "1"
+        with mock.patch.object(sys, "stdin", io.StringIO(payload)):
+            with mock.patch.object(sys, "stdout", out):
+                try:
+                    H.run()
+                except SystemExit:
+                    pass
+    return json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"]
+
+
+class TestTrailingCarriageReturnIsPartOfTheDeleteTarget(unittest.TestCase):
+    def both_modes(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    # AC-1, AC-6 (FR9, FR10, FR11): the block is in the case table after the
+    # feature base, in order, and nothing below the floor carries the id.
+    def test_the_cases_are_appended_after_the_base_entries_in_order(self):
+        cases = case_commands()
+        indexes = []
+        for tag, want, command in TRAILING_CR_CASES:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if cmd == command
+                    and w == want
+                    and label.startswith(TRAILING_CR_LABEL + tag + " ")
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], TRAILING_CR_CASE_FLOOR)
+                indexes.append(located[0])
+        self.assertEqual(indexes, list(range(indexes[0], indexes[0] + len(indexes))))
+
+    def test_no_label_below_the_floor_carries_the_stable_id(self):
+        for index, (_want, label, _cmd) in enumerate(case_commands()):
+            if index < TRAILING_CR_CASE_FLOOR:
+                self.assertNotIn(TRAILING_CR_STABLE_ID, label, msg=index)
+
+    # AC-2 (FR6, NFR6): the five cases of the plan.
+    def test_cases_one_to_four_are_denied_and_case_five_is_allowed(self):
+        for tag, want, command in TRAILING_CR_CASES:
+            with self.subTest(tag=tag):
+                self.assertEqual(self.both_modes(command), (want, want))
+
+    # Test notes: case 3 is the fallback-path pin, the other cases are read by
+    # the tokenizer.
+    def test_case_three_is_read_by_the_fallback_word_split(self):
+        segments = H.lex_segments(TRAILING_CR_CASES[2][2])
+        self.assertFalse(any(lexed for _words, lexed, _sep in segments))
+
+    def test_the_other_cases_are_read_by_the_tokenizer(self):
+        for tag, _want, command in TRAILING_CR_CASES:
+            if tag == "R1.CR3":
+                continue
+            with self.subTest(tag=tag):
+                segments = H.lex_segments(command)
+                self.assertTrue(all(lexed for _words, lexed, _sep in segments))
+
+    # AC-3 (FR6, NFR6): every build-artifact name, in every spelling of the
+    # `\r`, is judged like the same name with a letter in its place.
+    def test_a_build_artifact_with_a_carriage_return_is_judged_as_with_a_letter(self):
+        for name in sorted(H.SAFE_DELETE_BUILD_ARTIFACTS):
+            for spelling in TRAILING_CR_SPELLINGS:
+                command = spelling % name
+                letter = command.replace("\r", "x")
+                with self.subTest(command=command):
+                    got = self.both_modes(command)
+                    self.assertEqual(got, self.both_modes(letter))
+                    self.assertEqual(got, ("deny", "deny"))
+
+    def test_a_scratch_root_target_keeps_the_verdict_it_has_without_the_return(self):
+        for command in ("rm -rf /tmp/x", "rm -rf /var/tmp/x"):
+            with self.subTest(command=command):
+                with_cr = self.both_modes(command + "\r")
+                self.assertEqual(with_cr, self.both_modes(command))
+                self.assertEqual(with_cr, ("allow", "allow"))
+
+    def test_a_target_that_is_safe_with_its_carriage_return_stays_allowed(self):
+        for command in TRAILING_CR_SAFE_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("allow", "allow"))
+
+    def test_the_names_without_a_carriage_return_stay_allowed(self):
+        for name in sorted(H.SAFE_DELETE_BUILD_ARTIFACTS):
+            for command in ("rm -rf %s" % name, "rm -rf ./%s" % name):
+                with self.subTest(command=command):
+                    self.assertEqual(self.both_modes(command), ("allow", "allow"))
+
+    def test_a_scratch_root_itself_with_a_carriage_return_is_not_safe(self):
+        for command in ("rm -rf /tmp\r", "rm -rf /var/tmp\r", "rm -rf tmp\r"):
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("deny", "deny"))
+
+    # The target travels through every statement shape before the exception
+    # reads it.
+    def test_the_target_keeps_its_carriage_return_through_every_statement_shape(self):
+        for command in TRAILING_CR_SHAPES:
+            letter = command.replace("\r", "x")
+            with self.subTest(command=command):
+                got = self.both_modes(command)
+                self.assertEqual(got, self.both_modes(letter))
+                self.assertEqual(got, ("deny", "deny"))
+
+    # AC-4 (FR6, NFR6, NFR7): what the destructive rules match is unchanged;
+    # only the safe-delete exception reads the `\r`.
+    def test_the_matched_words_still_disregard_the_trailing_carriage_return(self):
+        self.assertEqual(shaped_words_of("rm -rf build\r"), [["rm", "-rf", "build"]])
+        self.assertEqual(
+            shaped_words_of("rm -rf build\\\r"), [["rm", "-rf", "build"]]
+        )
+        self.assertEqual(
+            shaped_words_of("rm -rf \"build\r\"\n'"),
+            [["rm", "-rf", "build"], ["'"]],
+        )
+
+    def test_a_denied_command_with_a_trailing_carriage_return_stays_denied(self):
+        for command in (
+            "rm -rf /home/sakura/valuable\r",
+            "rm -rf /home/sakura/valuable\\\r",
+            "rm -rf ~\r",
+            "rm -rf /\r",
+            "git reset --hard\r",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("deny", "deny"))
+
+    def test_a_trailing_carriage_return_keeps_an_asked_target_asked(self):
+        for command in ("rm -rf $(cat list)\r", "rm -rf $X\r", "rm -rf build/*$X\r"):
+            with self.subTest(command=command):
+                got = self.both_modes(command)
+                self.assertEqual(got, self.both_modes(command[:-1]))
+                self.assertEqual(got, ("ask", "deny"))
+
+    # AC-5 (NFR4): the same decision on two consecutive evaluations, the second
+    # after clearing the lexer cache.
+    def test_the_decision_is_the_same_after_clearing_the_lexer_cache(self):
+        self.addCleanup(H._LEX_CACHE.clear)
+        for tag, want, command in TRAILING_CR_CASES:
+            for batch in (False, True):
+                with self.subTest(tag=tag, batch=batch):
+                    H._LEX_CACHE.clear()
+                    first = decision_in_process(command, batch)
+                    H._LEX_CACHE.clear()
+                    second = decision_in_process(command, batch)
+                    self.assertEqual(first, second)
+                    self.assertEqual(first, want)
 
 
 # ---------------------------------------------------------------------------
@@ -6261,6 +6512,441 @@ class TestStageAgreementUnderExtglobOn(TestStageAgreement):
 
     def test_the_forms_are_there_to_check(self):
         self.assertGreaterEqual(len(self.commands), 7)
+
+
+# ---------------------------------------------------------------------------
+# destructive-guard-lexer-round2-deferred task0007 (review round 1, findings
+# a9d11e5242397844 and e7dc3c995b363c9d; FR7, FR9, FR10, FR11, NFR1, NFR4-NFR7):
+# bash removes a backslash-newline pair before it reads the characters around
+# it. The lexer finds the `$` openers past such pairs, and the word split the
+# decision layer reads takes every pair out that bash removes -- every pair
+# outside single-quoted text -- while its offsets stay offsets of the original
+# text.
+# ---------------------------------------------------------------------------
+
+LINE_CONTINUATION_LABEL = "round2-deferred"
+# The first index a block appended for this feature can have (D3).
+LINE_CONTINUATION_CASE_FLOOR = 769
+LINE_CONTINUATION_STABLE_IDS = ("a9d11e5242397844", "e7dc3c995b363c9d")
+LC_RM = "rm -rf /home/sakura/valuable"
+
+# (tag, stable_id, verdict, command): the nine cases of the task plan, in the
+# order the plan lists them.
+LINE_CONTINUATION_CASES = [
+    ("R1.LC1", "a9d11e5242397844", "deny", "echo $\\\n{ git reset --hard; }"),
+    ("R1.LC2", "a9d11e5242397844", "deny", 'echo "$\\\n{ git reset --hard; }"'),
+    ("R1.LC3", "a9d11e5242397844", "deny", "cat <<E\n$\\\n{ git reset --hard; }\nE"),
+    ("R1.LC4", "e7dc3c995b363c9d", "deny", "echo ${|\\\n" + LC_RM + "; }"),
+    ("R1.LC5", "e7dc3c995b363c9d", "deny", "echo ${ \\\n" + LC_RM + "; }"),
+    ("R1.LC6", "e7dc3c995b363c9d", "deny", "\\\n" + LC_RM),
+    ("R1.LC7", "e7dc3c995b363c9d", "deny", "r\\\nm -rf /home/sakura/valuable"),
+    ("R1.LC8", "e7dc3c995b363c9d", "deny", "echo $(\\\n" + LC_RM + ")"),
+    ("R1.LC9", "e7dc3c995b363c9d", "allow", "echo a\\\nb 'c\\\nd'"),
+]
+
+# (command, region kind): an opener of the `$` handling found past one or more
+# backslash-newline pairs. The region starts at the `$` and is the only region
+# of its kind.
+LINE_CONTINUATION_OPENER_FORMS = [
+    ("echo $\\\n(echo x)", "command-substitution"),
+    ("echo $\\\n\\\n(echo x)", "command-substitution"),
+    ("echo $(\\\n(1+2))", "arithmetic-expansion"),
+    ("echo $\\\n((1+2))", "arithmetic-expansion"),
+    ("echo $\\\n(\\\n(1+2))", "arithmetic-expansion"),
+    ("echo $\\\n[1+2]", "bracket-arithmetic"),
+    ("echo $\\\n{x}", "parameter-expansion"),
+    ("echo $\\\n\\\n{x}", "parameter-expansion"),
+    ("echo $\\\n'a'", "ansi-c-quote"),
+    ('echo $\\\n"a"', "locale-quote"),
+    ("echo ${\\\n x; }", BRACE_KIND),
+]
+
+# A deny that needs the opener past a pair, in every position the `$` handling
+# runs in.
+LINE_CONTINUATION_DENY_OPENER_FORMS = [
+    "echo $\\\n(" + LC_RM + ")",
+    "echo $\\\n{ " + LC_RM + "; }",
+    'echo "$\\\n(' + LC_RM + ')"',
+    "echo ${x:-$\\\n(" + LC_RM + ")}",
+    "echo $((1 + $\\\n(" + LC_RM + ")))",
+    "echo $[1 + $\\\n(" + LC_RM + ")]",
+    "x=($\\\n(" + LC_RM + "))",
+    "a[$\\\n(" + LC_RM + ")]=x",
+    "cat <<E\n$\\\n(" + LC_RM + ")\nE",
+]
+
+# Commands read after an unreadable delimiter word (a tail source): the tail
+# gate applies to an opener found past a pair exactly as to one without it.
+LINE_CONTINUATION_TAIL_FORMS = [
+    ("cat <<E${x}\necho $\\\n((1))", "arithmetic-expansion", "$\\\n"),
+    ("cat <<E${x}\necho $\\\n[1]", "bracket-arithmetic", "$\\\n"),
+    ("cat <<E${x}\necho $\\\n{x}", "parameter-expansion", "$\\\n"),
+    ("cat <<E${x}\necho $\\\n'a'", "ansi-c-quote", "'"),
+]
+
+# Words that hold a pair: (text, the words the tokenizer reads), in both of its
+# modes.
+LINE_CONTINUATION_WORD_FORMS = [
+    ("r\\\nm -rf x", ["rm", "-rf", "x"]),
+    ("r\\\n\\\nm -rf x", ["rm", "-rf", "x"]),
+    ("\\\nrm -rf x", ["rm", "-rf", "x"]),
+    ("rm\\\n -rf x", ["rm", "-rf", "x"]),
+    ('echo "a\\\nb"', ["echo", "ab"]),
+    ("echo 'a\\\nb'", ["echo", "a\\\nb"]),
+    ("echo a\\\nb 'c\\\nd'", ["echo", "ab", "c\\\nd"]),
+    ("echo \\\\\\\nx", ["echo", "\\x"]),
+]
+
+
+def lc_command(tag):
+    for form_tag, _stable_id, _verdict, command in LINE_CONTINUATION_CASES:
+        if form_tag == tag:
+            return command
+    raise KeyError(tag)
+
+
+def lc_regions(lexmap, kind):
+    return [r for r in lexmap.regions if r.kind == kind]
+
+
+def lc_inner(command, kind):
+    """The inner text of the one span of KIND in COMMAND, from the structure
+    scan."""
+    lexmap = H.lex_shell(command)
+    (region,) = lc_regions(lexmap, kind)
+    return H._span_inner(command, (region.start, region.end))[0]
+
+
+class TestLineContinuationBeforeOpenersAndInWords(unittest.TestCase):
+    def verdicts(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    # AC-1, AC-7 (FR9, FR10): the nine cases are in the table, in order, after
+    # every earlier entry. The order of their commit against the hook change
+    # is a history property, checked on the branch.
+    def test_the_nine_cases_are_appended_in_order_after_the_base_entries(self):
+        cases = case_commands()
+        located = []
+        for tag, stable_id, want, command in LINE_CONTINUATION_CASES:
+            with self.subTest(tag=tag):
+                found = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if cmd == command
+                    and w == want
+                    and label.startswith(
+                        "%s %s %s " % (stable_id, LINE_CONTINUATION_LABEL, tag)
+                    )
+                ]
+                self.assertEqual(len(found), 1)
+                self.assertGreaterEqual(found[0], LINE_CONTINUATION_CASE_FLOOR)
+                located.append(found[0])
+        self.assertEqual(located, list(range(located[0], located[0] + len(located))))
+
+    def test_no_label_before_the_floor_cites_either_finding(self):
+        for index, (_want, label, _cmd) in enumerate(
+            case_commands()[:LINE_CONTINUATION_CASE_FLOOR]
+        ):
+            for stable_id in LINE_CONTINUATION_STABLE_IDS:
+                self.assertNotIn(stable_id, label, msg="index %d" % index)
+
+    # AC-2 (FR7, NFR6, TM-7): the verdicts, in both modes.
+    def test_cases_one_to_eight_deny_and_nine_allows_in_both_modes(self):
+        for tag, _stable_id, want, command in LINE_CONTINUATION_CASES:
+            with self.subTest(tag=tag):
+                self.assertEqual(self.verdicts(command), (want, want), msg=repr(command))
+
+    # AC-2: cases 1 and 2 -- one closed command-form region from the `$`.
+    def test_a_command_form_opened_past_a_pair_is_one_closed_region_from_the_dollar(self):
+        for tag in ("R1.LC1", "R1.LC2"):
+            with self.subTest(tag=tag):
+                command = lc_command(tag)
+                lexmap = H.lex_shell(command)
+                (region,) = lc_regions(lexmap, BRACE_KIND)
+                self.assertTrue(region.closed)
+                self.assertEqual(region.start, command.index("$"))
+                self.assertEqual(region.end, command.index("}") + 1)
+                self.assertEqual(lc_regions(lexmap, "parameter-expansion"), [])
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(lc_inner(command, BRACE_KIND), " git reset --hard; ")
+
+    def test_the_structure_scan_gives_the_inner_text_after_the_pairs_of_the_opener(self):
+        # The inner text starts after `${` and every pair after it, and after
+        # the `|` of `${|` and every pair after that.
+        self.assertEqual(lc_inner(lc_command("R1.LC4"), BRACE_KIND), LC_RM + "; ")
+        self.assertEqual(lc_inner(lc_command("R1.LC5"), BRACE_KIND), " \\\n" + LC_RM + "; ")
+        self.assertEqual(lc_inner("echo ${\\\n\\\n|\\\n\\\nx; }", BRACE_KIND), "x; ")
+        self.assertEqual(lc_inner("echo $\\\n\\\n{ x; }", BRACE_KIND), " x; ")
+        self.assertEqual(lc_inner("echo $\\\n(x)", "command-substitution"), "x")
+        self.assertEqual(lc_inner("echo $\\\n(\\\nx)", "command-substitution"), "\\\nx")
+
+    def test_the_unclosed_command_form_gives_the_inner_text_after_the_pairs(self):
+        for text, inner in (
+            ("echo $\\\n{ " + LC_RM, " " + LC_RM),
+            ("echo $\\\n{|" + LC_RM, LC_RM),
+            ("echo ${|\\\n\\\n" + LC_RM, LC_RM),
+        ):
+            with self.subTest(text=text):
+                (form,) = H._unclosed_command_forms(text)
+                self.assertEqual(form, (inner, text.index("$")))
+        self.assertEqual(self.verdicts("echo $\\\n{ " + LC_RM)[0], "deny")
+
+    # AC-2: case 3 -- the here-document body extraction.
+    def test_an_unquoted_here_document_body_reports_the_command_form_once(self):
+        command = lc_command("R1.LC3")
+        lexmap = H.lex_shell(command)
+        (op,) = lexmap.heredocs
+        body = heredoc_body(command, op)
+        self.assertEqual(body, "$\\\n{ git reset --hard; }\n")
+        bodies, needs_whole_body = H._extract_heredoc_body_substitutions(body)
+        self.assertFalse(needs_whole_body)
+        self.assertEqual(bodies, [(" git reset --hard; ", 0)])
+        (region,) = lc_regions(H.lex_shell(body, "heredoc-body"), BRACE_KIND)
+        self.assertEqual((region.start, region.end, region.closed), (0, len(body) - 1, True))
+
+    def test_an_unclosed_command_form_in_a_body_gives_the_inner_text_after_the_pairs(self):
+        body = "$\\\n{ " + LC_RM + "\n"
+        (form,) = H._unclosed_command_forms(body, "heredoc-body")
+        self.assertEqual(form, (" " + LC_RM + "\n", 0))
+        self.assertEqual(self.verdicts("cat <<E\n" + body + "E")[0], "deny")
+
+    # AC-3 (NFR6): every other opener, found past the pairs.
+    def test_each_opener_found_past_a_pair_is_a_region_from_the_dollar(self):
+        for command, kind in LINE_CONTINUATION_OPENER_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                regions = lc_regions(lexmap, kind)
+                self.assertEqual(len(regions), 1)
+                self.assertEqual(regions[0].start, command.index("$"))
+                self.assertTrue(regions[0].closed)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_a_substitution_opened_past_a_pair_is_denied_in_every_position(self):
+        for command in LINE_CONTINUATION_DENY_OPENER_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_the_tail_gate_applies_to_an_opener_found_past_a_pair(self):
+        for command, kind, literal in LINE_CONTINUATION_TAIL_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(lc_regions(lexmap, kind), [])
+                # The `$` itself is listed, or -- for `$'`, which falls
+                # through to the quote the gate refuses next -- the quote.
+                self.assertIn(command.index(literal), lexmap.unopened)
+        command = "cat <<E${x}\necho $\\\n{ " + LC_RM + "; }"
+        self.assertEqual(len(lc_regions(H.lex_shell(command), BRACE_KIND)), 1)
+        self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_an_unclosed_opener_found_past_a_pair_is_settled_at_the_dollar(self):
+        for command in ("echo $\\\n[1+2", "echo $\\\n((1+2", "echo $\\\n'a"):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(list(lexmap.unopened), [command.index("$")])
+                self.assertEqual(lexmap.tail_start, command.index("$"))
+
+    def test_a_pair_that_ends_a_discarded_line_is_no_continuation_for_the_look_ahead(self):
+        # `x=( <<E` is a syntax error: bash drops the rest of that physical
+        # line, whatever precedes its newline. The `$` ends the line, so the
+        # `{` is on the next line, a command of its own.
+        command = "x=( <<E $\\\n{ " + LC_RM + "; }"
+        self.assertEqual(lc_regions(H.lex_shell(command), BRACE_KIND), [])
+
+    def test_a_pair_that_ends_the_line_of_a_pending_here_document_starts_no_body(self):
+        # The pair skipped by the look-ahead is a continuation: the line the
+        # `{` is on is the operator's line, and the body starts after it.
+        command = "cat <<E $\\\n{ echo; }\nbody\nE\n" + LC_RM
+        lexmap = H.lex_shell(command)
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "body\n")
+        self.assertEqual(len(lc_regions(lexmap, BRACE_KIND)), 1)
+        self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_a_settled_opener_past_a_pair_still_starts_no_body_at_the_pair(self):
+        # The opener is literal text here (it never closes), so no region
+        # stays open across the pair: the line the pair ends is still the
+        # operator's line, and the body starts after the line the `{` is on.
+        command = "cat <<E $\\\n{x\nbody\nE"
+        (op,) = H.lex_shell(command).heredocs
+        self.assertEqual(heredoc_body(command, op), "body\n")
+
+    def test_the_map_is_identical_after_clearing_the_lexer_cache(self):
+        commands = [command for _t, _s, _w, command in LINE_CONTINUATION_CASES]
+        commands += [command for command, _kind in LINE_CONTINUATION_OPENER_FORMS]
+        commands += [command for command, _kind, _literal in LINE_CONTINUATION_TAIL_FORMS]
+        commands += LINE_CONTINUATION_DENY_OPENER_FORMS
+        for command in commands:
+            with self.subTest(command=command):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    # AC-4 (NFR6, TM-7): the word split.
+    def test_the_tokenizer_removes_the_pairs_that_bash_removes_in_both_modes(self):
+        for layout in (True, False):
+            for text, words in LINE_CONTINUATION_WORD_FORMS:
+                with self.subTest(layout=layout, text=text):
+                    toks = H._tokenize_marked(H._MarkedText.plain(text), layout=layout)
+                    self.assertEqual([str(t) for t, _s, _e in toks], words)
+
+    def test_the_offsets_stay_offsets_of_the_original_text(self):
+        for layout in (True, False):
+            with self.subTest(layout=layout):
+                toks = H._tokenize_marked(
+                    H._MarkedText.plain("r\\\nm -rf x"), layout=layout
+                )
+                self.assertEqual([(s, e) for _t, s, e in toks], [(0, 4), (5, 8), (9, 10)])
+                toks = H._tokenize_marked(
+                    H._MarkedText.plain("a\\\n\\\nb c\\\nd"), layout=layout
+                )
+                self.assertEqual([(s, e) for _t, s, e in toks], [(0, 6), (7, 11)])
+                toks = H._tokenize_marked(
+                    H._MarkedText.plain("a 'b\\\nc'"), layout=layout
+                )
+                self.assertEqual(
+                    [(str(t), s, e) for t, s, e in toks], [("a", 0, 1), ("b\\\nc", 2, 8)]
+                )
+
+    def test_a_separator_after_a_pair_keeps_its_own_offsets(self):
+        text = "a \\\n; b"
+        toks = H._tokenize_marked(H._MarkedText.plain(text))
+        self.assertEqual(
+            [(str(t), s, e) for t, s, e in toks],
+            [("a", 0, 1), (";", 4, 5), ("b", 6, 7)],
+        )
+        segments, starts, _operators = H._lex_layout(text, True)
+        self.assertEqual([words for words, _lexed, _sep in segments], [["a"], ["b"]])
+        self.assertEqual(starts, [0, 5])
+
+    def test_a_backslash_before_any_other_character_is_untouched(self):
+        for text in ("a\\\rb", "a\\\r\nb", "a\\\\\nb", "a\\ b", "a\\xb"):
+            for layout in (True, False):
+                with self.subTest(text=text, layout=layout):
+                    toks = H._tokenize_marked(H._MarkedText.plain(text), layout=layout)
+                    got = [str(t) for t, _s, _e in toks if str(t) != "\n"]
+                    self.assertEqual(got, shlex_words(text))
+        toks = H._tokenize_marked(H._MarkedText.plain("a\\\\\nb"))
+        self.assertEqual([str(t) for t, _s, _e in toks], ["a\\", "\n", "b"])
+
+    def test_a_pair_inside_an_expansion_or_a_substitution_is_read_as_before(self):
+        # The hidden text of an expansion is restored by position, and a
+        # substitution is its own chunk: a pair in either leaves the words
+        # around it as they are.
+        for text, words in (
+            ("echo ${x:-a\\\nb} c", ["echo", "${x:-a\\\nb}", "c"]),
+            ("echo $((1 +\\\n2)) c", ["echo", "$((1 +\\\n2))", "c"]),
+        ):
+            with self.subTest(text=text):
+                toks = H._tokenize_marked(H._MarkedText.plain(text), layout=False)
+                self.assertEqual([str(t) for t, _s, _e in toks], words)
+
+    def test_statements_read_the_command_word_past_a_pair(self):
+        for tag in ("R1.LC6", "R1.LC7"):
+            with self.subTest(tag=tag):
+                shaped = shaped_words_of(lc_command(tag))
+                self.assertIn(LC_RM.split(), shaped)
+        for tag in ("R1.LC4", "R1.LC5"):
+            with self.subTest(tag=tag):
+                inner = lc_inner(lc_command(tag), BRACE_KIND)
+                shaped = shaped_words_of(inner)
+                self.assertTrue(
+                    any(words[:1] == ["rm"] for words in shaped), msg=repr(shaped)
+                )
+                self.assertIn(LC_RM.split(), shaped_words_of(lc_command(tag)))
+        self.assertIn(LC_RM.split(), shaped_words_of(lc_command("R1.LC8")))
+
+    def test_a_command_name_read_from_a_substitution_is_read_past_a_pair(self):
+        # The raw body of a substitution that stands where the command word
+        # is, which names the command (`$(which r<pair>m) -R ...`), is read
+        # with the pairs taken out as well.
+        self.assertEqual(H.read_command_name_evidence("which r\\\nm"), "rm")
+        self.assertEqual(H.read_command_name_evidence("which a\\\\\nm"), "m")
+        command = "$(which r\\\nm) -R /home/sakura/valuable"
+        self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_the_fallback_word_split_is_not_touched(self):
+        # A chunk whose view does not tokenize (an unclosed quote) is split on
+        # whitespace by the fallback, as before.
+        segments = H._lex_layout("r\\\nm x 'y", False)[0]
+        self.assertEqual(
+            [(toks, lexed) for toks, lexed, _sep in segments],
+            [(["r\\"], False), (["m", "x", "'y"], False)],
+        )
+
+    # AC-6 (NFR1, TM-8): linear work.
+    def assert_linear(self, unit):
+        small = H.lex_shell("\n".join([unit] * 200))
+        large_text = "\n".join([unit] * 400)
+        large = H.lex_shell(large_text)
+        self.assertLessEqual(large.work, 2.5 * small.work + 100)
+        self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024)
+
+    def test_lexing_work_is_linear_for_each_case_repeated(self):
+        for tag, _stable_id, _want, command in LINE_CONTINUATION_CASES:
+            with self.subTest(tag=tag):
+                self.assert_linear(command)
+
+    def test_lexing_work_is_linear_for_many_pairs_after_a_dollar(self):
+        for tail in ("{ x; }", "(x)", "((1))", "[1]", "'x'", '"x"', "x", "{x}", "$(x)"):
+            with self.subTest(tail=tail):
+                small_text = "echo $" + "\\\n" * 200 + tail
+                large_text = "echo $" + "\\\n" * 400 + tail
+                small = H.lex_shell(small_text)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_many_dollars_each_followed_by_a_pair_cost_linear_work(self):
+        for unit in ("$\\\n{ x; }", "$\\\nx", "$\\\n\\\n(x)"):
+            with self.subTest(unit=unit):
+                self.assert_linear("echo " + unit)
+
+    def test_a_command_with_many_pairs_is_read_in_time_by_the_hook(self):
+        for command in (
+            "echo $" + "\\\n" * 400 + "{ " + LC_RM + "; }",
+            "r" + "\\\nr" * 400 + "m -rf /home/sakura/valuable",
+        ):
+            start = time.monotonic()
+            decision = hook_verdict(command)[0]
+            self.assertNotEqual(decision, "(timeout)")
+            self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+        self.assertEqual(
+            hook_verdict("echo $" + "\\\n" * 400 + "{ " + LC_RM + "; }")[0], "deny"
+        )
+
+
+class TestLineContinuationStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    nine cases of the line-continuation findings and the openers found past a
+    pair, so the lexer's regions, the structure scan, marking, the layout layer
+    and the position maps agree on them."""
+
+    @classmethod
+    def setUpClass(cls):
+        forms = [command for _t, _s, _w, command in LINE_CONTINUATION_CASES]
+        forms += [command for command, _kind in LINE_CONTINUATION_OPENER_FORMS]
+        forms += [command for command, _kind, _literal in LINE_CONTINUATION_TAIL_FORMS]
+        forms += LINE_CONTINUATION_DENY_OPENER_FORMS
+        forms += [text for text, _words in LINE_CONTINUATION_WORD_FORMS]
+        forms += [
+            "echo a \\\n; echo b",
+            "echo $\\\n{ x; } r\\\nm 'a\\\nb' \"c\\\nd\"",
+        ]
+        seen = []
+        for form in forms:
+            if form not in seen:
+                seen.append(form)
+        cls.commands = [form for form in seen if _lexer_reads(form)]
+
+    def test_the_forms_are_there_to_check(self):
+        for _tag, _stable_id, _want, command in LINE_CONTINUATION_CASES:
+            self.assertIn(command, self.commands)
 
 
 if __name__ == "__main__":
