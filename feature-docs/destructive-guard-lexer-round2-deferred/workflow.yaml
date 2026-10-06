@@ -156,9 +156,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-lexer-round2-deferred/task0001
   task0002:
     title: 行をまたいで閉じる添字の後ろのヒアドキュメントと、識別子の途中の行継続を、bash 5.3 と同じに読む
     plan: tasks/task0002.md
@@ -182,9 +182,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-lexer-round2-deferred/task0002
   task0003:
     title: ヒアドキュメントの区切り語の終わりと行の境界を \n だけにし、引用なしの本文では行継続を連結して閉じ行を決める
     plan: tasks/task0003.md
@@ -208,9 +208,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-lexer-round2-deferred/task0003
   task0004:
     title: 字句解析と語の分割で \r を空白として扱わない
     plan: tasks/task0004.md
@@ -233,9 +233,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-lexer-round2-deferred/task0004
   task0005:
     title: bash 5.3 の ${ cmd; } / ${| cmd; } の中身をコマンドとして検査する
     plan: tasks/task0005.md
@@ -260,9 +260,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/destructive-guard-lexer-round2-deferred/task0005
 review:
   needs_rework: false
 requirements:
