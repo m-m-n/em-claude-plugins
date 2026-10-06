@@ -117,14 +117,14 @@ workflow:
   status: completed
   completed_at_commit: 1760880ea180d9a7d225411cff912ee281d29a03
 - id: implement
-  status: completed
+  status: pending
   base_commit: 60f7ea47dc957a73eee8be32a79a44a16f1f5123
   completed_at_commit: ebb8b700c0fb99f42e983059ca6249b32d58db29
 - id: review
   status: completed
   completed_at_commit: ea261afaa8e8c1427191697f5f7053a2665190b2
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: TS-13
@@ -362,6 +362,35 @@ tasks:
       source_ids:
       - b0f7592cd79e75ea
       review_round: 1
+  task0009:
+    title: '入れ子の閉じない ${ を並べた入力のフック評価を、入力長に比例する時間で 10 秒以内に終える'
+    plan: tasks/task0009.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR10
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - TS-13
+      - TS-14
+      - TS-10
 review:
   needs_rework: false
   status: completed
@@ -459,12 +488,14 @@ requirements:
     - task0005
     - task0006
     - task0007
+    - task0009
     tests:
     - TS-7
     - TS-8
     - TS-17
     - TS-19
     - TS-20
+    - TS-22
   FR8:
     title: tail で開いてよい領域の判定を一か所にまとめる（c8c16caba82d6238 の一部）
     status: ok
@@ -515,6 +546,7 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0009
     tests:
     - TS-10
     - TS-12
@@ -548,10 +580,12 @@ requirements:
     - task0005
     - task0006
     - task0007
+    - task0009
     tests:
     - TS-9
     - TS-19
     - TS-20
+    - TS-22
   NFR2:
     title: 約 60KB の入力でもフック 1 回の評価が 10 秒以内に終わる
     status: ok
@@ -559,8 +593,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0009
     tests:
     - TS-13
+    - TS-22
   NFR3:
     title: 作業上限を超えたら scan-budget の ask（batch では deny）にする
     status: ok
@@ -568,8 +604,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0009
     tests:
     - TS-14
+    - TS-22
   NFR4:
     title: 決定性
     status: ok
@@ -584,6 +622,7 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0009
     tests:
     - TS-8
   NFR5:
@@ -600,6 +639,7 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0009
     tests:
     - TS-10
   NFR6:
@@ -616,6 +656,7 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0009
     tests:
     - TS-15
     - TS-16
@@ -624,6 +665,7 @@ requirements:
     - TS-19
     - TS-20
     - TS-21
+    - TS-22
   NFR7:
     title: 既存の allow ケースの判定を変えない
     status: ok
@@ -638,6 +680,7 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0009
     tests:
     - TS-10
     - TS-15
