@@ -144,7 +144,7 @@ workflow:
   base_commit: 9e3140acd9beb2edb3b92df2b9c76e6ac7724b1b
   completed_at_commit: 8d26abc4a8325baa0e4728ae552280c9ed48e171
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -247,6 +247,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: task0004 が字句解析の読み直しを線形化し、仕事量の上限と線形性テストを足しているため
+    cross_validation: true
 requirements:
   FR1:
     title: 算術 for の直後の { を予約語として読む（453963d025537b11）
