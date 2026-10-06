@@ -236,7 +236,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-heredoc-bypass-fixes/task0005
     provenance:
       source: review
