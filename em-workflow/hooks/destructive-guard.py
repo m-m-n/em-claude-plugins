@@ -797,6 +797,7 @@ _LEX_WORD_RUN = re.compile(r"[^ \t\r\n;|&()<>\"'`$\\]+")
 _LEX_DQ_SPECIAL = re.compile(r"[\\\"$`]")
 _LEX_PARAM_SPECIAL = re.compile(r"[\\'\"$`}]")
 _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
+_LEX_EXTGLOB_SPECIAL = re.compile(r"[\\'\"$`()<>]")
 _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
 _LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
@@ -1021,11 +1022,19 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         close_bare(f)
         if f.named:
             parent = stack[-1]
-            if text.startswith("=(", after):
-                parent.arr_end = after + 1
-            elif text.startswith("+=(", after):
-                parent.arr_end = after + 2
-            elif not (text.startswith("=", after) or text.startswith("+=", after)):
+            op_at = after
+            if text.startswith("+=", op_at):
+                op_at += 2
+            elif text.startswith("=", op_at):
+                op_at += 1
+            else:
+                op_at = -1
+            paren = op_at
+            while op_at >= 0 and text.startswith("\\\n", paren):
+                paren += 2
+            if op_at >= 0 and paren < n and text[paren] == "(":
+                parent.arr_end = paren
+            elif op_at < 0:
                 parent.asg = False
 
     def word_transition(f, w, end, first=None):
@@ -1149,7 +1158,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             if first is not None and _LEX_ASSIGN_WORD.match(first):
                 f.asg = True
                 f.decl = False
-                array_word = w is not None and _LEX_ASSIGN_WORD.fullmatch(w)
+                array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
             elif sub_name is not None:
                 # `NAME[`: an assignment word when the `=` / `+=` follows the
                 # subscript's `]`, which close_subscript() finds out; until
@@ -1164,7 +1173,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             if sub_name is not None:
                 f.sub_at = end - len(first) + sub_name.end() - 1
             else:
-                array_word = w is not None and _LEX_ASSIGN_WORD.fullmatch(w)
+                array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
         if array_word:
             # Line continuations between the `=` and the `(` are removed by
             # bash before it reads the word: skip them, keeping the offset
@@ -1258,8 +1267,14 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         collected in DISCARD_UNCLOSED: the pass goes on, and at its end they
         are settled together with the rest, so many discarded lines cost no
         more passes than one."""
-        nonlocal discard_end, limit
+        nonlocal discard_end, limit, tail_start
         end = discard_end
+        if tail_start is not None and tail_start < end:
+            # An opener left unclosed on this discarded line reaches no
+            # further than its newline: the lines after it are read with
+            # only the later unclosed openers in force.
+            later = [s for s in settled if s >= end]
+            tail_start = min(later) if later else None
         if text[end - 1] == "\\" and not (
             regions and regions[-1][0] == "comment" and regions[-1][2] == end
         ):
@@ -1859,7 +1874,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             # The pattern group of an extended-glob parenthesis inside an
             # array (P14), read to its matching `)`: parentheses nest, and a
             # `<<` or `;` in it is pattern text.
-            m = _LEX_ARITH_SPECIAL.search(text, i, limit)
+            m = _LEX_EXTGLOB_SPECIAL.search(text, i, limit)
             if m is None:
                 i = limit
                 continue
@@ -1867,6 +1882,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             c = text[j]
             if c == "\\":
                 i = j + 2
+            elif c == "<" or c == ">":
+                if text.startswith("(", j + 1) and (j == 0 or text[j - 1] not in "<>"):
+                    # A process substitution runs inside a pattern too.
+                    push(f, "procsub", "process-substitution", j, cmd=True)
+                    i = j + 2
+                else:
+                    i = j + 1
             elif c == "(":
                 f.depth += 1
                 i = j + 1
@@ -7323,6 +7345,28 @@ def run():
         other = _judge_under(payload, True)
         if _outcome_rank(other) > _outcome_rank(outcome):
             outcome = other
+        # The option may be switched mid-command, so neither fixed reading is
+        # reliable: settle it with an `ask`, never an `allow`.
+        try:
+            command = payload["tool_input"]["command"]
+        except Exception:
+            command = ""
+        if (
+            isinstance(command, str)
+            and "shopt" in command
+            and "extglob" in command
+            and _outcome_rank(outcome) < _OUTCOME_RANK["ask"]
+        ):
+            outcome = {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "ask",
+                    "permissionDecisionReason": (
+                        "extglob を途中で切り替えており、拡張パターンの括弧の"
+                        "解釈を確定できない。"
+                    ),
+                }
+            }
     if outcome is not None:
         json.dump(outcome, sys.stdout)
     sys.exit(0)
