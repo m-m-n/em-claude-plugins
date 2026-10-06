@@ -1,0 +1,29 @@
+schema_version: 1
+feature: validator-scenario-id-format
+records:
+- question_id: requirement.scenario-id-format-rule
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-07T08:31:44+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - hyphen_canonical_accept_both
+  freeform: null
+  normalized_answer: plan-writing/SKILL.md states TS-n (TS, hyphen, digits) as the
+    form new VERIFICATION.md files use, and states that TSn (no hyphen) is also a
+    valid scenario ID the validator recognizes; IDs stay literal strings (TS13 and
+    TS-13 are distinct). No other agent or contract text changes.
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation);
+    question: what plan-writing/SKILL.md states as the VERIFICATION.md scenario ID
+    format rule once the validator accepts both TS-n and TSn; options: hyphen_canonical_accept_both
+    / both_equal / hyphenless_canonical; choice: hyphen_canonical_accept_both; not
+    chosen: both_equal, hyphenless_canonical; key points: the template row (plan-writing
+    SKILL.md:270), implementation-planner.md:239, the rework-planner contract (:142)
+    and every validator fixture already use TS-n, so keeping TS-n for new documents
+    changes nothing else; TSn exists in existing feature-docs (e.g. batch-once-refire-dedup/VERIFICATION.md:24),
+    so it must be stated as valid; add TSn tests for both new-scenario acceptance
+    and existing-ID rejection; risk: IDs stay literal, so rewriting an existing TS13
+    as TS-13 counts as a new scenario (validate-worker-output.py:2204); Codex agreed
+    with the analyst recommendation; codex_consulted: true (harness codex, 1 turn);
+    opus_escalation: false; discussion also recorded as a comment on the Notion task
+    page'
