@@ -2,38 +2,67 @@ schema_version: 1
 feature: destructive-guard-heredoc-bypass-fixes
 created: '2026-10-06'
 base_branch: main
-goal: |
-  # destructive-guard: heredoc-syntax-error の review round 2 で deferred になった回避経路を直す（high 4 件）
+goal: '# destructive-guard: heredoc-syntax-error の review round 2 で deferred になった回避経路を直す（high 4 件）
+
 
   Notion タスク: https://www.notion.so/3f13509ec8ee81e0af5ee7133da78d8e （種別: セキュリティ）
 
+
   ## 脆弱性の概要 (必須)
+
   `em-workflow/hooks/destructive-guard.py` の字句解析に、review round 2 の auto-fix で直しきれず batch の rework 上限で deferred になった回避経路が残っている。bash が実行する破壊的な行を、フックが本文として隠したり、配列代入として認識しなかったりして allow を返す。
+
   ## 参照 (必須)
+
   - CVE / GHSA ID: 該当なし
+
   - アドバイザリ URL: 該当なし
+
   - severity: high
+
   - 該当パッケージ: 該当なし
+
   - 現在のバージョン: em-workflow（feature `destructive-guard-heredoc-syntax-error` の integration ブランチ `em-workflow/destructive-guard-heredoc-syntax-error/integration`）
+
   - 修正済みバージョン: 無し
+
   ## 攻撃シナリオ (必須)
+
   エージェントが生成する Bash コマンドが次のいずれかの形をとると、フックは allow を返し、bash は破壊的な行を実行する。
+
   - `b0734a006de6f4d7`: 語の内部の行継続。`x\<改行>=( <<EOF` や `decl\<改行>are x=( <<EOF` の後に破壊的な行を置く。代入語と組み込み命令名を最初の平文断片だけで判定しているため配列代入と認識しない（round 1 の `c069888e6fdcbcd8` の残存経路）
+
   - `a7c0d90ac3e44e5b`: 宣言組み込み（declare / typeset / local / export / readonly）の引数にある `NAME[` を添字として読み、保留中のヒアドキュメントの本文を遅らせる。基準版 deny → 現在 allow の回帰。loop 3 の修正案は既存 deny ケース T2 E-1（eval の引数の `x[a b]=(`）を壊したため取り消した。eval は引数を再解析するので、宣言組み込みとは分けて扱う
+
   - `f34ee27bc8c323b1`: extglob の途中切り替え対策（解析単位の数による ask）が、括弧より前の文字列が同じ解析単位を重複排除する。外側と内側の eval が同じ接頭辞 `x=(@` を持つと単位数が 1 になり、切り替えによる回避が allow になる
+
   ## 影響範囲 (必須)
+
   無人実行（em-workflow の batch）を含め、hook が allow を返すので破壊的なコマンドが確認なしで実行される。
+
   ## 完了の定義 (必須)
+
   - [ ] 攻撃シナリオが成立しない
+
   - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
   - [ ] 各再現入力を deny ケースとして `em-workflow/hooks/tests/destructive-guard-cases.json` に足す
+
   - [ ] 既存の deny / ask ケースが 1 件も消えていない（特に T2 E-1 / T2 E-9）
+
   ## 該当箇所 (任意)
+
   - `em-workflow/hooks/destructive-guard.py` の `word_transition()`（decl_pos 分岐・代入語の判定）、`_count_extglob_units()`、`close_subscript()`
+
   - 詳細は integration ブランチの `feature-docs/destructive-guard-heredoc-syntax-error/reviews/round2.yaml`
+
   - 関連（architecture, deferred）: `765c3a53859569c2` subscript / extglob の走査器が主ループの引用・展開・プロセス置換の処理を複製しており、片方だけの修正で二通りの読みが食い違う。round 2 の退行 `d96cc6e9cb96644b` はこの重複が原因だった
+
   ## 暫定緩和策 (任意)
+
   \<修正までの回避手段。あれば\>
+
+  '
 parent_branch: em-workflow/destructive-guard-heredoc-bypass-fixes/integration
 tier: full
 tier_decision:
@@ -83,7 +112,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 3f28b2c0c92a0f09c33c9bad9212ce8ee87d6e9e
 - id: implement
   status: pending
   failed_kind: null
@@ -95,7 +125,70 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Judge assignment words and builtin names on the logical word
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    branch: null
+  task0002:
+    title: Declaration-builtin NAME[ no longer defers here-document bodies; eval / let / alias handled separately
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR5
+    - NFR1
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    branch: null
+  task0003:
+    title: Identify extglob parse units by origin and position
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -107,35 +200,42 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS1
     - TS2
+    - TS12
   FR2:
     title: 宣言組み込みの引数の NAME[ で保留中のヒアドキュメントの本文を遅らせない（a7c0d90ac3e44e5b）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS3
     - TS6
+    - TS12
   FR3:
     title: eval / let / alias を宣言組み込みと分けて扱う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS4
     - TS6
     - TS8
+    - TS12
   FR4:
     title: extglob の解析単位を元の位置と出自で区別して数える（f34ee27bc8c323b1）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS5
     - TS7
@@ -144,23 +244,33 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS9
   NFR1:
     title: 検知力を減らさない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
     tests:
     - TS6
     - TS7
+    - TS9
   NFR2:
     title: 作業量の上限
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0003
     tests:
     - TS8
   NFR3:
@@ -168,7 +278,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
     tests:
     - TS8
   NFR4:
@@ -176,15 +289,23 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS10
   NFR5:
     title: version
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS11
 batch:
   review_rework_count: 0
   verify_rework:
