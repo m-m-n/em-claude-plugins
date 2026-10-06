@@ -1,13 +1,13 @@
 task_id: task0005
-baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 8487 tests, OK (1 skipped); run-destructive-guard.py 678/678 passed (the 677 case entries of the base plus the batch-downgrade check)
-final_failures: []             # re-executed after the last hook and test edit: python3 -m unittest discover -s tests ran 8514 tests, OK (1 skipped); python3 -m unittest tests.test_destructive_guard_lexer_agreement 170 tests OK; run-destructive-guard.py 683/683 passed
+baseline_failures: []          # refreshed after parent-side adoption (task0006 and task0007 merged into the parent): the suite run at the adoption commit 798a68e6, before the case block was re-appended: python3 -m unittest discover -s tests ran 8507 tests, OK (1 skipped); run-destructive-guard.py 679/679 passed. (Before the adoption, at the start: 8487 tests OK, runner 678/678.)
+final_failures: []             # re-executed after the re-implementation on the updated parent: python3 -m unittest discover -s tests ran 8534 tests, OK (1 skipped); python3 -m unittest tests.test_destructive_guard_lexer_agreement 190 tests OK; run-destructive-guard.py 684/684 passed
 acceptance_tests:
   AC-1:
     tests:
       - em-workflow/hooks/tests/run-destructive-guard.py (case table runner; labels 1baa909f9b288847 round2-residuals FR4.1 / FR4.2 and 19edf404b5cbeb2b round2-residuals FR4.3 / FR4.4 / FR4.5)
       - TestHeredocFallbackAndCloseLines.test_new_cases_are_in_the_case_table_after_the_earlier_entries
     red_confirmed: true
-    red_reason: "After the case-table commit 9f679cac and before any hook commit the runner reported 679/683 with FAIL on the four deny cases (FR4.1-FR4.4): got=allow [destructive-guard] 破壊的なパターンに一致しない。 The allow case FR4.5 (E' X') was green before the hook change: it already got allow. The placement test reads the table by command text and label and was green from the start because the case commit precedes it."
+    red_reason: "After the case-table commit 9f679cac and before any hook commit the runner reported 679/683 with FAIL on the four deny cases (FR4.1-FR4.4): got=allow [destructive-guard] 破壊的なパターンに一致しない。 After parent-side adoption the block was re-appended in its own commit (0167e7f4) before the hook change was re-applied: the runner reported 680/684 with the same four FAIL lines. The allow case FR4.5 (E' X') was green before the hook change: it already got allow. The placement test reads the table by command text and label and was green from the start because the case commit precedes it."
   AC-2:
     tests:
       - TestHeredocFallbackAndCloseLines.test_unreadable_word_is_a_tail_source_and_denied
