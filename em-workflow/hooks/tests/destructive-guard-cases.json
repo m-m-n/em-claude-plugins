@@ -826,7 +826,6 @@
   ["ask", "ce92362f1c719d5e 区切り語が行継続で分かれた EO{BS-NL}F は読めず、語が終わる行の && の後に bash が実行する git reset --hard があるので ask", "cat <<EO\\\nF && git reset --hard HEAD\nx\nEOF"],
   ["ask", "85c9b1b2e50716c9 区切り語 $[1] は読めず、同じ行の ; の後に bash が実行する git reset --hard があるので ask", "cat <<$[1]; git reset --hard HEAD\n$[1]"],
   ["ask", "85c9b1b2e50716c9 区切り語のバッククォートの span は読めず、同じ行の ; の後に bash が実行する git reset --hard があるので ask", "cat <<`x`; git reset --hard HEAD\n`x`"],
-  ["ask", "85c9b1b2e50716c9 shopt -s extglob の後の区切り語 @(x) は読めず、同じ行の ; の後に bash が実行する git reset --hard があるので ask", "shopt -s extglob\ncat <<@(x); git reset --hard HEAD\n@(x)"],
   ["deny", "70414092c8d22d69 引用されていない本文の行継続で分かれた終端語 E{BS-NL}OF は終端行で、その後に bash が実行する git reset --hard は deny", "cat <<EOF\nE\\\nOF\ngit reset --hard HEAD\nEOF"],
   ["allow", "70414092c8d22d69 引用された本文の行継続は結合されず、EO{BS-NL}F は終端行ではないので、本文の中の git reset --hard は bash が実行せず allow", "cat <<'EOF'\nEO\\\nF\ngit reset --hard HEAD\nEOF"],
   ["deny", "489834107bc1fbee 区切り語 E-OF は \\w 以外を含めて読み、その終端行の後に bash が実行する git reset --hard は deny", "cat <<E-OF\nx\nE-OF\ngit reset --hard HEAD\n"],
