@@ -39,6 +39,10 @@ Layout:
   `$[`, `((` or case construct opens after an unreadable delimiter word, and
   one gate decides every tail question of the lexer pass.
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
+- TestNestedUnclosedFormCost (destructive-guard-lexer-round2-deferred task0009,
+  verify round 1): nested unclosed command forms cost time in proportion to the
+  input length -- the doubled-length inputs, the text read per evaluation, the
+  forms whose innermost content is still inspected.
 - TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11), and
   the linear work of `((` / `$((` openers that close without an adjacent `))`.
 - TestNonAdjacentCloseRereading: those openers (review round 2, finding
@@ -544,10 +548,11 @@ def actual_regions(lexmap):
 _verdict_cache = {}
 
 
-def hook_verdict(command, batch=False):
+def hook_verdict(command, batch=False, timeout=GUARD_TIMEOUT_SECONDS):
     """The decision the hook gives COMMAND, run through its stdin JSON /
-    stdout contract. Returns (decision, reason)."""
-    key = (command, batch)
+    stdout contract. Returns (decision, reason). TIMEOUT is how long the run
+    may take (the hook bound unless a test names another)."""
+    key = (command, batch) if timeout == GUARD_TIMEOUT_SECONDS else (command, batch, timeout)
     if key in _verdict_cache:
         return _verdict_cache[key]
     env = dict(os.environ)
@@ -561,7 +566,7 @@ def hook_verdict(command, batch=False):
             capture_output=True,
             text=True,
             env=env,
-            timeout=GUARD_TIMEOUT_SECONDS,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired:
         result = ("(timeout)", "")
@@ -4646,6 +4651,167 @@ class TestBraceCommandStageAgreement(TestStageAgreement):
                 self.assertIn(form, self.commands)
                 if "<<" not in form:
                     self.assertTrue(brace_regions(H.lex_shell(form)))
+
+
+# ---------------------------------------------------------------------------
+# The cost of nested unclosed command forms (destructive-guard-lexer-round2-
+# deferred task0009, verify round 1: TS-13, TS-14, TS-22; NFR1-NFR3). Every
+# level of a nest of unclosed `${ ` forms is a chunk of nearly the whole text,
+# so the hook's scan budget (a multiple of the input length) is spent on
+# copies of one text. A nest deeper than the budget lets through is answered
+# with the scan-budget ask (deny in batch) after the text is read a few times,
+# not once per level up to the budget, so one evaluation costs time in
+# proportion to the input length and finishes well inside the hook bound.
+# ---------------------------------------------------------------------------
+
+# The bound for the doubled-length inputs: twice the hook bound for twice the
+# length, so the cost grows in proportion to the length and not faster.
+DOUBLED_GUARD_TIMEOUT_SECONDS = 2 * GUARD_TIMEOUT_SECONDS
+MIXED_NEST_UNIT = "${ $(( $[ (( $' "
+# How many times, at most, the lexer reads the text of one evaluation of the
+# nests below, counted in characters over the length of the command. The scan
+# budget is 8 times the length, so a hook that scans one copy of the text per
+# level up to the budget reads about 8 times the length.
+LEXED_TEXT_FACTOR = 3
+
+
+def bulk_nested_forms(repeat):
+    """`${ ` repeated REPEAT times, then a line that holds RM_VALUABLE."""
+    return "${ " * repeat + "\n" + RM_VALUABLE + "\n"
+
+
+def mixed_nested_forms(size):
+    """The mixed unit `${ $(( $[ (( $' ` repeated to about SIZE characters,
+    then a line that holds RM_VALUABLE."""
+    return MIXED_NEST_UNIT * (size // len(MIXED_NEST_UNIT)) + "\n" + RM_VALUABLE + "\n"
+
+
+def judged_in_process(command, batch=False):
+    """The output main() hands to decide() for COMMAND, judged inside this
+    process the way the hook's run() does (None when the hook is silent)."""
+    with mock.patch.dict(os.environ, {"CLAUDE_BATCH": "1" if batch else ""}):
+        return H._judge_under(
+            {"tool_name": "Bash", "tool_input": {"command": command}}, False
+        )
+
+
+def lexed_characters(command):
+    """How many characters the lexer passes read in one in-process judgment
+    of COMMAND, the lexer cache emptied first."""
+    lengths = []
+    real_pass = H._lex_pass
+
+    def counting_pass(text, *args, **kwargs):
+        lengths.append(len(text))
+        return real_pass(text, *args, **kwargs)
+
+    H._LEX_CACHE.clear()
+    with mock.patch.object(H, "_lex_pass", counting_pass):
+        judged_in_process(command)
+    return sum(lengths)
+
+
+class TestNestedUnclosedFormCost(unittest.TestCase):
+    NESTED_FORMS = [
+        ("echo ${ " + RM_VALUABLE, "an unclosed form"),
+        ("echo ${ echo x ${ " + RM_VALUABLE, "a form nested in a form"),
+        ("${ " * 3 + RM_VALUABLE, "three forms nested in one another"),
+    ]
+
+    def time_of(self, command, batch=False):
+        start = time.monotonic()
+        decision, reason = hook_verdict(
+            command, batch=batch, timeout=DOUBLED_GUARD_TIMEOUT_SECONDS
+        )
+        return decision, reason, time.monotonic() - start
+
+    def assert_judged_within_the_doubled_bound(self, command):
+        """AC-3: one hook evaluation of COMMAND finishes within twice the hook
+        bound, with an ask or a deny without CLAUDE_BATCH and a deny with it
+        (an ask is a deny there)."""
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                decision, reason, seconds = self.time_of(command, batch)
+                self.assertIn(
+                    decision, ("deny",) if batch else ("ask", "deny"), msg=reason[:200]
+                )
+                self.assertLess(seconds, DOUBLED_GUARD_TIMEOUT_SECONDS)
+
+    def test_doubled_bulk_command_forms_get_a_decision_in_time(self):
+        # AC-3: `${ ` 40000 times and a destructive line (about 120 KB).
+        command = bulk_nested_forms(40000)
+        self.assertGreater(len(command), 100000)
+        self.assert_judged_within_the_doubled_bound(command)
+
+    def test_doubled_mixed_unit_gets_a_decision_in_time(self):
+        # AC-3: the mixed unit to about 120 KB and a destructive line.
+        command = mixed_nested_forms(120000)
+        self.assertGreater(len(command), 100000)
+        self.assert_judged_within_the_doubled_bound(command)
+
+    def test_bulk_inputs_get_a_decision_other_than_allow_in_both_modes(self):
+        # AC-2: the bulk `${ ` input (also the bulk `${` input of
+        # TestUnclosedOpeners), and the mixed input, at about 60 KB.
+        bulk = bulk_nested_forms(20000)
+        self.assertEqual(bulk, "${ " * 20000 + TestUnclosedOpeners.DESTRUCTIVE)
+        for name, command in (("bulk", bulk), ("mixed", mixed_nested_forms(60000))):
+            with self.subTest(form=name):
+                plain = hook_verdict(command)[0]
+                batch = hook_verdict(command, batch=True)[0]
+                self.assertIn(plain, ("ask", "deny"))
+                self.assertEqual(batch, "deny")
+
+    def test_the_text_read_per_evaluation_is_a_small_multiple_of_the_input(self):
+        # The cost of one evaluation counted in characters read, not in
+        # seconds: reading the nest costs a bounded number of passes over the
+        # text, however many levels it holds, and doubling the text doubles it.
+        reads = {}
+        for name, command in (
+            ("bulk", bulk_nested_forms(20000)),
+            ("doubled bulk", bulk_nested_forms(40000)),
+            ("mixed", mixed_nested_forms(60000)),
+            ("doubled mixed", mixed_nested_forms(120000)),
+        ):
+            with self.subTest(form=name):
+                reads[name] = lexed_characters(command)
+                self.assertLessEqual(reads[name], LEXED_TEXT_FACTOR * len(command))
+        self.assertLessEqual(reads["doubled bulk"], 2.5 * reads["bulk"] + 100)
+        self.assertLessEqual(reads["doubled mixed"], 2.5 * reads["mixed"] + 100)
+
+    def test_the_content_of_every_nested_unclosed_form_is_still_inspected(self):
+        # AC-4: the destructive command inside the innermost form is denied.
+        for command, name in self.NESTED_FORMS:
+            with self.subTest(form=name):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_the_innermost_form_of_a_nest_is_judged_through_its_levels(self):
+        # AC-4, further: the same destructive command inside the innermost of
+        # several levels, as many levels as the scan budget lets through.
+        for levels in (4, 10, 40):
+            command = "${ " * levels + RM_VALUABLE
+            with self.subTest(levels=levels):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_every_input_gets_the_same_decision_after_the_lexer_cache_is_cleared(self):
+        # AC-5: two consecutive evaluations, the second on an emptied cache.
+        for name, command in (
+            ("bulk", bulk_nested_forms(20000)),
+            ("mixed", mixed_nested_forms(60000)),
+            ("doubled bulk", bulk_nested_forms(40000)),
+            ("doubled mixed", mixed_nested_forms(120000)),
+        ):
+            for batch in (False, True):
+                with self.subTest(form=name, batch=batch):
+                    H._LEX_CACHE.clear()
+                    first = judged_in_process(command, batch)
+                    H._LEX_CACHE.clear()
+                    second = judged_in_process(command, batch)
+                    self.assertIsNotNone(first)
+                    self.assertEqual(first, second)
+                    decision = first["hookSpecificOutput"]["permissionDecision"]
+                    self.assertIn(decision, ("deny",) if batch else ("ask", "deny"))
 
 
 # ---------------------------------------------------------------------------
