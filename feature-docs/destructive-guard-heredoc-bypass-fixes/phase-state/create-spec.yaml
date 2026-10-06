@@ -1,0 +1,91 @@
+schema_version: 1
+feature: destructive-guard-heredoc-bypass-fixes
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 2d32471733ae219d9f6339dc81313556a062a291
+last_input_digest: sha256:704f5aa5bacfded40a140ec25e7d544d1261cef3211dcf58959905b5bdfb0b82
+active_request_id: null
+packets:
+  destructive-guard-heredoc-bypass-fixes-q0001:
+    status: answered
+    issued_at: '2026-10-06T14:06:24+09:00'
+    questions:
+    - question_id: requirement.scope.architecture-765c3a53
+      status: answered
+    - question_id: requirement.f34ee27.expected-verdict
+      status: answered
+    - question_id: requirement.eval-let-alias.deferral-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.scope.architecture-765c3a53:
+    packet_id: destructive-guard-heredoc-bypass-fixes-q0001
+    answered_at: '2026-10-06T14:06:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exclude
+    freeform: null
+    normalized_answer: 回避経路 3 件の修正だけを行い、765c3a53859569c2（走査器の共通化）は別タスクで扱う
+    resolution_note: 'Codex consulted (1 turn): 語・添字の判定と単位の集計を個別に直す方が確認しやすく回帰の危険も小さい'
+  requirement.f34ee27.expected-verdict:
+    packet_id: destructive-guard-heredoc-bypass-fixes-q0001
+    answered_at: '2026-10-06T14:06:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - ask-case
+    freeform: null
+    normalized_answer: f34ee27bc8c323b1 の再現入力は cases.json に ask で足し、無人実行での deny は既存の降格で担保する。b0734a006de6f4d7
+      / a7c0d90ac3e44e5b は deny で足す
+    resolution_note: 'Codex consulted (1 turn): run-destructive-guard.py は CLAUDE_BATCH
+      を外し、decide() は無人実行で ask を deny に降格する'
+  requirement.eval-let-alias.deferral-scope:
+    packet_id: destructive-guard-heredoc-bypass-fixes-q0001
+    answered_at: '2026-10-06T14:06:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include-if-bash-runs
+    freeform: null
+    normalized_answer: bash 5.3.9 で隠れた行が実行されると実測で確かめた eval / let / alias の形も deny
+      ケースとして足して直す。T2 E-1 と SUBSCRIPT_ARRAY_FORMS の読みは保つ
+    resolution_note: 'Codex consulted (1 turn): bash 5.3.9 実測で let / alias の同形でも対象行が実行され、フックは無人実行でも
+      allow を返すことを確認'
+  design-step.decision:
+    packet_id: destructive-guard-heredoc-bypass-fixes-q0001
+    answered_at: '2026-10-06T14:06:24+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は推奨どおり skip
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:156c3f1ffed11da28377d5d153444ba96e9a7fa6895b1dd2c2a34535e9ff44e0
+  output_digest: sha256:b5fb342f3dc26e5f884f18941900d009b421ac9b5f89d9324c373252daa8f9e6
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:2b0596fa48ad00f14179ffda077b575920be9342ead8a2a34a6251ec4c4c9563
+  output_digest: sha256:20d24f10d280fd3c7553f1e3825b7af43f1436a61c56c439f0c72807a00bf7b2
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:704f5aa5bacfded40a140ec25e7d544d1261cef3211dcf58959905b5bdfb0b82
+  output_digest: sha256:622e9875402df13feeda871361e189a706cbb8aaa08a5a1f4f617406c90f5c19
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-bypass-fixes/REQUIREMENTS.md
+  sha256: sha256:514eb6c33b2b1f8b056cfe46e1e778d8549b6e2fe89ebd1b9a02f6917872d08c
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-heredoc-bypass-fixes/SPEC.md
+  sha256: sha256:d24b36b6f18dfaac9caf1043c88e8515b35eee0ddbf2eee72ebb17c257b113f1
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
