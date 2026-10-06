@@ -1686,6 +1686,8 @@ def _lex_pass(
     hd_pending = state.hd_pending
     hd_seqs = state.hd_seqs
     discard_unclosed = state.discard_unclosed
+    # The backtick frame open when the discarded line began (None for none).
+    discard_bt = [None]
     new_reparen = state.reparen_found
     i = 0
 
@@ -1823,6 +1825,11 @@ def _lex_pass(
             del hd_seqs[cut:]
             if not hd_pending:
                 state.hd_trigger = None
+        if state.discard_end is not None and stack[-1] is discard_bt[0]:
+            # The discarded line began inside this substitution: the syntax
+            # error was the substitution's own, and it ends here.
+            state.discard_end = None
+            discard_bt[0] = None
         close(stack[-1], end + 1)
         state.bt_end = None
         set_limit()
@@ -2135,12 +2142,17 @@ def _lex_pass(
         if c2 == "(":
             p2 = skip_pairs(p + 1)
             if p2 < n and text[p2] == "(":
-                if i in settled or not tail_gate("arithmetic-expansion", i):
-                    # Settled as unclosed, or refused after a tail source:
-                    # literal text either way, read on after it.
+                if i in settled:
+                    # Settled as unclosed: literal text, read on after it.
                     encountered.append(i)
                     return past(i, p2 + 1)
-                if not as_two_parentheses(i):
+                if not tail_gate("arithmetic-expansion", i):
+                    # Refused after a tail source: the arithmetic reading is
+                    # not taken, but bash may re-read `$((` as `$(` + `(`, so
+                    # open the command substitution and let the inner `(`
+                    # be read as a group (inspects more text).
+                    encountered.append(i)
+                elif not as_two_parentheses(i):
                     push(f, "arith", "arithmetic-expansion", i, depth=2)
                     return past(i, p2 + 1)
             push(f, "cmdsub", "command-substitution", i, cmd=True)
@@ -2215,6 +2227,12 @@ def _lex_pass(
         before the newline can hand out a body."""
         newline = text.find("\n", i)
         state.discard_end = n if newline == -1 else newline
+        discard_bt[0] = None
+        if state.bt_end is not None:
+            for k in range(len(stack) - 1, 0, -1):
+                if stack[k].kind == "backtick":
+                    discard_bt[0] = stack[k]
+                    break
         del hd_pending[:]
         del hd_seqs[:]
         state.hd_trigger = None
@@ -2249,12 +2267,15 @@ def _lex_pass(
         # discarded line ends inside it, and only what was opened above its
         # frame is cleared. The extent was fixed when it opened and the
         # backtick that ends it still ends it.
+        # Only a backtick that was already open when the line began is kept; one
+        # opened on the discarded line goes with the line.
         keep = 1
-        if state.bt_end is not None:
+        if state.bt_end is not None and discard_bt[0] is not None:
             for k in range(len(stack) - 1, 0, -1):
-                if stack[k].kind == "backtick":
+                if stack[k] is discard_bt[0]:
                     keep = k + 1
                     break
+        discard_bt[0] = None
         cut_quotes = []
         for f in stack[keep:]:
             if f.kind in ("param", "arith", "bracket", "ansi"):
@@ -2656,22 +2677,26 @@ def _lex_pass(
                         else:
                             i += 2
                         continue
-                    if text.startswith("<(", i) and (i == 0 or text[i - 1] not in "<>"):
+                    paren = skip_pairs(i + 1)
+                    if text.startswith("(", paren) and (i == 0 or text[i - 1] not in "<>"):
+                        # Bash removes backslash-newline before it reads the
+                        # `(`: `<\<newline>(` is a process substitution.
                         f.in_word = in_word
                         start_word(f, i)
                         push(f, "procsub", "process-substitution", i, cmd=True)
-                        i += 2
+                        i = past(i, paren + 1)
                         continue
                     if kind == "array" and state.discard_end is None and tail_gate("discarded-line", i):
                         begin_discard(i)
                     mark_redirect(f)
                     i += 2 if (text.startswith("<&", i) or text.startswith("<>", i)) else 1
                     continue
-                if text.startswith(">(", i) and (i == 0 or text[i - 1] not in "<>"):
+                paren = skip_pairs(i + 1)
+                if text.startswith("(", paren) and (i == 0 or text[i - 1] not in "<>"):
                     f.in_word = in_word
                     start_word(f, i)
                     push(f, "procsub", "process-substitution", i, cmd=True)
-                    i += 2
+                    i = past(i, paren + 1)
                     continue
                 if kind == "array" and state.discard_end is None and tail_gate("discarded-line", i):
                     begin_discard(i)
@@ -4828,6 +4853,10 @@ def _span_inner(text, span):
         if text.startswith("{", k):
             k = _command_form_inner_start(text, start)
             return text[k : max(end - 1, k)], k
+        return text[k + 1 : end - 1], k + 1
+    if text[start] in "<>":
+        # `<(` / `>(` with backslash-newline pairs between the two characters.
+        k = _skip_continuations(text, start + 1)
         return text[k + 1 : end - 1], k + 1
     return text[start + 2 : end - 1], start + 2
 
@@ -7087,7 +7116,14 @@ def _shape_leading(toks, case_stack, tail=False):
         ):
             i = n  # the header's WORDS are never a command (FR2)
             continue
-        if t == "(" and getattr(t, "is_operator", False):
+        if (
+            getattr(t, "is_operator", False)
+            and len(t) >= 1
+            and set(t) == {"("}
+        ):
+            # `(` or a fused run `((`: each is a subshell opener, so the
+            # text after it is read as a command (fail-closed for `((`
+            # arithmetic: its body is inspected too).
             i += 1
             continue
         if t == "{" and not quoted:
