@@ -677,6 +677,38 @@ class _TrackingLexer(shlex.shlex):
 #              from, so `r\<newline>m` is the word `rm` and a pair before a
 #              command word hides nothing.
 #
+# Round 2 deferred, review round 1 (destructive-guard-lexer-round2-deferred,
+# task0006, FR7; review findings e79128f331828941, e6478d6af2a50e57,
+# 31165687b890b8bc and d1d035263eb03a8a).
+#
+#   Backtick extent (FR7)  a backtick substitution ends at the next backtick
+#              that is not escaped -- the second character of a backslash pair
+#              read from the opening backtick on, that is, one that follows an
+#              odd number of backslashes -- which bash finds before it reads
+#              the content as a script. The extent is fixed when the backtick
+#              opens (_lex_pass()'s backtick_extent(): one index of the
+#              text's unescaped backticks, a bisection per substitution), and
+#              the content is read up to it only: no comment, quote,
+#              expansion, subscript or command form opened inside it carries
+#              the reading past that backtick. What is still open there ends
+#              unclosed at it (region end at the backtick, not closed; the
+#              openers that cannot end that way -- the parameter form `${`,
+#              `$((`, `$[`, `$'` -- are settled as at the end of the text),
+#              and the backtick closes the substitution, which stays a closed
+#              span. A here-document operator inside the extent takes its body
+#              only from lines inside it: a delimiter line after the backtick
+#              closes nothing, and a delimiter word that runs past the backtick
+#              is no word. With no such backtick the substitution runs to
+#              where the reading ends, as it did. At most one backtick
+#              substitution is open at a time; _LexPassState.bt_end is its
+#              extent's end and bounds LIMIT.
+#   Unsettled chunks  an unclosed subscript inside a backtick extent ends with
+#              it, so the command around it reads fine, while the chunk that
+#              holds the substitution's body does not (its subscript never
+#              closes there): statements() leaves such a derived chunk out and
+#              main() judges the rest, asking only when nothing in it is a
+#              `deny`.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -857,11 +889,9 @@ class _LexFrame:
     """One open context on the lexer's stack. KIND is `top`, `btop` (the
     literal top level of a heredoc body), `cmdsub`, `backtick`, `procsub`,
     `group`, `bracecmd` (the command form of `${`; BRACES counts the `{`
-    groups opened in it and not yet closed; IN_BT says the frames directly
-    below it, as far as they are command forms, end in a backtick frame, so a
-    backtick ends it) (shell rules); `dq`, `locale`, `sq`, `ansi`, `param`,
-    `arith`, `bracket`. REGION is the region the frame owns and REG the region
-    a child of this frame hangs under. The grammar state of the shell-rule kinds is
+    groups opened in it and not yet closed) (shell rules); `dq`, `locale`,
+    `sq`, `ansi`, `param`, `arith`, `bracket`. REGION is the region the frame
+    owns and REG the region a child of this frame hangs under. The grammar state of the shell-rule kinds is
     CMD (the next word is at a command position), RW (P10: the next word
     comes directly after a closer or a `for` / `select` name, so a reserved
     word is recognized there although it is not a command position), CS (the
@@ -902,7 +932,7 @@ class _LexFrame:
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
         "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "asg", "decl",
         "arr_end", "redir", "rd_cmd", "nosub", "sub_at", "sub_bound", "named", "bound", "snap",
-        "braces", "in_bt",
+        "braces",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -931,7 +961,6 @@ class _LexFrame:
         self.named = False
         self.bound = False
         self.braces = 0
-        self.in_bt = False
         # An `arith` frame: a _LexResumeSnapshot of what the pass held when
         # the frame was pushed, to resume from there when its first close is
         # not an adjacent `))`.
@@ -1171,6 +1200,11 @@ _LEX_DELIM_RUN = re.compile(r"[^ \t\n;|&()<>\\'\"`$]+")
 _LEX_DELIM_DQ_SPECIAL = re.compile(r"[\\\"$`\n]")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
+# A backtick that no backslash pair takes: it follows an even number of
+# backslashes (none included), counted back to the character before them. The
+# one that ends a backtick substitution is the next of these after the
+# backtick that opens it.
+_LEX_UNESCAPED_BACKTICK = re.compile(r"(?<!\\)(?:\\\\)*`")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
 _LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
 _LEX_WORD_END = frozenset(" \t\n;|&()<>")
@@ -1437,7 +1471,12 @@ class _LexPassState:
 
     Scalars: HD_TRIGGER (the offset of the line start at which the pending
     operators are looked at again, None without any), LIMIT (the offset no scan
-    reads past: the trigger, or the end of the text), CONT_AT (the offset after
+    reads past: the trigger, the end of the discarded line, or the end of the
+    backtick extent below, whichever comes first, else the end of the text),
+    BT_END (the offset of the backtick that ends the backtick substitution
+    open now, or the end of the text when none ends it; None outside a
+    backtick substitution -- there is at most one open at a time, as an
+    unescaped backtick inside one ends it), CONT_AT (the offset after
     the last backslash-newline continuation, -1 for none), SEQ (the last
     region sequence number given out), TAIL_START (the offset from which no
     comment, no `<<` operator and no array subscript is opened: the earliest
@@ -1447,8 +1486,9 @@ class _LexPassState:
     opened either), DISCARD_END (the offset of the newline that ends the
     discarded line being read (P13), None outside one) and EXTGLOB_MET
     (whether an extended-glob parenthesis was met directly inside an array,
-    P14). DISCARD_UNCLOSED (the openers of the expansions a discarded line
-    left open, settled with the rest at the end of the pass) and EXT_LINES
+    P14). DISCARD_UNCLOSED (the openers of the expansions a discarded line or
+    a backtick extent left open, settled with the rest at the end of the pass)
+    and EXT_LINES
     (`(line start, text of that line before the parenthesis)` for every such
     parenthesis met, in order) are collections that grow too.
 
@@ -1462,7 +1502,7 @@ class _LexPassState:
         "regions", "candidates", "encountered", "ops", "stack", "rseq",
         "hd_pending", "hd_seqs", "hd_trigger", "limit", "cont_at", "seq",
         "tail_start", "tail_source", "iterations", "reparen_found",
-        "discard_end", "discard_unclosed", "extglob_met", "ext_lines",
+        "discard_end", "discard_unclosed", "extglob_met", "ext_lines", "bt_end",
     )
 
     def __init__(self, root, n):
@@ -1486,6 +1526,7 @@ class _LexPassState:
         self.discard_unclosed = []
         self.extglob_met = False
         self.ext_lines = []
+        self.bt_end = None
 
 
 class _LexResumeSnapshot:
@@ -1513,7 +1554,7 @@ class _LexResumeSnapshot:
     )
     SCALARS = (
         "hd_trigger", "limit", "cont_at", "seq", "tail_start", "tail_source",
-        "discard_end", "extglob_met",
+        "discard_end", "extglob_met", "bt_end",
     )
     NOT_RESTORED = ("iterations", "reparen_found")
 
@@ -1709,51 +1750,83 @@ def _lex_pass(
                 text, f.start + 2, end - 1, f.region, regions[f.region][5], candidates
             )
 
-    def unwind_to_bracecmd(i):
-        """A backtick at I met above a command form `${ ...; }` opened inside
-        a backtick substitution: the backtick ends that substitution whatever
-        is still open in the form, so every frame above the form ends
-        unclosed here and the form is on top again (its own branch ends it).
-        Each frame leaves the way the other unclosed ends do: region end at I,
-        CLOSED False, and its region sequence number dropped with it (the
-        group and array frames have none). Returns whether it unwound."""
-        k = len(stack) - 1
-        while k > 0:
-            fk = stack[k]
-            if fk.kind == "backtick":
-                return False
-            if fk.kind == "bracecmd" and fk.in_bt:
-                break
-            k -= 1
-        if k <= 0 or k == len(stack) - 1:
-            return False
-        while len(stack) - 1 > k:
+    # The offsets of the backticks no backslash pair takes, ascending: the ones
+    # a backtick substitution can end at. Built once, on the first backtick met.
+    unescaped = None
+
+    def backtick_extent(start):
+        """Where the backtick substitution the backtick at START opens ends: the
+        offset of the next backtick after START that is not escaped (it is the
+        second character of a backslash pair read from START + 1 on), or N when
+        there is none, the substitution then running to where the reading
+        ends. bash finds this end before it reads the content as a script, so
+        no quote, comment or expansion inside the content takes part in it.
+        One index of the text serves every substitution: a lookup is a
+        bisection, never a rescan."""
+        nonlocal unescaped
+        if unescaped is None:
+            unescaped = [m.end() - 1 for m in _LEX_UNESCAPED_BACKTICK.finditer(text)]
+        k = bisect.bisect_right(unescaped, start)
+        return unescaped[k] if k < len(unescaped) else n
+
+    def set_limit():
+        """LIMIT, the offset no scan reads past: the next line start while
+        here-document operators are pending, the end of the discarded line
+        while one is being read, and the end of the extent of the backtick
+        substitution open now, whichever of them is first (the end of the text
+        otherwise)."""
+        limit = n
+        if state.discard_end is not None:
+            limit = state.discard_end
+        elif state.hd_trigger is not None:
+            limit = state.hd_trigger
+        if state.bt_end is not None and state.bt_end < limit:
+            limit = state.bt_end
+        state.limit = limit
+
+    def open_backtick(f, i):
+        """The backtick at I opens a backtick substitution on top of F. Its
+        extent is fixed here, before any of its content is read, and the
+        reading is bound by it (end_extent())."""
+        push(f, "backtick", "backtick-substitution", i, cmd=True)
+        state.bt_end = backtick_extent(i)
+        set_limit()
+
+    def end_extent():
+        """The reading is at the backtick that ends the substitution open now
+        (BT_END). Every frame opened inside it and still open ends here
+        unclosed -- its region ends at the backtick, not closed; the openers
+        that cannot end that way (the parameter form `${`, `$((`, `$[`, `$'`)
+        are settled with the rest at the end of the pass, as at the end of the
+        text -- and the here-document operators registered inside it that still
+        wait for a body get none: a line after the backtick is never a body
+        line of them. The backtick then closes the substitution, which stays a
+        closed span; the frame below goes on after it."""
+        end = state.bt_end
+        while stack[-1].kind != "backtick":
             fu = stack.pop()
-            if fu.kind not in ("group", "array") and rseq:
+            if fu.kind not in ("group", "array"):
                 rseq.pop()
+            if fu.kind in ("param", "arith", "bracket", "ansi"):
+                discard_unclosed.append(fu.start)
             if fu.region is not None:
                 region = regions[fu.region]
-                region[2] = i
+                region[2] = end
                 region[4] = False
                 if fu.kind == "sq":
                     _lex_quote_candidates(
-                        text, fu.start + 1, i, fu.region, region[5], candidates
+                        text, fu.start + 1, end, fu.region, region[5], candidates
                     )
-        return True
-
-    def in_bt_form():
-        """Whether the stack holds, above any backtick frame, a command form
-        opened inside a backtick substitution (the top frame included): a
-        backtick met there ends the substitution wherever it stands."""
-        k = len(stack) - 1
-        while k > 0:
-            fk = stack[k]
-            if fk.kind == "backtick":
-                return False
-            if fk.kind == "bracecmd" and fk.in_bt:
-                return True
-            k -= 1
-        return False
+        cut = bisect.bisect_left(hd_seqs, rseq[-1])
+        if cut < len(hd_pending):
+            del hd_pending[cut:]
+            del hd_seqs[cut:]
+            if not hd_pending:
+                state.hd_trigger = None
+        close(stack[-1], end + 1)
+        state.bt_end = None
+        set_limit()
+        return end + 1
 
     def open_bare(f, kind, start, named=False, bound=False):
         """P14: a `subscript` (at its `[`) or `extglob` (at its `(`) frame on
@@ -2081,9 +2154,6 @@ def _lex_pass(
                 # settled and never refused. A `${|` is read from after the
                 # `|`.
                 push(f, "bracecmd", LEX_BRACE_COMMAND_SUBSTITUTION, i, cmd=True)
-                stack[-1].in_bt = f.kind == "backtick" or (
-                    f.kind == "bracecmd" and f.in_bt
-                )
                 return past(i, j2 + 1 if text[j2] == "|" else j2)
             # The parameter form: the command form `${ ` / `${|` is decided
             # before this point (task0005) and is never refused.
@@ -2132,7 +2202,7 @@ def _lex_pass(
             starts = lines.starts
             k = bisect.bisect_right(starts, i)
             state.hd_trigger = starts[k] if k < len(starts) else None
-            state.limit = state.hd_trigger if state.hd_trigger is not None else n
+            set_limit()
         hd_pending.append(op)
         hd_seqs.append(state.seq)
 
@@ -2148,7 +2218,7 @@ def _lex_pass(
         del hd_pending[:]
         del hd_seqs[:]
         state.hd_trigger = None
-        state.limit = state.discard_end
+        set_limit()
 
     def end_discard():
         """The discarded line ends (at DISCARD_END): every open context is
@@ -2214,6 +2284,7 @@ def _lex_pass(
                 )
         del stack[1:]
         del rseq[:]
+        state.bt_end = None
         base = stack[0]
         base.cmd = True
         base.cs = []
@@ -2229,8 +2300,8 @@ def _lex_pass(
         base.rd_cmd = False
         base.nosub = False
         base.sub_at = -1
-        state.limit = n
         state.discard_end = None
+        set_limit()
 
     while i < n:
         state.iterations += 1
@@ -2269,6 +2340,15 @@ def _lex_pass(
                     found = lines.find_close(
                         text.startswith("-", op[0] + 2), op[2], op[3], hd_next
                     )
+                    if found is not None and state.bt_end is not None:
+                        # Inside a backtick extent (every operator that takes
+                        # a body here was registered inside it): the close
+                        # line lies inside it too, or the body never ends
+                        # there -- a line after the closing backtick is never
+                        # a body line.
+                        close_next = found[1] + 1
+                        if (starts[close_next] if close_next < len(starts) else n) > state.bt_end:
+                            found = None
                     if found is not None:
                         close_first, close_last = found
                         op[4] = starts[hd_next]
@@ -2284,10 +2364,14 @@ def _lex_pass(
             if hd_pending:
                 k = bisect.bisect_right(starts, max(i, boundary))
                 state.hd_trigger = starts[k] if k < len(starts) else None
-                state.limit = state.hd_trigger if state.hd_trigger is not None else n
             else:
                 state.hd_trigger = None
-                state.limit = n
+            set_limit()
+            continue
+        if state.bt_end is not None and i >= state.bt_end:
+            # The backtick that ends the backtick substitution open now: it
+            # closes it, whatever is still open inside (see end_extent()).
+            i = end_extent()
             continue
         f = stack[-1]
         kind = f.kind
@@ -2325,13 +2409,6 @@ def _lex_pass(
                 end = text.find("\n", i, state.limit)
                 if end == -1:
                     end = state.limit
-                if in_bt_form():
-                    # Inside a backtick substitution the closing backtick
-                    # ends the comment too: bash finds it before reading
-                    # the content as a script.
-                    b = text.find("`", i, end)
-                    if b != -1:
-                        end = b
                 idx = new_region("comment", i, f)
                 regions[idx][2] = end
                 i = end
@@ -2543,6 +2620,11 @@ def _lex_pass(
                         word = None
                         if tail_gate("heredoc-operator", i):
                             word = _read_heredoc_delimiter(text, i)
+                            if word is not None and state.bt_end is not None and word[0] > state.bt_end:
+                                # A word that runs past the backtick ending
+                                # the substitution it is in is no word: bash
+                                # reads the content up to the backtick only.
+                                word = None
                             if word is None:
                                 # A delimiter word that cannot be read: no
                                 # operator, and the text from here on is read
@@ -2605,27 +2687,11 @@ def _lex_pass(
                 i = dollar(i, f, False, False)
                 continue
             if c == "`":
-                if kind == "backtick":
-                    close(f, i + 1)
-                    i += 1
-                    continue
-                if kind != "bracecmd" and unwind_to_bracecmd(i):
-                    continue
-                if kind == "bracecmd" and f.in_bt:
-                    # A backtick substitution ends at the next unescaped
-                    # backtick, whatever it holds (bash reads the content as
-                    # a script only afterwards): a command form opened in it
-                    # and still open here ends unclosed at this backtick, which
-                    # the backtick frame below then closes -- the substitution
-                    # and the word it is part of stay what bash reads (FR7).
-                    region = regions[f.region]
-                    region[2] = i
-                    region[4] = False
-                    stack.pop()
-                    rseq.pop()
-                    continue
+                # A backtick read here opens a substitution: the one that ends
+                # an open substitution is met by the loop's own check of its
+                # extent, never as a character of the content.
                 start_word(f, i)
-                push(f, "backtick", "backtick-substitution", i, cmd=True)
+                open_backtick(f, i)
                 i += 1
                 continue
             if (
@@ -2714,20 +2780,13 @@ def _lex_pass(
                 i = j + 1
             elif c == "$":
                 i = dollar(j, f, True, False)
-            elif unwind_to_bracecmd(j):
-                i = j
             else:
-                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                open_backtick(f, j)
                 i = j + 1
             continue
 
         if kind == "sq":
             j = text.find("'", i, state.limit)
-            if in_bt_form():
-                b = text.find("`", i, state.limit if j == -1 else j)
-                if b != -1 and unwind_to_bracecmd(b):
-                    i = b
-                    continue
             if j == -1:
                 i = state.limit
             else:
@@ -2741,11 +2800,6 @@ def _lex_pass(
                 i = state.limit
                 continue
             j = m.start()
-            if in_bt_form():
-                b = text.find("`", i, j)
-                if b != -1 and unwind_to_bracecmd(b):
-                    i = b
-                    continue
             if text[j] == "\\":
                 i = j + 2
             else:
@@ -2780,7 +2834,7 @@ def _lex_pass(
             elif c == "$":
                 i = dollar(j, f, False, False)
             else:
-                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                open_backtick(f, j)
                 i = j + 1
             continue
 
@@ -2845,7 +2899,7 @@ def _lex_pass(
             elif c == "$":
                 i = dollar(j, f, False, False)
             else:
-                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                open_backtick(f, j)
                 i = j + 1
             continue
 
@@ -2881,7 +2935,7 @@ def _lex_pass(
             elif c == "$":
                 i = dollar(j, f, False, False)
             else:
-                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                open_backtick(f, j)
                 i = j + 1
             continue
 
@@ -2935,7 +2989,7 @@ def _lex_pass(
             elif c == "$":
                 i = dollar(j, f, False, False)
             else:
-                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                open_backtick(f, j)
                 i = j + 1
             continue
 
@@ -2981,7 +3035,7 @@ def _lex_pass(
             elif c == "$":
                 i = dollar(j, f, False, False)
             else:
-                push(f, "backtick", "backtick-substitution", j, cmd=True)
+                open_backtick(f, j)
                 i = j + 1
             continue
 
@@ -2998,7 +3052,7 @@ def _lex_pass(
         elif c == "$":
             i = dollar(j, f, False, True)
         else:
-            push(f, "backtick", "backtick-substitution", j, cmd=True)
+            open_backtick(f, j)
             i = j + 1
 
     if state.discard_end is not None:
@@ -6097,9 +6151,20 @@ def ask_lex_unsettled(exc):
     ask_scan_budget_exceeded()
 
 
-def statements(command):
+def statements(command, unsettled=None):
     """Yield (text, tokens, lexed, shaped_words, redirects, origin) per
     command segment, substitution bodies included.
+
+    UNSETTLED (a list, or None) says what happens to a chunk derived from the
+    command -- a substitution body, an unclosed command form's content, a
+    here-document body, a payload -- whose subscript never closes
+    (LexUnmatchedSubscript): with None it ends the scan, as it does for the
+    command itself; with a list the chunk is left out, the exception is
+    appended to the list, and the other chunks are read all the same. A
+    backtick substitution ends at its next backtick whatever it holds, so a
+    subscript can be left open inside one while the command around it reads
+    fine: the caller then judges everything that could be read, and asks only
+    when nothing in it is a `deny` (main()).
 
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
@@ -6276,23 +6341,32 @@ def statements(command):
     # so each parked body is queued at most once.
     override_seen = False
     deferred_data_bodies = []
+    command_chunk = True
     while pending:
         chunk, anchor, sub_index = pending.pop()
+        is_command, command_chunk = command_chunk, False
         if sub_index is not None:
             anchor = marker_pos.get(sub_index, anchor)
         scanned_chars += len(chunk)
         if scanned_chars > scan_budget:
             ask_scan_budget_exceeded()
-        chunk, heredocs, _omap = _strip_heredocs_mapped(chunk)
-        # Component 1: ONE structural scan of CHUNK, shared by every caller
-        # below that needs to know where CHUNK's own top-level substitutions
-        # sit -- the heredoc destination decision, and this chunk's own
-        # CHUNK_SUBS/marking -- rather than each re-lexing or re-scanning
-        # CHUNK on its own (NFR3; also what lets a heredoc's destination and
-        # this chunk's own substitution marking agree by construction).
-        chunk_scan = scan_structure(
-            chunk, mode="shell", checkpoints=[r.op_start for r in heredocs]
-        )
+        try:
+            chunk, heredocs, _omap = _strip_heredocs_mapped(chunk)
+            # Component 1: ONE structural scan of CHUNK, shared by every
+            # caller below that needs to know where CHUNK's own top-level
+            # substitutions sit -- the heredoc destination decision, and this
+            # chunk's own CHUNK_SUBS/marking -- rather than each re-lexing or
+            # re-scanning CHUNK on its own (NFR3; also what lets a heredoc's
+            # destination and this chunk's own substitution marking agree by
+            # construction).
+            chunk_scan = scan_structure(
+                chunk, mode="shell", checkpoints=[r.op_start for r in heredocs]
+            )
+        except LexUnmatchedSubscript as exc:
+            if unsettled is None or is_command:
+                raise
+            unsettled.append(exc)
+            continue
         # This chunk's own general, non-heredoc substitution discovery --
         # what CHUNK_SUBS (recursion) and this loop's own _mark_
         # substitutions()/_mark_quoted_substitutions() calls below read --
@@ -8638,9 +8712,13 @@ def main(payload):
     # and gets one ordinal across both routes.
     rm_invocations = []
 
+    # The chunks derived from the command that could not be read for want of
+    # a subscript's `]` (statements() leaves them out and reports them here).
+    unsettled = []
+
     for (
         segment, toks, lexed, shaped_words, shaped_redirects, origin
-    ) in statements(command):
+    ) in statements(command, unsettled):
         check_bypass(segment, toks)
 
         # task0001 D1: every check below reads SHAPED_WORDS/SHAPED_REDIRECTS
@@ -8729,6 +8807,10 @@ def main(payload):
     # destruction()/etc. already exited the process before this line, so
     # reaching it means no OTHER check decided first.
     top = strongest_rm_decision(render_rm_decisions(rm_invocations, rm_records))
+    if unsettled and (top is None or top[0] != "deny"):
+        # A chunk was left unread: the verdict is the `ask` of an unsettled
+        # text, unless what was read earns a `deny`.
+        raise unsettled[0]
     if top is not None:
         tier, rule, message = top
         decide(tier, rule, message)
