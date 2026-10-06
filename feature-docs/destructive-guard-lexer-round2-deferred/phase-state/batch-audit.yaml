@@ -67,3 +67,24 @@ records:
     harness-level failure paragraph); Q2 review-protocol.md marks review_data_too_large non-retryable
     and R2b keeps non-retryable skips; codex_consulted: true (harness codex, 2 turns); opus_escalation:
     false; discussion also recorded as a comment on the Notion task page'
+- question_id: review.auto-fix-candidate-selection
+  packet_id: null
+  answered_at: '2026-10-08T03:00:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 A / Q2 E
+  normalized_answer: 'Q1 round 2 loop 2: re-reports that explicitly name an aborted loop-1 finding (94fa8bd5577541a8
+    = 44201ccaa437da29, 16514e6cb0bce378 = f05a4f1dad26689d, b5475acfc32b97a4 = a124a65876b37b76) join
+    aborted_stable_ids and are not auto-fix candidates. Q2 architecture findings f0bf5f6cc02b1062 (Tok
+    dual view) and 6e29701c65fd651f (_lex_pass god function) are not dispatched to the editor; they stay
+    unresolved.'
+  resolution_note: 'gate: orchestrator-raised Phase R4 candidate selection for loop 2 (review.auto-fix-judgment
+    adjacent), requested by the launch instruction to consult Codex on unclear points; options: Q1 A treat
+    re-reports as aborted / B new candidates; Q2 C apply both as-is / D apply Tok only / E skip both; choice:
+    Q1 A, Q2 E; not chosen: Q1 B, Q2 C, D; key points: a changed title or line does not justify retrying
+    a fix that regressed deny cases or needed a redesign, and the candidate set should shrink monotonically;
+    the _lex_pass split contradicts create-spec decision A3, and the Tok contract change spans destructive
+    matching and the safe-delete exception, so neither is a minimal single-file unattended fix; batch
+    Apply as-is does not lift the editor constraints; codex_consulted: true (harness codex, 1 turn);
+    opus_escalation: false; also recorded as a comment on the Notion task page'
