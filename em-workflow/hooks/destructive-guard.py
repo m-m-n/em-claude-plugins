@@ -522,15 +522,27 @@ class _TrackingLexer(shlex.shlex):
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
-# such opener settled as "not opened"; likewise a `((` / `$((` whose first
-# close is not an adjacent `))` is read again as two parentheses. Every
-# opener settled this way is remembered, so a pass never rescans because of an
-# opener it has already settled, and all unclosed openers found by one pass
-# are settled together -- `${` repeated twenty thousand times costs two passes,
-# not twenty thousand. The total number of loop iterations over all passes is
-# counted; past LEX_WORK_FACTOR times the text length (plus a floor) the
-# lexer raises LexBudgetExceeded and the hook issues its scan-budget "ask"
-# decision, never an "allow".
+# such opener settled as "not opened". Every opener settled this way is
+# remembered, so a pass never rescans because of an opener it has already
+# settled, and all unclosed openers found by one pass are settled together --
+# `${` repeated twenty thousand times costs two passes, not twenty thousand.
+#
+# A `((` / `$((` whose first close is not an adjacent `))` is read as two
+# parentheses (review round 2, finding 29bbf9032dd762a0), and that is found out
+# only at its close. The pass does not start over for it: nothing before the
+# opener, and no frame below it, changes while it is open, so the pass notes
+# the few counters and offsets it holds when it pushes the opener, takes them
+# back at the close and resumes at the opener, now read as two parentheses.
+# That is the very reading a whole-text restart with the opener added gives,
+# for the cost of the opener's span alone (read as arithmetic, then as two
+# parentheses): any number of openers one after another, or inside one span,
+# cost a constant number of reads of their spans. Only a chain of openers each
+# nested in the next, every one closing without an adjacent `))`, reads the
+# inner spans once more per level of the chain. The total number of loop
+# iterations over all passes and re-reads is counted; past
+# LEX_WORK_FACTOR times the text length (plus a floor) the lexer raises
+# LexBudgetExceeded and the hook issues its scan-budget "ask" decision, never
+# an "allow".
 
 LEX_WORK_FACTOR = 8
 _LEX_WORK_FLOOR = 1024
@@ -642,7 +654,7 @@ class _LexFrame:
 
     __slots__ = (
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
-        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond",
+        "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "snap",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -660,6 +672,9 @@ class _LexFrame:
         self.fn_p = False
         self.rw = False
         self.cond = False
+        # An `arith` frame: what the pass held when the frame was pushed, to
+        # resume from there when its first close is not an adjacent `))`.
+        self.snap = None
 
 
 class _LexLines:
@@ -883,15 +898,22 @@ def _read_heredoc_delimiter(text, i):
     return q, "".join(parts), quoted
 
 
-def _lex_pass(text, mode, settled, reparen, lines, budget):
+def _lex_pass(text, mode, settled, reparen, lines, budget, whole_restart=False):
     """ONE left-to-right pass of lex_shell(). SETTLED are the openers earlier
     passes settled as not opened (P4) and REPAREN the `((` / `$((` openers
-    earlier passes found to close without an adjacent `))`, which are read as
-    two parentheses; LINES is the line index when here-document bodies are to
-    be skipped (None otherwise). Returns
+    found to close without an adjacent `))`, which are read as two
+    parentheses; LINES is the line index when here-document bodies are to be
+    skipped (None otherwise). Returns
     ("done", regions, ops, candidates, unopened, iterations) or
     ("restart", new_settled, new_reparen, iterations) when this pass learned
     of openers to settle; raises LexBudgetExceeded past BUDGET iterations.
+
+    An opener that closes without an adjacent `))` is added to REPAREN
+    (modified in place) and the pass resumes at it, read as two parentheses
+    (see "Work bound" above); it never ends the pass. WHOLE_RESTART turns
+    that off for the reference reading the agreement test compares with: the
+    pass then ends with ("restart", [], [opener], iterations) at the first
+    such close, and the caller reads the whole text again.
 
     The grammar state a shell-rule frame carries (CMD, RW, CS and the small
     markers on _LexFrame) is advanced one word at a time by word_transition():
@@ -936,8 +958,21 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
 
     def push(f, kind, region_kind, start, cmd=False, depth=0):
         nonlocal seq
+        snap = None
+        if kind == "arith":
+            # What resuming from this opener restores. The frames below it
+            # are not touched while it is open, and every operator pending
+            # now stays pending (a region opened after it is open), so the
+            # lengths of the growing lists and the here-document scalars are
+            # all there is to take back.
+            snap = (
+                len(regions), len(candidates), len(encountered), len(ops),
+                len(hd_pending), hd_trigger, limit, cont_at, seq,
+            )
         idx = new_region(region_kind, start, f)
-        stack.append(_LexFrame(kind, start, idx, idx, cmd, depth))
+        frame = _LexFrame(kind, start, idx, idx, cmd, depth)
+        frame.snap = snap
+        stack.append(frame)
         seq += 1
         rseq.append(seq)
 
@@ -1447,10 +1482,35 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         parent.in_word = False
                         parent.rw = True
                     i = j + 2
+                elif whole_restart:
+                    return ("restart", [], [f.start], iterations)
                 else:
                     # The first close is not an adjacent `))`: read the opener
-                    # as two parentheses (P4) in a new pass.
-                    return ("restart", [], [f.start], iterations)
+                    # as two parentheses (P4). Take back what the pass held
+                    # at the opener and resume there: nothing before the
+                    # opener, and nothing in the frames below it, has changed.
+                    reparen.add(f.start)
+                    (n_regions, n_candidates, n_encountered, n_ops, n_pending,
+                     hd_trigger, limit, cont_at, seq) = f.snap
+                    is_command = regions[f.region][0] == "arithmetic-command"
+                    del regions[n_regions:]
+                    del candidates[n_candidates:]
+                    del encountered[n_encountered:]
+                    del ops[n_ops:]
+                    del hd_pending[n_pending:]
+                    del hd_seqs[n_pending:]
+                    stack.pop()
+                    rseq.pop()
+                    parent = stack[-1]
+                    if is_command:
+                        # `((`: two nested groups.
+                        stack.append(_LexFrame("group", f.start, None, parent.reg, True))
+                        i = f.start + 1
+                    else:
+                        # `$((`: a command substitution whose body starts
+                        # with a group.
+                        push(parent, "cmdsub", "command-substitution", f.start, cmd=True)
+                        i = f.start + 2
             elif c == "'":
                 push(f, "sq", "single-quote", j)
                 i = j + 1
@@ -1574,6 +1634,9 @@ def lex_shell(text, mode="shell", bodies=True):
     rounds = 0
     while True:
         rounds += 1
+        # A pass ends early only to settle unclosed openers (RESULT[1]); the
+        # openers that close without an adjacent `))` are added to REPAREN by
+        # the pass itself, which resumes at each of them (RESULT[2] is empty).
         result = _lex_pass(text, mode, settled, reparen, lines, budget - used)
         if result[0] == "done":
             break
