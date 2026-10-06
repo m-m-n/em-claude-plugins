@@ -1,0 +1,51 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 8554 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation: 8569 tests, OK (skipped=1); run-destructive-guard.py 786/786
+acceptance_tests:
+  AC-1:
+    tests: [TestSubscriptRound2Deferred.test_the_twelve_cases_are_in_the_case_table_after_the_floor]
+    red_confirmed: false
+    red_reason: "AC-1 is a git-history ordering (the cases commit cf66c91d precedes the commit that changes destructive-guard.py); no executable check can fail for commit order. The existing test only checks that the twelve cases are present with their expectations; it was written after the cases were appended, so it passed on its first run. No red state occurred for this criterion."
+  AC-2:
+    tests:
+      - TestSubscriptRound2Deferred.test_a_here_document_after_a_subscript_closed_on_a_later_line_is_an_operator
+      - TestSubscriptRound2Deferred.test_the_subscript_runs_across_the_newline_and_no_region_covers_the_rm_line
+      - TestSubscriptRound2Deferred.test_the_fr1_map_is_identical_after_clearing_the_lexer_cache
+      - TestSubscriptRound2Deferred.test_the_fr1_forms_deny_in_both_modes
+      - TestSubscriptRound2Deferred.test_a_chunk_that_does_not_parse_keeps_a_multi_line_subscript_in_one_segment
+    red_confirmed: true
+    red_reason: "Observed before the hook change: test_the_fr1_forms_deny_in_both_modes failed for FR1.1, FR1.2, FR1.4, FR1.6 with 'ask' != 'deny' (destructive-guard/unmatched-subscript: the parse-failure split of _lex_layout() cut a[1 from ]=x), and run-destructive-guard.py printed FAIL got=ask for the same four cases; test_a_chunk_that_does_not_parse_keeps_a_multi_line_subscript_in_one_segment errored with LexUnmatchedSubscript. The three lexical-map tests (operator, delimiter, body and close line, subscript region, no region over the rm line, tail start, cache) were already green: the lexer already read the six forms as specified."
+  AC-3:
+    tests: [TestSubscriptRound2Deferred.test_a_continuation_in_the_name_opens_the_subscript_at_its_bracket]
+    red_confirmed: true
+    red_reason: "Observed before the hook change: for FR4.1 and FR4.2 'Lists differ: [LexHeredoc(start=5, end=11, delimiter=2]=x ...)] != []' (the << was read as an operator whose whole-word delimiter 2]=x swallowed the rm line), and run-destructive-guard.py printed FAIL got=allow for both."
+  AC-4:
+    tests:
+      - TestSubscriptRound2Deferred.test_a_continuation_inside_the_subscript_or_before_the_equals_sign_is_no_operator
+      - TestSubscriptRound2Deferred.test_a_continuation_then_a_subscript_that_never_closes_asks
+      - TestSubscriptRound2Deferred.test_a_continuation_in_a_declaration_argument_reads_as_without_it
+    red_confirmed: true
+    red_reason: "Observed before the hook change: test_a_continuation_then_a_subscript_that_never_closes_asks failed with 'LexUnmatchedSubscript not raised', and run-destructive-guard.py printed FAIL got=deny (rm-recursive) for FR4.6 where ask was expected. FR4.3 to FR4.5 and the declaration-argument map comparison were already green (a continuation inside the subscript or before the = was already read across; a bound subscript ends at <<): they are pins, as the plan says, and no red state occurred for them."
+  AC-5:
+    tests:
+      - TestSubscriptRound2Deferred.test_the_twelve_cases_are_in_the_case_table_after_the_floor
+      - TestSubscriptRound2Deferred.test_the_labels_of_the_missed_detection_forms_carry_the_allow_risk_note
+    red_confirmed: false
+    red_reason: "The twelve cases were appended (commit cf66c91d) before these tests were written, so both passed on their first run; no red state occurred. The case table is read by the existing run-destructive-guard.py as well, which is where the cases first failed (see AC-2 to AC-4)."
+  AC-6:
+    tests:
+      - TestSubscriptRound2Deferred.test_lexing_work_is_linear_for_every_form_repeated
+      - TestSubscriptRound2Deferred.test_lexing_work_is_linear_for_a_name_holding_many_continuations
+      - TestSubscriptRound2Deferred.test_a_name_holding_many_continuations_is_read_in_time_by_the_hook
+    red_confirmed: false
+    red_reason: "The linear work bound (400 repetitions at most 2.5 x the work of 200 + 100, and at most LEX_WORK_FACTOR x length + 1024) held before the change as well; the new reading adds no rescan per continuation pair. The last two tests failed before the change only on their operator / verdict assertions (heredocs != [] and 'allow' != 'deny'), not on the work bound; they guard the bound for the new reading."
+  AC-7:
+    tests:
+      - run-destructive-guard.py
+      - tests.test_destructive_guard_lexer_agreement
+      - TestArraySubscripts
+      - TestArraySubscriptAndExtglobReadings
+      - TestResumeSnapshot
+      - TestModuleContract
+    red_confirmed: false
+    red_reason: "Regression guard: the pre-existing suite was green in the baseline and stays green (no pre-existing case or test was edited, removed or reordered); no red state occurs for it."
