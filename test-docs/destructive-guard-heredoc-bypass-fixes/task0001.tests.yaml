@@ -1,6 +1,6 @@
 task_id: task0001
-baseline_failures: []          # python3 -m unittest discover -s tests: 8434 tests, OK (skipped=1); run-destructive-guard.py: 718/718 passed -- measured before any edit
-final_failures: []             # re-executed after the implementation: unittest discover 8434 tests OK (skipped=1); run-destructive-guard.py 737/737 passed
+baseline_failures: []          # refreshed after parent-side adoption (merge conflict cycle 1): unittest discover 8434 tests OK (skipped=1); run-destructive-guard.py 722/722 passed. First measurement, before any edit on the old parent: 8434 OK, 718/718
+final_failures: []             # re-executed after the re-implementation on the updated parent: unittest discover 8434 tests OK (skipped=1); run-destructive-guard.py 741/741 passed
 acceptance_tests:
   AC-1:
     tests:
@@ -69,7 +69,7 @@ acceptance_tests:
       - "heredoc-syntax-error T2 E-15 引用符つきの引数の eval と let と alias は配列を開かず、後ろのヒアドキュメントは従来どおり本文を取り allow"
       - "heredoc-syntax-error T2 E-16 builtin を前置した declare は範囲外の形で、現在の判定は allow"
       - "heredoc-syntax-error T2 E-17 command を前置した declare は範囲外の形で、現在の判定は allow"
-      - "run-destructive-guard.py: every pre-existing case-table entry (717 entries + the unattended-downgrade case)"
+      - "run-destructive-guard.py: every pre-existing case-table entry (721 entries + the unattended-downgrade case)"
       - "tests.test_destructive_guard_lexer_agreement (TestFixedVerdicts and the other fixed-input classes)"
       - "tests.test_destructive_guard_command_substitution"
       - "tests.test_guard_deferral_parity"
@@ -86,8 +86,8 @@ acceptance_tests:
       destructive-guard.py and by destructive-guard-cases found the same plus
       run-destructive-guard.py and further registration / wording tests); no red state occurred for this change because the
       behaviour pre-existed and is only required to stay unchanged. Checked by comparing
-      the table against HEAD: the first 717 entries are byte-for-byte unchanged, deny
-      413 -> 431, ask 120 -> 120, allow 180 -> 181. The one new allow entry (x{BS-NL}=1, an
+      the table against the parent: its 721 entries are byte-for-byte unchanged and kept
+      in order, deny 413 -> 431, ask 124 -> 124, allow 180 -> 181. The one new allow entry (x{BS-NL}=1, an
       assignment word that opens no array, so the quoted here-document keeps its body) is
       a guard against over-triggering: it was allow before the change and stays allow.
   AC-6:
@@ -115,7 +115,7 @@ acceptance_tests:
     red_confirmed: true
     red_reason: >
       Observed red covers the run-destructive-guard.py half only: with the new entries in
-      place and the hook unchanged it ended 719/734 passed (15 FAIL, non-zero exit). The
+      place and the hook unchanged it ended 719/734 passed (15 FAIL, non-zero exit; measured before the merge conflict, with 16 of the 19 new entries in the table). The
       python3 -m unittest discover -s tests half (TestStageAgreement over the new entries,
       TestStageAgreementUnderExtglobOn, the SUBSCRIPT_ARRAY_FORMS test) stayed green
       before and after: stage agreement does not judge verdicts, so no red state occurred
