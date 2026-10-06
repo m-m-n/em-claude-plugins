@@ -761,6 +761,10 @@ _LEX_SHELL_KINDS = frozenset(
 # The start of an assignment word (`NAME=`, `NAME+=`, `NAME[sub]=`); a word
 # that is nothing more is the one a compound-assignment parenthesis follows.
 _LEX_ASSIGN_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=")
+# The plain run `NAME[` that opens a subscript continuing in a quote or an
+# expansion (`x["0"]=`); such a word is never plain, so it is judged by this
+# run and by the `=` it ends with.
+_LEX_ASSIGN_SUB_OPEN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\[[^\]]*")
 _LEX_DECLARATION_BUILTINS = frozenset(
     {"declare", "typeset", "local", "export", "readonly"}
 )
@@ -1027,11 +1031,18 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
         else:
             f.cmd = False
         array_word = False
+        sub_open = (
+            w is None
+            and first is not None
+            and _LEX_ASSIGN_SUB_OPEN.fullmatch(first) is not None
+        )
         if assign_pos:
-            if first is not None and _LEX_ASSIGN_WORD.match(first):
+            if first is not None and (_LEX_ASSIGN_WORD.match(first) or sub_open):
                 f.asg = True
                 f.decl = False
                 array_word = w is not None and _LEX_ASSIGN_WORD.fullmatch(w)
+                if sub_open and text[end - 1 : end] == "=":
+                    array_word = True
             else:
                 f.asg = False
                 f.decl = w in _LEX_DECLARATION_BUILTINS
@@ -1473,7 +1484,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             if (
                 end < n
                 and text[end] in "<>"
-                and text[i:end].isdigit()
+                and (
+                    text[i:end].isdigit()
+                    or re.fullmatch(r"\{[A-Za-z_][A-Za-z0-9_]*\}", text[i:end]) is not None
+                )
                 and not text.startswith("(", end + 1)
             ):
                 # The fd number of a redirection: it leaves the grammar state
