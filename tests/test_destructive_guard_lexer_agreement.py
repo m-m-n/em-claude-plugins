@@ -1412,7 +1412,7 @@ class TestStageAgreement(unittest.TestCase):
                 if tok.is_operator or any(p in masked for p in range(start, end)):
                     continue
                 self.assertEqual(
-                    shlex.split(a.marked.text[start:end], comments=False),
+                    shlex_words(a.marked.text[start:end]),
                     [str(tok)],
                     msg=repr(a.marked.text[start:end]),
                 )
@@ -1446,7 +1446,7 @@ class TestStageAgreement(unittest.TestCase):
                     # read the word the lexer reads.
                     continue
                 try:
-                    want = shlex.split(segment, comments=False)
+                    want = shlex_words(segment)
                 except ValueError:
                     continue
                 self.assertEqual(got, want, msg=repr(segment))
@@ -1563,6 +1563,222 @@ class TestPositionMap(unittest.TestCase):
         text = "cat <<EOF\n$(rm -rf /tmp/zz)\nEOF\necho $(date)"
         stripped, _records, _omap = H._strip_heredocs_mapped(text)
         self.assertEqual(stripped, "cat <<EOF\necho $(date)")
+
+
+# ---------------------------------------------------------------------------
+# `\r` is not a blank (destructive-guard-lexer-round2-deferred task0004, FR6,
+# NFR1, NFR4, NFR6, NFR7, TM-6, TM-8). Blanks are space and tab only, in the
+# lexer and in the tokenizer that reads the masked view; a `\r` at the end of a
+# word is disregarded when the decision layer matches words.
+# ---------------------------------------------------------------------------
+
+CARRIAGE_RETURN_LABEL = "aa735aa95be36542 round2-deferred "
+# The first index a block appended for this feature can have (D3).
+CARRIAGE_RETURN_CASE_FLOOR = 769
+CARRIAGE_RETURN_CASES = [
+    ("FR6.1", "deny", "echo x\r# ; rm -rf /home/sakura/valuable"),
+    ("FR6.2", "deny", "rm -rf /home/sakura/valuable\r"),
+    ("FR6.3", "deny", "git reset --hard\r"),
+    ("FR6.4", "allow", "echo hi\r\necho done\r\n"),
+]
+
+
+# Commands that keep, with a `\r` at the end of a word, the verdict they have
+# without it: (command, verdict, verdict under CLAUDE_BATCH). Each one reaches
+# a different reader of the words: a bypass flag, an option, a reserved word,
+# the command word of a here-string payload, a substitution-only target, a
+# safe target, a grouping closer, a redirect target, a separator.
+CARRIAGE_RETURN_MATCHING_FORMS = [
+    ("claude --dangerously-skip-permissions\r", "deny", "deny"),
+    ("find /home/sakura -name '*.log' -delete\r", "deny", "deny"),
+    ("case x in x) ((1<<2));; esac\r\nrm -rf /home/sakura/valuable\r\n2\r", "deny", "deny"),
+    ("command <<< 'rm -rf /home/sakura/x' bash\r", "deny", "deny"),
+    ("rm -rf $(cat list)\r", "ask", "deny"),
+    ("rm -rf ./build\r", "allow", "allow"),
+    ("( rm -rf /tmp/x )\r", "allow", "allow"),
+    ("echo x > ~/.claude/settings.json\r\n", "ask", "deny"),
+    ("rm -rf /home/sakura/valuable;\r\necho done\r\n", "deny", "deny"),
+    ("(rm -rf /home/sakura/valuable)\r\n", "deny", "deny"),
+]
+
+
+def shlex_words(text):
+    """What shlex.split(TEXT, comments=False) reads, with the blanks of bash
+    5.3: space, tab and newline. shlex's own default also takes `\\r` as a blank
+    (FR6), which the hook's tokenizer no longer does."""
+    lex = shlex.shlex(text, posix=True)
+    lex.whitespace_split = True
+    lex.commenters = ""
+    lex.whitespace = " \t\n"
+    return list(lex)
+
+
+def region_kinds(lexmap):
+    return sorted(r.kind for r in lexmap.regions)
+
+
+def shaped_words_of(command):
+    return [words for _t, _toks, _lexed, words, *_rest in H.statements(command)]
+
+
+class TestCarriageReturnIsNotABlank(unittest.TestCase):
+    # AC-1 (FR9): this task's block of the case table. The order of its commit
+    # against the hook change is a history property, checked on the branch.
+    def test_the_cases_are_appended_after_the_base_entries(self):
+        cases = case_commands()
+        for tag, want, command in CARRIAGE_RETURN_CASES:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if cmd == command
+                    and w == want
+                    and label.startswith(CARRIAGE_RETURN_LABEL + tag + " ")
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], CARRIAGE_RETURN_CASE_FLOOR)
+
+    # AC-2 (FR6, NFR4, NFR6, TM-6): a `#` right after a `\r` is no comment.
+    def test_a_hash_after_a_carriage_return_hides_nothing(self):
+        command = CARRIAGE_RETURN_CASES[0][2]
+        lexmap = H.lex_shell(command)
+        self.assertNotIn("comment", region_kinds(lexmap))
+        shaped = [words for _t, _toks, _lexed, words, *_rest in H.statements(command)]
+        self.assertTrue(
+            any(words and words[0] == "rm" for words in shaped), msg=repr(shaped)
+        )
+
+    def test_the_same_command_gives_an_identical_map(self):
+        command = CARRIAGE_RETURN_CASES[0][2]
+        first = H.lex_shell(command)
+        H._LEX_CACHE.clear()
+        second = H.lex_shell(command)
+        self.assertIsNot(first, second)
+        self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    def test_the_hiding_form_is_denied_in_both_modes(self):
+        command = CARRIAGE_RETURN_CASES[0][2]
+        self.assertEqual(hook_verdict(command)[0], "deny")
+        self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    # AC-3 (FR6, NFR6, TM-6): the lexer's own reading of a `\r`.
+    def test_a_hash_right_after_a_carriage_return_opens_no_comment(self):
+        for command in ("echo a\r#b", "echo x;\r#b; rm", "\r#x"):
+            with self.subTest(command=command):
+                self.assertNotIn("comment", region_kinds(H.lex_shell(command)))
+
+    def test_a_hash_after_a_blank_that_follows_a_carriage_return_opens_one(self):
+        command = "echo a\r #b"
+        comments = [r for r in H.lex_shell(command).regions if r.kind == "comment"]
+        self.assertEqual([r.start for r in comments], [command.index("#")])
+
+    def test_a_carriage_return_reads_as_any_other_word_character(self):
+        # The map of a text with a `\r` is the map of the same text with a
+        # letter in its place: `a\rb` is one word, as `axb` is.
+        for command in (
+            "echo a\rb",
+            "echo a\r#b",
+            "echo x;\r#b; rm",
+            "\r#x",
+            "x=(a\r[1<<2]=y)",
+            "declare a[1\r# x]=y",
+        ):
+            with self.subTest(command=command):
+                carriage = H.lex_shell(command)
+                letter = H.lex_shell(command.replace("\r", "x"))
+                self.assertEqual(carriage.as_tuple(), letter.as_tuple())
+
+    def test_a_carriage_return_inside_a_word_leaves_the_next_character_inside_it(self):
+        # A `[` opens an array element subscript only at a word start: after a
+        # blank it does, and after `a\r` it is part of the word `a\r[1<<2]=y`.
+        blank = "x=(a [1<<2]=y)"
+        self.assertEqual(
+            region_kinds(H.lex_shell(blank)).count("array-subscript"), 1
+        )
+        word = "x=(a\r[1<<2]=y)"
+        self.assertNotIn("array-subscript", region_kinds(H.lex_shell(word)))
+
+    def test_a_bound_subscript_does_not_end_at_a_carriage_return(self):
+        # In a declaration builtin's argument the subscript ends with its word
+        # at a blank: a space lets the `#` after it open a comment, a `\r`
+        # does not end the word.
+        self.assertIn("comment", region_kinds(H.lex_shell("declare a[1 # x]=y")))
+        self.assertNotIn("comment", region_kinds(H.lex_shell("declare a[1\r# x]=y")))
+
+    # AC-4 (FR6, TM-6): the tokenizer over the plain masked view.
+    def test_the_tokenizer_splits_words_at_space_and_tab_only(self):
+        for layout in (True, False):
+            with self.subTest(layout=layout):
+                toks = H._tokenize_marked(H._MarkedText.plain("a\rb c"), layout=layout)
+                self.assertEqual([str(t) for t, _s, _e in toks], ["a\rb", "c"])
+                self.assertEqual([(s, e) for _t, s, e in toks], [(0, 3), (4, 5)])
+                toks = H._tokenize_marked(H._MarkedText.plain("a\rb\tc"), layout=layout)
+                self.assertEqual([str(t) for t, _s, _e in toks], ["a\rb", "c"])
+
+    def test_the_tokenizer_keeps_a_newline_a_separator_in_its_own_modes(self):
+        text = "a\rb\nc"
+        layout = H._tokenize_marked(H._MarkedText.plain(text), layout=True)
+        self.assertEqual([str(t) for t, _s, _e in layout], ["a\rb", "\n", "c"])
+        plain = H._tokenize_marked(H._MarkedText.plain(text), layout=False)
+        self.assertEqual([str(t) for t, _s, _e in plain], ["a\rb", "c"])
+
+    def test_a_carriage_return_alone_is_a_word_to_the_tokenizer(self):
+        for layout in (True, False):
+            with self.subTest(layout=layout):
+                toks = H._tokenize_marked(H._MarkedText.plain("a \r b"), layout=layout)
+                self.assertEqual([str(t) for t, _s, _e in toks], ["a", "\r", "b"])
+
+    # AC-5 (NFR6, NFR7, TM-6): the verdicts around a trailing `\r`.
+    def test_a_trailing_carriage_return_keeps_a_denied_command_denied(self):
+        for command in (CARRIAGE_RETURN_CASES[1][2], CARRIAGE_RETURN_CASES[2][2]):
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_harmless_command_with_carriage_return_line_ends_stays_allowed(self):
+        for command in (CARRIAGE_RETURN_CASES[3][2], "echo hi\r"):
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], "allow")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "allow")
+
+    # AC-5 (NFR6, NFR7, TM-6): a `\r` at the end of a word is disregarded when
+    # the words are matched; nothing else about the word changes.
+    def test_a_trailing_carriage_return_is_no_part_of_a_matched_word(self):
+        self.assertEqual(
+            shaped_words_of("git reset --hard\r"), [["git", "reset", "--hard"]]
+        )
+        self.assertEqual(
+            shaped_words_of("rm -rf /home/sakura/valuable\r\n"),
+            [["rm", "-rf", "/home/sakura/valuable"]],
+        )
+
+    def test_a_word_of_carriage_returns_only_is_no_word(self):
+        self.assertEqual(shaped_words_of("ls;\r\nls \r"), [["ls"], ["ls"]])
+        self.assertEqual(shaped_words_of("(ls)\r"), [["ls"]])
+
+    def test_a_carriage_return_inside_a_word_stays(self):
+        self.assertEqual(shaped_words_of("echo a\rb"), [["echo", "a\rb"]])
+
+    def test_a_quoted_word_of_a_carriage_return_stays(self):
+        self.assertEqual(shaped_words_of('echo "\r"'), [["echo", "\r"]])
+
+    def test_the_commands_keep_their_verdict_with_a_trailing_carriage_return(self):
+        for command, want, want_batch in CARRIAGE_RETURN_MATCHING_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], want)
+                self.assertEqual(hook_verdict(command, batch=True)[0], want_batch)
+
+    # AC-6 (NFR1, TM-8): linear work.
+    def test_lexing_work_is_linear_for_each_form(self):
+        for tag, _want, command in CARRIAGE_RETURN_CASES:
+            with self.subTest(tag=tag):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
 
 
 # ---------------------------------------------------------------------------
