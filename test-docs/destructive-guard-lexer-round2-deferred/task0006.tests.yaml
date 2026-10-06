@@ -1,6 +1,6 @@
 task_id: task0006
-baseline_failures: []          # 4a, before the first edit: python3 -m unittest discover -s tests on the task's base, no failing test
-final_failures: []             # re-run after the last edit of the hook and the tests: Ran 8748 tests, OK (skipped=1); runner 832/832 passed
+baseline_failures: []          # refreshed after the parent-side adoption (conflict cycle 1): the suite on the adopted state, Ran 8803 tests; every failure in it is in TestBacktickExtent or TestBacktickExtentStageAgreement, this task's own new tests (113 failures, 69 errors, the reds below), none in a test the parent had
+final_failures: []             # re-run after the cases were re-appended and the change was re-implemented on the adopted parent: Ran 8803 tests, OK (skipped=1); runner 846/846 passed; agreement module 459 tests OK
 # Red observations. The case table was committed first (ecff3701) and the
 # runner was run against the unchanged hook: 9 of the 10 cases FAIL (R1.BT1
 # to R1.BT9, got=allow; R1.BT10 is an allow case and passed). The new test
@@ -9,15 +9,18 @@ final_failures: []             # re-run after the last edit of the hook and the 
 # HEAD): 56 tests ran, 30 failed or errored, 26 passed. The reasons below are
 # the first assertion or exception of each failing test. A test named under
 # "green at base" passed on that run: it pins a reading the lexer already
-# had, and is listed because the criterion names it. Test names are in
-# tests/test_destructive_guard_lexer_agreement.py unless a runner entry or
+# had, and is listed because the criterion names it. After the parent-side
+# adoption the same was observed on the parent's hook and case table: the
+# runner gave 837/846 (the same 9 FAIL after the cases were re-appended) and
+# the new test classes again gave 113 failures and 69 errors. Test names are
+# in tests/test_destructive_guard_lexer_agreement.py unless a runner entry or
 # another module is named; TestBacktickExtent is shortened to TBE and
 # TestBacktickExtentStageAgreement to TBESA.
 acceptance_tests:
   AC-1:
     tests: []
     red_confirmed: false
-    red_reason: "AC-1 is a history check (the plan's Test Notes say so): the commit that appends the ten cases precedes the commit that changes the hook. No executable check can be made to fail for the order of commits: tests/ was searched for tests that read git history (git log, rev-list) and for tests that name em-workflow/hooks/tests/destructive-guard-cases.json by path and filename; none checks the order of the commits that change the case table and the hook. The order was read from git log: ecff3701 changes only destructive-guard-cases.json and precedes 3b4aef3b, the first commit that changes destructive-guard.py. Before the hook change the runner was run and 9 cases failed with got=allow (see the header); the placement of the cases in the table is checked under AC-7."
+    red_reason: "AC-1 is a history check (the plan's Test Notes say so): the commit that appends the ten cases precedes the commit that changes the hook. No executable check can be made to fail for the order of commits: tests/ was searched for tests that read git history (git log, rev-list) and for tests that name em-workflow/hooks/tests/destructive-guard-cases.json by path and filename; none checks the order of the commits that change the case table and the hook. The order was read from git log: ecff3701 changes only destructive-guard-cases.json and precedes 3b4aef3b, the first commit that changes destructive-guard.py. After the parent-side adoption the cases were appended again, in ba4aef04 (only destructive-guard-cases.json), before 9f8425e7, the commit that puts the change back into the hook; the adoption commit 7fa3c2ec carries the parent's hook and case table as they are. Before the hook change the runner was run and 9 cases failed with got=allow (see the header); the placement of the cases in the table is checked under AC-7."
   AC-2:
     tests:
       - "run-destructive-guard.py: e79128f331828941 round2-deferred R1.BT1"
@@ -106,6 +109,6 @@ acceptance_tests:
       - TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
       - TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
       - TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
-      - "run-destructive-guard.py: the whole table, 832/832"
+      - "run-destructive-guard.py: the whole table, 846/846"
     red_confirmed: true
-    red_reason: "the_cases_are_in_the_case_table_after_the_base: AssertionError: Lists differ: [] != ['R1.BT1', 'R1.BT2', 'R1.BT3', 'R1.BT4', ...] (the ten cases are absent from the base table); the_command_form_specific_backtick_handling_is_gone: AssertionError: 'unwind_to_bracecmd' unexpectedly found in the hook source. Green at base: the label rule test (vacuous without the cases, so it only means something next to the placement test), the block floor test and the pre-existing table tests of TestNonAdjacentCloseRereading and TestModuleContract, which pin that no earlier entry is removed, edited or reordered (none is edited). The full suite, the runner and the agreement module pass after the change: Ran 8748 tests, OK (skipped=1); 832/832"
+    red_reason: "the_cases_are_in_the_case_table_after_the_base: AssertionError: Lists differ: [] != ['R1.BT1', 'R1.BT2', 'R1.BT3', 'R1.BT4', ...] (the ten cases are absent from the base table); the_command_form_specific_backtick_handling_is_gone: AssertionError: 'unwind_to_bracecmd' unexpectedly found in the hook source. Green at base: the label rule test (vacuous without the cases, so it only means something next to the placement test), the block floor test and the pre-existing table tests of TestNonAdjacentCloseRereading and TestModuleContract, which pin that no earlier entry is removed, edited or reordered (none is edited). The full suite, the runner and the agreement module pass after the change: Ran 8803 tests, OK (skipped=1); 846/846"
