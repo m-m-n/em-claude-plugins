@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-heredoc-bypass-fixes
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 2d32471733ae219d9f6339dc81313556a062a291
+last_input_digest: sha256:156c3f1ffed11da28377d5d153444ba96e9a7fa6895b1dd2c2a34535e9ff44e0
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:156c3f1ffed11da28377d5d153444ba96e9a7fa6895b1dd2c2a34535e9ff44e0
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
