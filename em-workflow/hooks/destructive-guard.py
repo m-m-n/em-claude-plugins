@@ -651,6 +651,25 @@ class _TrackingLexer(shlex.shlex):
 #              innermost form, unless it closes a `{` group opened inside it
 #              (_LexFrame.braces); a `}` anywhere else closes nothing.
 #
+# Round 2 deferred (destructive-guard-lexer-round2-deferred, task0007, review
+# round 1; findings a9d11e5242397844 and e7dc3c995b363c9d).
+#
+#   Line continuation (review round 1)  bash removes a backslash-newline pair
+#              before it reads the characters around it. The lexer's `$`
+#              handling finds the character after the `$`, the second `(` of
+#              `$((` and the character after `${` past any run of pairs
+#              (skip_pairs(); the look-ahead stops at the end of the text and at
+#              the newline that ends a discarded line): `$\<newline>{ cmd; }`
+#              is the command form, its region starts at the `$`, and what
+#              follows is decided as for the adjacent opener. The downstream
+#              readers of a command form start its inner text after the opener
+#              and the pairs in and after it (_span_inner(),
+#              _unclosed_command_forms()). The tokenizer splits the masked view
+#              with every pair outside single-quoted text taken out
+#              (_MarkedText.pairs) and reports offsets of the text it was made
+#              from, so `r\<newline>m` is the word `rm` and a pair before a
+#              command word hides nothing.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -2002,28 +2021,52 @@ def _lex_pass(
             return False
         return f.cmd or f.rw
 
+    def skip_pairs(j):
+        """J moved past any run of backslash-newline pairs: bash removes them
+        before it reads the characters around them (round 2 deferred, task0007).
+        The look-ahead never passes the current reading's bound: the end of the
+        text, or -- on a discarded line (P13) -- the newline that ends the line,
+        which is no continuation."""
+        while text.startswith("\\\n", j) and j + 1 != state.discard_end:
+            j += 2
+        return j
+
+    def past(i, r):
+        """R, the offset the pass goes on at after the opener the `$` at I
+        started, which may lie past backslash-newline pairs the look-ahead
+        skipped. A pair the look-ahead skipped that ends at the line start the
+        pending here-document operators are looked at again at is a
+        continuation, as one the loop reads itself: it never starts a body
+        (P11)."""
+        trigger = state.hd_trigger
+        if trigger is not None and i < trigger <= r:
+            state.cont_at = trigger
+        return r
+
     def dollar(i, f, in_quotes, body_literal):
         """The `$` at I: open the expansion it starts, or consume the special
-        parameter it names; returns the offset to continue at (P1-P3)."""
-        c2 = text[i + 1] if i + 1 < n else ""
+        parameter it names; returns the offset to continue at (P1-P3). Bash
+        removes backslash-newline before it reads, so the character after the
+        `$` -- and the second `(` of `$((`, and the character after `${` -- is
+        looked for past any run of such pairs (round 2 deferred, task0007);
+        the region starts at the `$`."""
+        p = skip_pairs(i + 1)
+        c2 = text[p] if p < n else ""
         if c2 == "(":
-            if text.startswith("(", i + 2):
+            p2 = skip_pairs(p + 1)
+            if p2 < n and text[p2] == "(":
                 if i in settled or not tail_gate("arithmetic-expansion", i):
                     # Settled as unclosed, or refused after a tail source:
                     # literal text either way, read on after it.
                     encountered.append(i)
-                    return i + 3
+                    return past(i, p2 + 1)
                 if not as_two_parentheses(i):
                     push(f, "arith", "arithmetic-expansion", i, depth=2)
-                    return i + 3
+                    return past(i, p2 + 1)
             push(f, "cmdsub", "command-substitution", i, cmd=True)
-            return i + 2
+            return past(i, p + 1)
         if c2 == "{":
-            # Bash removes backslash-newline before reading, so look past any
-            # run of them for the character that follows `${`.
-            j2 = i + 2
-            while text.startswith("\\\n", j2):
-                j2 += 2
+            j2 = skip_pairs(p + 1)
             if j2 < n and text[j2] in _LEX_BRACE_COMMAND_FOLLOW:
                 # The bash 5.3 command form `${ cmd; }` / `${|cmd; }` (FR7):
                 # decided before any settle or tail decision. Its content is
@@ -2034,34 +2077,38 @@ def _lex_pass(
                 stack[-1].in_bt = f.kind == "backtick" or (
                     f.kind == "bracecmd" and f.in_bt
                 )
-                return j2 + 1 if text[j2] == "|" else j2
+                return past(i, j2 + 1 if text[j2] == "|" else j2)
             # The parameter form: the command form `${ ` / `${|` is decided
             # before this point (task0005) and is never refused.
             if i in settled or not tail_gate("parameter-expansion", i):
                 encountered.append(i)
-                return i + 2
+                return past(i, p + 1)
             push(f, "param", "parameter-expansion", i)
-            return i + 2
+            return past(i, p + 1)
         if c2 == "[":
             if i in settled or not tail_gate("bracket-arithmetic", i):
                 encountered.append(i)
-                return i + 2
+                return past(i, p + 1)
             push(f, "bracket", "bracket-arithmetic", i, depth=1)
-            return i + 2
+            return past(i, p + 1)
         if c2 == "'" and not in_quotes and not body_literal:
             if i in settled:
                 encountered.append(i)
-                return i + 2
+                return past(i, p + 1)
             if tail_gate("ansi-c-quote", i):
                 push(f, "ansi", "ansi-c-quote", i)
-                return i + 2
+                return past(i, p + 1)
         if (
             c2 == '"' and not in_quotes and not body_literal
             and tail_gate("locale-quote", i)
         ):
             push(f, "locale", "locale-quote", i)
-            return i + 2
-        if c2 and c2 in _LEX_SPECIAL_PARAMETERS:
+            return past(i, p + 1)
+        # No opener: a special parameter is read here only when the character
+        # follows the `$` directly; after a pair the loop reads the pair and
+        # the `$` again, which keeps more of the text inspected.
+        c1 = text[i + 1] if i + 1 < n else ""
+        if c1 and c1 in _LEX_SPECIAL_PARAMETERS:
             return i + 2
         return i + 1
 
@@ -2151,7 +2198,13 @@ def _lex_pass(
             for q in cut_quotes:
                 region = regions[q]
                 region[0] = LEX_DISCARDED_QUOTE
-                region[2] = region[1] + (2 if text.startswith('$"', region[1]) else 1)
+                # The opening character, or -- for `$"` -- both its characters
+                # and any backslash-newline pairs between them.
+                region[2] = (
+                    text.index('"', region[1]) + 1
+                    if text[region[1]] == "$"
+                    else region[1] + 1
+                )
         del stack[1:]
         del rseq[:]
         base = stack[0]
@@ -2769,7 +2822,7 @@ def _lex_pass(
                         # `$((`: a command substitution whose body starts
                         # with a group.
                         push(parent, "cmdsub", "command-substitution", f.start, cmd=True)
-                        i = f.start + 2
+                        i = past(f.start, skip_pairs(f.start + 1) + 1)
             elif c == "'":
                 if tail_gate("single-quote", j):
                     push(f, "sq", "single-quote", j)
@@ -3253,6 +3306,34 @@ def _map_copy_ranges(posmap, ranges):
     return out
 
 
+# One escape of the masked view: a backslash and the character it escapes. The
+# first group is set when that character is the newline, which makes the two a
+# line continuation.
+_ESCAPE_OR_CONTINUATION = re.compile(r"\\(?:(\n)|.)", re.DOTALL)
+
+
+def _continuation_pairs(view, literal_ranges):
+    """The offsets, ascending, of the backslash-newline pairs of VIEW that bash
+    removes before it reads: every pair outside LITERAL_RANGES (sorted,
+    disjoint (start, end) ranges of VIEW: the single-quoted text, where a pair
+    stays as it is). Read left to right outside the literal ranges, a
+    backslash takes the character after it with it, so the second of two
+    backslashes starts no pair; a backslash before any other character (a
+    `\\r` included) is no pair. The characters the masked view hides (an
+    expansion, an ANSI-C quote, a backslash that ends a discarded line) are
+    not backslashes here."""
+    if "\\\n" not in view:
+        return []
+    pairs = []
+    cursor = 0
+    for lo, hi in literal_ranges + [(len(view), len(view))]:
+        for m in _ESCAPE_OR_CONTINUATION.finditer(view, cursor, lo):
+            if m.group(1) is not None:
+                pairs.append(m.start())
+        cursor = hi
+    return pairs
+
+
 class _MarkedText:
     """The text _TrackingLexer reads, with everything needed to read it
     back (FR7; IMPLEMENTATION.md "Masked view and value restoration").
@@ -3277,14 +3358,20 @@ class _MarkedText:
       offset of TEXT -- a tail inside a replaced substitution lands on that
       substitution's marker -- or None without one. Statement shaping compares
       it with where each statement of TEXT begins (round 2 deferred, task0001).
+    - PAIRS: the offsets in TEXT, ascending, of the backslash-newline pairs
+      the tokenizer takes out of VIEW before it splits it: every pair bash
+      removes, which is every pair outside single-quoted text (the lexer's
+      `single-quote` regions). VIEW itself keeps them; _tokenize_marked()
+      reads VIEW without them and reports offsets of TEXT (round 2 deferred,
+      task0007).
 
     Built from the lexer's map of SOURCE alone: no stage that reads VIEW
     classifies a character itself."""
 
     __slots__ = (
         "source", "text", "posmap", "view", "mask_char", "mask_ranges",
-        "subscript_ranges", "tail_start", "_mask_starts", "_quote_starts",
-        "_quote_ends",
+        "subscript_ranges", "tail_start", "pairs", "_mask_starts",
+        "_quote_starts", "_quote_ends",
     )
 
     def __init__(self, source, text, posmap):
@@ -3296,6 +3383,7 @@ class _MarkedText:
         blanked = []
         quoted = []
         subscripts = []
+        single_quoted = []
         for region in lexmap.regions:
             kind = region.kind
             if kind in LEX_MASKED_KINDS:
@@ -3306,9 +3394,16 @@ class _MarkedText:
                 blanked.append((region.start, region.end))
             if kind in LEX_QUOTE_KINDS:
                 quoted.append((region.start, region.end))
+            if kind == "single-quote":
+                single_quoted.append((region.start, region.end))
         for pos in lexmap.unopened:
-            if source.startswith("$'", pos):
-                masked.append((pos + 1, pos + 2))
+            if source[pos] == "$":
+                # A `$'` settled as not opened (P4): its quote character,
+                # which may lie past backslash-newline pairs, is hidden from
+                # shlex.
+                quote = _skip_continuations(source, pos + 1)
+                if source.startswith("'", quote):
+                    masked.append((quote, quote + 1))
             elif source[pos] in "'\"":
                 # A quote character left literal by a tail source (rework
                 # round 1, task0005): shlex must not open a quote at it.
@@ -3338,6 +3433,9 @@ class _MarkedText:
         self.text = text
         self.posmap = posmap
         self.view = "".join(chars)
+        self.pairs = _continuation_pairs(
+            self.view, _map_copy_ranges(posmap, _merge_ranges(single_quoted))
+        )
         self.mask_char = mask_char
         self.mask_ranges = mask_ranges
         self.subscript_ranges = subscript_ranges
@@ -3407,8 +3505,33 @@ def _tokenize_marked(marked, layout=True):
     Each Tok's value is restored from MARKED (restore()), is_operator comes
     from the lexer's own state, and quoted is True when the token's span holds
     a quote region or quote delimiter of any kind. Raises ValueError when the
-    view does not tokenize (an unclosed quote, a trailing backslash)."""
+    view does not tokenize (an unclosed quote, a trailing backslash).
+
+    The text shlex splits is the view without the backslash-newline pairs bash
+    removes before it reads (MARKED.PAIRS: every pair outside single-quoted
+    text), so `r\\<newline>m` is the word `rm`; the offsets reported are
+    offsets of MARKED.text all the same -- a word that held a pair spans the
+    pair, and the span of a token ends after its own last character (round 2
+    deferred, task0007)."""
     view = marked.view
+    pairs = marked.pairs
+    # The offset in the text shlex reads of the character that follows each
+    # pair: a character of that text at S lies at S plus two for every pair
+    # that is cut out before it.
+    cuts = []
+    if pairs:
+        pieces = []
+        cursor = 0
+        for k, at in enumerate(pairs):
+            pieces.append(view[cursor:at])
+            cursor = at + 2
+            cuts.append(at - 2 * k)
+        pieces.append(view[cursor:])
+        view = "".join(pieces)
+
+    def original(pos):
+        return pos + 2 * bisect.bisect_right(cuts, pos) if cuts else pos
+
     # Space and tab are the blanks, as in the lexer (FR6); `\r` is a word
     # character in both modes. The plain-word mode also splits at a newline.
     if layout:
@@ -3436,6 +3559,10 @@ def _tokenize_marked(marked, layout=True):
         while start < size and view[start] in whitespace:
             start += 1
         previous_end = end
+        if cuts:
+            first = original(start)
+            last = original(end - 1) + 1 if end > start else first
+            start, end = first, last
         value = marked.restore(raw, start, end)
         quoted = lex.last_was_quoted or marked.touches_quote(start, end)
         out.append((Tok(value, lex.last_was_operator, quoted=quoted), start, end))
@@ -4577,23 +4704,44 @@ def _top_level_spans(spans, parent_of):
     return sorted(s for s in spans if parent_of.get(s) is None)
 
 
+def _skip_continuations(text, j):
+    """J moved past any run of backslash-newline pairs of TEXT: bash removes
+    them before it reads the characters around them (round 2 deferred,
+    task0007). The pairs the lexer found an opener past are the ones the
+    downstream readers of that opener skip here."""
+    while text.startswith("\\\n", j):
+        j += 2
+    return j
+
+
+def _command_form_inner_start(text, start):
+    """The offset in TEXT where the inner text of the command form `${ ...` /
+    `${|...` opened by the `$` at START begins: after the `$`, the `{` and the
+    `|` of `${|`, and every backslash-newline pair between and after them."""
+    k = _skip_continuations(text, _skip_continuations(text, start + 1) + 1)
+    if k < len(text) and text[k] == "|":
+        k = _skip_continuations(text, k + 1)
+    return k
+
+
 def _span_inner(text, span):
     """(inner text, its own start offset in TEXT) for SPAN, a (start, end)
     pair from scan_structure(). The inner text is what lies between the
     opener and the closing character: after the backtick, `$(`, `<(` / `>(`,
-    `${` or `${|`, before the closing `)`, backtick or `}`."""
+    `${` or `${|`, before the closing `)`, backtick or `}`. Bash removes
+    backslash-newline before it reads, so the characters of a `$` opener may
+    have pairs between them, and the inner text of a command form begins
+    after the pairs that follow its opener as well (round 2 deferred,
+    task0007)."""
     start, end = span
     if text[start] == "`":
         return text[start + 1 : end - 1], start + 1
-    if text.startswith("${", start):
-        # Bash removes backslash-newline before reading: the inner text begins
-        # after any run of them following `${`, and after a `|` that follows.
-        k = start + 2
-        while text.startswith("\\\n", k):
-            k += 2
-        if k < len(text) and text[k] == "|":
-            k += 1
-        return text[k : max(end - 1, k)], k
+    if text[start] == "$":
+        k = _skip_continuations(text, start + 1)
+        if text.startswith("{", k):
+            k = _command_form_inner_start(text, start)
+            return text[k : max(end - 1, k)], k
+        return text[k + 1 : end - 1], k + 1
     return text[start + 2 : end - 1], start + 2
 
 
@@ -4626,11 +4774,7 @@ def _unclosed_command_forms(text, mode="shell"):
             and not region.closed
             and not within
         ):
-            opener_end = region.start + 2
-            while text.startswith("\\\n", opener_end):
-                opener_end += 2
-            if opener_end < len(text) and text[opener_end] == "|":
-                opener_end += 1
+            opener_end = _command_form_inner_start(text, region.start)
             out.append((text[opener_end : region.end], region.start))
     return out
 
@@ -7006,6 +7150,9 @@ def read_command_name_evidence(raw_body):
 
     Reading, in order:
     1. RAW_BODY is None, or empty/whitespace-only once stripped: unreadable.
+       Bash removes backslash-newline before it reads, so the pairs are taken
+       out of RAW_BODY first: `r\\<newline>m` is the word `rm` (round 2
+       deferred, task0007).
     2. Split on whitespace; take the LAST word.
     3. That word begins with `-`: unreadable — a real shell could never use
        an option spelling as a command name.
@@ -7017,7 +7164,9 @@ def read_command_name_evidence(raw_body):
     """
     if raw_body is None:
         return None
-    body = raw_body.strip()
+    body = _ESCAPE_OR_CONTINUATION.sub(
+        lambda m: "" if m.group(1) is not None else m.group(), raw_body
+    ).strip()
     if not body:
         return None
     last = body.split()[-1]
