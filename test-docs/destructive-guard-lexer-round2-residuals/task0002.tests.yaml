@@ -1,0 +1,59 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests at the task base: Ran 8422 tests, OK (skipped=1)
+final_failures: []             # re-run after the implementation: Ran 8447 tests, OK (skipped=1); run-destructive-guard.py 652/652
+acceptance_tests:
+  AC-1:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: case '9381769d7116fab2 round2-residuals FR3.1 ...' (a[1<<2]=x + TAIL)"
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_cases_are_appended_after_the_earlier_entries_and_all_deny
+    red_confirmed: true
+    red_reason: "After the case-table commit (3231daf2) and before any change to destructive-guard.py, run-destructive-guard.py printed 'FAIL deny 9381769d7116fab2 round2-residuals FR3.1 ... got=allow' (628/652 passed, the 24 appended deny cases failing). The history order (case commit, then test commit, then hook commit) is what git log of the task branch shows; the unit test that pins the label / index placement was written after the cases and passed from the start."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_subscript_of_an_assignment_word_is_one_region_and_no_operator
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_each_subscript_form_is_one_region_with_no_operator
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_each_subscript_form_denies_the_destructive_tail_in_both_modes
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_a_subscript_nests_only_what_it_holds
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_a_closer_inside_a_quote_or_substitution_does_not_close_the_subscript
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_masked_view_hides_the_subscript_from_the_word_splitter
+    red_confirmed: true
+    red_reason: "Before the implementation test_subscript_of_an_assignment_word_is_one_region_and_no_operator failed with 'AssertionError: Lists differ: [LexHeredoc(start=3, end=6, delimiter='2', ...)] != []': lex_shell() registered the << of a[1<<2]=x as a here-document operator and reported no array-subscript region."
+  AC-3:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: cases '9381769d7116fab2 round2-residuals FR3.1' to 'FR3.24'"
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_each_appended_case_is_read_without_an_operator_and_denied_in_both_modes
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_each_subscript_form_denies_the_destructive_tail_in_both_modes
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_declaration_builtin_arguments_keep_the_operator
+    red_confirmed: true
+    red_reason: "run-destructive-guard.py failed all 24 appended deny cases with 'got=allow' before the implementation; test_each_appended_case_is_read_without_an_operator_and_denied_in_both_modes failed for every FR3.n label. The bash 5.3.9 outcome of every edge form (echo substituted for rm) is in the task report; the declaration-builtin forms are the ones bash does not execute past, so they are pinned by test_declaration_builtin_arguments_keep_the_operator and are not deny cases."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_existing_context_form_cat_a1_heredoc_is_unchanged
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_echo_a_subscript_still_registers_the_operator
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_argument_position_reading_keeps_its_operator
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_a_subscript_word_that_is_no_assignment_ends_the_assignment_position
+      - tests.test_destructive_guard_lexer_agreement.TestFixedExpectations
+    red_confirmed: false
+    red_reason: "The argument-position reading pre-existed this change (the counterpart guard against over-wide recognition), so these tests passed before the implementation and no red state occurred; the existing TestFixedExpectations context-form expectation for cat a[1] <<EOF detects the same behavior. Sensitivity was checked by mutation instead: forcing subscript recognition at every position made 28 of these assertions fail."
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_spec_unclosed_form_is_denied
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_an_unclosed_subscript_is_settled_and_the_tail_stays_inspected
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_a_closed_subscript_before_an_unclosed_one_is_still_a_region
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_no_subscript_is_read_after_the_tail_start
+    red_confirmed: true
+    red_reason: "Before the implementation test_the_spec_unclosed_form_is_denied failed with 'AssertionError: Lists differ: [] != [1]' (the opener was not reported as unopened, tail_start was None) and the here-document operator of a[1<<2 was registered."
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_lexing_work_is_linear_for_closed_and_unclosed_subscripts
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_many_unclosed_subscripts_settle_in_a_bounded_number_of_readings
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_nested_subscripts_that_span_lines_cost_no_pass_per_level
+    red_confirmed: false
+    red_reason: "The work bound already held before the change (the old lexer read no subscript and was linear), so test_lexing_work_is_linear_for_closed_and_unclosed_subscripts passed from the start and no red state occurred for the bound itself (test_many_unclosed_subscripts_settle_in_a_bounded_number_of_readings failed before only on tail_start, which is AC-5's settle). The three tests guard against one re-read per subscript opener; sensitivity was checked by mutation: keeping subscript recognition after the tail start made them error with LexBudgetExceeded."
+  AC-7:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (652/652)"
+      - "tests.test_destructive_guard_lexer_agreement (103 tests, including TestStageAgreement and TestModuleContract)"
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscripts.test_the_cases_are_appended_after_the_earlier_entries_and_all_deny
+    red_confirmed: false
+    red_reason: "A regression guard: the existing case table and the existing agreement tests are the check and they stayed green; no red state occurred. The only textual change to a pre-existing entry is the comma JSON needs after the former last entry (P12.4); its content is unchanged. The task's cases sit at indexes 627 to 650, found by label and command text."
