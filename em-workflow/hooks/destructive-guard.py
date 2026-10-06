@@ -682,10 +682,14 @@ class LexMap:
 
     __slots__ = (
         "regions", "heredocs", "candidates", "unopened", "tail_start", "work",
-        "rounds",
+        "rounds", "ext_lines",
     )
 
     def __init__(self, regions, heredocs, candidates, unopened, tail_start, work, rounds):
+        # EXT_LINES: ((line start, text of that line before its first
+        # extended-glob parenthesis inside an array), ...) -- the lines on
+        # which the lexer met one (P14); run() counts them.
+        self.ext_lines = ()
         self.regions = regions
         self.heredocs = heredocs
         self.candidates = candidates
@@ -964,6 +968,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     discard_end = None
     discard_unclosed = []
     extglob_met = False
+    ext_lines = {}
 
     def new_region(kind, start, f):
         parent = f.reg
@@ -1023,6 +1028,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         if f.named:
             parent = stack[-1]
             op_at = after
+            while text.startswith("\\\n", op_at):
+                op_at += 2
             if text.startswith("+=", op_at):
                 op_at += 2
             elif text.startswith("=", op_at):
@@ -1494,6 +1501,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                         # extglob on, a syntax error with it off. The reading
                         # decides; either way the other one could differ.
                         extglob_met = True
+                        line_start = text.rfind("\n", 0, i) + 1
+                        if line_start not in ext_lines:
+                            ext_lines[line_start] = text[line_start:i]
                         if extglob:
                             open_bare(f, "extglob", i)
                             i += 1
@@ -1945,6 +1955,8 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 _lex_quote_candidates(
                     text, f.start + 1, n, f.region, regions[f.region][5], candidates
                 )
+    _lex_pass_ext_lines.clear()
+    _lex_pass_ext_lines.update(ext_lines)
     return ("done", regions, ops, candidates, encountered, iterations, extglob_met)
 
 
@@ -1956,6 +1968,35 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
 # by the one function that combines the verdicts. The cache below is keyed on it.
 _lex_extglob = False
 _lex_extglob_met = False
+# The lines _lex_pass() last met an extended-glob parenthesis on (line start ->
+# text before it), handed to lex_shell(); and the (text, line start, prefix)
+# of every such line any lexing of the judgment under way met, which run()
+# turns into a count of parse units (_count_extglob_units()).
+_lex_pass_ext_lines = {}
+_lex_ext_seen = set()
+
+
+def _note_extglob_lines(text, lex_map):
+    for line_start, prefix in lex_map.ext_lines:
+        _lex_ext_seen.add((text, line_start, prefix))
+
+
+def _count_extglob_units():
+    """How many parse units the lexing met an extended-glob parenthesis in
+    during one judgment: the most lines of one text, or the number of distinct
+    lines (compared by what precedes the parenthesis, marker residue left out)
+    over all the texts lexed -- the top-level text, the stripped text, an
+    `eval` / `-c` payload."""
+    if not _lex_ext_seen:
+        return 0
+    per_text = {}
+    keys = set()
+    for text, _line_start, prefix in _lex_ext_seen:
+        per_text[text] = per_text.get(text, 0) + 1
+        keys.add(
+            _MARK_RE.sub("", prefix).replace(QUOTED_MARK, "").replace(UNRESOLVED_MARK, "")
+        )
+    return max(max(per_text.values()), len(keys))
 
 
 def lex_shell(text, mode="shell", bodies=True, extglob=None):
@@ -2011,6 +2052,8 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     key = (text, mode, bodies, extglob)
     cached = _LEX_CACHE.get(key)
     if cached is not None:
+        if cached.ext_lines:
+            _note_extglob_lines(text, cached)
         return cached
     n = len(text)
     budget = LEX_WORK_FACTOR * n + _LEX_WORK_FLOOR
@@ -2045,6 +2088,9 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
         used,
         rounds,
     )
+    if ambiguous:
+        lex_map.ext_lines = tuple(sorted(_lex_pass_ext_lines.items()))
+        _note_extglob_lines(text, lex_map)
     if len(_LEX_CACHE) >= _LEX_CACHE_LIMIT:
         del _LEX_CACHE[next(iter(_LEX_CACHE))]
     _LEX_CACHE[key] = lex_map
@@ -7310,6 +7356,7 @@ def _judge_under(payload, extglob):
     global _capture_decisions, _lex_extglob
     _capture_decisions = True
     _lex_extglob = extglob
+    _lex_ext_seen.clear()
     try:
         try:
             main(payload)
@@ -7322,7 +7369,12 @@ def _judge_under(payload, extglob):
     finally:
         _capture_decisions = False
         _lex_extglob = False
+        _lex_ext_units.append(_count_extglob_units())
     return None
+
+
+# The parse-unit counts (_count_extglob_units()) of the readings run() judged.
+_lex_ext_units = []
 
 
 def run():
@@ -7340,33 +7392,32 @@ def run():
     # as a command under either reading is judged as one. Only the verdicts are
     # compared here: which `<<` is a here-document operator stays the lexer's
     # call, under each reading.
+    del _lex_ext_units[:]
     outcome = _judge_under(payload, False)
     if _lex_extglob_met:
         other = _judge_under(payload, True)
         if _outcome_rank(other) > _outcome_rank(outcome):
             outcome = other
         # The option may be switched mid-command, so neither fixed reading is
-        # reliable: settle it with an `ask`, never an `allow`.
-        try:
-            command = payload["tool_input"]["command"]
-        except Exception:
-            command = ""
-        if (
-            isinstance(command, str)
-            and "shopt" in command
-            and "extglob" in command
-            and _outcome_rank(outcome) < _OUTCOME_RANK["ask"]
-        ):
-            outcome = {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "ask",
-                    "permissionDecisionReason": (
-                        "extglob を途中で切り替えており、拡張パターンの括弧の"
-                        "解釈を確定できない。"
-                    ),
-                }
-            }
+        # reliable when extended-glob parentheses were met in more than one
+        # parse unit (in either reading): settle it with an `ask`, never an
+        # `allow`. Decided structurally, not by looking for the words
+        # `shopt` / `extglob`, which quoting can split. The `ask` goes through
+        # decide(), so an unattended run downgrades it to `deny`.
+        if max(_lex_ext_units) > 1 and _outcome_rank(outcome) < _OUTCOME_RANK["ask"]:
+            global _capture_decisions
+            _capture_decisions = True
+            try:
+                decide(
+                    "ask",
+                    "extglob-switch",
+                    "extglob を途中で切り替えており、拡張パターンの括弧の"
+                    "解釈を確定できない。",
+                )
+            except _Decided as decided:
+                outcome = decided.output
+            finally:
+                _capture_decisions = False
     if outcome is not None:
         json.dump(outcome, sys.stdout)
     sys.exit(0)
