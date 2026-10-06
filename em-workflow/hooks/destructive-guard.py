@@ -2086,7 +2086,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 # read by the frame below, as any other line end.
                 close_bare(f)
                 i = j
-            elif f.bound and c in " \t\r;&|()<>":
+            elif (
+                f.bound
+                and c in " \t\r;&|()<>"
+                and not (
+                    c in "<>"
+                    and text.startswith("(", j + 1)
+                    and (j == 0 or text[j - 1] not in "<>")
+                )
+            ):
                 # A bound subscript (P15): bash ends the word at the first
                 # unquoted blank or metacharacter, so there is no subscript.
                 # The exception is a blank-separated plain span that reaches
