@@ -45,6 +45,7 @@ PROCESS_SUBSTITUTION_FORMS and HEREDOC_BODY_START_FORMS.
 
 import ast
 import bisect
+import hashlib
 import importlib.util
 import io
 import json
@@ -1670,7 +1671,38 @@ NON_ADJACENT_MAP_FORMS = [
         [("command-substitution", "$((cat <<EOF\nbody\nEOF\n) | wc -c)")],
         [("EOF", False, "body\n")],
     ),
+    # An operator registered inside a nested substitution of the span, with
+    # its body in the lines after the span: read once the span is read as two
+    # parentheses, never twice.
+    (
+        "echo $(( $(cat <<EOF\nbody\nEOF\n) ) | wc -c)\necho done",
+        [
+            ("command-substitution", "$(( $(cat <<EOF\nbody\nEOF\n) ) | wc -c)"),
+            ("command-substitution", "$(cat <<EOF\nbody\nEOF\n)"),
+        ],
+        [("EOF", False, "body\n")],
+    ),
+    (
+        "echo $(( $(cat <<EOF) ) | wc -c)\nbody\nEOF\necho done",
+        [
+            ("command-substitution", "$(( $(cat <<EOF) ) | wc -c)"),
+            ("command-substitution", "$(cat <<EOF)"),
+        ],
+        [("EOF", False, "body\n")],
+    ),
+    # An operator pending before the span and another one registered in it.
+    (
+        "cat <<E1; echo $(( $(cat <<E2) ) | wc -c)\nb1\nE1\nb2\nE2\necho done",
+        [
+            ("command-substitution", "$(( $(cat <<E2) ) | wc -c)"),
+            ("command-substitution", "$(cat <<E2)"),
+        ],
+        [("E1", False, "b1\n"), ("E2", False, "b2\n")],
+    ),
 ]
+
+# SHA-256 of json.dumps(first 627 case-table entries, ensure_ascii=False).
+BASE_ENTRIES_DIGEST = "c6e3b706fb5c0425ca1e89a361aaf812603c4768e509007824fee643a65c3c5b"
 
 # Tokens the generated forms are built from.
 NON_ADJACENT_TOKENS = [
@@ -1703,7 +1735,9 @@ def whole_text_restart_reading(text, mode="shell", bodies=True):
     settled = set()
     reparen = set()
     while True:
-        result = H._lex_pass(text, mode, settled, reparen, lines, 1 << 60)
+        result = H._lex_pass(
+            text, mode, settled, reparen, lines, 1 << 60, whole_restart=True
+        )
         if result[0] == "done":
             break
         settled.update(result[1])
@@ -1727,6 +1761,75 @@ def generated_forms(count, seed=29):
     return forms
 
 
+def nested_forms(count, seed=29):
+    """COUNT forms built from nested openers, quotes, substitutions and
+    here-document operators, some of them damaged by one inserted or deleted
+    character; deterministic for a SEED."""
+    rng = random.Random(seed)
+    leaves = [
+        "echo a", "x", "a b", "1+2", "", "cat <<E", "echo 'q'", 'echo "q"', "#c",
+        "$x", "${y}",
+    ]
+    closers = ["", ")", " )", ")) "]
+    separators = [" ", "\n", ";", " | ", " && ", "\n\n", " # c\n"]
+
+    def build(depth):
+        if depth <= 0:
+            return rng.choice(leaves)
+        kind = rng.randint(0, 17)
+        inner = build(depth - 1)
+        if kind == 0:
+            return "$((" + inner + ")" + rng.choice(closers)
+        if kind == 1:
+            return "((" + inner + ")" + rng.choice(closers)
+        if kind == 2:
+            return "(" + inner + ")"
+        if kind == 3:
+            return "$(" + inner + ")"
+        if kind == 4:
+            return '"' + inner + '"'
+        if kind == 5:
+            return "'" + inner + "'"
+        if kind == 6:
+            return "`" + inner + "`"
+        if kind == 7:
+            return inner + rng.choice(separators) + build(depth - 1)
+        if kind == 8:
+            return (
+                "cat <<E" + rng.choice(["; ", " ", "\n"]) + inner
+                + rng.choice(["\nbody\nE\n", "\nE\n", "\n"])
+            )
+        if kind == 9:
+            return inner + "\nbody\nE\n"
+        if kind == 10:
+            return "x=" + inner
+        if kind == 11:
+            return "${" + inner + "}"
+        if kind == 12:
+            return "$[" + inner + "]"
+        if kind == 13:
+            return "$'" + inner + "'"
+        if kind == 14:
+            return "$((" + inner + ")" + build(depth - 1) + ")"
+        if kind == 15:
+            return "((" + inner + ")" + build(depth - 1) + ")"
+        if kind == 16:
+            return "<<E\n" + inner
+        return inner + " <<-E"
+
+    forms = []
+    for _ in range(count):
+        text = build(rng.randint(1, 5))
+        if text and rng.random() < 0.3:
+            pos = rng.randrange(len(text))
+            if rng.random() < 0.5:
+                text = text[:pos] + text[pos + 1 :]
+            else:
+                text = text[:pos] + rng.choice(["(", ")", "\n", '"', "'", "$", "`", "\\"]) + text[pos:]
+        forms.append(text)
+    return forms
+
+
 class TestNonAdjacentCloseRereading(unittest.TestCase):
     """A `((` / `$((` whose first close is a lone `)` is read as two
     parentheses without reading the whole text again for every such opener:
@@ -1734,6 +1837,10 @@ class TestNonAdjacentCloseRereading(unittest.TestCase):
     linear, and a bound overflow is an ask, never an allow."""
 
     def check_same_reading(self, text, mode="shell", bodies=True):
+        # A fresh lexing: the memo shares the map of a text lexed with its
+        # bodies as that of the same text lexed without, which is a different
+        # question from the one asked here.
+        H._LEX_CACHE.clear()
         got = lexical_reading(H.lex_shell(text, mode, bodies))
         want = whole_text_restart_reading(text, mode, bodies)
         self.assertEqual(got, want, msg=repr(text))
@@ -1754,6 +1861,16 @@ class TestNonAdjacentCloseRereading(unittest.TestCase):
         # No entry of the first 627 carries this finding's stable_id.
         for _want, label, _cmd in cases[:627]:
             self.assertNotIn(NON_ADJACENT_STABLE_ID, label)
+
+    def test_the_entries_present_at_the_feature_base_are_unchanged(self):
+        # AC-7 (FR8): none of the 627 entries of the feature base is removed,
+        # edited or reordered; the digest is that of their JSON text.
+        cases = case_commands()
+        self.assertGreaterEqual(len(cases), 627)
+        digest = hashlib.sha256(
+            json.dumps(cases[:627], ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(digest, BASE_ENTRIES_DIGEST)
 
     def test_the_review_inputs_get_allow_with_and_without_batch(self):
         # AC-2 (FR5, TM-4)
@@ -1777,6 +1894,21 @@ class TestNonAdjacentCloseRereading(unittest.TestCase):
             with self.subTest(command=command):
                 self.check_same_reading(command, "shell", True)
                 self.check_same_reading(command, "heredoc-body", False)
+
+    def test_nested_generated_forms_read_as_the_whole_text_restart_reads_them(self):
+        # Nested openers with here-document operators pending, registered and
+        # taking their bodies inside the spans that are read twice.
+        for command in nested_forms(3000):
+            with self.subTest(command=command):
+                self.check_same_reading(command, "shell", True)
+                self.check_same_reading(command, "shell", False)
+                self.check_same_reading(command, "heredoc-body", False)
+
+    def test_a_candidate_inside_a_span_that_is_read_twice_is_listed_once(self):
+        text = "echo $(( $(echo 'a$(b)') ) | cat)"
+        lexmap = H.lex_shell(text)
+        self.assertEqual([text[c.start : c.end] for c in lexmap.candidates], ["$(b)"])
+        self.check_same_reading(text)
 
     def test_nested_quoted_and_here_document_pending_forms_have_these_maps(self):
         # AC-4: hand-written expectations (D6), and the same map after the
