@@ -1,0 +1,96 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 8554 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests after the last edit: Ran 8574 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (cases aa735aa95be36542 round2-deferred FR6.1 to FR6.4)"
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_the_cases_are_appended_after_the_base_entries
+    red_confirmed: true
+    red_reason: >-
+      After the commit that appended the four cases and before any change to
+      destructive-guard.py, run-destructive-guard.py printed "FAIL deny
+      aa735aa95be36542 round2-deferred FR6.1 ... got=allow" and 777/778 passed.
+      The placement test was written after that commit and was green on
+      arrival; the commit order itself (cases commit before the hook commit)
+      is the branch history.
+  AC-2:
+    tests:
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_hash_after_a_carriage_return_hides_nothing
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_the_same_command_gives_an_identical_map
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_the_hiding_form_is_denied_in_both_modes
+      - "em-workflow/hooks/tests/run-destructive-guard.py (case FR6.1)"
+    red_confirmed: true
+    red_reason: >-
+      On the unchanged hook: test_a_hash_after_a_carriage_return_hides_nothing
+      failed with "'comment' unexpectedly found in ['comment']" and
+      test_the_hiding_form_is_denied_in_both_modes failed with "'allow' !=
+      'deny'". The identical-map test only restates determinism and was
+      green before the change.
+  AC-3:
+    tests:
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_hash_right_after_a_carriage_return_opens_no_comment
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_hash_after_a_blank_that_follows_a_carriage_return_opens_one
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_carriage_return_reads_as_any_other_word_character
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_carriage_return_inside_a_word_leaves_the_next_character_inside_it
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_bound_subscript_does_not_end_at_a_carriage_return
+    red_confirmed: true
+    red_reason: >-
+      On the unchanged hook: "'comment' unexpectedly found" for echo a\r#b,
+      echo x;\r#b; rm and \r#x; "'array-subscript' unexpectedly found" for
+      x=(a\r[1<<2]=y); the map of echo a\rb differed from the map of echo axb.
+      The blank-then-hash form (echo a\r #b) already opened a comment, so that
+      test was green before the change.
+  AC-4:
+    tests:
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_the_tokenizer_splits_words_at_space_and_tab_only
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_the_tokenizer_keeps_a_newline_a_separator_in_its_own_modes
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_carriage_return_alone_is_a_word_to_the_tokenizer
+    red_confirmed: true
+    red_reason: >-
+      On the unchanged hook, in both modes: "Lists differ: ['a', 'b', 'c'] !=
+      ['a\rb', 'c']" (layout and plain-word) and "['a', 'b', '\n', 'c'] !=
+      ['a\rb', '\n', 'c']".
+  AC-5:
+    tests:
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_trailing_carriage_return_keeps_a_denied_command_denied
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_harmless_command_with_carriage_return_line_ends_stays_allowed
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_trailing_carriage_return_is_no_part_of_a_matched_word
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_word_of_carriage_returns_only_is_no_word
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_carriage_return_inside_a_word_stays
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_a_quoted_word_of_a_carriage_return_stays
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_the_commands_keep_their_verdict_with_a_trailing_carriage_return
+      - "em-workflow/hooks/tests/run-destructive-guard.py (cases FR6.2, FR6.3, FR6.4)"
+    red_confirmed: true
+    red_reason: >-
+      With the blank sets and the tokenizer changed and the trailing-CR rule
+      (_disregard_trailing_cr) switched off: git reset --hard\r gave "'allow'
+      != 'deny'" in test_a_trailing_carriage_return_keeps_a_denied_command_denied
+      and "got=allow" in the runner (case FR6.3); the matching-forms test failed
+      for claude --dangerously-skip-permissions\r, find -delete\r, the case/esac
+      CRLF form, the here-string bash\r form, rm -rf $(cat list)\r (deny, not
+      ask), rm -rf ./build\r (deny, not allow) and ( rm -rf /tmp/x )\r (deny,
+      not allow); the words tests showed '--hard\r' and a '\r' word. Case FR6.2
+      (rm -rf /home/sakura/valuable\r) stayed deny without the rule (the path
+      holds a control character) and case FR6.4 / echo hi\r stayed allow: those
+      pin verdicts that were already in force and never went red.
+  AC-6:
+    tests:
+      - test_destructive_guard_lexer_agreement.TestCarriageReturnIsNotABlank.test_lexing_work_is_linear_for_each_form
+    red_confirmed: false
+    red_reason: >-
+      The work bound already held for the four forms before the change (the
+      change removes characters from the blank sets and adds no scanning), so
+      the test was green when first run; no red state occurred.
+  AC-7:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py (778/778)"
+      - "python3 -m unittest tests.test_destructive_guard_lexer_agreement (230 tests, including TestPositionMap, TestStageAgreement, TestModuleContract)"
+      - "python3 -m unittest discover -s tests (8574 tests)"
+    red_confirmed: false
+    red_reason: >-
+      A regression-guard criterion: the existing suites pass unchanged in
+      meaning, so there is no red state to observe. The one place they did
+      fail after the hook change was the two TestStageAgreement tests that
+      compare the tokenizer with shlex.split(), whose default reads \r as a
+      blank; their reference is now shlex_words() with the bash 5.3 blanks.
