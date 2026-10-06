@@ -1,11 +1,11 @@
 schema_version: 1
 feature: validator-scenario-id-format
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: b014905062fb86ca2df44203f81bd957d1fa902c
-last_input_digest: sha256:0bc3931aa321ab5164f16fb31a1f010b6642e8c7f3f0a36fc1b64e464f5b89f2
-active_request_id: null
+last_input_digest: sha256:a8b04de155e7e374e6e7808372c886bc644488a8ca9d1c9667cf523bd7c1ca39
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -54,6 +54,10 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:0bc3931aa321ab5164f16fb31a1f010b6642e8c7f3f0a36fc1b64e464f5b89f2
   output_digest: sha256:5c93912f2aa030e0a72c311fa776cf3c823cbb2c16460268e0a1f62b6a221745
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:a8b04de155e7e374e6e7808372c886bc644488a8ca9d1c9667cf523bd7c1ca39
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
