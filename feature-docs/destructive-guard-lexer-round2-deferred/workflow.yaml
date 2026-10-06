@@ -2,7 +2,8 @@ schema_version: 1
 feature: destructive-guard-lexer-round2-deferred
 created: '2026-10-06'
 base_branch: main
-goal: '# destructive-guard: lexer-round2-residuals の review round 2 で deferred になった回避経路を直す（high 5 件・medium 3 件）
+goal: '# destructive-guard: lexer-round2-residuals の review round 2 で deferred になった回避経路を直す（high 5 件・medium
+  3 件）
 
 
   Notion task: https://www.notion.so/3f13509ec8ee8148a15ed1dcb2164c62
@@ -10,7 +11,9 @@ goal: '# destructive-guard: lexer-round2-residuals の review round 2 で deferr
 
   ## 脆弱性の概要 (必須)
 
-  `em-workflow/hooks/destructive-guard.py` の字句解析に、feature `destructive-guard-lexer-round2-residuals`（PR https://github.com/m-m-n/em-claude-plugins/pull/105 ）の review round 2 で見つかり、batch の review rework 上限で deferred になった回避経路が残っている。bash が実行する破壊的な行を、フックが本文として隠して allow を返す。
+  `em-workflow/hooks/destructive-guard.py` の字句解析に、feature `destructive-guard-lexer-round2-residuals`（PR
+  https://github.com/m-m-n/em-claude-plugins/pull/105 ）の review round 2 で見つかり、batch の review rework 上限で
+  deferred になった回避経路が残っている。bash が実行する破壊的な行を、フックが本文として隠して allow を返す。
 
   ## 参照 (必須)
 
@@ -30,13 +33,16 @@ goal: '# destructive-guard: lexer-round2-residuals の review round 2 で deferr
 
   エージェントが生成する Bash コマンドが次のいずれかの形をとると、フックは allow を返し、bash は破壊的な行を実行する。
 
-  - `5753be9288beab27`（high、基準版 deny → allow の退行）: 行をまたいで閉じる配列添字を「開いていない」扱いにした後、`<<` は演算子にしないのに引用と `${` は開くため、bash が実行する行を隠す
+  - `5753be9288beab27`（high、基準版 deny → allow の退行）: 行をまたいで閉じる配列添字を「開いていない」扱いにした後、`<<` は演算子にしないのに引用と `${`
+  は開くため、bash が実行する行を隠す
 
-  - `52bfa0f59d1ea852`（high）: 読めない区切り語の後ろ（tail）でも `${` / `$((` / `$[` / `((` と case の状態が開き、bash が実行する行を隠す（`1baa909f9b288847` の修正が不十分）
+  - `52bfa0f59d1ea852`（high）: 読めない区切り語の後ろ（tail）でも `${` / `$((` / `$[` / `((` と case の状態が開き、bash が実行する行を隠す（`1baa909f9b288847`
+  の修正が不十分）
 
   - `e959ba60bde865a4`（high）: `\r`・`\x0b`・`\x0c`・`\x85`・ などを区切り語の終わりと行の境界にしているため、bash（`\n` だけ）と本文の範囲がずれて実行行を読み飛ばす
 
-  - `e25427e2a8b1dddf`（high、基準版 deny → allow の退行）: 識別子の途中の行継続（`a\<改行>[1<<2]=x`）を添字として読まず、語全体で読むようになった区切り語 `2]=x` が閉じ行に一致して後続行を本文に取り込む
+  - `e25427e2a8b1dddf`（high、基準版 deny → allow の退行）: 識別子の途中の行継続（`a\<改行>[1<<2]=x`）を添字として読まず、語全体で読むようになった区切り語
+  `2]=x` が閉じ行に一致して後続行を本文に取り込む
 
   - `2b52be5874de85f4`（high）: 引用なしの区切り語の本文で bash が行う `\<改行>` の連結を閉じ行の判定が考慮せず、本文を早く閉じて `#` が命令置換を隠す
 
@@ -64,7 +70,8 @@ goal: '# destructive-guard: lexer-round2-residuals の review round 2 で deferr
 
   - `em-workflow/hooks/destructive-guard.py`（`_lex_pass`）
 
-  - 詳細は integration ブランチの `feature-docs/destructive-guard-lexer-round2-residuals/reviews/round2.yaml`（stable_id で検索）
+  - 詳細は integration ブランチの `feature-docs/destructive-guard-lexer-round2-residuals/reviews/round2.yaml`（stable_id
+  で検索）
 
   ## 暫定緩和策 (任意)
 
@@ -123,7 +130,137 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: 読めない区切り語の後ろ（tail）で開いてよい領域の判定を一つにまとめ、${ / $(( / $[ / (( と case のパターン状態を開かない
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR2
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: 行をまたいで閉じる添字の後ろのヒアドキュメントと、識別子の途中の行継続を、bash 5.3 と同じに読む
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR4
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: ヒアドキュメントの区切り語の終わりと行の境界を \n だけにし、引用なしの本文では行継続を連結して閉じ行を決める
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR3
+    - FR5
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: 字句解析と語の分割で \r を空白として扱わない
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR6
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: bash 5.3 の ${ cmd; } / ${| cmd; } の中身をコマンドとして検査する
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
+    branch: null
 review:
   needs_rework: false
 requirements:
@@ -132,127 +269,222 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-1
+    - TS-8
   FR2:
     title: 読めない区切り語の後ろ（tail）で ${ / $(( / $[ / (( と case のパターン状態を開かない（52bfa0f59d1ea852）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-8
+    - TS-18
   FR3:
     title: 区切り語の終わりと行の境界を \n だけにする（e959ba60bde865a4）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-3
+    - TS-8
+    - TS-15
   FR4:
     title: 識別子の途中の行継続を取り除いてから添字の始まりを判定する（e25427e2a8b1dddf）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-4
+    - TS-8
   FR5:
     title: 引用なしの区切り語の本文で \<改行> の連結を閉じ行の判定に反映する（2b52be5874de85f4）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-5
+    - TS-8
+    - TS-16
   FR6:
     title: \r を空白として扱わない（aa735aa95be36542）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS-6
+    - TS-8
+    - TS-15
   FR7:
     title: bash 5.3 の ${ cmd; } / ${| cmd; } の中身をコマンドとして検査する（1fcae1f76f2a20f0）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-7
+    - TS-8
+    - TS-17
   FR8:
     title: tail で開いてよい領域の判定を一か所にまとめる（c8c16caba82d6238 の一部）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
+    - TS-18
   FR9:
     title: 直す前に cases.json へ deny ケースを足す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-12
   FR10:
     title: 既存ケースを消さない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-10
+    - TS-12
   FR11:
     title: 字句解析の一致テストに固定期待を足す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-8
+    - TS-12
   NFR1:
     title: lex_shell() の仕事量が入力長に比例する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-9
   NFR2:
     title: 約 60KB の入力でもフック 1 回の評価が 10 秒以内に終わる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-13
   NFR3:
     title: 作業上限を超えたら scan-budget の ask（batch では deny）にする
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-14
   NFR4:
     title: 決定性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-8
   NFR5:
     title: 標準ライブラリだけを使い、ファイルを読まず何も評価しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-10
   NFR6:
     title: bash 5.3 の構文に合わせる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
   NFR7:
     title: 既存の allow ケースの判定を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-10
+    - TS-15
+    - TS-17
 batch:
   review_rework_count: 0
   verify_rework:
