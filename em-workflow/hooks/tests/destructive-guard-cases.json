@@ -845,5 +845,14 @@
   ["deny", "b0f7592cd79e75ea round2-deferred R1.CR2 引用符もエスケープもない語末の CR も名前の一部で、build ではないので安全先に入らず deny", "rm -rf build\r"],
   ["deny", "b0f7592cd79e75ea round2-deferred R1.CR3 閉じない ' で単語分割に落ちる経路でも、引用符の中の語末の CR は名前の一部で、安全先に入らず deny", "rm -rf \"build\r\"\n'"],
   ["deny", "b0f7592cd79e75ea round2-deferred R1.CR4 CRLF 行末の ./node_modules CR は node_modules ではないので安全先に入らず deny", "rm -rf ./node_modules\r\n"],
-  ["allow", "b0f7592cd79e75ea round2-deferred R1.CR5 /tmp/x CR は名前に CR を含んでも /tmp の子孫のままなので allow", "rm -rf /tmp/x\r"]
+  ["allow", "b0f7592cd79e75ea round2-deferred R1.CR5 /tmp/x CR は名前に CR を含んでも /tmp の子孫のままなので allow", "rm -rf /tmp/x\r"],
+  ["deny", "a9d11e5242397844 round2-deferred R1.LC1 $ と { の間の行継続は bash が先に取り除くので、${ git reset --hard; } の形になり、中身の git reset --hard は deny", "echo $\\\n{ git reset --hard; }"],
+  ["deny", "a9d11e5242397844 round2-deferred R1.LC2 二重引用符の中でも $ と { の間の行継続は取り除かれ、中身の git reset --hard は deny", "echo \"$\\\n{ git reset --hard; }\""],
+  ["deny", "a9d11e5242397844 round2-deferred R1.LC3 引用符なしの区切り語の本文でも $ と { の間の行継続は取り除かれ、中身の git reset --hard は deny", "cat <<E\n$\\\n{ git reset --hard; }\nE"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC4 ${| の直後の行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "echo ${|\\\nrm -rf /home/sakura/valuable; }"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC5 ${ と空白の後ろの行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "echo ${ \\\nrm -rf /home/sakura/valuable; }"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC6 行頭の行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "\\\nrm -rf /home/sakura/valuable"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC7 語の途中の行継続は取り除かれ、r と m は rm という 1 語になるので rm -rf は deny", "r\\\nm -rf /home/sakura/valuable"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC8 $( の直後の行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "echo $(\\\nrm -rf /home/sakura/valuable)"],
+  ["allow", "e7dc3c995b363c9d round2-deferred R1.LC9 語の途中の行継続は取り除かれ、単一引用符の中の行継続は残るだけで、何も削除しないので allow", "echo a\\\nb 'c\\\nd'"]
 ]
