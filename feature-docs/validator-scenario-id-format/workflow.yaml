@@ -2,38 +2,68 @@ schema_version: 1
 feature: validator-scenario-id-format
 created: '2026-10-07'
 base_branch: main
-goal: |
-  # em-workflow: validate-worker-output.py の検証シナリオ ID 正規表現が TSn 書式を拾わない
+goal: '# em-workflow: validate-worker-output.py の検証シナリオ ID 正規表現が TSn 書式を拾わない
+
 
   Notion タスク: https://www.notion.so/3f13509ec8ee81beafe4c1fe5a71999f （種別: バグ）
 
+
   ## 現象 (必須)
-  `em-workflow/scripts/validate-worker-output.py` は VERIFICATION.md のシナリオ ID を `_TS_ID_RE = re.compile(r"TS-\d+")` で拾う。ハイフン付きの `TS-n` 書式しか一致しない。
-  implementation-planner が `TS1`, `TS2` … の書式で VERIFICATION.md を書いた feature では、rework-planner が新しく足したシナリオを検証器が見つけられない。結果として「new_scenarios 'TS13' is not a new VERIFICATION.md scenario」というエラーで正しい出力を拒否する。
+
+  `em-workflow/scripts/validate-worker-output.py` は VERIFICATION.md のシナリオ ID を `_TS_ID_RE
+  = re.compile(r"TS-\d+")` で拾う。ハイフン付きの `TS-n` 書式しか一致しない。
+
+  implementation-planner が `TS1`, `TS2` … の書式で VERIFICATION.md を書いた feature では、rework-planner
+  が新しく足したシナリオを検証器が見つけられない。結果として「new_scenarios ''TS13'' is not a new VERIFICATION.md
+  scenario」というエラーで正しい出力を拒否する。
+
 
   ## 再現手順 (必須)
-  1. VERIFICATION.md のシナリオ ID が `TSn` 書式の feature で review の rework を走らせる（例: destructive-guard-heredoc-bypass-fixes の review round 1）
-  2. rework-planner が `TS13` などの行を VERIFICATION.md に足し、`payload.rework_index.*.new_scenarios` に並べる
+
+  1. VERIFICATION.md のシナリオ ID が `TSn` 書式の feature で review の rework を走らせる（例: destructive-guard-heredoc-bypass-fixes
+  の review round 1）
+
+  2. rework-planner が `TS13` などの行を VERIFICATION.md に足し、`payload.rework_index.*.new_scenarios`
+  に並べる
+
   3. `validate-worker-output.py` で出力を検証する
 
+
   ## 期待する挙動 (必須)
+
   新しく足されたシナリオは、ID の書式にかかわらず新しいシナリオとして認識される。検証器の正規表現と plan-writing の ID 書式の決まりが一致している。
 
+
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
 
+
   ## 該当箇所 (任意)
+
   - `em-workflow/scripts/validate-worker-output.py` の `_TS_ID_RE`
+
   - `em-workflow/skills/plan-writing/SKILL.md` のシナリオ ID の書式
 
+
   ## 実害・発生条件 (任意)
-  無人実行では、検証が拒否するとオーケストレーターが Codex に判断を仰ぐか停止するしかなくなる。destructive-guard-heredoc-bypass-fixes では、Codex に相談したうえで監査記録を残してパッチを適用した（phase-state/batch-audit.yaml の rework.validator-scenario-id-format）。
+
+  無人実行では、検証が拒否するとオーケストレーターが Codex に判断を仰ぐか停止するしかなくなる。destructive-guard-heredoc-bypass-fixes
+  では、Codex に相談したうえで監査記録を残してパッチを適用した（phase-state/batch-audit.yaml の rework.validator-scenario-id-format）。
+
 
   ## 追加指示（起動時）
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration
+  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
   - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する
+
   - その議論内容を Notion に記録する
+
+  '
 parent_branch: em-workflow/validator-scenario-id-format/integration
 tier: reduced
 tier_decision:
@@ -78,7 +108,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI を持たない検証器の正規表現・テスト・スキル文書の変更であるため（design-step 推奨: skipped。tier reduced でも design は削減対象）'
+  skipped_reason: 'UI を持たない検証器の正規表現・テスト・スキル文書の変更であるため（design-step 推奨: skipped。tier
+    reduced でも design は削減対象）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -93,7 +124,42 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Recognize hyphen-less scenario IDs in the worker-output validator
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_validate_worker_output.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    status: pending
+    notes: null
+  task0002:
+    title: State the scenario ID format rule in plan-writing SKILL.md
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/skills/plan-writing/SKILL.md
+    skills: []
+    domains:
+    - api-contract
+    complexity: low
+    requirements:
+    - FR3
+    - NFR2
+    status: pending
+    notes: null
 review:
   needs_rework: false
 requirements:
@@ -102,50 +168,74 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
   FR2:
     title: Hyphen-less new scenarios pass the rework_index check
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-5
+    - TS-6
   FR3:
     title: plan-writing scenario ID format rule
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-6
+    - TS-8
   FR4:
     title: Regression tests
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-4
+    - TS-10
   FR5:
     title: Stale docstring citation
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR1:
     title: No new test dependencies
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   NFR2:
     title: No regression
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-7
+    - TS-9
 batch:
   review_rework_count: 0
   verify_rework:
