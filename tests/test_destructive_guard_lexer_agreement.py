@@ -177,6 +177,19 @@ CONTEXT_FORMS = [
     ("echo $'a\nb'; ls", [("ansi-c-quote", "$'a\nb'")], [], "allow"),
 ]
 
+# Round 2 residuals (task0001): the command position after a closer `{` (the
+# arithmetic-for header `))` followed by `{`, finding 453963d025537b11) and
+# after `time --` / `time -p --` (finding 681fab61e1d9ff2c). Each pair is the
+# finding's stable_id and the form; each form is followed by TAIL as a case.
+ROUND2_COMMAND_POSITION_CASES = [
+    ("453963d025537b11", "for ((i=0;i<1;i++)) { ((1<<2)); }"),
+    ("453963d025537b11", "for ((;0;)){ ((1<<2)); }"),
+    ("453963d025537b11", "if :; then for ((;0;)) { ((1<<2)); }; fi"),
+    ("681fab61e1d9ff2c", "time -- ((1<<2))"),
+    ("681fab61e1d9ff2c", "time -p -- ((1<<2))"),
+    ("681fab61e1d9ff2c", "time -- ! ((1<<2))"),
+]
+
 # Arithmetic commands at every command position P3 lists. Each form is
 # followed by TAIL; expected: one arithmetic-command region at the `((`, no
 # real heredoc operator, verdict deny.
@@ -213,13 +226,28 @@ COMMAND_POSITION_FORMS = [
     "if :; then if :; then :; fi else ((1<<2)); fi",
     "if :; then while false; do :; done else ((1<<2)); fi",
     "if :; then case x in x) :;; esac else ((1<<2)); fi",
+    # Round 2 residuals (task0001): the six forms of
+    # ROUND2_COMMAND_POSITION_CASES.
+    *[form for _finding, form in ROUND2_COMMAND_POSITION_CASES],
 ]
 
 # Command-position forms that hold one more arithmetic-command region than the
 # `((1<<2))` every form is about: the form -> the extra regions, written out.
 COMMAND_POSITION_EXTRA_REGIONS = {
     "if ((1)) then ((1<<2)); fi": [("arithmetic-command", "((1))")],
+    "for ((i=0;i<1;i++)) { ((1<<2)); }": [("arithmetic-command", "((i=0;i<1;i++))")],
+    "for ((;0;)){ ((1<<2)); }": [("arithmetic-command", "((;0;))")],
+    "if :; then for ((;0;)) { ((1<<2)); }; fi": [("arithmetic-command", "((;0;))")],
 }
+
+# After `time --` (task0001, FR2) no word is a `time` option any more: a `-p`
+# or `--` there is the command word of the timed command, so the `((` after it
+# is not at a command position and no arithmetic-command region is read. bash
+# rejects both lines as a syntax error, so only the lexical reading is pinned.
+TIME_OPTION_END_FORMS = [
+    "time -- -p ((1<<2))",
+    "time -- -- ((1<<2))",
+]
 
 # `((` that is not arithmetic: no arithmetic-command region. The verdict is
 # the one the unchanged hook gave when this test was written; this feature
@@ -529,6 +557,13 @@ class TestFixedExpectations(unittest.TestCase):
                 self.assertEqual(list(lexmap.heredocs), [])
                 self.assertIsNone(lexmap.tail_start)
 
+    def test_no_time_option_follows_a_double_dash(self):
+        for text in TIME_OPTION_END_FORMS:
+            with self.subTest(text=text):
+                lexmap = self.check_regions(text, [])
+                self.assertNotIn("arithmetic-command", [r.kind for r in lexmap.regions])
+                self.assertIsNone(lexmap.tail_start)
+
     def test_heredoc_body_start_forms(self):
         # AC-3 (P11): one real heredoc operator, at the `<<`; its body begins
         # after the newline that ends the line on which the region opened
@@ -791,6 +826,18 @@ class TestFixedVerdicts(unittest.TestCase):
         for form in COMMAND_POSITION_FORMS:
             with self.subTest(form=form):
                 self.check(form + TAIL, "deny")
+
+    def test_round2_command_position_forms_are_denied_in_both_modes(self):
+        # task0001 (FR1, FR2): the verdict is deny without and with
+        # CLAUDE_BATCH, so an unattended run is never let through either.
+        for _finding, form in ROUND2_COMMAND_POSITION_CASES:
+            text = form + TAIL
+            for batch in (False, True):
+                with self.subTest(form=form, batch=batch):
+                    got, reason = hook_verdict(text, batch=batch)
+                    self.assertEqual(
+                        got, "deny", msg="%r batch=%s -> %s %s" % (text, batch, got, reason)
+                    )
 
     def test_non_arithmetic_forms_keep_the_unchanged_verdict(self):
         for text, _regions, verdict in NON_ARITHMETIC_FORMS:
@@ -1879,6 +1926,17 @@ class TestReworkLinearity(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+# The stable_ids of the four round 2 residual findings and the length of the
+# case table at the feature base (indexes 0-626).
+ROUND2_STABLE_IDS = (
+    "453963d025537b11",
+    "681fab61e1d9ff2c",
+    "9381769d7116fab2",
+    "29bbf9032dd762a0",
+)
+ROUND2_BASE_CASE_COUNT = 627
+
+
 class TestModuleContract(unittest.TestCase):
     def test_replaced_readers_are_gone(self):
         self.assertFalse(hasattr(H, "_OperatorContext"))
@@ -1949,6 +2007,26 @@ class TestModuleContract(unittest.TestCase):
             self.assertIn(finding, label)
         self.assertEqual(block[0][2], "if (true) then ((1<<2)); fi" + TAIL)
         self.assertEqual(block[22][2], "cat <(true) #; rm -rf /home/sakura/valuable")
+
+    def test_round2_cases_come_only_after_the_base_entries(self):
+        # D3: the order of the four round 2 blocks depends on merge order, so
+        # this holds whichever of them are present. No label below the base
+        # length cites a round 2 finding, and every case of task0001 is found
+        # by its label and command text at the base length or later.
+        cases = case_commands()
+        self.assertGreaterEqual(len(cases), ROUND2_BASE_CASE_COUNT)
+        for index, (_want, label, _cmd) in enumerate(cases[:ROUND2_BASE_CASE_COUNT]):
+            for stable_id in ROUND2_STABLE_IDS:
+                self.assertNotIn(stable_id, label, msg="index %d" % index)
+        for finding, form in ROUND2_COMMAND_POSITION_CASES:
+            with self.subTest(form=form):
+                located = [
+                    index
+                    for index, (want, label, cmd) in enumerate(cases)
+                    if cmd == form + TAIL and want == "deny" and finding in label
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], ROUND2_BASE_CASE_COUNT)
 
 
 if __name__ == "__main__":
