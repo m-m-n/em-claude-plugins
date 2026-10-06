@@ -2123,8 +2123,24 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                     if text.startswith("<\\\n<", i):
                         # Backslash-newline is removed before tokenizing, so
                         # this is a `<<` split across lines: its delimiter
-                        # and body cannot be placed. Fail closed (P16).
-                        unreadable_delimiter = True
+                        # and body cannot be placed. Fail closed (P16), but
+                        # only for a real here-document operator.
+                        if text.startswith("<\\\n<<", i):
+                            # Split `<<<`: a here-string, not a here-document.
+                            if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
+                                begin_discard(i)
+                            f.redir = True
+                            i += 5
+                            continue
+                        if discard_end is not None:
+                            i += 3
+                            continue
+                        if kind == "array":
+                            begin_discard(i)
+                            i += 3
+                            continue
+                        if tail_start is None or i < tail_start:
+                            unreadable_delimiter = True
                         i += 3
                         continue
                     if text.startswith("<<<", i):
