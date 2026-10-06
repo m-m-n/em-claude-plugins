@@ -1,0 +1,98 @@
+task_id: task0005
+baseline_failures: []          # python3 -m unittest discover -s tests, run in the worktree before any edit: 8434 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation: python3 -m unittest discover -s tests, 8452 tests (the 18 new ones included), OK (skipped=1); python3 em-workflow/hooks/tests/run-destructive-guard.py 775/775 passed
+acceptance_tests:
+  AC-1:
+    tests:
+      - "tests.test_destructive_guard_extglob_units.TestMapFacts.test_the_map_of_a_text_carries_the_facts_written_out_by_hand"
+      - "tests.test_destructive_guard_extglob_units.TestMapFacts.test_a_cached_map_carries_the_facts_of_the_fresh_one"
+      - "tests.test_destructive_guard_extglob_units.TestMapFacts.test_other_texts_lexed_in_between_change_no_fact"
+      - "tests.test_destructive_guard_extglob_units.TestMapFacts.test_every_case_table_command_has_the_same_facts_fresh_cached_and_interleaved"
+      - "tests.test_destructive_guard_extglob_units.TestMapFacts.test_a_text_without_an_extended_glob_parenthesis_has_empty_facts"
+    red_confirmed: true
+    red_reason: >
+      The new module was written first and run against the unchanged hook: all five tests
+      failed (ERROR) with "AttributeError: 'LexMap' object has no attribute 'ext_met'" --
+      the map carried no met fact at all, and the line starts were set only on a map whose
+      lexing met a parenthesis. The inputs are TS5's input and the texts of its two
+      eval chunks, the differing-prefix variant and its chunks, T2 AC-4.7, a three-line
+      text with hand-written line starts (0, 15), a text whose parenthesis is on a later
+      line (8), texts with no parenthesis in an array, and every case-table command
+      under both readings, fresh / cached / after more texts than the cache holds.
+  AC-2:
+    tests:
+      - "tests.test_destructive_guard_extglob_units.TestMapFacts.test_a_cache_hit_raises_the_met_flag_of_the_judgment_that_reads_it"
+      - "tests.test_destructive_guard_extglob_units.TestRepeatAndPrewarmedJudgments.test_the_met_determination_is_the_judgments_own"
+      - "tests.test_destructive_guard_extglob_units.TestRepeatAndPrewarmedJudgments.test_a_second_judgment_in_one_process_matches_the_first"
+      - "tests.test_destructive_guard_extglob_units.TestRepeatAndPrewarmedJudgments.test_a_judgment_after_every_text_of_it_was_lexed_beforehand_matches_the_first"
+      - "tests.test_destructive_guard_extglob_units.TestRepeatAndPrewarmedJudgments.test_a_judgment_after_the_texts_were_lexed_in_the_other_order_matches_the_first"
+      - "tests.test_destructive_guard_extglob_units.TestRepeatAndPrewarmedJudgments.test_the_counts_of_the_three_named_inputs"
+    red_confirmed: false
+    red_reason: >
+      Mixed result, and red_confirmed is false because the two scenarios the criterion
+      names -- a second judgment of the same payload and a judgment after every text of it
+      was lexed beforehand -- were green on the unchanged hook, so no red was observed for
+      them. Observed red on the unchanged hook, two tests: a cache hit did not raise the
+      met flag ("False is not true"), and a command with no parenthesis judged after a
+      command that had one was judged under both readings
+      (Outcome(verdict='allow', met=True, units=(0, 0)) != Outcome(verdict='allow',
+      met=False, units=(0,)), 4 sub-cases). The other four tests (repeat judgment,
+      pre-warmed, pre-warmed in reverse order, counts of TS5 / its variant / T2 AC-4.7)
+      passed before the change: the met flag was never reset and so stayed raised from the
+      first judgment of the process, which hid the cache-hit gap from any in-process
+      repeat. They guard the contract now that run() resets the flag: with a temporary
+      mutation that raised the flag on fresh lexings only (reverted), 43 sub-tests failed,
+      the pre-warmed and reverse-order ones among them.
+  AC-3:
+    tests:
+      - "tests.test_destructive_guard_extglob_units.TestCacheDisabled.test_every_case_table_entry_yields_its_verdict_with_the_cache_off"
+    red_confirmed: false
+    red_reason: >
+      The test passed on the unchanged hook: with the cache replaced by one that keeps
+      nothing, the hook already recomputed every lexing and every one of the 774 entries
+      yielded its expected verdict, so the behaviour pre-existed and no red state occurred
+      for this change. The test stays as the guard that the cache is an optimization and
+      not a part of the verdict.
+  AC-4:
+    tests:
+      - "tests.test_destructive_guard_extglob_units.TestVerdicts.test_ts5_asks"
+      - "tests.test_destructive_guard_extglob_units.TestVerdicts.test_ts5_with_a_differing_prefix_asks"
+      - "tests.test_destructive_guard_extglob_units.TestVerdicts.test_t2_ac_4_7_allows"
+      - "tests.test_destructive_guard_extglob_units.TestVerdicts.test_the_three_named_inputs_are_case_table_entries"
+      - "run-destructive-guard.py: every case-table entry and the unattended-downgrade case (775/775)"
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing run-destructive-guard.py
+      case table (TS5 and its variants at labels f34ee27bc8c323b1, T2 AC-4.7, and the
+      unattended downgrade case at the end) detects these verdicts, and the new TestVerdicts
+      drives the same three inputs in-process; no red state occurred for this change. The
+      verdicts were established by task0003 and are only required to stay unchanged. The
+      case table and the runner are not modified (git diff is empty for both).
+  AC-5:
+    tests:
+      - "tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_lexing_work_is_linear_for_unclosed_and_closed_forms"
+      - "tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_stays_within_the_linear_bound"
+      - "tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_grows_linearly_with_the_input"
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing linearity tests in
+      tests/test_destructive_guard_lexer_agreement.py (found by searching tests/ for the
+      repository-relative path em-workflow/hooks/destructive-guard.py and for the basename
+      destructive-guard.py) detect super-linear lexing work; no red state occurred for
+      this change, they stay green and unmodified. The change moves no scanning: the pass
+      returns the line starts it already collected, and lex_shell() reads one more
+      attribute of a map; no loop and no pass over the input was added.
+  AC-6:
+    tests:
+      - "python3 em-workflow/hooks/tests/run-destructive-guard.py (775/775 passed)"
+      - "python3 -m unittest discover -s tests (8452 tests OK, skipped=1)"
+      - "tests.test_destructive_guard_extglob_units.TestModuleContract.test_hook_and_test_import_only_the_standard_library"
+      - "tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_hook_and_test_import_only_the_standard_library"
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing standard-library test in
+      tests/test_destructive_guard_lexer_agreement.py checks the hook's imports and
+      the new TestModuleContract checks the hook's and the new module's; both runners were
+      green before and after the change, so no red state occurred for this change.
+      tests/test_destructive_guard_lexer_agreement.py is unmodified (git diff is empty) and
+      no import was added to the hook.
