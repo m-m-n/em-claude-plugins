@@ -1,0 +1,456 @@
+round: 1
+executed_at: '2026-10-06T21:38:30+09:00'
+scope:
+  review_mode: diff
+  base_commit: d1f3077dbfce58a59f8289c42e3e2b0089cac229
+  head_commit: 174c6d989d538ce7c8c6845cd68747e92259fd5f
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0003.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: フックは全 Bash 呼び出しで走る字句解析で、今回の変更が NFR2（作業量の上限）に関わる走査を増やすため
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+  loop: 1
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+  loop: 2
+- run_id: security#loop3
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop3
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop3
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop3
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+  loop: 3
+findings:
+- stable_id: 0944ad655775e494
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2093
+  title: 束縛された添字が復帰文字（CR）を語の区切りとして扱い、破壊的な行を許可する（今回の変更による退行）
+  description: 束縛された添字の分岐と _LEX_SUBSCRIPT_LINE_SPECIAL が CR を語の区切りとして扱い、`declare x[a{CR}b""]=( <<EOF{NL}<破壊的な行>{NL}EOF` が deny から allow に変わった（eval / local / export、$v の形も同じ）。
+  suggestion: 束縛された添字の区切り文字集合と _LEX_SUBSCRIPT_LINE_SPECIAL から CR を外す。
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 94e1b00acef73aa9
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2255
+  title: 複数行のコマンド置換・プロセス置換の中の拡張パターンを 2 つの解析単位として数え、誤って ask になる（今回の変更による退行）
+  description: 親チャンクの ext_lines と置換本文の解析が同じ拡張パターンを別 origin で二重登録し、`echo $({NL}x=(@(a)){NL}printf ok{NL})` が allow から ask に変わる（無人実行では deny）。loop 3 の再レビューでも同じ指摘（2518 行付近）が残っている。
+  suggestion: 入れ子の置換に属するパターンを親側で重複登録しない。
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）'
+- stable_id: 00317f587babce32
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 154
+  title: ヒアドキュメントの区切り語が部分的に引用されている（<<E'OF'）と E と読み、破壊的な行を本文として隠す（変更前から存在）
+  description: HEREDOC_OP が <<E'OF' の区切り語を E と判定し、bash が実行する行を本文として除く。
+  suggestion: 区切り語をシェルの語として読み、その結果で終端行を照合する。
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 70414092c8d22d69
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 813
+  title: 引用されていない本文の中で行継続により分かれた終端語（E{BS-NL}OF）を見落とし、破壊的な行を本文として隠す（変更前から存在）
+  description: 終端行の照合が物理行ごとで、非引用本文のバックスラッシュ改行結合を反映しない。
+  suggestion: 非引用本文ではバックスラッシュ改行をつなげてから終端と比較する。
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 90df54f36ccefdf8
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1673
+  title: 'TM-5 未実装: 論理行の候補探索が演算子ごとに先頭からの線形走査で、作業量の上限に数えられない'
+  description: logical_lines() の候補探索が演算子ごとに先頭から読み飛ばし O(N^2)。
+  suggestion: bisect で引く。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2 の 469c44c126d09a8a の修正で bisect 化（N=32000 で 0.08s を実測）
+- stable_id: 87bc3a6f81978954
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 892
+  title: 行の索引が str.splitlines() で作られ、CR・VT・FF などで本文が行の途中から始まる
+  description: _LexLines が splitlines() で行頭を作り、bash の行区切り（\n のみ）と食い違う。
+  suggestion: 行頭の索引を \n だけで作る。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 489834107bc1fbee
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 158
+  title: 区切り語の読みが $・バッククォート・行継続で途切れ、\w 以外を含む区切り語は終端行が見つからない
+  description: 区切り語の読みと終端行の索引が bash と食い違う。
+  suggestion: 区切り語を字面どおり読み、終端行を内容そのもので索引する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 489c54bb59e8dc38
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 881
+  title: loop-1 の行継続終端修正が緩い区切り行比較を引き継ぎ、基点で deny だった入力が allow になる
+  description: 終端行の比較が前後の空白を許し、bash の完全一致と食い違う。
+  suggestion: << は完全一致、<<- は先頭タブだけ除いて比較する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 469c44c126d09a8a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1666
+  title: 非引用本文の終端判定が行継続を片方向しか扱わず、bash が実行する行を本文として扱う
+  description: 非引用本文で前行の行継続を考慮せず、本文先頭の論理行を取りこぼす。
+  suggestion: cont[] を前計算し、平文一致と本文先頭の論理行を bash と同じに扱う。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: ae43545c26dd9f7c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2066
+  title: 有効な ANSI-C 引用が後続のヒアドキュメントも無効にする
+  description: '`cat <<$''X'' <<EOF{NL}X{NL}git reset --hard HEAD{NL}EOF` が allow から deny に変わる（誤拒否）。'
+  suggestion: 有効な $'…' の区切り語を引用解除して登録する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 060471bb12fad78a
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2075
+  title: 区切り語の行継続によって実行対象のコマンドを除外する
+  description: '`cat <<EO\{NL}F; git reset --hard HEAD{NL}EOF` が deny から allow に変わる。'
+  suggestion: 語の終端より後の改行まで本文開始を遅らせる。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 3 の ce92362f1c719d5e の修正（改行を含む区切り語を読めないとして扱う）で解消。再現入力の deny を確認
+- stable_id: ce92362f1c719d5e
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 227
+  title: 'TM-1/TB-1: a backslash-newline inside the delimiter word makes the body start partway through the command line (regression from base)'
+  description: Delimiter word spanning a backslash-newline makes the body start on the line where the word ends, swallowing trailing statements.
+  suggestion: Treat a delimiter word containing a newline as unreadable.
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 85c9b1b2e50716c9
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 261
+  title: 'TM-1/TB-1: hand scanner reads some delimiter words differently from bash (`$[...]`, backquoted spans, extglob `@(...)`), giving new allow-bypasses'
+  description: $[, backquote and extglob delimiter words were read differently from bash.
+  suggestion: Treat these shapes as unreadable.
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 15f2adfccb266441
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 199
+  title: 'TM-1/TB-1: delimiter word ends at Unicode whitespace / CR / VT / FF, where bash''s word does not'
+  description: _HEREDOC_PLAIN used \s as a word terminator.
+  suggestion: Exclude only space, tab and newline.
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (diff)
+- stable_id: 267e8e9657658f40
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2070
+  title: 読めない区切り語のヒアドキュメントは本文を取らず次の行をコマンドとして読み直すため、本文中の後続の <<WORD や閉じない引用符が bash の実行する行を飲み込み allow になる
+  description: delimiter None の演算子は本文を取らず unknown_until を行末までしか設定しないため、bash が読み飛ばす本文行がコマンドとして再解析され、後続の <<WORD や引用符が bash の実行する行を隠す。`cat <<$(x)`、バッククォート、`$[1]`、`${x}`、`$'x'`、`'a'$'b'`、引用符の形で allow を確認。バッククォートと `$[` は loop 3 で deny から allow に巻き戻った。
+  suggestion: 読めない区切り語を fail-closed（ask）にする例外を新設し、ask_lex_unsettled() で ask に変換する。再現入力を ask/deny ケースとして追加する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap (3) reached
+- stable_id: 643305535d3c874d
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2070
+  title: 読めない区切り語の本文を再解析し、実行される行を除去してしまう
+  description: 行継続を含む区切り語が delimiter=None になり、本来の本文にある `cat <<DOC_END` が演算子として登録され、EOF 後の git 行まで本文として除去される。
+  suggestion: 解釈できない場合は判定不能として扱う。再現入力を回帰試験に追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap (3) reached
+- stable_id: 99d6b8336349b34d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1811
+  title: 無効な終了候補を演算子ごとに再検索し、処理時間が二乗で増える
+  description: 同じ行の <<EOF を N 個並べ、body＋行継続＋EOF の組を N 個置くと O(N^2)（N=6400 で約 1.30 秒）。iterations に加算されない。
+  suggestion: 無効な終了候補を索引から除くか、検索を処理量制限に計上する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 1f64cb294e6ffe41
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2065
+  title: Unreadable heredoc delimiter takes no body so its data lines stay scannable
+  description: Unreadable delimiter registers no body and only suppresses same-line operators; following body lines are lexed as code and a later << can swallow an executed line.
+  suggestion: 'Make unreadable-delimiter a first-class state: exclude the body as bash does, or fail closed.'
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap (3) reached
+- stable_id: 730712dde1bd3462
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2492
+  title: Extglob unit contract moved from lexer side effect to single caller
+  description: ext_lines type changed and extglob unit counting moved from lex_shell to statements() only; other lex_shell consumers no longer contribute and the count depends on call path and cache state.
+  suggestion: Restore a single SSOT for extglob unit counting and update all readers.
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap (3) reached
+- stable_id: 2c46aad4b9e807ed
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 928
+  title: Heredoc line handling split across god lexer and stateful line index
+  description: Delimiter-line comparison lives in two places; _delimiter_line_word is dead; new line scans run outside the work budget.
+  suggestion: Extract heredoc line handling into one budgeted module.
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: d9c0ee86072979fe
+  severity: critical
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2068
+  title: Unreadable-delimiter heredoc takes no body, later operator re-reads its body and hides executed line
+  description: 'SPEC の目的（bash が実行する破壊的な行を allow しない）に反する: delimiter None の演算子が本文を取らず、本文中の後続 << が実行行を本文として隠す。'
+  suggestion: Treat delimiter-None as opaque/unresolved and force a conservative verdict.
+  sources:
+  - litellm:muse-spark-contributor:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'spec category: auto-fix 対象外'
+evaluation:
+  round_summary: '第 1 ラウンド（前回セッションが R5 前に中断したため、前回の loop 1-3 のコミット 9e3307e1..174c6d98 を含む状態から再実行）。reviewer の high 3 件を評価者が bash 5.3.9 で再現。今回の差分による退行 2 件（CR を区切りとして扱う high、置換内の拡張パターンの二重計上 medium）と、以前からの回避経路 2 件（区切り語の部分引用、本文の行継続で分かれた終端語）。performance#0 の medium（_LEX_BOUND_KEEP の O(n^2)）は測定で誤検知と判定。注入は検出なし。観点ごと: security=findings, comprehensive=corroborated, architecture=corroborated, spec=corroborated, performance=corroborated。in-loop 再レビューでは security の codex が 3 回とも非 JSON を返したため、毎回 Claude fallback で代替した。'
+  recommended_action: auto_fix
+  action_rationale: 今回の差分による退行 2 件は bounded な修正に収まる。以前からの回避経路 2 件は SPEC 範囲外で、扱いはオーケストレーターに任せる。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 11
+  termination: loop-cap
+residual_critical_high: 5
+rework_required: true
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
