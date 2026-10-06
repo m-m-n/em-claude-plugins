@@ -104,9 +104,10 @@ workflow:
   status: completed
   completed_at_commit: 1341654445f9f1b71b4bb9f2c66c8a70ac43242a
 - id: implement
-  status: in_progress
+  status: completed
   failed_kind: null
   base_commit: f9c3395f4bf231cbddfe7fbc20e73507ea40fdba
+  completed_at_commit: edc2dbff80c22e823b4279e4fcf046f6bb0f2bc1
 - id: review
   status: pending
 - id: verify
