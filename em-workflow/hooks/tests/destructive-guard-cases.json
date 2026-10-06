@@ -840,5 +840,14 @@
   ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.8 二重引用符の中の ${ cmd; } も bash 5.3 では実行されるので、中身の rm -rf は deny", "echo \"${ rm -rf /home/sakura/valuable; }\""],
   ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.9 パラメータ展開の中に入れ子にした ${ cmd; } も実行されるので、中身の rm -rf は deny", "echo ${x:-${ rm -rf /home/sakura/valuable; }}"],
   ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.10 ${ の中の { } のグループの } では閉じず、最後の } で閉じる命令置換の中の rm -rf は deny", "echo ${ { rm -rf /home/sakura/valuable; }; }"],
-  ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.11 バッククォートの中で開いた ${ は閉じなくても次のバッククォートで終わり、直前の語に続く git reset --hard は deny（bash は置換の中身だけを構文エラーにして git を実行する）", "git reset --hard`${ x`"]
+  ["deny", "1fcae1f76f2a20f0 round2-deferred FR7.11 バッククォートの中で開いた ${ は閉じなくても次のバッククォートで終わり、直前の語に続く git reset --hard は deny（bash は置換の中身だけを構文エラーにして git を実行する）", "git reset --hard`${ x`"],
+  ["deny", "a9d11e5242397844 round2-deferred R1.LC1 $ と { の間の行継続は bash が先に取り除くので、${ git reset --hard; } の形になり、中身の git reset --hard は deny", "echo $\\\n{ git reset --hard; }"],
+  ["deny", "a9d11e5242397844 round2-deferred R1.LC2 二重引用符の中でも $ と { の間の行継続は取り除かれ、中身の git reset --hard は deny", "echo \"$\\\n{ git reset --hard; }\""],
+  ["deny", "a9d11e5242397844 round2-deferred R1.LC3 引用符なしの区切り語の本文でも $ と { の間の行継続は取り除かれ、中身の git reset --hard は deny", "cat <<E\n$\\\n{ git reset --hard; }\nE"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC4 ${| の直後の行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "echo ${|\\\nrm -rf /home/sakura/valuable; }"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC5 ${ と空白の後ろの行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "echo ${ \\\nrm -rf /home/sakura/valuable; }"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC6 行頭の行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "\\\nrm -rf /home/sakura/valuable"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC7 語の途中の行継続は取り除かれ、r と m は rm という 1 語になるので rm -rf は deny", "r\\\nm -rf /home/sakura/valuable"],
+  ["deny", "e7dc3c995b363c9d round2-deferred R1.LC8 $( の直後の行継続は取り除かれ、その後ろの rm が命令語になるので rm -rf は deny", "echo $(\\\nrm -rf /home/sakura/valuable)"],
+  ["allow", "e7dc3c995b363c9d round2-deferred R1.LC9 語の途中の行継続は取り除かれ、単一引用符の中の行継続は残るだけで、何も削除しないので allow", "echo a\\\nb 'c\\\nd'"]
 ]
