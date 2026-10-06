@@ -1,0 +1,106 @@
+schema_version: 2
+feature: destructive-guard-lexer-round2-residuals
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.28
+    confidence: 0.72
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.72
+      '2': 0.28
+      '3': 0.0
+  observed_at: '2026-10-06T13:50:46+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.13
+    confidence: 0.87
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.87
+      '2': 0.13
+      '3': 0.0
+  observed_at: '2026-10-06T13:55:22+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - tests/test_destructive_guard_lexer_agreement.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: '調査対象は main、コミット 797f3d04f89c1f9ef0e9f8f4fae19d0e3758d4bf。ファイル変更はない。em-workflow/hooks/tests/run-destructive-guard.py:55
+    と同じ {"tool_name":"Bash","tool_input":{"command":入力}} を stdin に渡して python3 em-workflow/hooks/destructive-guard.py
+    を実行した。通常時は CLAUDE_BATCH を除去し、batch 時は CLAUDE_BATCH=1 を設定した。13入力×2条件の26回すべて終了コード0で、標準エラー出力は空だった。
+
+
+    453963d025537b11：先頭行が「for ((i=0;i<1;i++)) { ((1<<2)); }」「for ((;0;)){ ((1<<2));
+    }」「if :; then for ((;0;)) { ((1<<2)); }; fi」の3入力について、それぞれ後ろに改行、rm -rf /home/sakura/valuable、改行、2を付けた。3入力すべて通常時allow／batch時allowだった。em-workflow/hooks/destructive-guard.py:726
+    の _LEX_AFTER_CLOSER_WORDS に { がなく、:869 の予約語判定で使われている。
+
+
+    681fab61e1d9ff2c：「time -- ((1<<2))」「time -p -- ((1<<2))」「time -- ! ((1<<2))」に同じ破壊的コマンドと終端行2を付けた。3入力すべて通常時allow／batch時allowだった。em-workflow/hooks/destructive-guard.py:900
+    の time_p 分岐は -p のみを受け付ける。
+
+
+    9381769d7116fab2：「a[1<<2]=x」に同じ破壊的コマンドと終端行2を付けた入力は通常時allow／batch時allowだった。「cat
+    <<END-X\nbody\nEND-X\nrm -rf /home/sakura/valuable\nEND」「cat <<E.X\nbody\nE.X\nrm
+    -rf /home/sakura/valuable\nE」「cat <<E\X\nbody\nEX\nrm -rf /home/sakura/valuable\nE」も、すべて通常時allow／batch時allowだった。字句解析の結果では、配列添字内の
+    <<2 がヒアドキュメントとして登録され、区切り語はそれぞれ END、E、E に切られ、rm 行が本文に含まれていた。対象は em-workflow/hooks/destructive-guard.py:1228
+    の語の読み取り、:1180 の演算子判定、:154 の HEREDOC_OP、:982 の register_operator。さらに :2234 の _delimiter_line_word
+    も変更対象に含まれる。:2244 の正規表現は END-X と E.X の終了行を受け付けないため、開始側だけの修正では対応が完結しない。
+
+
+    29bbf9032dd762a0：Nを0から増やした「x=$((echo N) | wc -c)」の28行（633文字）と100行（2289文字）、および「((cd
+    /tmp/aN && ls) || echo no)」の40行（1309文字）は、すべて通常時ask／batch時denyだった。理由は scan-budget-exceeded。em-workflow/hooks/destructive-guard.py:1332
+    は開き位置を1個返して再走査を要求し、:1456 は先頭から _lex_pass を呼び直す。十分な予算を引数で与えて既存の _lex_pass を測定すると、同じ「x=$((echo
+    N) | wc -c)」を4、8、16、32、64個並べた仕事量は161、563、2087、8015、31391で、走査回数は5、9、17、33、65だった。通常の
+    lex_shell は32個と64個で LexBudgetExceeded になった。例外からaskへの変換は :6707、batchでdenyへの変換は
+    :378 にある。
+
+
+    呼び出し数と依存先数は、変更対象の関数・クラスについて本体コードを数えた。lex_shell は直接呼び出し3箇所（em-workflow/hooks/destructive-guard.py:1638、:2258、:2777）、同一ファイル内の依存先3種類。_lex_pass
+    は直接呼び出し1箇所（:1456）、依存先11種類。word_transition は2箇所（:940、:1234）、register_operator は1箇所（:1182）、_delimiter_line_word
+    は1箇所（:696）から呼ばれ、この3関数には同一ファイル内の関数・クラスへの呼び出しがない。caller_and_dependency_count は直接呼び出し8箇所と依存先14種類の合計22とした。内側の補助関数を含み、組み込み・標準ライブラリ・テストを除いている。定数の参照は
+    HEREDOC_OP と _LEX_AFTER_CLOSER_WORDS が各1箇所。テスト側の lex_shell 呼び出しは35箇所、呼び出す関数は29個だった。
+
+
+    既存の判定テストは628/628、tests/test_destructive_guard_lexer_agreement.py は78/78が成功した。判定一覧は627件で、deny346件、ask117件、allow160件。今回の13入力と完全一致するケースはない。近接する検査は
+    tests/test_destructive_guard_lexer_agreement.py:181 のコマンド位置一覧、:677 の非隣接の閉じ、:1485
+    と :1516 の仕事量検査にあるが、今回の繰り返し入力は含まれない。
+
+
+    追加テストは約18ケースを推奨する。破壊的コマンドを含む10形を修正前にdenyとして追加し、無害な繰り返し3形はallow、各繰り返しの後ろに破壊的コマンドを付けた3形はdenyとして固定する。さらに
+    $((cmd) ...) と ((cmd) ...) の2形で入力長と仕事量の増え方を検査する。同じ入力の通常時・batch時・字句解析各層での検査は重複して数えていない。既存のdeny346件とask117件は保持する。changed_lines_approx=0
+    と new_functions_needed=0 は今回の読み取り調査での実変更・追加数であり、修正量の見積もりではない。'
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 18
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 22
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-06T13:55:30+09:00'
