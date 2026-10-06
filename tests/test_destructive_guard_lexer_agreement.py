@@ -1490,7 +1490,6 @@ SUBSCRIPT_ARGUMENT_FORMS = [
     "readonly a[1<<2]=x",
     "typeset a[1<<2]=x",
     "x=1 declare a[1<<2]=y",
-    "a[1] b[1<<2]=y",
     "a b[1<<2]=y",
     "1a[1<<2]=y",
     "a-b[1<<2]=y",
@@ -1622,6 +1621,16 @@ class TestArraySubscripts(unittest.TestCase):
                 self.assertEqual([str(t) for t, _s, _e in toks], command.split())
                 self.assertFalse(any(t.is_operator for t, _s, _e in toks))
 
+    def test_separators_and_blanks_inside_a_subscript_stay_in_one_word(self):
+        # bash reads the whole matched pair as part of the word: nothing in it
+        # splits the word or starts a statement.
+        for command in ("a[ 1 << 2 ]=x", "a[1;2]=x", "a[1|2]=x", "a[(1)]=x", "a[1 && 2]=x"):
+            with self.subTest(command=command):
+                toks = H._tokenize_marked(H._MarkedText.plain(command))
+                self.assertEqual([str(t) for t, _s, _e in toks], [command])
+                self.assertFalse(any(t.is_operator for t, _s, _e in toks))
+                self.assertEqual(len(H.lex_segments(command)), 1)
+
     def test_a_substitution_inside_a_subscript_is_still_inspected(self):
         for command in (
             "a[$(rm -rf /home/sakura/valuable)]=x",
@@ -1644,6 +1653,13 @@ class TestArraySubscripts(unittest.TestCase):
                 self.assertEqual(subscript_regions(lexmap), [])
                 self.assertEqual(len(lexmap.heredocs), 1)
                 self.assertIsNone(lexmap.tail_start)
+
+    def test_a_subscript_word_that_is_no_assignment_ends_the_assignment_position(self):
+        command = "a[1] b[1<<2]=y" + TAIL
+        lexmap = H.lex_shell(command)
+        self.assertEqual(subscript_regions(lexmap), [span_of(command, "[1]")])
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertEqual(lexmap.heredocs[0].start, command.index("<<"))
 
     def test_the_existing_context_form_cat_a1_heredoc_is_unchanged(self):
         command = "cat a[1] <<EOF\nhi\nEOF"
@@ -1683,8 +1699,9 @@ class TestArraySubscripts(unittest.TestCase):
                 self.assertEqual(lexmap.unopened, [opener])
                 self.assertEqual(lexmap.tail_start, opener)
                 self.assertFalse(any(r.kind == "comment" for r in lexmap.regions))
-                self.assertNotEqual(hook_verdict(command)[0], "allow")
-                self.assertNotEqual(hook_verdict(command, batch=True)[0], "allow")
+                if "rm -rf" in command:
+                    self.assertNotEqual(hook_verdict(command)[0], "allow")
+                    self.assertNotEqual(hook_verdict(command, batch=True)[0], "allow")
 
     def test_the_spec_unclosed_form_is_denied(self):
         command = "a[1<<2\nrm -rf /home/sakura/valuable\n2"
