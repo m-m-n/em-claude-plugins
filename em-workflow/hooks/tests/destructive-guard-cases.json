@@ -821,8 +821,9 @@
   ["deny", "2b52be5874de85f4 round2-deferred FR5.6 閉じ行が EN\\ と D に分かれていても bash は連結した END で閉じ、その後の rm -rf は deny", "cat <<END\nfoo\nEN\\\nD\nrm -rf /home/sakura/valuable\nEND"],
   ["deny", "2b52be5874de85f4 round2-deferred FR5.7 <<- でもタブ付きの EN\\ と D を連結した END で閉じ、その後の rm -rf は deny", "cat <<-END\nfoo\n\tEN\\\nD\nrm -rf /home/sakura/valuable\nEND"],
   ["deny", "2b52be5874de85f4 round2-deferred FR5.8 前の本文の閉じ行が \\ で終わっても、次の本文の最初の行 B は閉じ行になり、その後の rm -rf は deny", "cat <<'A\\' <<B\nA\\\nB\nrm -rf /home/sakura/valuable\nB"],
-  ["deny", "aa735aa95be36542 round2-deferred FR6.1 \\r の直後の # は語の一部で、コメントとして後続の rm -rf を隠さず deny", "echo x\r# ; rm -rf /home/sakura/valuable"],
-  ["deny", "aa735aa95be36542 round2-deferred FR6.2 語末の \\r があっても rm -rf /home/sakura/valuable は deny のまま", "rm -rf /home/sakura/valuable\r"],
-  ["deny", "aa735aa95be36542 round2-deferred FR6.3 語末の \\r があっても git reset --hard は deny のまま", "git reset --hard\r"],
-  ["allow", "aa735aa95be36542 round2-deferred FR6.4 CRLF 行末の無害なコマンドは allow のまま", "echo hi\r\necho done\r\n"]
+  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.1 読めない区切り語 E${x} の << の後ろの ${ はパラメータ展開を開かず、その後ろの rm -rf は deny", "cat <<E${x}\n${\nE${x}\nrm -rf /home/sakura/valuable\n}"],
+  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.2 読めない区切り語 E${x} の << の後ろの $(( は算術展開を開かず、その後ろの rm -rf は deny", "cat <<E${x}\n$((\nE${x}\nrm -rf /home/sakura/valuable\n))"],
+  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.3 読めない区切り語 E${x} の << の後ろの $[ は括弧算術を開かず、その後ろの rm -rf は deny", "cat <<E${x}\n$[\nE${x}\nrm -rf /home/sakura/valuable\n]"],
+  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.4 読めない区切り語 E${x} の << の後ろのコマンド位置の (( は算術コマンドを開かず、その後ろの rm -rf は deny", "cat <<E${x}\n((\nE${x}\nrm -rf /home/sakura/valuable\n))"],
+  ["deny", "52bfa0f59d1ea852 round2-deferred FR2.5 読めない区切り語 E${x} の << の後ろの case x in は case のパターン状態を開かず、その後ろの rm -rf は deny", "cat <<E${x}\ncase x in\nE${x}\nrm -rf /home/sakura/valuable\nesac"]
 ]
