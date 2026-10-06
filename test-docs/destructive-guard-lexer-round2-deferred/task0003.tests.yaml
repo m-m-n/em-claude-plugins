@@ -1,6 +1,7 @@
 task_id: task0003
-baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 8554 tests, OK (1 skipped); run-destructive-guard.py 774/774
-final_failures: []             # re-executed after the implementation: python3 -m unittest discover -s tests ran 8589 tests, OK (1 skipped); run-destructive-guard.py 790/790; tests.test_destructive_guard_lexer_agreement 245 tests OK
+baseline_failures:             # refreshed after parent-side adoption (merge of the parent into the task branch, conflict in the case table): the suite run at the adoption commit, before the case block was re-appended. Before any edit the suite was green (8554 tests, run-destructive-guard.py 774/774).
+  - TestHeredocLineSeparatorsAndJoinedCloseLines.test_new_cases_are_in_the_case_table_after_the_earlier_entries   # this task's own placement test: adopting the parent's case table dropped this task's block (16 subtest failures); fixed by the re-append commit. Everything else, task0002's tests included, passed: 8604 tests, FAILED (failures=16, skipped=1); run-destructive-guard.py 786/786
+final_failures: []             # re-executed after the re-implementation (case block re-appended on the parent's table, 801 entries): python3 -m unittest discover -s tests ran 8604 tests, OK (1 skipped); run-destructive-guard.py 802/802; tests.test_destructive_guard_lexer_agreement 260 tests OK
 acceptance_tests:
   AC-1:
     tests:
