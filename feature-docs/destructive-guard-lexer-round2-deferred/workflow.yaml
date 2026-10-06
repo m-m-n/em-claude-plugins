@@ -131,7 +131,8 @@ workflow:
   summary: 'unittest 8810 件 OK（skip 1）、run-destructive-guard.py 846/846 通過。TS-13 / TS-14 / TS-22 の計時テストは 2 回連続で通過（20000 回の ${ は 0.19 秒で scan-budget の deny）。bash 5.3 で新しい deny ケース 44 件の rm を echo に置換し、43 件で置換行が実行され、残る FR7.5（閉じない ${ ）は bash が構文エラーにする想定どおりの形。除外要件なし'
   completed_at_commit: 8506cba4c1a23cd84ac684fb8c5460494dc842a4
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 821a04e238d459e3462cd90eb84591250586ebc9
 tasks:
   task0001:
     title: 読めない区切り語の後ろ（tail）で開いてよい領域の判定を一つにまとめ、${ / $(( / $[ / (( と case のパターン状態を開かない
