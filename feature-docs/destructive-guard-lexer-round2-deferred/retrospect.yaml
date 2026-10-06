@@ -1,0 +1,267 @@
+feature: destructive-guard-lexer-round2-deferred
+collected_at: '2026-10-07T07:14:55+09:00'
+session_ids:
+- 01a11347-b8a2-732f-9f84-6cb58bce3eed
+signals:
+  review_critical_high:
+  - stable_id: a145dac536788f42
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: バッククォート内の ${ と閉じない ( で、外側の破壊的コマンドが allow になる
+    resolution: fixed
+  - stable_id: f33174f4eb9fc521
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: ${ の直後の行継続で、命令置換の中身を検査しない
+    resolution: fixed
+  - stable_id: 90d262dd6d78dfd4
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続を含むコマンド置換の本文を正しく判定できない
+    resolution: fixed
+  - stable_id: d1a1f6372396a685
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-7: 行継続を含む命令置換で破壊的コマンドが許可される'
+    resolution: fixed
+  - stable_id: 25e0b72c24c60af2
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 内側の引用によって外側のバッククォートが閉じなくなる
+    resolution: fixed
+  - stable_id: 37f0391f584707f2
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 引用されたCR付きの削除対象を安全な対象に変えてしまう
+    resolution: fixed
+  - stable_id: 94c05b2e017d9cb3
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: コメントや一重引用符内ではバッククォートの終了処理が働かない
+    resolution: fixed
+  - stable_id: db35bdedf5895808
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 単一引用符内で外側のバッククォート終端を見落とす
+    resolution: fixed
+  - stable_id: a9d11e5242397844
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続で分割された展開開始記号を認識できない
+    resolution: unresolved
+  - stable_id: b0f7592cd79e75ea
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: エスケープされた末尾CRが削除対象から失われる
+    resolution: unresolved
+  - stable_id: 31165687b890b8bc
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: エスケープされたバッククォートで置換を終了する退行がある
+    resolution: unresolved
+  - stable_id: d1d035263eb03a8a
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 引用や置換を挟むと外側のバッククォートの文脈を失う
+    resolution: unresolved
+  - stable_id: e79128f331828941
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '普通のバッククォート置換では、中の # コメントや引用符が閉じのバッククォートを飲み込み、破壊的コマンドが allow になる'
+    resolution: unresolved
+  - stable_id: e6478d6af2a50e57
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: bt-form の巻き戻しが param / arith / bracket / subscript / extglob 分岐に無く、TM-7 の対象のコマンドが読み飛ばされる
+    resolution: unresolved
+  - stable_id: e7dc3c995b363c9d
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続（\<改行>）が語の分割で除かれず、`${|\<改行>rm -rf …; }` や `\<改行>rm -rf …` が allow になる
+    resolution: unresolved
+  - stable_id: 814902ad222f71b9
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: バッククォート範囲の中で P13 の破棄行が始まると end_discard() が backtick フレームと bt_end を捨て、閉じのバッククォート以降の破壊的コマンドが allow になる
+    resolution: fixed
+  - stable_id: 44201ccaa437da29
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 解析失敗時のフォールバック（_lex_layout の except ValueError）が行継続の改行でも文を切るため、r\<改行>m -rf … などが allow になる
+    resolution: deferred
+  - stable_id: f05a4f1dad26689d
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: バッククォート置換の本文を bash の逆スラッシュ除去なしで再走査するため、入れ子の \`…\` / \$( / \${ の中のコマンドが allow になる
+    resolution: deferred
+  - stable_id: a124a65876b37b76
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: tail 内の文で case を予約語として扱わないため、case 項目の中の破壊的コマンドを検査しない（deny→allow の回帰）
+    resolution: deferred
+  - stable_id: 2aefebefe2ef0bac
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop 1 の修正で、破棄行の途中で開いたバッククォートも end_discard() が残すようになり、次行以降の置換内コマンドが allow になる（回帰）
+    resolution: fixed
+  - stable_id: 94fa8bd5577541a8
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '（未修正: 44201ccaa437da29）_lex_layout() の ValueError フォールバックが行継続の改行で文を切り、r\<改行>m -rf … などが allow のまま'
+    resolution: deferred
+  - stable_id: 16514e6cb0bce378
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '（未修正: f05a4f1dad26689d）バッククォート置換の本文を逆スラッシュ除去なしで再走査し、入れ子の \`…\` / \$( / \${ の中のコマンドが allow のまま'
+    resolution: deferred
+  - stable_id: b5475acfc32b97a4
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: tail 内の case 本文にある破壊的な命令を見逃す
+    resolution: deferred
+  - stable_id: 70c15555909687d1
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 算術展開を拒否すると命令置換への読み直しも失われる
+    resolution: fixed
+  - stable_id: 12addcd795b6f0f6
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続を含む処理置換の中身を検査しない
+    resolution: fixed
+  - stable_id: 2321b510368aec41
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 連続した開き括弧の後ろにある命令を見逃す
+    resolution: fixed
+  - stable_id: f0bf5f6cc02b1062
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Tok trailing_cr creates a dual-view token contract
+    resolution: deferred
+  - stable_id: 6e29701c65fd651f
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: _lex_pass absorbs tail-gate, backtick-extent and discard recovery
+    resolution: deferred
+  - stable_id: 9dd9f3f920e5644a
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1/TB-1: a discarded line inside a backtick drops here-document operators opened before the backtick, so lines bash runs end up inside a quote'
+    resolution: fixed
+  - stable_id: 06a2694a21d55f1d
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '(still unfixed: 44201ccaa437da29) the fallback in _lex_layout() splits statements at continuation newlines, so commands joined by a line continuation are allowed'
+    resolution: deferred
+  - stable_id: 1ea2bbbec622320f
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '(still unfixed: f05a4f1dad26689d) _span_inner() rescans backtick content without bash''s backslash removal, so commands in nested \` / \$( / \${ are allowed'
+    resolution: deferred
+  - stable_id: 512adc55fa75933f
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: '`>\<改行>(bash)` に流すヒアドキュメントがデータ扱いになり、本文の rm -rf が allow になる'
+    resolution: fixed
+  - stable_id: a1145e054c340952
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 閉じない `${ ` が連なると判定に 10 秒を超え、hooks.json の timeout 内に判定が返らない
+    resolution: deferred
+  - stable_id: 8e6fd9640058aceb
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: '`(>/dev/null rm -rf …)` のように `(` とリダイレクトがくっついた形で、サブシェル内の rm -rf が allow になる'
+    resolution: fixed
+  - stable_id: 6443a028c8a2baa5
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Duplicated line-continuation removal logic across lexer, tokenizer and readers
+    resolution: deferred
+  - stable_id: a27d030dd5d51c65
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Tail-start contract split between lexer gate and statement shaper flag
+    resolution: deferred
+  - stable_id: e1057c602f44e705
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    title: Unescaped-backtick index regex risks quadratic scan on backslash runs
+    resolution: declined
+  - stable_id: 0c39fb05a3d4d13b
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    title: Redundant full lex pass per chunk via _unclosed_command_forms
+    resolution: deferred
+  - stable_id: 4f1183f5b2e20560
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '`(>&2 cmd)` など ( に融合した & / | 入りリダイレクトで、破壊的コマンドが allow になる'
+    resolution: deferred
+  - stable_id: 7dcbbd64391ec7e0
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 解析失敗時の分割が行継続の改行で文を割り、`r\<改行>m -rf` などが allow になる
+    resolution: deferred
+  - stable_id: 5c26db3571b6c679
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: バッククォート本文の \` / \$ / \\ を外さずに検査するため、入れ子の置換や \${ ...; } が allow になる
+    resolution: deferred
+  - stable_id: 77e77ce2bd27bb6f
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: tail source の後の `$((` を命令置換として開くと、中身が tail の外で読み直され FR2 の deny が allow に戻る
+    resolution: deferred
+  - stable_id: e3c72b65d0ec2628
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 60KB の入れ子 `${ ` の評価に約 10.7 秒かかり、SPEC NFR2/F7 の 10 秒（hooks.json の timeout）を超える
+    resolution: deferred
+  - stable_id: d9651f11450c921b
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続で分かれたヒアドキュメント演算子 `<\<改行><EOF` を認識せず、本文中の `$( )` や引用によって rm -rf が allow になる
+    resolution: deferred
+  - stable_id: f559d312cd151700
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'God-function expansion: _lex_pass absorbs tail-gate, backtick extent, limit, and discard logic'
+    resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: 毎回の Bash 呼び出しで走る字句解析に、読み直し・行連結の走査が増えたため、入力長に対する計算量の悪化を確認する
+  declined_findings:
+  - stable_id: e1057c602f44e705
+    category: performance
+    resolution_reason: 'not reproduced: 20k backslashes plus a trailing backtick evaluate in 0.14s, the same as base'
+  tier_decision:
+    tier: full
+    rationale: 'fallback_matrix:jev_only_usable: Codex pre-survey unusable (run_codex_exec.sh readonly exited 1: the request was flagged for possible cybersecurity risk and no JSON was produced); the final Jev call is skipped'
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.86
+        confidence: 0.76
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.19
+          '2': 0.76
+          '3': 0.05
+      observed_at: '2026-10-06T20:15:48+09:00'
+follow_up_drafts: []
+lessons_candidates:
+- implementer の報告（conflict_retries / deviations）は phase-state に永続化されておらず、conflict_reworks / file_prediction_misses は空で記録した
+- review round 2 で residual critical/high 7 件が rework 上限（batch.review_rework_count=1）に達して deferred になった。同じ字句解析器で deferred → 別タスク → deferred の連鎖が続いている
+- codex primary reviewer が非 JSON 出力・時間切れで繰り返し失敗し、architecture / spec / performance は litellm の review_data_too_large で skipped になった（約 5000 行のフック全体が対象のため）
+- verify round 1 は TS-13 / TS-14 / TS-10 で failed、rework 1 回（task0009）で round 2 が pass

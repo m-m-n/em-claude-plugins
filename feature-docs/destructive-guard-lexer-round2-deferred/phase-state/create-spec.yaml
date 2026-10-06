@@ -1,0 +1,57 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-deferred
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 085614786613427d7beda50b6dec90d5dc97f0d6
+last_input_digest: sha256:1c188e3fef0319fad623e28ad68e3003ffc2f39d8875e04ba575f0a0369c4773
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: destructive-guard-lexer-round2-deferred'
+    answered_at: '2026-10-06T20:17:30+09:00'
+  create-spec.requirement-clarification:
+    question_id: create-spec.requirement-clarification
+    packet_id: null
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: Q1 A / Q2 A / Q3 A / Q4 A
+    normalized_answer: 'Q1 c8c16caba82d6238: consolidate the tail-open predicate only,
+      no _lex_pass split (A3). Q2 52bfa0f59d1ea852: stop opening ${ / $(( / $[ / ((
+      / case in the tail, not an ask (A4); also apply to _shape_leading() case state.
+      Q3 1fcae1f76f2a20f0: model ${ cmd; } / ${| cmd; } as command substitution closed
+      by a reserved-word }, update unittest expectations, keep cases.json (A7/A8);
+      extraction must cover unclosed bodies and the | offset. Q4 e959ba60bde865a4
+      / aa735aa95be36542: \n-only line boundary and space/tab-only blanks across the
+      lexer, including _tokenize_marked() in both modes.'
+    answered_at: '2026-10-06T20:33:00+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:1c188e3fef0319fad623e28ad68e3003ffc2f39d8875e04ba575f0a0369c4773
+  output_digest: sha256:9eb5e63d1fd854907f87430354de3aa8b07982fe76a261ce0b9bf5d688a81720
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:1c188e3fef0319fad623e28ad68e3003ffc2f39d8875e04ba575f0a0369c4773
+  output_digest: null
+artifacts:
+- path: feature-docs/destructive-guard-lexer-round2-deferred/REQUIREMENTS.md
+  sha256: sha256:0d788555ea872eac87782a931662737239775bedb937ee13d6192c120b474a2b
+  produced_by: create-spec-run-0002
+- path: feature-docs/destructive-guard-lexer-round2-deferred/SPEC.md
+  sha256: sha256:7ba3b50c12e72a5777da541398bd5ca9133e2b398f9dbfba06aa96d22d7469b6
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
