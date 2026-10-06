@@ -34,6 +34,10 @@ Layout:
   anything for the command text after its delimiter line.
 - TestHeredocDelimiterWords: the delimiter of `<<` / `<<-` is the whole word
   with its quotes removed; an unreadable word takes no body.
+- TestTailSourceOpenersAndTailGate, TestTailSourceStageAgreement
+  (destructive-guard-lexer-round2-deferred task0001, FR2, FR8): no `${`, `$((`,
+  `$[`, `((` or case construct opens after an unreadable delimiter word, and
+  one gate decides every tail question of the lexer pass.
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
 - TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11), and
   the linear work of `((` / `$((` openers that close without an adjacent `))`.
@@ -2485,13 +2489,16 @@ class TestHeredocFallbackAndCloseLines(unittest.TestCase):
         self.assertEqual([lo for lo, _hi in view.mask_ranges], quotes)
         self.assertNotIn("'", view.view)
         # An unreadable `<<` followed by double quotes and `$'` / `$"` the same way.
+        # The `${` of `E${x}` lies after the tail source: it opens no
+        # parameter expansion (no region) and is listed in UNOPENED with them
+        # (destructive-guard-lexer-round2-deferred task0001, FR2).
         command = "cat <<E${x}\n\"a\n$'b\n$\"c\nrm -rf /home/sakura/valuable\n\""
         lexmap = H.lex_shell(command)
-        self.assertEqual([r.kind for r in lexmap.regions], ["parameter-expansion"])
-        self.assertEqual(
-            list(lexmap.unopened),
-            [i for i, ch in enumerate(command) if ch in "'\""],
-        )
+        self.assertEqual([r.kind for r in lexmap.regions], [])
+        quotes = [i for i, ch in enumerate(command) if ch in "'\""]
+        self.assertEqual(list(lexmap.unopened), sorted([command.index("${x}")] + quotes))
+        view = H._MarkedText.plain(command)
+        self.assertEqual([lo for lo, _hi in view.mask_ranges], quotes)
         self.assertEqual(hook_verdict(command)[0], "deny")
 
     def test_lexing_work_is_linear_in_a_tail_full_of_quote_characters(self):
@@ -2634,6 +2641,364 @@ class TestHeredocFallbackAndCloseLines(unittest.TestCase):
                 previous = index
                 self.assertEqual(want, verdict)
                 self.assertTrue(label.startswith(prefix), msg=label)
+
+
+# ---------------------------------------------------------------------------
+# Openers after an unreadable delimiter word, and the one tail gate
+# (destructive-guard-lexer-round2-deferred task0001: FR2, FR8, NFR1, NFR4,
+# NFR6; review finding 52bfa0f59d1ea852 and the tail-gate part of
+# c8c16caba82d6238). After a `<<` whose delimiter word cannot be read (a tail
+# source) no parameter-form `${`, `$((`, `$[`, `((` at a command position or
+# case construct opens, in the lexer or in statement shaping; `$(` and
+# backticks still do. Every tail decision of the lexer pass is one gate.
+# ---------------------------------------------------------------------------
+
+TAIL_SOURCE_CASE_LABEL = "52bfa0f59d1ea852 round2-deferred FR2."
+
+# The five commands of the case table: each form and the opener its second
+# line holds (a case word for the last one).
+TAIL_SOURCE_FORMS = [
+    ("cat <<E${x}\n${\nE${x}\nrm -rf /home/sakura/valuable\n}", "${"),
+    ("cat <<E${x}\n$((\nE${x}\nrm -rf /home/sakura/valuable\n))", "$(("),
+    ("cat <<E${x}\n$[\nE${x}\nrm -rf /home/sakura/valuable\n]", "$["),
+    ("cat <<E${x}\n((\nE${x}\nrm -rf /home/sakura/valuable\n))", "(("),
+    ("cat <<E${x}\ncase x in\nE${x}\nrm -rf /home/sakura/valuable\nesac", "case"),
+]
+
+# The gate's two classes (IMPLEMENTATION.md, "Tail gate"), and how many call
+# sites of each opener kind the lexer pass holds at least: every site SPEC.md
+# FR8 lists, and the assignment-word subscript start.
+TAIL_GATE_NAME = "tail_gate"
+TAIL_START_OPENERS = frozenset(
+    {
+        "comment",
+        "heredoc-operator",
+        "assignment-subscript",
+        "array-subscript",
+        "discarded-line",
+    }
+)
+TAIL_SOURCE_OPENERS = frozenset(
+    {
+        "single-quote",
+        "double-quote",
+        "ansi-c-quote",
+        "locale-quote",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+        "case-construct",
+    }
+)
+TAIL_GATE_SITES = {
+    # a quote character in a shell-rule frame, a parameter expansion, an
+    # arithmetic expansion, a bracket arithmetic, a subscript, an extglob frame
+    "single-quote": 6,
+    "double-quote": 6,
+    "ansi-c-quote": 1,
+    "locale-quote": 1,
+    "comment": 1,
+    "heredoc-operator": 1,
+    # `;`, `&` / `|`, a parenthesis, the declaration `=(` error and the
+    # `<<<`, `<` and `>` operators, all directly in an array
+    "discarded-line": 7,
+    "array-subscript": 1,
+    "assignment-subscript": 1,
+    "parameter-expansion": 1,
+    "arithmetic-expansion": 1,
+    "bracket-arithmetic": 1,
+    "arithmetic-command": 1,
+    "case-construct": 1,
+}
+# The three bookkeeping statements of the tail start, which are no opener
+# decision: its initial value from the settled openers, its update when a tail
+# source is met, and its update at the end of a discarded line.
+TAIL_BOOKKEEPING_STATEMENTS = (
+    "state.tail_start = min(settled) if settled else None",
+    "state.tail_source = state.tail_start = i",
+)
+TAIL_BOOKKEEPING_IF_TEST = "state.tail_start is not None and state.tail_start < end"
+
+
+class TestTailSourceOpenersAndTailGate(unittest.TestCase):
+    NOT_OPENED_KINDS = QUOTE_KINDS | {
+        "comment",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+    }
+    # AC-4: `$(` and a backtick still open after the tail source.
+    SUBSTITUTION_FORMS = [
+        (
+            "cat <<E${x}\necho $(rm -rf /home/sakura/valuable)",
+            "command-substitution",
+            "$(rm -rf /home/sakura/valuable)",
+        ),
+        (
+            "cat <<E${x}\necho `rm -rf /home/sakura/valuable`",
+            "backtick-substitution",
+            "`rm -rf /home/sakura/valuable`",
+        ),
+    ]
+    # AC-3: the construct opened before the tail source.
+    CASE_BEFORE_FORM = "case x in x) cat <<E${x};; esac\nrm -rf /home/sakura/valuable"
+    # The case word's reading in the lexer: a command substitution closes at
+    # the `)` of a case pattern only when no construct is open.
+    CASE_AFTER_FORM = "cat <<E${x}\necho $(case x in a) true;; esac)"
+    CASE_BEFORE_IN_SUBSTITUTION_FORM = (
+        "echo $(case x in a) cat <<E${x};; esac)\nrm -rf /home/sakura/valuable"
+    )
+
+    def test_the_openers_after_an_unreadable_word_are_literal_text(self):
+        # AC-2: cases 1 to 4.
+        for form, opener in TAIL_SOURCE_FORMS[:4]:
+            with self.subTest(form=form):
+                lexmap = H.lex_shell(form)
+                pos = form.index("<<")
+                self.assertEqual(list(lexmap.heredocs), [])
+                self.assertEqual(lexmap.tail_start, pos)
+                self.assertEqual(
+                    [
+                        (r.kind, r.start)
+                        for r in lexmap.regions
+                        if r.start >= pos and r.kind in self.NOT_OPENED_KINDS
+                    ],
+                    [],
+                )
+                required = {m.start() + 1 for m in re.finditer(re.escape("E${x}"), form)}
+                self.assertEqual(len(required), 2)
+                unopened = set(lexmap.unopened)
+                self.assertLessEqual(required, unopened)
+                if opener != "${":
+                    # The second-line `${` of case 1 is the command form on
+                    # a tree that reads it (a later task); the other openers
+                    # are refused whatever else changes.
+                    required.add(form.index("\n" + opener) + 1)
+                    self.assertEqual(unopened, required)
+                H._LEX_CACHE.clear()
+                self.assertEqual(H.lex_shell(form).as_tuple(), lexmap.as_tuple())
+                for batch in (False, True):
+                    decision, reason = hook_verdict(form, batch=batch)
+                    self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_a_case_word_after_an_unreadable_word_is_a_command_word(self):
+        # AC-3, case 5: statement shaping opens no case construct, so the
+        # destructive line is the statement's command, not a pattern.
+        form = TAIL_SOURCE_FORMS[4][0]
+        shaped = [words for _text, _toks, _lexed, words, *_rest in H.statements(form)]
+        self.assertIn(["case", "x", "in"], shaped)
+        self.assertTrue(any(words[:1] == ["rm"] for words in shaped), msg=shaped)
+        for batch in (False, True):
+            decision, reason = hook_verdict(form, batch=batch)
+            self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_a_case_word_after_an_unreadable_word_opens_none_in_the_lexer(self):
+        # AC-3: the `)` of the pattern closes the substitution, as it does
+        # when no construct is open ...
+        command = self.CASE_AFTER_FORM
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            [command[r.start : r.end] for r in lexmap.regions],
+            ["$(case x in a)"],
+        )
+        # ... and a construct opened before the tail source stays open past it
+        # and closes at its `esac`.
+        command = self.CASE_BEFORE_IN_SUBSTITUTION_FORM
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            [command[r.start : r.end] for r in lexmap.regions],
+            ["$(case x in a) cat <<E${x};; esac)"],
+        )
+        self.assertEqual(lexmap.tail_start, command.index("<<"))
+
+    def test_a_case_construct_opened_before_the_tail_source_still_closes_at_esac(self):
+        # AC-3: shaping reads the construct opened before the tail source as
+        # it did, so `esac` closes it and the next line is a command.
+        form = self.CASE_BEFORE_FORM
+        shaped = [words for _text, _toks, _lexed, words, *_rest in H.statements(form)]
+        self.assertIn([], shaped, msg="the `esac` closer carries no command")
+        self.assertNotIn(["esac"], shaped)
+        self.assertEqual(shaped[-1][:1], ["rm"])
+        for batch in (False, True):
+            decision, reason = hook_verdict(form, batch=batch)
+            self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_the_destination_table_shapes_statements_the_same_way(self):
+        # The table the here-document destination reads carries the same case
+        # state as statements(): the destructive line is a command word in it.
+        for form in (self.CASE_BEFORE_FORM, TAIL_SOURCE_FORMS[4][0]):
+            with self.subTest(form=form):
+                stripped, _records, _omap = H._strip_heredocs_mapped(form)
+                spans, parent_of, _unmatched, _opaque, _containing = H.scan_structure(
+                    stripped, mode="shell"
+                )
+                marked = H._mark_substitutions(
+                    stripped, H._top_level_spans(spans, parent_of), 0
+                )
+                table, _starts, _operators = H._build_statement_table(stripped, marked)
+                shaped = [stmt.shaped_words for stmt in table]
+                self.assertTrue(any(words[:1] == ["rm"] for words in shaped), msg=shaped)
+
+    def test_substitutions_still_open_after_an_unreadable_word(self):
+        # AC-4 (NFR6): `$(` and backticks are never refused.
+        for command, kind, text in self.SUBSTITUTION_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                pos = command.index("<<")
+                found = [
+                    (r.kind, command[r.start : r.end])
+                    for r in lexmap.regions
+                    if r.start > pos and r.kind in SUBSTITUTION_KINDS
+                ]
+                self.assertEqual(found, [(kind, text)])
+                for batch in (False, True):
+                    decision, reason = hook_verdict(command, batch=batch)
+                    self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_a_tail_of_settled_openers_alone_keeps_reading_these_openers(self):
+        # No tail source: the openers after the earliest settled one still
+        # open (and an unclosed one is settled), as before.
+        command = "echo ${y\n${a} $((1)) $[2] ((3))\n"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(lexmap.tail_start, command.index("${y"))
+        self.assertEqual(
+            [(r.kind, command[r.start : r.end]) for r in lexmap.regions],
+            [
+                ("parameter-expansion", "${a}"),
+                ("arithmetic-expansion", "$((1))"),
+                ("bracket-arithmetic", "$[2]"),
+            ],
+        )
+        self.assertEqual(list(lexmap.unopened), [command.index("${y")])
+
+    def test_unclosed_openers_after_an_unreadable_word_are_not_settled(self):
+        # They are refused, so the pass needs no second round for them.
+        for opener in ("${", "$((", "$[", "(("):
+            command = "cat <<E${x}\necho " + opener + " a\n" + opener + " b"
+            with self.subTest(opener=opener):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(lexmap.rounds, 1)
+                self.assertEqual(lexmap.tail_start, command.index("<<"))
+
+    def test_lexing_work_is_linear_in_repeated_tail_source_forms(self):
+        # AC-7 (NFR1): each of the five forms repeated 200 and 400 times.
+        for form, _opener in TAIL_SOURCE_FORMS:
+            with self.subTest(form=form):
+                small_text = "\n".join([form] * 200)
+                large_text = "\n".join([form] * 400)
+                small = H.lex_shell(small_text)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def lex_pass_tree(self):
+        with open(HOOK, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and node.name == "_lex_pass":
+                return node
+        self.fail("the hook has no _lex_pass()")
+
+    def test_the_two_classes_of_the_gate(self):
+        self.assertEqual(H._LEX_TAIL_START_OPENERS, TAIL_START_OPENERS)
+        self.assertEqual(H._LEX_TAIL_SOURCE_OPENERS, TAIL_SOURCE_OPENERS)
+        self.assertFalse(TAIL_START_OPENERS & TAIL_SOURCE_OPENERS)
+
+    def test_the_tail_is_decided_only_inside_the_gate(self):
+        # AC-5 (FR8): inside the lexer pass, a comparison with the tail start
+        # and a test of the tail source occur only in the gate, apart from
+        # the three bookkeeping statements.
+        root = self.lex_pass_tree()
+        parents = {}
+        for node in ast.walk(root):
+            for child in ast.iter_child_nodes(node):
+                parents[child] = node
+        gates = [
+            n for n in ast.walk(root)
+            if isinstance(n, ast.FunctionDef) and n.name == TAIL_GATE_NAME
+        ]
+        self.assertEqual(len(gates), 1, msg="one gate function inside the pass")
+        exempt_seen = {text: 0 for text in TAIL_BOOKKEEPING_STATEMENTS}
+        exempt_seen[TAIL_BOOKKEEPING_IF_TEST] = 0
+        outside = []
+        for node in ast.walk(root):
+            if not (
+                isinstance(node, ast.Attribute)
+                and node.attr in ("tail_start", "tail_source")
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "state"
+            ):
+                continue
+            exempt = False
+            walker = node
+            while walker is not root:
+                if walker is gates[0]:
+                    exempt = True
+                    break
+                if isinstance(walker, ast.Assign):
+                    text = ast.unparse(walker)
+                    if text in exempt_seen:
+                        exempt_seen[text] += 1
+                        exempt = True
+                        break
+                if isinstance(walker, ast.If):
+                    if ast.unparse(walker.test) == TAIL_BOOKKEEPING_IF_TEST:
+                        exempt_seen[TAIL_BOOKKEEPING_IF_TEST] += 1
+                        exempt = True
+                        break
+                walker = parents[walker]
+            if not exempt:
+                outside.append("line %d: %s" % (node.lineno, ast.unparse(node)))
+        self.assertEqual(outside, [])
+        for text, count in exempt_seen.items():
+            self.assertGreaterEqual(count, 1, msg="exempt statement not found: " + text)
+
+    def test_every_listed_site_calls_the_gate(self):
+        # AC-5 (FR8): the sites SPEC.md FR8 lists, and the assignment-word
+        # subscript start, ask the gate, each with its opener kind.
+        root = self.lex_pass_tree()
+        calls = {}
+        for node in ast.walk(root):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == TAIL_GATE_NAME
+            ):
+                self.assertTrue(node.args and isinstance(node.args[0], ast.Constant))
+                kind = node.args[0].value
+                calls[kind] = calls.get(kind, 0) + 1
+        for kind, least in TAIL_GATE_SITES.items():
+            with self.subTest(kind=kind):
+                self.assertGreaterEqual(calls.get(kind, 0), least)
+        for kind in calls:
+            self.assertIn(kind, TAIL_START_OPENERS | TAIL_SOURCE_OPENERS)
+
+    def test_the_gate_never_refuses_a_substitution(self):
+        # `$(`, backticks and process substitutions are not gated kinds.
+        for kind in ("command-substitution", "backtick-substitution", "process-substitution"):
+            self.assertNotIn(kind, TAIL_START_OPENERS | TAIL_SOURCE_OPENERS)
+
+
+class TestTailSourceStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    forms of the openers after an unreadable delimiter word: the lexer, the
+    masked view, the position maps and the structure scan agree on them."""
+
+    @classmethod
+    def setUpClass(cls):
+        holder = TestTailSourceOpenersAndTailGate
+        forms = [form for form, _opener in TAIL_SOURCE_FORMS]
+        forms += [form for form, _kind, _text in holder.SUBSTITUTION_FORMS]
+        forms += [
+            holder.CASE_BEFORE_FORM,
+            holder.CASE_AFTER_FORM,
+            holder.CASE_BEFORE_IN_SUBSTITUTION_FORM,
+        ]
+        cls.commands = forms
 
 
 class TestFallbackStageAgreement(TestStageAgreement):
@@ -3407,6 +3772,24 @@ ROUND2_STABLE_IDS = (
 )
 ROUND2_BASE_CASE_COUNT = 627
 
+# The stable_ids of the seven findings destructive-guard-lexer-round2-deferred
+# gives cases to (D3), the length of the case table at that feature's base
+# (indexes 0-772) and the SHA-256 of json.dumps(those entries,
+# ensure_ascii=False).
+DEFERRED_STABLE_IDS = (
+    "5753be9288beab27",
+    "52bfa0f59d1ea852",
+    "e959ba60bde865a4",
+    "e25427e2a8b1dddf",
+    "2b52be5874de85f4",
+    "aa735aa95be36542",
+    "1fcae1f76f2a20f0",
+)
+DEFERRED_BASE_CASE_COUNT = 773
+DEFERRED_BASE_ENTRIES_DIGEST = (
+    "b37419584f6d6a51e6cfd3af875b5e03c5f4e9add583948c66c649e933d7465b"
+)
+
 
 class TestModuleContract(unittest.TestCase):
     def test_replaced_readers_are_gone(self):
@@ -3498,6 +3881,38 @@ class TestModuleContract(unittest.TestCase):
                 ]
                 self.assertEqual(len(located), 1)
                 self.assertGreaterEqual(located[0], ROUND2_BASE_CASE_COUNT)
+
+    def test_round2_deferred_cases_come_only_after_the_base_entries(self):
+        # D3 (FR10, FR11): the order of the five blocks depends on merge
+        # order, so this holds whichever of them are present. No label below
+        # the base length cites one of the seven findings, the base entries
+        # are unchanged, and each case of task0001 is found by its label and
+        # command text after them.
+        cases = case_commands()
+        self.assertGreaterEqual(len(cases), DEFERRED_BASE_CASE_COUNT)
+        for index, (_want, label, _cmd) in enumerate(cases[:DEFERRED_BASE_CASE_COUNT]):
+            for stable_id in DEFERRED_STABLE_IDS:
+                self.assertNotIn(stable_id, label, msg="index %d" % index)
+        digest = hashlib.sha256(
+            json.dumps(cases[:DEFERRED_BASE_CASE_COUNT], ensure_ascii=False).encode(
+                "utf-8"
+            )
+        ).hexdigest()
+        self.assertEqual(digest, DEFERRED_BASE_ENTRIES_DIGEST)
+        located = []
+        for number, (form, _opener) in enumerate(TAIL_SOURCE_FORMS, 1):
+            with self.subTest(form=form):
+                found = [
+                    index
+                    for index, (want, label, cmd) in enumerate(cases)
+                    if cmd == form
+                    and want == "deny"
+                    and label.startswith("%s%d " % (TAIL_SOURCE_CASE_LABEL, number))
+                ]
+                self.assertEqual(len(found), 1)
+                self.assertGreaterEqual(found[0], DEFERRED_BASE_CASE_COUNT)
+                located.append(found[0])
+        self.assertEqual(located, list(range(located[0], located[0] + len(located))))
 
 
 # ---------------------------------------------------------------------------
