@@ -3,19 +3,46 @@ feature: destructive-guard-lexer-round2-residuals
 records:
 - question_id: review.malformed-primary-result
   packet_id: null
-  answered_at: "2026-10-06T15:58:05+09:00"
+  answered_at: '2026-10-06T15:58:05+09:00'
   source: batch-safe-default
   answer_mode: freeform
   selected_option_ids: []
-  freeform: "treat security#0 as failed and dispatch one Claude fallback"
-  normalized_answer: "treat security#0 as failed and dispatch one Claude fallback"
-  resolution_note: "gate: review round 1 security primary (codex) returned findings [] with summary 'codex returned non-JSON output'; options: accept as completed-empty / treat as malformed (failed) + one Claude fallback; choice: failed + fallback (review-phase.md R2b malformed-result rule, the underlying Codex output was unparseable); codex_consulted: false; opus_escalation: false"
+  freeform: treat security#0 as failed and dispatch one Claude fallback
+  normalized_answer: treat security#0 as failed and dispatch one Claude fallback
+  resolution_note: 'gate: review round 1 security primary (codex) returned findings [] with summary ''codex returned non-JSON output''; options: accept as completed-empty / treat as malformed (failed) + one Claude fallback; choice: failed + fallback (review-phase.md R2b malformed-result rule, the underlying Codex output was unparseable); codex_consulted: false; opus_escalation: false'
 - question_id: review.auto-fix-judgment
   packet_id: null
-  answered_at: "2026-10-06T15:58:05+09:00"
+  answered_at: '2026-10-06T15:58:05+09:00'
   source: batch-codex-consultation
   answer_mode: freeform
   selected_option_ids: []
-  freeform: "B: skip auto-fix for all 4 high findings and route them to batch rework"
-  normalized_answer: "skip auto-fix (1baa909f9b288847, 19edf404b5cbeb2b, 48e1f462b0dd164f, 956849b341a5150b); batch rework"
-  resolution_note: "gate: review.auto-fix-judgment round 1 (4 prose high findings on em-workflow/hooks/destructive-guard.py); options: A apply as-is via single-file review-editor / B skip all and route to batch rework (TDD, cases first) / C security to B, architecture to A; choice: B; not chosen: A, C; key points: the repo rule .claude/rules/hook-tests.md requires adding deny cases to destructive-guard-cases.json before the fix and running the tests in the same change, which the single-file review-editor cannot do (it also cannot rewrite test_close_line_is_the_delimiter_with_optional_blanks_only); apply-as-is does not license bypassing that rule; batch review rework (cap 1) is unused; codex_consulted: true; opus_escalation: false"
+  freeform: 'B: skip auto-fix for all 4 high findings and route them to batch rework'
+  normalized_answer: skip auto-fix (1baa909f9b288847, 19edf404b5cbeb2b, 48e1f462b0dd164f, 956849b341a5150b); batch rework
+  resolution_note: 'gate: review.auto-fix-judgment round 1 (4 prose high findings on em-workflow/hooks/destructive-guard.py); options: A apply as-is via single-file review-editor / B skip all and route to batch rework (TDD, cases first) / C security to B, architecture to A; choice: B; not chosen: A, C; key points: the repo rule .claude/rules/hook-tests.md requires adding deny cases to destructive-guard-cases.json before the fix and running the tests in the same change, which the single-file review-editor cannot do (it also cannot rewrite test_close_line_is_the_delimiter_with_optional_blanks_only); apply-as-is does not license bypassing that rule; batch review rework (cap 1) is unused; codex_consulted: true; opus_escalation: false'
+- question_id: review.malformed-primary-result
+  packet_id: null
+  answered_at: '2026-10-06T17:21:21+09:00'
+  answer_mode: freeform
+  selected_option_ids: &id001 []
+  source: batch-safe-default
+  freeform: treat security#0 and comprehensive#0 as failed and dispatch one Claude fallback each
+  normalized_answer: treat security#0 and comprehensive#0 as failed and dispatch one Claude fallback each
+  resolution_note: 'gate: review round 2 security / comprehensive primaries (codex) returned findings [] with summary ''codex returned non-JSON output''; options: accept as completed-empty / treat as malformed (failed) + one Claude fallback; choice: failed + fallback (same as round 1, review-phase.md R2b malformed-result rule); codex_consulted: false; opus_escalation: false'
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-10-06T17:21:21+09:00'
+  answer_mode: freeform
+  selected_option_ids: *id001
+  source: batch-codex-consultation
+  freeform: 'B: skip auto-fix for all 5 high findings; defer at the batch review rework cap; file follow-up tasks; state unresolved bypasses in the PR'
+  normalized_answer: skip auto-fix (5753be9288beab27, 52bfa0f59d1ea852, e959ba60bde865a4, e25427e2a8b1dddf, 2b52be5874de85f4); deferred at rework cap
+  resolution_note: 'gate: review.auto-fix-judgment round 2 (5 prose high findings on em-workflow/hooks/destructive-guard.py, 2 of them deny->allow regressions); options: A apply as-is via single-file review-editor for all 5 / B skip all and defer at the rework cap, file follow-ups, disclose in PR / C apply only the 2 regressions, defer the rest; choice: B; not chosen: A, C; key points: A and C violate .claude/rules/hook-tests.md (deny cases must be added before the fix and tests run in the same change), and verify cannot repair the ordering violation; narrowing to the 2 regressions keeps the same problem; B leaves the 5 highs unresolved, so the branch must not be treated as safe — disclose them in the unmerged PR and hand off as follow-up tasks rather than add unverified lexer edits; codex_consulted: true; opus_escalation: false'
+- question_id: review.residual-critical-high
+  packet_id: null
+  answered_at: '2026-10-06T17:21:21+09:00'
+  answer_mode: freeform
+  selected_option_ids: *id001
+  source: batch-safe-default
+  freeform: 'batch.review_rework_count already 1 (cap 1): mark residual highs deferred and complete the review step'
+  normalized_answer: 'deferred: 5753be9288beab27, 52bfa0f59d1ea852, e959ba60bde865a4, e25427e2a8b1dddf, 2b52be5874de85f4'
+  resolution_note: 'gate: review.residual-critical-high round 2; batch-mode.md Non-packet gates: auto-rework once, at cap mark residuals deferred with reason "batch mode: rework cap reached"; cap reached (review_rework_count=1); codex_consulted: false; opus_escalation: false'
