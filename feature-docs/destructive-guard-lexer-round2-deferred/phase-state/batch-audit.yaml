@@ -1,0 +1,90 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-deferred
+records:
+- question_id: create-spec.requirement-clarification
+  packet_id: null
+  answered_at: '2026-10-06T20:33:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 A / Q2 A / Q3 A / Q4 A
+  normalized_answer: 'Q1 c8c16caba82d6238: consolidate the tail-open predicate only, no _lex_pass split
+    (A3). Q2 52bfa0f59d1ea852: stop opening ${ / $(( / $[ / (( / case in the tail, not an ask (A4); also
+    apply to _shape_leading() case state. Q3 1fcae1f76f2a20f0: model ${ cmd; } / ${| cmd; } as command
+    substitution closed by a reserved-word }, update unittest expectations, keep cases.json (A7/A8); extraction
+    must cover unclosed bodies and the | offset. Q4 e959ba60bde865a4 / aa735aa95be36542: \n-only line
+    boundary and space/tab-only blanks across the lexer, including _tokenize_marked() in both modes.'
+  resolution_note: 'gate: orchestrator-raised clarification of four analyst assumptions (A3, A4, A7/A8,
+    FR3/FR6 approach) requested by the launch instruction to consult Codex on unclear points; options:
+    Q1 A consolidate predicate / B also split _lex_pass / C local fixes only; Q2 A do not open in tail
+    / B ask on unreadable delimiter; Q3 A model funsub as command substitution / B ask on ${ +blank; Q4
+    A \n-only boundaries and space/tab blanks / B ask on any such char; choice: A for all four; not chosen:
+    Q1 B,C; Q2 B; Q3 B; Q4 B; key points: Q1 splitting while fixing widens verification (state restore
+    at :1176); Q2 B turns cases.json FR4.1/FR4.2 deny into ask, and case state is also kept in _shape_leading()
+    (:6056); Q3 A matches the bash manual and reaches the existing body inspection, but extraction (:3995)
+    must handle unclosed bodies and the ${| offset; Q4 A matches bash blank/line definitions, B would
+    ask on ordinary text; Codex verified ${ printf SAFE; } / ${|REPLY=SAFE; } / x\r# behaviour with bash;
+    codex_consulted: true (harness codex, 1 turn); opus_escalation: false'
+- question_id: create-plan.plan-clarification
+  packet_id: null
+  answered_at: '2026-10-06T21:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 A / Q2 A (scoped)
+  normalized_answer: 'Q1 IMPLEMENTATION.md D4: in the tail, refuse only the parameter form of ${; keep
+    opening the command form (${ followed by space/tab/newline/|) like $( per SPEC F2. Q2 task0004: disregard
+    a trailing \r only when matching destructive rules; the safe-delete exception (e.g. dist / node_modules
+    targets) must use the original word, so `dist\r` is not treated as `dist`.'
+  resolution_note: 'gate: orchestrator-raised clarification of two planner judgments (D4, task0004 trailing-\r
+    rule) requested by the launch instruction to consult Codex on unclear points; options: Q1 A open command-form
+    ${ in tail / B refuse every ${ in tail literally; Q2 A ignore trailing \r for destructive matching
+    / B ask on any word containing \r / C nothing special; choice: Q1 A, Q2 A limited to destructive-rule
+    matching; not chosen: Q1 B, Q2 B, C; key points: Q1 B makes the funsub body arguments of the preceding
+    command and hides a command bash runs (consistent with FR7 and F2, SPEC.md:67/:182); FR2 should be
+    read with the command-form exception; Q2 B turns harmless `echo hi\r` into ask (deny in batch, destructive-guard.py:384);
+    C flips `git reset --hard\r` to allow (:6425); caveat: do not apply trailing-\r stripping to the safe-delete
+    exception check (:6581) — carry this to the task0004 implementer and reviewer; codex_consulted: true
+    (harness codex, 1 turn); opus_escalation: false'
+- question_id: review.reviewer-result-classification
+  packet_id: null
+  answered_at: '2026-10-08T01:30:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 B / Q2 C
+  normalized_answer: 'Q1 round 2 security#0 / comprehensive#0 (codex) returned findings [] with summary
+    "codex returned non-JSON output" after ~561.8s (codex-cli.yaml timeout 540, exit 124): treat as a
+    harness-level failure (status failed) and dispatch one Claude fallback each. Q2 architecture#0 / spec#0
+    / performance#0 (litellm muse-spark-contributor) skipped with review_data_too_large: keep the skip,
+    no fallback.'
+  resolution_note: 'gate: orchestrator-raised classification of review round 2 primary reviewer results
+    (Phase R2b), requested by the launch instruction to consult Codex on unclear points; options: Q1 A
+    completed empty review / B harness failure + Claude fallback; Q2 C keep non-retryable skip / D Claude
+    fallback anyway; choice: Q1 B, Q2 C; not chosen: Q1 A, Q2 D; key points: Codex first chose Q1 A (R2b
+    schema validity is the only test), then corrected to B once told both runs exceeded the 540s wrapper
+    timeout — an empty result wrapped after a failed launch is not evidence of a completed review (R2b
+    harness-level failure paragraph); Q2 review-protocol.md marks review_data_too_large non-retryable
+    and R2b keeps non-retryable skips; codex_consulted: true (harness codex, 2 turns); opus_escalation:
+    false; discussion also recorded as a comment on the Notion task page'
+- question_id: review.auto-fix-candidate-selection
+  packet_id: null
+  answered_at: '2026-10-08T03:00:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 A / Q2 E
+  normalized_answer: 'Q1 round 2 loop 2: re-reports that explicitly name an aborted loop-1 finding (94fa8bd5577541a8
+    = 44201ccaa437da29, 16514e6cb0bce378 = f05a4f1dad26689d, b5475acfc32b97a4 = a124a65876b37b76) join
+    aborted_stable_ids and are not auto-fix candidates. Q2 architecture findings f0bf5f6cc02b1062 (Tok
+    dual view) and 6e29701c65fd651f (_lex_pass god function) are not dispatched to the editor; they stay
+    unresolved.'
+  resolution_note: 'gate: orchestrator-raised Phase R4 candidate selection for loop 2 (review.auto-fix-judgment
+    adjacent), requested by the launch instruction to consult Codex on unclear points; options: Q1 A treat
+    re-reports as aborted / B new candidates; Q2 C apply both as-is / D apply Tok only / E skip both; choice:
+    Q1 A, Q2 E; not chosen: Q1 B, Q2 C, D; key points: a changed title or line does not justify retrying
+    a fix that regressed deny cases or needed a redesign, and the candidate set should shrink monotonically;
+    the _lex_pass split contradicts create-spec decision A3, and the Tok contract change spans destructive
+    matching and the safe-delete exception, so neither is a minimal single-file unattended fix; batch
+    Apply as-is does not lift the editor constraints; codex_consulted: true (harness codex, 1 turn);
+    opus_escalation: false; also recorded as a comment on the Notion task page'
