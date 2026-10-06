@@ -2233,9 +2233,22 @@ def _lex_pass(
                 if stack[k].kind == "backtick":
                     discard_bt[0] = stack[k]
                     break
-        del hd_pending[:]
-        del hd_seqs[:]
-        state.hd_trigger = None
+        cut = 0
+        if discard_bt[0] is not None:
+            # Inside a backtick: bash reads its content only when it expands
+            # it, so the syntax error does not discard the outer line. Only
+            # the operators registered inside the extent are dropped; the
+            # ones registered before the backtick stay.
+            above = sum(
+                1 for f in stack[k:] if f.kind not in ("group", "array")
+            )
+            ridx = len(rseq) - above
+            if 0 <= ridx < len(rseq):
+                cut = bisect.bisect_left(hd_seqs, rseq[ridx])
+        del hd_pending[cut:]
+        del hd_seqs[cut:]
+        if not hd_pending:
+            state.hd_trigger = None
         set_limit()
 
     def end_discard():
@@ -5538,7 +5551,7 @@ def _substitution_body_range(chunk, span):
     is queued as its own chunk, like the body of a `$( … )`."""
     start, end = span
     if chunk[start] in "<>":
-        return start + 2, end - 1
+        return _skip_continuations(chunk, start + 1) + 1, end - 1
     return start, end
 
 
@@ -6907,7 +6920,11 @@ def _split_fused_closer_redirects(toks):
     """
     out = []
     for t in toks:
-        if not (getattr(t, "is_operator", False) and len(t) > 1 and t[0] == ")"):
+        if not (
+            getattr(t, "is_operator", False)
+            and len(t) > 1
+            and (t[0] == ")" or (t[0] == "(" and t != FUNC_SIGNATURE and t.lstrip("(")))
+        ):
             out.append(t)
             continue
         rest = t
