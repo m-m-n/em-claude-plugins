@@ -1,10 +1,20 @@
 task_id: task0004
-baseline_failures: []          # python3 -m unittest discover -s tests: 8422 tests OK (skipped=1); run-destructive-guard.py 628/628
-final_failures: []             # re-executed after implementation: 8433 tests OK (skipped=1); run-destructive-guard.py 631/631; tests.test_destructive_guard_lexer_agreement 89 tests OK
+# Conflict cycle 1 (parent-side adoption of em-workflow/hooks/tests/destructive-guard-cases.json): the suite was
+# re-run right after the adoption, before this task's case block was re-appended. Its only failures are this
+# task's own placement test, whose three subtests look for the FR5 cases the adoption had just dropped from the
+# file. The original baseline (before any change) was empty: 8422 tests OK, run-destructive-guard.py 628/628.
+baseline_failures:
+  - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_sit_in_the_case_table_after_the_base_entries (subtests L28, L100, S40)
+# Re-executed after the cases were re-appended on the updated parent: python3 -m unittest discover -s tests
+# 8436 tests OK (skipped=1); run-destructive-guard.py 637/637; tests.test_destructive_guard_lexer_agreement 92 tests OK.
+final_failures: []
 acceptance_tests:
   AC-1:
     # History check (case-table commit 604cc012 precedes every commit that changes
     # em-workflow/hooks/destructive-guard.py); the executable part is the runner.
+    # After the conflict cycle the block was appended again, after the parent's six
+    # round 2 cases, in the "re-implement on updated parent" commit; the hook change
+    # needed no re-application (it merged without conflict).
     tests:
       - em-workflow/hooks/tests/run-destructive-guard.py (cases labelled 29bbf9032dd762a0 round2-residuals FR5.1, FR5.2, FR5.3)
       - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_sit_in_the_case_table_after_the_base_entries
