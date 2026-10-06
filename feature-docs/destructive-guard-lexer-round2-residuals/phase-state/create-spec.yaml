@@ -1,0 +1,31 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-residuals
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 7e65c2b34e365cb01acde34a0ad98b1ac51dbda5
+last_input_digest: sha256:5b0ab3d836d2e1754ba8c80298aa272a661d7cc0ce4b22702880fac7226e9ba7
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: destructive-guard-lexer-round2-residuals'
+    answered_at: '2026-10-06T13:56:18+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:5b0ab3d836d2e1754ba8c80298aa272a661d7cc0ce4b22702880fac7226e9ba7
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
