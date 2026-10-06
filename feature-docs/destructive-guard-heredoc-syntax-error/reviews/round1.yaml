@@ -1,0 +1,461 @@
+round: 1
+executed_at: '2026-10-06T10:20:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: f9c3395f4bf231cbddfe7fbc20e73507ea40fdba
+  head_commit: 1d92e685
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-heredoc-syntax-error/task0001.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: security#loop3
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop3
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop3
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+findings:
+- stable_id: 5ffccd24040ce1a6
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1132
+  title: 捨てた行で閉じない展開を再走査の tail_start に回し、後続行の判定が止まって deny が allow に変わる
+  description: 'end_discard() が捨てた行の未閉鎖展開を discard_unclosed に積み、再走査の tail_start が後続行の << と begin_discard を止める。`x=( <<A ${\n: }\nx=( <<B # "\ngit reset --hard HEAD\n"` が base の deny から allow に変わる回帰。'
+  suggestion: 捨てた行で閉じなかった展開の効果をその物理行に限る。
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: fixed
+  resolution_reason: loop 1 で editor が skipped（abort）。loop 2 の d75906fa の修正（配列直下の << 分岐を tail_start から独立）で再現入力 3 形が deny に戻ったことを orchestrator が確認
+- stable_id: e7c93a4306bf3eaa
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 951
+  title: 'TM-1: 先頭にリダイレクトがあると後ろの配列代入を認識せず、回避が残る'
+  description: '`</dev/null x=( <<EOF\ngit reset --hard HEAD\nEOF` が allow。リダイレクト先をコマンド語として読み代入位置を失う。'
+  suggestion: リダイレクト先を通常のコマンド語と区別し、先頭のリダイレクトの後も代入位置を保つ。
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1（redir フラグ）
+- stable_id: b6d33914596a191f
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1027
+  title: 'TM-1: 引用を含む添字や `=` と `(` の間の行継続がある配列代入を配列と認識せず、回避が残る'
+  description: '`x["0"]=( <<EOF` と `x=\\\n( <<EOF` が allow。代入語の判定が平文の語の完全一致に限られる。'
+  suggestion: 引用を含む添字と行継続を解析し、語全体を見て array 状態に移る。
+  sources:
+  - codex:security
+  confidence: 92
+  resolution: unresolved
+  resolution_reason: loop 1 の editor 修正が __slots__ 漏れでフック全体を例外終了させたため orchestrator がバックアップから復元して abort。後続の 0fbb436715caf22a / 64b1a5346e97262c / c630bfb6a19f88a2 に引き継ぎ
+- stable_id: 878389d3cdec2d53
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1304
+  title: 配列内の裸の ( で配列状態を積んで改行後も保持し、次の行の本物のヒアドキュメントを本文として扱わない
+  description: '`x=( (a\ncat <<''EOF''\ngit reset --hard HEAD\nEOF` が base の allow から deny に変わる誤検知。'
+  suggestion: 配列直下の裸の ( で begin_discard() を呼ぶ。
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: fixed
+  resolution_reason: loop 2 の 5b0deff7478264d1 の修正で allow に戻ったことを orchestrator が確認
+- stable_id: d476764c694786d1
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1276
+  title: 配列直下の ; | ( などの構文エラーでも bash は行を捨てるが、ガードは << だけを契機にするため、閉じた配列の後のヒアドキュメントで回避できる
+  description: '`x=( ; ); cat <<EOF\n...`、`x=( a | b ); cat <<EOF\n...` 等が allow（base でも allow）。evaluator 自身の点検による所見。SPEC A1 より範囲が広い。'
+  suggestion: 配列直下で語以外のトークンを読んだ時点で begin_discard() を呼ぶ。取り込むかは人の判断を要する。
+  sources:
+  - claude:evaluator
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: sources が evaluator のみのため batch では auto-fix の対象外（skip this site）
+- stable_id: 18bc373d0728880c
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 847
+  title: _lex_pass() に配列の文法と、捨てた行からの回復処理を混在させている
+  description: asg / decl / arr_end、array フレーム、begin_discard / end_discard が _lex_pass() に加わり、各分岐に例外が散らばる。
+  suggestion: 配列位置の追跡と捨てた行からの回復をヘルパーに切り出す。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外。loop 1/2 の再レビューで high として再報告（59900360e187cfa9 / 2f1dc9ffeb039d43）、editor は構造変更として skipped
+- stable_id: cab21999b57ce304
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 941
+  title: 'TM-1: 番号付きリダイレクトで修正後もガードを回避できる'
+  description: '`2>&1 x=( <<EOF\n...` が allow。演算子の前の番号をコマンド語として処理し代入位置を失う。'
+  suggestion: リダイレクト演算子に直結する番号もリダイレクト構文として扱う。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2 の 2d105af70e539bdd の修正（同じ欠陥）で deny になったことを orchestrator が確認
+- stable_id: 2d105af70e539bdd
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1473
+  title: 番号付き / 変数名形式のファイル記述子で配列の検出を回避できる
+  description: '`2</dev/null x=( <<EOF` と `{fd}>/dev/null x=( <<EOF` が allow。'
+  suggestion: リダイレクト直前の番号と {NAME} をファイル記述子として認識する。
+  sources:
+  - codex:comprehensive
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（番号）と loop 3（{NAME}）
+- stable_id: 0fbb436715caf22a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1031
+  title: 'TM-1: 引用符や行継続を含む配列代入でガードを回避できる'
+  description: '`x[''0'']=( <<EOF` と `x=\\\n( <<EOF` が allow。'
+  suggestion: 代入語全体を認識する。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 2 で editor が skipped（abort）
+- stable_id: d75906fa67c424f5
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1408
+  title: 'TM-4: 再解析後に構文エラー行の状態解除が省略される'
+  description: '`x=( <<A ${\nx=( <<B \\\ngit reset --hard HEAD` が allow。tail_start 条件が 2 行目の begin_discard() を抑止する。'
+  suggestion: 配列直下の構文エラー行の処理を tail_start から独立させる。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: ecb0ee96c7343101
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1138
+  title: 破棄行の未閉鎖展開が後続行の破棄処理を無効化する
+  description: 5ffccd24040ce1a6 と同じ欠陥の再報告。
+  suggestion: 破棄行で切断した展開の再走査範囲をその行に限定する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2 で editor は skipped だが、d75906fa67c424f5 の修正で再現入力が deny になったことを orchestrator が確認
+- stable_id: 5b0deff7478264d1
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1316
+  title: 配列内の不正な括弧を入れ子として扱い後続行を本文に隠す
+  description: '`x=( (a) ) <<EOF\ngit reset --hard HEAD\nEOF` が allow。'
+  suggestion: 配列直下の裸の ( で begin_discard() を呼ぶ。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2。ただしこの修正が extglob の正当な括弧も捨てる回帰を生んだ（c231452e02deec9b）
+- stable_id: 4afc6efbaed6b84a
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 931
+  title: Redirect-target state leaks across frame boundaries
+  description: redir フラグが ( / (( の push で解除されない。
+  suggestion: push 時に親の redir を解除する。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 59900360e187cfa9
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 848
+  title: 'God-function expansion: _lex_pass absorbs array grammar and discard lifecycle'
+  description: 18bc373d0728880c の再報告。
+  suggestion: 状態オブジェクトへの切り出し。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 2 で editor が構造変更として skipped（abort）
+- stable_id: 2f1dc9ffeb039d43
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 916
+  title: God-function expansion with shotgun state resets in lexer
+  description: f.cmd / f.redir のリセットが各分岐に散らばる。
+  suggestion: 状態オブジェクトへの切り出し。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 3 で editor が構造変更として skipped（abort）。loop 3 後の再レビューでは architecture は所見なし
+- stable_id: 35b1ba95a34deaa7
+  severity: medium
+  category: architecture
+  file: tests/test_destructive_guard_lexer_agreement.py
+  line: 985
+  title: 'Test SSOT drift: agreement suite filters out over-budget inputs'
+  description: all_commands() が LexBudgetExceeded の入力を一致検査から外す。
+  suggestion: 予算超過入力の扱いを明示する。
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: declined
+  resolution_reason: evaluator が false positive と判定（LexBudgetExceeded は run()/statements() が scan-budget の ask に変え、段どうしを比べる出力が無い。E-10 がその ask を固定）
+- stable_id: 64b1a5346e97262c
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1031
+  title: 添字の引用符と行継続で配列の検出を回避できる
+  description: '`x["0"]=1 y=( <<EOF` 等が allow。'
+  suggestion: 代入語全体とそれに続く括弧を判別する。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 3 で部分修正を適用したが、loop 3 後の再レビューで効いていないと判明（c630bfb6a19f88a2）
+- stable_id: 20fad22829d0ab66
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1646
+  title: 破棄した行の展開が後続のヒアドキュメントを誤拒否させる
+  description: '`x=( <<A ${\ncat <<''EOF''\ngit reset --hard HEAD\n}\nEOF` が deny（bash では本文）。誤拒否。'
+  suggestion: 破棄行で終了した展開を入力末尾まで未閉鎖の展開と別に管理する。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: 7261e07cafedcae5
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1411
+  title: 配列添字のビットシフトを構文エラーと誤認する
+  description: '`x=( [1<<2]=foo ); cat <<''EOF''\n...` が base の allow から deny。'
+  suggestion: 配列要素の添字を算術式として追跡する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 3 後の再レビューで high に格上げ（4b5de463a6e5e162）
+- stable_id: fd4b0e41e037d221
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 768
+  title: 'TM-1: arrays after eval / let / alias are not recognized, so the bypass is still allowed'
+  description: eval / let / alias の引数の NAME=( も bash は複合代入として読み、<< で行を捨てて次の行を実行する。フックは allow（base と同じ）。
+  suggestion: eval / let / alias を宣言組み込みの集合に加え、deny ケースを足す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop cap 到達後の残存
+- stable_id: c630bfb6a19f88a2
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1044
+  title: 'Prior finding 64b1a5346e97262c not fixed: an array whose subscript is quoted or expanded is still allowed'
+  description: 'loop 3 の判定 `text[end - 1 : end] == "="` は最初の平文断片の末尾 `[` を見るため常に偽。`x["0"]=( <<EOF`、`x[$i]=(`、`x[''k'']=(`、`x[a b]=(` が allow（base と同じ）。'
+  suggestion: bash と同じ規則で対応する ] を探し、]= / ]+= の直後の ( で arr_end を立てる。見つからないときは ask に倒す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop cap 到達後の残存
+- stable_id: c069888e6fdcbcd8
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1051
+  title: 'Remainder of prior finding 64b1a5346e97262c: a backslash-newline inside the assignment word or the builtin name hides the array'
+  description: '`x=\\<newline>( <<EOF`、`x\\<newline>=( <<EOF`、`decl\\<newline>are x=( <<EOF` が allow（base と同じ）。'
+  suggestion: 語の判定でバックスラッシュ改行を取り除いて読むか、ask に倒す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix 対象外
+- stable_id: c231452e02deec9b
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1327
+  title: 有効な拡張パターンの括弧で行を破棄し、破壊的な命令を許可する
+  description: loop 2 の裸の ( の修正が extglob の `@(foo)` も捨てるため、`shopt -s extglob\nx=(@(foo)); cat <<'A'\ncat <<'true'\nA\ngit reset --hard HEAD\ntrue` が base の deny から allow に変わる回帰（bash では git の行が実行される）。同時に `x=( @(foo|bar) ); cat <<"EOF"` の誤拒否も生む。
+  suggestion: 拡張パターンの括弧を区別し、構文エラーとなる括弧だけで行を捨てる。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop cap 到達後の残存。deny から allow への回帰
+- stable_id: 4b5de463a6e5e162
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1422
+  title: 算術添字のシフト演算子で行を破棄し、破壊的な命令を許可する
+  description: '`x=([1<<2]=foo); cat <<''A''\ncat <<''true''\nA\ngit reset --hard HEAD\ntrue` が base の deny から allow に変わる回帰（bash では git の行が実行される）。添字内の << を配列直下の構文エラーと誤認する。'
+  suggestion: 配列要素の算術添字を追跡し、その内側の << をシフト演算子として扱う。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop cap 到達後の残存。deny から allow への回帰
+evaluation:
+  round_summary: round 1（diff, cross_validation=true）。高 4 件（うち 1 件は evaluator 発）と中 2 件。reviewer の 4 件はすべて、base_commit と変更後のフックの判定、および bash 5.3.9（git を printf に置き換え）で再現した。tail_start の所見は deny から allow への回帰で、NFR3 / FR6 に反する。security = findings（配列直下の ; | ( を << 以外で扱っていない抜け道を evaluator が独自に検出）。comprehensive = corroborated。architecture = 1 件目は high から medium に下げ、2 件目は false positive として除外。spec = reviewer は所見なしだが tail_start と裸の ( の所見が NFR3 / FR3 の趣旨違反にあたる。cases.json は追記のみで既存の deny / ask は減っていない。run-destructive-guard.py 669/669、lexer agreement 78 件 OK。reviewer の出力に注入の試みは無かった。
+  recommended_action: auto_fix
+  action_rationale: いずれも destructive-guard.py の字句解析の中で直せる局所的な修正で、再現入力と期待する判定がそろっている。; | の所見は evaluator 発で SPEC A1 の範囲の境界にかかるため人の承認が要る。
+dismissed_sites:
+- file: tests/test_destructive_guard_lexer_agreement.py
+  line: 985
+  run_id: architecture#0
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 8
+  termination: loop-cap
+  notes: 'loop 1: e7c93a43 applied / 5ffccd24 skipped / b6d33914 applied だが __slots__ 漏れでフックが例外終了したため orchestrator がバックアップから復元し abort。loop 2: 2d105af7, 4afc6efb, 5b0deff7, d75906fa applied / 0fbb4367, 59900360, ecb0ee96 skipped / cab21999 は同 loop の 2d105af7 と同じ欠陥のため次 loop へ defer。loop 3: 2d105af7({NAME}), 64b1a534(部分) applied / 2f1dc9ff skipped。各 editor の後に orchestrator が run-destructive-guard.py（669/669）と lexer agreement テスト（OK）を実行して確認。security#loop3 は codex の出力が JSON でなかったため Claude fallback を 1 回 dispatch。'
+residual_critical_high: 4
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-heredoc-syntax-error-20261006T011713Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+unreviewed_perspectives: []

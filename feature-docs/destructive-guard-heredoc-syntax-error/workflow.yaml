@@ -1,0 +1,325 @@
+schema_version: 1
+feature: destructive-guard-heredoc-syntax-error
+created: '2026-10-06'
+base_branch: main
+goal: '# destructive-guard: bash が構文エラーで捨てる行の << をヒアドキュメントと読み、次の行の破壊的コマンドを素通りさせる
+
+
+  Notion タスク: https://www.notion.so/3f03509ec8ee817c89dfd4ea5d181743 （種別: セキュリティ）
+
+
+  ## 脆弱性の概要
+
+  `em-workflow/hooks/destructive-guard.py` が、bash が構文エラーで捨てる行の中の `<<` をヒアドキュメント演算子と読み、続く行を本文として検査から外す。bash は構文エラーの行を捨てて次の行を実行するので、破壊的コマンドが allow のまま実行される。
+
+
+  ## 参照
+
+  - CVE / GHSA ID: 該当なし
+
+  - severity: medium
+
+  - 現在のバージョン: em-workflow（feature `destructive-guard-unified-lexer` の integration ブランチ。現在は main にマージ済み）
+
+  - 修正済みバージョン: 無し
+
+
+  ## 攻撃シナリオ
+
+  エージェントが生成する Bash コマンドが `x=( <<EOF` の行の後ろに `rm -rf ...` の行を置き、`EOF` の行で閉じる形をとると、フックは allow を返し、bash は rm を実行する。基準コミット（e69f212）のフックでも allow で、退行ではない。
+
+
+  ## 影響範囲
+
+  無人実行（em-workflow の batch）を含め、hook が allow を返すので rm -rf や git reset --hard が確認なしで実行される。
+
+
+  ## 完了の定義
+
+  - [ ] 攻撃シナリオが成立しない
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  - [ ] 上の形を deny ケースとして `em-workflow/hooks/tests/destructive-guard-cases.json` に足す
+
+  - [ ] 既存の deny / ask ケースが 1 件も消えていない
+
+
+  ## 該当箇所
+
+  - `em-workflow/hooks/destructive-guard.py` の `lex_shell()` / `_lex_pass()`（ヒアドキュメント演算子の登録）
+
+  - 詳細は `feature-docs/destructive-guard-unified-lexer/reviews/round1.yaml` の `evaluation.round_summary`
+
+  '
+parent_branch: em-workflow/destructive-guard-heredoc-syntax-error/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.91
+      '2': 0.09
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.9400000000000001
+      '2': 0.06
+      '3': 0.0
+  at: '2026-10-06T07:47:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: fa3aeab6313a86f6a5398ec0fe87fd46aace6239
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 画面を持たない PreToolUse フックの字句解析の修正
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 1341654445f9f1b71b4bb9f2c66c8a70ac43242a
+- id: implement
+  status: completed
+  failed_kind: null
+  base_commit: f9c3395f4bf231cbddfe7fbc20e73507ea40fdba
+  completed_at_commit: f2d2e4c2468b40d222f2ec48e35ee08947c18df1
+- id: review
+  status: completed
+  completed_at_commit: 617f73cb2a6280f13865ccb1a8e6d29ba5be2d25
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 9dc3c4124bb81b890f9afc98dfe3440eddfe522b
+- id: retrospect
+  status: completed
+  completed_at_commit: 999539f9addefe7f6386390d19760ae32466694b
+tasks:
+  task0001:
+    title: Do not register heredoc operators written directly in array compound assignments
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/destructive-guard-heredoc-syntax-error/task0001
+    notes: null
+  task0002:
+    title: Complete array-context recognition and keep valid array contents from discarding the line
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/destructive-guard-heredoc-syntax-error/task0002
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - fd4b0e41e037d221
+      - c630bfb6a19f88a2
+      - c231452e02deec9b
+      - 4b5de463a6e5e162
+      review_round: 1
+review:
+  status: completed
+  rounds_completed: 2
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    security: findings
+    comprehensive: findings
+    architecture: findings
+    spec: clean
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 配列の複合代入の括弧内にある `<<` を演算子として登録しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+  FR2:
+    title: 同じ行で先に登録された演算子にも本文を取らせない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+  FR3:
+    title: 配列エラーの後に配列状態を解除する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-4
+    - TS-12
+  FR4:
+    title: 置換・引用の中や閉じた配列の後にある `<<` は従来どおり扱う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-6
+    - TS-7
+  FR5:
+    title: 再発防止ケースを cases.json に追加する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+  FR6:
+    title: 既存ケースを保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
+  NFR1:
+    title: 判定を下す場所を 1 か所に保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
+  NFR2:
+    title: 作業量の上限を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
+  NFR3:
+    title: 判定は厳しくなる方向にだけ動かす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
+    - TS-10
+    - TS-11
+  NFR4:
+    title: テストを走らせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
