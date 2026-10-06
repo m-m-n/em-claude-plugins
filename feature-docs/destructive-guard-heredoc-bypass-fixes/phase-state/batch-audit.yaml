@@ -1,0 +1,12 @@
+schema_version: 1
+feature: destructive-guard-heredoc-bypass-fixes
+records:
+- question_id: rework.validator-scenario-id-format
+  packet_id: null
+  answered_at: '2026-10-06T22:05:00+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'A: apply the rework-planner patch despite the remaining validator errors'
+  normalized_answer: apply the rework-planner patch; record the validator ID-format mismatch
+  resolution_note: 'gate: unlisted orchestrator decision after validate-worker-output.py rejected the rework-planner result (review round 1 rework); options: A apply with audit note / B renumber new rows to TS-n / C stop fail-closed; choice: A; codex_consulted: true; opus_escalation: not run; key points: the only remaining errors were "new_scenarios TS13/TS14/TS15 is not a new VERIFICATION.md scenario", caused by the validator''s _TS_ID_RE = TS-\d+ while this feature''s VERIFICATION.md and workflow.yaml use TSn; the diff against HEAD shows TS13-TS15 rows newly added and the same IDs are in requirements_patch tests_append; B would mix ID formats, C is excessive once cause and fact are confirmed; Codex recommends filing the regex/convention mismatch as a separate follow-up. One earlier error (task0005 Files bullet with two backticked tokens) was fixed by the rework-planner before this decision.'

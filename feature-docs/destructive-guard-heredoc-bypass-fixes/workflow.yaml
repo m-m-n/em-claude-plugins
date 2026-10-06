@@ -115,7 +115,7 @@ workflow:
   status: completed
   completed_at_commit: 3f28b2c0c92a0f09c33c9bad9212ce8ee87d6e9e
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 0189677be4c7d5b4a7c93ec7de083d1d83c0409c
   failed_kind: null
   base_commit: d1f3077dbfce58a59f8289c42e3e2b0089cac229
@@ -191,6 +191,56 @@ tasks:
     - NFR5
     status: merged
     branch: em-workflow/destructive-guard-heredoc-bypass-fixes/task0003
+  task0004:
+    title: "Fail closed on an unreadable here-document delimiter word"
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    provenance:
+      source: review
+      source_ids:
+      - '267e8e9657658f40'
+      - '643305535d3c874d'
+      - '1f64cb294e6ffe41'
+      - 'd9c0ee86072979fe'
+      review_round: 1
+  task0005:
+    title: "One owner for extglob parse-unit recording, independent of call path and lexer cache"
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - tests/test_destructive_guard_extglob_units.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    provenance:
+      source: review
+      source_ids:
+      - '730712dde1bd3462'
+      review_round: 1
 review:
   status: pending
   plan:
@@ -254,9 +304,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0003
+    - task0005
     tests:
     - TS5
     - TS7
+    - TS15
   FR5:
     title: 再現入力をケース表に足す
     status: ok
@@ -277,10 +329,14 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
+    - task0005
     tests:
     - TS6
     - TS7
     - TS9
+    - TS13
+    - TS14
   NFR2:
     title: 作業量の上限
     status: ok
@@ -289,6 +345,8 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
+    - task0005
     tests:
     - TS8
   NFR3:
@@ -300,6 +358,8 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
+    - task0005
     tests:
     - TS8
   NFR4:
@@ -311,6 +371,8 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
+    - task0005
     tests:
     - TS10
   NFR5:
@@ -322,10 +384,12 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
+    - task0005
     tests:
     - TS11
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}

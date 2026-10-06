@@ -33,6 +33,9 @@ is a newline. "Base" means `workflow.implement.base_commit`.
 | TS10 | (NFR4) Every import in `em-workflow/hooks/destructive-guard.py`, and in any test file the feature changed, is a Python standard-library module | pass | Static |
 | TS11 | (NFR5) The diff from Base to the integrated tip contains no change to `em-workflow/.claude-plugin/plugin.json` and no change to the em-workflow entry of `.claude-plugin/marketplace.json` | pass | Static |
 | TS12 | (FR1, FR2, FR3) On the integrated tip, run the hook on (a) one TS3 declaration-group input and (b) one TS4 re-parsing-group input (T2 E-1 when TS4 has no entry), each with its command name split by one `{BS-NL}` | deny for both, the same verdict as the unsplit inputs | Integration |
+| TS13 | (NFR1; rework round 1, task0004) Case-table entries: a here-document operator whose delimiter word is `$(x)`, a backquoted span, `$[1]`, `${x}`, `$'x'`, `'a'$'b'`, an unclosed quote, or a word containing `{BS-NL}`, followed by body lines holding a `<<WORD` or an unclosed quote that would hide a destructive line bash 5.3.9 executes; and `cat <<$(x)` followed only by harmless lines and the line `$(x)` | ask or deny for every hiding form (never allow); ask, with the unreadable-delimiter rule, for the harmless form | Unit (case table) |
+| TS14 | (NFR1; rework round 1, task0004) Case-table entries: the reproduction input of every finding recorded as fixed in `reviews/round1.yaml` whose input contains a here-document operator (`<<` not part of `<<<`) | each entry's expected verdict; no entry whose destructive line bash 5.3.9 executes expects allow | Unit (case table) |
+| TS15 | (FR4; rework round 1, task0005) In one process: the map `lex_shell()` returns for the TS5 input, its differing-prefix variant and T2 AC-4.7, fresh vs cached vs after lexing other texts; a repeat judgment and a judgment after pre-lexing every chunk, over those inputs and every case-table entry containing `@(` `!(` `+(` `*(` or `?(`; and the whole case table judged with the lexer cache disabled | identical extended-glob line starts and met fact on every map; identical verdict, met determination and unit count to a first judgment with an empty cache; every entry's expected verdict with the cache disabled | Unit (`tests/test_destructive_guard_extglob_units.py`) |
 
 ### Edge Cases (SPEC.md)
 - [ ] Consecutive `{BS-NL}` inside a word before `=(` — case-table entry, same verdict as without them.
@@ -67,13 +70,13 @@ is a newline. "Base" means `workflow.implement.base_commit`.
 | FR1 | task0001 | TS1, TS2, TS12 |
 | FR2 | task0002 | TS3, TS6, TS12 |
 | FR3 | task0002 | TS4, TS6, TS8, TS12 |
-| FR4 | task0003 | TS5, TS7 |
+| FR4 | task0003, task0005 | TS5, TS7, TS15 |
 | FR5 | task0001, task0002, task0003 | TS9 |
-| NFR1 | task0001, task0002, task0003 | TS6, TS7, TS9 |
-| NFR2 | task0001, task0003 | TS8 |
-| NFR3 | task0001, task0002, task0003 | TS8 |
-| NFR4 | task0001, task0002, task0003 | TS10 |
-| NFR5 | task0001, task0002, task0003 | TS11 |
+| NFR1 | task0001, task0002, task0003, task0004, task0005 | TS6, TS7, TS9, TS13, TS14 |
+| NFR2 | task0001, task0003, task0004, task0005 | TS8 |
+| NFR3 | task0001, task0002, task0003, task0004, task0005 | TS8 |
+| NFR4 | task0001, task0002, task0003, task0004, task0005 | TS10 |
+| NFR5 | task0001, task0002, task0003, task0004, task0005 | TS11 |
 
 ## E2E Testing
 No E2E framework beyond the case-table runner, which workflow.yaml registers
@@ -81,7 +84,7 @@ as `e2e_test_command` and which TS8 already runs. No separate E2E scenario.
 
 ## Manual Testing (E2E Not Possible)
 - [ ] For each new deny entry whose expectation rests on bash executing the
-  destructive line (TS1, TS2, TS3, TS4 forms), confirm on bash 5.3.9 in a
+  destructive line (TS1, TS2, TS3, TS4, TS13, TS14 forms), confirm on bash 5.3.9 in a
   scratch directory, with the destructive line replaced by a harmless marker
   command, that the marker runs. Never run the destructive line itself. When
   the available bash is not 5.3.9, record the version used.
@@ -101,14 +104,19 @@ as `e2e_test_command` and which TS8 already runs. No separate E2E scenario.
   stays allow (TS7), and the unattended downgrade cases pass (TS8).
 - TM-5: lexer work stays within `LEX_WORK_FACTOR` — the existing linearity
   tests pass unchanged (TS8).
+- TM-6: a here-document operator whose delimiter word cannot be read fails
+  closed — TS13 hiding forms are ask or deny, the harmless form is ask, and
+  the round 1 here-document fixes hold (TS14).
+- TM-7: the extglob parse-unit count and the verdict do not depend on the
+  lexer cache or on which stage lexed a chunk first — TS15.
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Test scenarios (TS1–TS12) | 12 | 12 | 0 | 0 |
+| Test scenarios (TS1–TS15) | 15 | 15 | 0 | 0 |
 | Edge cases | 6 | 6 | 0 | 0 |
 | Success criteria (AC1–AC10) | 10 | 10 | 0 | 0 |
 | Performance (NFR2) | 1 | 1 | 0 | 0 |
-| Security (TM-1–TM-5) | 5 | 5 | 0 | 0 |
+| Security (TM-1–TM-7) | 7 | 7 | 0 | 0 |
 | Manual (bash 5.3.9 execution confirmation) | 1 | 0 | 0 | 1 |

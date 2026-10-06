@@ -20,7 +20,7 @@ inputs to the case table.
 |---|---|---|
 | Lexer | Reads the command string word by word: assignment words, builtin names, array and subscript extents, pending here-document bodies, extglob parse units | `word_transition()`, `close_subscript()`, `_count_extglob_units()` and the eval / -c expansion points that feed it |
 | Decision | Turns the lexer's reading into allow / ask / deny, including the downgrade of ask to deny under unattended execution | `decide()` — not modified |
-| Tests | Case table (expected verdict per input) and unit tests comparing lexer stages and checking linearity | case table — append-only; unit-test files — not modified |
+| Tests | Case table (expected verdict per input) and unit tests comparing lexer stages and checking linearity | case table — append-only; existing unit-test files — not modified; task0005 adds one new test module |
 
 Dependency direction: Decision reads Lexer results; tests drive both through
 the hook's existing entry point. No task adds a dependency from the Lexer to
@@ -34,13 +34,15 @@ immediately followed by a newline; `{NL}` is a newline.
 |---|---|---|---|
 | Command-name classification (inside `word_transition()`) | Decides which group the command word of a simple command belongs to: the declaration group (declare, typeset, local, export, readonly), the re-parsing group (eval, let, alias), or neither | Pre: applied to the logical word (next row). Post: group membership is exactly as listed here — no task adds or removes a member; the two groups are distinguishable to every consumer; a command word split by in-word `{BS-NL}` is classified the same as the unsplit word; every consumer reads this one classification and none re-reads the raw command word to decide the group | task0001 (supplies the logical word as its input), task0002 (makes the two groups distinguishable and branches on them) |
 | Logical word and assignment-word judgment (inside `word_transition()`) | For the word being scanned: its leading plain text with every `{BS-NL}` that bash removes as a line continuation skipped, and the judgment whether the word is an assignment word of the form `NAME=`, `NAME+=` or `NAME[` | Pre: accumulated during the existing single scan of the word. Post: the judgment reads the logical word; ARR_END (array start) and SUB_AT (subscript start) are offsets in the original input, never in the logical word; for a word without an in-word `{BS-NL}`, the judgment, ARR_END and SUB_AT are identical to the current behavior | task0001 (produces it), task0002 (consumes the `NAME[` judgment and SUB_AT in builtin arguments) |
-| Case table (`em-workflow/hooks/tests/destructive-guard-cases.json`) | Verdict expectations, one `[expected verdict, label, command]` triple per entry | Append-only: no existing entry is removed, reordered, or has its verdict, label or command changed; each task appends its entries as one contiguous block; every label is unique in the table | task0001, task0002, task0003 |
-| Lexer work bound (`LEX_WORK_FACTOR`) | Keeps the lexer's total work linear in input length | Work a task adds is done inside the existing scan and counted against the existing bound; no task adds a second pass over the input or an uncounted loop | task0001, task0002, task0003 |
+| Case table (`em-workflow/hooks/tests/destructive-guard-cases.json`) | Verdict expectations, one `[expected verdict, label, command]` triple per entry | Append-only: no existing entry is removed, reordered, or has its verdict, label or command changed; each task appends its entries as one contiguous block; every label is unique in the table | task0001, task0002, task0003, task0004 |
+| Lexer work bound (`LEX_WORK_FACTOR`) | Keeps the lexer's total work linear in input length | Work a task adds is done inside the existing scan and counted against the existing bound; no task adds a second pass over the input or an uncounted loop | task0001, task0002, task0003, task0004, task0005 |
+| Lexer facts and the extglob parse-unit record (`lex_shell()`, its map, `_note_extglob_units()`, `_count_extglob_units()`) | Carries what one lexing of a text found to every consumer, and records the extglob parse units of one judgment | Pre: a consumer obtains a lexing only through `lex_shell()`. Post: every fact a lexing establishes — the extended-glob line starts, whether an extended-glob parenthesis was met, and the outcome for a here-document operator whose delimiter word cannot be read — reaches consumers only through the map `lex_shell()` returns or the exception it raises, never through module-level state written by the lexer pass; a map returned from the cache is indistinguishable from a fresh one for the same key, and a text whose lexing raises raises on every call; parse units are recorded at one point, where a chunk is lexed with its origin known, with the identity (origin, line start in the chunk's text) of FR4, and the record is reset only at the start of a judgment; an unreadable delimiter word makes the judgment ask, reached through the same route as the lexer's other unsettled outcomes (`ask_lex_unsettled()`) | task0003 (unit identity), task0004 (unreadable-delimiter outcome), task0005 (facts on the map, one recording point) |
 
 ## Conventions
 - **Case labels**: a new entry's label begins with the finding ID it
   reproduces or whose fix it exercises (b0734a006de6f4d7, a7c0d90ac3e44e5b or
-  f34ee27bc8c323b1), followed by a short description of the form.
+  f34ee27bc8c323b1, or for a rework task the review finding ID it pins),
+  followed by a short description of the form.
 - **bash measurement**: an entry whose expected verdict rests on "bash
   executes this line" is added only after confirming it on bash 5.3.9. The
   confirmation runs the same input with the destructive line replaced by a
@@ -48,8 +50,11 @@ immediately followed by a newline; `{NL}` is a newline.
   marker runs. The destructive line itself is never executed.
 - **Offsets**: every position the lexer records (ARR_END, SUB_AT, an extglob
   unit's position) is in original-input coordinates.
-- **Error handling**: no new error path. The hook's existing behavior when the
-  work bound is reached is unchanged.
+- **Error handling**: no new error path, except task0004's ask for a
+  here-document operator whose delimiter word cannot be read, which joins the
+  lexer's existing unsettled outcomes (Shared Components, "Lexer facts and the
+  extglob parse-unit record"). The hook's existing behavior when the work
+  bound is reached is unchanged.
 - **Files no task modifies**: `tests/test_destructive_guard_lexer_agreement.py`
   (its `SUBSCRIPT_ARRAY_FORMS` test must pass unchanged),
   `em-workflow/hooks/tests/run-destructive-guard.py`, the `decide()` function,
