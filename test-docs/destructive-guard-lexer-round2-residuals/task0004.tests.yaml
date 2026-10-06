@@ -1,0 +1,51 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests: 8422 tests OK (skipped=1); run-destructive-guard.py 628/628
+final_failures: []             # re-executed after implementation: 8433 tests OK (skipped=1); run-destructive-guard.py 631/631; tests.test_destructive_guard_lexer_agreement 89 tests OK
+acceptance_tests:
+  AC-1:
+    # History check (case-table commit 604cc012 precedes every commit that changes
+    # em-workflow/hooks/destructive-guard.py); the executable part is the runner.
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py (cases labelled 29bbf9032dd762a0 round2-residuals FR5.1, FR5.2, FR5.3)
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_sit_in_the_case_table_after_the_base_entries
+    red_confirmed: true
+    red_reason: "After appending the three cases and before any hook change the runner reported 628/631 passed: FR5.1, FR5.2 and FR5.3 got ask [destructive-guard/scan-budget-exceeded] where allow was expected. The placement test passed at that point by construction; the commit order itself is shown by git log, not by a test."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_get_allow_with_and_without_batch
+      - em-workflow/hooks/tests/run-destructive-guard.py (FR5.1-FR5.3)
+    red_confirmed: true
+    red_reason: "Before the hook change all six subtests (L28, L100, S40 x batch off/on) failed: AssertionError 'ask' != 'allow' without CLAUDE_BATCH and 'deny' != 'allow' with CLAUDE_BATCH=1 (scan-budget-exceeded)."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_is_linear_for_closes_that_are_not_adjacent
+    red_confirmed: true
+    red_reason: "Before the hook change both subtests (arithmetic expansion, arithmetic command) errored with LexBudgetExceeded already for the 200-line input. The existing linearity tests (test_lexing_work_grows_linearly_with_the_input, test_lexing_work_is_linear_for_unclosed_and_closed_forms, test_lexing_work_stays_within_the_linear_bound) pass before and after."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_every_known_command_reads_as_the_whole_text_restart_reads_it
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_generated_forms_read_as_the_whole_text_restart_reads_them
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_nested_generated_forms_read_as_the_whole_text_restart_reads_them
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_nested_quoted_and_here_document_pending_forms_have_these_maps
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_a_candidate_inside_a_span_that_is_read_twice_is_listed_once
+    red_confirmed: true
+    red_reason: "The equivalence is written to hold on the base. Before the hook change test_every_known_command_reads_as_the_whole_text_restart_reads_it errored with LexBudgetExceeded for the three new case-table commands (the base lexer exceeds its bound on them); every other command, the generated forms and the hand-written maps passed on the base, which validates the whole-text-restart reference driver. After the change the same tests pass, i.e. the maps are unchanged. Mutation checks (removing the truncation of ops, candidates, encountered or pending operators, or the restore of the here-document trigger, in the resume step) each made these tests fail."
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_a_roughly_60kb_input_gets_allow_within_the_time_limit
+    red_confirmed: true
+    red_reason: "Before the hook change: AssertionError 'ask' != 'allow' (scan-budget-exceeded) for the ~60 KB input."
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_exceeding_the_work_bound_is_an_ask_never_an_allow
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_budget_exceeded_is_an_ask_never_an_allow
+    red_confirmed: true
+    red_reason: "Before the hook change the new test errored at its precondition (lex_shell raised LexBudgetExceeded for the 200-line input under the real work factor). The ask / deny-under-CLAUDE_BATCH / never-allow behaviour of the budget condition itself pre-existed and is covered by the existing test_budget_exceeded_is_an_ask_never_an_allow; no red state occurred for that part."
+  AC-7:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
+    red_confirmed: true
+    red_reason: "Before the hook change the runner reported 628/631 and TestStageAgreement errored (33 errors: the 11 per-command properties raised LexBudgetExceeded for the three new case-table commands). TestModuleContract and the first-627-entries digest test passed before and after."
