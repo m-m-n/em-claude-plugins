@@ -1,0 +1,110 @@
+feature: destructive-guard-lexer-round2-residuals
+collected_at: '2026-10-06T17:28:38+09:00'
+session_ids:
+- 01a10f8c-1856-7042-893c-ef75f6512bd6
+- 01a10f9a-6dfd-74b8-a05b-27f7d7d02ae1
+- 01a10faf-04dd-7212-b5f2-fe3461ec9d14
+- 01a10fdd-1652-76ae-92ef-0da3e23d1566
+- 01a1100b-861d-7256-8b22-ab5671855fe1
+- 01a11028-f032-71b7-b244-ef85e6eeaafc
+- 01a1104e-9e0a-71d5-b658-f8b915540350
+- 01a11052-8651-74bf-ae0c-6eab94f15558
+signals:
+  review_critical_high:
+  - stable_id: 1baa909f9b288847
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '読み取れない区切り語の <<（演算子なし扱い）の後ろを通常のシェルとして字句解析するため、本文中の # や引用が bash の実行する行を隠す（<<E${x} は deny→allow の退行）'
+    resolution: unresolved (round 1) → batch auto-rework
+  - stable_id: 19edf404b5cbeb2b
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: '閉じ行の判定が前後の空白を許すため本文を bash より早く閉じ、残りの本文行の # コメントで bash が実行する命令置換を隠す（END-X 等で deny→allow の退行）'
+    resolution: unresolved (round 1) → batch auto-rework
+  - stable_id: 48e1f462b0dd164f
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: time -p の後ろの 2 つめの -p をオプションとして読み続けるため、bash が引数として読む name[ を添字として読み、<< 演算子を落として後続行を隠す
+    resolution: unresolved (round 1) → batch auto-rework
+  - stable_id: 956849b341a5150b
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Fragile snapshot coupling for in-pass reparen resume
+    resolution: unresolved (round 1) → batch auto-rework
+  - stable_id: 5753be9288beab27
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'F1: 行をまたいで閉じる配列添字を「開いていない」扱いにした後、<< は演算子にしないのに引用と ${ は開くため、bash が実行する行を隠す（deny→allow の退行）'
+    resolution: deferred
+  - stable_id: 52bfa0f59d1ea852
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'F2: 1baa909f の修正が不十分: 読めない区切り語の tail でも ${ / $(( / $[ / (( と case の状態が開き、bash が実行する行を隠す'
+    resolution: deferred
+  - stable_id: e959ba60bde865a4
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'F3: \r・\x0b・\x0c・\x85・\u2028 などを区切り語の終わりと行の境界にしているため、bash（\n だけ）と本文の範囲がずれて実行行を読み飛ばす'
+    resolution: deferred
+  - stable_id: e25427e2a8b1dddf
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'F4: 識別子の途中の行継続（a\<改行>[1<<2]=x）を添字として読まず、語全体で読むようになった区切り語 2]=x が閉じ行に一致して後続行を本文に取り込む（deny→allow の退行）'
+    resolution: deferred
+  - stable_id: 2b52be5874de85f4
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'F5: 引用なしの区切り語の本文で bash が行う \<改行> の連結を閉じ行の判定が考慮せず、本文を早く閉じて # が命令置換を隠す'
+    resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: task0004 が字句解析の読み直しを線形化し、仕事量の上限と線形性テストを足しているため
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みでバケット 1（ルール追加とテスト追加）が 0.87、スコア 1.13 となり reduced に決まった
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.28
+        confidence: 0.72
+        probabilities:
+          '0': 0.0
+          '1': 0.72
+          '2': 0.28
+          '3': 0.0
+      observed_at: '2026-10-06T13:50:46+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.13
+        confidence: 0.87
+        probabilities:
+          '0': 0.0
+          '1': 0.87
+          '2': 0.13
+          '3': 0.0
+      observed_at: '2026-10-06T13:55:22+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - tests/test_destructive_guard_lexer_agreement.py
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 18
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 22
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- 'tier は reduced（事前調査の見込みは 1 モジュール・追加テスト約 18 件）だったが、実際は 7 タスク・コード差分 +2953/-161 行となり、review は 2 ラウンドとも high が残った（round 1: 4 件で rework、round 2: high 5 件・medium 3 件を deferred）'
+- round 2 の high 5 件はどれも round 1 の修正（区切り語の読み取り・配列添字・閉じ行の判定）が作った新しい境界で見つかった。_lex_pass に関心が集まっていること（c8c16caba82d6238）が退行の連鎖の原因として指摘されている
+- 'review round 2 の triage_filing は executed: true だが branch が null で、deferred の 8 件はどれも起票されていない'
+- implementer 報告（conflict_retries / deviations）が journal に残らず、retrospect では conflict_reworks / file_prediction_misses を空にした
