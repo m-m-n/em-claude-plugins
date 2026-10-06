@@ -301,6 +301,18 @@ traceability checks compare these as literal strings.
 |----------|-------|-----------|-----|--------|
 ```
 
+Scenario IDs in the template's scenario table follow one rule, which stays
+outside the template block:
+
+- New VERIFICATION.md files use the TS-n form: `TS`, a hyphen, one or more
+  digits.
+- The TSn form — `TS` immediately followed by one or more digits, no hyphen —
+  is also a valid scenario ID, and `em-workflow/scripts/validate-worker-output.py`
+  recognizes it.
+- These two are the only scenario ID forms.
+- Scenario IDs are compared as literal strings, so `TS13` and `TS-13` are
+  distinct IDs.
+
 ## Pre-Save Self-Verification Checklist (MANDATORY)
 
 - [ ] No language-specific code blocks, library API calls, or snippets
