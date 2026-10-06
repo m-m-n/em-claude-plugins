@@ -686,9 +686,10 @@ class LexMap:
     )
 
     def __init__(self, regions, heredocs, candidates, unopened, tail_start, work, rounds):
-        # EXT_LINES: ((line start, text of that line before its first
-        # extended-glob parenthesis inside an array), ...) -- the lines on
-        # which the lexer met one (P14); run() counts them.
+        # EXT_LINES: the start offsets, in the lexed text, of the lines on
+        # which the lexer met an extended-glob parenthesis inside an array
+        # (P14), in ascending order; statements() records them as parse units
+        # of the chunk it lexed (_note_extglob_units()).
         self.ext_lines = ()
         self.regions = regions
         self.heredocs = heredocs
@@ -968,7 +969,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     discard_end = None
     discard_unclosed = []
     extglob_met = False
-    ext_lines = {}
+    ext_lines = set()
 
     def new_region(kind, start, f):
         parent = f.reg
@@ -1501,9 +1502,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                         # extglob on, a syntax error with it off. The reading
                         # decides; either way the other one could differ.
                         extglob_met = True
-                        line_start = text.rfind("\n", 0, i) + 1
-                        if line_start not in ext_lines:
-                            ext_lines[line_start] = text[line_start:i]
+                        ext_lines.add(text.rfind("\n", 0, i) + 1)
                         if extglob:
                             open_bare(f, "extglob", i)
                             i += 1
@@ -1968,35 +1967,41 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
 # by the one function that combines the verdicts. The cache below is keyed on it.
 _lex_extglob = False
 _lex_extglob_met = False
-# The lines _lex_pass() last met an extended-glob parenthesis on (line start ->
-# text before it), handed to lex_shell(); and the (text, line start, prefix)
-# of every such line any lexing of the judgment under way met, which run()
-# turns into a count of parse units (_count_extglob_units()).
-_lex_pass_ext_lines = {}
+# The start offsets of the lines _lex_pass() last met an extended-glob
+# parenthesis on, handed to lex_shell(); and the parse units of the judgment
+# under way that hold such a parenthesis, each an (origin, position) pair
+# (_note_extglob_units()), which run() turns into a count
+# (_count_extglob_units()).
+_lex_pass_ext_lines = set()
 _lex_ext_seen = set()
 
 
-def _note_extglob_lines(text, lex_map):
-    for line_start, prefix in lex_map.ext_lines:
-        _lex_ext_seen.add((text, line_start, prefix))
+def _note_extglob_units(origin, lex_map):
+    """Record the parse units LEX_MAP met an extended-glob parenthesis in.
+    LEX_MAP is the lexer's map of one chunk of statements() read as written
+    (not stripped of its here-document bodies, nor marked), ORIGIN the chunk's
+    origin position (see statements()): `()` for the top-level command string,
+    otherwise where the `eval` / `-c` payload, substitution or here-document
+    body the chunk was taken from sits in its parent.
+
+    A unit is the pair (ORIGIN, the offset its line starts at in the chunk's
+    text). Both are known here, from the chunk being scanned and the line
+    offsets the lexer already collected, so no input is read again; the text
+    before the parenthesis plays no part. Only this reading of the chunk is
+    recorded: the later stages read texts derived from it (stripped, marked,
+    a fragment) whose offsets are not the chunk's, and they are not new units."""
+    for line_start in lex_map.ext_lines:
+        _lex_ext_seen.add((origin, line_start))
 
 
 def _count_extglob_units():
     """How many parse units the lexing met an extended-glob parenthesis in
-    during one judgment: the most lines of one text, or the number of distinct
-    lines (compared by what precedes the parenthesis, marker residue left out)
-    over all the texts lexed -- the top-level text, the stripped text, an
-    `eval` / `-c` payload."""
-    if not _lex_ext_seen:
-        return 0
-    per_text = {}
-    keys = set()
-    for text, _line_start, prefix in _lex_ext_seen:
-        per_text[text] = per_text.get(text, 0) + 1
-        keys.add(
-            _MARK_RE.sub("", prefix).replace(QUOTED_MARK, "").replace(UNRESOLVED_MARK, "")
-        )
-    return max(max(per_text.values()), len(keys))
+    during one judgment: the number of distinct (origin, position) pairs
+    _note_extglob_units() recorded -- the same line of the same chunk is one
+    unit however often it is read, and lines of different chunks (the
+    top-level text, an `eval` / `-c` payload, and each of those inside
+    another) are different units whatever precedes the parenthesis."""
+    return len(_lex_ext_seen)
 
 
 def lex_shell(text, mode="shell", bodies=True, extglob=None):
@@ -2052,8 +2057,6 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     key = (text, mode, bodies, extglob)
     cached = _LEX_CACHE.get(key)
     if cached is not None:
-        if cached.ext_lines:
-            _note_extglob_lines(text, cached)
         return cached
     n = len(text)
     budget = LEX_WORK_FACTOR * n + _LEX_WORK_FLOOR
@@ -2089,8 +2092,7 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
         rounds,
     )
     if ambiguous:
-        lex_map.ext_lines = tuple(sorted(_lex_pass_ext_lines.items()))
-        _note_extglob_lines(text, lex_map)
+        lex_map.ext_lines = tuple(sorted(_lex_pass_ext_lines))
     if len(_LEX_CACHE) >= _LEX_CACHE_LIMIT:
         del _LEX_CACHE[next(iter(_LEX_CACHE))]
     _LEX_CACHE[key] = lex_map
@@ -2861,17 +2863,19 @@ def _delimiter_line_word(line):
     return m.group(1) if m else None
 
 
-def _strip_heredocs_mapped(chunk):
+def _strip_heredocs_mapped(chunk, lexmap=None):
     """(CHUNK with every real heredoc body removed, the ordered list of
     HeredocRecord, the original-to-stripped _PositionMap). Which `<<` is a
     real operator, and which lines are its body, is lex_shell()'s judgment
-    (P6, FR8): this function only cuts the lines the lexer reported.
+    (P6, FR8): this function only cuts the lines the lexer reported. LEXMAP
+    is lex_shell(CHUNK, "shell") when the caller already holds it.
 
     Each removed body -- the body lines and the delimiter line, through its
     line end -- is one `replace` segment of the map (its stripped range
     empty, its REF the body's HeredocRecord); the text between bodies is
     copied verbatim. Construction is linear in the chunk."""
-    lexmap = lex_shell(chunk, "shell")
+    if lexmap is None:
+        lexmap = lex_shell(chunk, "shell")
     ops = [op for op in lexmap.heredocs if op.body_start is not None]
     if not ops:
         return chunk, [], _identity_map(len(chunk))
@@ -4936,7 +4940,13 @@ def statements(command):
         scanned_chars += len(chunk)
         if scanned_chars > scan_budget:
             ask_scan_budget_exceeded()
-        chunk, heredocs, _omap = _strip_heredocs_mapped(chunk)
+        # The chunk's first lexing, as written: the extended-glob parse units
+        # it holds are identified here, by this chunk's origin (ANCHOR) and
+        # their offsets in this text, once -- the stages below read derived
+        # texts and record nothing (_note_extglob_units()).
+        chunk_lexmap = lex_shell(chunk, "shell")
+        _note_extglob_units(anchor, chunk_lexmap)
+        chunk, heredocs, _omap = _strip_heredocs_mapped(chunk, chunk_lexmap)
         # Component 1: ONE structural scan of CHUNK, shared by every caller
         # below that needs to know where CHUNK's own top-level substitutions
         # sit -- the heredoc destination decision, and this chunk's own
