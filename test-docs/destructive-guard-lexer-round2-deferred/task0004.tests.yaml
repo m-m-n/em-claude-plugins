@@ -1,6 +1,6 @@
 task_id: task0004
-baseline_failures: []          # refreshed after the parent-side adoption (task0002 merged): the 23 failures of that run were all this task's own new tests, whose hook change and case block the adoption had discarded; none were inherited. First baseline, before any edit: Ran 8554 tests, OK (skipped=1)
-final_failures: []             # python3 -m unittest discover -s tests after the re-implementation on the updated parent: Ran 8589 tests, OK (skipped=1)
+baseline_failures: []          # refreshed after the second parent-side adoption (task0003 merged): the 36 failures of that run were all this task's own tests (its new class, and the two TestStageAgreement tests whose shlex reference this task rewrote, which fail against a hook that still reads \\r as a blank); none were inherited. First baseline, before any edit: Ran 8554 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests after the re-implementation on the updated parent: Ran 8624 tests, OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
@@ -84,9 +84,9 @@ acceptance_tests:
       the test was green when first run; no red state occurred.
   AC-7:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (790/790)"
-      - "python3 -m unittest tests.test_destructive_guard_lexer_agreement (245 tests, including TestPositionMap, TestStageAgreement, TestModuleContract)"
-      - "python3 -m unittest discover -s tests (8589 tests)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py (806/806)"
+      - "python3 -m unittest tests.test_destructive_guard_lexer_agreement (280 tests, including TestPositionMap, TestStageAgreement, TestModuleContract)"
+      - "python3 -m unittest discover -s tests (8624 tests)"
     red_confirmed: false
     red_reason: >-
       A regression-guard criterion: the existing suites pass unchanged in
