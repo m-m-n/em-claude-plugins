@@ -104,7 +104,7 @@ workflow:
   status: completed
   completed_at_commit: 1341654445f9f1b71b4bb9f2c66c8a70ac43242a
 - id: implement
-  status: completed
+  status: pending
   failed_kind: null
   base_commit: f9c3395f4bf231cbddfe7fbc20e73507ea40fdba
   completed_at_commit: edc2dbff80c22e823b4279e4fcf046f6bb0f2bc1
@@ -143,6 +143,38 @@ tasks:
     status: merged
     branch: em-workflow/destructive-guard-heredoc-syntax-error/task0001
     notes: null
+  task0002:
+    title: Complete array-context recognition and keep valid array contents from discarding the line
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - fd4b0e41e037d221
+      - c630bfb6a19f88a2
+      - c231452e02deec9b
+      - 4b5de463a6e5e162
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -169,9 +201,14 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
   FR2:
     title: 同じ行で先に登録された演算子にも本文を取らせない
     status: ok
@@ -188,8 +225,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-4
+    - TS-12
   FR4:
     title: 置換・引用の中や閉じた配列の後にある `<<` は従来どおり扱う
     status: ok
@@ -208,6 +247,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -216,6 +256,10 @@ requirements:
     - TS-5
     - TS-6
     - TS-7
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
   FR6:
     title: 既存ケースを保つ
     status: ok
@@ -223,6 +267,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
   NFR1:
@@ -232,6 +277,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
   NFR2:
@@ -241,6 +287,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
   NFR3:
@@ -250,8 +297,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
+    - TS-10
+    - TS-11
   NFR4:
     title: テストを走らせる
     status: ok
@@ -259,10 +309,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
