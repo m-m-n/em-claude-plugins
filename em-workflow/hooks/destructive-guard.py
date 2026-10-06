@@ -425,11 +425,17 @@ class Tok(str):
     `'if'`) is not, itself, that keyword, and `.is_operator` cannot tell the
     two apart the way it does for `(`/`)` (neither a bare nor a quoted
     letter-word ever goes through the punctuation-sticky state); `.quoted`
-    is the signal `_shape_leading()` uses instead for those checks.
+    is the signal `_shape_leading()` uses instead for those checks. A word
+    whose trailing carriage returns _disregard_trailing_cr() took off for
+    matching keeps them in `.trailing_cr` (destructive-guard-lexer-round2-
+    deferred task0008): check_rm()'s safe-delete exception reads the target
+    as bash passes it on, those carriage returns included — set after
+    construction, never via this constructor.
     Every consumer besides split_redirects()/check_rm()/
     read_command_name_evidence()/_shape_leading() treats it as an ordinary
-    str; every attribute defaults to a closed-fail value (False / None) so
-    a plain str used where a Tok is expected fails closed.
+    str; every attribute but `.trailing_cr` (empty: nothing was taken off)
+    defaults to a closed-fail value (False / None) so a plain str used where
+    a Tok is expected fails closed.
     """
 
     is_operator = False
@@ -437,6 +443,7 @@ class Tok(str):
     substitution_only = False
     raw_substitution_body = None
     quoted = False
+    trailing_cr = ""
 
     def __new__(
         cls, value, is_operator=False, unresolved=False, substitution_only=False,
@@ -3560,6 +3567,13 @@ def _disregard_trailing_cr(words):
     lexer and the tokenizer read, and the offsets they report, keep it, and so
     does a `\r` inside a word.
 
+    The disregarded `\r` is not lost (task0008, FR6, NFR6): bash passes it to
+    the command as part of the word, so the changed word remembers it in
+    `.trailing_cr`, and a decision that would turn the word into an allow
+    reads it back (_as_bash_receives()). Only a decision that can lead to
+    nothing but ask or deny may go without it. A plain str word, which is
+    what the fallback word split yields, becomes a Tok for that.
+
     A word without a trailing `\r` is returned as the object it is. A changed
     word is a copy that keeps every attribute of its token. An operator is
     never changed. A word that is nothing but `\r` is a run of blanks when it
@@ -3578,13 +3592,18 @@ def _disregard_trailing_cr(words):
         stripped = word.rstrip("\r")
         if not stripped:
             continue
+        matched = Tok(stripped)
         if isinstance(word, Tok):
-            matched = Tok(stripped)
             matched.__dict__.update(word.__dict__)
-            out.append(matched)
-        else:
-            out.append(stripped)
+        matched.trailing_cr = word[len(stripped):]
+        out.append(matched)
     return out
+
+
+def _as_bash_receives(word):
+    r"""WORD as bash passes it on: the text matching reads, followed by the
+    trailing `\r` _disregard_trailing_cr() took off it (task0008)."""
+    return str(word) + getattr(word, "trailing_cr", "")
 
 
 def _lex_layout(chunk, track):
@@ -7537,7 +7556,11 @@ def check_rm(args, anchor):
        same reason folding cannot be trusted there
        (_has_parent_ref_component()) — a PURE glob is not caught here; see
        step 6.
-    4. Lexical normalization (normalize_candidate()) — filesystem-free.
+    4. Lexical normalization (normalize_candidate()) — filesystem-free — of
+       the target as bash passes it to `rm`: a `\\r` at its end, which the
+       word matching disregards (_disregard_trailing_cr()), is part of it
+       here (_as_bash_receives(), task0008). `build\\r` is therefore not the
+       build artifact `build`, and `/tmp/x\\r` is still below `/tmp`.
     5. A relative target still starting with `..` after normalization has
        nowhere left to fold and is not safe; it falls straight through to
        step 7 exactly as containment failure would, so no separate branch
@@ -7625,7 +7648,11 @@ def check_rm(args, anchor):
                 )
             )
             continue
-        normalized = normalize_candidate(t)
+        # The exception reads the target as bash passes it to `rm`, a trailing
+        # `\r` included (task0008): `build\r` is not the build artifact
+        # `build`. Every check above and below may go without it, because
+        # they lead to ask or deny only.
+        normalized = normalize_candidate(_as_bash_receives(t))
         if not unresolved and safe_delete_target(normalized):
             continue
         if GLOB_CHARS.search(t):
