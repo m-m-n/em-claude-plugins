@@ -1,11 +1,13 @@
 task_id: task0007
-baseline_failures: []          # 4a, before any edit: python3 -m unittest discover -s tests on the task's base (8f60eeb2), Ran 8692 tests, OK (skipped=1)
-final_failures: []             # re-executed after the implementation: Ran 8732 tests, OK (skipped=1); runner 831/831; agreement module 388 tests OK
+baseline_failures: []          # refreshed after the parent-side adoption (conflict cycle 1, case table only): the suite of the parent branch, exported with git archive and run outside a repository, Ran 8707 tests, only error the git-dependent test_tracked_occurrences_are_contained_in_allowed_areas (git ls-files fails outside a repository; it passes in the worktree) -> no failure inherited. First baseline, on the task's base 8f60eeb2: Ran 8692 tests, OK (skipped=1)
+final_failures: []             # re-executed after the case block was re-appended on the adopted parent: Ran 8747 tests, OK (skipped=1); runner 836/836; agreement module 403 tests OK
 # Red observations: the case block was appended and committed first, then the
 # runner was run against the unchanged hook; the new test classes were run
 # against the hook of the task's base (git show 8f60eeb2:em-workflow/hooks/
-# destructive-guard.py, copied beside the new tests and the case table): 90
-# failures and 5 errors, all in this task's tests, before the hook change.
+# destructive-guard.py, copied beside the new tests and the case table) and
+# again, after the adoption, against the parent's hook: the failing set was the
+# same, 90 failures and 5 errors, all in this task's tests, before the hook
+# change; the runner gave 823/831 on the base hook and 828/836 on the parent's.
 # Test names below are in tests/test_destructive_guard_lexer_agreement.py,
 # class TestLineContinuationBeforeOpenersAndInWords unless another class or a
 # runner entry is named.
