@@ -27,6 +27,8 @@ Layout:
 - TestSubstitutionPolicies: the three substitution searches stay distinct.
 - TestHeredocBodies: nothing written inside a real heredoc body opens
   anything for the command text after its delimiter line.
+- TestHeredocDelimiterWords: the delimiter of `<<` / `<<-` is the whole word
+  with its quotes removed; an unreadable word takes no body.
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
 - TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11), and
   the linear work of `((` / `$((` openers that close without an adjacent `))`.
@@ -987,7 +989,11 @@ class Analysis:
         ]
         for op in self.lex_s.heredocs:
             if op.quoted:
-                ranges.append((op.end - len(op.delimiter) - 2, op.end))
+                # The whole delimiter word, from after the operator and its
+                # blanks: it may hold quote characters anywhere (`E"X"`,
+                # `E\X`), and its value is shorter than its text.
+                word_start = re.compile(r"<<-?[ \t]*").match(self.stripped, op.start).end()
+                ranges.append((word_start, op.end))
         return ranges
 
     def in_region(self, regions, pos):
@@ -1499,6 +1505,312 @@ class TestHeredocBodies(unittest.TestCase):
     def test_quote_in_a_body_does_not_hide_the_next_heredoc(self):
         command = "cat <<A\nit's\nA\nbash <<B\nrm -rf /home/sakura/valuable\nB"
         self.assertEqual(hook_verdict(command)[0], "deny")
+
+
+# ---------------------------------------------------------------------------
+# Here-document delimiter words (round 2 residuals, task0003: FR4, NFR1, NFR6;
+# review finding 9381769d7116fab2, second half). The delimiter of `<<` / `<<-`
+# is the whole following word with its quotes removed, and a word that cannot
+# be read takes no body.
+# ---------------------------------------------------------------------------
+
+
+class TestHeredocDelimiterWords(unittest.TestCase):
+    DESTRUCTIVE = "rm -rf /home/sakura/valuable"
+
+    # AC-1 / AC-2: (command, operator text, delimiter, quoted, delimiter line).
+    # The commands are the three deny cases this task appends to the case
+    # table; each one holds a decoy line the old reading closed the body at.
+    CASE_FORMS = [
+        (
+            "cat <<END-X\nbody\nEND-X\nrm -rf /home/sakura/valuable\nEND",
+            "<<END-X", "END-X", False, "END-X\n",
+        ),
+        (
+            "cat <<E.X\nbody\nE.X\nrm -rf /home/sakura/valuable\nE",
+            "<<E.X", "E.X", False, "E.X\n",
+        ),
+        (
+            "cat <<E\\X\nbody\nEX\nrm -rf /home/sakura/valuable\nE",
+            "<<E\\X", "EX", True, "EX\n",
+        ),
+    ]
+
+    # AC-3: (command, operator text, delimiter, quoted, body).
+    VARIANT_FORMS = [
+        (
+            'cat <<E"X"\nbody\nEX\nrm -rf /home/sakura/valuable',
+            '<<E"X"', "EX", True, "body\n",
+        ),
+        (
+            "cat <<'E-X'\nbody\nE-X\nrm -rf /home/sakura/valuable",
+            "<<'E-X'", "E-X", True, "body\n",
+        ),
+        (
+            "cat <<\\EOF\nbody\nEOF\nrm -rf /home/sakura/valuable",
+            "<<\\EOF", "EOF", True, "body\n",
+        ),
+        (
+            "cat <<E$X\nbody\nE$X\nrm -rf /home/sakura/valuable",
+            "<<E$X", "E$X", False, "body\n",
+        ),
+        (
+            "cat <<-EOF\n\tbody\n\tEOF\nrm -rf /home/sakura/valuable",
+            "<<-EOF", "EOF", False, "\tbody\n",
+        ),
+        (
+            "cat <<-END-X\n\tbody\n\tEND-X\nrm -rf /home/sakura/valuable",
+            "<<-END-X", "END-X", False, "\tbody\n",
+        ),
+        (
+            'cat <<"E\\"X"\nbody\nE"X\nrm -rf /home/sakura/valuable',
+            '<<"E\\"X"', 'E"X', True, "body\n",
+        ),
+        (
+            'cat <<"E\\aX"\nbody\nE\\aX\nrm -rf /home/sakura/valuable',
+            '<<"E\\aX"', "E\\aX", True, "body\n",
+        ),
+        (
+            'cat <<"E$x"\nbody\nE$x\nrm -rf /home/sakura/valuable',
+            '<<"E$x"', "E$x", True, "body\n",
+        ),
+        (
+            "cat <<''\nbody\n\nrm -rf /home/sakura/valuable",
+            "<<''", "", True, "body\n",
+        ),
+    ]
+
+    # AC-4: a delimiter word that cannot be read -- no word before a
+    # metacharacter or the end, or a command substitution, a backtick, `${`,
+    # `$((`, `$[`, `$'` or `$"` in it. Each holds a destructive line on the
+    # line after the operator and a last line the old reading closed at.
+    UNREADABLE_FORMS = [
+        "cat <<" + TAIL,
+        "cat <<-" + TAIL,
+        "cat << ;" + TAIL,
+        "cat <<E$(x)\nrm -rf /home/sakura/valuable\nE",
+        "cat <<E`x`\nrm -rf /home/sakura/valuable\nE",
+        "cat <<E${x}\nrm -rf /home/sakura/valuable\nE",
+        "cat <<E$((1))\nrm -rf /home/sakura/valuable\nE",
+        "cat <<E$[1]\nrm -rf /home/sakura/valuable\nE",
+        "cat <<$'E'\nrm -rf /home/sakura/valuable\nE",
+        'cat <<$"E"\nrm -rf /home/sakura/valuable\nE',
+        'cat <<"E$(x)"\nrm -rf /home/sakura/valuable\nE',
+        'cat <<"E`x`"\nrm -rf /home/sakura/valuable\nE',
+        "cat <<E\\\nX\nrm -rf /home/sakura/valuable\nE",
+    ]
+
+    def operator_of(self, text):
+        lexmap = H.lex_shell(text)
+        self.assertEqual(len(lexmap.heredocs), 1, msg=repr(text))
+        return lexmap, lexmap.heredocs[0]
+
+    def test_whole_word_delimiters_close_at_their_own_line(self):
+        # AC-2: one operator, the delimiter the whole word with quotes
+        # removed, the body ending before the delimiter line.
+        for command, op_text, delimiter, quoted, close_line in self.CASE_FORMS:
+            with self.subTest(command=command):
+                lexmap, op = self.operator_of(command)
+                self.assertEqual(command[op.start : op.end], op_text)
+                self.assertEqual((op.delimiter, op.quoted), (delimiter, quoted))
+                self.assertEqual(heredoc_body(command, op), "body\n")
+                self.assertEqual(command[op.body_end : op.close_end], close_line)
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_whole_word_delimiter_forms_are_denied_with_and_without_batch(self):
+        # AC-2: the decoy line does not close the body, so the destructive
+        # line after the real delimiter line is inspected.
+        for command, _op, _delimiter, _quoted, _close in self.CASE_FORMS:
+            for batch in (False, True):
+                with self.subTest(command=command, batch=batch):
+                    decision, reason = hook_verdict(command, batch=batch)
+                    self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_variant_delimiter_words(self):
+        # AC-3: delimiter, quoted flag and body of each variant; the quote
+        # characters of the delimiter word are no regions of their own.
+        for command, op_text, delimiter, quoted, body in self.VARIANT_FORMS:
+            with self.subTest(command=command):
+                lexmap, op = self.operator_of(command)
+                self.assertEqual(command[op.start : op.end], op_text)
+                self.assertEqual((op.delimiter, op.quoted), (delimiter, quoted))
+                self.assertEqual(heredoc_body(command, op), body)
+                self.assertEqual(actual_regions(lexmap), [])
+                self.assertEqual(
+                    command[op.close_end :], "rm -rf /home/sakura/valuable"
+                )
+
+    def test_variant_delimiter_forms_are_denied(self):
+        for command, _op, _delimiter, _quoted, _body in self.VARIANT_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_unreadable_delimiter_words_take_no_body(self):
+        # AC-4 (NFR6): no operator takes a body, so the line after the
+        # operator is read as the command it is.
+        for command in self.UNREADABLE_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                for op in lexmap.heredocs:
+                    self.assertIsNone(op.body_start)
+                    self.assertIsNone(op.body_end)
+                    self.assertIsNone(op.close_end)
+                stripped, records, _omap = H._strip_heredocs_mapped(command)
+                self.assertEqual(stripped, command)
+                self.assertEqual(records, [])
+                for batch in (False, True):
+                    decision, reason = hook_verdict(command, batch=batch)
+                    self.assertNotEqual(decision, "allow", msg=reason[:200])
+
+    def test_a_later_readable_operator_is_read_after_an_unreadable_one(self):
+        command = "cat <<E$(x)\nrm -rf /tmp/zz\nE\ncat <<EOF\nbody\nEOF\n"
+        lexmap = H.lex_shell(command)
+        bodies = [(op.delimiter, heredoc_body(command, op)) for op in lexmap.heredocs]
+        self.assertEqual(bodies, [("EOF", "body\n")])
+
+    def test_a_quote_not_closed_on_the_operators_line_takes_no_body(self):
+        # AC-4: no operator, and the text after the `<<` is lexed as the base
+        # lexed it for a `<<` that registers no operator (the expected
+        # regions were taken from the base before the change): the quote
+        # opens a region of its own, running on past the line.
+        destructive = "\nrm -rf /home/sakura/valuable\n"
+        forms = [
+            ("cat <<'EOF" + TAIL, [("single-quote", "'EOF" + TAIL)], False),
+            ('cat <<"EOF' + TAIL, [("double-quote", '"EOF' + TAIL)], False),
+            (
+                "cat <<'EOF" + destructive + "EOF'\n",
+                [("single-quote", "'EOF" + destructive + "EOF'")],
+                True,
+            ),
+        ]
+        for command, regions, closed in forms:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(list(lexmap.heredocs), [])
+                self.assertEqual(actual_regions(lexmap), expected_regions(command, regions))
+                self.assertEqual([r.closed for r in lexmap.regions], [closed])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_a_delimiter_holding_a_blank_finds_no_close_line(self):
+        # A value the close-line index cannot represent: the operator is read
+        # but never finds a close line, so it takes no body.
+        for command in (
+            "cat <<'E X'\nbody\nE X\nrm -rf /home/sakura/valuable",
+            "cat <<E\\ X\nbody\nE X\nrm -rf /home/sakura/valuable",
+            'cat <<"E\tX"\nbody\nE\tX\nrm -rf /home/sakura/valuable',
+        ):
+            with self.subTest(command=command):
+                lexmap, op = self.operator_of(command)
+                self.assertTrue(any(blank in op.delimiter for blank in " \t"))
+                self.assertTrue(op.quoted)
+                self.assertIsNone(op.body_start)
+                self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_close_line_is_the_delimiter_with_optional_blanks_only(self):
+        # AC-5: a line holding only the delimiter value, surrounded by
+        # spaces and tabs at most, closes the body; one where the value is
+        # only a prefix or a suffix does not.
+        for delimiter in ("END-X", "E.X", "EOF"):
+            command = (
+                "cat <<%s\nbody\n%sY\nX%s\n%s-\n \t%s \t\n%s\n" % (
+                    (delimiter,) * 6
+                )
+            )
+            with self.subTest(delimiter=delimiter):
+                lexmap, op = self.operator_of(command)
+                self.assertEqual(op.delimiter, delimiter)
+                self.assertEqual(
+                    heredoc_body(command, op),
+                    "body\n%sY\nX%s\n%s-\n" % ((delimiter,) * 3),
+                )
+                self.assertEqual(
+                    command[op.body_end : op.close_end], " \t%s \t\n" % delimiter
+                )
+
+    def test_close_line_index_accepts_non_word_values(self):
+        text = "END-X\n  E.X \t\nplain\nE X\n"
+        index = H._LexLines(text).word_to_lines()
+        self.assertEqual(index["END-X"], [0])
+        self.assertEqual(index["E.X"], [1])
+        self.assertEqual(index["plain"], [2])
+        self.assertNotIn("E X", index)
+
+    def test_word_delimiters_keep_their_reading(self):
+        for command, delimiter, quoted in (
+            ("cat <<EOF\nbody\nEOF\n", "EOF", False),
+            ("cat <<'EOF'\nbody\nEOF\n", "EOF", True),
+            ('cat <<"EOF"\nbody\nEOF\n', "EOF", True),
+            ("cat <<-EOF\nbody\nEOF\n", "EOF", False),
+            ("cat << EOF\nbody\nEOF\n", "EOF", False),
+            ("cat <<EOF>out\nbody\nEOF\n", "EOF", False),
+            ("(cat <<EOF)\nbody\nEOF\n", "EOF", False),
+        ):
+            with self.subTest(command=command):
+                lexmap, op = self.operator_of(command)
+                self.assertEqual((op.delimiter, op.quoted), (delimiter, quoted))
+                self.assertEqual(heredoc_body(command, op), "body\n")
+
+    def test_here_string_is_still_no_operator(self):
+        command = "cat <<<END-X\nrm -rf /home/sakura/valuable\nEND-X"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(list(lexmap.heredocs), [])
+        self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_lexing_work_is_linear_for_non_word_delimiters(self):
+        # AC-6 (NFR1).
+        unit = "cat <<END-X\nbody\nEND-X\n"
+        small = H.lex_shell(unit * 200)
+        large = H.lex_shell(unit * 400)
+        # Every operator finds its own close line, so the close-line lookup
+        # is part of the work measured here.
+        self.assertEqual(len(large.heredocs), 400)
+        self.assertTrue(all(op.body_start is not None for op in large.heredocs))
+        self.assertLessEqual(large.work, 2.5 * small.work + 100)
+        self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(unit * 400) + 1024)
+
+    def test_lexing_work_is_linear_for_unreadable_words(self):
+        for unit in (
+            "cat <<'E$(x)\nbody\n",
+            'cat <<"E $(x) \n',
+            "cat <<E`x`\nbody\nE\n",
+        ):
+            with self.subTest(unit=unit):
+                small = H.lex_shell(unit * 200)
+                large = H.lex_shell(unit * 400)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(unit * 400) + 1024
+                )
+
+    def test_new_cases_are_in_the_case_table_after_the_earlier_entries(self):
+        # AC-1, AC-7: located by label and command text, never by an absolute
+        # index; each sits after the 627 entries present at the feature base.
+        cases = case_commands()
+        for command, _op, _delimiter, _quoted, _close in self.CASE_FORMS:
+            with self.subTest(command=command):
+                found = [
+                    (index, want, label)
+                    for index, (want, label, cmd) in enumerate(cases)
+                    if cmd == command
+                ]
+                self.assertEqual(len(found), 1)
+                index, want, label = found[0]
+                self.assertGreaterEqual(index, 627)
+                self.assertEqual(want, "deny")
+                self.assertTrue(label.startswith("9381769d7116fab2 round2-residuals "))
+
+
+class TestDelimiterWordStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    delimiter word forms of this task: the lexer's quoted delimiter words,
+    the masked view and the position maps agree on every one of them."""
+
+    @classmethod
+    def setUpClass(cls):
+        forms = [form[0] for form in TestHeredocDelimiterWords.CASE_FORMS]
+        forms += [form[0] for form in TestHeredocDelimiterWords.VARIANT_FORMS]
+        forms += TestHeredocDelimiterWords.UNREADABLE_FORMS
+        cls.commands = forms
 
 
 # ---------------------------------------------------------------------------
