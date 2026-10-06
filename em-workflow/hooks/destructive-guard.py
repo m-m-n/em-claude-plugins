@@ -195,19 +195,92 @@ def _heredoc_delimiter(raw):
     return "".join(out), quoted
 
 
+_HEREDOC_OP_HEAD = re.compile(r"<<-?(?!<)[ \t]*")
+_HEREDOC_PLAIN = re.compile(r"[^\s;|&()<>'\"\\`$]+")
+_HEREDOC_DQ_SPECIAL = re.compile(r"[\"\\]")
+
+
 def _heredoc_operator(text, i):
-    """(end, delimiter, quoted) of the here-document operator at I, or None."""
-    m = HEREDOC_WORD_OP.match(text, i)
-    if m is not None:
-        nxt = text[m.end()] if m.end() < len(text) else ""
-        if nxt not in ("'", '"', "\\"):
-            delimiter, quoted = _heredoc_delimiter(m.group(1))
-            if delimiter:
-                return m.end(), delimiter, quoted
-    m = HEREDOC_OP.match(text, i)
-    if m is None:
+    """(end, delimiter, quoted) of the here-document operator at I, or None
+    when no operator (or no delimiter word) is there. The delimiter word is
+    read the way bash does: quotes and backslashes are removed, a
+    backslash-newline is dropped, and `$name` and a backquoted span stay
+    literal. A word that cannot be read (`$(`, `${`, `$'`, a quote or a
+    backquote never closed) gives (end, None, False), END being where the
+    reading stopped: the caller takes no body for this operator nor for any
+    later operator on the same line."""
+    head = _HEREDOC_OP_HEAD.match(text, i)
+    if head is None:
         return None
-    return m.end(), m.group(2), bool(m.group(1))
+    n = len(text)
+    p = head.end()
+    start = p
+    out = []
+    quoted = False
+    while p < n:
+        plain = _HEREDOC_PLAIN.match(text, p)
+        if plain is not None:
+            out.append(plain.group())
+            p = plain.end()
+            continue
+        c = text[p]
+        if c == "\\":
+            if p + 1 >= n:
+                break
+            if text[p + 1] != "\n":
+                quoted = True
+                out.append(text[p + 1])
+            p += 2
+        elif c == "'":
+            j = text.find("'", p + 1)
+            if j < 0:
+                return p, None, False
+            quoted = True
+            out.append(text[p + 1 : j])
+            p = j + 1
+        elif c == '"':
+            q = p + 1
+            while True:
+                k = _HEREDOC_DQ_SPECIAL.search(text, q)
+                if k is None:
+                    return p, None, False
+                out.append(text[q : k.start()])
+                if k.group() == '"':
+                    break
+                nxt = text[k.start() + 1 : k.start() + 2]
+                if nxt and nxt in '$`"\\':
+                    out.append(nxt)
+                    q = k.start() + 2
+                elif nxt == "\n":
+                    q = k.start() + 2
+                else:
+                    out.append("\\")
+                    q = k.start() + 1
+            quoted = True
+            p = k.end()
+        elif c == "`":
+            j = text.find("`", p + 1)
+            if j < 0:
+                return p, None, False
+            out.append(text[p : j + 1])
+            p = j + 1
+        elif c == "$":
+            nxt = text[p + 1 : p + 2]
+            if nxt in ("(", "{", "'"):
+                return p, None, False
+            if nxt == '"':
+                p += 1
+            else:
+                out.append("$")
+                p += 1
+        else:
+            break
+    if p == start:
+        return None
+    delimiter = "".join(out)
+    if not delimiter:
+        return None
+    return p, delimiter, quoted
 # Commands that run what arrives on stdin, so a here-doc body aimed at one is
 # not data but code, and has to be scanned like any other statement.
 SHELL_SINK = re.compile(r"\b(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
@@ -848,15 +921,63 @@ class _LexLines:
     built on first use, WORD_TO_LINES -- every line that is nothing but a
     bare word, per _delimiter_line_word(), indexed by that word (NFR3)."""
 
-    __slots__ = ("text", "starts", "_word_to_lines", "_logical")
+    __slots__ = ("text", "starts", "_word_to_lines", "_logical", "_cont", "_head")
 
-    def logical_lines(self):
+    def continued(self):
+        """CONT[j]: line j ends with a newline and an odd run of backslashes,
+        so bash joins it with line j + 1."""
+        if self._cont is None:
+            starts = self.starts
+            text = self.text
+            last = len(starts) - 1
+            cont = []
+            for j, s in enumerate(starts):
+                if j < last:
+                    body = text[s:starts[j + 1] - 1]
+                    cont.append((len(body) - len(body.rstrip("\\"))) % 2 == 1)
+                else:
+                    cont.append(False)
+            self._cont = cont
+        return self._cont
+
+    def head_logical(self, idx, dash=False):
+        """The logical line that starts at physical line IDX, as
+        (bare word, last physical line) when it spans several lines and is a
+        bare word, else None. The last answer is kept: linear per start."""
+        key = (idx, dash)
+        if self._head is not None and self._head[0] == key:
+            return self._head[1]
+        cont = self.continued()
+        starts = self.starts
+        text = self.text
+        last = len(starts) - 1
+        j = idx
+        parts = []
+        while True:
+            s = starts[j]
+            e = starts[j + 1] if j < last else len(text)
+            line = text[s:e]
+            if cont[j]:
+                parts.append(line[:-2])
+                j += 1
+                continue
+            parts.append(line)
+            break
+        result = None
+        if j > idx:
+            word = _exact_delimiter_line("".join(parts), dash)
+            if word is not None:
+                result = (word, j)
+        self._head = (key, result)
+        return result
+
+    def logical_lines(self, dash=False):
         """The delimiter lines an UNQUOTED here-document body can end at when
         a backslash-newline splits them: bash removes the backslash-newlines
         of an unquoted body before comparing a line with the delimiter. Maps
         the bare word of each logical line made of several physical lines to
         a list of (first, last) physical line indexes, in order."""
-        if self._logical is None:
+        if dash not in self._logical:
             mapping = {}
             starts = self.starts
             text = self.text
@@ -878,37 +999,41 @@ class _LexLines:
                     parts.append(line)
                     break
                 if j > idx:
-                    word = _delimiter_line_word("".join(parts))
+                    word = _exact_delimiter_line("".join(parts), dash)
                     if word is not None:
                         mapping.setdefault(word, []).append((idx, j))
                 idx = j + 1
-            self._logical = mapping
-        return self._logical
+            self._logical[dash] = mapping
+        return self._logical[dash]
 
     def __init__(self, text):
-        self._logical = None
+        self._logical = {}
+        self._cont = None
+        self._head = None
         starts = []
         total = 0
-        for line in text.splitlines(keepends=True):
+        n = len(text)
+        while total < n:
             starts.append(total)
-            total += len(line)
+            nl = text.find("\n", total)
+            total = n if nl < 0 else nl + 1
         self.text = text
         self.starts = starts
-        self._word_to_lines = None
+        self._word_to_lines = {}
 
-    def word_to_lines(self):
-        if self._word_to_lines is None:
+    def word_to_lines(self, dash=False):
+        if dash not in self._word_to_lines:
             mapping = {}
             starts = self.starts
             text = self.text
             last = len(starts) - 1
             for idx, s in enumerate(starts):
                 e = starts[idx + 1] if idx < last else len(text)
-                word = _delimiter_line_word(text[s:e])
+                word = _exact_delimiter_line(text[s:e], dash)
                 if word is not None:
                     mapping.setdefault(word, []).append(idx)
-            self._word_to_lines = mapping
-        return self._word_to_lines
+            self._word_to_lines[dash] = mapping
+        return self._word_to_lines[dash]
 
 
 _LEX_WS = re.compile(r"[ \t\r]+")
@@ -1149,6 +1274,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     extglob_met = False
     ext_lines = set()
     bound_keep_until = -1
+    unknown_until = 0
 
     def new_region(kind, start, f):
         parent = f.reg
@@ -1661,21 +1787,43 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             if cut < len(hd_pending):
                 hd_next = bisect.bisect_right(starts, boundary) - 1
                 jump = None
-                by_word = lines.word_to_lines()
                 for op in hd_pending[cut:]:
+                    dash = text.startswith("<<-", op[0])
+                    by_word = lines.word_to_lines(dash)
                     found_lines = by_word.get(op[2], ())
                     pos = bisect.bisect_left(found_lines, hd_next)
-                    found = found_lines[pos] if pos < len(found_lines) else None
-                    found_last = found
-                    if not op[3]:
-                        # Unquoted body: a delimiter split by backslash-newline
-                        # still ends it, when it starts before the plain match.
-                        for first, last_line in lines.logical_lines().get(op[2], ()):
-                            if first >= hd_next:
-                                if found is None or first < found:
-                                    found = first
-                                    found_last = last_line
+                    if op[3]:
+                        found = found_lines[pos] if pos < len(found_lines) else None
+                        found_last = found
+                    else:
+                        # Unquoted body: bash joins a line ending in an odd
+                        # run of backslashes with the next, so such a line's
+                        # successor is no closing line by itself (it is, when
+                        # it is the first body line), and a delimiter split by
+                        # backslash-newline ends it when it starts before the
+                        # plain match.
+                        cont = lines.continued()
+                        found = None
+                        while pos < len(found_lines):
+                            j = found_lines[pos]
+                            if j == hd_next or not cont[j - 1]:
+                                found = j
                                 break
+                            pos += 1
+                        found_last = found
+                        cands = lines.logical_lines(dash).get(op[2], ())
+                        k = bisect.bisect_left(cands, (hd_next,))
+                        if k < len(cands):
+                            first, last_line = cands[k]
+                            if found is None or first < found:
+                                found = first
+                                found_last = last_line
+                        if hd_next > 0 and cont[hd_next - 1]:
+                            head = lines.head_logical(hd_next, dash)
+                            if head is not None and head[0] == op[2]:
+                                if found is None or hd_next <= found:
+                                    found = hd_next
+                                    found_last = head[1]
                     if found is not None:
                         op[4] = starts[hd_next]
                         op[5] = starts[found]
@@ -1915,8 +2063,17 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                             continue
                         m = _heredoc_operator(text, i)
                         if m is not None and (tail_start is None or i < tail_start):
-                            register_operator(i, m)
-                            i = m[0]
+                            if m[1] is None:
+                                # Delimiter word unreadable: no body for this
+                                # operator nor any later one on this line.
+                                nl = text.find("\n", m[0])
+                                unknown_until = n if nl < 0 else nl
+                                i = m[0]
+                            elif i < unknown_until:
+                                i += 2
+                            else:
+                                register_operator(i, m)
+                                i = m[0]
                         else:
                             i += 2
                         continue
@@ -3228,8 +3385,19 @@ def _delimiter_line_word(line):
     stays" for delimiter lines).
     """
     text = line[:-1] if line.endswith("\n") else line
-    m = re.match(r"^[ \t]*(\w+)[ \t]*$", text)
-    return m.group(1) if m else None
+    word = text.strip(" \t")
+    return word if word else None
+
+
+def _exact_delimiter_line(line, dash):
+    """The text LINE is compared with a here-document delimiter as, the way
+    bash compares: LINE without its own trailing newline, exactly -- for `<<-`
+    (DASH) with its leading tabs removed, nothing else. None for an empty
+    result, which no delimiter equals."""
+    text = line[:-1] if line.endswith("\n") else line
+    if dash:
+        text = text.lstrip("\t")
+    return text if text else None
 
 
 def _strip_heredocs_mapped(chunk, lexmap=None):
