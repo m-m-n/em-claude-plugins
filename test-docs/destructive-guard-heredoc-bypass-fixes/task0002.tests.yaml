@@ -1,0 +1,93 @@
+task_id: task0002
+baseline_failures: []          # after parent-side adoption (task0001 and task0003 merged in; the suite refreshed, replacing the pre-adoption run), before the re-implementation: python3 -m unittest discover -s tests -> Ran 8434 tests, OK (skipped=1); python3 em-workflow/hooks/tests/run-destructive-guard.py -> 741/741 passed (the pre-adoption run was Ran 8434 tests OK, 718/718 passed)
+final_failures: []             # re-executed after the re-implementation on the updated parent (a different run from the baseline): python3 -m unittest discover -s tests -> Ran 8434 tests, OK (skipped=1); python3 em-workflow/hooks/tests/run-destructive-guard.py -> 775/775 passed (774 table entries + the unattended-demotion check)
+acceptance_tests:
+  AC-1:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} の引数の x[a は保留中のヒアドキュメントの本文の開始を遅らせず ... deny (5 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} -a x[0 のようにオプションの後の引数 NAME[ も ... deny (5 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} y=1 x[a のように代入語の後の引数 NAME[ も ... deny (5 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} x[a の途中の行継続は行を終わらせず ... deny (5 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b declare の引数の x[a があっても本文は次の行から始まり ... allow"
+    red_confirmed: true
+    red_reason: >-
+      With the 34 new entries appended and the hook unchanged (the adopted
+      parent's destructive-guard.py), run-destructive-guard.py reported
+      741/775 passed (the same 34 entries failed before the adoption too, on
+      the then-current hook). Every one of the 20 deny entries for declare / typeset /
+      local / export / readonly returned allow where deny was expected: the
+      `NAME[` argument opened a subscript that deferred the body of the pending
+      `cat <<EOF`, so the line after the delimiter line was read as body. The
+      allow entry (the destructive text really is the body) returned deny where
+      allow was expected, from the same deferral. bash 5.3.9 ran the harmless
+      marker line in every deny form and did not run it in the allow form.
+  AC-2:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} の引数の x[a は保留中のヒアドキュメントの本文の開始を遅らせず ... deny (3 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} -a x[0 のようにオプションの後の引数 NAME[ も ... deny (3 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} y=1 x[a のように代入語の後の引数 NAME[ も ... deny (3 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} x[a の途中の行継続は行を終わらせず ... deny (3 entries)"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b let の引数の x[a があっても本文は次の行から始まり ... allow"
+    red_confirmed: true
+    red_reason: >-
+      Unchanged hook (before the change, and again on the adopted parent): all 12 deny entries for eval / let / alias failed
+      (allow for let and alias in every form and for eval with `-a x[0`; ask for
+      eval in the basic, `y=1 x[a` and continuation forms, from the
+      unmatched-subscript reading) and the let allow entry returned deny.
+      Measured on bash 5.3.9 (harmless `echo MARK` in place of the destructive
+      line, scratch directory), the marker ran in all 12 deny forms and did not
+      run in the allow form. No measured form was left out of the table for
+      being non-executing.
+  AC-3:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 E-1 eval の引数の添字つき配列名 x[a b]=( ... deny"
+      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 E-9 declare の引数の添字つき配列名 x[0]=( ... deny"
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing case-table
+      entries T2 E-1 and T2 E-9 detect that the `<<EOF` after `NAME[...]=(` in
+      eval / declare arguments is no operator, so the following git line is
+      denied; no red state occurred for this change (both passed before the
+      change and stayed green after every edit of the argument branch).
+  AC-4:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py: every case-table entry that existed before this task's entries (740 on the adopted parent), among them heredoc-syntax-error T2 E-15, T2 E-16, T2 E-17 (allow)"
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing case table
+      detects any change of an old entry's verdict, including the allow entries
+      T2 E-15 / E-16 / E-17; no red state occurred for this change (all 740
+      entries of the adopted parent passed before the change and after it; the
+      table is append-only, the deny count went 431 -> 463 and the ask count
+      stayed 124; against the 717 entries this task started from, deny 413 ->
+      463, ask 120 -> 124).
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestArraySubscriptAndExtglobReadings.test_a_subscript_or_assignment_builtin_array_is_an_array_context
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
+    red_confirmed: true
+    red_reason: >-
+      The SUBSCRIPT_ARRAY_FORMS test
+      (test_a_subscript_or_assignment_builtin_array_is_an_array_context) passed
+      unmodified before and after the change; no red state for it.
+      TestStageAgreement over the new entries was observed red with the hook
+      unchanged (a read-only copy of tests/test_destructive_guard_lexer_agreement.py,
+      the adopted parent's hook and the new case table in a scratch directory;
+      the same 34 errors on the pre-adoption hook): Ran 98
+      tests, FAILED (errors=34) -- test_e_tokens_keeps_values_clean_and_matches_shlex_without_regions
+      raised LexUnmatchedSubscript for the segment `declare x[a` (and the
+      eval / let / alias / typeset / ... equivalents) of each of the 34 new
+      commands. With the change it passes with the test file unmodified.
+  AC-6:
+    tests:
+      - "em-workflow/hooks/tests/run-destructive-guard.py"
+      - python3 -m unittest discover -s tests
+    red_confirmed: true
+    red_reason: >-
+      With the new entries appended and the hook unchanged,
+      run-destructive-guard.py reported 741/775 passed (34 FAIL lines) and the
+      stage-agreement module errored (see AC-5). After the change both commands
+      pass (775/775; Ran 8434 tests, OK (skipped=1)), the existing linearity
+      tests included. No import was added: the existing TestModuleContract
+      standard-library check passes and the diff adds no import statement.

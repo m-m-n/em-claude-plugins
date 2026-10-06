@@ -1,0 +1,64 @@
+schema_version: 2
+feature: destructive-guard-heredoc-bypass-fixes
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.71
+    confidence: 0.68
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.3
+      '2': 0.68
+      '3': 0.02
+  observed_at: '2026-10-06T13:57:07+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.73
+    confidence: 0.72
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.73
+      '3': 0.0
+  observed_at: '2026-10-06T13:57:07+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 250
+  new_functions_needed: 1
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 17
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 指定ブランチと round2.yaml を確認した。first による代入判定、宣言と eval の共通扱い、接頭辞による解析単位の重複排除、走査処理の重複が残る。既存717件には
+    deny413件、ask120件、T2 E-1/E-9 があり、一致検証も同じJSONを読む。概算は走査共通化の補助関数1件、行継続2形・宣言5種・入れ子evalの再現8件を含む。呼出関係は対象4関数の外側の直接呼出元3件と既存呼出先14件を数えた。単位数の修正だけでは通常実行で
+    ask となるため、deny 要件への対応も必要になる
+decided_at: '2026-10-06T13:57:07+09:00'

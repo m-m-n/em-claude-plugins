@@ -1,0 +1,197 @@
+feature: destructive-guard-heredoc-bypass-fixes
+collected_at: '2026-10-06T23:49:00+09:00'
+session_ids:
+- 01a111af-b3ad-7164-a98a-bc78f36e853b
+signals:
+  review_critical_high:
+  - stable_id: 0944ad655775e494
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 束縛された添字が復帰文字（CR）を語の区切りとして扱い、破壊的な行を許可する（今回の変更による退行）
+    resolution: fixed
+  - stable_id: 00317f587babce32
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: ヒアドキュメントの区切り語が部分的に引用されている（<<E'OF'）と E と読み、破壊的な行を本文として隠す（変更前から存在）
+    resolution: fixed
+  - stable_id: 70414092c8d22d69
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 引用されていない本文の中で行継続により分かれた終端語（E{BS-NL}OF）を見落とし、破壊的な行を本文として隠す（変更前から存在）
+    resolution: fixed
+  - stable_id: 87bc3a6f81978954
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行の索引が str.splitlines() で作られ、CR・VT・FF などで本文が行の途中から始まる
+    resolution: fixed
+  - stable_id: 489834107bc1fbee
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 区切り語の読みが $・バッククォート・行継続で途切れ、\w 以外を含む区切り語は終端行が見つからない
+    resolution: fixed
+  - stable_id: 489c54bb59e8dc38
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop-1 の行継続終端修正が緩い区切り行比較を引き継ぎ、基点で deny だった入力が allow になる
+    resolution: fixed
+  - stable_id: 469c44c126d09a8a
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 非引用本文の終端判定が行継続を片方向しか扱わず、bash が実行する行を本文として扱う
+    resolution: fixed
+  - stable_id: 060471bb12fad78a
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 区切り語の行継続によって実行対象のコマンドを除外する
+    resolution: fixed
+  - stable_id: ce92362f1c719d5e
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1/TB-1: a backslash-newline inside the delimiter word makes the body start partway through the command line (regression from base)'
+    resolution: fixed
+  - stable_id: 85c9b1b2e50716c9
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1/TB-1: hand scanner reads some delimiter words differently from bash (`$[...]`, backquoted spans, extglob `@(...)`), giving new allow-bypasses'
+    resolution: fixed
+  - stable_id: 15f2adfccb266441
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1/TB-1: delimiter word ends at Unicode whitespace / CR / VT / FF, where bash''s word does not'
+    resolution: fixed
+  - stable_id: 267e8e9657658f40
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 読めない区切り語のヒアドキュメントは本文を取らず次の行をコマンドとして読み直すため、本文中の後続の <<WORD や閉じない引用符が bash の実行する行を飲み込み allow になる
+    resolution: unresolved
+  - stable_id: 643305535d3c874d
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 読めない区切り語の本文を再解析し、実行される行を除去してしまう
+    resolution: unresolved
+  - stable_id: 1f64cb294e6ffe41
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Unreadable heredoc delimiter takes no body so its data lines stay scannable
+    resolution: unresolved
+  - stable_id: 730712dde1bd3462
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Extglob unit contract moved from lexer side effect to single caller
+    resolution: unresolved
+  - stable_id: d9c0ee86072979fe
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: Unreadable-delimiter heredoc takes no body, later operator re-reads its body and hides executed line
+    resolution: unresolved
+  - stable_id: cbb38943734ebe2f
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 空の区切り語（<<'' / <<""）を演算子なしとして扱い、本文中の偽のヒアドキュメントが bash の実行する破壊的な行を隠す
+    resolution: fixed
+  - stable_id: 29872f769dd7e2f2
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続で分割された演算子（<\<改行><）を見落とし、本文中の偽のヒアドキュメントが bash の実行する破壊的な行を隠す
+    resolution: fixed
+  - stable_id: 632ae8d38960d44b
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 配列内の分割された演算子が後続の破壊コマンドを deny から ask に変える
+    resolution: fixed
+  - stable_id: 630125d1207f0d6b
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 分割された <<< の新しい分岐が破壊的なシェル入力を許可する
+    resolution: fixed
+  - stable_id: fe4839f54ee2d328
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 複数の行継続で分割した << は引き続き回避できる
+    resolution: fixed
+  - stable_id: 4a8fa1ee0b462f9a
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop 2 の演算子処理が保留中の本文開始を早め、実行行を隠す
+    resolution: fixed
+  - stable_id: 0a6dfb9327c8c0fe
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Split-operator handling collateral outside operator SSOT
+    resolution: fixed
+  - stable_id: 6c5ebef1694351a8
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Duplicated heredoc operator/delimiter parsing across regexes and functions
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: フックは全 Bash 呼び出しで走る字句解析で、今回の変更が NFR2（作業量の上限）に関わる走査を増やすため
+    round: 1
+  - perspective: performance
+    reason: フックは全 Bash 呼び出しで走る字句解析で、今回の変更が NFR2（作業量の上限）に関わる走査を増やすため
+    round: 2
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みがバケット 2（新しいロジック）を 0.73 で示し full を採用
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.71
+        confidence: 0.68
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.3
+          '2': 0.68
+          '3': 0.02
+      observed_at: '2026-10-06T13:57:07+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.73
+        confidence: 0.72
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.27
+          '2': 0.73
+          '3': 0.0
+      observed_at: '2026-10-06T13:57:07+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 250
+      new_functions_needed: 1
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 8
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 17
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: 指定ブランチと round2.yaml を確認した。first による代入判定、宣言と eval の共通扱い、接頭辞による解析単位の重複排除、走査処理の重複が残る。既存717件には deny413件、ask120件、T2 E-1/E-9 があり、一致検証も同じJSONを読む。概算は走査共通化の補助関数1件、行継続2形・宣言5種・入れ子evalの再現8件を含む。呼出関係は対象4関数の外側の直接呼出元3件と既存呼出先14件を数えた。単位数の修正だけでは通常実行で
+        ask となるため、deny 要件への対応も必要になる
+follow_up_drafts: []
+lessons_candidates:
+- implementer 報告（conflict_retries / deviations）が feature-docs に永続化されておらず、conflict_reworks / file_prediction_misses は空で記録した
+- round1 の auto-fix は loop cap 3 に達し、high 4 件 + critical 1 件を rework（task0004 / task0005）へ回した
