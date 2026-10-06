@@ -296,7 +296,10 @@ def _heredoc_operator(text, i):
         return p, None, False
     delimiter = "".join(out)
     if not delimiter:
-        return None
+        # An empty delimiter (`<<''` / `<<""`) is valid in bash: the body
+        # ends at the first empty line. Treat it as unreadable so the caller
+        # fails closed instead of reading a fake operator inside the body.
+        return p, None, False
     return p, delimiter, quoted
 # Commands that run what arrives on stdin, so a here-doc body aimed at one is
 # not data but code, and has to be scanned like any other statement.
@@ -2117,6 +2120,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 f.prev_plain = f.time_p = False
                 f.kw = ""
                 if c == "<":
+                    if text.startswith("<\\\n<", i):
+                        # Backslash-newline is removed before tokenizing, so
+                        # this is a `<<` split across lines: its delimiter
+                        # and body cannot be placed. Fail closed (P16).
+                        unreadable_delimiter = True
+                        i += 3
+                        continue
                     if text.startswith("<<<", i):
                         if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
                             begin_discard(i)
