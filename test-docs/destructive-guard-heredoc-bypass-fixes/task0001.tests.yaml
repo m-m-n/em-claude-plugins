@@ -1,0 +1,123 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 8434 tests, OK (skipped=1); run-destructive-guard.py: 718/718 passed -- measured before any edit
+final_failures: []             # re-executed after the implementation: unittest discover 8434 tests OK (skipped=1); run-destructive-guard.py 737/737 passed
+acceptance_tests:
+  AC-1:
+    tests:
+      - "b0734a006de6f4d7 配列代入の語 x=( の途中の行継続（x{BS-NL}=(）は語を分けず、後ろの <<EOF は演算子でなく、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 先に本文を待つヒアドキュメントがあっても、後ろの配列代入の語の途中の行継続（x{BS-NL}=(）は語を分けず、続く行の git reset --hard は deny"
+    red_confirmed: true
+    red_reason: >
+      Case-table entries (run-destructive-guard.py): the TS1 input, and the same x{BS-NL}=(
+      form after an earlier here-document operator that is still pending (cat <<A; ...).
+      With the first entry appended and the hook unchanged, the runner reported FAIL:
+      expected deny, got allow ("破壊的なパターンに一致しない。"). The second entry was added
+      after the main implementation; its red was observed by running the hook as of HEAD
+      directly (allow, expected deny). The inputs execute the marker on bash 5.3.9 (bash -c, harmless
+      marker in place of the destructive line, scratch directory).
+  AC-2:
+    tests:
+      - "b0734a006de6f4d7 宣言 builtin の名前 declare の途中の行継続（decl{BS-NL}are）は名前を分けず、引数の x=( の中の <<EOF は演算子でなく、続く行の git reset --hard は deny"
+    red_confirmed: true
+    red_reason: >
+      Case-table entry (run-destructive-guard.py). With the hook unchanged the runner
+      reported FAIL: expected deny, got allow. The marker runs on bash 5.3.9.
+  AC-3:
+    tests:
+      - "b0734a006de6f4d7 行継続が x と =( の間に 2 つ続いても行継続を除いた x=( と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 行継続が x と [0]=( の間にあっても行継続を除いた x[0]=( と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 行継続が x+ と =( の間にあっても行継続を除いた x+=( と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 添字つきの代入の語の + と = の間の行継続（x[0]+{BS-NL}=(）は行継続を除いた x[0]+=( と同じ読みで、続く行の git reset --hard は deny"
+    red_confirmed: true
+    red_reason: >
+      Four case-table entries: the three required forms plus x[0]+{BS-NL}=( (a continuation
+      between the + and the = after a subscript). The unsplit counterparts (x=( , x[0]=( ,
+      x+=( , x[0]+=( ) were run through the hook first and return deny; the entries record
+      deny. With the hook unchanged the runner reported FAIL for the three required entries
+      (expected deny, got allow); the fourth was observed as allow on the hook as of HEAD
+      (run directly). The marker runs on bash 5.3.9 for all four split forms and for the
+      counterparts.
+  AC-4:
+    tests:
+      - "b0734a006de6f4d7 declare の名前の途中の行継続（dec{BS-NL}lare）は名前を分けず、declare を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 typeset の名前の途中の行継続（typ{BS-NL}eset）は名前を分けず、typeset を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 local の名前の途中の行継続（lo{BS-NL}cal）は名前を分けず、local を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 export の名前の途中の行継続（exp{BS-NL}ort）は名前を分けず、export を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 readonly の名前の途中の行継続（read{BS-NL}only）は名前を分けず、readonly を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 eval の名前の途中の行継続（ev{BS-NL}al）は名前を分けず、eval を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 let の名前の途中の行継続（l{BS-NL}et）は名前を分けず、let を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 alias の名前の途中の行継続（al{BS-NL}ias）は名前を分けず、alias を行継続のない名前と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 T2 E-1 の eval の名前の途中の行継続（ev{BS-NL}al）は名前を分けず、eval x[a b]=( と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 T2 E-9 の declare の名前の途中の行継続（decl{BS-NL}are）は名前を分けず、declare -a x[0]=( と同じ読みで、続く行の git reset --hard は deny"
+      - "b0734a006de6f4d7 宣言 builtin の名前の直後で空白の前の行継続（declare{BS-NL} x=(）は名前を分けず、declare x=( と同じ読みで、続く行の git reset --hard は deny"
+    red_confirmed: true
+    red_reason: >
+      Eleven case-table entries: the eight builtin names split by one backslash-newline, the
+      split-name variants of T2 E-1 (eval form) and T2 E-9 (declare form), and declare with
+      the continuation after the name right before a blank (declare{BS-NL} x=( ; observed
+      as allow on the hook as of HEAD, run directly). The unsplit
+      inputs of all eight names return deny (run through the hook first), so deny is
+      recorded. With the hook unchanged the runner reported FAIL for the ten required entries: expected
+      deny, got allow. bash 5.3.9 executes the marker for the eight names, split and
+      unsplit, and for the E-9 form; for the T2 E-1 form bash itself stops at a syntax
+      error (as the existing T2 E-1 entry already states) and deny is the existing,
+      conservative reading kept for the split variant.
+  AC-5:
+    tests:
+      - "heredoc-syntax-error T2 E-1 eval の引数の添字つき配列名 x[a b]=( の中の <<EOF も演算子でなく、続く行の git reset --hard は deny（規則 1 と 2 の組み合わせ。bash 自体は構文エラーで続きを実行しない形）"
+      - "heredoc-syntax-error T2 E-9 declare の引数の添字つき配列名 x[0]=( の中の <<EOF も演算子でなく、続く行の git reset --hard は deny"
+      - "heredoc-syntax-error T2 E-15 引用符つきの引数の eval と let と alias は配列を開かず、後ろのヒアドキュメントは従来どおり本文を取り allow"
+      - "heredoc-syntax-error T2 E-16 builtin を前置した declare は範囲外の形で、現在の判定は allow"
+      - "heredoc-syntax-error T2 E-17 command を前置した declare は範囲外の形で、現在の判定は allow"
+      - "run-destructive-guard.py: every pre-existing case-table entry (717 entries + the unattended-downgrade case)"
+      - "tests.test_destructive_guard_lexer_agreement (TestFixedVerdicts and the other fixed-input classes)"
+      - "tests.test_destructive_guard_command_substitution"
+      - "tests.test_guard_deferral_parity"
+      - "b0734a006de6f4d7 配列でない代入の語 x=1 の途中の行継続（x{BS-NL}=1）は配列を開かず、後ろのヒアドキュメントは従来どおり本文を取り allow"
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing tests detect each
+      pre-existing verdict: the run-destructive-guard.py entries, and the modules that run
+      the real hook on fixed inputs (search of tests/ and em-workflow/hooks/tests/ by the
+      repository-relative path em-workflow/hooks/destructive-guard.py found
+      tests/test_destructive_guard_command_substitution.py,
+      tests/test_destructive_guard_lexer_agreement.py, tests/test_guard_deferral_parity.py
+      and tests/test_protocol_git_ops_pass_destructive_guard.py; the search by basename
+      destructive-guard.py and by destructive-guard-cases found the same plus
+      run-destructive-guard.py and further registration / wording tests); no red state occurred for this change because the
+      behaviour pre-existed and is only required to stay unchanged. Checked by comparing
+      the table against HEAD: the first 717 entries are byte-for-byte unchanged, deny
+      413 -> 431, ask 120 -> 120, allow 180 -> 181. The one new allow entry (x{BS-NL}=1, an
+      assignment word that opens no array, so the quoted here-document keeps its body) is
+      a guard against over-triggering: it was allow before the change and stays allow.
+  AC-6:
+    tests:
+      - "tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_lexing_work_is_linear_for_unclosed_and_closed_forms"
+      - "tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_stays_within_the_linear_bound"
+      - "tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_grows_linearly_with_the_input"
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing linearity tests in
+      tests/test_destructive_guard_lexer_agreement.py detect super-linear lexing work;
+      no red state occurred for this change (they stay green, unmodified). "Accumulated
+      within the existing scan, no second pass" is a property of the code with no failing
+      check; as an extra, uncommitted probe, inputs with 1000 / 10000 / 40000 in-word
+      backslash-newline segments ran in 0.04 / 0.07 / 0.24 s (before the change: allow
+      in 0.04 / 0.09 / 0.33 s), i.e. linear. The look-ahead of logical_word() reads the
+      continued part of one word once more than the main scan and is counted in the
+      pass's iteration budget.
+  AC-7:
+    tests:
+      - "run-destructive-guard.py (the 18 new deny entries)"
+      - "tests.test_destructive_guard_lexer_agreement.TestStageAgreement"
+      - "tests.test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn"
+      - "tests.test_destructive_guard_lexer_agreement.TestArraySubscriptAndExtglobReadings.test_a_subscript_or_assignment_builtin_array_is_an_array_context"
+    red_confirmed: true
+    red_reason: >
+      Observed red covers the run-destructive-guard.py half only: with the new entries in
+      place and the hook unchanged it ended 719/734 passed (15 FAIL, non-zero exit). The
+      python3 -m unittest discover -s tests half (TestStageAgreement over the new entries,
+      TestStageAgreementUnderExtglobOn, the SUBSCRIPT_ARRAY_FORMS test) stayed green
+      before and after: stage agreement does not judge verdicts, so no red state occurred
+      for it. Both commands pass after the change; tests/test_destructive_guard_lexer_agreement.py
+      is unmodified and no import was added (bisect was already imported).
