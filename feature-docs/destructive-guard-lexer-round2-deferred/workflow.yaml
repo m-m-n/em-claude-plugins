@@ -124,7 +124,18 @@ workflow:
   status: completed
   completed_at_commit: ea261afaa8e8c1427191697f5f7053a2665190b2
 - id: verify
-  status: in_progress
+  status: failed
+  result: fail
+  failed_items:
+  - id: TS-13
+    category: performance
+    note: 'NFR2: TestUnclosedOpeners の 60KB 入力（opener=''${'' の bulk と mixed bulk）でフック 1 回の評価が 10.6〜10.8 秒かかり、10 秒の上限を超えて (timeout) になる。implement 完了時点（ebb8b700）から同じ時間で、2 回の実行で再現'
+  - id: TS-14
+    category: security
+    note: 'NFR3: TestBraceCommandSubstitution.test_nested_unclosed_forms_followed_by_a_destructive_line_are_never_allow（"${ " を 20000 回 + RM）の評価が 11.1 秒かかり (timeout) になる。hooks.json の timeout 10 秒を超えるとフックの判定が返らず、deny にならない'
+  - id: TS-10
+    category: performance
+    note: 'python3 -m unittest discover -s tests が 8803 件中 3 件失敗（TS-13 / TS-14 の 3 テストのみ）。run-destructive-guard.py は 846/846 通過'
 - id: retrospect
   status: pending
 tasks:
@@ -634,8 +645,11 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      TS-13: 1
+      TS-14: 1
+      TS-10: 1
   infra_resume:
     rounds: 0
     cap: 2
