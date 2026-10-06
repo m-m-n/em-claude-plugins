@@ -804,5 +804,21 @@
   ["deny", "e25427e2a8b1dddf round2-deferred FR4.3 添字の中の行継続 a[1\\ 改行 <<2]=x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1\\\n<<2]=x\nrm -rf /home/sakura/valuable\n2]=x"],
   ["deny", "e25427e2a8b1dddf round2-deferred FR4.4 添字の ] の直前の行継続 a[1<<2\\ 改行 ]=x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1<<2\\\n]=x\nrm -rf /home/sakura/valuable\n2]=x"],
   ["deny", "e25427e2a8b1dddf round2-deferred FR4.5 ] と = の間の行継続 a[1<<2]\\ 改行 =x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1<<2]\\\n=x\nrm -rf /home/sakura/valuable\n2]=x"],
-  ["ask", "e25427e2a8b1dddf round2-deferred FR4.6 名前の途中の行継続の後の ] が来ない添字 a\\ 改行 [1<<2 は閉じていない添字として ask（バッチでは deny）", "a\\\n[1<<2\nrm -rf /home/sakura/valuable"]
+  ["ask", "e25427e2a8b1dddf round2-deferred FR4.6 名前の途中の行継続の後の ] が来ない添字 a\\ 改行 [1<<2 は閉じていない添字として ask（バッチでは deny）", "a\\\n[1<<2\nrm -rf /home/sakura/valuable"],
+  ["deny", "e959ba60bde865a4 round2-deferred FR3.1 区切り語 EOF の直後の CR は語の一部で、同じ行の ; 以降の rm -rf は deny", "cat <<EOF\r; rm -rf /home/sakura/valuable\nEOF"],
+  ["deny", "e959ba60bde865a4 round2-deferred FR3.2 区切り語 EOF の直後の垂直タブは語の一部で、同じ行の ; 以降の rm -rf は deny", "cat <<EOF\u000b; rm -rf /home/sakura/valuable\nEOF"],
+  ["deny", "e959ba60bde865a4 round2-deferred FR3.3 区切り語 EOF の直後の U+2028 は語の一部で、同じ行の ; 以降の rm -rf は deny", "cat <<EOF\u2028; rm -rf /home/sakura/valuable\nEOF"],
+  ["deny", "e959ba60bde865a4 round2-deferred FR3.4 区切り語 END の後ろの空白と CR は行を分けず、同じ行の ; 以降の rm -rf は deny", "cat <<END \r; rm -rf /home/sakura/valuable\nEND"],
+  ["deny", "e959ba60bde865a4 round2-deferred FR3.5 本文の行の途中の CR は行を分けず、x CR END は閉じ行でない。後続の # の中の $( ) の rm -rf は deny", "cat <<END\nx\rEND\n# $(rm -rf /home/sakura/valuable)\nEND"],
+  ["deny", "e959ba60bde865a4 round2-deferred FR3.6 CR を含む区切り語 E CR X は E の行では閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<E\rX\nE\n# $(rm -rf /home/sakura/valuable)\nE\rX"],
+  ["deny", "e959ba60bde865a4 round2-deferred FR3.7 CRLF の改行では区切り語が EOF CR になり、その閉じ行の後の rm -rf は deny", "cat <<EOF\r\nx\r\nEOF\r\nrm -rf /home/sakura/valuable\nEOF"],
+  ["allow", "e959ba60bde865a4 round2-deferred FR3.8 CRLF の改行の here-document は、本文も閉じ行も CR 付きで allow", "cat <<EOF\r\nhi\r\nEOF\r\n"],
+  ["deny", "2b52be5874de85f4 round2-deferred FR5.1 引用なしの区切り語では、行末の \\ で続く行を連結して比べる。foo\\ と END は閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<END\nfoo\\\nEND\n# $(rm -rf /home/sakura/valuable)\nEND"],
+  ["deny", "2b52be5874de85f4 round2-deferred FR5.2 <<- でも連結した行の先頭のタブを除いて比べる。foo\\ とタブ付き END は閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<-END\nfoo\\\n\tEND\n# $(rm -rf /home/sakura/valuable)\nEND"],
+  ["deny", "2b52be5874de85f4 round2-deferred FR5.3 行末の \\ が偶数個なら行は続かず、次の END の行で閉じ、その後の rm -rf は deny", "cat <<END\nfoo\\\\\nEND\nrm -rf /home/sakura/valuable\nEND"],
+  ["deny", "2b52be5874de85f4 round2-deferred FR5.4 引用した区切り語では行を連結せず、次の END の行で閉じ、その後の rm -rf は deny", "cat <<'END'\nfoo\\\nEND\nrm -rf /home/sakura/valuable\nEND"],
+  ["allow", "2b52be5874de85f4 round2-deferred FR5.5 引用なしの区切り語で foo\\ と bar を連結した本文は END の行で閉じ、後続は echo だけで allow", "cat <<END\nfoo\\\nbar\nEND\necho done"],
+  ["deny", "2b52be5874de85f4 round2-deferred FR5.6 閉じ行が EN\\ と D に分かれていても bash は連結した END で閉じ、その後の rm -rf は deny", "cat <<END\nfoo\nEN\\\nD\nrm -rf /home/sakura/valuable\nEND"],
+  ["deny", "2b52be5874de85f4 round2-deferred FR5.7 <<- でもタブ付きの EN\\ と D を連結した END で閉じ、その後の rm -rf は deny", "cat <<-END\nfoo\n\tEN\\\nD\nrm -rf /home/sakura/valuable\nEND"],
+  ["deny", "2b52be5874de85f4 round2-deferred FR5.8 前の本文の閉じ行が \\ で終わっても、次の本文の最初の行 B は閉じ行になり、その後の rm -rf は deny", "cat <<'A\\' <<B\nA\\\nB\nrm -rf /home/sakura/valuable\nB"]
 ]
