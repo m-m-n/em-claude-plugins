@@ -25,6 +25,9 @@ Layout:
 - TestPositionMap: the position-map contract, including a marker longer than
   the substitution it replaces.
 - TestSubstitutionPolicies: the three substitution searches stay distinct.
+- TestArraySubscripts: the array subscript of an assignment word is one
+  region and registers no here-document operator; an unclosed one is settled
+  (round 2 residuals, task0002).
 - TestHeredocBodies: nothing written inside a real heredoc body opens
   anything for the command text after its delimiter line.
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
@@ -82,6 +85,7 @@ OPAQUE_KINDS = QUOTE_KINDS | SUBSTITUTION_KINDS | frozenset(
         "arithmetic-expansion",
         "bracket-arithmetic",
         "arithmetic-command",
+        "array-subscript",
     }
 )
 # Kinds whose content shlex would read differently from bash: the masked view
@@ -93,6 +97,7 @@ HIDDEN_KINDS = frozenset(
         "arithmetic-expansion",
         "bracket-arithmetic",
         "arithmetic-command",
+        "array-subscript",
         "comment",
     }
 )
@@ -1393,6 +1398,369 @@ class TestSubstitutionPolicies(unittest.TestCase):
         self.assertEqual(hook_verdict(command)[0], "deny")
         command = "echo $(cat <<'EOF'\nrm -rf /home/sakura/valuable\nEOF\n)"
         self.assertEqual(hook_verdict(command)[0], "allow")
+
+
+# ---------------------------------------------------------------------------
+# Array subscript of an assignment word (round 2 residuals, task0002, FR3).
+# ---------------------------------------------------------------------------
+
+# Every case this task appends to the case table begins its label with this.
+SUBSCRIPT_LABEL = "9381769d7116fab2 round2-residuals FR3."
+SUBSCRIPT_CASE_FLOOR = 627
+
+# (command, the subscript literal): bash 5.3 reads `name[` through its
+# matching `]` at each of these positions, so the lexer reports the literal
+# as one array-subscript region and registers no here-document operator.
+SUBSCRIPT_FORMS = [
+    ("a[1<<2]=x", "[1<<2]"),
+    ("x=1 a[1<<2]=y", "[1<<2]"),
+    ("x=1 y=2 a[1<<2]=y", "[1<<2]"),
+    ("x=$(echo 1) a[1<<2]=y", "[1<<2]"),
+    ('x="1" a[1<<2]=y', "[1<<2]"),
+    ("a[1<<2]+=x", "[1<<2]"),
+    ("a[1<<2]", "[1<<2]"),
+    ("a[1<<2]x=y", "[1<<2]"),
+    ("a[ 1 << 2 ]=x", "[ 1 << 2 ]"),
+    ("a[b[1]<<2]=x", "[b[1]<<2]"),
+    ("a[b[1<<2]]=x", "[b[1<<2]]"),
+    ('a["1"<<2]=x', '["1"<<2]'),
+    ("a['k]'<<2]=x", "['k]'<<2]"),
+    ('a["]"<<2]=x', '["]"<<2]'),
+    ("a[$(echo 1)<<2]=x", "[$(echo 1)<<2]"),
+    ("a[$(echo ])<<2]=x", "[$(echo ])<<2]"),
+    ("a[`echo 1`<<2]=x", "[`echo 1`<<2]"),
+    ("a[${x:-1}<<2]=x", "[${x:-1}<<2]"),
+    ("a[$((1))<<2]=x", "[$((1))<<2]"),
+    ("a[(1<<2)]=x", "[(1<<2)]"),
+    ("a[\\]<<2]=x", "[\\]<<2]"),
+    ("x=$(a[1<<2]=x)", "[1<<2]"),
+    ("echo $(a[1<<2]=x)", "[1<<2]"),
+    ("`a[1<<2]=x`", "[1<<2]"),
+    ("cat <(a[1<<2]=x)", "[1<<2]"),
+    ("{ a[1<<2]=y; }", "[1<<2]"),
+    ("(a[1<<2]=y)", "[1<<2]"),
+    ("echo hi; a[1<<2]=y", "[1<<2]"),
+    ("echo hi | a[1<<2]=y", "[1<<2]"),
+    ("echo hi && a[1<<2]=y", "[1<<2]"),
+    ("echo hi & a[1<<2]=y", "[1<<2]"),
+    ("echo hi\na[1<<2]=y", "[1<<2]"),
+    ("if a[1<<2]=y; then :; fi", "[1<<2]"),
+    ("if :; then a[1<<2]=y; fi", "[1<<2]"),
+    ("while ! a[1<<2]=y; do :; done", "[1<<2]"),
+    ("for i in 1; do a[1<<2]=y; done", "[1<<2]"),
+    ("case x in x) a[1<<2]=y;; esac", "[1<<2]"),
+    ("f() { a[1<<2]=y; }", "[1<<2]"),
+    ("time a[1<<2]=y", "[1<<2]"),
+    ("time -p a[1<<2]=y", "[1<<2]"),
+    ("! a[1<<2]=y", "[1<<2]"),
+    ("coproc a[1<<2]=y", "[1<<2]"),
+    ("a[1]=1 b[1<<2]=y", "[1<<2]"),
+    ("a[1]+=1 b[1<<2]=y", "[1<<2]"),
+    (">/dev/null a[1<<2]=y", "[1<<2]"),
+    ("</dev/null a[1<<2]=y", "[1<<2]"),
+    ("2>/dev/null a[1<<2]=y", "[1<<2]"),
+    ("12>/dev/null a[1<<2]=y", "[1<<2]"),
+    ("{fd}>/dev/null a[1<<2]=y", "[1<<2]"),
+    ("> /dev/null a[1<<2]=y", "[1<<2]"),
+    (">&2 a[1<<2]=y", "[1<<2]"),
+    ("2>&1 a[1<<2]=y", "[1<<2]"),
+    ("&>/dev/null a[1<<2]=y", "[1<<2]"),
+    ("<<<x a[1<<2]=y", "[1<<2]"),
+    (">/dev/null 2>/dev/null a[1<<2]=y", "[1<<2]"),
+    (">/dev/null x=1 a[1<<2]=y", "[1<<2]"),
+    ("time >/dev/null a[1<<2]=y", "[1<<2]"),
+    ("! >/dev/null a[1<<2]=y", "[1<<2]"),
+    ("echo hi; >/dev/null a[1<<2]=y", "[1<<2]"),
+]
+
+# bash 5.3 registers the `<<` of each of these as a here-document operator:
+# the word is an argument, or the assignment position was lost, or the word is
+# not an identifier followed by `[`. The lexer keeps its reading: one operator
+# and no array-subscript region.
+SUBSCRIPT_ARGUMENT_FORMS = [
+    "echo a[1<<2]",
+    "echo a[1<<2]=x",
+    "echo hi; echo a[1<<2]",
+    "x=1 echo a[1<<2]",
+    "x=1 echo a[1<<2]=y",
+    "declare a[1<<2]=x",
+    "declare -a a[1<<2]=x",
+    "local a[1<<2]=x",
+    "export a[1<<2]=x",
+    "readonly a[1<<2]=x",
+    "typeset a[1<<2]=x",
+    "x=1 declare a[1<<2]=y",
+    "a[1] b[1<<2]=y",
+    "a b[1<<2]=y",
+    "1a[1<<2]=y",
+    "a-b[1<<2]=y",
+    "a.b[1<<2]=y",
+    "x=a[1<<2]",
+    ">/dev/null echo a[1<<2]=y",
+    "echo hi >/dev/null a[1<<2]=y",
+    "x=1 >/dev/null a[1<<2]=y",
+    "x=1 2>&1 a[1<<2]=y",
+    ">/dev/null x=1 >/dev/null a[1<<2]=y",
+    ">/dev/null time a[1<<2]=y",
+    "echo $(( 1 )) a[1<<2]=y",
+]
+
+# (command, offset of the opener that is settled as not opened). The subscript
+# is not closed on its own line, or never: not a region, the re-read tail
+# starts at its `[`, no here-document operator and no comment from there on.
+SUBSCRIPT_UNCLOSED_FORMS = [
+    ("a[1<<2\nrm -rf /home/sakura/valuable\n2", 1),
+    ("a[1<<2", 1),
+    ("a[1<<2\n]=x" + TAIL, 1),
+    ("a[1 # ; rm -rf /home/sakura/valuable", 1),
+    ("a[1<<2 # ; rm -rf /home/sakura/valuable\n]=x", 1),
+    ("a[$(echo 1\n)<<2]=x" + TAIL, 1),
+    ('a["1\n"<<2]=x' + TAIL, 1),
+    ("x=1 a[1<<2\nrm -rf /home/sakura/valuable\n2", 5),
+    ("echo $(a[1<<2\nrm -rf /home/sakura/valuable\n2\n)", 8),
+]
+
+
+def subscript_regions(lexmap):
+    return sorted((r.start, r.end) for r in lexmap.regions if r.kind == "array-subscript")
+
+
+def subscript_cases():
+    """The cases this task appended, with their index, found by label."""
+    return [
+        (index, want, label, cmd)
+        for index, (want, label, cmd) in enumerate(case_commands())
+        if label.startswith(SUBSCRIPT_LABEL)
+    ]
+
+
+class TestArraySubscripts(unittest.TestCase):
+    def test_subscript_of_an_assignment_word_is_one_region_and_no_operator(self):
+        command = "a[1<<2]=x" + TAIL
+        lexmap = H.lex_shell(command)
+        self.assertEqual(lexmap.heredocs, [])
+        self.assertEqual(actual_regions(lexmap), [("array-subscript", 1, 7)])
+        self.assertEqual(command[1:7], "[1<<2]")
+        self.assertEqual(lexmap.unopened, [])
+        self.assertIsNone(lexmap.tail_start)
+        self.assertEqual(hook_verdict(command)[0], "deny")
+        self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_each_subscript_form_is_one_region_with_no_operator(self):
+        for command, literal in SUBSCRIPT_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command + TAIL)
+                self.assertEqual(lexmap.heredocs, [])
+                found = subscript_regions(lexmap)
+                for n in range(command.count(literal)):
+                    self.assertIn(span_of(command, literal, n), found)
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(lexmap.unopened, [])
+
+    def test_each_subscript_form_denies_the_destructive_tail_in_both_modes(self):
+        for command, _literal in SUBSCRIPT_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command + TAIL)[0], "deny")
+                self.assertEqual(hook_verdict(command + TAIL, batch=True)[0], "deny")
+
+    def test_a_subscript_nests_only_what_it_holds(self):
+        command = "a[b[1]<<2]=x" + TAIL
+        lexmap = H.lex_shell(command)
+        self.assertEqual(subscript_regions(lexmap), [span_of(command, "[b[1]<<2]")])
+        command = 'a["1"<<2]=x' + TAIL
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            actual_regions(lexmap),
+            expected_regions(
+                command, [("array-subscript", '["1"<<2]'), ("double-quote", '"1"')]
+            ),
+        )
+        command = "a[$(echo 1)<<2]=x" + TAIL
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            actual_regions(lexmap),
+            expected_regions(
+                command,
+                [("array-subscript", "[$(echo 1)<<2]"), ("command-substitution", "$(echo 1)")],
+            ),
+        )
+
+    def test_a_closer_inside_a_quote_or_substitution_does_not_close_the_subscript(self):
+        for command, literal in (
+            ("a['k]'<<2]=x", "['k]'<<2]"),
+            ('a["]"<<2]=x', '["]"<<2]'),
+            ("a[$(echo ])<<2]=x", "[$(echo ])<<2]"),
+            ("a[`echo ]`<<2]=x", "[`echo ]`<<2]"),
+            ("a[${x:-]}<<2]=x", "[${x:-]}<<2]"),
+            ("a[\\]<<2]=x", "[\\]<<2]"),
+        ):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command + TAIL)
+                self.assertEqual(subscript_regions(lexmap), [span_of(command, literal)])
+                self.assertEqual(lexmap.heredocs, [])
+
+    def test_a_here_document_operator_after_the_closing_bracket_is_real(self):
+        command = "a[1] <<EOF\nhi\nEOF"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(subscript_regions(lexmap), [span_of(command, "[1]")])
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertEqual(lexmap.heredocs[0].delimiter, "EOF")
+        self.assertEqual(heredoc_body(command, lexmap.heredocs[0]), "hi\n")
+        command = "a[1]<<EOF\nhi\nEOF"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(subscript_regions(lexmap), [span_of(command, "[1]")])
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertEqual(lexmap.heredocs[0].delimiter, "EOF")
+        command = "a[$(echo 1)]<<EOF\nhi\nEOF"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(len(lexmap.heredocs), 1)
+
+    def test_the_masked_view_hides_the_subscript_from_the_word_splitter(self):
+        for command in ("a[1<<2]=x", "a[1<<2]+=x", "x=1 a[1<<2]=y", "a[b[1]<<2]=x"):
+            with self.subTest(command=command):
+                toks = H._tokenize_marked(H._MarkedText.plain(command))
+                self.assertEqual([str(t) for t, _s, _e in toks], command.split())
+                self.assertFalse(any(t.is_operator for t, _s, _e in toks))
+
+    def test_a_substitution_inside_a_subscript_is_still_inspected(self):
+        for command in (
+            "a[$(rm -rf /home/sakura/valuable)]=x",
+            "x=1 a[`rm -rf /home/sakura/valuable`]=x",
+            "a[$(rm -rf /home/sakura/valuable)<<2]=x",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_the_heredoc_body_top_level_reads_no_subscript(self):
+        lexmap = H.lex_shell("a[1<<2]=x", "heredoc-body")
+        self.assertEqual(subscript_regions(lexmap), [])
+
+    # AC-4: argument-position reading is unchanged.
+    def test_argument_position_reading_keeps_its_operator(self):
+        for command in SUBSCRIPT_ARGUMENT_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command + TAIL)
+                self.assertEqual(subscript_regions(lexmap), [])
+                self.assertEqual(len(lexmap.heredocs), 1)
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_the_existing_context_form_cat_a1_heredoc_is_unchanged(self):
+        command = "cat a[1] <<EOF\nhi\nEOF"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(actual_regions(lexmap), [])
+        self.assertEqual(len(lexmap.heredocs), 1)
+        op = lexmap.heredocs[0]
+        self.assertEqual((op.delimiter, op.quoted), ("EOF", False))
+        self.assertEqual(heredoc_body(command, op), "hi\n")
+        self.assertEqual(hook_verdict(command)[0], "allow")
+
+    def test_echo_a_subscript_still_registers_the_operator(self):
+        command = "echo a[1<<2]"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertEqual(lexmap.heredocs[0].start, command.index("<<"))
+        self.assertEqual(subscript_regions(lexmap), [])
+
+    def test_declaration_builtin_arguments_keep_the_operator(self):
+        # bash 5.3 registers the `<<` of `declare a[1<<2]=x` and of the other
+        # declaration builtins as a here-document operator.
+        for word in ("declare", "local", "export", "readonly", "typeset"):
+            command = "%s a[1<<2]=x" % word + TAIL
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(len(lexmap.heredocs), 1)
+                self.assertEqual(subscript_regions(lexmap), [])
+
+    # AC-5: an unclosed subscript is settled as not opened.
+    def test_an_unclosed_subscript_is_settled_and_the_tail_stays_inspected(self):
+        for command, opener in SUBSCRIPT_UNCLOSED_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(command[opener], "[")
+                lexmap = H.lex_shell(command)
+                self.assertEqual(subscript_regions(lexmap), [])
+                self.assertEqual(lexmap.heredocs, [])
+                self.assertEqual(lexmap.unopened, [opener])
+                self.assertEqual(lexmap.tail_start, opener)
+                self.assertFalse(any(r.kind == "comment" for r in lexmap.regions))
+                self.assertNotEqual(hook_verdict(command)[0], "allow")
+                self.assertNotEqual(hook_verdict(command, batch=True)[0], "allow")
+
+    def test_the_spec_unclosed_form_is_denied(self):
+        command = "a[1<<2\nrm -rf /home/sakura/valuable\n2"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(lexmap.unopened, [1])
+        self.assertEqual(lexmap.tail_start, 1)
+        self.assertEqual(lexmap.heredocs, [])
+        self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_a_closed_subscript_before_an_unclosed_one_is_still_a_region(self):
+        command = "a[1<<2]=x\nb[3<<4\nrm -rf /home/sakura/valuable\n4"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(subscript_regions(lexmap), [span_of(command, "[1<<2]")])
+        self.assertEqual(lexmap.unopened, [command.index("[3")])
+        self.assertEqual(lexmap.tail_start, command.index("[3"))
+        self.assertEqual(lexmap.heredocs, [])
+        self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_no_subscript_is_read_after_the_tail_start(self):
+        command = "echo ${x\na[1<<2]=y\nrm -rf /home/sakura/valuable\n2"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(subscript_regions(lexmap), [])
+        self.assertEqual(lexmap.heredocs, [])
+        self.assertEqual(lexmap.tail_start, command.index("${"))
+        self.assertEqual(hook_verdict(command)[0], "deny")
+
+    def test_the_same_command_gives_an_identical_map(self):
+        for command in ("a[1<<2]=x" + TAIL, "a[1<<2\nrm -rf /home/sakura/valuable\n2"):
+            with self.subTest(command=command):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    # AC-6: linear work for closed and unclosed subscripts.
+    def test_lexing_work_is_linear_for_closed_and_unclosed_subscripts(self):
+        for unit in ("a[1<<2]=x\n", "a[\n"):
+            with self.subTest(unit=unit):
+                small = H.lex_shell(unit * 200)
+                large = H.lex_shell(unit * 400)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(unit * 400) + 1024)
+
+    def test_many_unclosed_subscripts_settle_in_a_bounded_number_of_readings(self):
+        unit = "a[\n"
+        small = H.lex_shell(unit * 200)
+        large = H.lex_shell(unit * 400)
+        self.assertEqual(large.rounds, small.rounds)
+        self.assertLessEqual(large.rounds, 3)
+        self.assertEqual(large.tail_start, 1)
+        self.assertEqual(large.unopened, [1])
+
+    def test_nested_subscripts_that_span_lines_cost_no_pass_per_level(self):
+        command = "a[$(" * 300 + "x\n" + ")]=1" * 300
+        lexmap = H.lex_shell(command)
+        self.assertLessEqual(lexmap.rounds, 3)
+        self.assertLessEqual(lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024)
+
+    # AC-1, AC-3, AC-7: this task's block of the case table.
+    def test_the_cases_are_appended_after_the_earlier_entries_and_all_deny(self):
+        cases = subscript_cases()
+        self.assertGreaterEqual(len(cases), 20)
+        for index, want, label, _cmd in cases:
+            with self.subTest(label=label):
+                self.assertGreaterEqual(index, SUBSCRIPT_CASE_FLOOR)
+                self.assertEqual(want, "deny")
+        commands = [cmd for _i, _w, _l, cmd in cases]
+        self.assertIn("a[1<<2]=x" + TAIL, commands)
+
+    def test_each_appended_case_is_read_without_an_operator_and_denied_in_both_modes(self):
+        for _index, _want, label, command in subscript_cases():
+            with self.subTest(label=label):
+                self.assertEqual(H.lex_shell(command).heredocs, [])
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
 
 
 # ---------------------------------------------------------------------------
