@@ -1,6 +1,7 @@
 task_id: task0003
-baseline_failures: []          # 4a: python3 -m unittest discover -s tests ran 8422 tests, OK (1 skipped), before any edit
-final_failures: []             # re-executed after implementation: python3 -m unittest discover -s tests ran 8448 tests, OK (1 skipped); run-destructive-guard.py 631/631; tests.test_destructive_guard_lexer_agreement 104 tests OK
+baseline_failures:             # refreshed after parent-side adoption (merge of the parent into the task branch): the suite run at the adoption commit, before the case block was re-appended
+  - TestHeredocDelimiterWords.test_new_cases_are_in_the_case_table_after_the_earlier_entries   # this task's own placement test: adopting the parent's case table dropped this task's three cases; fixed by the re-append commit
+final_failures: []             # re-executed after the re-implementation commit on the updated parent: python3 -m unittest discover -s tests ran 8451 tests, OK (1 skipped); run-destructive-guard.py 637/637; tests.test_destructive_guard_lexer_agreement 107 tests OK
 acceptance_tests:
   AC-1:
     tests:
