@@ -124,7 +124,7 @@ workflow:
   status: completed
   completed_at_commit: ea261afaa8e8c1427191697f5f7053a2665190b2
 - id: verify
-  status: pending
+  status: in_progress
   result: fail
   failed_items:
   - id: TS-13
