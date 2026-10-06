@@ -122,6 +122,7 @@ tasks:
     files:
     - em-workflow/hooks/destructive-guard.py
     - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
     skills:
     - backend-impl
     domains:
@@ -138,7 +139,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-heredoc-syntax-error/task0001
     notes: null
 review:
