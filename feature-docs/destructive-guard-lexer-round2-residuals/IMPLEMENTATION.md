@@ -41,6 +41,10 @@ as four tasks that run in parallel and share three files.
 | Here-document operator reading (operator registration, delimiter value, quoted flag, close-line index) | Which `<<` / `<<-` is a real operator, its delimiter, and where its body ends | Owned by task0003. Post: the delimiter recorded on a here-document entry is the quote-removed delimiter word; `quoted` is true exactly when the word holds a quote character; an operator whose delimiter word cannot be read takes no body. task0002 keeps a `<<` inside a subscript from registering only by consuming the subscript before the operator reader sees it, without changing the operator reader. task0004 keeps the pending-body / line-start trigger semantics intact across its re-reading. | task0002, task0003, task0004 |
 | Case table append protocol (`em-workflow/hooks/tests/destructive-guard-cases.json`) | Holds the regression cases the runner checks | Pre: the 627 entries present at the feature base (indexes 0-626). Post: each task appends its own contiguous block after the last entry; no entry is inserted before, edited, removed or reordered (FR8); every new label begins with the finding's stable_id followed by `round2-residuals` and a requirement tag (e.g. `FR1.1`); the commit that appends a task's cases precedes every commit of that task that changes the hook (FR6). Tests locate new cases by label and command text, never by an absolute index of 627 or above, because the order of the four blocks depends on merge order. | task0001, task0002, task0003, task0004 |
 | Lexer agreement test layout (`tests/test_destructive_guard_lexer_agreement.py`) | Where each task adds its tests, so that parallel edits land in distinct places | task0001: extends `COMMAND_POSITION_FORMS` and `COMMAND_POSITION_EXTRA_REGIONS`, adds its two-mode verdict test to `TestFixedVerdicts`, and adds the placement test to `TestModuleContract`. task0002: a new test class placed directly after `TestSubstitutionPolicies`. task0003: a new test class placed directly after `TestHeredocBodies`. task0004: extends `TestUnclosedOpeners` / `TestReworkLinearity` and adds a new test class placed directly after `TestReworkLinearity`. Constants a task needs are defined next to its own class, except task0001's edits to the form lists at the top. | task0001, task0002, task0003, task0004 |
+| Rework round 1: grammar state — `time` option transitions | Which words after `time` are options | Owned by task0006. Post: directly after `time`, `-p` and `--` are options; directly after `time -p`, only `--` is; any other word (a second `-p` included) is the command word and ends the command position. task0005 and task0007 change no grammar-state transition. | task0006 |
+| Rework round 1: here-document close-line rule and unreadable-delimiter tail source | Where a body ends, and how the text after a `<<` with an unreadable delimiter word is read | Owned by task0005. Post: under `<<` a line closes a body only on an exact match with the delimiter value (line end removed); under `<<-` only after removing leading tabs; the close-line index can look up values holding blanks. A `<<` whose delimiter word is unreadable registers no operator and becomes a tail source: from its position on no comment, quote or here-document operator is opened, and the map's tail start is the earliest of this position and the settle channel's tail start. Readable delimiter words keep task0003's value and quoted flag. task0006 and task0007 do not change this reading; task0007's resume carries any pass state it uses. | task0005, task0007 |
+| Rework round 1: pass-state snapshot for the non-adjacent-close resume | Saves and restores the pass state around a resume | Owned by task0007. Post: every pass-state field the resume restores is captured and restored only through one named snapshot type whose capture and restore are defined together; fields the resume does not restore are named in one explicit list beside it; each collection is restored from its own recorded extent; the pass returns the openers it newly reads as two parentheses instead of mutating its input set. Any pass state task0005 adds is either restored through the snapshot or named in the not-restored list (before task0007 merges: through today's capture / restore sites). | task0005, task0007 |
+| Rework round 1: test layout | Where the rework tasks add tests | task0005: a new test class placed directly after the delimiter-word class that follows `TestHeredocBodies`; it rewrites the existing close-line blank-allowance test and the open-quote "as today" expectation in place. task0006: a new test class placed directly after `TestFixedVerdicts`. task0007: a new test class placed after the classes that follow `TestReworkLinearity`; it updates in place the existing tests that drive the pass with an opener set. | task0005, task0006, task0007 |
 
 ## Conventions
 - **Fail-safe direction (NFR6, SPEC A3)**: follow bash 5.3. Where the
@@ -90,6 +94,18 @@ by label and command text. The check passes whichever subset of the four
 blocks is present, so it holds on every task branch and after every merge
 order. Affected: all tasks (task0001 implements the shared test).
 
+### D4: Review round 1 rework split
+Three rework tasks run in parallel on the merged tree: task0005
+(here-document unreadable-delimiter fallback and close lines, findings
+1baa909f9b288847 and 19edf404b5cbeb2b), task0006 (`time` options, finding
+48e1f462b0dd164f) and task0007 (resume snapshot, finding
+956849b341a5150b). Ownership follows the rework round 1 rows of Shared
+Components; the case table append protocol applies with each label
+beginning with the rework finding's stable_id followed by
+`round2-residuals` and a requirement tag. task0007 adds no case-table
+entries. The D3 placement test keeps passing because every rework case
+sits at index 627 or later. Affected: task0005, task0006, task0007.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
@@ -99,6 +115,8 @@ order. Affected: all tasks (task0001 implements the shared test).
 | task0004's re-reading interacts with task0002's subscript region or task0003's operator reading (e.g. a pending here-document across a re-read span) | Medium | High | task0004's map-equivalence test runs over every case-table command, so after merge it covers the other tasks' cases; the verify phase runs both suites on the integrated tree |
 | A wider reading flips the verdict of an existing case | Low | High | Existing cases are fixed points (Conventions); stop and report |
 | bash 5.3 is not available to confirm an edge form | Low | Low | The form is not added and is reported as unconfirmed; the fail-safe direction still governs the code |
+| task0005 adds pass state while task0007 replaces the positional resume snapshot | Medium | High | Pass-state snapshot row above; task0007's completeness test fails on any unclassified field after merge; parent-side adoption re-applies the field to the snapshot type |
+| Exact close-line matching (task0005) flips an existing case that relied on a blank-indented close line | Low | High | Existing cases are fixed points (Conventions); stop and report |
 
 ## Open Questions
 - None.
