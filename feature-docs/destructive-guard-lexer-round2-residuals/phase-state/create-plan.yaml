@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-residuals
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: c40641caf8a5a63a925cea843fde374308da5a3e
+last_input_digest: sha256:0a54db662f891b61cc4b41411b2c684f5fb89ce9d36a7427502c8bc108851067
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:0a54db662f891b61cc4b41411b2c684f5fb89ce9d36a7427502c8bc108851067
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
