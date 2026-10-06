@@ -1315,9 +1315,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                     continue
                 if kind == "array":
                     # A parenthesis inside an array compound assignment is a
-                    # syntax error in bash as well, and the `<<` it holds
-                    # keeps the position of the array (P13).
-                    stack.append(_LexFrame("array", i, None, f.reg))
+                    # syntax error in bash as well: this line is the
+                    # discarded line, and no operator on it gets a body (P13).
+                    if discard_end is None and (tail_start is None or i < tail_start):
+                        begin_discard(i)
                     i += 1
                     continue
                 if f.prev_plain:
@@ -1351,11 +1352,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                         continue
                     if i not in reparen:
                         f.kw = ""
+                        f.redir = False
                         f.prev_plain = f.time_p = False
                         push(f, "arith", "arithmetic-command", i, depth=2)
                         i += 2
                         continue
                 f.kw = ""
+                f.redir = False
                 f.prev_plain = f.time_p = False
                 stack.append(_LexFrame("group", i, None, f.reg, True))
                 i += 1
@@ -1405,7 +1408,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
                             # On the discarded line: no operator (P13).
                             i += 2
                             continue
-                        if kind == "array" and (tail_start is None or i < tail_start):
+                        if kind == "array":
                             # Direct position in an array compound assignment:
                             # a syntax error, no operator; this line is the
                             # discarded line (P13).
@@ -1465,6 +1468,17 @@ def _lex_pass(text, mode, settled, reparen, lines, budget):
             run = _LEX_WORD_RUN.match(text, i, limit)
             end = run.end()
             if f.in_word:
+                i = end
+                continue
+            if (
+                end < n
+                and text[end] in "<>"
+                and text[i:end].isdigit()
+                and not text.startswith("(", end + 1)
+            ):
+                # The fd number of a redirection: it leaves the grammar state
+                # as it was; the operator that follows sets REDIR.
+                f.in_word = True
                 i = end
                 continue
             complete = end >= n or text[end] in _LEX_WORD_END
