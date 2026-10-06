@@ -1715,6 +1715,20 @@ def _lex_pass(
                     )
         return True
 
+    def in_bt_form():
+        """Whether the stack holds, above any backtick frame, a command form
+        opened inside a backtick substitution (the top frame included): a
+        backtick met there ends the substitution wherever it stands."""
+        k = len(stack) - 1
+        while k > 0:
+            fk = stack[k]
+            if fk.kind == "backtick":
+                return False
+            if fk.kind == "bracecmd" and fk.in_bt:
+                return True
+            k -= 1
+        return False
+
     def open_bare(f, kind, start, named=False, bound=False):
         """P14: a `subscript` (at its `[`) or `extglob` (at its `(`) frame on
         top of F. An `extglob` frame, and a BOUND subscript (a declaration-
@@ -2251,6 +2265,13 @@ def _lex_pass(
                 end = text.find("\n", i, state.limit)
                 if end == -1:
                     end = state.limit
+                if in_bt_form():
+                    # Inside a backtick substitution the closing backtick
+                    # ends the comment too: bash finds it before reading
+                    # the content as a script.
+                    b = text.find("`", i, end)
+                    if b != -1:
+                        end = b
                 idx = new_region("comment", i, f)
                 regions[idx][2] = end
                 i = end
@@ -2642,6 +2663,11 @@ def _lex_pass(
 
         if kind == "sq":
             j = text.find("'", i, state.limit)
+            if in_bt_form():
+                b = text.find("`", i, state.limit if j == -1 else j)
+                if b != -1 and unwind_to_bracecmd(b):
+                    i = b
+                    continue
             if j == -1:
                 i = state.limit
             else:
@@ -2655,6 +2681,11 @@ def _lex_pass(
                 i = state.limit
                 continue
             j = m.start()
+            if in_bt_form():
+                b = text.find("`", i, j)
+                if b != -1 and unwind_to_bracecmd(b):
+                    i = b
+                    continue
             if text[j] == "\\":
                 i = j + 2
             else:
