@@ -128,7 +128,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 1a2f45002a38086ccc9e066d3285e04c28c09151
 tasks:
   task0001:
     title: Judge assignment words and builtin names on the logical word
