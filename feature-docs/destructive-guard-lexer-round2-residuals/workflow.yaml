@@ -152,7 +152,7 @@ workflow:
   failed_items: []
   completed_at_commit: 032c9e5183d6006877a1eb2eb7bace5ea418b7b0
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: 閉じ記号の後の { と time -- / time -p -- の後をコマンド位置として読む
