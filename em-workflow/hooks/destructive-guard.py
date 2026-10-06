@@ -588,6 +588,27 @@ class _TrackingLexer(shlex.shlex):
 #              under `<<-` it does once its leading tabs are removed.
 #              _LexLines.close_lines() is that index, one pass per kind.
 #
+# Round 2 deferred (destructive-guard-lexer-round2-deferred, task0003, FR3 and
+# FR5; review findings e959ba60bde865a4 and 2b52be5874de85f4).
+#
+#   Line separator (FR3)  a line ends at `\n` only, as in bash 5.3: the line
+#              index (_LexLines) starts a line at offset 0 and right after each
+#              `\n`, and a delimiter word ends at a metacharacter only (space,
+#              tab, newline, `;`, `|`, `&`, `(`, `)`, `<`, `>`). `\r`, `\x0b`,
+#              `\x0c`, `\x1c`-`\x1e`, `\x85`, U+2028 and U+2029 are characters of
+#              the word, quoted or not, and of the delimiter value; "on the
+#              operator's line" means before the next `\n`.
+#   Joined close line (FR5)  a body of an unquoted delimiter ends at a line
+#              that equals the delimiter value once it is joined with the lines
+#              it continues into (a backslash-newline removed: the line before
+#              ends with an odd number of backslashes), under `<<-` once the
+#              joined line's leading tabs are removed; the close extent runs to
+#              the end of the last joined line, and the next body starts after
+#              it. The first line of a body is always a candidate: bash reads
+#              every body afresh. A quoted delimiter joins nothing. The index
+#              is _LexJoinedLines, one pass per operator flavour, and the first
+#              line of a body inside a run costs the delimiter's length.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -708,7 +729,9 @@ class LexMap:
       DELIMITER is that word with its quotes removed (_read_heredoc_delimiter())
       and QUOTED whether it held a quote character (`'`, `"` or `\\`);
       BODY_START/BODY_END the body lines and CLOSE_END the end of the
-      delimiter line (all None when the delimiter line never appears, when
+      delimiter line (the last of its physical lines when an unquoted
+      delimiter's line is joined from several; all None when the delimiter
+      line never appears, when
       the operator sits on a discarded line (P13), or when the map was made
       without body skipping). An operator whose delimiter word cannot be read
       is not reported at all and takes no body; it is a tail source instead
@@ -830,31 +853,53 @@ class _LexFrame:
 
 class _LexLines:
     """Line index of a text for here-document body lookup: START offsets of
-    every line (str.splitlines() rules, as strip_heredocs() always used) and,
-    built on first use of each kind, the close-line index (NFR3):
-    close_lines(DASH) maps a delimiter value to the lines that close a body
-    with it, one pass over the lines per kind. A line closes the body of a
-    `<<` operator when the line, its line end removed, equals the delimiter
+    every line and, built on first use of each kind, the close-line indexes
+    (NFR3). A line ends at `\\n` only, as in bash 5.3: the line starts are
+    offset 0 and the offset right after each `\\n` that does not end the text,
+    never after `\\r`, `\\x0b`, `\\x0c`, `\\x1c`-`\\x1e`, `\\x85`, U+2028 or
+    U+2029 (which str.splitlines() would split at).
+
+    close_lines(DASH) maps a delimiter value to the physical lines that close
+    a body with it, one pass over the lines per kind: a line closes the body of
+    a `<<` operator when the line, its line end removed, equals the delimiter
     value; of a `<<-` operator when it does once its leading tabs are removed
     too (bash 5.3). The key of a line is therefore the line itself (DASH
     false) or the line without its leading tabs (DASH true), so a value that
-    holds blanks is looked up like any other."""
+    holds blanks is looked up like any other. This is the close-line rule of a
+    quoted delimiter word.
 
-    __slots__ = ("text", "starts", "_close_lines")
+    close_lines(DASH, JOINED=True) is the index of an unquoted delimiter word
+    (_LexJoinedLines): bash joins the lines it reads for such a body at every
+    backslash-newline before it compares one with the delimiter.
+
+    find_close() is the lookup the lexer pass uses: the line a body starting
+    at a given line closes at, for either rule."""
+
+    __slots__ = ("text", "starts", "_close_lines", "_joined_lines")
 
     def __init__(self, text):
         starts = []
-        total = 0
-        for line in text.splitlines(keepends=True):
-            starts.append(total)
-            total += len(line)
+        n = len(text)
+        if n:
+            starts.append(0)
+            at = text.find("\n")
+            while at != -1 and at + 1 < n:
+                starts.append(at + 1)
+                at = text.find("\n", at + 1)
         self.text = text
         self.starts = starts
         self._close_lines = [None, None]
+        self._joined_lines = [None, None]
 
-    def close_lines(self, dash):
+    def close_lines(self, dash, joined=False):
         """{key: [indexes of the lines with that key, in order]} for a `<<-`
-        operator (DASH true) or a `<<` operator (DASH false)."""
+        operator (DASH true) or a `<<` operator (DASH false). With JOINED the
+        indexes are those of the lines an unquoted delimiter's close line can
+        start at, the key the line joined with the lines it continues into
+        (the _LexJoinedLines keys); without it every physical line is a
+        candidate, as a quoted delimiter has it."""
+        if joined:
+            return self._joined(dash).keys
         kind = 1 if dash else 0
         mapping = self._close_lines[kind]
         if mapping is None:
@@ -873,13 +918,147 @@ class _LexLines:
             self._close_lines[kind] = mapping
         return mapping
 
+    def _joined(self, dash):
+        kind = 1 if dash else 0
+        index = self._joined_lines[kind]
+        if index is None:
+            index = self._joined_lines[kind] = _LexJoinedLines(self, dash)
+        return index
 
-# Blanks of the shell-rule frames are space and tab only, as in bash 5.3
-# (destructive-guard-lexer-round2-deferred FR6): they end a word, are skipped
-# between words, leave the next character at a word start and end a bound
-# subscript. A `\r` is an ordinary word character in all of these roles.
-_LEX_WS = re.compile(r"[ \t]+")
-_LEX_WORD_RUN = re.compile(r"[^ \t\n;|&()<>\"'`$\\]+")
+    def find_close(self, dash, value, quoted, first):
+        """The close line of a body that starts at line FIRST, for the
+        delimiter VALUE of a `<<-` (DASH) or `<<` operator whose word is
+        QUOTED or not: (the line the close line starts at, the last physical
+        line it extends over), or None when no line closes the body. A quoted
+        delimiter's close line is one physical line; an unquoted one may be
+        several, joined at backslash-newline."""
+        if first >= len(self.starts):
+            return None
+        if quoted:
+            found = self.close_lines(dash).get(value, ())
+            pos = bisect.bisect_left(found, first)
+            if pos < len(found):
+                return found[pos], found[pos]
+            return None
+        return self._joined(dash).find(value, first)
+
+
+class _LexJoinedLines:
+    """The close lines of an unquoted delimiter word, for one operator flavour
+    (DASH: `<<-`), read in one pass over the lines of a _LexLines.
+
+    bash reads the lines of an unquoted-delimiter body with every
+    backslash-newline removed: a line that ends with an odd number of
+    backslashes (and a newline) continues into the next line, the last of
+    those backslashes and the newline dropped. A RUN is a maximal series of
+    lines joined that way; its joined text J is what bash compares with the
+    delimiter value (under `<<-` once the leading tabs of J are removed). A
+    line is a candidate for a close line when it starts a run, and the first
+    line of a body is one wherever it sits in a run: bash starts reading every
+    body afresh, so the line before a body's first line (a quoted delimiter's
+    close line, for one) never joins it.
+
+    KEYS maps the key of a run (J, or J without its leading tabs) to the
+    indexes of the lines the runs start at. The rest serves the one candidate
+    that is not a run start, the first line of a body inside a run, without
+    reading the run again: RUN_OF (a line's run), HEADS / LASTS / TEXTS (a
+    run's first line, last line and J), OFFSET (where a line's own text starts
+    in J) and LEAD (under `<<-`: how many tabs J has from that offset on). The
+    rest of the run from such a line equals the delimiter value exactly when
+    its length, less the leading tabs, is the value's and the value is at
+    that place of J: work proportional to the value's length, however many
+    continuation lines follow."""
+
+    __slots__ = ("keys", "run_of", "heads", "lasts", "texts", "offset", "lead")
+
+    def __init__(self, lines, dash):
+        text = lines.text
+        starts = lines.starts
+        n = len(text)
+        count = len(starts)
+        keys = {}
+        run_of = [0] * count
+        offset = [0] * count
+        lead = [0] * count if dash else None
+        heads = []
+        lasts = []
+        texts = []
+        pieces = []
+        size = 0
+        head = 0
+
+        def end_run(last):
+            joined = "".join(pieces)
+            key = joined.lstrip("\t") if dash else joined
+            keys.setdefault(key, []).append(head)
+            heads.append(head)
+            lasts.append(last)
+            texts.append(joined)
+            if dash:
+                # The tabs J has from each line's own text on, read from the
+                # end of the run: a line of nothing but tabs adds its own to
+                # the tabs the rest of the run starts with.
+                after = 0
+                for k in range(len(pieces) - 1, -1, -1):
+                    piece = pieces[k]
+                    rest = piece.lstrip("\t")
+                    after = len(piece) - len(rest) if rest else len(piece) + after
+                    lead[head + k] = after
+
+        for idx in range(count):
+            s = starts[idx]
+            e = starts[idx + 1] if idx + 1 < count else n
+            has_newline = e > s and text[e - 1] == "\n"
+            if has_newline:
+                e -= 1
+            raw = text[s:e]
+            continues = has_newline and (len(raw) - len(raw.rstrip("\\"))) % 2 == 1
+            piece = raw[:-1] if continues else raw
+            run_of[idx] = len(heads)
+            offset[idx] = size
+            pieces.append(piece)
+            size += len(piece)
+            if not continues:
+                end_run(idx)
+                head = idx + 1
+                pieces = []
+                size = 0
+        if pieces:
+            # The text ends right after a backslash-newline: bash reads end
+            # of input as the continued line's end, so the run ends here.
+            end_run(count - 1)
+        self.keys = keys
+        self.run_of = run_of
+        self.heads = heads
+        self.lasts = lasts
+        self.texts = texts
+        self.offset = offset
+        self.lead = lead
+
+    def find(self, value, first):
+        """(line the close line starts at, the last line it extends over) for
+        a body whose first line is FIRST, or None."""
+        run = self.run_of[first]
+        if self.heads[run] != first:
+            # The first line is inside a run: it is a candidate all the same,
+            # joined with the rest of its run.
+            at = self.offset[first]
+            if self.lead is not None:
+                at += self.lead[first]
+            joined = self.texts[run]
+            if len(joined) - at == len(value) and joined.startswith(value, at):
+                return first, self.lasts[run]
+        found = self.keys.get(value)
+        if found:
+            pos = bisect.bisect_left(found, first)
+            if pos < len(found):
+                head = found[pos]
+                return head, self.lasts[self.run_of[head]]
+        return None
+
+
+_LEX_WS = re.compile(r"[ \t\r]+")
+_LEX_WORD_RUN = re.compile(r"[^ \t\r\n;|&()<>\"'`$\\]+")
 _LEX_DQ_SPECIAL = re.compile(r"[\\\"$`]")
 _LEX_PARAM_SPECIAL = re.compile(r"[\\'\"$`}]")
 _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
@@ -888,27 +1067,22 @@ _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
 _LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
 # A BOUND subscript (a declaration-builtin argument) ends with its word at an
 # unquoted blank or metacharacter as well.
-_LEX_SUBSCRIPT_BOUND_SPECIAL = re.compile(r"[\\'\"$`\[\] \t\n;|&()<>]")
-# The line breaks str.splitlines() splits a text at -- the lines _LexLines
-# indexes. A here-document delimiter word never spans one.
-_LEX_LINE_BREAKS = frozenset("\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
-_LEX_LINE_BREAK = re.compile(r"[\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]")
+_LEX_SUBSCRIPT_BOUND_SPECIAL = re.compile(r"[\\'\"$`\[\] \t\r\n;|&()<>]")
+# A line ends at `\n` only (bash 5.3): `\r`, `\x0b`, `\x0c`, `\x1c`-`\x1e`, `\x85`,
+# U+2028 and U+2029 are ordinary characters, in a delimiter word and in the line
+# index alike. A here-document delimiter word ends at a metacharacter only.
 _LEX_DELIM_BLANKS = re.compile(r"[ \t]*")
 # A run of delimiter word characters read without a decision: everything but
-# a metacharacter (blank, line break, `;|&()<>`) and the characters that open
+# a metacharacter (space, tab, newline, `;|&()<>`) and the characters that open
 # an escape, a quote, an expansion or a substitution.
-_LEX_DELIM_RUN = re.compile(
-    r"[^ \t\r\n\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029;|&()<>\\'\"`$]+"
-)
+_LEX_DELIM_RUN = re.compile(r"[^ \t\n;|&()<>\\'\"`$]+")
 # Inside double quotes: the characters that need a decision.
-_LEX_DELIM_DQ_SPECIAL = re.compile(
-    r"[\\\"$`\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]"
-)
+_LEX_DELIM_DQ_SPECIAL = re.compile(r"[\\\"$`\n]")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
 _LEX_CANDIDATE_OPEN = re.compile(r"\$\(|`")
-_LEX_WORD_END = frozenset(" \t\n;|&()<>")
+_LEX_WORD_END = frozenset(" \t\r\n;|&()<>")
 _LEX_SHELL_KINDS = frozenset(
     {"top", "cmdsub", "group", "procsub", "backtick", "array"}
 )
@@ -1029,19 +1203,23 @@ def _read_heredoc_delimiter(text, i):
     read -- then the `<<` is no operator and takes no body (NFR6, SPEC A3).
 
     The word runs from after the operator and its blanks to the next unquoted
-    metacharacter (blank, line break, `;`, `|`, `&`, `(`, `)`, `<`, `>`);
-    quoted segments and backslash escapes are part of it. DELIMITER is the
-    word with its quotes removed (`END-X` -> `END-X`, `E\\X` -> `EX`, `E"X"` ->
-    `EX`, `'E-X'` -> `E-X`, `\\EOF` -> `EOF`); a `$` that starts no expansion
+    metacharacter (space, tab, newline, `;`, `|`, `&`, `(`, `)`, `<`, `>`);
+    quoted segments and backslash escapes are part of it, and every other
+    character is a character of the word (`\\r`, `\\x0b`, `\\x0c`,
+    `\\x1c`-`\\x1e`, `\\x85`, U+2028 and U+2029 included: bash 5.3 breaks a
+    line at `\\n` only). DELIMITER is the word with its quotes removed
+    (`END-X` -> `END-X`, `E\\X` -> `EX`, `E"X"` -> `EX`, `'E-X'` -> `E-X`,
+    `\\EOF` -> `EOF`); a `$` that starts no expansion
     stays a character of it (`E$X` -> `E$X`: nothing is expanded). QUOTED is
     True exactly when the word holds a `'`, `"` or `\\`: the body is then
     literal. Inside double quotes a backslash removes itself only before
     `$`, a backtick, `"` and `\\`.
 
     Unreadable: no word before a metacharacter or the end of the text; a
-    quote that does not close on the operator's line (nor does a backslash
-    before a line break); a command substitution, a backtick, `${`, `$((`,
-    `$[`, `$'` or `$"` in the word. The `<<` is then no operator and a tail
+    quote that does not close on the operator's line, that is before the next
+    newline (nor does a backslash before a newline); a command substitution, a
+    backtick, `${`, `$((`, `$[`, `$'` or `$"` in the word. The `<<` is then no
+    operator and a tail
     source: _lex_pass() opens no comment, quote region or operator from it on,
     so every following line stays subject to inspection."""
     n = len(text)
@@ -1058,7 +1236,7 @@ def _read_heredoc_delimiter(text, i):
         c = text[q]
         if c == "\\":
             nxt = text[q + 1 : q + 2]
-            if nxt == "" or nxt in _LEX_LINE_BREAKS:
+            if nxt == "" or nxt == "\n":
                 return None
             parts.append(nxt)
             quoted = True
@@ -1067,7 +1245,7 @@ def _read_heredoc_delimiter(text, i):
             close = text.find("'", q + 1)
             if close == -1:
                 return None
-            if _LEX_LINE_BREAK.search(text, q + 1, close) is not None:
+            if text.find("\n", q + 1, close) != -1:
                 return None
             parts.append(text[q + 1 : close])
             quoted = True
@@ -1086,7 +1264,7 @@ def _read_heredoc_delimiter(text, i):
                     break
                 if d == "\\":
                     nxt = text[j + 1 : j + 2]
-                    if nxt == "" or nxt in _LEX_LINE_BREAKS:
+                    if nxt == "" or nxt == "\n":
                         return None
                     parts.append(nxt if nxt in '$`"\\' else "\\" + nxt)
                     r = j + 2
@@ -1818,17 +1996,19 @@ def _lex_pass(
                 jump = None
                 for op in hd_pending[cut:]:
                     # `<<-` removes leading tabs from a line before it is
-                    # compared with the delimiter, `<<` compares the line.
-                    found_lines = lines.close_lines(
-                        text.startswith("-", op[0] + 2)
-                    ).get(op[2], ())
-                    pos = bisect.bisect_left(found_lines, hd_next)
-                    if pos < len(found_lines):
-                        found = found_lines[pos]
+                    # compared with the delimiter, `<<` compares the line; an
+                    # unquoted delimiter compares the line joined with the
+                    # lines it continues into, and the close extent ends at
+                    # the last of them.
+                    found = lines.find_close(
+                        text.startswith("-", op[0] + 2), op[2], op[3], hd_next
+                    )
+                    if found is not None:
+                        close_first, close_last = found
                         op[4] = starts[hd_next]
-                        op[5] = starts[found]
-                        op[6] = starts[found + 1] if found + 1 < len(starts) else n
-                        hd_next = found + 1
+                        op[5] = starts[close_first]
+                        op[6] = starts[close_last + 1] if close_last + 1 < len(starts) else n
+                        hd_next = close_last + 1
                         jump = op[6]
                 del hd_pending[cut:]
                 del hd_seqs[cut:]
@@ -1848,7 +2028,7 @@ def _lex_pass(
 
         if kind in _LEX_SHELL_KINDS:
             c = text[i]
-            if c in " \t":
+            if c in " \t\r":
                 i = _LEX_WS.match(text, i, state.limit).end()
                 f.in_word = False
                 continue
@@ -2957,14 +3137,11 @@ def _tokenize_marked(marked, layout=True):
     a quote region or quote delimiter of any kind. Raises ValueError when the
     view does not tokenize (an unclosed quote, a trailing backslash)."""
     view = marked.view
-    # Space and tab are the blanks, as in the lexer (FR6); `\r` is a word
-    # character in both modes. The plain-word mode also splits at a newline.
     if layout:
         lex = _TrackingLexer(view, posix=True, punctuation_chars=PUNCTUATION)
-        lex.whitespace = " \t"
+        lex.whitespace = " \t\r"
     else:
         lex = _TrackingLexer(view, posix=True)
-        lex.whitespace = " \t\n"
     lex.whitespace_split = True
     lex.commenters = ""
     whitespace = lex.whitespace
@@ -3017,8 +3194,7 @@ def lex_segments(chunk):
     text (`.is_operator` cannot do this for a word: neither a bare nor a
     quoted letter-word ever enters the punctuation-sticky state). A Tok's
     value is the text of its span: characters hidden from shlex are given
-    back, so no value holds the mask character. A carriage return at the end
-    of a word is not part of its value (_disregard_trailing_cr(), task0004).
+    back, so no value holds the mask character.
 
     SEP (task0001, case-pattern tracking) is the raw separator text that
     ended this statement (possibly fused with an adjacent separator, e.g.
@@ -3093,44 +3269,6 @@ def _split_outside_subscripts(text, ranges):
     return out
 
 
-def _disregard_trailing_cr(words):
-    r"""The words of one statement as the destructive rules match them
-    (destructive-guard-lexer-round2-deferred, task0004, FR6): a `\r` at the
-    end of a word is disregarded.
-
-    The lexer and the tokenizer take space and tab as the only blanks, as
-    bash 5.3 does, so in a command text with CRLF line ends a `\r` stays at
-    the end of the last word of a line (`git reset --hard\r`) and is a word of
-    its own after a separator or a blank (`ls;\r`). Left in the words, it
-    would stop a command name, an option, a target, a reserved word or a
-    substitution-only word from matching, and a denied command would become an
-    allowed one. Only a `\r` at the very end of a word goes: the words the
-    lexer and the tokenizer read, and the offsets they report, keep it, and so
-    does a `\r` inside a word.
-
-    A word without a trailing `\r` is returned as the object it is. A changed
-    word is a copy that keeps every attribute of its token. An operator is
-    never changed. A word that is nothing but `\r` is a run of blanks when it
-    is not quoted, so it is dropped; a quoted one is kept as it is."""
-    out = []
-    for word in words:
-        if not word.endswith("\r") or getattr(word, "is_operator", False):
-            out.append(word)
-            continue
-        stripped = word.rstrip("\r")
-        if not stripped:
-            if getattr(word, "quoted", False):
-                out.append(word)
-            continue
-        if isinstance(word, Tok):
-            matched = Tok(stripped)
-            matched.__dict__.update(word.__dict__)
-            out.append(matched)
-        else:
-            out.append(stripped)
-    return out
-
-
 def _lex_layout(chunk, track):
     """lex_segments()'s one lexing pass: (segments, layout, operators).
     SEGMENTS is lex_segments()'s own return value, unchanged.
@@ -3169,7 +3307,7 @@ def _lex_layout(chunk, track):
         toks = _tokenize_marked(marked)
     except ValueError:
         return [
-            (_disregard_trailing_cr(tokens(seg)), False, None)
+            (tokens(seg), False, None)
             for seg in _split_outside_subscripts(text, marked.subscript_ranges)
             if seg.strip()
         ], None, None
@@ -3245,7 +3383,6 @@ def _lex_layout(chunk, track):
                         operators.setdefault(len(out), []).append(seg_start + k)
                         k = seg.find("<<", k + 1)
     out.append((current, True, None))
-    out = [(_disregard_trailing_cr(words), lexed, sep) for words, lexed, sep in out]
     if not confirmed or len(starts) != len(out):
         return out, None, None
     return out, starts, operators
