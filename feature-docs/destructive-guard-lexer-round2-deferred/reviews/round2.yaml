@@ -1,0 +1,714 @@
+round: 2
+executed_at: '2026-10-07T05:14:41+09:00'
+scope:
+  review_mode: diff
+  base_commit: 60f7ea47dc957a73eee8be32a79a44a16f1f5123
+  head_commit: 01cc9f991c38384a1a583e20eaf6167a658f9a65
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-lexer-round2-deferred/task0001.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0004.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0005.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0006.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0007.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0008.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: 毎回の Bash 呼び出しで走る字句解析に、読み直し・行連結の走査が増えたため、入力長に対する計算量の悪化を確認する
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+  skip_reason: non-JSON output
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+  skip_reason: non-JSON output
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: review_data_too_large
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: review_data_too_large
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: review_data_too_large
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#loop1-fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: review_data_too_large
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: review_data_too_large
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#loop2-fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#loop2-fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: review_data_too_large
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: security#loop3
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#loop3-fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#loop3-fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#loop3
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop3
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  model: muse-spark-contributor
+  skip_reason: review_data_too_large
+- run_id: performance#loop3
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+findings:
+- stable_id: 814902ad222f71b9
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2285
+  title: バッククォート範囲の中で P13 の破棄行が始まると end_discard() が backtick フレームと bt_end を捨て、閉じのバッククォート以降の破壊的コマンドが allow になる
+  description: 'バッククォート置換の中に配列の構文エラー（`x=(a; b)` / `x=(a & b)` / `x=( <<EOF` / `a=(x;)`）があり、置換が次の行まで続くとき、begin_discard() が LIMIT を破棄行の改行に置き、end_discard()（2285-2287）が `del stack[1:]` と `state.bt_end = None` で backtick フレームと範囲をまとめて捨てる。以降は最上位として読まれ、bash が置換を閉じるバッククォートが新しい置換の開きになり、範囲内の `#` がトップレベルのコメントとして後続を隠す。bash 5.3.9 では置換の範囲が先に決まり、構文エラーは置換の中だけで起きるので、後続は実行される。評価者が再現を確認した入力（Python の文字列表記。HEAD で通常実行・CLAUDE_BATCH=1 とも allow。base・main も allow。bash は echo に置き換えた後続を実行）: ''echo `x=(a; b)\necho hi`#; rm -rf /home/sakura/valuable''、''echo `x=( <<EOF\n`#; git reset --hard''、''echo `x=(a & b)\n`#; rm -rf /home/sakura/valuable''、''echo `a=(x;)\necho #`; git reset --hard''。base から既存で回帰ではないが、task0006 が宣言した「範囲は開いた時点で確定し、中で開いたものは閉じのバッククォートを越えない」不変条件の例外で、e79128f331828941 と同じ種類（TB-1、NFR6）。逆方向の誤検知もある: ''cat <<E; echo `x=(a; b)`\nrm -rf /home/sakura/v\nE'' は bash ではヒアドキュメント本文で実行されないが deny になる（base から既存。comprehensive#fallback は begin_discard() が範囲の外で登録された hd_pending まで捨てることを原因に挙げている）。security#fallback（critical）と
+    comprehensive#fallback（high）が同じ箇所を独立に報告した。'
+  suggestion: bt_end が立っている間に始まった破棄行は範囲の中で完結させる。(a) end_discard() で巻き戻すのは最も内側の backtick フレームより上だけにし、bt_end を保ったまま set_limit() する。または (b) bt_end が開いている間は begin_discard() を呼ばず、配列の構文エラーは範囲の終わり（end_extent()）で閉じる扱いにする。begin_discard() で捨てる hd_pending も範囲内で登録したもの（hd_seqs が backtick の rseq 以上）に限る。上の 4 形を deny ケースとして、ヒアドキュメントの形を allow ケースとして cases.json の末尾に足す。
+  sources:
+  - claude:security
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop1
+- stable_id: 44201ccaa437da29
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3829
+  title: 解析失敗時のフォールバック（_lex_layout の except ValueError）が行継続の改行でも文を切るため、r\<改行>m -rf … などが allow になる
+  description: '_tokenize_marked() が ValueError を投げたとき（後ろの行に閉じない引用がある等）、_lex_layout()（3826-3829）は _split_outside_subscripts() → SEGMENT_SPLIT で `\n` を常に区切りにする。task0007 が主経路で取り除いた `\<改行>` の対がここでは残り、継続で 1 語になるはずの語が別々の文に割れる。評価者が再現を確認した入力（HEAD で通常実行・batch とも allow。base・main も allow）: ''r\\\nm -rf /home/sakura/v\necho "''、''git re\\\nset --hard\necho "''、''rm -r\\\nf /home/sakura/v\necho "''、''git reset --hard\\\n;\n"(''。bash 5.3.9 は構文エラーの行に達する前に、継続で結合した 1 行目を実行する（`ec\<改行>ho RAN` と `echo RAN\<改行>;` で確認）。同じ経路で、演算子が語に付いた ''git reset --hard<<\''E\''\n"'' も allow で、bash は警告を出して実行する。e7dc3c995b363c9d（round 1 の critical）の修正がこのフォールバック経路に及んでいない。base から既存。'
+  suggestion: (a) フォールバックで分割する前に、単一引用の外にある `\<改行>` の対を取り除く（_continuation_pairs() を流用し、SEGMENT_SPLIT が対の改行で切らないようにする）。または (b) フォールバック経路（lexed=False）で読んだ文が 1 つでもあれば最終判定を allow にせず ask にする（batch では deny）。上の再現入力を deny ケースとして cases.json の末尾に足す。
+  sources:
+  - claude:security
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (editor fix regressed existing deny case E-14; reverted; re-reported as 94fa8bd5577541a8)'
+- stable_id: f05a4f1dad26689d
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4810
+  title: バッククォート置換の本文を bash の逆スラッシュ除去なしで再走査するため、入れ子の \`…\` / \$( / \${ の中のコマンドが allow になる
+  description: 'bash はバッククォートの中身を `\\`→`\`、`\``→`` ` ``、`\$`→`$` と変換してからスクリプトとして読む。_span_inner()（4810-4811）はバッククォートの生の本文をそのまま返すので、内側の段のコマンドが検査されない。評価者が再現を確認した入力（HEAD で通常実行・batch とも allow。base・main も allow。bash 5.3.9 は echo に置き換えた内側を実行）: ''echo `echo \\`git reset --hard\\``''、''echo `echo \\$(git reset --hard)`''、''echo `echo \\${ git reset --hard; }`''、"echo `echo \\\\''; git reset --hard; echo \\\\''`"。引用なしヒアドキュメント本文の中の同じ形も security#fallback が報告している。base から既存で回帰ではないが、task0006 で作り直したバッククォート処理の範囲にあり、TB-1 の「bash が実行するテキストを読み飛ばす」に当たる。comprehensive#fallback も同じ箇所を medium で報告した。'
+  suggestion: バッククォートの本文を内側のチャンクとして積む前に、bash と同じく `\` の後ろが `` ` `` / `$` / `\` のときだけ逆スラッシュを取り除き、元のオフセットとの対応表を保つ。_span_inner() の呼び出し側か、backtick スパン専用の本文抽出で行う。引用なしヒアドキュメント本文の中のバッククォートも同じ経路を通す。上の 4 形とヒアドキュメント版を deny ケースとして足す。
+  sources:
+  - claude:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (editor skipped (needs offset-mapping redesign); re-reported as 16514e6cb0bce378)'
+- stable_id: a124a65876b37b76
+  severity: critical
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7055
+  title: tail 内の文で case を予約語として扱わないため、case 項目の中の破壊的コマンドを検査しない（deny→allow の回帰）
+  description: 'このブランチは _shape_leading() の case 分岐（7055）に `not tail` を足し、_statements_in_tail()（5050）は LexMap の tail_start 以降に始まる文を tail とする。tail の文では `case` が開かれず、文全体がコマンド名 `case` の 1 文になり、`y)` の後ろのコマンドを検査しない。tail_start は読めない `<<`（tail source）だけでなく、バッククォート範囲内で確定した未閉鎖の `${x` / `$((x` / `$[x` や、破棄行の未閉鎖 `${y` でも立ち、bash がその影響を後続に持ち越さない位置でも効く。layout が無いとき（starts is None）は全文を tail とみなすので穴が広がる。評価者が再現を確認した入力（HEAD で通常実行・batch とも allow、base と main は deny、bash 5.3.9 は echo に置き換えた case 項目を実行）: ''echo `${x`; case y in y) rm -rf /home/sakura/valuable;; esac''、''echo `$((x`; case y in y) rm -rf /home/sakura/valuable;; esac''、''echo `$[x`; case y in y) rm -rf /home/sakura/valuable;; esac''、''a=(x;) ${y\ncase z in z) rm -rf /home/sakura/valuable;; esac''、''echo `${x`\ncase y in y) git reset --hard;; esac''、''cat <<E${x}\nE${x}\ncase y in y) rm -rf /home/sakura/valuable;; esac''、''case y in y) echo hi;; esac; echo `${x`; case y in y) rm -rf /home/sakura/valuable;; esac''。SPEC の FR2 は「tail より後ろでは `_shape_leading()`
+    でも case のパターン状態に入らない」と書くが、FR2 の目的（52bfa0f59d1ea852: パターン状態が後続行を飲み込まない）は項目の検査を外すことを求めておらず、NFR6（bash と一致させられない形は後続行を検査から外さない側に倒す）に反する。_statements_in_tail() の docstring は「より多くを検査に残す読み」と書いているが、実際は逆に働く。reviewer の high から critical に引き上げた: base・main とも deny だった形を allow（batch でも allow）にする回帰で、round 1 とこの round で critical とされた迂回と同じ影響の種類。'
+  suggestion: tail 内の `case` でも case 項目を検査できる形にする。(a) tail 内でも case 構文を開くが、case_stack をその物理行の終わりで打ち切り、後続の行をパターンとして飲み込まないようにする（FR2 の目的を保つ）。または (b) tail 内の `case` 文を、case として読んだ場合と普通のコマンドとして読んだ場合の両方で判定し、強いほうを採る。あわせて _statements_in_tail() の基準を tail source（読めない `<<`）に限り、バッククォート範囲内で確定した開始記号や破棄行の開始記号を tail の根拠にしない。上の形を deny ケースとして cases.json の末尾に足す。
+  sources:
+  - claude:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (editor fix regressed existing deny case FR2.5; reverted; re-reported as b5475acfc32b97a4)'
+- stable_id: 190c951222ec9728
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2138
+  title: tail source の後の `$((` を文字として扱い、bash が `$( (cmd) )` として実行する中身を検査しない（回帰）
+  description: dollar() は tail source の後の `$((` を tail_gate で拒否し（2138）、as_two_parentheses() による読み直しより前に文字として読み飛ばす。bash は閉じが隣接する `))` でなければ `$(` + `(` として読み直し、中身を実行する。'cat <<E${x}\nE${x}\necho $((rm -rf /home/sakura/valuable) )' は HEAD で通常実行・batch とも allow、base と main は deny で、bash 5.3.9 は echo に置き換えた中身を実行する。main には読めない区切り語の `<<` を ask にする変更が入っており（main のコピーで `cat <<E${x}\nE${x}\necho hi` が ask になることを確認）、マージ後はこの経路が ask で隠れる見込みのため medium のままにした。このブランチ単体では回帰。
+  suggestion: tail source の後の `$((` は文字にせず、`$(` のコマンド置換として push し、中身を `(` から始まる命令として読む（検査が増える側）。コマンド位置の `((`（2539）も同様に 2 つのグループとして読む。7055 の case の回帰と同じ tail の扱いなので一緒に直す。
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 724b1cb710cbfef4
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2645
+  title: '`<\<改行>(` / `>\<改行>(` のプロセス置換を認識しない（行継続対応の取りこぼし）'
+  description: 'task0007 で `$` 系の開始記号とトークン分割は行継続を読み飛ばすようになったが、プロセス置換の判定（2645 / 2656）は `text.startswith("<(", i)` / `(">(", i)` のままで間の `\<改行>` を飛ばさない。評価者が再現を確認した入力（HEAD で通常実行・batch とも allow。base・main も allow。bash 5.3.9 は echo に置き換えた中身を実行）: ''cat <\\\n(rm -rf /home/sakura/valuable)''、''echo hi >\\\n(rm -rf /home/sakura/valuable)''。base から既存。`<\<改行><` のヒアドキュメントの見落としは誤検知の方向に倒れる。'
+  suggestion: '`<` / `>` の直後に skip_pairs() を適用して `(` を判定し、_span_inner() でも `<(` / `>(` の中身の開始位置を行継続の後ろにずらす。`<<` 演算子の判定にも同じ読み飛ばしを入れる。上の 2 形を deny ケースとして足す。'
+  sources:
+  - claude:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 2eeec9b2b8a255ae
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7076
+  title: '`((cmd) )` の二重サブシェルを文の整形で読めず、git reset --hard 等が allow になる'
+  description: '字句解析は閉じが隣接する `))` でない `((` を 2 つのグループとして読み直す（as_two_parentheses）が、shlex は `((` を 1 つの句読点トークンに融合し、_lex_layout() も分割しない。_shape_leading() は単独の `(` しかサブシェルの開始として扱わない（7076）ため、`((` がコマンド名になり中のコマンドを検査しない。評価者が再現を確認した入力（HEAD で通常実行・batch とも allow。base・main も allow。bash 5.3.9 は echo に置き換えた中身を実行）: ''((git reset --hard) )''、''(( git reset --hard ) )''、''((git reset --hard); true)''。base から既存。字句解析の判定が整形側に渡らない点は 7055 の case の回帰と同じ構造。'
+  suggestion: 字句解析の判定（as_two_parentheses / reparen）を文の整形に渡し、2 つのグループとして読まれた `((` トークンは `(`、`(` に分割して _shape_leading() に渡す。または `((` で始まり閉じが隣接する `))` でない文をサブシェル 2 段として整形する。上の 3 形を deny ケースとして足す。
+  sources:
+  - claude:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 2aefebefe2ef0bac
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2252
+  title: loop 1 の修正で、破棄行の途中で開いたバッククォートも end_discard() が残すようになり、次行以降の置換内コマンドが allow になる（回帰）
+  description: 'end_discard() は bt_end が立っていれば最も内側の backtick フレームまでを残す（2252-2257）が、そのバッククォートが破棄行の開始より前から開いていたかを見ていない。配列の構文エラー（`;` / `&` / `<<`）で破棄行が最上位で始まり、その同じ行でバッククォートが開くと、bash はそのバッククォートごと行を捨てて次行を最上位から読むのに、フックは範囲を次行の最初のバッククォートまで延ばし、その下の array フレームも残す。結果、bash が次行で開く置換の中身がフックでは配列の要素として読まれ、検査されない。HEAD で通常実行・CLAUDE_BATCH=1 とも allow、base（60f7ea47）と修正前（7dcf343b^）は deny、bash 5.3.9 は echo に置き換えた内側を実行することを確認した（Python 表記）: ''x=(a; `\necho `git reset --hard`''、''x=(a; b) `\necho `git reset --hard`''、''x=(a & `\necho `git reset --hard`''、''x=( <<E `\necho `git reset --hard`''、''x=(a; "`"\necho `git reset --hard`''、''x=(a; $(echo `\necho `git reset --hard`''。TB-1 の「bash が実行するテキストを読み飛ばす」に当たる。'
+  suggestion: 破棄行がどの層で始まったかを begin_discard() で記録し、end_discard() はそれに従う。(1) begin_discard() の時点で bt_end が立っていれば、その backtick フレームを記録する（立っていなければ None）。(2) end_discard() で残すのは記録したフレームまでとし、記録が None なら従来どおり keep=1・rseq 全消去・bt_end=None にする（破棄行の上で開いたバッククォートは行と一緒に捨てる）。(3) 記録したバッククォートが改行より前に閉じた場合（end_extent()）は、構文エラーは置換の中だけのものなので、その時点で破棄状態を解く（discard_end を None にして set_limit()）。上の 6 形を deny ケースとして、'echo `x=(a; b)`; git reset --hard' を deny ケースとして cases.json の末尾に足す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop2
+- stable_id: 94fa8bd5577541a8
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3843
+  title: '（未修正: 44201ccaa437da29）_lex_layout() の ValueError フォールバックが行継続の改行で文を切り、r\<改行>m -rf … などが allow のまま'
+  description: 'loop 1 の修正はこの箇所に触れていない。_tokenize_marked() が ValueError を投げたとき（後ろの行に閉じない引用がある等）、_lex_layout() のフォールバック（3840-3845）は _split_outside_subscripts() で `\n` を常に区切りにし、`\<改行>` の対を取り除かない。継続で 1 語になる語が別の文に割れる。HEAD で allow のまま（Python 表記）: ''r\\\nm -rf /home/sakura/v\necho "''、''git re\\\nset --hard\necho "''、''rm -r\\\nf /home/sakura/v\necho "''、''git reset --hard\\\n;\n"(''、"git reset --hard<<''E''\n\""。bash 5.3.9 は構文エラーの行に達する前に、継続で結合した 1 行目を実行する（''ec\\\nho RAN1\necho "'' で RAN1、''echo RAN3<<\''E\''\n"'' で RAN3 を出力することを確認）。'
+  suggestion: (a) フォールバックで分割する前に、単一引用の外にある `\<改行>` の対を取り除く（_continuation_pairs() を流用し、SEGMENT_SPLIT が対の改行で切らないようにする）。または (b) フォールバック経路で読んだ文が 1 つでもあれば最終判定を allow にせず ask にする（batch では deny）。上の再現入力を deny ケースとして cases.json の末尾に足す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (re-reported as 06a2694a21d55f1d)'
+- stable_id: 16514e6cb0bce378
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4824
+  title: '（未修正: f05a4f1dad26689d）バッククォート置換の本文を逆スラッシュ除去なしで再走査し、入れ子の \`…\` / \$( / \${ の中のコマンドが allow のまま'
+  description: 'loop 1 の修正はこの箇所に触れていない。bash はバッククォートの中身を `\\`→`\`、`\``→`` ` ``、`\$`→`$` と変換してからスクリプトとして読むが、_span_inner()（4824-4825）は生の本文をそのまま返すため、内側の段のコマンドが検査されない。HEAD で allow のまま（Python 表記）: ''echo `echo \\`git reset --hard\\``''、''echo `echo \\$(git reset --hard)`''、''echo `echo \\${ git reset --hard; }`''、"echo `echo \\\\''; git reset --hard; echo \\\\''`"。bash 5.3.9 は echo に置き換えた内側を実行する（RAN4 / RAN5 / RAN6 を確認）。'
+  suggestion: バッククォートの本文を内側のチャンクとして積む前に、bash と同じく `\` の後ろが `` ` `` / `$` / `\` のときだけ逆スラッシュを取り除き、元のオフセットとの対応表を保つ。_span_inner() の呼び出し側か、backtick スパン専用の本文抽出で行う。引用なしヒアドキュメント本文の中のバッククォートも同じ経路を通す。上の 4 形とヒアドキュメント版を deny ケースとして足す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (re-reported as 1ea2bbbec622320f)'
+- stable_id: b5475acfc32b97a4
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7069
+  title: tail 内の case 本文にある破壊的な命令を見逃す
+  description: '前回指摘 a124a65876b37b76 は残っている。`cat <<E${x}
+
+    E${x}
+
+    case x in x) rm -rf /home/sakura/valuable;; esac` は通常実行・無人実行とも allow になる。tail では case の構文を読み飛ばさず、本文の rm を引数として扱ってしまう。Bash 5.3.9 では本文の rm が呼び出されることを確認した。'
+  suggestion: tail 内でも case の本文候補を検査し、破壊的な命令を見逃さないようにする。この再現例を両実行モードの回帰試験に追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 70c15555909687d1
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2138
+  title: 算術展開を拒否すると命令置換への読み直しも失われる
+  description: '前回指摘 190c951222ec9728 は残っている。`cat <<E${x}
+
+    E${x}
+
+    echo $((rm -rf /home/sakura/valuable); true)` は両実行モードで allow になる。この構文を Bash はグループを含む命令置換として実行するが、tail の分岐は `$((` を文字として消費し、中身の検査を省いてしまう。'
+  suggestion: tail で算術展開を拒否する場合も、命令置換として成立する読み方の中身を検査する。判別できない場合は ask にする。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop2
+- stable_id: 12addcd795b6f0f6
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2659
+  title: 行継続を含む処理置換の中身を検査しない
+  description: '前回指摘 724b1cb710cbfef4 に対応する検出漏れが残っている。`cat <\
+
+    (rm -rf /home/sakura/valuable)` は両実行モードで allow になる。字句解析は連続した `<(` だけを認識するため、行継続を含む形では置換の中身が独立した検査対象にならない。Bash は行継続を除去して rm を呼び出す。'
+  suggestion: 処理置換の `<`・`>` と `(` の間でも行継続を読み飛ばし、中身の抽出位置も対応させる。両方向の再現例を回帰試験に追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop2
+- stable_id: 2321b510368aec41
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7090
+  title: 連続した開き括弧の後ろにある命令を見逃す
+  description: 前回指摘 2eeec9b2b8a255ae は残っている。`((rm -rf /home/sakura/valuable); true)` は両実行モードで allow になる。Bash では入れ子のグループとして rm が呼び出されるが、字句分割の結果は `((` という一つの演算子になる。この分岐は `(` だけを読み飛ばすため、rm に到達しない。
+  suggestion: 演算子として読み取った連続する開き括弧を分解してから先頭構文を処理する。算術命令との区別を保ち、この再現例を回帰試験に追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop2
+- stable_id: f0bf5f6cc02b1062
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3798
+  title: Tok trailing_cr creates a dual-view token contract
+  description: 'Tok stays a str subclass whose match value strips trailing \r, while the bash-received value lives in mutable .trailing_cr set after construction. Only check_rm''s safe-delete path calls _as_bash_receives(); every other current/future consumer that treats Tok as an ordinary str (the documented default) silently drops the suffix, so `build\r` collapses to `build` and a deny becomes allow. Adding a check requires knowing which view to read: shotgun surgery with a concrete fail-closed bypass.'
+  suggestion: 'Make the SSOT single-view: either keep \r in the value and expose a normalized view for matching, or make Tok construction set trailing_cr and forbid post-construction mutation, with one accessor all checks must use.'
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (structural refactor, outside bounded auto-fix scope)'
+- stable_id: 6e29701c65fd651f
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1701
+  title: _lex_pass absorbs tail-gate, backtick-extent and discard recovery
+  description: '_lex_pass() adds tail_gate(), backtick_extent(), set_limit(), open_backtick(), end_extent() as closures over shared stack/rseq/hd_pending/state tail_start/tail_source/bt_end/discard_end. Query is centralized in tail_gate() but updates stay scattered across dollar/quote/comment/heredoc/array paths, and LIMIT merges hd_trigger/discard_end/bt_end priorities. A tail, backtick, or heredoc policy change now edits N call sites inside one giant pass plus _shape_leading()/_statements_in_tail(): textbook god-function shotgun surgery.'
+  suggestion: Extract tail policy and backtick-extent/discard limit policy into separate modules with explicit state transitions instead of closures mutating pass internals; keep _lex_pass() as a dispatcher.
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (structural refactor, outside bounded auto-fix scope)'
+- stable_id: 83ec570b609d785c
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2285
+  title: Discard recovery fused with backtick extent; unsettled-chunk control inverted across layers
+  description: end_discard() no longer resets to stack[0]; it preserves a backtick frame (keep>1), selectively trims rseq by kind, keeps bt_end, and resets base=stack[-1] as if top-level. Discard recovery (P13 syntax-error path) is now coupled to backtick-extent lifecycle and set_limit() priority. Combined with statements(unsettled) out-param toggle (is_command/command_chunk) and _unclosed_command_forms() re-lexing the same chunk that scan_structure() already lexed, error control splits across lexer/statements/main with two maps that can disagree on brace-command closed state; a new chunk source that mis-threads anchor/unsettled silently drops inspection or crashes.
+  suggestion: Isolate discard recovery from backtick-extent preservation behind an explicit interface, and replace the unsettled out-param plus dual lex with a single chunk-scan result type consumed uniformly by statements() and main().
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 9dd9f3f920e5644a
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2236
+  title: 'TM-1/TB-1: a discarded line inside a backtick drops here-document operators opened before the backtick, so lines bash runs end up inside a quote'
+  description: 'begin_discard() runs `del hd_pending[:]` / `del hd_seqs[:]` even when the discarded line starts inside a backtick substitution (discard_bt is set). This also drops `<<` operators that were registered earlier on the same line, outside the backtick. bash reads a backtick''s content only when it expands it, so the array syntax error inside the backtick does not discard the outer line. The outer `<<` is a real operator, its body lines are body, and the lines after the delimiter line run as commands. The hook loses the operator and reads the body lines as commands. If a body line holds a lone `''` or `"`, the hook opens a quote there. That quote runs to a matching quote character in a later here-document body and covers the command line in between, which bash runs. The shape: line 1 is `cat <<E; echo `<array syntax error such as x=(a;b), x=(a; b) or x=( <<Q>``; line 2 is a lone quote character; line 3 is `E`; line 4 is the destructive command; then another here-document whose
+    body is a lone quote character of the same kind. HEAD returns allow, with and without CLAUDE_BATCH=1. loop1, the round-2 start, base 60f7ea47 and main also return allow, so this is not new in this round. It is part of the backtick and discarded-line handling this round reworked, and the stable_id 814902ad222f71b9 suggestion already asked for this narrowing. bash 5.3.9 (both `bash -c` and `eval`) runs line 4; I checked this by replacing it with echo. With `$(` instead of a backtick, bash discards the whole line, so dropping the operators is correct there.'
+  suggestion: In begin_discard(), when a backtick frame is open (discard_bt[0] is not None), drop only the pending operators whose hd_seqs value is at or above the rseq number of that backtick frame, which are the ones registered inside the extent. Keep the ones registered before it, and keep hd_trigger when any remain. Clear everything as today only when no backtick is open. Append the shape above to the end of cases.json as deny cases, once for each array-error form and each quote kind. Also add the `$(` version as an allow case to pin the boundary.
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop3
+- stable_id: 06a2694a21d55f1d
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3865
+  title: '(still unfixed: 44201ccaa437da29) the fallback in _lex_layout() splits statements at continuation newlines, so commands joined by a line continuation are allowed'
+  description: When _tokenize_marked() raises ValueError, the fallback (3865-3870) splits with _split_outside_subscripts() and SEGMENT_SPLIT and still breaks at the newline of a backslash-newline pair. A word or command name joined by a continuation is split across two statements. I re-checked the reproduction inputs from the earlier finding (continuation inside a command name, inside `git reset --hard`, inside the rm flags, a continuation followed by `;`, and an unclosed quote on a later line). HEAD still returns allow for all of them. Loops 1 and 2 did not touch this path.
+  suggestion: Either (a) before splitting in the fallback, remove the backslash-newline pairs outside single quotes, reusing _continuation_pairs(), so the split never breaks at a pair's newline; or (b) when any statement is read on the fallback path (lexed=False), make the final verdict ask (deny in batch) instead of allow. Add the reproduction inputs as deny cases.
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (re-reported as 7dcbbd64391ec7e0)'
+- stable_id: 1ea2bbbec622320f
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4849
+  title: '(still unfixed: f05a4f1dad26689d) _span_inner() rescans backtick content without bash''s backslash removal, so commands in nested \` / \$( / \${ are allowed'
+  description: The backtick branch of _span_inner() (4849-4850) still returns the raw content. bash turns `\\`, `\``, and `\$` into `\`, `` ` ``, and `$` before it reads the content as a script, so a command one level deeper is never inspected. HEAD still returns allow for the four earlier reproduction forms (nested escaped backtick, `\$(`, `\${ `, and an escaped single quote). The loop-2 change to _span_inner() only added the `<(` / `>(` continuation case.
+  suggestion: Before queuing backtick content as an inner chunk, remove a backslash only when the next character is `` ` ``, `$`, or `\`, as bash does. Keep a map back to the original offsets. Run unquoted here-document bodies through the same path. Add the four forms as deny cases.
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (re-reported as 5c26db3571b6c679)'
+- stable_id: 512adc55fa75933f
+  severity: critical
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5540
+  title: '`>\<改行>(bash)` に流すヒアドキュメントがデータ扱いになり、本文の rm -rf が allow になる'
+  description: 'loop 2 で lexer（2680-2699）と _span_inner（4857-4860）は `<\<改行>(` / `>\<改行>(` をプロセス置換として読むようになった。一方、_substitution_body_range は今も本文の始まりを `start + 2` としている。行継続が挟まると `\<改行>(` までがマーカー残りに置き換わり、文には `>(` も `>` `(` も残らない。そのため _has_process_substitution() が False を返し、ヒアドキュメントの行き先がデータと判定されて本文が検査されない。HEAD での再現: `tee >\<改行>(bash) <<''EOF''\nrm -rf /home/sakura/valuable\nEOF` は allow（`tee >(bash) <<''EOF''…` は deny）。`cat <<''EOF'' > >\<改行>(bash)…` と `tee <<''EOF'' >\<改行>(bash)…` も allow。同じ形の本文（echo）が bash 5.x でプロセス置換側の bash に実行されることを実機で確認した。下の修正を当てた scratch のコピーでは 3 つの形がすべて deny になり、run-destructive-guard.py は 846/846 で通った。hook-tests ルールに従い、修正前に destructive-guard-cases.json へ deny ケースとして足すこと。'
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -5538,7 +5538,7 @@\n     is queued as its own chunk, like the body of a `$( … )`.\"\"\"\n     start, end = span\n     if chunk[start] in \"<>\":\n-        return start + 2, end - 1\n+        return _skip_continuations(chunk, start + 1) + 1, end - 1\n     return start, end\n \n \n"
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop3
+- stable_id: a1145e054c340952
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6438
+  title: 閉じない `${ ` が連なると判定に 10 秒を超え、hooks.json の timeout 内に判定が返らない
+  description: 'task0005（119e3dc9）から、閉じないコマンド形 `${ ` のうち一番外側の中身を、1 段ごとにチャンクとして積み直している（6438）。`"${ " * 20000 + "\nrm -rf /home/sakura/valuable\n"`（60KB）では段ごとにほぼ全文を走査し直す。相対上限 8×len（6369）に届くまで約 8 段かかり、1 段あたり約 1.3 秒になる。実測: 基点 60f7ea47 は 1.6 秒で rm-recursive の deny。HEAD は 10.9 秒かかって scan-budget-exceeded になる。テストの混合形（`${ $(( $[ (( $'' `）も 10.7 秒かかり、tests/test_destructive_guard_lexer_agreement.py の test_mixed_bulk_openers_get_a_non_allow_decision_in_time が `(timeout)` で失敗する（今回の実行では 459 件中 1 件が失敗）。hooks.json での destructive-guard の timeout は 10 秒なので、実運用では deny が出る前にフックが打ち切られる。所要時間は入力長に比例するため、入力を長くすれば必ず超える。上限を文字数で決めているため、深い入れ子を ask で止める前に timeout を超えてしまう。'
+  suggestion: '次のどちらかにする。(a) 閉じないコマンド形の中身を積むとき、中身自身も閉じないコマンド形を持つ連鎖の深さを数え、一定の段数（例: 3）を超えたら直ちに ask_scan_budget_exceeded() する。(b) statements() に経過時間の上限（例: 6 秒。hooks.json の 10 秒より十分短くする）を設け、超えたら ask_scan_budget_exceeded() する。どちらの場合も、test_mixed_bulk_openers_get_a_non_allow_decision_in_time と `${ ` 単体の 60KB 形が、10 秒より十分短い時間で allow 以外を返すことを確かめる。'
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (loop 2: conflicting suggestions at the same site, skipped; re-reported as e3c72b65d0ec2628)'
+- stable_id: 8e6fd9640058aceb
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6910
+  title: '`(>/dev/null rm -rf …)` のように `(` とリダイレクトがくっついた形で、サブシェル内の rm -rf が allow になる'
+  description: 'loop 2 は _shape_leading（7119-7128）で `((` のように `(` だけが続くトークンを開き括弧として扱うよう直した。しかし _split_fused_closer_redirects()（6910）が分割するのは `)` で始まる融合トークンだけである。shlex は `(>`、`(>>`、`((>`、`(<` を 1 つのトークンにまとめる。そのため split_redirects() はこれをリダイレクトと認識せず、_shape_leading() も開き括弧として読まない。結果、そのトークンが命令語になり、rm は引数として扱われる。HEAD での再現: `(>/dev/null rm -rf /home/sakura/valuable)`、`((>/dev/null rm -rf …) )`、`(>>/tmp/log rm -rf …)`、`echo hi;(>/dev/null rm -rf …)`、`(<file rm -rf …)` がすべて allow。`( >/dev/null rm -rf …)` は deny になる。この問題は基点 60f7ea47 から存在するが、今回直した `((` と同じ原因の直し残し。下の修正を当てた scratch のコピーでは、挙げた形がすべて deny になり、846/846 で通った。FUNC_SIGNATURE `()` を除外しないと、関数定義のケースが 1 件 allow に落ちる。`(<&0 rm -rf …)` も allow だが、`&` の位置で文が分かれる別の原因とみられ、この修正では直らない。'
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -6907,7 +6907,11 @@\n     \"\"\"\n     out = []\n     for t in toks:\n-        if not (getattr(t, \"is_operator\", False) and len(t) > 1 and t[0] == \")\"):\n+        if not (\n+            getattr(t, \"is_operator\", False)\n+            and len(t) > 1\n+            and (t[0] == \")\" or (t[0] == \"(\" and t != FUNC_SIGNATURE and t.lstrip(\"(\")))\n+        ):\n             out.append(t)\n             continue\n         rest = t\n"
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop3
+- stable_id: 6443a028c8a2baa5
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2110
+  title: Duplicated line-continuation removal logic across lexer, tokenizer and readers
+  description: 'The change adds at least four independent implementations of bash backslash-newline removal: skip_pairs() inside _lex_pass, _skip_continuations()/_command_form_inner_start() for downstream span readers, _continuation_pairs()/_ESCAPE_OR_CONTINUATION for the masked-view tokenizer, and an inline _ESCAPE_OR_CONTINUATION.sub in read_command_name_evidence. Each has different bounds (discard_end limit vs single-quote exclusion vs no limit). A future fix to continuation bounds must touch all sites in lockstep; if one drifts, one stage reads `r\<newline>m` as `rm` while another reads `r` and `m`, producing lexer/tokenizer/statement divergence and allow-vs-deny disagreement.'
+  suggestion: Centralize one SSOT for continuation skipping parameterized by bound and literal-mask, and make tokenizer, span-inner, subscript-open and command-name readers call it instead of duplicating regex/loop logic.
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (structural refactor, outside bounded auto-fix scope)'
+- stable_id: a27d030dd5d51c65
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6922
+  title: Tail-start contract split between lexer gate and statement shaper flag
+  description: 'Tail-source refusal is now decided in two places: _lex_pass.tail_gate() with _LEX_TAIL_START_OPENERS/_LEX_TAIL_SOURCE_OPENERS, and statement shaping via _MarkedText.tail_start plus _statements_in_tail() plus _shape_leading(toks, case_stack, tail). The boolean tail flag is a control-flag parameter that switches `case` from keyword to command word. If a new tail-source kind updates the gate sets but not the shaper path, the lexer opens no case construct while the shaper does, turning the rm line after an unreadable heredoc word into a case pattern (allow) in one layer and code (deny) in the other.'
+  suggestion: Keep one tail-decision SSOT consumed by both layers, or replace the boolean flag with a distinct statement-shape type so lexer and shaper cannot diverge on what `case` means in the tail.
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (structural refactor, outside bounded auto-fix scope)'
+- stable_id: 247e5a586f916656
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 446
+  title: Post-construction mutation for trailing carriage return splits word contract
+  description: 'Tok gains trailing_cr set only after construction (docstring says never via constructor) via bare attribute assignment and __dict__.update copying in _disregard_trailing_cr, while matching disregards it and check_rm restores it via _as_bash_receives. The word value SSOT is now split: most consumers read str(word), one consumer must remember to read str plus trailing_cr. Any new rm-path caller that copies a Tok without the attribute or reads the plain value silently matches `build\r` as `build`, reintroducing the safe-delete bypass the change fixes.'
+  suggestion: Make construction complete by passing trailing_cr through Tok.__new__ or return a dedicated match-value plus bash-value pair, so the preserved suffix cannot be lost by copying or plain-str use.
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: e1057c602f44e705
+  severity: high
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1207
+  title: Unescaped-backtick index regex risks quadratic scan on backslash runs
+  description: Pattern `(?<!\\)(?:\\\\)*`` executed with finditer over the whole text tries O(remaining) `\\` pairs at each start offset and then fails when no backtick follows, giving O(N^2) on a long backslash run. It is built lazily on the first backtick (backtick_extent), so one trailing backtick plus a 10-20k `\` run — plausible in generated scripts/heredocs — stalls this PreToolUse hot path. A single linear scan tracking backslash parity avoids backtracking entirely.
+  suggestion: 'Replace the regex index with a linear scan: iterate once collecting backtick offsets whose preceding-backslash count is even, or find each ''`'' and walk back over `\` runs. Only build it when needed and never with nested-quantifier backtracking.'
+  sources:
+  - litellm:muse-spark-contributor:performance
+  confidence: 60
+  resolution: declined
+  resolution_reason: 'not reproduced: 20k backslashes plus a trailing backtick evaluate in 0.14s, the same as base'
+- stable_id: 0c39fb05a3d4d13b
+  severity: high
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6438
+  title: Redundant full lex pass per chunk via _unclosed_command_forms
+  description: statements() already pays scan_structure plus _MarkedText lex_shell per chunk, but the new code adds another full lex_shell inside _unclosed_command_forms for every queued chunk, plus a second full lex per heredoc body in the needs_whole_body path. Cost is paid even when no `${` exists, roughly doubling/tripling per-Bash-call latency, and nested unclosed `${` forms queue near-full-length substrings that are each fully re-lexed (O(n*depth), bounded only by scan_budget). This is N+1 recomputation in the main pending loop.
+  suggestion: Reuse the chunk's existing scan regions instead of re-lexing, or gate the extra pass on a cheap substring test for '${' and memoize per chunk/body so bodies are not lexed twice.
+  sources:
+  - litellm:muse-spark-contributor:performance
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached (loop 2: conflicting suggestions at the same site, skipped; re-reported as e3c72b65d0ec2628)'
+- stable_id: 4f1183f5b2e20560
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3905
+  title: '`(>&2 cmd)` など ( に融合した & / | 入りリダイレクトで、破壊的コマンドが allow になる'
+  description: _lex_layout() の融合トークン分割は REDIRECT.fullmatch を片の先頭からしか試さない。shlex が 1 トークンに融合した `(>&` / `(>|` / `(<&` は `(>` と `&` / `|` に割られ、`&` / `|` が文の区切りとして扱われる。後ろの `2 rm -rf /srv/data)` はコマンド名 `2` の文になる。`(>&2 rm -rf /srv/data)`、`(>&2 git reset --hard)`、`(>|./o rm -rf /srv/data)`、`(<&0 rm -rf /srv/data)`、`true && (>&2 rm -rf /srv/data)`、`echo $( (>&2 rm -rf /srv/data) )` がすべて allow。bash 5.3 ではどれも実行される（echo に置き換えて確認）。loop 3 で _split_fused_closer_redirects() に `(` 始まりの融合トークンの分割を足したが、この前段で `&` / `|` が先に区切りへ流れるので届かない。base (60f7ea47) から既存。
+  suggestion: "分割ループで、片の先頭にある `(` / `)` の並びの残りが REDIRECT に一致するときは、括弧の並びと残りを別の片にする。下の差分をスクラッチのコピーに当てて確かめた。run-destructive-guard.py は 846/846 通り、上の形はすべて deny、`(>&2 echo hi)` と `f() { echo hi; }; f` は allow のまま。\n--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -3905,4 +3905,11 @@\n                 if REDIRECT.fullmatch(t[i:]):\n                     pieces.append(t[i:])\n                     break\n+                p = i\n+                while p < len(t) and t[p] in \"()\":\n+                    p += 1\n+                if i < p < len(t) and REDIRECT.fullmatch(t[p:]):\n+                    pieces.append(t[i:p])\n+                    pieces.append(t[p:])\n+                    break\n                 j = i + 1\n"
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 7dcbbd64391ec7e0
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3881
+  title: 解析失敗時の分割が行継続の改行で文を割り、`r\<改行>m -rf` などが allow になる
+  description: _tokenize_marked() が ValueError を出すと、_lex_layout() は _split_outside_subscripts() で生テキストを SEGMENT_SPLIT で割ってから tokens() に渡す。この分割は backslash-newline の改行も区切りにするため、1 語が 2 つの文に分かれる。44201ccaa437da29 / 94fa8bd5577541a8 / 06a2694a21d55f1d と同じ箇所で loop 3 でも未修正。
+  suggestion: (a) _split_outside_subscripts() に marked.pairs を渡し、行継続の対の改行では割らない。または (b) 解析失敗の経路で単一引用の外に backslash-newline がある場合は ask に倒す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 5c26db3571b6c679
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4862
+  title: バッククォート本文の \` / \$ / \\ を外さずに検査するため、入れ子の置換や \${ ...; } が allow になる
+  description: _span_inner() はバッククォート置換の中身を生のまま返す。bash は本文を解析する前に、後ろが ` / $ / \ のバックスラッシュを外す。base (60f7ea47) から既存。f05a4f1dad26689d / 16514e6cb0bce378 / 1ea2bbbec622320f と同じ箇所で loop 3 でも未修正。
+  suggestion: (a) バッククォート分岐で、後ろが ` / $ / \ のバックスラッシュを外した本文を返し、オフセットの対応表を持たせる。または (b) バッククォート本文に \` か \$ があれば ask に倒す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 77e77ce2bd27bb6f
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2149
+  title: tail source の後の `$((` を命令置換として開くと、中身が tail の外で読み直され FR2 の deny が allow に戻る
+  description: round 2 loop 2 で tail source の後の `$((` を command-substitution として開くよう変えた。その中身は別チャンクとして tail 無しで読み直され、`'` `"` `case` `<<` がまた開く。`cat <<E${x}<改行>$(( '<改行>E${x}<改行>R<改行>' ))` など 4 形が 01cc9f99 では deny、HEAD では allow。tail の後の素の `$( '…' )` も feature base から allow。
+  suggestion: (a) tail で拒否した `$((` は literal に戻し T7 は別の方法で拾う、または (b) tail の中で開いた置換の本文チャンクを「tail の中」の印付きで積み、tail_start=0 と同じ扱いで lex させる。4 形と `$( '` 形を cases.json に deny で追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: e3c72b65d0ec2628
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6586
+  title: 60KB の入れ子 `${ ` の評価に約 10.7 秒かかり、SPEC NFR2/F7 の 10 秒（hooks.json の timeout）を超える
+  description: agreement テスト 3 件が (timeout) で失敗する。HEAD でも 01cc9f99 でも 10.7〜10.9 秒で、task0005 由来。statements() が入れ子の段ごとに残りのほぼ全体を積み直し、scan_budget に届くまで約 8 回 lex し直す。
+  suggestion: 入れ子の閉じていない command form を積む時点で本文長を scanned_chars に先に足す、または積み直しに小さい上限を設け超えたら ask_scan_budget_exceeded() に倒す。
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: d9651f11450c921b
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2656
+  title: 行継続で分かれたヒアドキュメント演算子 `<\<改行><EOF` を認識せず、本文中の `$( )` や引用によって rm -rf が allow になる
+  description: lexer は `text.startswith("<<", i)` しか見ず、`<\<改行><` をヒアドキュメントとして読まない。`cat <\<改行><EOF<改行># $(R)<改行>EOF` などが HEAD で allow。feature base から存在。main の guard は deny する。
+  suggestion: '`<` 分岐で `p = skip_pairs(i + 1)` を求め `text[p] == "<"` ならヒアドキュメント演算子として扱う。`<<<` / `<<-` も同様。下流の位置記録も揃える。'
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: ceb107f82abf04b3
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 867
+  title: round 2 の修正ループ 1〜3 で入れた変更に対応するケースが、cases.json にもテストにも無い
+  description: 01cc9f99..HEAD で変わったのは destructive-guard.py だけで、cases.json と agreement テストは変わっていない。hook-tests ルールは直す前にケースを足すよう求めている。
+  suggestion: 各修正の再現形を cases.json に deny / allow ケースとして追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: f559d312cd151700
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1686
+  title: 'God-function expansion: _lex_pass absorbs tail-gate, backtick extent, limit, and discard logic'
+  description: _lex_pass() already concentrates the whole shell pass (stack, LIMIT/BT_END/DISCARD_END/TAIL bookkeeping, heredoc, discard, backtick, continuation, tail-gate decisions) and this diff expands it further with nested closures tail_gate(), backtick_extent(), set_limit(), open_backtick(), end_extent(), skip_pairs(), past(), dollar() extensions and new bracecmd/backtick/discard/heredoc branches. Every future tail, continuation, or substitution fix must reason about all interacting global bounds at once, with concrete regression risk around LIMIT vs BT_END vs hd_trigger and settled vs refused openers.
+  suggestion: 'Freeze further growth of _lex_pass(): extract tail_gate policy, backtick-extent index and LIMIT computation, discarded-line handling, and heredoc close lookup into tested helpers or small collaborator objects with explicit inputs/outputs instead of closures over pass state.'
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+evaluation:
+  round_summary: 'round 2（diff、cross_validation=true のため精査を強めた）。codex の primary 2 本（security#0 / comprehensive#0）は非 JSON 出力で failed、Claude fallback 2 本が完了した。architecture / spec / performance は litellm が review_data_too_large で skipped し、完了した reviewer run が無い（fallback も無く、unreviewed_perspectives は空で渡された）ため、この 3 観点は評価者の独自確認だけで網羅を判断した。reviewer の指摘 9 件（同じ箇所の重複 2 件を統合して 7 件）は、すべて HEAD・base（60f7ea47）・main のコピーと bash 5.3.9（無害な echo に置換）で再現した。回帰は 2 件: tail 内の case（7055、high から critical に引き上げ）と tail source 後の `$((`（2138、medium。main の「読めない区切り語は ask」とのマージ後は隠れる見込み）。残り 5 件は base からある迂回だが、critical 2 件（2285、3829）と high 1 件（4810）は task0006 / task0007 が作り直したバッククォート範囲・行継続の経路にある。round 1 で未解決だった 8 件の修正は、cases.json 846/846、一致テスト 459 件 OK、`python3 -m unittest discover -s tests` 8803 件 OK（skip 1）で確認した（-B で実行し作業ツリーは clean のまま）。reviewer 出力に注入の試みは無かった。観点ごとの網羅: security = corroborated（3 件とも再現。ただし 7055 / 2138 の回帰は見落としていた）。comprehensive = corroborated（6 件とも再現し、テスト件数の主張も再現した）。architecture = corroborated（評価者のみ。reviewer
+    出力なし。行継続の読み飛ばしを経路ごとに足している点と、字句解析の判定（reparen・tail）が shlex 側の整形に渡らない点は 3829 / 2645 / 7055 / 7076 の指摘に含まれ、別の指摘は無い）。spec = findings（評価者のみ。SPEC の FR2 の `_shape_leading()` 条項を文字どおり実装すると NFR6 に反して case 項目が検査から外れることを 7055 の指摘の説明に記載した。他の FR は上のテストスイートで確認）。performance = corroborated（評価者のみ。最大 36KB の 15 形（行継続の連続、`$\<改行>{`、バッククォートの連続、範囲内の未閉鎖の開始記号、範囲内の配列の破棄行、入れ子のエスケープ済みバッククォート）で HEAD と base の 1 回の評価時間を比べ、線形で 0.8 秒未満、base 比の増加は最大 0.07 秒）。'
+  recommended_action: auto_fix
+  action_rationale: critical 3 件（2285、3829、7055）と high 1 件（4810）が残る。どれも changed_files 内の局所的な修正で、修正方針と deny ケースにする再現入力が揃っている。batch の review_rework_count は既に 1 で rework は上限に達しているため、境界付き auto-fix が残る経路になる。最優先は 7055（base・main とも deny だった形を allow にする回帰）で、同じ tail の扱いにある 2138（medium の回帰）も一緒に直すのが筋。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 2285
+  run_id: comprehensive#fallback
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 4810
+  run_id: comprehensive#fallback
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 8
+  termination: loop-cap
+residual_critical_high: 7
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+notes:
+- 'batch mode: review_rework_count is already 1, so residual findings are deferred at the cap and the step completes'
+- auto-fix scope verification ran run-destructive-guard.py (846/846) and repro inputs after each editor dispatch; edits that regressed an existing deny case were restored and recorded as aborted
+- codex primaries repeatedly failed (timeout around 560s against the 540s limit, or non-JSON output); treated as harness failures with Claude fallbacks, per the Codex-consulted decision recorded in batch-audit.yaml
+- litellm spec runs skipped with review_data_too_large every loop; spec coverage rests on the evaluator and the comprehensive fallbacks
+- 'full unittest after loop 3: 8803 tests, 3 failures, all (timeout) on 60KB nested unclosed openers; the same input takes about 10.8s on the loop-3 start, loop-2 start and pre-loop-1 copies, so it predates this round (task0005); recorded as e3c72b65d0ec2628'
+- loop-3 comprehensive re-review reports that the loop-2 change for 70c15555909687d1 turned four FR2 deny forms into allow (77e77ce2bd27bb6f); deferred at the cap
+- in-loop re-review results went through the R3b mechanical gates directly (no second evaluator dispatch)
+- 'triage filing: no vulnerability findings this round (axis 2 not selected), so nothing to file'

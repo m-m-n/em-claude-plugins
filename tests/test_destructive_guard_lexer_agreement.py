@@ -34,7 +34,15 @@ Layout:
   anything for the command text after its delimiter line.
 - TestHeredocDelimiterWords: the delimiter of `<<` / `<<-` is the whole word
   with its quotes removed; an unreadable word takes no body.
+- TestTailSourceOpenersAndTailGate, TestTailSourceStageAgreement
+  (destructive-guard-lexer-round2-deferred task0001, FR2, FR8): no `${`, `$((`,
+  `$[`, `((` or case construct opens after an unreadable delimiter word, and
+  one gate decides every tail question of the lexer pass.
 - TestUnclosedOpeners: unclosed openers in bulk, determinism, linearity.
+- TestNestedUnclosedFormCost (destructive-guard-lexer-round2-deferred task0009,
+  verify round 1): nested unclosed command forms cost time in proportion to the
+  input length -- the doubled-length inputs, the text read per evaluation, the
+  forms whose innermost content is still inspected.
 - TestReworkLinearity: the two ~60KB inputs of rework round 1 (P10, P11), and
   the linear work of `((` / `$((` openers that close without an adjacent `))`.
 - TestNonAdjacentCloseRereading: those openers (review round 2, finding
@@ -51,6 +59,14 @@ Layout:
   (destructive-guard-heredoc-syntax-error task0002, P14): array subscripts,
   eval / let / alias arrays, and the two readings of an extended-glob
   parenthesis inside an array, read by the lexer and by its consumers.
+- TestSubscriptRound2Deferred (destructive-guard-lexer-round2-deferred
+  task0002, FR1, FR4): a here-document after a subscript that closes on a
+  later line, and line continuations inside the name of a subscripted
+  assignment word.
+- TestLineContinuationBeforeOpenersAndInWords, TestLineContinuationStageAgreement
+  (destructive-guard-lexer-round2-deferred task0007, review round 1): the `$`
+  openers found past backslash-newline pairs, and the word split that takes
+  every pair out that bash removes, with its offsets kept in the original text.
 
 Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
 words after closers and name-taking keywords), P11 (where a heredoc body
@@ -96,8 +112,14 @@ H = _load_hook()
 
 TAIL = "\nrm -rf /home/sakura/valuable\n2"
 
+BRACE_KIND = "brace-command-substitution"
 SUBSTITUTION_KINDS = frozenset(
-    {"command-substitution", "backtick-substitution", "process-substitution"}
+    {
+        "command-substitution",
+        "backtick-substitution",
+        "process-substitution",
+        BRACE_KIND,
+    }
 )
 QUOTE_KINDS = frozenset({"single-quote", "double-quote", "ansi-c-quote", "locale-quote"})
 OPAQUE_KINDS = QUOTE_KINDS | SUBSTITUTION_KINDS | frozenset(
@@ -526,10 +548,11 @@ def actual_regions(lexmap):
 _verdict_cache = {}
 
 
-def hook_verdict(command, batch=False):
+def hook_verdict(command, batch=False, timeout=GUARD_TIMEOUT_SECONDS):
     """The decision the hook gives COMMAND, run through its stdin JSON /
-    stdout contract. Returns (decision, reason)."""
-    key = (command, batch)
+    stdout contract. Returns (decision, reason). TIMEOUT is how long the run
+    may take (the hook bound unless a test names another)."""
+    key = (command, batch) if timeout == GUARD_TIMEOUT_SECONDS else (command, batch, timeout)
     if key in _verdict_cache:
         return _verdict_cache[key]
     env = dict(os.environ)
@@ -543,7 +566,7 @@ def hook_verdict(command, batch=False):
             capture_output=True,
             text=True,
             env=env,
-            timeout=GUARD_TIMEOUT_SECONDS,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired:
         result = ("(timeout)", "")
@@ -1397,8 +1420,12 @@ class TestStageAgreement(unittest.TestCase):
             for tok, start, end in raw:
                 if tok.is_operator or any(p in masked for p in range(start, end)):
                     continue
+                # The tokenizer splits the view with the backslash-newline
+                # pairs bash removes taken out (round 2 deferred, task0007):
+                # the reading to compare with is shlex's of the span without
+                # them.
                 self.assertEqual(
-                    shlex.split(a.marked.text[start:end], comments=False),
+                    shlex_words(without_line_continuations(a.marked.text[start:end])),
                     [str(tok)],
                     msg=repr(a.marked.text[start:end]),
                 )
@@ -1432,7 +1459,7 @@ class TestStageAgreement(unittest.TestCase):
                     # read the word the lexer reads.
                     continue
                 try:
-                    want = shlex.split(segment, comments=False)
+                    want = shlex_words(segment)
                 except ValueError:
                     continue
                 self.assertEqual(got, want, msg=repr(segment))
@@ -1549,6 +1576,465 @@ class TestPositionMap(unittest.TestCase):
         text = "cat <<EOF\n$(rm -rf /tmp/zz)\nEOF\necho $(date)"
         stripped, _records, _omap = H._strip_heredocs_mapped(text)
         self.assertEqual(stripped, "cat <<EOF\necho $(date)")
+
+
+# ---------------------------------------------------------------------------
+# `\r` is not a blank (destructive-guard-lexer-round2-deferred task0004, FR6,
+# NFR1, NFR4, NFR6, NFR7, TM-6, TM-8). Blanks are space and tab only, in the
+# lexer and in the tokenizer that reads the masked view; a `\r` at the end of a
+# word is disregarded when the decision layer matches words.
+# ---------------------------------------------------------------------------
+
+CARRIAGE_RETURN_LABEL = "aa735aa95be36542 round2-deferred "
+# The first index a block appended for this feature can have (D3).
+CARRIAGE_RETURN_CASE_FLOOR = 769
+CARRIAGE_RETURN_CASES = [
+    ("FR6.1", "deny", "echo x\r# ; rm -rf /home/sakura/valuable"),
+    ("FR6.2", "deny", "rm -rf /home/sakura/valuable\r"),
+    ("FR6.3", "deny", "git reset --hard\r"),
+    ("FR6.4", "allow", "echo hi\r\necho done\r\n"),
+]
+
+
+# Commands that keep, with a `\r` at the end of a word, the verdict they have
+# without it: (command, verdict, verdict under CLAUDE_BATCH). Each one reaches
+# a different reader of the words: a bypass flag, an option, a reserved word,
+# the command word of a here-string payload, a substitution-only target, a
+# safe target, a grouping closer, a redirect target, a separator. The one
+# exception is a delete target of the safe-delete exception: bash deletes the
+# name with its `\r`, so `./build\r` is not the build artifact `./build`
+# (destructive-guard-lexer-round2-deferred task0008, D7).
+CARRIAGE_RETURN_MATCHING_FORMS = [
+    ("claude --dangerously-skip-permissions\r", "deny", "deny"),
+    ("find /home/sakura -name '*.log' -delete\r", "deny", "deny"),
+    ("case x in x) ((1<<2));; esac\r\nrm -rf /home/sakura/valuable\r\n2\r", "deny", "deny"),
+    ("command <<< 'rm -rf /home/sakura/x' bash\r", "deny", "deny"),
+    ("rm -rf $(cat list)\r", "ask", "deny"),
+    ("rm -rf ./build\r", "deny", "deny"),
+    ("( rm -rf /tmp/x )\r", "allow", "allow"),
+    ("echo x > ~/.claude/settings.json\r\n", "ask", "deny"),
+    ("rm -rf /home/sakura/valuable;\r\necho done\r\n", "deny", "deny"),
+    ("(rm -rf /home/sakura/valuable)\r\n", "deny", "deny"),
+]
+
+
+def shlex_words(text):
+    """What shlex.split(TEXT, comments=False) reads, with the blanks of bash
+    5.3: space, tab and newline. shlex's own default also takes `\\r` as a blank
+    (FR6), which the hook's tokenizer no longer does."""
+    lex = shlex.shlex(text, posix=True)
+    lex.whitespace_split = True
+    lex.commenters = ""
+    lex.whitespace = " \t\n"
+    return list(lex)
+
+
+def without_line_continuations(text):
+    """TEXT with every backslash-newline pair removed that bash removes: the
+    ones outside single quotes. Hand-written here, for the segments the
+    checks read, which hold no other region than a quote or an escape."""
+    out = []
+    i = 0
+    single = double = False
+    while i < len(text):
+        c = text[i]
+        if single:
+            single = c != "'"
+            out.append(c)
+            i += 1
+        elif c == "\\":
+            if text.startswith("\n", i + 1):
+                i += 2
+            else:
+                out.append(text[i : i + 2])
+                i += 2
+        else:
+            if c == "'" and not double:
+                single = True
+            elif c == '"':
+                double = not double
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
+def region_kinds(lexmap):
+    return sorted(r.kind for r in lexmap.regions)
+
+
+def shaped_words_of(command):
+    return [words for _t, _toks, _lexed, words, *_rest in H.statements(command)]
+
+
+class TestCarriageReturnIsNotABlank(unittest.TestCase):
+    # AC-1 (FR9): this task's block of the case table. The order of its commit
+    # against the hook change is a history property, checked on the branch.
+    def test_the_cases_are_appended_after_the_base_entries(self):
+        cases = case_commands()
+        for tag, want, command in CARRIAGE_RETURN_CASES:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if cmd == command
+                    and w == want
+                    and label.startswith(CARRIAGE_RETURN_LABEL + tag + " ")
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], CARRIAGE_RETURN_CASE_FLOOR)
+
+    # AC-2 (FR6, NFR4, NFR6, TM-6): a `#` right after a `\r` is no comment.
+    def test_a_hash_after_a_carriage_return_hides_nothing(self):
+        command = CARRIAGE_RETURN_CASES[0][2]
+        lexmap = H.lex_shell(command)
+        self.assertNotIn("comment", region_kinds(lexmap))
+        shaped = [words for _t, _toks, _lexed, words, *_rest in H.statements(command)]
+        self.assertTrue(
+            any(words and words[0] == "rm" for words in shaped), msg=repr(shaped)
+        )
+
+    def test_the_same_command_gives_an_identical_map(self):
+        command = CARRIAGE_RETURN_CASES[0][2]
+        first = H.lex_shell(command)
+        H._LEX_CACHE.clear()
+        second = H.lex_shell(command)
+        self.assertIsNot(first, second)
+        self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    def test_the_hiding_form_is_denied_in_both_modes(self):
+        command = CARRIAGE_RETURN_CASES[0][2]
+        self.assertEqual(hook_verdict(command)[0], "deny")
+        self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    # AC-3 (FR6, NFR6, TM-6): the lexer's own reading of a `\r`.
+    def test_a_hash_right_after_a_carriage_return_opens_no_comment(self):
+        for command in ("echo a\r#b", "echo x;\r#b; rm", "\r#x"):
+            with self.subTest(command=command):
+                self.assertNotIn("comment", region_kinds(H.lex_shell(command)))
+
+    def test_a_hash_after_a_blank_that_follows_a_carriage_return_opens_one(self):
+        command = "echo a\r #b"
+        comments = [r for r in H.lex_shell(command).regions if r.kind == "comment"]
+        self.assertEqual([r.start for r in comments], [command.index("#")])
+
+    def test_a_carriage_return_reads_as_any_other_word_character(self):
+        # The map of a text with a `\r` is the map of the same text with a
+        # letter in its place: `a\rb` is one word, as `axb` is.
+        for command in (
+            "echo a\rb",
+            "echo a\r#b",
+            "echo x;\r#b; rm",
+            "\r#x",
+            "x=(a\r[1<<2]=y)",
+            "declare a[1\r# x]=y",
+        ):
+            with self.subTest(command=command):
+                carriage = H.lex_shell(command)
+                letter = H.lex_shell(command.replace("\r", "x"))
+                self.assertEqual(carriage.as_tuple(), letter.as_tuple())
+
+    def test_a_carriage_return_inside_a_word_leaves_the_next_character_inside_it(self):
+        # A `[` opens an array element subscript only at a word start: after a
+        # blank it does, and after `a\r` it is part of the word `a\r[1<<2]=y`.
+        blank = "x=(a [1<<2]=y)"
+        self.assertEqual(
+            region_kinds(H.lex_shell(blank)).count("array-subscript"), 1
+        )
+        word = "x=(a\r[1<<2]=y)"
+        self.assertNotIn("array-subscript", region_kinds(H.lex_shell(word)))
+
+    def test_a_bound_subscript_does_not_end_at_a_carriage_return(self):
+        # In a declaration builtin's argument the subscript ends with its word
+        # at a blank: a space lets the `#` after it open a comment, a `\r`
+        # does not end the word.
+        self.assertIn("comment", region_kinds(H.lex_shell("declare a[1 # x]=y")))
+        self.assertNotIn("comment", region_kinds(H.lex_shell("declare a[1\r# x]=y")))
+
+    # AC-4 (FR6, TM-6): the tokenizer over the plain masked view.
+    def test_the_tokenizer_splits_words_at_space_and_tab_only(self):
+        for layout in (True, False):
+            with self.subTest(layout=layout):
+                toks = H._tokenize_marked(H._MarkedText.plain("a\rb c"), layout=layout)
+                self.assertEqual([str(t) for t, _s, _e in toks], ["a\rb", "c"])
+                self.assertEqual([(s, e) for _t, s, e in toks], [(0, 3), (4, 5)])
+                toks = H._tokenize_marked(H._MarkedText.plain("a\rb\tc"), layout=layout)
+                self.assertEqual([str(t) for t, _s, _e in toks], ["a\rb", "c"])
+
+    def test_the_tokenizer_keeps_a_newline_a_separator_in_its_own_modes(self):
+        text = "a\rb\nc"
+        layout = H._tokenize_marked(H._MarkedText.plain(text), layout=True)
+        self.assertEqual([str(t) for t, _s, _e in layout], ["a\rb", "\n", "c"])
+        plain = H._tokenize_marked(H._MarkedText.plain(text), layout=False)
+        self.assertEqual([str(t) for t, _s, _e in plain], ["a\rb", "c"])
+
+    def test_a_carriage_return_alone_is_a_word_to_the_tokenizer(self):
+        for layout in (True, False):
+            with self.subTest(layout=layout):
+                toks = H._tokenize_marked(H._MarkedText.plain("a \r b"), layout=layout)
+                self.assertEqual([str(t) for t, _s, _e in toks], ["a", "\r", "b"])
+
+    # AC-5 (NFR6, NFR7, TM-6): the verdicts around a trailing `\r`.
+    def test_a_trailing_carriage_return_keeps_a_denied_command_denied(self):
+        for command in (CARRIAGE_RETURN_CASES[1][2], CARRIAGE_RETURN_CASES[2][2]):
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_harmless_command_with_carriage_return_line_ends_stays_allowed(self):
+        for command in (CARRIAGE_RETURN_CASES[3][2], "echo hi\r"):
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], "allow")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "allow")
+
+    # AC-5 (NFR6, NFR7, TM-6): a `\r` at the end of a word is disregarded when
+    # the words are matched; nothing else about the word changes.
+    def test_a_trailing_carriage_return_is_no_part_of_a_matched_word(self):
+        self.assertEqual(
+            shaped_words_of("git reset --hard\r"), [["git", "reset", "--hard"]]
+        )
+        self.assertEqual(
+            shaped_words_of("rm -rf /home/sakura/valuable\r\n"),
+            [["rm", "-rf", "/home/sakura/valuable"]],
+        )
+
+    def test_a_word_of_carriage_returns_only_is_no_word(self):
+        self.assertEqual(shaped_words_of("ls;\r\nls \r"), [["ls"], ["ls"]])
+        self.assertEqual(shaped_words_of("(ls)\r"), [["ls"]])
+
+    def test_a_carriage_return_inside_a_word_stays(self):
+        self.assertEqual(shaped_words_of("echo a\rb"), [["echo", "a\rb"]])
+
+    def test_a_quoted_word_of_a_carriage_return_stays(self):
+        self.assertEqual(shaped_words_of('echo "\r"'), [["echo", "\r"]])
+
+    def test_the_commands_keep_their_verdict_with_a_trailing_carriage_return(self):
+        for command, want, want_batch in CARRIAGE_RETURN_MATCHING_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(hook_verdict(command)[0], want)
+                self.assertEqual(hook_verdict(command, batch=True)[0], want_batch)
+
+    # AC-6 (NFR1, TM-8): linear work.
+    def test_lexing_work_is_linear_for_each_form(self):
+        for tag, _want, command in CARRIAGE_RETURN_CASES:
+            with self.subTest(tag=tag):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+
+# ---------------------------------------------------------------------------
+# A trailing `\r` is part of the delete target (destructive-guard-lexer-round2-
+# deferred task0008, review round 1 finding b0f7592cd79e75ea, FR6, FR9-FR11,
+# NFR4-NFR7, D7). The decision layer disregards a `\r` at the end of a word
+# when it matches names, options and separators, but the safe-delete exception
+# reads the target the way bash passes it to `rm`, `\r` included.
+# ---------------------------------------------------------------------------
+
+TRAILING_CR_STABLE_ID = "b0f7592cd79e75ea"
+TRAILING_CR_LABEL = TRAILING_CR_STABLE_ID + " round2-deferred "
+# The first index a block appended for this feature can have (D3).
+TRAILING_CR_CASE_FLOOR = 769
+TRAILING_CR_CASES = [
+    ("R1.CR1", "deny", "rm -rf build\\\r"),
+    ("R1.CR2", "deny", "rm -rf build\r"),
+    ("R1.CR3", "deny", "rm -rf \"build\r\"\n'"),
+    ("R1.CR4", "deny", "rm -rf ./node_modules\r\n"),
+    ("R1.CR5", "allow", "rm -rf /tmp/x\r"),
+]
+# The four spellings of a build-artifact name N with a `\r` at its end: bare,
+# with `./`, backslash-escaped and quoted. `\r` is replaced by `x` to get the
+# command the verdict must agree with.
+TRAILING_CR_SPELLINGS = [
+    "rm -rf %s\r",
+    "rm -rf ./%s\r",
+    "rm -rf %s\\\r",
+    'rm -rf "%s\r"',
+]
+# Statement shapes a target travels through before the safe-delete exception
+# reads it: wrappers, grouping, a redirect, a separator, a payload.
+TRAILING_CR_SHAPES = [
+    "sudo rm -rf build\r",
+    "env A=1 rm -rf build\r",
+    "time rm -rf build\r",
+    "( rm -rf build\r )",
+    "{ rm -rf build\r; }",
+    "rm -rf build\r > /dev/null",
+    "rm -rf build\r; echo done",
+    "echo a && rm -rf ./build\r",
+    "bash -c 'rm -rf build\r'",
+    "rm -rf -- build\r",
+    "rm -fr node_modules\r\ndist\r\n",
+]
+# Targets that are safe with their `\r`, so the verdict stays allow: a proper
+# descendant of a build artifact or of a scratch root.
+TRAILING_CR_SAFE_FORMS = [
+    "rm -rf build/out\r",
+    "rm -rf ./node_modules/.cache\r",
+    "rm -rf /tmp/x\r",
+    "rm -rf /var/tmp/x\r",
+    "rm -rf tmp/x\r",
+    "rm -rf .cache/x\r",
+]
+
+
+def decision_in_process(command, batch):
+    """The decision H.run() gives COMMAND, in this process (the lexer cache is
+    the caller's to clear)."""
+    payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": command}})
+    out = io.StringIO()
+    with mock.patch.dict(os.environ):
+        os.environ.pop("CLAUDE_BATCH", None)
+        if batch:
+            os.environ["CLAUDE_BATCH"] = "1"
+        with mock.patch.object(sys, "stdin", io.StringIO(payload)):
+            with mock.patch.object(sys, "stdout", out):
+                try:
+                    H.run()
+                except SystemExit:
+                    pass
+    return json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"]
+
+
+class TestTrailingCarriageReturnIsPartOfTheDeleteTarget(unittest.TestCase):
+    def both_modes(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    # AC-1, AC-6 (FR9, FR10, FR11): the block is in the case table after the
+    # feature base, in order, and nothing below the floor carries the id.
+    def test_the_cases_are_appended_after_the_base_entries_in_order(self):
+        cases = case_commands()
+        indexes = []
+        for tag, want, command in TRAILING_CR_CASES:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if cmd == command
+                    and w == want
+                    and label.startswith(TRAILING_CR_LABEL + tag + " ")
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], TRAILING_CR_CASE_FLOOR)
+                indexes.append(located[0])
+        self.assertEqual(indexes, list(range(indexes[0], indexes[0] + len(indexes))))
+
+    def test_no_label_below_the_floor_carries_the_stable_id(self):
+        for index, (_want, label, _cmd) in enumerate(case_commands()):
+            if index < TRAILING_CR_CASE_FLOOR:
+                self.assertNotIn(TRAILING_CR_STABLE_ID, label, msg=index)
+
+    # AC-2 (FR6, NFR6): the five cases of the plan.
+    def test_cases_one_to_four_are_denied_and_case_five_is_allowed(self):
+        for tag, want, command in TRAILING_CR_CASES:
+            with self.subTest(tag=tag):
+                self.assertEqual(self.both_modes(command), (want, want))
+
+    # Test notes: case 3 is the fallback-path pin, the other cases are read by
+    # the tokenizer.
+    def test_case_three_is_read_by_the_fallback_word_split(self):
+        segments = H.lex_segments(TRAILING_CR_CASES[2][2])
+        self.assertFalse(any(lexed for _words, lexed, _sep in segments))
+
+    def test_the_other_cases_are_read_by_the_tokenizer(self):
+        for tag, _want, command in TRAILING_CR_CASES:
+            if tag == "R1.CR3":
+                continue
+            with self.subTest(tag=tag):
+                segments = H.lex_segments(command)
+                self.assertTrue(all(lexed for _words, lexed, _sep in segments))
+
+    # AC-3 (FR6, NFR6): every build-artifact name, in every spelling of the
+    # `\r`, is judged like the same name with a letter in its place.
+    def test_a_build_artifact_with_a_carriage_return_is_judged_as_with_a_letter(self):
+        for name in sorted(H.SAFE_DELETE_BUILD_ARTIFACTS):
+            for spelling in TRAILING_CR_SPELLINGS:
+                command = spelling % name
+                letter = command.replace("\r", "x")
+                with self.subTest(command=command):
+                    got = self.both_modes(command)
+                    self.assertEqual(got, self.both_modes(letter))
+                    self.assertEqual(got, ("deny", "deny"))
+
+    def test_a_scratch_root_target_keeps_the_verdict_it_has_without_the_return(self):
+        for command in ("rm -rf /tmp/x", "rm -rf /var/tmp/x"):
+            with self.subTest(command=command):
+                with_cr = self.both_modes(command + "\r")
+                self.assertEqual(with_cr, self.both_modes(command))
+                self.assertEqual(with_cr, ("allow", "allow"))
+
+    def test_a_target_that_is_safe_with_its_carriage_return_stays_allowed(self):
+        for command in TRAILING_CR_SAFE_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("allow", "allow"))
+
+    def test_the_names_without_a_carriage_return_stay_allowed(self):
+        for name in sorted(H.SAFE_DELETE_BUILD_ARTIFACTS):
+            for command in ("rm -rf %s" % name, "rm -rf ./%s" % name):
+                with self.subTest(command=command):
+                    self.assertEqual(self.both_modes(command), ("allow", "allow"))
+
+    def test_a_scratch_root_itself_with_a_carriage_return_is_not_safe(self):
+        for command in ("rm -rf /tmp\r", "rm -rf /var/tmp\r", "rm -rf tmp\r"):
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("deny", "deny"))
+
+    # The target travels through every statement shape before the exception
+    # reads it.
+    def test_the_target_keeps_its_carriage_return_through_every_statement_shape(self):
+        for command in TRAILING_CR_SHAPES:
+            letter = command.replace("\r", "x")
+            with self.subTest(command=command):
+                got = self.both_modes(command)
+                self.assertEqual(got, self.both_modes(letter))
+                self.assertEqual(got, ("deny", "deny"))
+
+    # AC-4 (FR6, NFR6, NFR7): what the destructive rules match is unchanged;
+    # only the safe-delete exception reads the `\r`.
+    def test_the_matched_words_still_disregard_the_trailing_carriage_return(self):
+        self.assertEqual(shaped_words_of("rm -rf build\r"), [["rm", "-rf", "build"]])
+        self.assertEqual(
+            shaped_words_of("rm -rf build\\\r"), [["rm", "-rf", "build"]]
+        )
+        self.assertEqual(
+            shaped_words_of("rm -rf \"build\r\"\n'"),
+            [["rm", "-rf", "build"], ["'"]],
+        )
+
+    def test_a_denied_command_with_a_trailing_carriage_return_stays_denied(self):
+        for command in (
+            "rm -rf /home/sakura/valuable\r",
+            "rm -rf /home/sakura/valuable\\\r",
+            "rm -rf ~\r",
+            "rm -rf /\r",
+            "git reset --hard\r",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(self.both_modes(command), ("deny", "deny"))
+
+    def test_a_trailing_carriage_return_keeps_an_asked_target_asked(self):
+        for command in ("rm -rf $(cat list)\r", "rm -rf $X\r", "rm -rf build/*$X\r"):
+            with self.subTest(command=command):
+                got = self.both_modes(command)
+                self.assertEqual(got, self.both_modes(command[:-1]))
+                self.assertEqual(got, ("ask", "deny"))
+
+    # AC-5 (NFR4): the same decision on two consecutive evaluations, the second
+    # after clearing the lexer cache.
+    def test_the_decision_is_the_same_after_clearing_the_lexer_cache(self):
+        self.addCleanup(H._LEX_CACHE.clear)
+        for tag, want, command in TRAILING_CR_CASES:
+            for batch in (False, True):
+                with self.subTest(tag=tag, batch=batch):
+                    H._LEX_CACHE.clear()
+                    first = decision_in_process(command, batch)
+                    H._LEX_CACHE.clear()
+                    second = decision_in_process(command, batch)
+                    self.assertEqual(first, second)
+                    self.assertEqual(first, want)
 
 
 # ---------------------------------------------------------------------------
@@ -2383,6 +2869,509 @@ class TestHeredocDelimiterWords(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Line separators and continuation-joined close lines (round 2 deferred,
+# task0003: FR3, FR5, FR9, NFR1, NFR4, NFR6; review findings e959ba60bde865a4
+# and 2b52be5874de85f4). As in bash 5.3, a here-document delimiter word ends
+# at a metacharacter only and the line index splits lines at `\n` only; for an
+# unquoted delimiter the close line is decided on lines joined at
+# backslash-newline, a quoted one on the physical line.
+# ---------------------------------------------------------------------------
+
+RM_LINE = "rm -rf /home/sakura/valuable"
+SUBSTITUTION_LINE = "# $(rm -rf /home/sakura/valuable)"
+# The characters of SPEC.md FR3 besides `\n`: str.splitlines() splits a text
+# at each of them, bash does not.
+OTHER_LINE_BREAKS = "\r\x0b\x0c\x1c\x1d\x1e\x85  "
+
+
+def outside_every_body(lexmap, offset):
+    """Whether OFFSET lies in no here-document body (the body lines through
+    the close line) of LEXMAP."""
+    return all(
+        op.body_start is None or not (op.body_start <= offset < op.close_end)
+        for op in lexmap.heredocs
+    )
+
+
+def physical_close_lines(text, dash):
+    """The close-line index the one-argument call of _LexLines.close_lines()
+    gave before this task, written out from str.splitlines(): valid for a text
+    holding none of OTHER_LINE_BREAKS."""
+    mapping = {}
+    for index, line in enumerate(text.splitlines(keepends=True)):
+        key = line[:-1] if line.endswith("\n") else line
+        if dash:
+            key = key.lstrip("\t")
+        mapping.setdefault(key, []).append(index)
+    return mapping
+
+
+class TestHeredocLineSeparatorsAndJoinedCloseLines(unittest.TestCase):
+    # AC-1: FR3 cases 1 to 8 and FR5 cases 1 to 5 of the task plan, with the
+    # verdict each carries in the case table.
+    FR3_FORMS = [
+        ("cat <<EOF\r; rm -rf /home/sakura/valuable\nEOF", "deny"),
+        ("cat <<EOF\x0b; rm -rf /home/sakura/valuable\nEOF", "deny"),
+        ("cat <<EOF ; rm -rf /home/sakura/valuable\nEOF", "deny"),
+        ("cat <<END \r; rm -rf /home/sakura/valuable\nEND", "deny"),
+        ("cat <<END\nx\rEND\n# $(rm -rf /home/sakura/valuable)\nEND", "deny"),
+        ("cat <<E\rX\nE\n# $(rm -rf /home/sakura/valuable)\nE\rX", "deny"),
+        ("cat <<EOF\r\nx\r\nEOF\r\nrm -rf /home/sakura/valuable\nEOF", "deny"),
+        ("cat <<EOF\r\nhi\r\nEOF\r\n", "allow"),
+    ]
+    FR5_FORMS = [
+        ("cat <<END\nfoo\\\nEND\n# $(rm -rf /home/sakura/valuable)\nEND", "deny"),
+        ("cat <<-END\nfoo\\\n\tEND\n# $(rm -rf /home/sakura/valuable)\nEND", "deny"),
+        ("cat <<END\nfoo\\\\\nEND\nrm -rf /home/sakura/valuable\nEND", "deny"),
+        ("cat <<'END'\nfoo\\\nEND\nrm -rf /home/sakura/valuable\nEND", "deny"),
+        ("cat <<END\nfoo\\\nbar\nEND\necho done", "allow"),
+    ]
+    # AC-5: the planner-found forms, bash 5.3.9 confirmed and in the case
+    # table as FR5.6 to FR5.8. (command, [(delimiter, body, close extent)]).
+    PLANNER_FORMS = [
+        (
+            "cat <<END\nfoo\nEN\\\nD\nrm -rf /home/sakura/valuable\nEND",
+            [("END", "foo\n", "EN\\\nD\n")],
+        ),
+        (
+            "cat <<-END\nfoo\n\tEN\\\nD\nrm -rf /home/sakura/valuable\nEND",
+            [("END", "foo\n", "\tEN\\\nD\n")],
+        ),
+        (
+            "cat <<'A\\' <<B\nA\\\nB\nrm -rf /home/sakura/valuable\nB",
+            [("A\\", "", "A\\\n"), ("B", "", "B\n")],
+        ),
+    ]
+    # Forms beyond the plan's lists, each confirmed on bash 5.3.9 with `echo`
+    # in place of `rm`: the first line of a body is a close candidate that
+    # continues into the next lines (the line before it ends with a
+    # backslash), also under `<<-` over tab-only lines.
+    FIRST_LINE_FORMS = [
+        (
+            "cat <<'A\\' <<B\nA\\\nB\\\n\nrm -rf /home/sakura/valuable\nB",
+            [("A\\", "", "A\\\n"), ("B", "", "B\\\n\n")],
+        ),
+        (
+            "cat <<'A\\' <<-B\nA\\\n\tB\nrm -rf /home/sakura/valuable\nB",
+            [("A\\", "", "A\\\n"), ("B", "", "\tB\n")],
+        ),
+        (
+            "cat <<'A\\' <<-B\nA\\\n\t\\\n\tB\nrm -rf /home/sakura/valuable\nB",
+            [("A\\", "", "A\\\n"), ("B", "", "\t\\\n\tB\n")],
+        ),
+        (
+            "cat <<-B\nfoo\n\t\\\n\tB\nrm -rf /home/sakura/valuable\nB",
+            [("B", "foo\n", "\t\\\n\tB\n")],
+        ),
+        (
+            "cat <<-B\n\t\\\nB\nrm -rf /home/sakura/valuable\nB",
+            [("B", "", "\t\\\nB\n")],
+        ),
+        (
+            "cat <<B\nfoo\nB\\\\\\\nB\nrm -rf /home/sakura/valuable\nB",
+            [("B", "foo\nB\\\\\\\nB\nrm -rf /home/sakura/valuable\n", "B")],
+        ),
+    ]
+
+    def operators_of(self, command, count):
+        lexmap = H.lex_shell(command)
+        self.assertEqual(len(lexmap.heredocs), count, msg=repr(command))
+        return lexmap, lexmap.heredocs
+
+    def assert_denied_in_both_modes(self, command):
+        for batch in (False, True):
+            decision, reason = hook_verdict(command, batch=batch)
+            self.assertEqual(decision, "deny", msg=(batch, reason[:200]))
+
+    def assert_allowed_in_both_modes(self, command):
+        for batch in (False, True):
+            decision, reason = hook_verdict(command, batch=batch)
+            self.assertEqual(decision, "allow", msg=(batch, reason[:200]))
+
+    # -- AC-1 ----------------------------------------------------------------
+
+    def test_new_cases_are_in_the_case_table_after_the_earlier_entries(self):
+        # AC-1: located by label and command text, never by an absolute index;
+        # each sits after the 769 entries present at the feature base, and the
+        # block keeps the order of the task plan.
+        cases = case_commands()
+        expected = [
+            (command, verdict, "e959ba60bde865a4 round2-deferred FR3.%d " % number)
+            for number, (command, verdict) in enumerate(self.FR3_FORMS, 1)
+        ]
+        expected += [
+            (command, verdict, "2b52be5874de85f4 round2-deferred FR5.%d " % number)
+            for number, (command, verdict) in enumerate(self.FR5_FORMS, 1)
+        ]
+        expected += [
+            (command, "deny", "2b52be5874de85f4 round2-deferred FR5.%d " % number)
+            for number, (command, _ops) in enumerate(self.PLANNER_FORMS, 6)
+        ]
+        previous = -1
+        for command, verdict, prefix in expected:
+            with self.subTest(command=command):
+                found = [
+                    (index, want, label)
+                    for index, (want, label, cmd) in enumerate(cases)
+                    if cmd == command and label.startswith(prefix)
+                ]
+                self.assertEqual(len(found), 1, msg=prefix)
+                index, want, label = found[0]
+                self.assertGreaterEqual(index, 769)
+                self.assertGreater(index, previous)
+                previous = index
+                self.assertEqual(want, verdict)
+
+    # -- AC-2 ----------------------------------------------------------------
+
+    def test_a_character_after_the_delimiter_word_belongs_to_the_word(self):
+        # AC-2 (FR3 cases 1 to 3): `\r`, `\x0b` and U+2028 are no
+        # metacharacter: the delimiter is `EOF` and that character, the `;`
+        # ends the word, the rm text is on the operator's line and in no
+        # body, and no line `EOF` closes a body for `EOF` + character.
+        for char in ("\r", "\x0b", " "):
+            command = "cat <<EOF%s; %s\nEOF" % (char, RM_LINE)
+            with self.subTest(char=char):
+                lexmap, (op,) = self.operators_of(command, 1)
+                self.assertEqual(op.delimiter, "EOF" + char)
+                self.assertEqual(command[op.start : op.end], "<<EOF" + char)
+                self.assertFalse(op.quoted)
+                rm = command.index(RM_LINE)
+                self.assertLess(rm, command.index("\n"))
+                self.assertTrue(outside_every_body(lexmap, rm))
+                self.assertIsNone(op.body_start)
+                self.assert_denied_in_both_modes(command)
+
+    def test_blank_and_carriage_return_after_the_word_leave_an_empty_body(self):
+        # AC-2 (FR3 case 4): the word is `END`; the `\r` does not start a line,
+        # so the body is empty and closes at the line `END`.
+        command = self.FR3_FORMS[3][0]
+        lexmap, (op,) = self.operators_of(command, 1)
+        self.assertEqual(op.delimiter, "END")
+        self.assertEqual(op.body_start, command.index("\nEND") + 1)
+        self.assertEqual(op.body_end, op.body_start)
+        self.assertEqual(command[op.body_end : op.close_end], "END")
+        self.assertEqual(op.close_end, len(command))
+        self.assertTrue(outside_every_body(lexmap, command.index(RM_LINE)))
+        self.assert_denied_in_both_modes(command)
+
+    def test_a_carriage_return_inside_a_body_line_does_not_end_the_line(self):
+        # AC-2 (FR3 case 5): `x\rEND` is one body line, the body runs to the
+        # last line `END`, and the substitution it holds is in the body.
+        command = self.FR3_FORMS[4][0]
+        lexmap, (op,) = self.operators_of(command, 1)
+        self.assertEqual(op.delimiter, "END")
+        self.assertEqual(
+            heredoc_body(command, op), "x\rEND\n" + SUBSTITUTION_LINE + "\n"
+        )
+        self.assertEqual(command[op.body_end : op.close_end], "END")
+        self.assertEqual(op.close_end, len(command))
+        self.assert_denied_in_both_modes(command)
+
+    def test_a_delimiter_holding_a_carriage_return_closes_at_that_line(self):
+        # AC-2 (FR3 case 6): the value is `E\rX`; the line `E` does not close.
+        command = self.FR3_FORMS[5][0]
+        lexmap, (op,) = self.operators_of(command, 1)
+        self.assertEqual(op.delimiter, "E\rX")
+        self.assertEqual(heredoc_body(command, op), "E\n" + SUBSTITUTION_LINE + "\n")
+        self.assertEqual(command[op.body_end : op.close_end], "E\rX")
+        self.assert_denied_in_both_modes(command)
+
+    def test_a_crlf_delimiter_closes_at_its_own_line_and_the_next_line_is_code(self):
+        # AC-2 (FR3 case 7): the value is `EOF\r`, the body `x\r`, the close
+        # line the third line, and the rm line is in no body.
+        command = self.FR3_FORMS[6][0]
+        lexmap, (op,) = self.operators_of(command, 1)
+        self.assertEqual(op.delimiter, "EOF\r")
+        self.assertEqual(heredoc_body(command, op), "x\r\n")
+        self.assertEqual(command[op.body_end : op.close_end], "EOF\r\n")
+        self.assertTrue(outside_every_body(lexmap, command.index(RM_LINE)))
+        self.assert_denied_in_both_modes(command)
+
+    def test_fr3_maps_are_identical_after_clearing_the_lexer_cache(self):
+        # AC-2 (NFR4).
+        for command, _verdict in self.FR3_FORMS:
+            with self.subTest(command=command):
+                first = H.lex_shell(command).as_tuple()
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command).as_tuple()
+                self.assertEqual(first, second)
+
+    # -- AC-3 ----------------------------------------------------------------
+
+    def test_every_other_line_break_character_is_a_word_character(self):
+        # AC-3: one operator, the delimiter value `EcX`, the body `body`.
+        for char in OTHER_LINE_BREAKS:
+            command = "cat <<E%sX\nbody\nE%sX" % (char, char)
+            with self.subTest(char=hex(ord(char))):
+                lexmap, (op,) = self.operators_of(command, 1)
+                self.assertEqual(op.delimiter, "E%sX" % char)
+                self.assertEqual(command[op.start : op.end], "<<E%sX" % char)
+                self.assertEqual(heredoc_body(command, op), "body\n")
+                self.assertEqual(command[op.body_end : op.close_end], "E%sX" % char)
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_a_quote_and_an_escape_see_only_the_newline_as_a_line_break(self):
+        # A quote must close before the next `\n`, and a backslash before a
+        # `\n` makes the word unreadable; before any other character it
+        # escapes that character.
+        for char in OTHER_LINE_BREAKS:
+            for command, delimiter in (
+                ("cat <<'E%sX'\nbody\nE%sX" % (char, char), "E%sX" % char),
+                ('cat <<"E%sX"\nbody\nE%sX' % (char, char), "E%sX" % char),
+                ("cat <<E\\%sX\nbody\nE%sX" % (char, char), "E%sX" % char),
+            ):
+                with self.subTest(command=command):
+                    lexmap, (op,) = self.operators_of(command, 1)
+                    self.assertEqual(op.delimiter, delimiter)
+                    self.assertTrue(op.quoted)
+                    self.assertEqual(heredoc_body(command, op), "body\n")
+        for command in (
+            "cat <<'E\nX'\nbody\nE\nX'",
+            'cat <<"E\nX"\nbody\nE\nX"',
+            "cat <<E\\\nX\nbody\nEX",
+        ):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(list(lexmap.heredocs), [])
+                self.assertEqual(lexmap.tail_start, command.index("<<"))
+
+    def test_the_line_index_splits_at_the_newline_only(self):
+        # AC-3: line starts are offset 0 and the offset after each `\n`.
+        literal = "a\rb\nc\x0bd\n\ne"
+        self.assertEqual(H._LexLines(literal).starts, [0, 4, 8, 9])
+        for char in OTHER_LINE_BREAKS:
+            text = "x%sy\nz%sw\n\nq%s\n" % (char, char, char)
+            expected = [0] + [
+                i + 1 for i, ch in enumerate(text) if ch == "\n" and i + 1 < len(text)
+            ]
+            with self.subTest(char=hex(ord(char))):
+                self.assertEqual(H._LexLines(text).starts, expected)
+        everything = "\n".join("l" + char for char in OTHER_LINE_BREAKS) + OTHER_LINE_BREAKS
+        expected = [0] + [
+            i + 1
+            for i, ch in enumerate(everything)
+            if ch == "\n" and i + 1 < len(everything)
+        ]
+        self.assertEqual(H._LexLines(everything).starts, expected)
+        for text, starts in (("", []), ("\n", [0]), ("a", [0]), ("a\n", [0]), ("\n\n", [0, 1])):
+            with self.subTest(text=text):
+                self.assertEqual(H._LexLines(text).starts, starts)
+
+    def test_crlf_here_document_is_allowed(self):
+        # AC-3 (FR3 case 8).
+        command = self.FR3_FORMS[7][0]
+        lexmap, (op,) = self.operators_of(command, 1)
+        self.assertEqual(op.delimiter, "EOF\r")
+        self.assertEqual(heredoc_body(command, op), "hi\r\n")
+        self.assert_allowed_in_both_modes(command)
+
+    # -- AC-4 ----------------------------------------------------------------
+
+    def test_a_continued_body_line_does_not_close_an_unquoted_body_early(self):
+        # AC-4 (FR5 cases 1 and 2): `foo\` joins `END` into `fooEND`, the line
+        # `END` after it is not a candidate; the body runs to the last line and
+        # holds the line with the substitution, which the body extraction
+        # reports.
+        for command, _verdict in self.FR5_FORMS[:2]:
+            with self.subTest(command=command):
+                lexmap, (op,) = self.operators_of(command, 1)
+                self.assertEqual(op.delimiter, "END")
+                self.assertEqual(op.body_end, command.rindex("\n") + 1)
+                self.assertEqual(command[op.body_end : op.close_end], "END")
+                body = heredoc_body(command, op)
+                self.assertIn(SUBSTITUTION_LINE, body.split("\n"))
+                inner, needs_whole = H._extract_heredoc_body_substitutions(body)
+                self.assertFalse(needs_whole)
+                self.assertEqual([text for text, _at in inner], [RM_LINE])
+                stripped, records = H.strip_heredocs(command)
+                self.assertEqual([record.body for record in records], [body])
+                self.assertNotIn(SUBSTITUTION_LINE, stripped)
+                self.assert_denied_in_both_modes(command)
+
+    def test_even_backslashes_and_quoted_delimiters_join_nothing(self):
+        # AC-4 (FR5 cases 3 and 4): the third line closes the body.
+        for command, _verdict in self.FR5_FORMS[2:4]:
+            with self.subTest(command=command):
+                lexmap, (op,) = self.operators_of(command, 1)
+                self.assertEqual(command[op.body_end : op.close_end], "END\n")
+                self.assertEqual(op.body_end, command.index("\nEND\n") + 1)
+                self.assertTrue(outside_every_body(lexmap, command.index(RM_LINE)))
+                self.assert_denied_in_both_modes(command)
+
+    def test_a_joined_body_line_followed_by_a_plain_close_line_is_allowed(self):
+        # AC-4 (FR5 case 5).
+        command = self.FR5_FORMS[4][0]
+        lexmap, (op,) = self.operators_of(command, 1)
+        self.assertEqual(heredoc_body(command, op), "foo\\\nbar\n")
+        self.assertEqual(command[op.body_end : op.close_end], "END\n")
+        self.assert_allowed_in_both_modes(command)
+
+    # -- AC-5 ----------------------------------------------------------------
+
+    def check_close_extents(self, command, expected):
+        lexmap, ops = self.operators_of(command, len(expected))
+        for op, (delimiter, body, close) in zip(ops, expected):
+            self.assertEqual(op.delimiter, delimiter, msg=repr(command))
+            self.assertEqual(heredoc_body(command, op), body, msg=repr(command))
+            self.assertEqual(command[op.body_end : op.close_end], close, msg=repr(command))
+        self.assertTrue(outside_every_body(lexmap, command.index(RM_LINE)))
+        self.assert_denied_in_both_modes(command)
+
+    def test_planner_found_forms_close_at_the_joined_line_and_are_denied(self):
+        # AC-5: the close extent runs from the candidate line's start to the
+        # end of its last joined physical line (the first line `B` for the
+        # third form), and the rm line is outside every body.
+        for command, expected in self.PLANNER_FORMS:
+            with self.subTest(command=command):
+                self.check_close_extents(command, expected)
+
+    def test_the_first_line_of_a_body_is_a_candidate_whatever_precedes_it(self):
+        # The line before a body's first line may end with a backslash (a
+        # quoted delimiter's close line); the first line still starts a fresh
+        # reading, joins with the lines it continues into, and under `<<-`
+        # loses the leading tabs of the joined line.
+        for command, expected in self.FIRST_LINE_FORMS:
+            with self.subTest(command=command):
+                lexmap, ops = self.operators_of(command, len(expected))
+                for op, (delimiter, body, close) in zip(ops, expected):
+                    self.assertEqual(op.delimiter, delimiter)
+                    self.assertEqual(heredoc_body(command, op), body)
+                    self.assertEqual(command[op.body_end : op.close_end], close)
+
+    def test_first_line_forms_that_close_are_denied(self):
+        for command, _expected in self.FIRST_LINE_FORMS[:5]:
+            with self.subTest(command=command):
+                self.assertTrue(
+                    outside_every_body(H.lex_shell(command), command.index(RM_LINE))
+                )
+                self.assert_denied_in_both_modes(command)
+
+    def test_a_close_line_continued_with_an_odd_run_of_backslashes_only(self):
+        # Three backslashes join (the last one continues the line), two do not.
+        three = "cat <<B\nfoo\nB\\\\\\\nB\n" + RM_LINE + "\nB"
+        lexmap, (op,) = self.operators_of(three, 1)
+        self.assertEqual(op.body_end, three.rindex("\nB") + 1)
+        two = "cat <<B\nfoo\nB\\\\\nB\n" + RM_LINE + "\nB"
+        lexmap, (op,) = self.operators_of(two, 1)
+        self.assertEqual(heredoc_body(two, op), "foo\nB\\\\\n")
+        self.assertEqual(two[op.body_end : op.close_end], "B\n")
+
+    def test_a_close_line_continued_into_the_end_of_the_text(self):
+        # bash reads the end of input as the end of the continued line: `B`
+        # followed by a backslash-newline closes the body, `B` followed by a
+        # lone backslash does not.
+        lexmap, (op,) = self.operators_of("cat <<B\nx\nB\\\n", 1)
+        self.assertEqual(op.body_end, len("cat <<B\nx\n"))
+        self.assertEqual(op.close_end, len("cat <<B\nx\nB\\\n"))
+        lexmap, (op,) = self.operators_of("cat <<B\nB\\\n\n", 1)
+        self.assertEqual(op.body_end, op.body_start)
+        self.assertEqual(op.close_end, len("cat <<B\nB\\\n\n"))
+        lexmap, (op,) = self.operators_of("cat <<B\nx\nB\\", 1)
+        self.assertIsNone(op.body_start)
+
+    def test_the_physical_close_line_index_is_unchanged(self):
+        # AC-7: the one-argument call keeps its meaning (physical lines) for a
+        # text without the characters of SPEC.md FR3.
+        texts = [
+            "",
+            "\n",
+            "a",
+            "END",
+            "END\n",
+            "a\\\nEND\n\tEND\n  E \t\nplain\nE X\n\t\tE Y\n\n\t\n",
+            "x\\\\\nEND\nEN\\\nD\n\\\n\\",
+            "\n\n\t\nEND\n\tEND\n\t\tEND\nEND ",
+        ]
+        rnd = random.Random(7)
+        pieces = ["END", "E", "\t", " ", "\\", "\n", "\n", "x", "ND", "\\\n"]
+        for _ in range(60):
+            texts.append("".join(rnd.choice(pieces) for _ in range(rnd.randint(0, 40))))
+        for text in texts:
+            for dash in (False, True):
+                with self.subTest(text=text, dash=dash):
+                    self.assertEqual(
+                        H._LexLines(text).close_lines(dash),
+                        physical_close_lines(text, dash),
+                    )
+
+    # -- AC-6 ----------------------------------------------------------------
+
+    def assert_linear(self, build):
+        """The work for size 400 is at most 2.5 times the work for size 200
+        plus 100, and each is within LEX_WORK_FACTOR times its length plus
+        the floor."""
+        small_text, large_text = build(200), build(400)
+        small = H.lex_shell(small_text)
+        large = H.lex_shell(large_text)
+        self.assertLessEqual(large.work, 2.5 * small.work + 100)
+        self.assertLessEqual(small.work, H.LEX_WORK_FACTOR * len(small_text) + 1024)
+        self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024)
+
+    def test_lexing_work_is_linear_for_every_case_repeated(self):
+        commands = [command for command, _verdict in self.FR3_FORMS + self.FR5_FORMS]
+        commands += [command for command, _ops in self.PLANNER_FORMS]
+        for command in commands:
+            with self.subTest(command=command):
+                self.assert_linear(lambda count, command=command: "\n".join([command] * count))
+
+    def test_lexing_work_is_linear_for_a_body_of_continued_lines(self):
+        for head, tail in (
+            ("cat <<END\n", "z\nEND"),
+            ("cat <<-END\n", "\tz\nEND"),
+            ("cat <<END\n", "z"),
+        ):
+            with self.subTest(head=head):
+                self.assert_linear(
+                    lambda count, head=head, tail=tail: head + "a\\\n" * count + tail
+                )
+
+    def test_lexing_work_is_linear_when_every_body_starts_on_a_backslash_line(self):
+        # Every unquoted body starts on a line holding one backslash and finds
+        # no close line: rereading the continuation run per body is quadratic.
+        for operators in (" <<'\\' <<B", " <<'\\' <<-B", " <<'\\' <<B <<-C"):
+            with self.subTest(operators=operators):
+                self.assert_linear(
+                    lambda count, operators=operators: "cat"
+                    + operators * count
+                    + "\n"
+                    + "\n".join(["\\"] * count)
+                )
+
+    def test_a_backslash_line_run_is_read_in_time(self):
+        # The same shape at a size where a walk over the continuation run per
+        # body takes half a minute (the linear reading takes well under a
+        # second): the lookup costs the delimiter's length, not the run's.
+        count = 20000
+        for operators in (" <<'\\' <<B", " <<'\\' <<-B"):
+            with self.subTest(operators=operators):
+                command = "cat" + operators * count + "\n" + "\n".join(["\\"] * count)
+                H._LEX_CACHE.clear()
+                start = time.monotonic()
+                lexmap = H.lex_shell(command)
+                self.assertLess(time.monotonic() - start, 3)
+                self.assertLessEqual(
+                    lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024
+                )
+
+
+class TestLineSeparatorStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    forms of the line separator and joined close line rules."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls_ = TestHeredocLineSeparatorsAndJoinedCloseLines
+        forms = [command for command, _verdict in cls_.FR3_FORMS]
+        forms += [command for command, _verdict in cls_.FR5_FORMS]
+        forms += [command for command, _ops in cls_.PLANNER_FORMS]
+        forms += [command for command, _ops in cls_.FIRST_LINE_FORMS]
+        for char in OTHER_LINE_BREAKS:
+            forms.append("cat <<E%sX\nbody\nE%sX\n%s" % (char, char, RM_LINE))
+        cls.commands = forms
+
+
+# ---------------------------------------------------------------------------
 # Rework round 1 (task0005: FR4, FR6, FR8, NFR5, NFR6; review findings
 # 1baa909f9b288847 and 19edf404b5cbeb2b). A `<<` whose delimiter word cannot be
 # read registers no operator and is a tail source: from it on no comment, no
@@ -2485,13 +3474,16 @@ class TestHeredocFallbackAndCloseLines(unittest.TestCase):
         self.assertEqual([lo for lo, _hi in view.mask_ranges], quotes)
         self.assertNotIn("'", view.view)
         # An unreadable `<<` followed by double quotes and `$'` / `$"` the same way.
+        # The `${` of `E${x}` lies after the tail source: it opens no
+        # parameter expansion (no region) and is listed in UNOPENED with them
+        # (destructive-guard-lexer-round2-deferred task0001, FR2).
         command = "cat <<E${x}\n\"a\n$'b\n$\"c\nrm -rf /home/sakura/valuable\n\""
         lexmap = H.lex_shell(command)
-        self.assertEqual([r.kind for r in lexmap.regions], ["parameter-expansion"])
-        self.assertEqual(
-            list(lexmap.unopened),
-            [i for i, ch in enumerate(command) if ch in "'\""],
-        )
+        self.assertEqual([r.kind for r in lexmap.regions], [])
+        quotes = [i for i, ch in enumerate(command) if ch in "'\""]
+        self.assertEqual(list(lexmap.unopened), sorted([command.index("${x}")] + quotes))
+        view = H._MarkedText.plain(command)
+        self.assertEqual([lo for lo, _hi in view.mask_ranges], quotes)
         self.assertEqual(hook_verdict(command)[0], "deny")
 
     def test_lexing_work_is_linear_in_a_tail_full_of_quote_characters(self):
@@ -2506,7 +3498,10 @@ class TestHeredocFallbackAndCloseLines(unittest.TestCase):
     def test_no_operator_is_opened_after_an_unreadable_word(self):
         command = "cat <<E${x}\ncat <<EOF\nrm -rf /home/sakura/valuable\nEOF\n"
         lexmap = self.check_tail_reading(command)
-        self.assertEqual(list(lexmap.unopened), [])
+        # No quote character is left literal; the `${` of `E${x}` lies after
+        # the tail source and is the one opener the gate refuses (round 2
+        # deferred, task0001, FR2).
+        self.assertEqual(list(lexmap.unopened), [command.index("${x}")])
         self.assertEqual(hook_verdict(command)[0], "deny")
 
     def test_an_earlier_operator_keeps_its_body(self):
@@ -2636,6 +3631,374 @@ class TestHeredocFallbackAndCloseLines(unittest.TestCase):
                 self.assertTrue(label.startswith(prefix), msg=label)
 
 
+# ---------------------------------------------------------------------------
+# Openers after an unreadable delimiter word, and the one tail gate
+# (destructive-guard-lexer-round2-deferred task0001: FR2, FR8, NFR1, NFR4,
+# NFR6; review finding 52bfa0f59d1ea852 and the tail-gate part of
+# c8c16caba82d6238). After a `<<` whose delimiter word cannot be read (a tail
+# source) no parameter-form `${`, `$((`, `$[`, `((` at a command position or
+# case construct opens, in the lexer or in statement shaping; `$(` and
+# backticks still do. Every tail decision of the lexer pass is one gate.
+# ---------------------------------------------------------------------------
+
+TAIL_SOURCE_CASE_LABEL = "52bfa0f59d1ea852 round2-deferred FR2."
+
+# The five commands of the case table: each form and the opener its second
+# line holds (a case word for the last one).
+TAIL_SOURCE_FORMS = [
+    ("cat <<E${x}\n${\nE${x}\nrm -rf /home/sakura/valuable\n}", "${"),
+    ("cat <<E${x}\n$((\nE${x}\nrm -rf /home/sakura/valuable\n))", "$(("),
+    ("cat <<E${x}\n$[\nE${x}\nrm -rf /home/sakura/valuable\n]", "$["),
+    ("cat <<E${x}\n((\nE${x}\nrm -rf /home/sakura/valuable\n))", "(("),
+    ("cat <<E${x}\ncase x in\nE${x}\nrm -rf /home/sakura/valuable\nesac", "case"),
+]
+
+# The gate's two classes (IMPLEMENTATION.md, "Tail gate"), and how many call
+# sites of each opener kind the lexer pass holds at least: every site SPEC.md
+# FR8 lists, and the assignment-word subscript start.
+TAIL_GATE_NAME = "tail_gate"
+TAIL_START_OPENERS = frozenset(
+    {
+        "comment",
+        "heredoc-operator",
+        "assignment-subscript",
+        "array-subscript",
+        "discarded-line",
+    }
+)
+TAIL_SOURCE_OPENERS = frozenset(
+    {
+        "single-quote",
+        "double-quote",
+        "ansi-c-quote",
+        "locale-quote",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+        "case-construct",
+    }
+)
+TAIL_GATE_SITES = {
+    # a quote character in a shell-rule frame, a parameter expansion, an
+    # arithmetic expansion, a bracket arithmetic, a subscript, an extglob frame
+    "single-quote": 6,
+    "double-quote": 6,
+    "ansi-c-quote": 1,
+    "locale-quote": 1,
+    "comment": 1,
+    "heredoc-operator": 1,
+    # `;`, `&` / `|`, a parenthesis, the declaration `=(` error and the
+    # `<<<`, `<` and `>` operators, all directly in an array
+    "discarded-line": 7,
+    "array-subscript": 1,
+    "assignment-subscript": 1,
+    "parameter-expansion": 1,
+    "arithmetic-expansion": 1,
+    "bracket-arithmetic": 1,
+    "arithmetic-command": 1,
+    "case-construct": 1,
+}
+# The three bookkeeping statements of the tail start, which are no opener
+# decision: its initial value from the settled openers, its update when a tail
+# source is met, and its update at the end of a discarded line.
+TAIL_BOOKKEEPING_STATEMENTS = (
+    "state.tail_start = min(settled) if settled else None",
+    "state.tail_source = state.tail_start = i",
+)
+TAIL_BOOKKEEPING_IF_TEST = "state.tail_start is not None and state.tail_start < end"
+
+
+class TestTailSourceOpenersAndTailGate(unittest.TestCase):
+    NOT_OPENED_KINDS = QUOTE_KINDS | {
+        "comment",
+        "parameter-expansion",
+        "arithmetic-expansion",
+        "bracket-arithmetic",
+        "arithmetic-command",
+    }
+    # AC-4: `$(` and a backtick still open after the tail source.
+    SUBSTITUTION_FORMS = [
+        (
+            "cat <<E${x}\necho $(rm -rf /home/sakura/valuable)",
+            "command-substitution",
+            "$(rm -rf /home/sakura/valuable)",
+        ),
+        (
+            "cat <<E${x}\necho `rm -rf /home/sakura/valuable`",
+            "backtick-substitution",
+            "`rm -rf /home/sakura/valuable`",
+        ),
+    ]
+    # AC-3: the construct opened before the tail source.
+    CASE_BEFORE_FORM = "case x in x) cat <<E${x};; esac\nrm -rf /home/sakura/valuable"
+    # The case word's reading in the lexer: a command substitution closes at
+    # the `)` of a case pattern only when no construct is open.
+    CASE_AFTER_FORM = "cat <<E${x}\necho $(case x in a) true;; esac)"
+    CASE_BEFORE_IN_SUBSTITUTION_FORM = (
+        "echo $(case x in a) cat <<E${x};; esac)\nrm -rf /home/sakura/valuable"
+    )
+
+    def test_the_openers_after_an_unreadable_word_are_literal_text(self):
+        # AC-2: cases 1 to 4.
+        for form, opener in TAIL_SOURCE_FORMS[:4]:
+            with self.subTest(form=form):
+                lexmap = H.lex_shell(form)
+                pos = form.index("<<")
+                self.assertEqual(list(lexmap.heredocs), [])
+                self.assertEqual(lexmap.tail_start, pos)
+                self.assertEqual(
+                    [
+                        (r.kind, r.start)
+                        for r in lexmap.regions
+                        if r.start >= pos and r.kind in self.NOT_OPENED_KINDS
+                    ],
+                    [],
+                )
+                required = {m.start() + 1 for m in re.finditer(re.escape("E${x}"), form)}
+                self.assertEqual(len(required), 2)
+                unopened = set(lexmap.unopened)
+                self.assertLessEqual(required, unopened)
+                if opener != "${":
+                    # The second-line `${` of case 1 is the command form on
+                    # a tree that reads it (a later task); the other openers
+                    # are refused whatever else changes.
+                    required.add(form.index("\n" + opener) + 1)
+                    self.assertEqual(unopened, required)
+                H._LEX_CACHE.clear()
+                self.assertEqual(H.lex_shell(form).as_tuple(), lexmap.as_tuple())
+                for batch in (False, True):
+                    decision, reason = hook_verdict(form, batch=batch)
+                    self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_a_case_word_after_an_unreadable_word_is_a_command_word(self):
+        # AC-3, case 5: statement shaping opens no case construct, so the
+        # destructive line is the statement's command, not a pattern.
+        form = TAIL_SOURCE_FORMS[4][0]
+        shaped = [words for _text, _toks, _lexed, words, *_rest in H.statements(form)]
+        self.assertIn(["case", "x", "in"], shaped)
+        self.assertTrue(any(words[:1] == ["rm"] for words in shaped), msg=shaped)
+        for batch in (False, True):
+            decision, reason = hook_verdict(form, batch=batch)
+            self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_a_case_word_after_an_unreadable_word_opens_none_in_the_lexer(self):
+        # AC-3: the `)` of the pattern closes the substitution, as it does
+        # when no construct is open ...
+        command = self.CASE_AFTER_FORM
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            [command[r.start : r.end] for r in lexmap.regions],
+            ["$(case x in a)"],
+        )
+        # ... and a construct opened before the tail source stays open past it
+        # and closes at its `esac`.
+        command = self.CASE_BEFORE_IN_SUBSTITUTION_FORM
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            [command[r.start : r.end] for r in lexmap.regions],
+            ["$(case x in a) cat <<E${x};; esac)"],
+        )
+        self.assertEqual(lexmap.tail_start, command.index("<<"))
+
+    def test_a_case_construct_opened_before_the_tail_source_still_closes_at_esac(self):
+        # AC-3: shaping reads the construct opened before the tail source as
+        # it did, so `esac` closes it and the next line is a command.
+        form = self.CASE_BEFORE_FORM
+        shaped = [words for _text, _toks, _lexed, words, *_rest in H.statements(form)]
+        self.assertIn([], shaped, msg="the `esac` closer carries no command")
+        self.assertNotIn(["esac"], shaped)
+        self.assertEqual(shaped[-1][:1], ["rm"])
+        for batch in (False, True):
+            decision, reason = hook_verdict(form, batch=batch)
+            self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_the_destination_table_shapes_statements_the_same_way(self):
+        # The table the here-document destination reads carries the same case
+        # state as statements(): the destructive line is a command word in it.
+        for form in (self.CASE_BEFORE_FORM, TAIL_SOURCE_FORMS[4][0]):
+            with self.subTest(form=form):
+                stripped, _records, _omap = H._strip_heredocs_mapped(form)
+                spans, parent_of, _unmatched, _opaque, _containing = H.scan_structure(
+                    stripped, mode="shell"
+                )
+                marked = H._mark_substitutions(
+                    stripped, H._top_level_spans(spans, parent_of), 0
+                )
+                table, _starts, _operators = H._build_statement_table(stripped, marked)
+                shaped = [stmt.shaped_words for stmt in table]
+                self.assertTrue(any(words[:1] == ["rm"] for words in shaped), msg=shaped)
+
+    def test_substitutions_still_open_after_an_unreadable_word(self):
+        # AC-4 (NFR6): `$(` and backticks are never refused.
+        for command, kind, text in self.SUBSTITUTION_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                pos = command.index("<<")
+                found = [
+                    (r.kind, command[r.start : r.end])
+                    for r in lexmap.regions
+                    if r.start > pos and r.kind in SUBSTITUTION_KINDS
+                ]
+                self.assertEqual(found, [(kind, text)])
+                for batch in (False, True):
+                    decision, reason = hook_verdict(command, batch=batch)
+                    self.assertEqual(decision, "deny", msg=reason[:200])
+
+    def test_a_tail_of_settled_openers_alone_keeps_reading_these_openers(self):
+        # No tail source: the openers after the earliest settled one still
+        # open (and an unclosed one is settled), as before.
+        command = "echo ${y\n${a} $((1)) $[2] ((3))\n"
+        lexmap = H.lex_shell(command)
+        self.assertEqual(lexmap.tail_start, command.index("${y"))
+        self.assertEqual(
+            [(r.kind, command[r.start : r.end]) for r in lexmap.regions],
+            [
+                ("parameter-expansion", "${a}"),
+                ("arithmetic-expansion", "$((1))"),
+                ("bracket-arithmetic", "$[2]"),
+            ],
+        )
+        self.assertEqual(list(lexmap.unopened), [command.index("${y")])
+
+    def test_unclosed_openers_after_an_unreadable_word_are_not_settled(self):
+        # They are refused, so the pass needs no second round for them.
+        for opener in ("${", "$((", "$[", "(("):
+            command = "cat <<E${x}\necho " + opener + " a\n" + opener + " b"
+            with self.subTest(opener=opener):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(lexmap.rounds, 1)
+                self.assertEqual(lexmap.tail_start, command.index("<<"))
+
+    def test_lexing_work_is_linear_in_repeated_tail_source_forms(self):
+        # AC-7 (NFR1): each of the five forms repeated 200 and 400 times.
+        for form, _opener in TAIL_SOURCE_FORMS:
+            with self.subTest(form=form):
+                small_text = "\n".join([form] * 200)
+                large_text = "\n".join([form] * 400)
+                small = H.lex_shell(small_text)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def lex_pass_tree(self):
+        with open(HOOK, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and node.name == "_lex_pass":
+                return node
+        self.fail("the hook has no _lex_pass()")
+
+    def test_the_two_classes_of_the_gate(self):
+        self.assertEqual(H._LEX_TAIL_START_OPENERS, TAIL_START_OPENERS)
+        self.assertEqual(H._LEX_TAIL_SOURCE_OPENERS, TAIL_SOURCE_OPENERS)
+        self.assertFalse(TAIL_START_OPENERS & TAIL_SOURCE_OPENERS)
+
+    def test_the_tail_is_decided_only_inside_the_gate(self):
+        # AC-5 (FR8): inside the lexer pass, a comparison with the tail start
+        # and a test of the tail source occur only in the gate, apart from
+        # the three bookkeeping statements.
+        root = self.lex_pass_tree()
+        parents = {}
+        for node in ast.walk(root):
+            for child in ast.iter_child_nodes(node):
+                parents[child] = node
+        gates = [
+            n for n in ast.walk(root)
+            if isinstance(n, ast.FunctionDef) and n.name == TAIL_GATE_NAME
+        ]
+        self.assertEqual(len(gates), 1, msg="one gate function inside the pass")
+        exempt_seen = {text: 0 for text in TAIL_BOOKKEEPING_STATEMENTS}
+        exempt_seen[TAIL_BOOKKEEPING_IF_TEST] = 0
+        outside = []
+        for node in ast.walk(root):
+            if not (
+                isinstance(node, ast.Attribute)
+                and node.attr in ("tail_start", "tail_source")
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "state"
+            ):
+                continue
+            exempt = False
+            walker = node
+            parent = parents[node]
+            if (
+                isinstance(parent, ast.Call)
+                and isinstance(parent.func, ast.Name)
+                and parent.func.id == "_LexPassResult"
+                and node in parent.args
+            ):
+                # The pass hands its tail source to its caller in the result:
+                # a report, not a decision.
+                continue
+            while walker is not root:
+                if walker is gates[0]:
+                    exempt = True
+                    break
+                if isinstance(walker, ast.Assign):
+                    text = ast.unparse(walker)
+                    if text in exempt_seen:
+                        exempt_seen[text] += 1
+                        exempt = True
+                        break
+                if isinstance(walker, ast.If):
+                    if ast.unparse(walker.test) == TAIL_BOOKKEEPING_IF_TEST:
+                        exempt_seen[TAIL_BOOKKEEPING_IF_TEST] += 1
+                        exempt = True
+                        break
+                walker = parents[walker]
+            if not exempt:
+                outside.append("line %d: %s" % (node.lineno, ast.unparse(node)))
+        self.assertEqual(outside, [])
+        for text, count in exempt_seen.items():
+            self.assertGreaterEqual(count, 1, msg="exempt statement not found: " + text)
+
+    def test_every_listed_site_calls_the_gate(self):
+        # AC-5 (FR8): the sites SPEC.md FR8 lists, and the assignment-word
+        # subscript start, ask the gate, each with its opener kind.
+        root = self.lex_pass_tree()
+        calls = {}
+        for node in ast.walk(root):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == TAIL_GATE_NAME
+            ):
+                self.assertTrue(node.args and isinstance(node.args[0], ast.Constant))
+                kind = node.args[0].value
+                calls[kind] = calls.get(kind, 0) + 1
+        for kind, least in TAIL_GATE_SITES.items():
+            with self.subTest(kind=kind):
+                self.assertGreaterEqual(calls.get(kind, 0), least)
+        for kind in calls:
+            self.assertIn(kind, TAIL_START_OPENERS | TAIL_SOURCE_OPENERS)
+
+    def test_the_gate_never_refuses_a_substitution(self):
+        # `$(`, backticks and process substitutions are not gated kinds.
+        for kind in ("command-substitution", "backtick-substitution", "process-substitution"):
+            self.assertNotIn(kind, TAIL_START_OPENERS | TAIL_SOURCE_OPENERS)
+
+
+class TestTailSourceStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    forms of the openers after an unreadable delimiter word: the lexer, the
+    masked view, the position maps and the structure scan agree on them."""
+
+    @classmethod
+    def setUpClass(cls):
+        holder = TestTailSourceOpenersAndTailGate
+        forms = [form for form, _opener in TAIL_SOURCE_FORMS]
+        forms += [form for form, _kind, _text in holder.SUBSTITUTION_FORMS]
+        forms += [
+            holder.CASE_BEFORE_FORM,
+            holder.CASE_AFTER_FORM,
+            holder.CASE_BEFORE_IN_SUBSTITUTION_FORM,
+        ]
+        cls.commands = forms
+
+
 class TestFallbackStageAgreement(TestStageAgreement):
     """The stage agreement properties (a)-(f) of TestStageAgreement, over the
     forms of the here-document fallback and close-line rules."""
@@ -2668,7 +4031,10 @@ class TestDelimiterWordStageAgreement(TestStageAgreement):
 
 
 class TestUnclosedOpeners(unittest.TestCase):
-    OPENERS = ["${", "$((", "$[", "((", "$'"]
+    # `${` followed by a blank is the bash 5.3 command form (nested command
+    # forms, never settled); `${x` is the parameter form, settled when it never
+    # closes: the bulk test covers both readings (1fcae1f76f2a20f0, SPEC A8).
+    OPENERS = ["${", "${x", "$((", "$[", "((", "$'"]
     DESTRUCTIVE = "\nrm -rf /home/sakura/valuable\n"
 
     def bulk(self, opener, size=60000):
@@ -2713,16 +4079,1381 @@ class TestUnclosedOpeners(unittest.TestCase):
                 self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(unit * 400) + 1024)
 
     def test_many_unclosed_openers_are_settled_without_a_rescan_per_opener(self):
-        command = "${ " * 20000
+        command = "${x " * 20000
         lexmap = H.lex_shell(command)
         self.assertLessEqual(lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024)
         self.assertEqual(len(lexmap.unopened), 20000)
         self.assertEqual(lexmap.tail_start, 0)
 
+    def test_many_unclosed_command_forms_are_read_in_linear_work_and_never_settled(self):
+        command = "${ " * 20000
+        lexmap = H.lex_shell(command)
+        self.assertLessEqual(lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024)
+        self.assertEqual(list(lexmap.unopened), [])
+        self.assertIsNone(lexmap.tail_start)
+        self.assertEqual(lexmap.rounds, 1)
+
     def test_budget_exceeded_is_an_ask_never_an_allow(self):
         command = "(( ;" * 15000 + self.DESTRUCTIVE
         decision, _reason = hook_verdict(command)
         self.assertIn(decision, ("ask", "deny"))
+
+
+# ---------------------------------------------------------------------------
+# The bash 5.3 command form of `${` (destructive-guard-lexer-round2-deferred,
+# task0005: FR7, FR9-FR11, NFR1-NFR7; review finding 1fcae1f76f2a20f0).
+# `${` directly followed by a space, a tab, a newline or `|` is a command
+# substitution (`${ cmd; }` / `${|cmd; }`) whose content is read as commands;
+# every other `${` is the parameter form. Expectations are written out by hand
+# (D6); the forms marked "bash 5.3.9" were run there with `rm` replaced by
+# `echo`.
+# ---------------------------------------------------------------------------
+
+BRACE_LABEL_ID = "1fcae1f76f2a20f0 round2-deferred"
+# The first index a block appended by a task of this feature can sit at.
+BRACE_BLOCK_FLOOR = 769
+RM_VALUABLE = "rm -rf /home/sakura/valuable"
+
+# The seven cases of the task plan and the four it adds beyond SPEC.md (the
+# first three confirmed on bash 5.3.9, the last one a deny that keeps a
+# conservative verdict): tag -> (expected verdict, command).
+BRACE_CASES = {
+    "FR7.1": ("deny", "echo ${ " + RM_VALUABLE + "; }"),
+    "FR7.2": ("deny", "echo ${|" + RM_VALUABLE + "; }"),
+    "FR7.3": ("deny", "echo ${\n" + RM_VALUABLE + "\n}"),
+    "FR7.4": ("deny", "cat <<E\n${ " + RM_VALUABLE + "; }\nE"),
+    "FR7.5": ("deny", "echo ${ " + RM_VALUABLE),
+    "FR7.6": ("allow", "echo ${x} ${x:-y} ${#x}"),
+    "FR7.7": ("allow", "cat <<'E'\n${ " + RM_VALUABLE + "; }\nE"),
+    "FR7.8": ("deny", 'echo "${ ' + RM_VALUABLE + '; }"'),
+    "FR7.9": ("deny", "echo ${x:-${ " + RM_VALUABLE + "; }}"),
+    "FR7.10": ("deny", "echo ${ { " + RM_VALUABLE + "; }; }"),
+    "FR7.11": ("deny", "git reset --hard`${ x`"),
+}
+BRACE_REQUIRED_TAGS = ["FR7.%d" % n for n in range(1, 8)]
+
+# (command, the literal of the one region, its inner text): cases 1 to 3. The
+# inner text is exactly what lies between the opener (`${`, or `${|`) and the
+# final `}`.
+BRACE_CLOSED_FORMS = [
+    (
+        BRACE_CASES["FR7.1"][1],
+        "${ " + RM_VALUABLE + "; }",
+        " " + RM_VALUABLE + "; ",
+    ),
+    (
+        BRACE_CASES["FR7.2"][1],
+        "${|" + RM_VALUABLE + "; }",
+        RM_VALUABLE + "; ",
+    ),
+    (
+        BRACE_CASES["FR7.3"][1],
+        "${\n" + RM_VALUABLE + "\n}",
+        "\n" + RM_VALUABLE + "\n",
+    ),
+]
+
+# Where the close lands (SPEC A7; bash 5.3.9): (command, the command form's
+# literal, or None when it never closes). A `}` closes at a reserved-word
+# position (the start of the content, after `;`, `&`, a newline, after a
+# closer), as a token of its own: what follows it is not part of it.
+BRACE_CLOSE_FORMS = [
+    ("echo ${ echo hi;}", "${ echo hi;}"),
+    ("echo ${ echo hi; }}", "${ echo hi; }"),
+    ("echo ${ echo hi; }x", "${ echo hi; }"),
+    ("echo ${ echo hi &}", "${ echo hi &}"),
+    ("echo ${ }", "${ }"),
+    ("echo ${|}", "${|}"),
+    ("echo ${ echo hi\n}", "${ echo hi\n}"),
+    ("echo ${ echo hi; } }", "${ echo hi; }"),
+    ("echo ${ { echo hi; } }", "${ { echo hi; } }"),
+    ("echo ${ { echo hi; }; }", "${ { echo hi; }; }"),
+    ("echo ${ { { echo hi; }; }; }", "${ { { echo hi; }; }; }"),
+    ("echo ${ ( echo hi ) }", "${ ( echo hi ) }"),
+    ("echo ${ if true; then echo hi; fi }", "${ if true; then echo hi; fi }"),
+    ("echo ${ case x in x) echo hi;; esac }", "${ case x in x) echo hi;; esac }"),
+    # A `}` that is an argument, part of a word or quoted closes nothing.
+    ("echo ${ echo }", None),
+    ("echo ${ echo hi}", None),
+    ("echo ${ echo \\}", None),
+    ("echo ${ echo a}b; }", "${ echo a}b; }"),
+    ("echo ${ echo \\}; }", "${ echo \\}; }"),
+    ("echo ${ echo $x}; }", "${ echo $x}; }"),
+    ("echo ${ >f }", None),
+    ("echo ${ { echo hi; }", None),
+    ("echo ${ case x in }) echo hi;; esac; }", "${ case x in }) echo hi;; esac; }"),
+]
+
+# (command, [(kind, literal[, n]), ...], the child region's parent literal):
+# the command form read inside another region (AC-3).
+BRACE_NESTED_FORMS = [
+    (
+        BRACE_CASES["FR7.8"][1],
+        [("double-quote", '"${ ' + RM_VALUABLE + '; }"'), (BRACE_KIND, "${ " + RM_VALUABLE + "; }")],
+        "double-quote",
+    ),
+    (
+        BRACE_CASES["FR7.9"][1],
+        [
+            ("parameter-expansion", "${x:-${ " + RM_VALUABLE + "; }}"),
+            (BRACE_KIND, "${ " + RM_VALUABLE + "; }"),
+        ],
+        "parameter-expansion",
+    ),
+    (
+        BRACE_CASES["FR7.10"][1],
+        [(BRACE_KIND, "${ { " + RM_VALUABLE + "; }; }")],
+        None,
+    ),
+]
+
+# The two forms of AC-4 that are not cases: a `}` that closes nothing, and a
+# command form after a `<<` whose delimiter word cannot be read (D4).
+BRACE_ARGUMENT_FORM = "echo ${ echo }"
+BRACE_TAIL_FORM = "cat <<E${x}\necho ${ " + RM_VALUABLE + "; }"
+
+# Existing cases whose discarded line holds a command form (AC-5): label
+# fragment -> the text the form is cut at (the newline that ends the line).
+BRACE_DISCARDED_LABELS = [
+    "heredoc-syntax-error E-12 ",
+    "heredoc-syntax-error T2 AC-5.5 ",
+    "heredoc-syntax-error T2 AC-5.7 ",
+]
+
+
+def brace_cases():
+    """{tag: (verdict, command, index)} of the cases this task appended,
+    found by label (never by an absolute index)."""
+    found = {}
+    for index, (want, label, cmd) in enumerate(case_commands()):
+        if label.startswith(BRACE_LABEL_ID + " FR7."):
+            tag = label.split(" ")[2]
+            assert tag not in found, tag
+            found[tag] = (want, cmd, index)
+    return found
+
+
+def brace_regions(lexmap):
+    return [r for r in lexmap.regions if r.kind == BRACE_KIND]
+
+
+class TestBraceCommandSubstitution(unittest.TestCase):
+    def verdicts(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    def assert_both_modes(self, command, want):
+        self.assertEqual(self.verdicts(command), (want, want), msg=repr(command))
+
+    # AC-1, AC-7: the cases are in the table, after the feature base.
+    def test_the_cases_are_in_the_case_table_after_the_base(self):
+        found = brace_cases()
+        for tag in BRACE_REQUIRED_TAGS:
+            self.assertIn(tag, found)
+        for tag, (want, cmd, index) in found.items():
+            with self.subTest(tag=tag):
+                self.assertEqual((want, cmd), BRACE_CASES[tag])
+                self.assertGreaterEqual(index, BRACE_BLOCK_FLOOR)
+        indexes = sorted(index for _w, _c, index in found.values())
+        self.assertEqual(indexes, list(range(indexes[0], indexes[0] + len(indexes))))
+
+    def test_the_cases_label_and_text_match_the_plan(self):
+        found = brace_cases()
+        labels = {
+            index: label for index, (_w, label, _c) in enumerate(case_commands())
+        }
+        for tag, (_want, _cmd, index) in found.items():
+            self.assertTrue(
+                labels[index].startswith("%s %s " % (BRACE_LABEL_ID, tag)), msg=labels[index]
+            )
+
+    # AC-2: cases 1 to 3.
+    def test_a_closed_command_form_is_one_region_and_one_span(self):
+        for command, literal, inner in BRACE_CLOSED_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(
+                    actual_regions(lexmap),
+                    expected_regions(command, [(BRACE_KIND, literal)]),
+                )
+                (region,) = lexmap.regions
+                self.assertTrue(region.closed)
+                self.assertIsNone(region.parent)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(list(lexmap.heredocs), [])
+                spans, parent_of, unmatched, opaque, _containing = H.scan_structure(command)
+                self.assertEqual(spans, [(region.start, region.end)])
+                self.assertEqual(parent_of, {(region.start, region.end): None})
+                self.assertEqual(unmatched, [])
+                self.assertEqual(opaque, [(region.start, region.end)])
+                got_inner, inner_start = H._span_inner(command, spans[0])
+                self.assertEqual(got_inner, inner)
+                self.assertEqual(command[inner_start : inner_start + len(inner)], inner)
+
+    def test_the_map_is_the_same_after_clearing_the_lexer_cache(self):
+        closed = [form[0] for form in BRACE_CLOSED_FORMS]
+        for command in closed + [cmd for _tag, (_want, cmd) in BRACE_CASES.items()]:
+            with self.subTest(command=command):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+                if command in closed:
+                    # The map being compared is the one with the command
+                    # form in it.
+                    self.assertEqual(len(brace_regions(first)), 1)
+                    self.assertEqual(len(brace_regions(second)), 1)
+
+    def test_the_closed_command_forms_are_deny_in_both_modes(self):
+        for command, _literal, _inner in BRACE_CLOSED_FORMS:
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "deny")
+
+    def test_a_command_form_in_a_heredoc_body_is_one_substitution(self):
+        # Case 4: the here-document body extraction reports the form, its
+        # inner text exactly what lies between `${` and `}` (`${|` from after
+        # the `|`).
+        for opener, inner in (
+            ("${ ", " " + RM_VALUABLE + "; "),
+            ("${|", RM_VALUABLE + "; "),
+            ("${\n", "\n" + RM_VALUABLE + "; "),
+        ):
+            command = "cat <<E\n" + opener + RM_VALUABLE + "; }\nE"
+            with self.subTest(opener=opener):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(len(lexmap.heredocs), 1)
+                body = heredoc_body(command, lexmap.heredocs[0])
+                self.assertEqual(body, opener + RM_VALUABLE + "; }\n")
+                bodies, needs_whole_body = H._extract_heredoc_body_substitutions(body)
+                self.assertEqual(bodies, [(inner, 0)])
+                self.assertFalse(needs_whole_body)
+                body_map = H.lex_shell(body, "heredoc-body")
+                self.assertEqual(
+                    actual_regions(body_map),
+                    expected_regions(body, [(BRACE_KIND, opener + RM_VALUABLE + "; }")]),
+                )
+                self.assert_both_modes(command, "deny")
+
+    def test_case_4_is_deny_in_both_modes(self):
+        self.assert_both_modes(BRACE_CASES["FR7.4"][1], "deny")
+
+    def test_an_unclosed_command_form_in_a_heredoc_body_is_inspected(self):
+        # The body is read as the here-document reads it: a quote or `#`
+        # before an unclosed form opens nothing there, so the form's content
+        # is inspected whatever precedes it.
+        for prefix in ("", "it's\n", "# note\n", '"\n', "'\n", "a'b\n"):
+            for opener in ("${ ", "${|", "${\n"):
+                command = "cat <<E\n" + prefix + opener + RM_VALUABLE + "\nE"
+                with self.subTest(command=command):
+                    self.assert_both_modes(command, "deny")
+
+    def test_a_benign_unclosed_command_form_in_a_heredoc_body_is_allowed(self):
+        for command in (
+            "cat <<E\nit's\n${ echo hi\nE",
+            "cat <<E\nit's\n${|echo hi\nE",
+            "cat <<'E'\nit's\n${ " + RM_VALUABLE + "\nE",
+        ):
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "allow")
+
+    # AC-3: the form inside other regions.
+    def test_a_command_form_inside_another_region(self):
+        for command, items, outer in BRACE_NESTED_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(
+                    actual_regions(lexmap), expected_regions(command, items)
+                )
+                (region,) = brace_regions(lexmap)
+                self.assertTrue(region.closed)
+                if outer is None:
+                    self.assertIsNone(region.parent)
+                else:
+                    self.assertEqual(lexmap.regions[region.parent].kind, outer)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+                self.assert_both_modes(command, "deny")
+
+    def test_the_command_form_in_double_quotes_is_a_span_of_the_quote(self):
+        command = BRACE_CASES["FR7.8"][1]
+        spans, parent_of, unmatched, opaque, _containing = H.scan_structure(command)
+        form = span_of(command, "${ " + RM_VALUABLE + "; }")
+        quote = span_of(command, '"${ ' + RM_VALUABLE + '; }"')
+        self.assertEqual(spans, [form])
+        self.assertEqual(unmatched, [])
+        self.assertEqual(opaque, [quote])
+
+    def test_an_inner_brace_group_does_not_close_the_form(self):
+        command = BRACE_CASES["FR7.10"][1]
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertEqual((region.start, region.end), (command.index("${"), len(command)))
+
+    # SPEC A7: where the close lands.
+    def test_where_the_close_lands(self):
+        for command, literal in BRACE_CLOSE_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                regions = brace_regions(lexmap)
+                self.assertEqual(len(regions), 1)
+                region = regions[0]
+                self.assertEqual(region.start, command.index("${"))
+                if literal is None:
+                    self.assertFalse(region.closed)
+                    self.assertEqual(region.end, len(command))
+                else:
+                    self.assertTrue(region.closed)
+                    self.assertEqual(
+                        command[region.start : region.end], literal
+                    )
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_a_brace_group_count_is_per_form(self):
+        # The `}` of a group opened in the outer form does not close the form
+        # inside it, and the form's own `}` is not taken for the group's.
+        command = "{ echo ${ echo hi; }; }; " + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertTrue(region.closed)
+        self.assertEqual(command[region.start : region.end], "${ echo hi; }")
+        self.assert_both_modes(command, "deny")
+
+    def test_the_text_after_a_closed_form_is_read_at_the_outer_level(self):
+        for command in (
+            "echo ${ echo hi; }; " + RM_VALUABLE,
+            "echo ${ echo hi; }\n" + RM_VALUABLE,
+            "echo ${ echo hi; }}; " + RM_VALUABLE,
+            "echo ${ echo hi;}x; " + RM_VALUABLE,
+        ):
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "deny")
+
+    # AC-4: an unclosed form, the parameter form, a tail source.
+    def test_an_unclosed_command_form_runs_to_the_end_and_is_inspected(self):
+        command = BRACE_CASES["FR7.5"][1]
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            actual_regions(lexmap),
+            [(BRACE_KIND, command.index("${"), len(command))],
+        )
+        (region,) = lexmap.regions
+        self.assertFalse(region.closed)
+        self.assertEqual(list(lexmap.unopened), [])
+        self.assertIsNone(lexmap.tail_start)
+        spans, _parent_of, unmatched, _opaque, _containing = H.scan_structure(command)
+        self.assertEqual(spans, [])
+        self.assertEqual(unmatched, [region.start])
+        self.assertEqual(
+            H._unclosed_command_forms(command), [(" " + RM_VALUABLE, region.start)]
+        )
+        self.assert_both_modes(command, "deny")
+
+    def test_only_the_outermost_unclosed_form_is_queued(self):
+        command = "echo ${ echo ${ echo ${|" + RM_VALUABLE
+        outer = command.index("${")
+        self.assertEqual(
+            H._unclosed_command_forms(command),
+            [(" echo ${ echo ${|" + RM_VALUABLE, outer)],
+        )
+        self.assert_both_modes(command, "deny")
+
+    def test_a_closed_form_is_not_in_the_unclosed_list(self):
+        self.assertEqual(H._unclosed_command_forms("echo ${ echo hi; }"), [])
+        self.assertEqual(H._unclosed_command_forms("echo ${x"), [])
+
+    def test_a_close_that_never_comes_closes_nothing(self):
+        lexmap = H.lex_shell(BRACE_ARGUMENT_FORM)
+        (region,) = brace_regions(lexmap)
+        self.assertFalse(region.closed)
+        self.assertEqual(region.end, len(BRACE_ARGUMENT_FORM))
+        self.assertEqual(
+            H._unclosed_command_forms(BRACE_ARGUMENT_FORM), [(" echo }", region.start)]
+        )
+
+    def test_the_parameter_form_stays_a_parameter_expansion(self):
+        command = BRACE_CASES["FR7.6"][1]
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            actual_regions(lexmap),
+            expected_regions(
+                command,
+                [
+                    ("parameter-expansion", "${x}"),
+                    ("parameter-expansion", "${x:-y}"),
+                    ("parameter-expansion", "${#x}"),
+                ],
+            ),
+        )
+        self.assertEqual(brace_regions(lexmap), [])
+        self.assertEqual(list(lexmap.unopened), [])
+        self.assertIsNone(lexmap.tail_start)
+        self.assert_both_modes(command, "allow")
+
+    def test_a_backtick_ends_a_command_form_opened_inside_it(self):
+        # A backtick substitution ends at the next unescaped backtick whatever
+        # it holds (bash 5.3.9 runs the command before it here, the
+        # substitution being a syntax error of its own): the form opened inside
+        # it ends unclosed there, and the substitution stays a closed span, so
+        # the word before it is still read as it was.
+        for command, forms in (
+            ("git reset --hard`${ x`", ["${ x"]),
+            ("git reset --hard`${ ${|x`", ["${ ${|x", "${|x"]),
+            ("git reset --hard`echo ${ x`", ["${ x"]),
+        ):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                (backtick,) = [
+                    r for r in lexmap.regions if r.kind == "backtick-substitution"
+                ]
+                self.assertTrue(backtick.closed)
+                self.assertEqual(command[backtick.start : backtick.end][-1], "`")
+                self.assertEqual(backtick.end, len(command))
+                got = [command[r.start : r.end] for r in brace_regions(lexmap)]
+                self.assertEqual(got, forms)
+                for region in brace_regions(lexmap):
+                    self.assertFalse(region.closed)
+                    self.assertEqual(region.end, backtick.end - 1)
+                spans, _parent_of, unmatched, _opaque, _c = H.scan_structure(command)
+                self.assertEqual(spans, [(backtick.start, backtick.end)])
+                self.assertEqual(len(unmatched), len(forms))
+                self.assert_both_modes(command, "deny")
+
+    def test_a_command_form_closed_inside_a_backtick_substitution_is_closed(self):
+        command = "echo `echo ${ echo hi; }` ; " + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertTrue(region.closed)
+        self.assertEqual(command[region.start : region.end], "${ echo hi; }")
+        self.assert_both_modes(command, "deny")
+
+    def test_a_blank_other_than_space_tab_newline_does_not_open_the_form(self):
+        for command in ("echo ${\rx}", "echo ${\x0cx}", "echo ${\x0bx}"):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(brace_regions(lexmap), [])
+
+    def test_a_tab_opens_the_form(self):
+        command = "echo ${\t" + RM_VALUABLE + "; }"
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertTrue(region.closed)
+        self.assert_both_modes(command, "deny")
+
+    def test_a_quoted_delimiter_body_keeps_the_form_as_text(self):
+        command = BRACE_CASES["FR7.7"][1]
+        lexmap = H.lex_shell(command)
+        self.assertEqual(lexmap.regions, [])
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertTrue(lexmap.heredocs[0].quoted)
+        self.assert_both_modes(command, "allow")
+
+    def test_the_form_opens_after_a_delimiter_word_that_cannot_be_read(self):
+        # D4: a tail source refuses the parameter form, never the command form.
+        lexmap = H.lex_shell(BRACE_TAIL_FORM)
+        regions = brace_regions(lexmap)
+        self.assertEqual(len(regions), 1)
+        self.assertGreater(regions[0].start, BRACE_TAIL_FORM.index("<<"))
+        self.assertEqual(regions[0].start, BRACE_TAIL_FORM.index("${ "))
+        self.assertTrue(regions[0].closed)
+        self.assertNotIn(regions[0].start, list(lexmap.unopened))
+        self.assert_both_modes(BRACE_TAIL_FORM, "deny")
+
+    # AC-5: the form on a discarded line.
+    def test_a_form_on_a_discarded_line_closes_at_the_newline(self):
+        cases = case_commands()
+        for fragment in BRACE_DISCARDED_LABELS:
+            matching = [
+                (want, label, cmd) for want, label, cmd in cases if fragment in label
+            ]
+            self.assertEqual(len(matching), 1, msg=fragment)
+            want, _label, command = matching[0]
+            with self.subTest(label=fragment):
+                self.assertEqual(want, "deny")
+                lexmap = H.lex_shell(command)
+                regions = brace_regions(lexmap)
+                self.assertEqual(len(regions), 1)
+                region = regions[0]
+                self.assertFalse(region.closed)
+                newline = command.index("\n", region.start)
+                self.assertEqual(region.end, newline)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assert_both_modes(command, "deny")
+
+    # AC-6: work.
+    def test_lexing_work_is_linear_for_every_case_repeated(self):
+        found = brace_cases()
+        for tag in BRACE_REQUIRED_TAGS:
+            _want, command, _index = found[tag]
+            with self.subTest(tag=tag):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_repeated_unclosed_forms_get_a_non_allow_decision_in_time(self):
+        for tag in ("FR7.1", "FR7.5"):
+            command = ("\n".join([BRACE_CASES[tag][1]] * 1000))[:60000]
+            with self.subTest(tag=tag):
+                start = time.monotonic()
+                decision, _reason = hook_verdict(command)
+                self.assertNotIn(decision, ("allow", "(timeout)"))
+                self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+    def test_nested_unclosed_forms_followed_by_a_destructive_line_are_never_allow(self):
+        command = "${ " * 20000 + "\n" + RM_VALUABLE + "\n"
+        start = time.monotonic()
+        decision, _reason = hook_verdict(command)
+        self.assertIn(decision, ("ask", "deny"))
+        self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+        self.assertLess(time.monotonic() - start, 2 * GUARD_TIMEOUT_SECONDS)
+
+
+class TestBraceCommandStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    command form of `${`: cases 1 to 7 (and the three beyond the SPEC), the
+    nested, close and unclosed forms, so the lexer's regions, the structure
+    scan, marking, the layout layer and the position maps agree on the new
+    region kind."""
+
+    @classmethod
+    def setUpClass(cls):
+        forms = [cmd for _want, cmd in BRACE_CASES.values()]
+        forms += [form[0] for form in BRACE_CLOSED_FORMS]
+        forms += [form[0] for form in BRACE_CLOSE_FORMS]
+        forms += [form[0] for form in BRACE_NESTED_FORMS]
+        forms += [BRACE_ARGUMENT_FORM, BRACE_TAIL_FORM]
+        forms += [
+            "cat <<E\n${|" + RM_VALUABLE + "; }\nE",
+            "echo ${ cat <<E\n" + RM_VALUABLE + "\nE\n}",
+            "echo ${ echo hi; } ${|echo ho; } $(echo ${ echo hu; })",
+        ]
+        seen = []
+        for form in forms:
+            if form not in seen:
+                seen.append(form)
+        cls.commands = [form for form in seen if _lexer_reads(form)]
+
+    def test_the_command_forms_are_there_to_check(self):
+        # The properties run over these forms; each is read as a command
+        # form, so they meet the new region kind and do not pass over a form
+        # the lexer reads another way. (A form in a here-document body is
+        # read by the body mode, not by the shell-mode map of the command.)
+        forms = [cmd for want, cmd in BRACE_CASES.values() if want == "deny"]
+        forms += [form[0] for form in BRACE_CLOSED_FORMS]
+        forms += [form[0] for form in BRACE_NESTED_FORMS]
+        for form in forms:
+            with self.subTest(command=form):
+                self.assertIn(form, self.commands)
+                if "<<" not in form:
+                    self.assertTrue(brace_regions(H.lex_shell(form)))
+
+
+# ---------------------------------------------------------------------------
+# The cost of nested unclosed command forms (destructive-guard-lexer-round2-
+# deferred task0009, verify round 1: TS-13, TS-14, TS-22; NFR1-NFR3). Every
+# level of a nest of unclosed `${ ` forms is a chunk of nearly the whole text,
+# so the hook's scan budget (a multiple of the input length) is spent on
+# copies of one text. A nest deeper than the budget lets through is answered
+# with the scan-budget ask (deny in batch) after the text is read a few times,
+# not once per level up to the budget, so one evaluation costs time in
+# proportion to the input length and finishes well inside the hook bound.
+# ---------------------------------------------------------------------------
+
+# The bound for the doubled-length inputs: twice the hook bound for twice the
+# length, so the cost grows in proportion to the length and not faster.
+DOUBLED_GUARD_TIMEOUT_SECONDS = 2 * GUARD_TIMEOUT_SECONDS
+MIXED_NEST_UNIT = "${ $(( $[ (( $' "
+# How many times, at most, the lexer reads the text of one evaluation of the
+# nests below, counted in characters over the length of the command. The scan
+# budget is 8 times the length, so a hook that scans one copy of the text per
+# level up to the budget reads about 8 times the length.
+LEXED_TEXT_FACTOR = 3
+
+
+def bulk_nested_forms(repeat):
+    """`${ ` repeated REPEAT times, then a line that holds RM_VALUABLE."""
+    return "${ " * repeat + "\n" + RM_VALUABLE + "\n"
+
+
+def mixed_nested_forms(size):
+    """The mixed unit `${ $(( $[ (( $' ` repeated to about SIZE characters,
+    then a line that holds RM_VALUABLE."""
+    return MIXED_NEST_UNIT * (size // len(MIXED_NEST_UNIT)) + "\n" + RM_VALUABLE + "\n"
+
+
+def judged_in_process(command, batch=False):
+    """The output main() hands to decide() for COMMAND, judged inside this
+    process the way the hook's run() does (None when the hook is silent)."""
+    with mock.patch.dict(os.environ, {"CLAUDE_BATCH": "1" if batch else ""}):
+        return H._judge_under(
+            {"tool_name": "Bash", "tool_input": {"command": command}}, False
+        )
+
+
+def lexed_characters(command):
+    """How many characters the lexer passes read in one in-process judgment
+    of COMMAND, the lexer cache emptied first."""
+    lengths = []
+    real_pass = H._lex_pass
+
+    def counting_pass(text, *args, **kwargs):
+        lengths.append(len(text))
+        return real_pass(text, *args, **kwargs)
+
+    H._LEX_CACHE.clear()
+    with mock.patch.object(H, "_lex_pass", counting_pass):
+        judged_in_process(command)
+    return sum(lengths)
+
+
+class TestNestedUnclosedFormCost(unittest.TestCase):
+    NESTED_FORMS = [
+        ("echo ${ " + RM_VALUABLE, "an unclosed form"),
+        ("echo ${ echo x ${ " + RM_VALUABLE, "a form nested in a form"),
+        ("${ " * 3 + RM_VALUABLE, "three forms nested in one another"),
+    ]
+
+    def time_of(self, command, batch=False):
+        start = time.monotonic()
+        decision, reason = hook_verdict(
+            command, batch=batch, timeout=DOUBLED_GUARD_TIMEOUT_SECONDS
+        )
+        return decision, reason, time.monotonic() - start
+
+    def assert_judged_within_the_doubled_bound(self, command):
+        """AC-3: one hook evaluation of COMMAND finishes within twice the hook
+        bound, with an ask or a deny without CLAUDE_BATCH and a deny with it
+        (an ask is a deny there)."""
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                decision, reason, seconds = self.time_of(command, batch)
+                self.assertIn(
+                    decision, ("deny",) if batch else ("ask", "deny"), msg=reason[:200]
+                )
+                self.assertLess(seconds, DOUBLED_GUARD_TIMEOUT_SECONDS)
+
+    def test_doubled_bulk_command_forms_get_a_decision_in_time(self):
+        # AC-3: `${ ` 40000 times and a destructive line (about 120 KB).
+        command = bulk_nested_forms(40000)
+        self.assertGreater(len(command), 100000)
+        self.assert_judged_within_the_doubled_bound(command)
+
+    def test_doubled_mixed_unit_gets_a_decision_in_time(self):
+        # AC-3: the mixed unit to about 120 KB and a destructive line.
+        command = mixed_nested_forms(120000)
+        self.assertGreater(len(command), 100000)
+        self.assert_judged_within_the_doubled_bound(command)
+
+    def test_bulk_inputs_get_a_decision_other_than_allow_in_both_modes(self):
+        # AC-2: the bulk `${ ` input (also the bulk `${` input of
+        # TestUnclosedOpeners), and the mixed input, at about 60 KB.
+        bulk = bulk_nested_forms(20000)
+        self.assertEqual(bulk, "${ " * 20000 + TestUnclosedOpeners.DESTRUCTIVE)
+        for name, command in (("bulk", bulk), ("mixed", mixed_nested_forms(60000))):
+            with self.subTest(form=name):
+                plain = hook_verdict(command)[0]
+                batch = hook_verdict(command, batch=True)[0]
+                self.assertIn(plain, ("ask", "deny"))
+                self.assertEqual(batch, "deny")
+
+    def test_the_text_read_per_evaluation_is_a_small_multiple_of_the_input(self):
+        # The cost of one evaluation counted in characters read, not in
+        # seconds: reading the nest costs a bounded number of passes over the
+        # text, however many levels it holds, and doubling the text doubles it.
+        reads = {}
+        for name, command in (
+            ("bulk", bulk_nested_forms(20000)),
+            ("doubled bulk", bulk_nested_forms(40000)),
+            ("mixed", mixed_nested_forms(60000)),
+            ("doubled mixed", mixed_nested_forms(120000)),
+        ):
+            with self.subTest(form=name):
+                reads[name] = lexed_characters(command)
+                self.assertLessEqual(reads[name], LEXED_TEXT_FACTOR * len(command))
+        self.assertLessEqual(reads["doubled bulk"], 2.5 * reads["bulk"] + 100)
+        self.assertLessEqual(reads["doubled mixed"], 2.5 * reads["mixed"] + 100)
+
+    def test_the_content_of_every_nested_unclosed_form_is_still_inspected(self):
+        # AC-4: the destructive command inside the innermost form is denied.
+        for command, name in self.NESTED_FORMS:
+            with self.subTest(form=name):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_the_innermost_form_of_a_nest_is_judged_through_its_levels(self):
+        # AC-4, further: the same destructive command inside the innermost of
+        # several levels, as many levels as the scan budget lets through.
+        for levels in (4, 10, 40):
+            command = "${ " * levels + RM_VALUABLE
+            with self.subTest(levels=levels):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_every_input_gets_the_same_decision_after_the_lexer_cache_is_cleared(self):
+        # AC-5: two consecutive evaluations, the second on an emptied cache.
+        for name, command in (
+            ("bulk", bulk_nested_forms(20000)),
+            ("mixed", mixed_nested_forms(60000)),
+            ("doubled bulk", bulk_nested_forms(40000)),
+            ("doubled mixed", mixed_nested_forms(120000)),
+        ):
+            for batch in (False, True):
+                with self.subTest(form=name, batch=batch):
+                    H._LEX_CACHE.clear()
+                    first = judged_in_process(command, batch)
+                    H._LEX_CACHE.clear()
+                    second = judged_in_process(command, batch)
+                    self.assertIsNotNone(first)
+                    self.assertEqual(first, second)
+                    decision = first["hookSpecificOutput"]["permissionDecision"]
+                    self.assertIn(decision, ("deny",) if batch else ("ask", "deny"))
+
+
+# ---------------------------------------------------------------------------
+# Backtick substitution extent (destructive-guard-lexer-round2-deferred
+# task0006, review round 1: findings e79128f331828941, e6478d6af2a50e57,
+# 31165687b890b8bc and d1d035263eb03a8a). A backtick substitution ends at the
+# next unescaped backtick, found before its content is read; no comment, quote,
+# expansion, subscript or command form opened inside it carries the reading
+# past that backtick.
+# ---------------------------------------------------------------------------
+
+BACKTICK_STABLE_IDS = (
+    "e79128f331828941",
+    "e6478d6af2a50e57",
+    "31165687b890b8bc",
+    "d1d035263eb03a8a",
+)
+# The first index a block appended by a task of this feature can sit at.
+BACKTICK_BLOCK_FLOOR = 769
+
+# The ten cases of the task plan: tag -> (stable_id, verdict, command).
+BACKTICK_CASES = {
+    "R1.BT1": ("e79128f331828941", "deny", "echo `rm -rf src #`"),
+    "R1.BT2": ("e79128f331828941", "deny", "echo `true #`; git reset --hard"),
+    "R1.BT3": ("e79128f331828941", "deny", 'echo `echo "`; echo `rm -rf src`'),
+    "R1.BT4": ("e6478d6af2a50e57", "deny", "echo `${ echo ${x`; echo `rm -rf src #}`"),
+    "R1.BT5": ("e6478d6af2a50e57", "deny", "echo `${ echo $((x`; echo `rm -rf src #))`"),
+    "R1.BT6": ("e6478d6af2a50e57", "deny", "echo `${ echo $[x`; echo `rm -rf src #]`"),
+    "R1.BT7": ("e6478d6af2a50e57", "deny", "echo `${ a[x`; echo `rm -rf src #]`"),
+    "R1.BT8": ("31165687b890b8bc", "deny", "`${ echo '\\` ignored'; }`git reset --hard"),
+    "R1.BT9": ("d1d035263eb03a8a", "deny", '`"${ echo # `git reset --hard'),
+    "R1.BT10": ("e79128f331828941", "allow", "echo `date # note`; echo done"),
+}
+BACKTICK_TAGS = ["R1.BT%d" % n for n in range(1, 11)]
+
+# The openers of AC-3, and the three places the substitution is put in.
+BACKTICK_OPENERS = ["#", "'", '"', "$'", "${", "${ ", "$((", "$[", "$(", "a[", "@("]
+
+
+def backtick_opener_forms(opener):
+    """The three commands of AC-3 for OPENER: the substitution at the top
+    level, inside double quotes and inside a command substitution."""
+    inner = "`" + opener + " x`"
+    return [
+        "echo " + inner + "; " + RM_VALUABLE,
+        'echo "' + inner + '"; ' + RM_VALUABLE,
+        "echo $(echo " + inner + "); " + RM_VALUABLE,
+    ]
+
+
+def all_backtick_opener_forms():
+    return [form for opener in BACKTICK_OPENERS for form in backtick_opener_forms(opener)]
+
+
+# An extended-glob parenthesis opened inside an array inside a substitution,
+# read as the pattern group it is with `shopt -s extglob`.
+BACKTICK_EXTGLOB_FORM = "echo `x=(a@( x`; " + RM_VALUABLE
+
+# Where a backtick substitution is opened, one form per kind of context the
+# lexer opens one in; `{}` is where the substitution goes.
+BACKTICK_CONTAINER_FORMS = [
+    ("double quotes", 'echo "a {} b"; ' + RM_VALUABLE),
+    ("parameter expansion", "echo ${y:-{}}; " + RM_VALUABLE),
+    ("arithmetic expansion", "echo $((1 + {})); " + RM_VALUABLE),
+    ("bracket arithmetic", "echo $[1 + {}]; " + RM_VALUABLE),
+    ("array subscript", "a[{}]=1; " + RM_VALUABLE),
+    ("command form", "echo ${ echo {}; }; " + RM_VALUABLE),
+    ("process substitution", "cat <(echo {}); " + RM_VALUABLE),
+    ("command substitution", "echo $(echo {}); " + RM_VALUABLE),
+    ("group", "( echo {} ); " + RM_VALUABLE),
+    ("array", "x=( {} ); " + RM_VALUABLE),
+]
+BACKTICK_CONTAINED = ["`# x`", '`" x`', "`' x`", "`${ x`", "`$(( x`"]
+
+# The forms whose extent depends on the backslashes before a backtick: (command,
+# which of the command's backticks, counted from 1, ends the substitution the
+# first one opens). A backtick that follows an odd number of backslashes is
+# escaped.
+BACKTICK_ESCAPE_FORMS = [
+    ("echo `echo \\\\`; " + RM_VALUABLE, 2),
+    ("echo `echo \\` x`; " + RM_VALUABLE, 3),
+    ("echo `echo \\\\\\` x`; " + RM_VALUABLE, 3),
+    ("echo `echo \\\\\\\\`; " + RM_VALUABLE, 2),
+    ("echo `a\\`b\\`c`; " + RM_VALUABLE, 4),
+]
+
+
+def next_unescaped_backtick(text, start):
+    """The offset of the first backtick after the one at START that no
+    backslash pair, read from START + 1 on, takes as its second character; -1
+    for none. A plain scan, written apart from the hook's index."""
+    k = start + 1
+    n = len(text)
+    while k < n:
+        c = text[k]
+        if c == "\\":
+            k += 2
+        elif c == "`":
+            return k
+        else:
+            k += 1
+    return -1
+
+
+def backtick_regions(lexmap):
+    return [r for r in lexmap.regions if r.kind == "backtick-substitution"]
+
+
+def backtick_shaped_words(command):
+    """The shaped words of every statement the hook reads in COMMAND. A chunk
+    whose subscript never closes (the content of an `a[ x` substitution) is
+    left out of the scan, as the hook's own judgment leaves it out."""
+    return [
+        words for _t, _toks, _lexed, words, *_rest in H.statements(command, [])
+    ]
+
+
+def backtick_cases():
+    """{tag: (stable_id, verdict, command, index)} of the cases this task
+    appended, found by label (never by an absolute index)."""
+    found = {}
+    for index, (want, label, cmd) in enumerate(case_commands()):
+        for stable_id in BACKTICK_STABLE_IDS:
+            prefix = stable_id + " round2-deferred R1.BT"
+            if label.startswith(prefix):
+                tag = label.split(" ")[2]
+                assert tag not in found, tag
+                found[tag] = (stable_id, want, cmd, index)
+    return found
+
+
+def backtick_forms():
+    """Every command the extent tests read, the duplicates left out."""
+    forms = [command for _id, _want, command in BACKTICK_CASES.values()]
+    forms += all_backtick_opener_forms()
+    forms += [BACKTICK_EXTGLOB_FORM]
+    forms += [form for form, _ordinal in BACKTICK_ESCAPE_FORMS]
+    for _name, container in BACKTICK_CONTAINER_FORMS:
+        forms += [container.replace("{}", inner) for inner in BACKTICK_CONTAINED]
+    seen = []
+    for form in forms:
+        if form not in seen:
+            seen.append(form)
+    return seen
+
+
+class TestBacktickExtent(unittest.TestCase):
+    def verdicts(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    def assert_both_modes(self, command, want):
+        self.assertEqual(self.verdicts(command), (want, want), msg=repr(command))
+
+    def assert_one_extent(self, command, lexmap=None):
+        """AC-3: one closed backtick substitution that ends right after the
+        command's second backtick, every region opened inside it ending at or
+        before that backtick."""
+        lexmap = H.lex_shell(command) if lexmap is None else lexmap
+        regions = backtick_regions(lexmap)
+        self.assertEqual(len(regions), 1, msg=repr(command))
+        (backtick,) = regions
+        first = command.index("`")
+        second = command.index("`", first + 1)
+        self.assertEqual(backtick.start, first, msg=repr(command))
+        self.assertTrue(backtick.closed, msg=repr(command))
+        self.assertEqual(backtick.end, second + 1, msg=repr(command))
+        for region in lexmap.regions:
+            if backtick.start < region.start < backtick.end:
+                self.assertLessEqual(region.end, second, msg=(command, region))
+        return backtick
+
+    # AC-1, AC-7: the cases are in the case table, after the feature base.
+    def test_the_cases_are_in_the_case_table_after_the_base(self):
+        found = backtick_cases()
+        self.assertEqual(sorted(found, key=BACKTICK_TAGS.index), BACKTICK_TAGS)
+        for tag, (stable_id, want, command, index) in found.items():
+            with self.subTest(tag=tag):
+                self.assertEqual((stable_id, want, command), BACKTICK_CASES[tag])
+                self.assertGreaterEqual(index, BACKTICK_BLOCK_FLOOR)
+        indexes = [found[tag][3] for tag in BACKTICK_TAGS]
+        self.assertEqual(indexes, list(range(indexes[0], indexes[0] + len(indexes))))
+
+    def test_the_cases_label_follows_the_rework_label_rule(self):
+        labels = {index: label for index, (_w, label, _c) in enumerate(case_commands())}
+        for tag, (stable_id, _want, _command, index) in backtick_cases().items():
+            with self.subTest(tag=tag):
+                self.assertTrue(
+                    labels[index].startswith("%s round2-deferred %s " % (stable_id, tag)),
+                    msg=labels[index],
+                )
+                self.assertGreater(len(labels[index].split(" ", 3)[3]), 0)
+
+    def test_no_label_below_the_block_floor_carries_one_of_the_stable_ids(self):
+        for index, (_want, label, _cmd) in enumerate(case_commands()[:BACKTICK_BLOCK_FLOOR]):
+            for stable_id in BACKTICK_STABLE_IDS:
+                self.assertNotIn(stable_id, label, msg="index %d" % index)
+
+    # AC-2: cases 1 to 10 in both modes.
+    def test_cases_1_to_9_are_deny_and_case_10_is_allow_in_both_modes(self):
+        for tag in BACKTICK_TAGS:
+            _id, want, command = BACKTICK_CASES[tag]
+            with self.subTest(tag=tag):
+                self.assert_both_modes(command, want)
+
+    def test_in_cases_1_2_3_and_10_the_substitution_ends_at_the_next_backtick(self):
+        for tag in ("R1.BT1", "R1.BT2", "R1.BT3", "R1.BT10"):
+            command = BACKTICK_CASES[tag][2]
+            with self.subTest(tag=tag):
+                lexmap = H.lex_shell(command)
+                for region in backtick_regions(lexmap):
+                    self.assertTrue(region.closed)
+                    self.assertEqual(
+                        region.end, command.index("`", region.start + 1) + 1
+                    )
+                self.assertGreaterEqual(len(backtick_regions(lexmap)), 1)
+
+    def test_case_2_has_a_statement_after_the_substitution_with_the_destructive_words(self):
+        command = BACKTICK_CASES["R1.BT2"][2]
+        shaped = backtick_shaped_words(command)
+        self.assertTrue(
+            any(words[:3] == ["git", "reset", "--hard"] for words in shaped),
+            msg=repr(shaped),
+        )
+
+    def test_case_3_reads_the_second_substitution_as_a_substitution(self):
+        command = BACKTICK_CASES["R1.BT3"][2]
+        lexmap = H.lex_shell(command)
+        regions = backtick_regions(lexmap)
+        self.assertEqual(
+            [command[r.start : r.end] for r in regions], ['`echo "`', "`rm -rf src`"]
+        )
+        self.assertTrue(all(r.closed for r in regions))
+        (quote,) = [r for r in lexmap.regions if r.kind == "double-quote"]
+        self.assertFalse(quote.closed)
+        self.assertEqual(quote.end, regions[0].end - 1)
+
+    # AC-3: every opener, in each of three places.
+    def test_every_opener_ends_with_the_substitution(self):
+        for opener in BACKTICK_OPENERS:
+            for command in backtick_opener_forms(opener):
+                with self.subTest(command=command):
+                    self.assert_one_extent(command)
+
+    def test_every_opener_leaves_the_statement_after_it_shaped_as_rm(self):
+        for opener in BACKTICK_OPENERS:
+            for command in backtick_opener_forms(opener):
+                with self.subTest(command=command):
+                    shaped = backtick_shaped_words(command)
+                    self.assertTrue(
+                        any(words and words[0] == "rm" for words in shaped),
+                        msg=repr(shaped),
+                    )
+
+    def test_every_opener_is_deny_in_both_modes(self):
+        for opener in BACKTICK_OPENERS:
+            for command in backtick_opener_forms(opener):
+                with self.subTest(command=command):
+                    self.assert_both_modes(command, "deny")
+
+    def test_an_extended_glob_group_opened_inside_the_substitution_ends_with_it(self):
+        lexmap = H.lex_shell(BACKTICK_EXTGLOB_FORM, extglob=True)
+        self.assert_one_extent(BACKTICK_EXTGLOB_FORM, lexmap)
+        self.assert_both_modes(BACKTICK_EXTGLOB_FORM, "deny")
+
+    def test_an_unclosed_expansion_inside_the_substitution_is_literal_text(self):
+        # The parameter form, arithmetic, bracket arithmetic and `$'` that
+        # never close are settled as not opened, as at the end of the text.
+        for opener in ("${", "$((", "$[", "$'"):
+            command = "echo `" + opener + "x`; " + RM_VALUABLE
+            with self.subTest(opener=opener):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(
+                    [r.kind for r in lexmap.regions], ["backtick-substitution"]
+                )
+                self.assertEqual(list(lexmap.unopened), [command.index(opener)])
+
+    # AC-3 (FR7): every context a substitution opens in.
+    def test_the_extent_holds_in_every_context_the_lexer_opens_one_in(self):
+        for name, container in BACKTICK_CONTAINER_FORMS:
+            for inner in BACKTICK_CONTAINED:
+                command = container.replace("{}", inner)
+                with self.subTest(context=name, command=command):
+                    lexmap = H.lex_shell(command)
+                    regions = backtick_regions(lexmap)
+                    self.assertEqual(len(regions), 1)
+                    (backtick,) = regions
+                    self.assertTrue(backtick.closed)
+                    self.assertEqual(
+                        backtick.end, command.index("`", backtick.start + 1) + 1
+                    )
+                    self.assertEqual(command[backtick.start : backtick.end], inner)
+                    for region in lexmap.regions:
+                        if backtick.start < region.start < backtick.end:
+                            self.assertLessEqual(region.end, backtick.end - 1)
+
+    def test_a_statement_after_a_substitution_in_every_context_is_still_inspected(self):
+        for name, container in BACKTICK_CONTAINER_FORMS:
+            command = container.replace("{}", "`# x`")
+            with self.subTest(context=name):
+                self.assert_both_modes(command, "deny")
+
+    def test_a_substitution_in_the_literal_top_level_of_a_heredoc_body(self):
+        for inner in BACKTICK_CONTAINED:
+            body = "a " + inner + " b\n$(echo c)\n"
+            with self.subTest(inner=inner):
+                lexmap = H.lex_shell(body, "heredoc-body")
+                regions = lexmap.regions
+                backtick = [r for r in regions if r.kind == "backtick-substitution"]
+                self.assertEqual(len(backtick), 1)
+                self.assertEqual(body[backtick[0].start : backtick[0].end], inner)
+                self.assertTrue(backtick[0].closed)
+                (cmdsub,) = [r for r in regions if r.kind == "command-substitution"]
+                self.assertEqual(body[cmdsub.start : cmdsub.end], "$(echo c)")
+                self.assertTrue(cmdsub.closed)
+
+    # AC-4: the backslashes before a backtick.
+    def test_the_backtick_after_two_backslashes_ends_the_extent(self):
+        command = "echo `echo \\\\`; " + RM_VALUABLE
+        (backtick,) = backtick_regions(H.lex_shell(command))
+        self.assertTrue(backtick.closed)
+        self.assertEqual(backtick.end, command.index("`", 6) + 1)
+        self.assertEqual(command[backtick.start : backtick.end], "`echo \\\\`")
+        self.assert_both_modes(command, "deny")
+
+    def test_the_backtick_after_one_backslash_does_not_end_the_extent(self):
+        command = "echo `echo \\` x`; " + RM_VALUABLE
+        (backtick,) = backtick_regions(H.lex_shell(command))
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], "`echo \\` x`")
+        self.assertEqual(backtick.end, [i for i, c in enumerate(command) if c == "`"][2] + 1)
+        self.assert_both_modes(command, "deny")
+
+    def test_an_odd_run_of_backslashes_escapes_the_backtick_and_an_even_run_does_not(self):
+        for command, ordinal in BACKTICK_ESCAPE_FORMS:
+            with self.subTest(command=command):
+                end = [i for i, c in enumerate(command) if c == "`"][ordinal - 1]
+                (backtick,) = backtick_regions(H.lex_shell(command))
+                self.assertTrue(backtick.closed)
+                self.assertEqual(backtick.end, end + 1)
+                self.assertEqual(next_unescaped_backtick(command, backtick.start), end)
+                self.assert_both_modes(command, "deny")
+
+    def test_an_escaped_backtick_in_a_single_quote_does_not_end_the_extent(self):
+        # Case 8: the quote holds the escaped backtick, and the substitution
+        # ends after its `}`: the command after it is the statement's.
+        command = BACKTICK_CASES["R1.BT8"][2]
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], command[: command.index("}`") + 2])
+        (form,) = [r for r in lexmap.regions if r.kind == BRACE_KIND]
+        self.assertTrue(form.closed)
+        (quote,) = [r for r in lexmap.regions if r.kind == "single-quote"]
+        self.assertTrue(quote.closed)
+        self.assertEqual(command[quote.start : quote.end], "'\\` ignored'")
+
+    def test_a_substitution_without_a_closing_backtick_runs_to_the_end(self):
+        for command in ("echo `rm -rf src #", "echo `rm -rf src \\`", "echo `echo \"a"):
+            with self.subTest(command=command):
+                (backtick,) = backtick_regions(H.lex_shell(command))
+                self.assertFalse(backtick.closed)
+                self.assertEqual(backtick.end, len(command))
+
+    def test_an_unclosed_substitution_is_the_same_reading_as_before(self):
+        # The extent of a substitution with no closing backtick is the end of
+        # the text: what it holds is read as it was.
+        command = "echo `echo ${ x\nrm -rf src"
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertFalse(backtick.closed)
+        (form,) = [r for r in lexmap.regions if r.kind == BRACE_KIND]
+        self.assertFalse(form.closed)
+        self.assertEqual((form.end, backtick.end), (len(command), len(command)))
+        self.assert_both_modes(command, "deny")
+
+    # A subscript left open inside a substitution ends with its extent; the
+    # chunk that holds the substitution's body does not read, and is left out.
+    def test_a_subscript_open_at_the_extent_ends_unclosed_and_the_command_reads_fine(self):
+        command = "echo `a[ x`; " + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        (subscript,) = [r for r in lexmap.regions if r.kind == "array-subscript"]
+        self.assertFalse(subscript.closed)
+        self.assertEqual(subscript.end, backtick.end - 1)
+
+    def test_a_chunk_whose_subscript_never_closes_is_left_out_when_asked_to(self):
+        command = "echo `a[ x`; " + RM_VALUABLE
+        unsettled = []
+        shaped = [words for _t, _k, _l, words, *_r in H.statements(command, unsettled)]
+        self.assertEqual([words[0] for words in shaped], ["echo", "rm"])
+        self.assertEqual(len(unsettled), 1)
+        self.assertIsInstance(unsettled[0], H.LexUnmatchedSubscript)
+        with self.assertRaises(H.LexUnmatchedSubscript):
+            list(H.statements(command))
+
+    def test_the_command_itself_is_never_left_out(self):
+        unsettled = []
+        with self.assertRaises(H.LexUnmatchedSubscript):
+            list(H.statements("a[1<<2\n" + RM_VALUABLE, unsettled))
+        self.assertEqual(unsettled, [])
+
+    def test_an_unreadable_chunk_asks_unless_the_rest_is_a_deny(self):
+        # Nothing else in the command is a `deny`: the text cannot be settled,
+        # so the answer is the `ask` of an unmatched subscript (a `deny` in a
+        # batch run), never an `allow`.
+        for command in ("echo `a[ x`; echo done", "echo `${ a[x`; echo `echo done`"):
+            with self.subTest(command=command):
+                decision, reason = hook_verdict(command)
+                self.assertEqual(decision, "ask")
+                self.assertIn("unmatched-subscript", reason)
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_deny_found_in_the_rest_wins_over_the_unreadable_chunk(self):
+        for command in (
+            "echo `a[ x`; git reset --hard",
+            "echo `a[ x`; " + RM_VALUABLE,
+            "echo `${ a[x`; echo `" + RM_VALUABLE + "`",
+        ):
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "deny")
+
+    # AC-4: the here-document in the extent.
+    def test_the_heredoc_of_case_E_7_has_its_body_inside_the_extent(self):
+        matching = [
+            (want, cmd)
+            for want, label, cmd in case_commands()
+            if "heredoc-syntax-error E-7 配列内のバッククォート置換" in label
+        ]
+        self.assertEqual(len(matching), 1)
+        want, command = matching[0]
+        self.assertEqual(want, "allow")
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "git reset --hard HEAD\n")
+        self.assertGreaterEqual(op.body_start, backtick.start)
+        self.assertLessEqual(op.close_end, backtick.end - 1)
+        self.assert_both_modes(command, "allow")
+
+    def test_a_delimiter_line_after_the_extent_gives_the_operator_no_body(self):
+        # The substitution ends at the backtick on the second line: bash reads
+        # the content `cat <<E` and the first line only; the lines after the
+        # backtick are commands, never the body of the operator.
+        command = "echo `cat <<E\nfoo` bar\nE\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<E\nfoo`")
+        (op,) = lexmap.heredocs
+        self.assertIsNone(op.body_start)
+        self.assertIsNone(op.body_end)
+        self.assertIsNone(op.close_end)
+        self.assert_both_modes(command, "deny")
+
+    def test_a_delimiter_line_inside_the_extent_closes_the_body(self):
+        command = "echo `cat <<E\nfoo\nE\n` bar\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<E\nfoo\nE\n`")
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "foo\n")
+        self.assertEqual(op.close_end, backtick.end - 1)
+        self.assert_both_modes(command, "deny")
+
+    def test_an_operator_on_the_closing_line_takes_no_body_from_after_the_extent(self):
+        command = "echo `cat <<E ` bar\nfoo\nE\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<E `")
+        (op,) = lexmap.heredocs
+        self.assertIsNone(op.body_start)
+        self.assertIsNone(op.close_end)
+        self.assert_both_modes(command, "deny")
+
+    def test_an_operator_before_the_substitution_takes_its_body_after_the_substitution(self):
+        command = "cat <<A; echo `x\ny` z\nbody\nA\n" + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertEqual(command[backtick.start : backtick.end], "`x\ny`")
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "body\n")
+        self.assertGreater(op.body_start, backtick.end)
+
+    def test_a_delimiter_word_that_runs_past_the_extent_is_not_read_as_a_word(self):
+        # The quote that holds the delimiter does not close before the
+        # backtick that ends the substitution: bash reads `cat <<'E` only,
+        # and the commands after the backtick are its own.
+        command = "echo `cat <<'E`; " + RM_VALUABLE + "; echo 'x'"
+        lexmap = H.lex_shell(command)
+        (backtick,) = backtick_regions(lexmap)
+        self.assertTrue(backtick.closed)
+        self.assertEqual(command[backtick.start : backtick.end], "`cat <<'E`")
+        self.assertEqual(list(lexmap.heredocs), [])
+        self.assert_both_modes(command, "deny")
+
+    # The index of unescaped backticks.
+    def test_every_backtick_substitution_ends_where_a_plain_scan_ends_it(self):
+        commands = backtick_forms() + [
+            command for command in all_commands() if "`" in command
+        ]
+        checked = 0
+        for command in commands:
+            lexmap = H.lex_shell(command)
+            for region in backtick_regions(lexmap):
+                checked += 1
+                found = next_unescaped_backtick(command, region.start)
+                with self.subTest(command=command[:80], start=region.start):
+                    if region.closed:
+                        self.assertEqual(region.end, found + 1)
+                    else:
+                        self.assertTrue(found == -1 or found >= region.end)
+        self.assertGreater(checked, 100)
+
+    def test_no_region_opened_inside_a_substitution_ends_after_it(self):
+        commands = backtick_forms() + [
+            command for command in all_commands() if "`" in command
+        ]
+        for command in commands:
+            lexmap = H.lex_shell(command)
+            for backtick in backtick_regions(lexmap):
+                limit = backtick.end - 1 if backtick.closed else backtick.end
+                for region in lexmap.regions:
+                    if backtick.start < region.start < backtick.end:
+                        with self.subTest(command=command[:80], region=region.kind):
+                            self.assertLessEqual(region.end, limit)
+
+    def test_the_extent_of_each_substitution_costs_no_rescan(self):
+        # Many substitutions that each end at the next backtick: the extents
+        # are one index of the text, never one search per backtick.
+        text = "echo `# x`; " * 3000
+        small = H.lex_shell(text[: len(text) // 2])
+        large = H.lex_shell(text)
+        self.assertLessEqual(large.work, 2.5 * small.work + 100)
+        self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(text) + 1024)
+
+    # AC-5: determinism and the whole-text-restart equivalence.
+    def test_the_map_is_the_same_after_clearing_the_lexer_cache(self):
+        for command in backtick_forms():
+            with self.subTest(command=command):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    def test_every_form_reads_as_the_whole_text_restart_reads_it(self):
+        for command in backtick_forms():
+            for mode, bodies in (("shell", True), ("shell", False), ("heredoc-body", False)):
+                with self.subTest(command=command, mode=mode, bodies=bodies):
+                    H._LEX_CACHE.clear()
+                    got = lexical_reading(H.lex_shell(command, mode, bodies))
+                    want = whole_text_restart_reading(command, mode, bodies)
+                    self.assertEqual(got, want)
+
+    def test_the_pass_state_has_a_classified_field_for_the_extent(self):
+        unclassified, repeated = classification_gaps(H._LexPassState)
+        self.assertEqual((unclassified, repeated), (set(), set()))
+
+    def test_a_resume_inside_a_substitution_restores_its_extent(self):
+        # `$((` closing without an adjacent `))` inside a backtick substitution
+        # is read again as two parentheses; the substitution still ends at its
+        # backtick, and what follows is read at the outer level.
+        for command in (
+            "echo `echo $((echo a) | wc -c)`; " + RM_VALUABLE,
+            "echo `((echo a) | wc -c) #`; " + RM_VALUABLE,
+            "echo `echo $((echo a) | wc -c) \"`; " + RM_VALUABLE,
+        ):
+            with self.subTest(command=command):
+                self.assert_one_extent(command)
+                self.assert_both_modes(command, "deny")
+
+    # AC-6: work.
+    def test_lexing_work_is_linear_for_every_case_repeated(self):
+        for tag in BACKTICK_TAGS:
+            command = BACKTICK_CASES[tag][2]
+            with self.subTest(tag=tag):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_lexing_work_is_linear_for_a_backtick_in_double_quotes_repeated(self):
+        for unit in ('"`#" ', '"`\'" '):
+            with self.subTest(unit=unit):
+                small = H.lex_shell("\n".join([unit] * 200))
+                large_text = "\n".join([unit] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_lexing_work_is_linear_for_every_opener_form_repeated(self):
+        for command in all_backtick_opener_forms():
+            with self.subTest(command=command):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_repeated_substitutions_get_a_decision_in_time(self):
+        for unit in ("echo `true #`; ", "echo `echo \"`; ", "echo `${ a[x`; "):
+            command = unit * (60000 // len(unit)) + RM_VALUABLE
+            with self.subTest(unit=unit):
+                start = time.monotonic()
+                decision, _reason = hook_verdict(command)
+                self.assertEqual(decision, "deny")
+                self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+    # AC-7: the hook's own pieces the extent replaces are gone.
+    def test_the_command_form_specific_backtick_handling_is_gone(self):
+        with open(HOOK, encoding="utf-8") as f:
+            source = f.read()
+        for name in ("unwind_to_bracecmd", "in_bt_form", "in_bt"):
+            self.assertNotIn(name, source)
+        self.assertNotIn("in_bt", H._LexFrame.__slots__)
+
+
+class TestBacktickExtentStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement over the
+    ten cases and every form of the extent tests: the lexer's regions, the
+    structure scan, marking, the layout layer and the position maps agree on a
+    substitution that ends at its next backtick."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.commands = [form for form in backtick_forms() if _lexer_reads(form)]
+
+    def test_the_forms_are_there_to_check(self):
+        for tag in BACKTICK_TAGS:
+            with self.subTest(tag=tag):
+                self.assertIn(BACKTICK_CASES[tag][2], self.commands)
+        for command in all_backtick_opener_forms():
+            with self.subTest(command=command):
+                self.assertIn(command, self.commands)
 
 
 # ---------------------------------------------------------------------------
@@ -3407,6 +6138,24 @@ ROUND2_STABLE_IDS = (
 )
 ROUND2_BASE_CASE_COUNT = 627
 
+# The stable_ids of the seven findings destructive-guard-lexer-round2-deferred
+# gives cases to (D3), the length of the case table at that feature's base
+# (indexes 0-772) and the SHA-256 of json.dumps(those entries,
+# ensure_ascii=False).
+DEFERRED_STABLE_IDS = (
+    "5753be9288beab27",
+    "52bfa0f59d1ea852",
+    "e959ba60bde865a4",
+    "e25427e2a8b1dddf",
+    "2b52be5874de85f4",
+    "aa735aa95be36542",
+    "1fcae1f76f2a20f0",
+)
+DEFERRED_BASE_CASE_COUNT = 773
+DEFERRED_BASE_ENTRIES_DIGEST = (
+    "b37419584f6d6a51e6cfd3af875b5e03c5f4e9add583948c66c649e933d7465b"
+)
+
 
 class TestModuleContract(unittest.TestCase):
     def test_replaced_readers_are_gone(self):
@@ -3498,6 +6247,39 @@ class TestModuleContract(unittest.TestCase):
                 ]
                 self.assertEqual(len(located), 1)
                 self.assertGreaterEqual(located[0], ROUND2_BASE_CASE_COUNT)
+
+    def test_round2_deferred_cases_come_only_after_the_base_entries(self):
+        # D3 (FR10, FR11): the order of the five blocks depends on merge
+        # order, so this holds whichever of them are present. No label below
+        # the base length cites one of the seven findings, the base entries
+        # are unchanged, and each case of task0001 is found by its label and
+        # command text after them.
+        cases = case_commands()
+        self.assertGreaterEqual(len(cases), DEFERRED_BASE_CASE_COUNT)
+        for index, (_want, label, _cmd) in enumerate(cases[:DEFERRED_BASE_CASE_COUNT]):
+            for stable_id in DEFERRED_STABLE_IDS:
+                self.assertNotIn(stable_id, label, msg="index %d" % index)
+        digest = hashlib.sha256(
+            json.dumps(cases[:DEFERRED_BASE_CASE_COUNT], ensure_ascii=False).encode(
+                "utf-8"
+            )
+        ).hexdigest()
+        self.assertEqual(digest, DEFERRED_BASE_ENTRIES_DIGEST)
+        located = []
+        for number, (form, _opener) in enumerate(TAIL_SOURCE_FORMS, 1):
+            with self.subTest(form=form):
+                found = [
+                    index
+                    for index, (want, label, cmd) in enumerate(cases)
+                    if cmd == form
+                    and want == "deny"
+                    and label.startswith("%s%d " % (TAIL_SOURCE_CASE_LABEL, number))
+                ]
+                self.assertEqual(len(found), 1)
+                self.assertGreaterEqual(found[0], DEFERRED_BASE_CASE_COUNT)
+                located.append(found[0])
+        self.assertEqual(len(located), len(TAIL_SOURCE_FORMS))
+        self.assertEqual(located, list(range(located[0], located[0] + len(located))))
 
 
 # ---------------------------------------------------------------------------
@@ -3615,6 +6397,269 @@ class TestArraySubscriptAndExtglobReadings(unittest.TestCase):
                 self.assertEqual(off, on)
 
 
+# ---------------------------------------------------------------------------
+# destructive-guard-lexer-round2-deferred task0002: a here-document after a
+# subscript that closes on a later line (FR1, finding 5753be9288beab27), and
+# line continuations inside the name of a subscripted assignment word (FR4,
+# finding e25427e2a8b1dddf).
+# ---------------------------------------------------------------------------
+
+DEFERRED_SUBSCRIPT_RM = "rm -rf /home/sakura/valuable"
+# The case table holds at least this many entries before any case of this
+# feature (the blocks of the five tasks follow in merge order): each case of
+# this task is found by label and command text at this index or later.
+DEFERRED_SUBSCRIPT_CASE_FLOOR = 769
+DEFERRED_SUBSCRIPT_FR1_LABEL = "5753be9288beab27 round2-deferred FR1."
+DEFERRED_SUBSCRIPT_FR4_LABEL = "e25427e2a8b1dddf round2-deferred FR4."
+
+# (tag, command): the subscript of the assignment word closes on a later line,
+# and the `<<E` after it is a real here-document operator in bash 5.3 whose
+# body holds a quote or `${` that must not take the close line and the lines
+# after it. All deny.
+DEFERRED_SUBSCRIPT_FR1_FORMS = [
+    ("FR1.1", "a[1\n]=x\ncat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+    ("FR1.2", 'a[1\n]=x\ncat <<E\n"\nE\n' + DEFERRED_SUBSCRIPT_RM + '\n"'),
+    ("FR1.3", "a[1\n]=x\ncat <<E\n${\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n}"),
+    ("FR1.4", "a[1\n]=x; cat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+    ("FR1.5", "a[$(echo 1\n)]=x\ncat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+    ("FR1.6", "a[b[1\n]]=x\ncat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'"),
+]
+
+# (tag, command, want): a line continuation inside the name or the subscript of
+# an assignment word. Forms 1 and 2 open the subscript after a continuation in
+# the name; 3 to 5 put one inside the subscript, before its `]` and between the
+# `]` and the `=` (already read across a continuation: pinned); 6 never closes
+# the subscript.
+DEFERRED_SUBSCRIPT_FR4_FORMS = [
+    ("FR4.1", "a\\\n[1<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.2", "ab\\\nc[1<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.3", "a[1\\\n<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.4", "a[1<<2\\\n]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.5", "a[1<<2]\\\n=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x", "deny"),
+    ("FR4.6", "a\\\n[1<<2\n" + DEFERRED_SUBSCRIPT_RM, "ask"),
+]
+
+
+def deferred_subscript_command(tag):
+    for form in DEFERRED_SUBSCRIPT_FR1_FORMS + DEFERRED_SUBSCRIPT_FR4_FORMS:
+        if form[0] == tag:
+            return form[1]
+    raise KeyError(tag)
+
+
+def array_subscript_spans(lexmap):
+    return sorted((r.start, r.end) for r in lexmap.regions if r.kind == "array-subscript")
+
+
+class TestSubscriptRound2Deferred(unittest.TestCase):
+    # AC-5: the twelve cases, found by label and command text.
+    def test_the_twelve_cases_are_in_the_case_table_after_the_floor(self):
+        cases = case_commands()
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (want, label, cmd) in enumerate(cases)
+                    if label.startswith(DEFERRED_SUBSCRIPT_FR1_LABEL + tag[4:] + " ")
+                    and cmd == command
+                    and want == "deny"
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], DEFERRED_SUBSCRIPT_CASE_FLOOR)
+        for tag, command, want in DEFERRED_SUBSCRIPT_FR4_FORMS:
+            with self.subTest(tag=tag):
+                located = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if label.startswith(DEFERRED_SUBSCRIPT_FR4_LABEL + tag[4:] + " ")
+                    and cmd == command
+                    and w == want
+                ]
+                self.assertEqual(len(located), 1)
+                self.assertGreaterEqual(located[0], DEFERRED_SUBSCRIPT_CASE_FLOOR)
+
+    def test_the_labels_of_the_missed_detection_forms_carry_the_allow_risk_note(self):
+        labels = {
+            label.split(" ")[2]: label
+            for _want, label, _cmd in case_commands()
+            if label.startswith(DEFERRED_SUBSCRIPT_FR4_LABEL)
+        }
+        for tag in ("FR4.3", "FR4.4", "FR4.5"):
+            with self.subTest(tag=tag):
+                label = labels[tag]
+                self.assertIn("2]=x", label)
+                self.assertIn("allow", label)
+
+    # AC-2: the six FR1 forms.
+    def test_a_here_document_after_a_subscript_closed_on_a_later_line_is_an_operator(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(len(lexmap.heredocs), 1)
+                op = lexmap.heredocs[0]
+                self.assertEqual(command[op.start : op.end], "<<E")
+                self.assertEqual((op.delimiter, op.quoted), ("E", False))
+                operator_line_end = command.index("\n", op.end)
+                self.assertEqual(op.body_start, operator_line_end + 1)
+                self.assertEqual(command[op.body_end : op.close_end], "E\n")
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(lexmap.unopened, [])
+
+    def test_the_subscript_runs_across_the_newline_and_no_region_covers_the_rm_line(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                lexmap = H.lex_shell(command)
+                first_newline = command.index("\n")
+                spans = array_subscript_spans(lexmap)
+                self.assertEqual(spans[0][0], command.index("["))
+                self.assertLess(spans[0][0], first_newline)
+                self.assertGreater(spans[0][1], first_newline)
+                self.assertEqual(command[spans[0][1] - 1], "]")
+                rm_start = command.index(DEFERRED_SUBSCRIPT_RM)
+                rm_end = rm_start + len(DEFERRED_SUBSCRIPT_RM)
+                for region in lexmap.regions:
+                    self.assertTrue(
+                        region.end <= rm_start or region.start >= rm_end,
+                        msg="%s %r covers the rm line" % (tag, region),
+                    )
+
+    def test_the_fr1_map_is_identical_after_clearing_the_lexer_cache(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    def test_the_fr1_forms_deny_in_both_modes(self):
+        for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS:
+            with self.subTest(tag=tag):
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_chunk_that_does_not_parse_keeps_a_multi_line_subscript_in_one_segment(self):
+        # The lone quote after the rm line makes the masked view fail to
+        # tokenize, so the statement layer splits the chunk itself (the
+        # parse-failure path of _lex_layout()). The subscript the lexer read
+        # across the newline is no place to split: cut there, `a[1` is a
+        # subscript the lexer cannot settle and the hook answers `ask`.
+        command = "a[1\n]=x\ncat <<E\n" + DEFERRED_SUBSCRIPT_RM + "\n'"
+        segments, starts, _operators = H._lex_layout(command, False)
+        self.assertIsNone(starts)
+        words = [toks for toks, _lexed, _sep in segments]
+        self.assertEqual(words[0], ["a[1\n]=x"])
+        self.assertIn(DEFERRED_SUBSCRIPT_RM.split(), words)
+
+    # AC-3: the name holds a line continuation.
+    def test_a_continuation_in_the_name_opens_the_subscript_at_its_bracket(self):
+        for tag in ("FR4.1", "FR4.2"):
+            with self.subTest(tag=tag):
+                command = deferred_subscript_command(tag)
+                lexmap = H.lex_shell(command)
+                self.assertEqual(lexmap.heredocs, [])
+                spans = array_subscript_spans(lexmap)
+                self.assertEqual(spans[0][0], command.index("["))
+                self.assertLess(spans[0][0], command.index("<<"))
+                self.assertGreater(spans[0][1], command.index("<<"))
+                self.assertEqual(command[spans[0][0] : spans[0][1]], "[1<<2]")
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    # AC-4: continuations inside the subscript, and a subscript that never closes.
+    def test_a_continuation_inside_the_subscript_or_before_the_equals_sign_is_no_operator(self):
+        for tag in ("FR4.3", "FR4.4", "FR4.5"):
+            with self.subTest(tag=tag):
+                command = deferred_subscript_command(tag)
+                self.assertEqual(H.lex_shell(command).heredocs, [])
+                self.assertEqual(hook_verdict(command)[0], "deny")
+                self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_continuation_then_a_subscript_that_never_closes_asks(self):
+        command = deferred_subscript_command("FR4.6")
+        with self.assertRaises(H.LexUnmatchedSubscript):
+            H.lex_shell(command)
+        self.assertEqual(hook_verdict(command)[0], "ask")
+        self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+
+    def test_a_continuation_in_a_declaration_argument_reads_as_without_it(self):
+        with_continuation = "declare a\\\n[1<<2]=x\nbody\n2]=x"
+        without = "declare a[1<<2]=x\nbody\n2]=x"
+        got = H.lex_shell(with_continuation)
+        want = H.lex_shell(without)
+        self.assertEqual(len(got.heredocs), len(want.heredocs))
+        self.assertEqual(len(got.heredocs), 1)
+        for a, b in zip(got.heredocs, want.heredocs):
+            self.assertEqual((a.delimiter, a.quoted), (b.delimiter, b.quoted))
+            # The removed backslash-newline pair is two characters, so every
+            # extent after it is two further on.
+            self.assertEqual(
+                (a.start, a.end, a.body_start, a.body_end, a.close_end),
+                (b.start + 2, b.end + 2, b.body_start + 2, b.body_end + 2, b.close_end + 2),
+            )
+        self.assertEqual(
+            sorted(r.kind for r in got.regions), sorted(r.kind for r in want.regions)
+        )
+
+    def test_a_name_without_a_subscript_after_continuations_opens_none(self):
+        # Only the `[` after the name opens a subscript: a continued name that
+        # a `=` or a blank follows is an ordinary word.
+        for command in (
+            "a\\\nb=1 cat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'",
+            "a\\\nb cat <<E\n'\nE\n" + DEFERRED_SUBSCRIPT_RM + "\n'",
+            "cat a\\\n[1<<2]\n" + DEFERRED_SUBSCRIPT_RM + "\n2]",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(array_subscript_spans(H.lex_shell(command)), [])
+
+    # AC-6: linear work.
+    def test_lexing_work_is_linear_for_every_form_repeated(self):
+        forms = [(tag, command) for tag, command in DEFERRED_SUBSCRIPT_FR1_FORMS]
+        forms += [(tag, command) for tag, command, _want in DEFERRED_SUBSCRIPT_FR4_FORMS]
+        for tag, unit in forms:
+            with self.subTest(tag=tag):
+                small_text = "\n".join([unit] * 200)
+                large_text = "\n".join([unit] * 400)
+                try:
+                    small = H.lex_shell(small_text)
+                    large = H.lex_shell(large_text)
+                except H.LexUnmatchedSubscript:
+                    # A subscript that never closes is settled by the hook's
+                    # own `ask` once the whole text is read: the exact type
+                    # (not the work bound's) says the bound was not hit.
+                    self.assertEqual(tag, "FR4.6")
+                    for text in (small_text, large_text):
+                        with self.assertRaises(H.LexUnmatchedSubscript):
+                            H.lex_shell(text)
+                    continue
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_lexing_work_is_linear_for_a_name_holding_many_continuations(self):
+        for subscript in ("[1]=x", "[1<<2]=x", "=x"):
+            with self.subTest(tail=subscript):
+                small_text = "a" + "\\\na" * 200 + subscript
+                large_text = "a" + "\\\na" * 400 + subscript
+                small = H.lex_shell(small_text)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+        opened = H.lex_shell("a" + "\\\na" * 400 + "[1<<2]=x\n2]=x")
+        self.assertEqual(opened.heredocs, [])
+        self.assertEqual(len(array_subscript_spans(opened)), 1)
+
+    def test_a_name_holding_many_continuations_is_read_in_time_by_the_hook(self):
+        command = "a" + "\\\na" * 400 + "[1<<2]=x\n" + DEFERRED_SUBSCRIPT_RM + "\n2]=x"
+        start = time.monotonic()
+        self.assertEqual(hook_verdict(command)[0], "deny")
+        self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+
 class TestStageAgreementUnderExtglobOn(TestStageAgreement):
     """The stage-agreement checks over every case-table command that holds an
     extended-glob parenthesis in an array, with the lexer reading it as the
@@ -3633,6 +6678,441 @@ class TestStageAgreementUnderExtglobOn(TestStageAgreement):
 
     def test_the_forms_are_there_to_check(self):
         self.assertGreaterEqual(len(self.commands), 7)
+
+
+# ---------------------------------------------------------------------------
+# destructive-guard-lexer-round2-deferred task0007 (review round 1, findings
+# a9d11e5242397844 and e7dc3c995b363c9d; FR7, FR9, FR10, FR11, NFR1, NFR4-NFR7):
+# bash removes a backslash-newline pair before it reads the characters around
+# it. The lexer finds the `$` openers past such pairs, and the word split the
+# decision layer reads takes every pair out that bash removes -- every pair
+# outside single-quoted text -- while its offsets stay offsets of the original
+# text.
+# ---------------------------------------------------------------------------
+
+LINE_CONTINUATION_LABEL = "round2-deferred"
+# The first index a block appended for this feature can have (D3).
+LINE_CONTINUATION_CASE_FLOOR = 769
+LINE_CONTINUATION_STABLE_IDS = ("a9d11e5242397844", "e7dc3c995b363c9d")
+LC_RM = "rm -rf /home/sakura/valuable"
+
+# (tag, stable_id, verdict, command): the nine cases of the task plan, in the
+# order the plan lists them.
+LINE_CONTINUATION_CASES = [
+    ("R1.LC1", "a9d11e5242397844", "deny", "echo $\\\n{ git reset --hard; }"),
+    ("R1.LC2", "a9d11e5242397844", "deny", 'echo "$\\\n{ git reset --hard; }"'),
+    ("R1.LC3", "a9d11e5242397844", "deny", "cat <<E\n$\\\n{ git reset --hard; }\nE"),
+    ("R1.LC4", "e7dc3c995b363c9d", "deny", "echo ${|\\\n" + LC_RM + "; }"),
+    ("R1.LC5", "e7dc3c995b363c9d", "deny", "echo ${ \\\n" + LC_RM + "; }"),
+    ("R1.LC6", "e7dc3c995b363c9d", "deny", "\\\n" + LC_RM),
+    ("R1.LC7", "e7dc3c995b363c9d", "deny", "r\\\nm -rf /home/sakura/valuable"),
+    ("R1.LC8", "e7dc3c995b363c9d", "deny", "echo $(\\\n" + LC_RM + ")"),
+    ("R1.LC9", "e7dc3c995b363c9d", "allow", "echo a\\\nb 'c\\\nd'"),
+]
+
+# (command, region kind): an opener of the `$` handling found past one or more
+# backslash-newline pairs. The region starts at the `$` and is the only region
+# of its kind.
+LINE_CONTINUATION_OPENER_FORMS = [
+    ("echo $\\\n(echo x)", "command-substitution"),
+    ("echo $\\\n\\\n(echo x)", "command-substitution"),
+    ("echo $(\\\n(1+2))", "arithmetic-expansion"),
+    ("echo $\\\n((1+2))", "arithmetic-expansion"),
+    ("echo $\\\n(\\\n(1+2))", "arithmetic-expansion"),
+    ("echo $\\\n[1+2]", "bracket-arithmetic"),
+    ("echo $\\\n{x}", "parameter-expansion"),
+    ("echo $\\\n\\\n{x}", "parameter-expansion"),
+    ("echo $\\\n'a'", "ansi-c-quote"),
+    ('echo $\\\n"a"', "locale-quote"),
+    ("echo ${\\\n x; }", BRACE_KIND),
+]
+
+# A deny that needs the opener past a pair, in every position the `$` handling
+# runs in.
+LINE_CONTINUATION_DENY_OPENER_FORMS = [
+    "echo $\\\n(" + LC_RM + ")",
+    "echo $\\\n{ " + LC_RM + "; }",
+    'echo "$\\\n(' + LC_RM + ')"',
+    "echo ${x:-$\\\n(" + LC_RM + ")}",
+    "echo $((1 + $\\\n(" + LC_RM + ")))",
+    "echo $[1 + $\\\n(" + LC_RM + ")]",
+    "x=($\\\n(" + LC_RM + "))",
+    "a[$\\\n(" + LC_RM + ")]=x",
+    "cat <<E\n$\\\n(" + LC_RM + ")\nE",
+]
+
+# Commands read after an unreadable delimiter word (a tail source): the tail
+# gate applies to an opener found past a pair exactly as to one without it.
+LINE_CONTINUATION_TAIL_FORMS = [
+    ("cat <<E${x}\necho $\\\n((1))", "arithmetic-expansion", "$\\\n"),
+    ("cat <<E${x}\necho $\\\n[1]", "bracket-arithmetic", "$\\\n"),
+    ("cat <<E${x}\necho $\\\n{x}", "parameter-expansion", "$\\\n"),
+    ("cat <<E${x}\necho $\\\n'a'", "ansi-c-quote", "'"),
+]
+
+# Words that hold a pair: (text, the words the tokenizer reads), in both of its
+# modes.
+LINE_CONTINUATION_WORD_FORMS = [
+    ("r\\\nm -rf x", ["rm", "-rf", "x"]),
+    ("r\\\n\\\nm -rf x", ["rm", "-rf", "x"]),
+    ("\\\nrm -rf x", ["rm", "-rf", "x"]),
+    ("rm\\\n -rf x", ["rm", "-rf", "x"]),
+    ('echo "a\\\nb"', ["echo", "ab"]),
+    ("echo 'a\\\nb'", ["echo", "a\\\nb"]),
+    ("echo a\\\nb 'c\\\nd'", ["echo", "ab", "c\\\nd"]),
+    ("echo \\\\\\\nx", ["echo", "\\x"]),
+]
+
+
+def lc_command(tag):
+    for form_tag, _stable_id, _verdict, command in LINE_CONTINUATION_CASES:
+        if form_tag == tag:
+            return command
+    raise KeyError(tag)
+
+
+def lc_regions(lexmap, kind):
+    return [r for r in lexmap.regions if r.kind == kind]
+
+
+def lc_inner(command, kind):
+    """The inner text of the one span of KIND in COMMAND, from the structure
+    scan."""
+    lexmap = H.lex_shell(command)
+    (region,) = lc_regions(lexmap, kind)
+    return H._span_inner(command, (region.start, region.end))[0]
+
+
+class TestLineContinuationBeforeOpenersAndInWords(unittest.TestCase):
+    def verdicts(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    # AC-1, AC-7 (FR9, FR10): the nine cases are in the table, in order, after
+    # every earlier entry. The order of their commit against the hook change
+    # is a history property, checked on the branch.
+    def test_the_nine_cases_are_appended_in_order_after_the_base_entries(self):
+        cases = case_commands()
+        located = []
+        for tag, stable_id, want, command in LINE_CONTINUATION_CASES:
+            with self.subTest(tag=tag):
+                found = [
+                    index
+                    for index, (w, label, cmd) in enumerate(cases)
+                    if cmd == command
+                    and w == want
+                    and label.startswith(
+                        "%s %s %s " % (stable_id, LINE_CONTINUATION_LABEL, tag)
+                    )
+                ]
+                self.assertEqual(len(found), 1)
+                self.assertGreaterEqual(found[0], LINE_CONTINUATION_CASE_FLOOR)
+                located.append(found[0])
+        self.assertEqual(located, list(range(located[0], located[0] + len(located))))
+
+    def test_no_label_before_the_floor_cites_either_finding(self):
+        for index, (_want, label, _cmd) in enumerate(
+            case_commands()[:LINE_CONTINUATION_CASE_FLOOR]
+        ):
+            for stable_id in LINE_CONTINUATION_STABLE_IDS:
+                self.assertNotIn(stable_id, label, msg="index %d" % index)
+
+    # AC-2 (FR7, NFR6, TM-7): the verdicts, in both modes.
+    def test_cases_one_to_eight_deny_and_nine_allows_in_both_modes(self):
+        for tag, _stable_id, want, command in LINE_CONTINUATION_CASES:
+            with self.subTest(tag=tag):
+                self.assertEqual(self.verdicts(command), (want, want), msg=repr(command))
+
+    # AC-2: cases 1 and 2 -- one closed command-form region from the `$`.
+    def test_a_command_form_opened_past_a_pair_is_one_closed_region_from_the_dollar(self):
+        for tag in ("R1.LC1", "R1.LC2"):
+            with self.subTest(tag=tag):
+                command = lc_command(tag)
+                lexmap = H.lex_shell(command)
+                (region,) = lc_regions(lexmap, BRACE_KIND)
+                self.assertTrue(region.closed)
+                self.assertEqual(region.start, command.index("$"))
+                self.assertEqual(region.end, command.index("}") + 1)
+                self.assertEqual(lc_regions(lexmap, "parameter-expansion"), [])
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(lc_inner(command, BRACE_KIND), " git reset --hard; ")
+
+    def test_the_structure_scan_gives_the_inner_text_after_the_pairs_of_the_opener(self):
+        # The inner text starts after `${` and every pair after it, and after
+        # the `|` of `${|` and every pair after that.
+        self.assertEqual(lc_inner(lc_command("R1.LC4"), BRACE_KIND), LC_RM + "; ")
+        self.assertEqual(lc_inner(lc_command("R1.LC5"), BRACE_KIND), " \\\n" + LC_RM + "; ")
+        self.assertEqual(lc_inner("echo ${\\\n\\\n|\\\n\\\nx; }", BRACE_KIND), "x; ")
+        self.assertEqual(lc_inner("echo $\\\n\\\n{ x; }", BRACE_KIND), " x; ")
+        self.assertEqual(lc_inner("echo $\\\n(x)", "command-substitution"), "x")
+        self.assertEqual(lc_inner("echo $\\\n(\\\nx)", "command-substitution"), "\\\nx")
+
+    def test_the_unclosed_command_form_gives_the_inner_text_after_the_pairs(self):
+        for text, inner in (
+            ("echo $\\\n{ " + LC_RM, " " + LC_RM),
+            ("echo $\\\n{|" + LC_RM, LC_RM),
+            ("echo ${|\\\n\\\n" + LC_RM, LC_RM),
+        ):
+            with self.subTest(text=text):
+                (form,) = H._unclosed_command_forms(text)
+                self.assertEqual(form, (inner, text.index("$")))
+        self.assertEqual(self.verdicts("echo $\\\n{ " + LC_RM)[0], "deny")
+
+    # AC-2: case 3 -- the here-document body extraction.
+    def test_an_unquoted_here_document_body_reports_the_command_form_once(self):
+        command = lc_command("R1.LC3")
+        lexmap = H.lex_shell(command)
+        (op,) = lexmap.heredocs
+        body = heredoc_body(command, op)
+        self.assertEqual(body, "$\\\n{ git reset --hard; }\n")
+        bodies, needs_whole_body = H._extract_heredoc_body_substitutions(body)
+        self.assertFalse(needs_whole_body)
+        self.assertEqual(bodies, [(" git reset --hard; ", 0)])
+        (region,) = lc_regions(H.lex_shell(body, "heredoc-body"), BRACE_KIND)
+        self.assertEqual((region.start, region.end, region.closed), (0, len(body) - 1, True))
+
+    def test_an_unclosed_command_form_in_a_body_gives_the_inner_text_after_the_pairs(self):
+        body = "$\\\n{ " + LC_RM + "\n"
+        (form,) = H._unclosed_command_forms(body, "heredoc-body")
+        self.assertEqual(form, (" " + LC_RM + "\n", 0))
+        self.assertEqual(self.verdicts("cat <<E\n" + body + "E")[0], "deny")
+
+    # AC-3 (NFR6): every other opener, found past the pairs.
+    def test_each_opener_found_past_a_pair_is_a_region_from_the_dollar(self):
+        for command, kind in LINE_CONTINUATION_OPENER_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                regions = lc_regions(lexmap, kind)
+                self.assertEqual(len(regions), 1)
+                self.assertEqual(regions[0].start, command.index("$"))
+                self.assertTrue(regions[0].closed)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_a_substitution_opened_past_a_pair_is_denied_in_every_position(self):
+        for command in LINE_CONTINUATION_DENY_OPENER_FORMS:
+            with self.subTest(command=command):
+                self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_the_tail_gate_applies_to_an_opener_found_past_a_pair(self):
+        for command, kind, literal in LINE_CONTINUATION_TAIL_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(lc_regions(lexmap, kind), [])
+                # The `$` itself is listed, or -- for `$'`, which falls
+                # through to the quote the gate refuses next -- the quote.
+                self.assertIn(command.index(literal), lexmap.unopened)
+        command = "cat <<E${x}\necho $\\\n{ " + LC_RM + "; }"
+        self.assertEqual(len(lc_regions(H.lex_shell(command), BRACE_KIND)), 1)
+        self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_an_unclosed_opener_found_past_a_pair_is_settled_at_the_dollar(self):
+        for command in ("echo $\\\n[1+2", "echo $\\\n((1+2", "echo $\\\n'a"):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(list(lexmap.unopened), [command.index("$")])
+                self.assertEqual(lexmap.tail_start, command.index("$"))
+
+    def test_a_pair_that_ends_a_discarded_line_is_no_continuation_for_the_look_ahead(self):
+        # `x=( <<E` is a syntax error: bash drops the rest of that physical
+        # line, whatever precedes its newline. The `$` ends the line, so the
+        # `{` is on the next line, a command of its own.
+        command = "x=( <<E $\\\n{ " + LC_RM + "; }"
+        self.assertEqual(lc_regions(H.lex_shell(command), BRACE_KIND), [])
+
+    def test_a_pair_that_ends_the_line_of_a_pending_here_document_starts_no_body(self):
+        # The pair skipped by the look-ahead is a continuation: the line the
+        # `{` is on is the operator's line, and the body starts after it.
+        command = "cat <<E $\\\n{ echo; }\nbody\nE\n" + LC_RM
+        lexmap = H.lex_shell(command)
+        (op,) = lexmap.heredocs
+        self.assertEqual(heredoc_body(command, op), "body\n")
+        self.assertEqual(len(lc_regions(lexmap, BRACE_KIND)), 1)
+        self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_a_settled_opener_past_a_pair_still_starts_no_body_at_the_pair(self):
+        # The opener is literal text here (it never closes), so no region
+        # stays open across the pair: the line the pair ends is still the
+        # operator's line, and the body starts after the line the `{` is on.
+        command = "cat <<E $\\\n{x\nbody\nE"
+        (op,) = H.lex_shell(command).heredocs
+        self.assertEqual(heredoc_body(command, op), "body\n")
+
+    def test_the_map_is_identical_after_clearing_the_lexer_cache(self):
+        commands = [command for _t, _s, _w, command in LINE_CONTINUATION_CASES]
+        commands += [command for command, _kind in LINE_CONTINUATION_OPENER_FORMS]
+        commands += [command for command, _kind, _literal in LINE_CONTINUATION_TAIL_FORMS]
+        commands += LINE_CONTINUATION_DENY_OPENER_FORMS
+        for command in commands:
+            with self.subTest(command=command):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+
+    # AC-4 (NFR6, TM-7): the word split.
+    def test_the_tokenizer_removes_the_pairs_that_bash_removes_in_both_modes(self):
+        for layout in (True, False):
+            for text, words in LINE_CONTINUATION_WORD_FORMS:
+                with self.subTest(layout=layout, text=text):
+                    toks = H._tokenize_marked(H._MarkedText.plain(text), layout=layout)
+                    self.assertEqual([str(t) for t, _s, _e in toks], words)
+
+    def test_the_offsets_stay_offsets_of_the_original_text(self):
+        for layout in (True, False):
+            with self.subTest(layout=layout):
+                toks = H._tokenize_marked(
+                    H._MarkedText.plain("r\\\nm -rf x"), layout=layout
+                )
+                self.assertEqual([(s, e) for _t, s, e in toks], [(0, 4), (5, 8), (9, 10)])
+                toks = H._tokenize_marked(
+                    H._MarkedText.plain("a\\\n\\\nb c\\\nd"), layout=layout
+                )
+                self.assertEqual([(s, e) for _t, s, e in toks], [(0, 6), (7, 11)])
+                toks = H._tokenize_marked(
+                    H._MarkedText.plain("a 'b\\\nc'"), layout=layout
+                )
+                self.assertEqual(
+                    [(str(t), s, e) for t, s, e in toks], [("a", 0, 1), ("b\\\nc", 2, 8)]
+                )
+
+    def test_a_separator_after_a_pair_keeps_its_own_offsets(self):
+        text = "a \\\n; b"
+        toks = H._tokenize_marked(H._MarkedText.plain(text))
+        self.assertEqual(
+            [(str(t), s, e) for t, s, e in toks],
+            [("a", 0, 1), (";", 4, 5), ("b", 6, 7)],
+        )
+        segments, starts, _operators = H._lex_layout(text, True)
+        self.assertEqual([words for words, _lexed, _sep in segments], [["a"], ["b"]])
+        self.assertEqual(starts, [0, 5])
+
+    def test_a_backslash_before_any_other_character_is_untouched(self):
+        for text in ("a\\\rb", "a\\\r\nb", "a\\\\\nb", "a\\ b", "a\\xb"):
+            for layout in (True, False):
+                with self.subTest(text=text, layout=layout):
+                    toks = H._tokenize_marked(H._MarkedText.plain(text), layout=layout)
+                    got = [str(t) for t, _s, _e in toks if str(t) != "\n"]
+                    self.assertEqual(got, shlex_words(text))
+        toks = H._tokenize_marked(H._MarkedText.plain("a\\\\\nb"))
+        self.assertEqual([str(t) for t, _s, _e in toks], ["a\\", "\n", "b"])
+
+    def test_a_pair_inside_an_expansion_or_a_substitution_is_read_as_before(self):
+        # The hidden text of an expansion is restored by position, and a
+        # substitution is its own chunk: a pair in either leaves the words
+        # around it as they are.
+        for text, words in (
+            ("echo ${x:-a\\\nb} c", ["echo", "${x:-a\\\nb}", "c"]),
+            ("echo $((1 +\\\n2)) c", ["echo", "$((1 +\\\n2))", "c"]),
+        ):
+            with self.subTest(text=text):
+                toks = H._tokenize_marked(H._MarkedText.plain(text), layout=False)
+                self.assertEqual([str(t) for t, _s, _e in toks], words)
+
+    def test_statements_read_the_command_word_past_a_pair(self):
+        for tag in ("R1.LC6", "R1.LC7"):
+            with self.subTest(tag=tag):
+                shaped = shaped_words_of(lc_command(tag))
+                self.assertIn(LC_RM.split(), shaped)
+        for tag in ("R1.LC4", "R1.LC5"):
+            with self.subTest(tag=tag):
+                inner = lc_inner(lc_command(tag), BRACE_KIND)
+                shaped = shaped_words_of(inner)
+                self.assertTrue(
+                    any(words[:1] == ["rm"] for words in shaped), msg=repr(shaped)
+                )
+                self.assertIn(LC_RM.split(), shaped_words_of(lc_command(tag)))
+        self.assertIn(LC_RM.split(), shaped_words_of(lc_command("R1.LC8")))
+
+    def test_a_command_name_read_from_a_substitution_is_read_past_a_pair(self):
+        # The raw body of a substitution that stands where the command word
+        # is, which names the command (`$(which r<pair>m) -R ...`), is read
+        # with the pairs taken out as well.
+        self.assertEqual(H.read_command_name_evidence("which r\\\nm"), "rm")
+        self.assertEqual(H.read_command_name_evidence("which a\\\\\nm"), "m")
+        command = "$(which r\\\nm) -R /home/sakura/valuable"
+        self.assertEqual(self.verdicts(command), ("deny", "deny"))
+
+    def test_the_fallback_word_split_is_not_touched(self):
+        # A chunk whose view does not tokenize (an unclosed quote) is split on
+        # whitespace by the fallback, as before.
+        segments = H._lex_layout("r\\\nm x 'y", False)[0]
+        self.assertEqual(
+            [(toks, lexed) for toks, lexed, _sep in segments],
+            [(["r\\"], False), (["m", "x", "'y"], False)],
+        )
+
+    # AC-6 (NFR1, TM-8): linear work.
+    def assert_linear(self, unit):
+        small = H.lex_shell("\n".join([unit] * 200))
+        large_text = "\n".join([unit] * 400)
+        large = H.lex_shell(large_text)
+        self.assertLessEqual(large.work, 2.5 * small.work + 100)
+        self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024)
+
+    def test_lexing_work_is_linear_for_each_case_repeated(self):
+        for tag, _stable_id, _want, command in LINE_CONTINUATION_CASES:
+            with self.subTest(tag=tag):
+                self.assert_linear(command)
+
+    def test_lexing_work_is_linear_for_many_pairs_after_a_dollar(self):
+        for tail in ("{ x; }", "(x)", "((1))", "[1]", "'x'", '"x"', "x", "{x}", "$(x)"):
+            with self.subTest(tail=tail):
+                small_text = "echo $" + "\\\n" * 200 + tail
+                large_text = "echo $" + "\\\n" * 400 + tail
+                small = H.lex_shell(small_text)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_many_dollars_each_followed_by_a_pair_cost_linear_work(self):
+        for unit in ("$\\\n{ x; }", "$\\\nx", "$\\\n\\\n(x)"):
+            with self.subTest(unit=unit):
+                self.assert_linear("echo " + unit)
+
+    def test_a_command_with_many_pairs_is_read_in_time_by_the_hook(self):
+        for command in (
+            "echo $" + "\\\n" * 400 + "{ " + LC_RM + "; }",
+            "r" + "\\\nr" * 400 + "m -rf /home/sakura/valuable",
+        ):
+            start = time.monotonic()
+            decision = hook_verdict(command)[0]
+            self.assertNotEqual(decision, "(timeout)")
+            self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+        self.assertEqual(
+            hook_verdict("echo $" + "\\\n" * 400 + "{ " + LC_RM + "; }")[0], "deny"
+        )
+
+
+class TestLineContinuationStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    nine cases of the line-continuation findings and the openers found past a
+    pair, so the lexer's regions, the structure scan, marking, the layout layer
+    and the position maps agree on them."""
+
+    @classmethod
+    def setUpClass(cls):
+        forms = [command for _t, _s, _w, command in LINE_CONTINUATION_CASES]
+        forms += [command for command, _kind in LINE_CONTINUATION_OPENER_FORMS]
+        forms += [command for command, _kind, _literal in LINE_CONTINUATION_TAIL_FORMS]
+        forms += LINE_CONTINUATION_DENY_OPENER_FORMS
+        forms += [text for text, _words in LINE_CONTINUATION_WORD_FORMS]
+        forms += [
+            "echo a \\\n; echo b",
+            "echo $\\\n{ x; } r\\\nm 'a\\\nb' \"c\\\nd\"",
+        ]
+        seen = []
+        for form in forms:
+            if form not in seen:
+                seen.append(form)
+        cls.commands = [form for form in seen if _lexer_reads(form)]
+
+    def test_the_forms_are_there_to_check(self):
+        for _tag, _stable_id, _want, command in LINE_CONTINUATION_CASES:
+            self.assertIn(command, self.commands)
 
 
 if __name__ == "__main__":

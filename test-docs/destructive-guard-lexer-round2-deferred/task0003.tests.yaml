@@ -1,0 +1,64 @@
+task_id: task0003
+baseline_failures:             # refreshed after parent-side adoption (merge of the parent into the task branch, conflict in the case table): the suite run at the adoption commit, before the case block was re-appended. Before any edit the suite was green (8554 tests, run-destructive-guard.py 774/774).
+  - TestHeredocLineSeparatorsAndJoinedCloseLines.test_new_cases_are_in_the_case_table_after_the_earlier_entries   # this task's own placement test: adopting the parent's case table dropped this task's block (16 subtest failures); fixed by the re-append commit. Everything else, task0002's tests included, passed: 8604 tests, FAILED (failures=16, skipped=1); run-destructive-guard.py 786/786
+final_failures: []             # re-executed after the re-implementation (case block re-appended on the parent's table, 801 entries): python3 -m unittest discover -s tests ran 8604 tests, OK (1 skipped); run-destructive-guard.py 802/802; tests.test_destructive_guard_lexer_agreement 260 tests OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - em-workflow/hooks/tests/run-destructive-guard.py (case table runner; labels e959ba60bde865a4 round2-deferred FR3.1 to FR3.8 and 2b52be5874de85f4 round2-deferred FR5.1 to FR5.8)
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_new_cases_are_in_the_case_table_after_the_earlier_entries
+    red_confirmed: true
+    red_reason: "After the case-table commit 4495699c and before any hook commit, the runner reported 779/790 with FAIL (got=allow, expected deny) on 11 of the new cases: FR3.1 to FR3.7, FR5.1, FR5.2, FR5.6, FR5.7. FR3.8, FR5.3, FR5.4, FR5.5 and FR5.8 were green before the change (the plan says so for the FR5 ones). The placement test was written after the block; run against the case table of the feature base (6fa3a500, without the block) it failed with 16 subtest failures (AssertionError 0 != 1 on every command). That the case commit comes before the hook commit is a property of the branch history (4495699c, then the hook commit): no test reads history."
+  AC-2:
+    tests:
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_character_after_the_delimiter_word_belongs_to_the_word
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_blank_and_carriage_return_after_the_word_leave_an_empty_body
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_carriage_return_inside_a_body_line_does_not_end_the_line
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_delimiter_holding_a_carriage_return_closes_at_that_line
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_crlf_delimiter_closes_at_its_own_line_and_the_next_line_is_code
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_fr3_maps_are_identical_after_clearing_the_lexer_cache
+    red_confirmed: true
+    red_reason: "Against the unchanged hook (final tests, old hook copied into a scratch tree): AssertionError 'EOF' != 'EOF\\r' (three subtests: \\r, \\x0b, U+2028), 'E' != 'E\\rX', and the case 4, 5 and 7 assertions on the body and close extents failed; every FR3 case 1 to 7 verdict was allow in both modes. The cache-clearing determinism test is a guard that was green before and after."
+  AC-3:
+    tests:
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_every_other_line_break_character_is_a_word_character
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_quote_and_an_escape_see_only_the_newline_as_a_line_break
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_the_line_index_splits_at_the_newline_only
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_crlf_here_document_is_allowed
+    red_confirmed: true
+    red_reason: "Against the unchanged hook: nine subtests failed in the word-character test (one per character of SPEC.md FR3), 27 in the quote / escape test, and the line-index test failed because the old index started lines after \\r and the other characters. test_crlf_here_document_is_allowed went red on its delimiter assertion ('EOF' != 'EOF\\r'); the allow verdict of FR3 case 8 itself was already allow before the change."
+  AC-4:
+    tests:
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_continued_body_line_does_not_close_an_unquoted_body_early
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_even_backslashes_and_quoted_delimiters_join_nothing
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_joined_body_line_followed_by_a_plain_close_line_is_allowed
+    red_confirmed: true
+    red_reason: "FR5 cases 1 and 2 (the first test, two subtests) failed against the unchanged hook: the body closed at the line END after foo\\ and the substitution line was outside the body, verdict allow. FR5 cases 3, 4 and 5 (the other two tests) were green before the change, as the plan states (deny today / allow today); they are regression guards, no red state occurred for them."
+  AC-5:
+    tests:
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_planner_found_forms_close_at_the_joined_line_and_are_denied
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_the_first_line_of_a_body_is_a_candidate_whatever_precedes_it
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_first_line_forms_that_close_are_denied
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_close_line_continued_with_an_odd_run_of_backslashes_only
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_close_line_continued_into_the_end_of_the_text
+    red_confirmed: true
+    red_reason: "Against the unchanged hook the EN\\ / D forms (planner forms 1 and 2) failed: the body ran on to the last line END and the rm line was inside the body. The third planner form (the quoted-then-unquoted first line B) was already deny and already closed at its first line before the change, as the plan states; it is a guard against a regression of the first-line rule. Five of the six extra first-line forms (joined with the following empty line, tab-only continued lines under <<-, three backslashes) failed against the unchanged hook too; the sixth (a tab-indented first line B under <<-) already held."
+  AC-6:
+    tests:
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_lexing_work_is_linear_for_every_case_repeated
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_lexing_work_is_linear_for_a_body_of_continued_lines
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_lexing_work_is_linear_when_every_body_starts_on_a_backslash_line
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_a_backslash_line_run_is_read_in_time
+    red_confirmed: false
+    red_reason: "These tests guard a property the unchanged hook already has: it joins nothing, so it is linear on every one of these inputs and all four passed against it before the change; no executable check of this criterion can fail without a joining implementation. Their sensitivity was shown on a deliberately naive lookup (a walk over the continuation run for each body's first line, patched in for one run only): test_a_backslash_line_run_is_read_in_time failed in both operator flavours (26 s not less than 3). The work counter does not include the close-line lookup, so the time test is the one that catches a rescan."
+  AC-7:
+    tests:
+      - TestHeredocLineSeparatorsAndJoinedCloseLines.test_the_physical_close_line_index_is_unchanged
+      - em-workflow/hooks/tests/run-destructive-guard.py
+      - TestHeredocDelimiterWords
+      - TestHeredocFallbackAndCloseLines
+      - TestDelimiterWordStageAgreement
+      - TestResumeSnapshot
+      - TestModuleContract
+    red_confirmed: false
+    red_reason: "A dedicated new red is out of scope, but the existing tests detect the behavior: test_the_physical_close_line_index_is_unchanged (new) compares the one-argument close_lines() with a splitlines-based reference over 68 texts without the characters of SPEC.md FR3, the runner keeps every pre-existing case's verdict, and the existing classes read the delimiter words, close lines, resume snapshot and module contract; they were green before the change and are green after, so no red state occurred for this change. A differential run of the old and the new lexer over 50000 random texts (no FR3 character, no line ending in a backslash) gave identical maps."
