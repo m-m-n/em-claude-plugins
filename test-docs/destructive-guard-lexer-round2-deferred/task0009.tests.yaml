@@ -1,0 +1,90 @@
+task_id: task0009
+baseline_failures:             # python3 -m unittest discover -s tests before any edit: Ran 8803 tests, FAILED (failures=3, skipped=1); the three are the verify-failed tests of the plan, each with '(timeout)' as the hook decision
+  - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_bulk_unclosed_openers_get_a_non_allow_decision_in_time
+  - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_mixed_bulk_openers_get_a_non_allow_decision_in_time
+  - tests.test_destructive_guard_lexer_agreement.TestBraceCommandSubstitution.test_nested_unclosed_forms_followed_by_a_destructive_line_are_never_allow
+final_failures: []             # re-executed after the implementation, twice in a row: Ran 8810 tests, OK (skipped=1) both times; run-destructive-guard.py 846/846; must be subset of baseline_failures
+# Red observations. AC-1 and the baseline: the three plan tests failed in the
+# baseline run of the whole suite, before any edit. AC-2, AC-3: the tests of
+# the new class TestNestedUnclosedFormCost (tests/test_destructive_guard_lexer_agreement.py)
+# were run against the hook without the change (the hook of the task's base,
+# commit 3548d9ec): 10 subtests failed, 3 tests were green (AC-4, AC-5).
+# Measurement before the change (one hook evaluation, seconds, without / with
+# CLAUDE_BATCH): `${ ` x 20000 + RM 11.4 / 12.2; mixed unit 60 KB + RM 11.4 /
+# 11.2; `${ ` x 40000 + RM 23.1 / 22.0; mixed unit 120 KB + RM 22.5 / 21.8;
+# `${ \n` x 15000 + RM 22.3 / 22.4; `echo ${ ` x 7500 + RM 8.9 / 9.5. After:
+# 1.7 / 1.8; 1.7 / 1.7; 3.2 / 3.1; 3.0 / 3.0; 3.2 / 3.1; 1.5 / 1.5.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_bulk_unclosed_openers_get_a_non_allow_decision_in_time
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_mixed_bulk_openers_get_a_non_allow_decision_in_time
+      - tests.test_destructive_guard_lexer_agreement.TestBraceCommandSubstitution.test_nested_unclosed_forms_followed_by_a_destructive_line_are_never_allow
+    red_confirmed: true
+    red_reason: >-
+      All three failed in the baseline run of the whole suite, before any
+      edit: AssertionError "'(timeout)' == '(timeout)'" for the bulk test
+      (opener `${`), "'(timeout)' unexpectedly found in ('allow', '(timeout)')"
+      for the mixed test, and "'(timeout)' not found in ('ask', 'deny')" for
+      the nested-forms test; the hook took 11 to 12 seconds for each input,
+      past the 10-second subprocess bound the tests use. Their inputs, bound
+      and assertions are unchanged; they pass after the change.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNestedUnclosedFormCost.test_bulk_inputs_get_a_decision_other_than_allow_in_both_modes
+    red_confirmed: true
+    red_reason: >-
+      Against the hook without the change both the bulk `${ ` input and the
+      mixed input failed with "'(timeout)' not found in ('ask', 'deny')": the
+      decision of the evaluation without CLAUDE_BATCH was a timeout.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNestedUnclosedFormCost.test_doubled_bulk_command_forms_get_a_decision_in_time
+      - tests.test_destructive_guard_lexer_agreement.TestNestedUnclosedFormCost.test_doubled_mixed_unit_gets_a_decision_in_time
+      - tests.test_destructive_guard_lexer_agreement.TestNestedUnclosedFormCost.test_the_text_read_per_evaluation_is_a_small_multiple_of_the_input
+    red_confirmed: true
+    red_reason: >-
+      Against the hook without the change the doubled bulk input and the
+      doubled mixed input each ended in "'(timeout)' not found in ('ask',
+      'deny')" in both modes (22 to 23 seconds against the 20-second bound),
+      and the lexer read 480163 characters for the 60 KB bulk input (8 times
+      its length), 960163 for the doubled one, 959108 and 1919108 for the
+      mixed inputs, against the limit of 3 times the length.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNestedUnclosedFormCost.test_the_content_of_every_nested_unclosed_form_is_still_inspected
+      - tests.test_destructive_guard_lexer_agreement.TestNestedUnclosedFormCost.test_the_innermost_form_of_a_nest_is_judged_through_its_levels
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-exists: `echo ${ RM`, `echo ${ echo x ${ RM` and
+      `${ ${ ${ RM`, and the same destructive command inside the innermost of
+      4, 10 and 40 levels, are denied in both modes by the hook without the
+      change (the tests were green before it). They are pinned so that the
+      change is seen not to drop the inspection of any nested form's content;
+      no executable check of this criterion can be made to fail first.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestNestedUnclosedFormCost.test_every_input_gets_the_same_decision_after_the_lexer_cache_is_cleared
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_many_unclosed_command_forms_are_read_in_linear_work_and_never_settled
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_lexing_work_is_linear_for_unclosed_and_closed_forms
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_same_command_gives_an_identical_map_and_decision
+    red_confirmed: false
+    red_reason: >-
+      The lexer is untouched, so the linearity tests of TS-9 and the
+      determinism checks were green before the change and stay green; the new
+      same-decision test passed against the hook without the change too (the
+      decision was the same on two evaluations, only slow). No red state
+      occurred for this change.
+  AC-6:
+    tests:
+      - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - python3 -m unittest discover -s tests
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing runner over
+      the case table, TestModuleContract and TestStageAgreement detect a
+      changed verdict, a moved or edited case and a stage disagreement; no red
+      state occurred for this change (no case was added, removed or edited,
+      and the runner stayed at 846/846).

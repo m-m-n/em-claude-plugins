@@ -4908,6 +4908,37 @@ def _unclosed_command_forms(text, mode="shell"):
     return out
 
 
+def _unclosed_command_form_chars(text, mode="shell"):
+    """How many characters of inner text statements() has to scan for the
+    unclosed command forms `${ ...` / `${|...` of TEXT: the sum of the lengths
+    of their inner texts, the outermost ones it queues from this chunk and the
+    ones nested in them, each of which it queues in turn when the text around
+    it is scanned as a chunk of its own. The inner text of an unclosed form
+    runs to the end of the text, so a nest of d forms holds d nearly whole
+    copies of the text. An estimate that leaves out what it cannot count
+    cheaply: a form that ends before the end of TEXT (the end of a discarded
+    line) and one whose inner text is blank (never queued) are not counted, and
+    a here-document body the later scan of a nested text strips is counted as
+    the lexer of TEXT reads it. Reads the lexer's map of TEXT, the one
+    _unclosed_command_forms() reads, in one pass over its regions."""
+    regions = lex_shell(text, mode, False).regions
+    end = len(text)
+    last = None
+    total = 0
+    for region in regions:
+        if (
+            region.kind == LEX_BRACE_COMMAND_SUBSTITUTION
+            and not region.closed
+            and region.end == end
+        ):
+            if last is None:
+                last = len(text.rstrip())
+            inner = _command_form_inner_start(text, region.start)
+            if inner < last:
+                total += end - inner
+    return total
+
+
 # --- Component 5: substitutions in an unquoted-delimiter heredoc body ------
 
 
@@ -6449,6 +6480,7 @@ def statements(command, unsettled=None):
         # the relative scan budget above answers a deep nest with the
         # scan-budget ask.
         unclosed_forms = _unclosed_command_forms(chunk)
+        unclosed_form_chars = _unclosed_command_form_chars(chunk)
         # The chunk's one lexing: its statements are walked further down, and
         # SEG_ENDS (where each statement's separator starts) lets a heredoc
         # body queued below be anchored between the right two statements.
@@ -6664,6 +6696,18 @@ def statements(command, unsettled=None):
                                 None,
                             )
                         )
+        # The unclosed command forms of this chunk: every level of a nest of
+        # them is scanned as a chunk of nearly the whole text, so a deep nest
+        # spends the scan budget above on copies of one text, in time that
+        # grows with the budget's multiple of the length. When the forms of
+        # this chunk alone add up to more than the budget has left, the budget
+        # is bound to run out on them: answer now, after the statements of
+        # this chunk (a deny among them has been given), instead of scanning
+        # the copies one after the other until the budget says so. The answer
+        # is the same ask; a form that is not nested deep enough to get there
+        # is scanned as before.
+        if scanned_chars + unclosed_form_chars > scan_budget:
+            ask_scan_budget_exceeded()
 
 
 def tokens(segment):
