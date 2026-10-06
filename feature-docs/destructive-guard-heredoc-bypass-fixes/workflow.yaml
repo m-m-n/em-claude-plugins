@@ -146,8 +146,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
-    branch: null
+    status: merged
+    branch: em-workflow/destructive-guard-heredoc-bypass-fixes/task0001
   task0002:
     title: Declaration-builtin NAME[ no longer defers here-document bodies; eval / let / alias handled separately
     plan: tasks/task0002.md
@@ -167,8 +167,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-heredoc-bypass-fixes/task0002
   task0003:
     title: Identify extglob parse units by origin and position
     plan: tasks/task0003.md
@@ -188,8 +188,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
-    branch: null
+    status: merged
+    branch: em-workflow/destructive-guard-heredoc-bypass-fixes/task0003
 review:
   status: pending
   rounds_completed: 0
