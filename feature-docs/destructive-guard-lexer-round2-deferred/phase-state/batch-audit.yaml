@@ -46,3 +46,24 @@ records:
     C flips `git reset --hard\r` to allow (:6425); caveat: do not apply trailing-\r stripping to the safe-delete
     exception check (:6581) — carry this to the task0004 implementer and reviewer; codex_consulted: true
     (harness codex, 1 turn); opus_escalation: false'
+- question_id: review.reviewer-result-classification
+  packet_id: null
+  answered_at: '2026-10-08T01:30:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Q1 B / Q2 C
+  normalized_answer: 'Q1 round 2 security#0 / comprehensive#0 (codex) returned findings [] with summary
+    "codex returned non-JSON output" after ~561.8s (codex-cli.yaml timeout 540, exit 124): treat as a
+    harness-level failure (status failed) and dispatch one Claude fallback each. Q2 architecture#0 / spec#0
+    / performance#0 (litellm muse-spark-contributor) skipped with review_data_too_large: keep the skip,
+    no fallback.'
+  resolution_note: 'gate: orchestrator-raised classification of review round 2 primary reviewer results
+    (Phase R2b), requested by the launch instruction to consult Codex on unclear points; options: Q1 A
+    completed empty review / B harness failure + Claude fallback; Q2 C keep non-retryable skip / D Claude
+    fallback anyway; choice: Q1 B, Q2 C; not chosen: Q1 A, Q2 D; key points: Codex first chose Q1 A (R2b
+    schema validity is the only test), then corrected to B once told both runs exceeded the 540s wrapper
+    timeout — an empty result wrapped after a failed launch is not evidence of a completed review (R2b
+    harness-level failure paragraph); Q2 review-protocol.md marks review_data_too_large non-retryable
+    and R2b keeps non-retryable skips; codex_consulted: true (harness codex, 2 turns); opus_escalation:
+    false; discussion also recorded as a comment on the Notion task page'
