@@ -1,0 +1,393 @@
+round: 1
+executed_at: '2026-10-06T23:54:37+09:00'
+scope:
+  review_mode: diff
+  base_commit: 60f7ea47dc957a73eee8be32a79a44a16f1f5123
+  head_commit: f3744ee9440c959cda6d3ca50cbc9d8259ac57e6
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-lexer-round2-deferred/task0001.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0004.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0005.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: 毎回の Bash 呼び出しで走る字句解析に、読み直し・行連結の走査が増えたため、入力長に対する計算量の悪化を確認する
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop3
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+- run_id: architecture#loop3
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop3
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop3
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: security#loop3-fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+findings:
+- stable_id: a145dac536788f42
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2494
+  title: バッククォート内の ${ と閉じない ( で、外側の破壊的コマンドが allow になる
+  description: git reset --hard`${ (x}` が変更前の deny から allow に変わった。バッククォート終了の特例は最上位フレームが bracecmd のときだけ効き、内側に group フレームが残ると 2 つ目のバッククォートを新しい置換の開始として読む。bash 5.3.9 では置換内の構文エラー後も外側のコマンドが --hard 付きで実行される。
+  suggestion: バッククォートに出会ったときは、内側のフレーム種別に依存せず、in_bt 配下で閉じていないフレームをすべて閉じて外側のバッククォート置換を閉じる。
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (loop 1 attempt crashed with IndexError and was restored from backup)
+- stable_id: f33174f4eb9fc521
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1976
+  title: ${ の直後の行継続で、命令置換の中身を検査しない
+  description: echo ${ の後ろに \<改行> を挟んで rm -rf … ; } と続く形（空白版・| 版・二重引用符内・引用なし区切り語のヒアドキュメント本文）が allow。
+  suggestion: ${ の後ろの \<改行> の連なりを飛ばした最初の文字で _LEX_BRACE_COMMAND_FOLLOW を判定する。
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (opener) + loop 2 (body extraction); all four forms deny
+- stable_id: dfdc84687e99ee8c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3500
+  title: 末尾の CR を除いた語で安全な削除対象の例外を判定する
+  description: _disregard_trailing_cr() が全語の末尾 CR を除くため、rm -rf './build<CR>' 等が変更前の deny から allow に変わった（二重引用版・バックスラッシュでエスケープした版も同じ）。
+  suggestion: 削除対象のパスの安全判定には CR を保った元の語を使う。
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: quoted forms fixed in loop 2; the backslash-escaped form remains (see the loop-3 finding at line 3572)
+- stable_id: 90d262dd6d78dfd4
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1991
+  title: 行継続を含むコマンド置換の本文を正しく判定できない
+  description: 開始部分を認識できるようになったが、本文抽出（_span_inner()）に行継続が残り、後段が改行文字を先頭の語として扱い allow。
+  suggestion: 読み飛ばした開始位置を本文抽出にも引き継ぐ。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: d1a1f6372396a685
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1978
+  title: 'TM-7: 行継続を含む命令置換で破壊的コマンドが許可される'
+  description: echo ${\<改行> rm -rf …; } が allow。_span_inner() が行継続を残して本文を抽出する。
+  suggestion: 行継続を読み飛ばした本文開始位置を本文抽出でも共有する。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (same root cause as the comprehensive finding at line 1991)
+- stable_id: 25e0b72c24c60af2
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2499
+  title: 内側の引用によって外側のバッククォートが閉じなくなる
+  description: git reset --hard`${ "` が allow（変更前 deny）。bracecmd の内側で引用を開くと外側のバッククォートも未終了扱いになる。
+  suggestion: 引用やグループの内側でも外側のバッククォートの終了を処理する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (unwind_to_bracecmd)
+- stable_id: 37f0391f584707f2
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3505
+  title: 引用されたCR付きの削除対象を安全な対象に変えてしまう
+  description: rm -rf "build<CR>" が変更前の deny から allow。
+  suggestion: 安全な削除対象の例外判定には CR を含む元の語を使う。
+  sources:
+  - codex:comprehensive
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (quoted words keep their CR); security perspective reported the same site at medium
+- stable_id: 94c05b2e017d9cb3
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2531
+  title: コメントや一重引用符内ではバッククォートの終了処理が働かない
+  description: 'echo `${ : # comment`; rm -rf … が allow（変更前 deny）。一重引用符内でも同じ。'
+  suggestion: コメント・一重引用符・ANSI-C 引用でも外側のバッククォートの終了位置を優先する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (in_bt_form)
+- stable_id: db35bdedf5895808
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2636
+  title: 単一引用符内で外側のバッククォート終端を見落とす
+  description: git reset --hard`${ echo 'x` が allow。
+  suggestion: 単一引用符の状態からも外側のバッククォート終端を認識する。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: a9d11e5242397844
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2008
+  title: 行継続で分割された展開開始記号を認識できない
+  description: echo $\<改行>{ git reset --hard; } が allow（二重引用符内・引用なしヒアドキュメント内も）。$ と { の間の行継続に対応していない。
+  suggestion: 展開開始記号を判定する前に行継続を読み飛ばし、元の位置情報を維持する。
+  sources:
+  - codex:comprehensive
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: loop 3 editor skipped (could not keep span offsets consistent without tests); also reported by security (line 1994)
+- stable_id: b0f7592cd79e75ea
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3572
+  title: エスケープされた末尾CRが削除対象から失われる
+  description: rm -rf build\<CR> が変更前の deny から allow。バックスラッシュ引用では Tok.quoted が False のため末尾 CR を除去して安全対象 build に変える。引用なしの rm -rf build<CR>（base から allow）と、解析失敗時の経路で引用属性を失う rm -rf "build<CR>"<LF>' も同系統。
+  suggestion: エスケープされた末尾 CR も保持し、実際の対象名で安全対象を判定する。
+  sources:
+  - codex:comprehensive
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'loop 3 fix (mark stripped non-command words unresolved) was reverted: it flipped the existing agreement test TestCarriageReturnIsNotABlank (rm -rf ./build<CR> expected allow); needs a decision on that expectation'
+- stable_id: 31165687b890b8bc
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2666
+  title: エスケープされたバッククォートで置換を終了する退行がある
+  description: '`${ echo ''\` ignored''; }`git reset --hard は loop 2 の時点で deny、loop 3 後に allow。追加された text.find() がエスケープされたバッククォートも終了位置として扱う。'
+  suggestion: コメントと単一引用内の探索では未エスケープのバッククォートだけを終了位置として扱う。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: regression introduced by auto-fix loop 3
+- stable_id: d1d035263eb03a8a
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2034
+  title: 引用や置換を挟むと外側のバッククォートの文脈を失う
+  description: '`"${ echo # `git reset --hard が allow。bracecmd の in_bt を直上の backtick / bracecmd からしか設定しないため、二重引用や $(...) を挟むと False になる。'
+  suggestion: 引用や入れ子の置換を通じて外側のバッククォートの文脈を引き継ぐ。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: reported in the loop-3 re-review
+- stable_id: e79128f331828941
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2268
+  title: '普通のバッククォート置換では、中の # コメントや引用符が閉じのバッククォートを飲み込み、破壊的コマンドが allow になる'
+  description: 'echo `rm -rf src #` / echo `true #`; git reset --hard / echo `echo "`; echo `rm -rf src` が allow（base から既存）。in_bt_form() は ${ を経由した場合だけ効く。bash 5.3 は次の未エスケープのバッククォートで置換範囲を先に決める。'
+  suggestion: backtick フレームを push する時点で次の未エスケープのバッククォートを先に探し、中身の走査の上限にする（根本対応）。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: reported in the loop-3 re-review
+- stable_id: e6478d6af2a50e57
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 2722
+  title: bt-form の巻き戻しが param / arith / bracket / subscript / extglob 分岐に無く、TM-7 の対象のコマンドが読み飛ばされる
+  description: 'echo `${ echo ${x`; echo `rm -rf src #}` 等（$(( / $[ / a[ の形も）が allow。'
+  suggestion: 1 件目の根本対応で解消。局所対応なら各分岐で backtick を push する前に unwind_to_bracecmd を通す。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: reported in the loop-3 re-review
+- stable_id: e7dc3c995b363c9d
+  severity: critical
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4594
+  title: 行継続（\<改行>）が語の分割で除かれず、`${|\<改行>rm -rf …; }` や `\<改行>rm -rf …` が allow になる
+  description: shlex（posix）が \<改行> を次の語にくっつけるため、${|\<改行>rm、${ \<改行>rm、最上位の \<改行>rm、r\<改行>m、$(\<改行>rm などが allow（一部は base から既存）。
+  suggestion: shlex に渡す view を作る段階で、引用・コメントの外にある \<改行> の対を取り除く（位置の対応表は保つ）。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: reported in the loop-3 re-review
+evaluation:
+  round_summary: 'cross_validation=true のため、comprehensive#0 の 3 件を base（60f7ea47）と HEAD のフックで並べて再実行し、bash 5.3.9 の挙動も無害なコマンドに替えて確かめた。3 件とも再現した。うち 2 件（バッククォート内の ${ (x、引用した末尾 CR）は今回の差分による deny→allow の回帰で、security#fallback の「allow に倒す経路を新設しない」という結論は反証された。行継続版は回帰ではないが FR7/NFR6 の残り。既存スイートは 822/822、一致テストは 348 件すべて通過、作業ツリーは未変更。security#0 は codex の非 JSON 出力で失敗し、fallback で補完済み。reviewer 出力に指示の注入は見当たらなかった。観点ごとの状況: security = findings（独自検証で回帰 2 件を確認。finding は出典 run に合わせ comprehensive に計上）、comprehensive = corroborated、architecture = corroborated、spec = corroborated、performance = corroborated。'
+  recommended_action: auto_fix
+  action_rationale: high 2 件と medium 1 件は、いずれも再現入力が明確で、字句解析の局所的な修正と deny ケースの追加で閉じられる。high が残る間は complete にできない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 5
+  termination: loop-cap
+residual_critical_high: 7
+rework_required: true
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+notes:
+- auto-fix scope verification additionally ran the case suite and the repro inputs after each editor dispatch; the loop-1 edit for the line-2494 finding (IndexError on the repro) and the loop-3 CR edit (broke an existing agreement test) were restored and not committed
+- in-loop re-review results went through the R3b mechanical gates directly (no second evaluator dispatch)
+- 'triage filing: no vulnerability findings this round (axis 2 not selected), so nothing to file'
