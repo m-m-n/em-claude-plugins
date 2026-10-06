@@ -804,5 +804,9 @@
   ["deny", "e25427e2a8b1dddf round2-deferred FR4.3 添字の中の行継続 a[1\\ 改行 <<2]=x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1\\\n<<2]=x\nrm -rf /home/sakura/valuable\n2]=x"],
   ["deny", "e25427e2a8b1dddf round2-deferred FR4.4 添字の ] の直前の行継続 a[1<<2\\ 改行 ]=x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1<<2\\\n]=x\nrm -rf /home/sakura/valuable\n2]=x"],
   ["deny", "e25427e2a8b1dddf round2-deferred FR4.5 ] と = の間の行継続 a[1<<2]\\ 改行 =x を見落とすと、区切り語 2]=x の行で閉じて allow になる。添字として読み、後続の rm -rf は deny", "a[1<<2]\\\n=x\nrm -rf /home/sakura/valuable\n2]=x"],
-  ["ask", "e25427e2a8b1dddf round2-deferred FR4.6 名前の途中の行継続の後の ] が来ない添字 a\\ 改行 [1<<2 は閉じていない添字として ask（バッチでは deny）", "a\\\n[1<<2\nrm -rf /home/sakura/valuable"]
+  ["ask", "e25427e2a8b1dddf round2-deferred FR4.6 名前の途中の行継続の後の ] が来ない添字 a\\ 改行 [1<<2 は閉じていない添字として ask（バッチでは deny）", "a\\\n[1<<2\nrm -rf /home/sakura/valuable"],
+  ["deny", "aa735aa95be36542 round2-deferred FR6.1 \\r の直後の # は語の一部で、コメントとして後続の rm -rf を隠さず deny", "echo x\r# ; rm -rf /home/sakura/valuable"],
+  ["deny", "aa735aa95be36542 round2-deferred FR6.2 語末の \\r があっても rm -rf /home/sakura/valuable は deny のまま", "rm -rf /home/sakura/valuable\r"],
+  ["deny", "aa735aa95be36542 round2-deferred FR6.3 語末の \\r があっても git reset --hard は deny のまま", "git reset --hard\r"],
+  ["allow", "aa735aa95be36542 round2-deferred FR6.4 CRLF 行末の無害なコマンドは allow のまま", "echo hi\r\necho done\r\n"]
 ]
