@@ -1,0 +1,92 @@
+task_id: task0007
+baseline_failures: []          # refreshed after the parent-side adoption (conflict cycle 1, case table only): the suite of the parent branch, exported with git archive and run outside a repository, Ran 8707 tests, only error the git-dependent test_tracked_occurrences_are_contained_in_allowed_areas (git ls-files fails outside a repository; it passes in the worktree) -> no failure inherited. First baseline, on the task's base 8f60eeb2: Ran 8692 tests, OK (skipped=1)
+final_failures: []             # re-executed after the case block was re-appended on the adopted parent: Ran 8747 tests, OK (skipped=1); runner 836/836; agreement module 403 tests OK
+# Red observations: the case block was appended and committed first, then the
+# runner was run against the unchanged hook; the new test classes were run
+# against the hook of the task's base (git show 8f60eeb2:em-workflow/hooks/
+# destructive-guard.py, copied beside the new tests and the case table) and
+# again, after the adoption, against the parent's hook: the failing set was the
+# same, 90 failures and 5 errors, all in this task's tests, before the hook
+# change; the runner gave 823/831 on the base hook and 828/836 on the parent's.
+# Test names below are in tests/test_destructive_guard_lexer_agreement.py,
+# class TestLineContinuationBeforeOpenersAndInWords unless another class or a
+# runner entry is named.
+acceptance_tests:
+  AC-1:
+    tests:
+      - "run-destructive-guard.py: a9d11e5242397844 round2-deferred R1.LC1"
+      - "run-destructive-guard.py: a9d11e5242397844 round2-deferred R1.LC2"
+      - "run-destructive-guard.py: a9d11e5242397844 round2-deferred R1.LC3"
+      - "run-destructive-guard.py: e7dc3c995b363c9d round2-deferred R1.LC4"
+      - "run-destructive-guard.py: e7dc3c995b363c9d round2-deferred R1.LC5"
+      - "run-destructive-guard.py: e7dc3c995b363c9d round2-deferred R1.LC6"
+      - "run-destructive-guard.py: e7dc3c995b363c9d round2-deferred R1.LC7"
+      - "run-destructive-guard.py: e7dc3c995b363c9d round2-deferred R1.LC8"
+      - test_the_nine_cases_are_appended_in_order_after_the_base_entries
+    red_confirmed: true
+    red_reason: "runner over the case table with the nine cases appended and the hook unchanged: 823/831 passed; R1.LC1 to R1.LC8 FAIL with got=allow ([destructive-guard] 破壊的なパターンに一致しない。); R1.LC9 is an allow case and passed. History order: commit cbcfab29 changes only destructive-guard-cases.json and precedes every commit that changes destructive-guard.py. The placement test itself was written after that commit and never ran red."
+  AC-2:
+    tests:
+      - test_cases_one_to_eight_deny_and_nine_allows_in_both_modes
+      - test_a_command_form_opened_past_a_pair_is_one_closed_region_from_the_dollar
+      - test_the_structure_scan_gives_the_inner_text_after_the_pairs_of_the_opener
+      - test_an_unquoted_here_document_body_reports_the_command_form_once
+      - test_the_unclosed_command_form_gives_the_inner_text_after_the_pairs
+      - test_an_unclosed_command_form_in_a_body_gives_the_inner_text_after_the_pairs
+    red_confirmed: true
+    red_reason: "verdict ('allow', 'allow') where ('deny', 'deny') is expected for R1.LC1 to R1.LC8; lex_shell() reported no brace-command-substitution region for cases 1 and 2 (ValueError: not enough values to unpack); the here-document body extraction returned [] where [(' git reset --hard; ', 0)] is expected; _unclosed_command_forms() found no form for an unclosed command form opened past a pair (ValueError: not enough values to unpack); R1.LC9 (allow) passed before the change"
+  AC-3:
+    tests:
+      - test_each_opener_found_past_a_pair_is_a_region_from_the_dollar
+      - test_a_substitution_opened_past_a_pair_is_denied_in_every_position
+      - test_the_tail_gate_applies_to_an_opener_found_past_a_pair
+      - test_an_unclosed_opener_found_past_a_pair_is_settled_at_the_dollar
+      - test_a_pair_that_ends_the_line_of_a_pending_here_document_starts_no_body
+      - test_a_settled_opener_past_a_pair_still_starts_no_body_at_the_pair
+      - test_a_pair_that_ends_a_discarded_line_is_no_continuation_for_the_look_ahead
+    red_confirmed: true
+    red_reason: "ten of the eleven opener forms had no region of their kind (AssertionError: 0 != 1; the form `${` + pair + space already read as the command form); nine deny forms gave ('allow', 'allow'); the four tail forms listed no UNOPENED offset for the opener (AssertionError: the offset is not in UNOPENED); the unclosed forms `$` + pair + `[1+2` etc. listed [] where [5] is expected; the pending here-document form had no command-form region. The three guards (settled opener at a pair, discarded line, tail forms' absent regions) passed before the change by design: they pin what the change must not alter. test_a_settled_opener_past_a_pair_still_starts_no_body_at_the_pair was mutation-checked: with the continuation bookkeeping of past() removed it fails"
+  AC-4:
+    tests:
+      - test_the_tokenizer_removes_the_pairs_that_bash_removes_in_both_modes
+      - test_the_offsets_stay_offsets_of_the_original_text
+      - test_a_separator_after_a_pair_keeps_its_own_offsets
+      - test_a_backslash_before_any_other_character_is_untouched
+      - test_a_pair_inside_an_expansion_or_a_substitution_is_read_as_before
+      - test_statements_read_the_command_word_past_a_pair
+      - test_a_command_name_read_from_a_substitution_is_read_past_a_pair
+      - test_the_fallback_word_split_is_not_touched
+    red_confirmed: true
+    red_reason: "the tokenizer read ['r\\nm', '-rf', 'x'] where ['rm', '-rf', 'x'] is expected (14 failing sub-cases over both modes); a separator after a pair came out as the extra word ('\\n', 2, 4) before ';'; statements() had no shaped words beginning rm for cases 6 and 7 and the inner text of 4 and 5; read_command_name_evidence on `which r` + pair + `m` gave 'm' where 'rm' is expected. The offsets test, the untouched-backslash test, the expansion test and the fallback test passed before the change by design (they pin what must stay)"
+  AC-5:
+    tests:
+      - test_the_map_is_identical_after_clearing_the_lexer_cache
+      - TestLineContinuationStageAgreement.test_a_scan_structure_follows_the_lexer
+      - TestLineContinuationStageAgreement.test_b_separators_lie_outside_every_region
+      - TestLineContinuationStageAgreement.test_c_real_operators_are_recorded_in_their_statement
+      - TestLineContinuationStageAgreement.test_d_tok_provenance_matches_the_contract
+      - TestLineContinuationStageAgreement.test_e_unmasked_spans_equal_their_shlex_reading
+      - TestLineContinuationStageAgreement.test_e_values_carry_no_mask_character
+      - TestLineContinuationStageAgreement.test_f_position_maps_meet_their_contract
+    red_confirmed: true
+    red_reason: "TestLineContinuationStageAgreement.test_e_unmasked_spans_equal_their_shlex_reading failed on 29 sub-cases against the base hook (the tokenizer's word '$\\n{' where the pair-free reading '${' is expected, 'r\\nm' where 'rm'); the determinism test and the other stage-agreement checks passed before the change (the map of these forms was already deterministic and the layers already agreed on the old reading), so only that check carries a red for this criterion"
+  AC-6:
+    tests:
+      - test_lexing_work_is_linear_for_each_case_repeated
+      - test_lexing_work_is_linear_for_many_pairs_after_a_dollar
+      - test_many_dollars_each_followed_by_a_pair_cost_linear_work
+      - test_a_command_with_many_pairs_is_read_in_time_by_the_hook
+    red_confirmed: false
+    red_reason: "the work bound limits the cost of the added look-ahead and the pair removal; the lexer of the base read these inputs in linear work already, so the work assertions passed before any implementation (no red state occurred for this criterion). Only test_a_command_with_many_pairs_is_read_in_time_by_the_hook failed on the base hook, on its verdict (AssertionError: 'allow' != 'deny'), not on the bound"
+  AC-7:
+    tests:
+      - test_no_label_before_the_floor_cites_either_finding
+      - TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
+      - TestModuleContract.test_round2_cases_come_only_after_the_base_entries
+      - TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
+      - TestPositionMap
+      - TestCarriageReturnIsNotABlank
+      - TestBraceCommandSubstitution
+      - "run-destructive-guard.py: every pre-existing case"
+    red_confirmed: false
+    red_reason: "a regression guard: the pre-existing cases, the placement checks and the existing classes pass before this change and are required to keep passing after it. The only existing check the planned reading forces to change is TestStageAgreement.test_e_unmasked_spans_equal_their_shlex_reading, which now compares the span with the pairs bash removes taken out (its purpose, that an unmasked span reads as shlex reads it, is kept); it is listed as a plan deviation in the report"
