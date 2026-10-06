@@ -1,0 +1,31 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-deferred
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 085614786613427d7beda50b6dec90d5dc97f0d6
+last_input_digest: sha256:1c188e3fef0319fad623e28ad68e3003ffc2f39d8875e04ba575f0a0369c4773
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: destructive-guard-lexer-round2-deferred'
+    answered_at: '2026-10-06T20:17:30+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:1c188e3fef0319fad623e28ad68e3003ffc2f39d8875e04ba575f0a0369c4773
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
