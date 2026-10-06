@@ -1,0 +1,67 @@
+schema_version: 2
+feature: validator-scenario-id-format
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.97
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-10-07T08:23:59+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-07T08:25:47+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/skills/plan-writing/SKILL.md
+  - tests/test_validate_worker_output.py
+  changed_lines_approx: 25
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/skills/plan-writing
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/scripts/validate-worker-output.py:388 は TS-\d+ のみを定義し、:469
+    で抽出、:2204 で前後の差集合を計算、:2263 で未検出の ID を拒否する。em-workflow/skills/plan-writing/SKILL.md:270
+    の例は TS-N。tests/test_validate_worker_output.py:1368 の既存の受理テストは TS-9 を使用している。読み取り専用の実行でも
+    TS13 は抽出されず、TS-13 は抽出された
+decided_at: '2026-10-07T08:26:30+09:00'
