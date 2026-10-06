@@ -828,19 +828,27 @@ class LexMap:
       substitution region around that quote, or None.
     - UNOPENED: offsets of the openers settled as not opened (P4); TAIL_START
       the earliest of them (the re-read tail starts there), None without any.
-    - WORK / ROUNDS: loop iterations and passes it cost (P7)."""
+    - WORK / ROUNDS: loop iterations and passes it cost (P7).
+    - EXT_LINES / EXT_MET (P14): the start offsets, in the lexed text and in
+      ascending order, of the lines on which the lexer met an extended-glob
+      parenthesis inside an array, and whether it met one at all. Both are
+      set on every map -- empty and False when none was met -- and they are
+      the only way a lexing hands these facts on: a map from the cache and a
+      fresh one for the same key carry the same. EXT_LINES is read by
+      _note_extglob_units(), EXT_MET by lex_shell() itself, which raises
+      the flag run() decides the second reading on (_lex_extglob_met)."""
 
     __slots__ = (
         "regions", "heredocs", "candidates", "unopened", "tail_start", "work",
-        "rounds", "ext_lines",
+        "rounds", "ext_lines", "ext_met",
     )
 
-    def __init__(self, regions, heredocs, candidates, unopened, tail_start, work, rounds):
-        # EXT_LINES: the start offsets, in the lexed text, of the lines on
-        # which the lexer met an extended-glob parenthesis inside an array
-        # (P14), in ascending order; statements() records them as parse units
-        # of the chunk it lexed (_note_extglob_units()).
-        self.ext_lines = ()
+    def __init__(
+        self, regions, heredocs, candidates, unopened, tail_start, work, rounds,
+        ext_lines=(), ext_met=False,
+    ):
+        self.ext_lines = tuple(ext_lines)
+        self.ext_met = bool(ext_met)
         self.regions = regions
         self.heredocs = heredocs
         self.candidates = candidates
@@ -1178,12 +1186,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     two parentheses; LINES is the line index when here-document bodies are to
     be skipped (None otherwise); EXTGLOB is the reading of an extended-glob
     parenthesis inside an array (P14). Returns
-    ("done", regions, ops, candidates, unopened, iterations, ambiguous) --
-    AMBIGUOUS says an extended-glob parenthesis was met directly inside an
-    array, so the other reading could differ -- or
+    ("done", regions, ops, candidates, unopened, iterations, ambiguous,
+    ext_lines) -- AMBIGUOUS says an extended-glob parenthesis was met directly
+    inside an array, so the other reading could differ, and EXT_LINES is the
+    ascending tuple of the offsets of the lines it was met on (empty exactly
+    when AMBIGUOUS is false) -- or
     ("restart", new_settled, new_reparen, iterations) when this pass learned
     of openers to settle; raises LexBudgetExceeded past BUDGET iterations and
-    LexUnmatchedSubscript when a subscript's `]` never comes.
+    LexUnmatchedSubscript when a subscript's `]` never comes. The pass writes
+    nothing outside its own locals: what it found reaches lex_shell() only
+    through this return value.
 
     The grammar state a shell-rule frame carries (CMD, RW, CS and the small
     markers on _LexFrame) is advanced one word at a time by word_transition():
@@ -2479,30 +2491,39 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 _lex_quote_candidates(
                     text, f.start + 1, n, f.region, regions[f.region][5], candidates
                 )
-    _lex_pass_ext_lines.clear()
-    _lex_pass_ext_lines.update(ext_lines)
-    return ("done", regions, ops, candidates, encountered, iterations, extglob_met)
+    return (
+        "done", regions, ops, candidates, encountered, iterations, extglob_met,
+        tuple(sorted(ext_lines)),
+    )
 
 
 # The reading of an extended-glob parenthesis inside an array (P14) that
-# lex_shell() takes when its caller names none, and whether any lexing met such
-# a parenthesis. run() judges a command under extglob off and, when the lexer
-# met one, under extglob on as well (_judge_under()); the stages in between
-# call lex_shell() without a reading, so the reading in force is set here, once,
-# by the one function that combines the verdicts. The cache below is keyed on it.
+# lex_shell() takes when its caller names none, and whether the judgment under
+# way read a map that met such a parenthesis. run() judges a command under
+# extglob off and, when a map it read met one, under extglob on as well
+# (_judge_under()); the stages in between call lex_shell() without a reading,
+# so the reading in force is set here, once, by the one function that combines
+# the verdicts. The cache below is keyed on it.
+#
+# _lex_extglob_met is raised by lex_shell() for every map it returns that
+# carries the fact (LexMap.ext_met), a map from the cache included, and reset
+# by run() at the start of a judgment; it is read by run() only.
+#
+# The parse units of the reading under judgment that hold such a parenthesis,
+# each an (origin, position) pair, are the one record of them: they are
+# recorded at one point, where statements() lexes a chunk and knows its origin
+# (_note_extglob_units()), reset at the start of each reading's judgment
+# (_judge_under()), and counted when that reading ends
+# (_count_extglob_units()).
 _lex_extglob = False
 _lex_extglob_met = False
-# The start offsets of the lines _lex_pass() last met an extended-glob
-# parenthesis on, handed to lex_shell(); and the parse units of the judgment
-# under way that hold such a parenthesis, each an (origin, position) pair
-# (_note_extglob_units()), which run() turns into a count
-# (_count_extglob_units()).
-_lex_pass_ext_lines = set()
 _lex_ext_seen = set()
 
 
 def _note_extglob_units(origin, lex_map):
-    """Record the parse units LEX_MAP met an extended-glob parenthesis in.
+    """Record the parse units LEX_MAP met an extended-glob parenthesis in:
+    the one place a unit is recorded, called by statements() for each chunk it
+    pops, and read by _count_extglob_units() alone.
     LEX_MAP is the lexer's map of one chunk of statements() read as written
     (not stripped of its here-document bodies, nor marked), ORIGIN the chunk's
     origin position (see statements()): `()` for the top-level command string,
@@ -2511,10 +2532,12 @@ def _note_extglob_units(origin, lex_map):
 
     A unit is the pair (ORIGIN, the offset its line starts at in the chunk's
     text). Both are known here, from the chunk being scanned and the line
-    offsets the lexer already collected, so no input is read again; the text
-    before the parenthesis plays no part. Only this reading of the chunk is
-    recorded: the later stages read texts derived from it (stripped, marked,
-    a fragment) whose offsets are not the chunk's, and they are not new units."""
+    starts its map carries (LexMap.ext_lines, the one carrier of them,
+    whether the map was lexed just now or came from the cache), so no input is
+    read again; the text before the parenthesis plays no part. Only this
+    reading of the chunk is recorded: the later stages read texts derived from
+    it (stripped, marked, a fragment) whose offsets are not the chunk's, and
+    they are not new units."""
     for line_start in lex_map.ext_lines:
         _lex_ext_seen.add((origin, line_start))
 
@@ -2525,7 +2548,8 @@ def _count_extglob_units():
     _note_extglob_units() recorded -- the same line of the same chunk is one
     unit however often it is read, and lines of different chunks (the
     top-level text, an `eval` / `-c` payload, and each of those inside
-    another) are different units whatever precedes the parenthesis."""
+    another) are different units whatever precedes the parenthesis. Read by
+    _judge_under() alone, which keeps the count of each reading for run()."""
     return len(_lex_ext_seen)
 
 
@@ -2563,11 +2587,17 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     inside an array compound assignment: True reads it as the pattern group
     bash accepts with `shopt -s extglob`, False as the syntax error it is
     without it. None -- what every stage but the one that combines the two
-    readings passes -- takes the reading in force (_lex_extglob). The module
-    flag _lex_extglob_met is raised whenever a lexing met such a parenthesis,
-    that is, whenever the other reading could give another map. Raises
+    readings passes -- takes the reading in force (_lex_extglob). Whether the
+    lexing met such a parenthesis, that is, whether the other reading could
+    give another map, and the offsets of the lines it met one on are facts on
+    the returned map (LexMap.ext_met, LexMap.ext_lines), the same for a map
+    from the cache as for a fresh one; they reach consumers through the map
+    alone. The module flag _lex_extglob_met, which tells run() to judge the
+    command under the other reading as well, is raised here from that fact
+    for every map returned, a cached one included. Raises
     LexUnmatchedSubscript (a LexBudgetExceeded) for a subscript whose `]`
-    never comes.
+    never comes; a text whose lexing raises raises on every call (nothing is
+    cached for it).
 
     The result is cached on (TEXT, MODE, BODIES, EXTGLOB): the maps are never
     modified, and every stage that needs the lexer's reading of one chunk
@@ -2580,49 +2610,48 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     if extglob is None:
         extglob = _lex_extglob
     key = (text, mode, bodies, extglob)
-    cached = _LEX_CACHE.get(key)
-    if cached is not None:
-        return cached
-    n = len(text)
-    budget = LEX_WORK_FACTOR * n + _LEX_WORK_FLOOR
-    lines = _LexLines(text) if bodies else None
-    settled = set()
-    reparen = set()
-    used = 0
-    rounds = 0
-    while True:
-        rounds += 1
-        result = _lex_pass(text, mode, settled, reparen, lines, budget - used, extglob)
-        if result[0] == "done":
-            break
-        used += result[3]
-        settled.update(result[1])
-        reparen.update(result[2])
-    _, regions, ops, candidates, encountered, iterations, ambiguous = result
-    used += iterations
-    if ambiguous:
+    lex_map = _LEX_CACHE.get(key)
+    if lex_map is None:
+        n = len(text)
+        budget = LEX_WORK_FACTOR * n + _LEX_WORK_FLOOR
+        lines = _LexLines(text) if bodies else None
+        settled = set()
+        reparen = set()
+        used = 0
+        rounds = 0
+        while True:
+            rounds += 1
+            result = _lex_pass(text, mode, settled, reparen, lines, budget - used, extglob)
+            if result[0] == "done":
+                break
+            used += result[3]
+            settled.update(result[1])
+            reparen.update(result[2])
+        _, regions, ops, candidates, encountered, iterations, ambiguous, ext_lines = result
+        used += iterations
+        # The re-read tail starts at the earliest opener settled as not
+        # opened: it is the very rule the final pass applied (no `<<`
+        # operator, no comment from there on).
+        unopened = sorted(encountered)
+        tail_start = min(settled) if settled else None
+        lex_map = LexMap(
+            [LexRegion(kind, s, e, parent, closed) for kind, s, e, parent, closed, _anc in regions],
+            [LexHeredoc(*op) for op in ops],
+            sorted(candidates, key=lambda c: (c.start, c.end)),
+            unopened,
+            tail_start,
+            used,
+            rounds,
+            ext_lines,
+            ambiguous,
+        )
+        if len(_LEX_CACHE) >= _LEX_CACHE_LIMIT:
+            del _LEX_CACHE[next(iter(_LEX_CACHE))]
+        _LEX_CACHE[key] = lex_map
+        if bodies and all(op.body_start is None for op in lex_map.heredocs):
+            _LEX_CACHE[(text, mode, False, extglob)] = lex_map
+    if lex_map.ext_met:
         _lex_extglob_met = True
-    # The re-read tail starts at the earliest opener settled as not opened:
-    # it is the very rule the final pass applied (no `<<` operator, no
-    # comment from there on).
-    unopened = sorted(encountered)
-    tail_start = min(settled) if settled else None
-    lex_map = LexMap(
-        [LexRegion(kind, s, e, parent, closed) for kind, s, e, parent, closed, _anc in regions],
-        [LexHeredoc(*op) for op in ops],
-        sorted(candidates, key=lambda c: (c.start, c.end)),
-        unopened,
-        tail_start,
-        used,
-        rounds,
-    )
-    if ambiguous:
-        lex_map.ext_lines = tuple(sorted(_lex_pass_ext_lines))
-    if len(_LEX_CACHE) >= _LEX_CACHE_LIMIT:
-        del _LEX_CACHE[next(iter(_LEX_CACHE))]
-    _LEX_CACHE[key] = lex_map
-    if bodies and all(op.body_start is None for op in lex_map.heredocs):
-        _LEX_CACHE[(text, mode, False, extglob)] = lex_map
     return lex_map
 
 
@@ -7930,6 +7959,7 @@ _lex_ext_units = []
 
 def run():
     """The hook's entry point: reads the payload and judges it with main()."""
+    global _lex_extglob_met
     try:
         payload = json.load(sys.stdin)
     except Exception:
@@ -7937,12 +7967,15 @@ def run():
 
     # Whether bash accepts an extended-glob parenthesis inside an array
     # depends on `shopt -s extglob`, which the hook cannot know (P14). The
-    # command is judged with the option off; when the lexer met such a
-    # parenthesis (_lex_extglob_met) it is judged with the option on as well,
-    # and the stricter of the two verdicts stands, so every line bash would run
-    # as a command under either reading is judged as one. Only the verdicts are
-    # compared here: which `<<` is a here-document operator stays the lexer's
-    # call, under each reading.
+    # command is judged with the option off; when a map it read met such a
+    # parenthesis (_lex_extglob_met, raised by lex_shell() from the map's
+    # fact) it is judged with the option on as well, and the stricter of the
+    # two verdicts stands, so every line bash would run as a command under
+    # either reading is judged as one. Only the verdicts are compared here:
+    # which `<<` is a here-document operator stays the lexer's call, under
+    # each reading. The flag and the unit counts are those of this judgment
+    # alone: both start empty here.
+    _lex_extglob_met = False
     del _lex_ext_units[:]
     outcome = _judge_under(payload, False)
     if _lex_extglob_met:
