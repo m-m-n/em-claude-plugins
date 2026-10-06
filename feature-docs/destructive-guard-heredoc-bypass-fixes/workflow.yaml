@@ -120,7 +120,7 @@ workflow:
   failed_kind: null
   base_commit: d1f3077dbfce58a59f8289c42e3e2b0089cac229
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -192,7 +192,17 @@ tasks:
     status: merged
     branch: em-workflow/destructive-guard-heredoc-bypass-fixes/task0003
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: フックは全 Bash 呼び出しで走る字句解析で、今回の変更が NFR2（作業量の上限）に関わる走査を増やすため
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
