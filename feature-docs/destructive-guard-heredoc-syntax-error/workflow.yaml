@@ -109,7 +109,7 @@ workflow:
   base_commit: f9c3395f4bf231cbddfe7fbc20e73507ea40fdba
   completed_at_commit: edc2dbff80c22e823b4279e4fcf046f6bb0f2bc1
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -144,9 +144,16 @@ tasks:
     branch: em-workflow/destructive-guard-heredoc-syntax-error/task0001
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
