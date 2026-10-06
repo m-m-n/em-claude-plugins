@@ -1,0 +1,215 @@
+schema_version: 1
+feature: destructive-guard-lexer-round2-residuals
+created: '2026-10-06'
+base_branch: main
+goal: |+
+  # destructive-guard: 一本化した字句解析の review round 2 残件 4 件（for (( )) { と time -- のコマンド位置 high 2 件、配列添字・区切り語、閉じない (( の二乗の読み直し）
+
+  Notion: https://www.notion.so/3f03509ec8ee819681e4d33402a8f361
+
+
+  ## 脆弱性の概要 (必須)
+  `em-workflow/hooks/destructive-guard.py` の一本化した字句解析（feature `destructive-guard-unified-lexer`）に、review round 2 で次の 4 件が残った。high 2 件はコマンド位置の判定が bash より狭く、`((1<<2))` の `<<` をヒアドキュメント演算子と読んで後続行を本文として捨て、破壊的コマンドに allow を返す。
+  ## 参照 (必須)
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: high
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: em-workflow（integration ブランチ `em-workflow/destructive-guard-unified-lexer/integration`）
+  - 修正済みバージョン: 無し
+  ## 攻撃シナリオ (必須)
+  エージェントが生成する Bash コマンドが次の形をとると、PreToolUse フックが allow を返し、2 行目の破壊的コマンドが実行される（評価者が bash 5.3.9 で rm を echo に置き換えて確認）。
+  - 453963d025537b11 high（deferred）: `for ((...))` の直後の `{` を予約語と読まない。例: `for ((i=0;i<1;i++)) { ((1<<2)); }` の次の行に `rm -rf ...`、続けて `2` の行
+  - 681fab61e1d9ff2c high（deferred）: `time --` / `time -p --` の後ろをコマンド位置と読まない。例: `time -- ((1<<2))` の次の行に `rm -rf ...`、続けて `2` の行
+  - 9381769d7116fab2 medium（round 1 の b739294836fa88ea から未解決）: 代入語の配列添字 `a[1<<2]=x` の `<<`、英数字以外を含む区切り語（`<<END-X`、`<<E.X`、`<<E\X`）を読み違える
+  - 29bbf9032dd762a0 medium（round 1 の 551b3cec17ed0813 から未解決、退行）: `))` で閉じない `((` / `$((` ごとに全文を読み直すため仕事量が二乗で増え、`x=$((echo N) | wc -c)` を 28 行並べた程度の無害なコマンドが scan-budget の ask（batch では deny）になる
+  いずれも基準コミットでも allow（high 2 件と medium の 1 件目）で、今回の変更による退行は 29bbf9032dd762a0 のみ。
+  ## 影響範囲 (必須)
+  無人実行（em-workflow の batch）を含め、hook が allow を返すので rm -rf や git reset --hard が確認なしで実行される。性能退行では無害なコマンドが batch で deny され、無人実行が止まる。
+  ## 完了の定義 (必須)
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  - [ ] 上の各形を deny ケースとして `em-workflow/hooks/tests/destructive-guard-cases.json` に足す（直す前に足す）
+  - [ ] 二乗経路について、k 個の `$((cmd) ...)` を並べた入力で仕事量が入力長に比例することをテストで固定する
+  - [ ] 既存の deny / ask ケースが 1 件も消えていない
+  ## 該当箇所 (任意)
+  - `em-workflow/hooks/destructive-guard.py:726`（`_LEX_AFTER_CLOSER_WORDS` に `{` が無い）
+  - `em-workflow/hooks/destructive-guard.py:900`（`word_transition()` の `time_p` が `--` を受け付けない）
+  - `em-workflow/hooks/destructive-guard.py:154`（`HEREDOC_OP` の `(\w+)`）、`:1180`（演算子の登録）
+  - `em-workflow/hooks/destructive-guard.py:1332`（非隣接の閉じでの全文 restart）
+  - 詳細は integration ブランチの `feature-docs/destructive-guard-unified-lexer/reviews/round2.yaml`（stable_id で検索）
+  ## 暫定緩和策 (任意)
+  なし。修正はどれも字句解析内の局所（上の各行）に収まる見込み。
+
+parent_branch: em-workflow/destructive-guard-lexer-round2-residuals/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.72
+      '2': 0.28
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.87
+      '2': 0.13
+      '3': 0.0
+  at: '2026-10-06T13:55:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 8a59966b271fbc59a7dbd8042f5bfae72365061d
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックの字句解析の修正であるため（tier reduced、design-step 推奨: skipped）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 算術 for の直後の { を予約語として読む（453963d025537b11）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: time -- / time -p -- の後ろをコマンド位置として読む（681fab61e1d9ff2c）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 代入語の配列添字の中の << を演算子と読まない（9381769d7116fab2 前半）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: ヒアドキュメントの区切り語を語全体から決める（9381769d7116fab2 後半）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 非隣接の閉じでの読み直しを全文からにしない（29bbf9032dd762a0）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 直す前に cases.json へケースを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 字句解析の一致テストに固定期待と線形性テストを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 既存ケースを消さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: lex_shell() の仕事量が入力長に比例する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 約 60KB の入力でも 10 秒以内に評価が終わる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 作業上限の超過時は scan-budget の ask（batch では deny）にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 決定性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 標準ライブラリのみを使い、字句解析はファイルを読まず何も評価しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: bash 5.3 の構文に合わせ、一致しない形は後続行を検査から外さない側に倒す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

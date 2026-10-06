@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-lexer-round2-residuals
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 453fc51aa18365b95ee76995dfec34653463570c
 last_input_digest: sha256:0a28391755c5b323466995b48beb85b7dac9dab2cc2bf33914c405788aa2ba7f
