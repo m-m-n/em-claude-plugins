@@ -240,7 +240,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-lexer-round2-residuals/task0004
     notes: null
 review:
