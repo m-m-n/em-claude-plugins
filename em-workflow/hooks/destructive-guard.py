@@ -567,6 +567,23 @@ class _TrackingLexer(shlex.shlex):
 #              readings -- when the lexer met such a parenthesis -- and keeps
 #              the stricter verdict.
 #
+# destructive-guard-heredoc-bypass-fixes (finding a7c0d90ac3e44e5b) adds:
+#
+#   P15        the command-name classification tells two groups apart: the
+#              declaration group (`declare`, `typeset`, `local`, `export`,
+#              `readonly`) and the re-parsing group (`eval`, `let`, `alias`),
+#              _LEX_COMMAND_GROUPS, kept in _LexFrame.decl. A `NAME[` argument
+#              of either group opens a subscript that ends at the end of its
+#              line, because bash ends such a word at an unquoted newline
+#              (measured on bash 5.3.9 for each of the eight names): it never
+#              defers a here-document body pending before it, so the body
+#              starts where it would if the argument had no `[`, and one still
+#              open at the end of the line or the text is no subscript and no
+#              unmatched subscript. Within the line it is read to its `]` as
+#              before, so `x[a b]=( <<EOF` still keeps the `<<` out of the
+#              operators. A `NAME[` word at a command position is unchanged:
+#              bash matches its brackets across lines.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -719,9 +736,10 @@ class _LexFrame:
     its `]]`) and the little markers `time -p`, KW (the keyword the previous
     word was: `for`, `select` or `coproc`), function-name and function-head
     tracking. ASG (every word since the command position was an assignment
-    word, so the next one is still in assignment position), DECL (the command
-    word was a declaration builtin, so its words are in declaration-argument
-    position) and ARR_END (the offset of the `(` that would open an array
+    word, so the next one is still in assignment position), DECL (the group of
+    the command word -- _LEX_GROUP_DECLARATION or _LEX_GROUP_REPARSING, else
+    _LEX_GROUP_NONE -- so its words are in declaration-argument position) and
+    ARR_END (the offset of the `(` that would open an array
     compound assignment: the end of the `NAME=` / `NAME+=` word just read in
     one of those positions) are the grammar state that tells an array
     compound assignment's `(` from every other parenthesis. The kind `array`
@@ -733,12 +751,14 @@ class _LexFrame:
     follows `NAME`, so the `=(` after it can open an array) and `extglob` (the
     pattern group of an extended-glob parenthesis inside an array, read to its
     matching `)`) are frames without a region of their own, as `array` is;
-    regions opened inside them hang under REG."""
+    regions opened inside them hang under REG. BOUND (P15) marks a subscript
+    that ends at the end of its line and so takes no region sequence number;
+    SUB_BOUND is that decision made for the subscript SUB_AT will open."""
 
     __slots__ = (
         "kind", "start", "region", "reg", "cmd", "cs", "in_word", "depth",
         "prev_plain", "time_p", "kw", "fn_p", "rw", "cond", "asg", "decl",
-        "arr_end", "redir", "sub_at", "named",
+        "arr_end", "redir", "sub_at", "named", "sub_bound", "bound",
     )
 
     def __init__(self, kind, start, region, reg, cmd=False, depth=0):
@@ -757,11 +777,13 @@ class _LexFrame:
         self.rw = False
         self.cond = False
         self.asg = False
-        self.decl = False
+        self.decl = _LEX_GROUP_NONE
         self.arr_end = -1
         self.redir = False
         self.sub_at = -1
         self.named = False
+        self.sub_bound = False
+        self.bound = False
 
 
 class _LexLines:
@@ -805,6 +827,7 @@ _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
 _LEX_EXTGLOB_SPECIAL = re.compile(r"[\\'\"$`()<>]")
 _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
 _LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
+_LEX_SUBSCRIPT_LINE_SPECIAL = re.compile(r"[\\'\"$`\[\]<>\n]")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
@@ -820,12 +843,39 @@ _LEX_ASSIGN_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\+?=")
 # the matching `]` by a `subscript` frame, and the `=` or `+=` after that `]`
 # makes the word an assignment word.
 _LEX_SUBSCRIPTED_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\[")
-# The builtins bash parses assignment arguments for: after one of them a
-# `NAME=(` word opens an array compound assignment. `eval` and `let` are
-# assignment-argument builtins in the parser, `alias` is an assignment builtin.
-_LEX_DECLARATION_BUILTINS = frozenset(
-    {"declare", "typeset", "local", "export", "readonly", "eval", "let", "alias"}
-)
+# The command-name classification of word_transition(): the group a command
+# word belongs to, which sets how its arguments are read. After a command word
+# of either group a `NAME=(` word opens an array compound assignment and a
+# `NAME[` word opens a subscript. The declaration group is bash's declaration
+# builtins; the re-parsing group is `eval`, `let` and `alias`, which take their
+# arguments as assignment words and re-parse them. Every consumer reads the
+# group from the classification (_LexFrame.decl), never from the command word.
+_LEX_GROUP_NONE = 0
+_LEX_GROUP_DECLARATION = 1
+_LEX_GROUP_REPARSING = 2
+_LEX_COMMAND_GROUPS = {
+    "declare": _LEX_GROUP_DECLARATION,
+    "typeset": _LEX_GROUP_DECLARATION,
+    "local": _LEX_GROUP_DECLARATION,
+    "export": _LEX_GROUP_DECLARATION,
+    "readonly": _LEX_GROUP_DECLARATION,
+    "eval": _LEX_GROUP_REPARSING,
+    "let": _LEX_GROUP_REPARSING,
+    "alias": _LEX_GROUP_REPARSING,
+}
+# Whether the subscript a `NAME[` argument opens ends at the end of its line
+# (P15), by the group of the command word. bash 5.3.9 ends such a word at an
+# unquoted newline for every command word of both groups -- the line after a
+# pending operator's line is its body, measured on each of the eight names --
+# so a `]` on a later line closes nothing. The subscript is still read to its
+# `]` within the line, because the array `NAME[...]=(` opens keeps `<<` in it
+# from being an operator. A subscript ended this way takes no region sequence
+# number, so it never defers a pending body, and one still open at the end of
+# the text is no unmatched subscript.
+_LEX_ARG_SUBSCRIPT_BOUND = {
+    _LEX_GROUP_DECLARATION: True,
+    _LEX_GROUP_REPARSING: True,
+}
 # What an extended-glob parenthesis follows directly, inside one word.
 _LEX_EXTGLOB_PREFIXES = "?*+@!"
 # Case-construct states while a pattern is being read: PATTERN_FIRST right
@@ -966,7 +1016,22 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     parenthesis: with EXTGLOB true it is a pattern group (an `extglob` frame,
     read to its matching `)`), with it false it is the syntax error a bare `(`
     is. A subscript still open at the end of the text raises
-    LexUnmatchedSubscript."""
+    LexUnmatchedSubscript.
+
+    Subscripts of arguments (P15). The `NAME[` word that is an argument of a
+    command word of the declaration group (`declare` / `typeset` / `local` /
+    `export` / `readonly`) or of the re-parsing group (`eval` / `let` /
+    `alias`) -- the group is the command-name classification's, not a reading
+    of the command word -- opens a subscript bound to its line: bash ends the
+    word at an unquoted newline, so at the first newline the subscript's own
+    text meets, the frame closes without a `]` and the newline is read by the
+    frame below. Such a subscript takes no region sequence number, so it never
+    defers a here-document body pending before it -- the body starts on the
+    next line exactly as it would without the `[` -- and one open at the end
+    of the text is no LexUnmatchedSubscript. Quotes and substitutions opened
+    inside it are regions as ever, and defer a pending body as they do
+    anywhere. A `NAME[` word at a command position keeps its unbound
+    subscript: bash matches its brackets across lines."""
     n = len(text)
     tail_start = min(settled) if settled else None
     regions = []  # [kind, start, end, parent, closed, nearest substitution ancestor]
@@ -1017,24 +1082,30 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 text, f.start + 2, end - 1, f.region, regions[f.region][5], candidates
             )
 
-    def open_bare(f, kind, start, named=False):
+    def open_bare(f, kind, start, named=False, bound=False):
         """P14: a `subscript` (at its `[`) or `extglob` (at its `(`) frame on
         top of F. It has no region of its own -- regions opened inside it hang
         under F's -- but it counts as an open context for the here-document
         bodies pending before it, as a region does, so it takes a region
-        sequence number."""
+        sequence number. BOUND (the subscript of a `NAME[` argument of a
+        command word of the declaration or re-parsing group, P15) is the
+        exception: it ends at the end of its line, so it takes no sequence
+        number and never defers a pending body."""
         nonlocal seq
         child = _LexFrame(kind, start, None, f.reg, depth=1)
         child.named = named
+        child.bound = bound
         stack.append(child)
-        seq += 1
-        rseq.append(seq)
+        if not bound:
+            seq += 1
+            rseq.append(seq)
 
     def close_bare(f):
         """The frame F opened by open_bare() ends: the word of the frame below
         goes on after it."""
         stack.pop()
-        rseq.pop()
+        if not f.bound:
+            rseq.pop()
         stack[-1].in_word = True
 
     def close_subscript(f, after):
@@ -1151,13 +1222,17 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         position.
 
         P13. A word at a command position or after assignment words only
-        (ASG) is in assignment position; one after a declaration builtin, or
-        `eval`, `let` or `alias` (DECL) is in declaration-argument position.
+        (ASG) is in assignment position; one after a command word of the
+        declaration group or of the re-parsing group (DECL, set from the
+        command-name classification _LEX_COMMAND_GROUPS, the one place the
+        group is decided) is in declaration-argument position.
         A `NAME=` / `NAME+=` word in either position that a `(` follows
         directly sets ARR_END to its end: that `(` opens an array compound
         assignment. P14: a `NAME[` word in either position sets SUB_AT to the
         offset of its `[`, where a subscript frame opens; its `]` followed by
-        `=(` / `+=(` sets ARR_END."""
+        `=(` / `+=(` sets ARR_END. P15: in declaration-argument position the
+        subscript is bound to its line (SUB_BOUND, by the group): it defers no
+        pending here-document body."""
         if f.redir:
             # The target word of a redirection: it is no command or
             # assignment word and leaves the grammar state as it was.
@@ -1176,10 +1251,13 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         if rw and not f.cmd and w in _LEX_AFTER_CLOSER_WORDS:
             f.cmd = True
         assign_pos = f.cmd or f.asg
-        decl_pos = f.decl and not f.cmd
+        # The group of the command word this word is an argument of (the
+        # command-name classification, _LEX_COMMAND_GROUPS), or none: nonzero
+        # exactly when the word is in declaration-argument position.
+        decl_pos = _LEX_GROUP_NONE if f.cmd else f.decl
         if f.cmd:
             f.asg = False
-            f.decl = False
+            f.decl = _LEX_GROUP_NONE
         if f.cond and w == "]]":
             f.cond = False
             f.cmd = False
@@ -1265,14 +1343,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         if assign_pos:
             if lw is not None and _LEX_ASSIGN_WORD.match(lw):
                 f.asg = True
-                f.decl = False
+                f.decl = _LEX_GROUP_NONE
                 array_word = _LEX_ASSIGN_WORD.fullmatch(lw)
             elif sub_name is not None:
                 # `NAME[`: an assignment word when the `=` / `+=` follows the
                 # subscript's `]`, which close_subscript() finds out; until
                 # then it is taken for one, and the subscript opens at its `[`.
                 f.asg = True
-                f.decl = False
+                f.decl = _LEX_GROUP_NONE
+                f.sub_bound = False
                 if logical is None:
                     f.sub_at = end - len(first) + sub_name.end() - 1
                 else:
@@ -1281,9 +1360,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                     )
             else:
                 f.asg = False
-                f.decl = name in _LEX_DECLARATION_BUILTINS
+                f.decl = _LEX_COMMAND_GROUPS.get(name, _LEX_GROUP_NONE)
         elif decl_pos:
             if sub_name is not None:
+                f.sub_bound = _LEX_ARG_SUBSCRIPT_BOUND[decl_pos]
                 if logical is None:
                     f.sub_at = end - len(first) + sub_name.end() - 1
                 else:
@@ -1443,10 +1523,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         base.fn_p = False
         base.rw = False
         base.cond = False
-        base.asg = base.decl = False
+        base.asg = False
+        base.decl = _LEX_GROUP_NONE
         base.arr_end = -1
         base.redir = False
         base.sub_at = -1
+        base.sub_bound = False
         limit = n
         discard_end = None
 
@@ -1783,7 +1865,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                     # here, in the run the logical word reaches it in.
                     at = f.sub_at
                     f.sub_at = -1
-                    open_bare(f, "subscript", at, True)
+                    bound = f.sub_bound
+                    f.sub_bound = False
+                    open_bare(f, "subscript", at, True, bound)
                     i = at + 1
                     continue
                 i = end
@@ -1823,7 +1907,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 # opens at the `[` (P14).
                 at = f.sub_at
                 f.sub_at = -1
-                open_bare(f, "subscript", at, True)
+                bound = f.sub_bound
+                f.sub_bound = False
+                open_bare(f, "subscript", at, True, bound)
                 i = at + 1
                 continue
             if kind == "array" and text[i] == "[" and discard_end is None:
@@ -1975,7 +2061,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             # A subscript (P14), read the way bash matches `[` ... `]`: only
             # quotes, expansions, backquotes, backslash escapes and nested
             # brackets mean anything; a blank, `<<` or `;` is part of it.
-            m = _LEX_SUBSCRIPT_SPECIAL.search(text, i, limit)
+            m = (
+                _LEX_SUBSCRIPT_LINE_SPECIAL if f.bound else _LEX_SUBSCRIPT_SPECIAL
+            ).search(text, i, limit)
             if m is None:
                 i = limit
                 continue
@@ -1983,6 +2071,16 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
             c = text[j]
             if c == "\\":
                 i = j + 2
+                if text.startswith("\n", j + 1):
+                    # A line continuation never starts a here-document body
+                    # (P11), in a subscript as anywhere in a word.
+                    cont_at = i
+            elif c == "\n":
+                # The line ends before the `]` of a bound subscript (P15): bash
+                # ends the word here, so there is no subscript. The newline is
+                # read by the frame below, as any other line end.
+                close_bare(f)
+                i = j
             elif c == "<" or c == ">":
                 if text.startswith("(", j + 1) and (j == 0 or text[j - 1] not in "<>"):
                     # A process substitution runs inside a subscript too.
@@ -2075,8 +2173,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     ]
     if unclosed:
         return ("restart", unclosed, [], iterations)
-    if any(f.kind == "subscript" for f in stack):
+    if any(f.kind == "subscript" and not f.bound for f in stack):
         # A subscript whose `]` never comes (P14): bash keeps reading for it.
+        # One bound to its line (P15) is no subscript past the line's end.
         raise LexUnmatchedSubscript()
     for f in stack[1:]:
         if f.region is not None:
