@@ -3,9 +3,9 @@ feature: destructive-guard-lexer-round2-residuals
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 7e65c2b34e365cb01acde34a0ad98b1ac51dbda5
-last_input_digest: sha256:5b0ab3d836d2e1754ba8c80298aa272a661d7cc0ce4b22702880fac7226e9ba7
-active_request_id: create-spec-run-0001
+base_revision: b32ce704d518021f9f850efaeba0fdcb119c94af
+last_input_digest: sha256:0a28391755c5b323466995b48beb85b7dac9dab2cc2bf33914c405788aa2ba7f
+active_request_id: create-spec-run-0002
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -20,8 +20,12 @@ answers:
     answered_at: '2026-10-06T13:56:18+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:5b0ab3d836d2e1754ba8c80298aa272a661d7cc0ce4b22702880fac7226e9ba7
+  output_digest: sha256:62915f769d19b11598a5a02ced8e128488e835ff289c1c1373a1b3c7f515a7c6
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:0a28391755c5b323466995b48beb85b7dac9dab2cc2bf33914c405788aa2ba7f
   output_digest: null
 artifacts: []
 patches: []
