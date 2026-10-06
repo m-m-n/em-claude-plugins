@@ -1,0 +1,252 @@
+feature: destructive-guard-heredoc-syntax-error
+collected_at: '2026-10-06T12:40:18+09:00'
+session_ids:
+- 01a10f4b-4a73-773c-81e1-c2b4f462c5aa
+signals:
+  review_critical_high:
+  - stable_id: 5ffccd24040ce1a6
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 捨てた行で閉じない展開を再走査の tail_start に回し、後続行の判定が止まって deny が allow に変わる
+    resolution: fixed
+  - stable_id: e7c93a4306bf3eaa
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: 先頭にリダイレクトがあると後ろの配列代入を認識せず、回避が残る'
+    resolution: fixed
+  - stable_id: b6d33914596a191f
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: 引用を含む添字や `=` と `(` の間の行継続がある配列代入を配列と認識せず、回避が残る'
+    resolution: unresolved
+  - stable_id: d476764c694786d1
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 配列直下の ; | ( などの構文エラーでも bash は行を捨てるが、ガードは << だけを契機にするため、閉じた配列の後のヒアドキュメントで回避できる
+    resolution: unresolved
+  - stable_id: cab21999b57ce304
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: 番号付きリダイレクトで修正後もガードを回避できる'
+    resolution: fixed
+  - stable_id: 2d105af70e539bdd
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 番号付き / 変数名形式のファイル記述子で配列の検出を回避できる
+    resolution: fixed
+  - stable_id: 0fbb436715caf22a
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: 引用符や行継続を含む配列代入でガードを回避できる'
+    resolution: unresolved
+  - stable_id: d75906fa67c424f5
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-4: 再解析後に構文エラー行の状態解除が省略される'
+    resolution: fixed
+  - stable_id: ecb0ee96c7343101
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 破棄行の未閉鎖展開が後続行の破棄処理を無効化する
+    resolution: fixed
+  - stable_id: 5b0deff7478264d1
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 配列内の不正な括弧を入れ子として扱い後続行を本文に隠す
+    resolution: fixed
+  - stable_id: 4afc6efbaed6b84a
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Redirect-target state leaks across frame boundaries
+    resolution: fixed
+  - stable_id: 59900360e187cfa9
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'God-function expansion: _lex_pass absorbs array grammar and discard lifecycle'
+    resolution: unresolved
+  - stable_id: 2f1dc9ffeb039d43
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: God-function expansion with shotgun state resets in lexer
+    resolution: unresolved
+  - stable_id: 64b1a5346e97262c
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 添字の引用符と行継続で配列の検出を回避できる
+    resolution: unresolved
+  - stable_id: fd4b0e41e037d221
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: arrays after eval / let / alias are not recognized, so the bypass
+      is still allowed'
+    resolution: unresolved
+  - stable_id: c630bfb6a19f88a2
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'Prior finding 64b1a5346e97262c not fixed: an array whose subscript is
+      quoted or expanded is still allowed'
+    resolution: unresolved
+  - stable_id: c231452e02deec9b
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 有効な拡張パターンの括弧で行を破棄し、破壊的な命令を許可する
+    resolution: unresolved
+  - stable_id: 4b5de463a6e5e162
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 算術添字のシフト演算子で行を破棄し、破壊的な命令を許可する
+    resolution: unresolved
+  - stable_id: d96cc6e9cb96644b
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 配列要素の添字の読み取りがプロセス置換を認識せず、deny から allow に退行する
+    resolution: fixed
+  - stable_id: 1004eff2811ef018
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 拡張パターンの接頭辞と括弧の間の行継続を認識せず、deny から allow に退行する
+    resolution: fixed
+  - stable_id: b0734a006de6f4d7
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: 代入語と ( の間の行継続で配列代入を認識せず、配列直下の << を演算子として登録する'
+    resolution: deferred
+  - stable_id: eca879124d555b53
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 配列直下の << 以外の構文エラー（<<< < > ; | &）では行を捨てず、同じ行の後続ヒアドキュメントで後続行を隠せる
+    resolution: fixed
+  - stable_id: af486323aabeb05a
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 拡張パターンの状態を途中で変更すると両方の判定を回避できる
+    resolution: fixed
+  - stable_id: f10e0854baf2c59e
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: extglobを途中で切り替えると両方の解析で破壊的な命令を見逃す
+    resolution: fixed
+  - stable_id: 2ee8371b6e7faca6
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続を含む配列代入が依然として許可される
+    resolution: fixed
+  - stable_id: 5e2c469f564c8422
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 破棄行の未閉鎖展開が後続の構文エラー処理を無効にする
+    resolution: fixed
+  - stable_id: 98e83fd39a73528d
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 拡張パターン内のプロセス置換を見落とす
+    resolution: fixed
+  - stable_id: d103d6a83800eec7
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 引用された設定名で途中切替の検出を回避できる
+    resolution: fixed
+  - stable_id: 6b5425c1b780fca7
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: '前回所見 f10e0854baf2c59e の修正が不完全: extglob の途中切り替えを文字列の部分一致でしか検出していない'
+    resolution: fixed
+  - stable_id: 8cb713c5179b2f20
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 添字と代入演算子の間の行継続で配列代入を見落とす
+    resolution: fixed
+  - stable_id: a7c0d90ac3e44e5b
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-3: 宣言組み込みの引数の NAME[ を添字として読み、保留中のヒアドキュメントの本文を遅らせるため deny が allow に戻る'
+    resolution: deferred
+  - stable_id: f34ee27bc8c323b1
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 異なる eval の解析単位を同一視し、extglob の切り替えによる回避を許可する
+    resolution: deferred
+  - stable_id: 765c3a53859569c2
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Duplicated subscript/extglob body parsers will drift
+    resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+  - stable_id: 35b1ba95a34deaa7
+    category: architecture
+    resolution_reason: evaluator が false positive と判定（LexBudgetExceeded は run()/statements()
+      が scan-budget の ask に変え、段どうしを比べる出力が無い。E-10 がその ask を固定）
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みでバケット 1（規則追加とテスト追加の小規模変更）の確率 0.94 となり reduced
+      を採用した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.09
+        confidence: 0.9
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.91
+          '2': 0.09
+          '3': 0.0
+        expectation_clear: 0.9
+      observed_at: '2026-10-06T07:43:00+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.06
+        confidence: 0.93
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.9400000000000001
+          '2': 0.06
+          '3': 0.0
+        expectation_clear: 0.86
+      observed_at: '2026-10-06T07:47:30+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 0
+      new_functions_needed: 0
+      new_files_needed: []
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      work_still_required_evidence: HEAD 84ec109でpython3 em-workflow/hooks/destructive-guard.pyにPreToolUse
+        JSON（tool_input.command="x=( <<EOF\nrm -rf /tmp/some-dir\nEOF"）を渡すと、終了コード0・permissionDecision="allow"を返した。rm行はヒアドキュメント本文として除去された。/tmp/some-dirの削除は単独でもallowだが、git
+        reset --hard HEADは単独deny、同じ形ではallowだった。cases.jsonの627件に該当形はなく、deny346件・ask117件を含む既存試験は628/628成功した
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 0
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 0
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- reduced tier（バケット 1 判定）だったが、レビューで high 所見が 2 ラウンド合計 30 件超出て rework 1 回と deferred
+  4 件に至った。シェル字句解析の回避系修正は事前見積りより複雑になりやすい
