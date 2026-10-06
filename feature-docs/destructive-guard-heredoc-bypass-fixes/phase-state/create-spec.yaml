@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-heredoc-bypass-fixes
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 2d32471733ae219d9f6339dc81313556a062a291
 last_input_digest: sha256:704f5aa5bacfded40a140ec25e7d544d1261cef3211dcf58959905b5bdfb0b82
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   destructive-guard-heredoc-bypass-fixes-q0001:
     status: answered
@@ -74,10 +74,16 @@ worker_runs:
   input_digest: sha256:2b0596fa48ad00f14179ffda077b575920be9342ead8a2a34a6251ec4c4c9563
   output_digest: sha256:20d24f10d280fd3c7553f1e3825b7af43f1436a61c56c439f0c72807a00bf7b2
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:704f5aa5bacfded40a140ec25e7d544d1261cef3211dcf58959905b5bdfb0b82
-  output_digest: null
-artifacts: []
+  output_digest: sha256:622e9875402df13feeda871361e189a706cbb8aaa08a5a1f4f617406c90f5c19
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-bypass-fixes/REQUIREMENTS.md
+  sha256: sha256:514eb6c33b2b1f8b056cfe46e1e778d8549b6e2fe89ebd1b9a02f6917872d08c
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-heredoc-bypass-fixes/SPEC.md
+  sha256: sha256:d24b36b6f18dfaac9caf1043c88e8515b35eee0ddbf2eee72ebb17c257b113f1
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
