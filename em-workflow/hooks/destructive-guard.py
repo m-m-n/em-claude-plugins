@@ -152,6 +152,62 @@ READWRITE_REDIRECT = re.compile(r"\d*<>\d*")
 # regex match. `<<<` (a here-string, not a here-document) stays excluded by
 # the negative lookahead, unchanged from before this task.
 HEREDOC_OP = re.compile(r"<<-?(?!<)[ \t]*(['\"]?)(\w+)\1")
+# The delimiter read as a shell word: plain characters, backslash escapes and
+# quoted parts joined (`E'OF'` is the word EOF). Used by the lexer so the
+# closing line is matched against the delimiter bash itself would use.
+HEREDOC_WORD_OP = re.compile(
+    r"<<-?(?!<)[ \t]*((?:\\.|'[^']*'|\"[^\"]*\"|[^\s;|&()<>'\"\\`$])+)"
+)
+
+
+def _heredoc_delimiter(raw):
+    """(delimiter, quoted) of the raw delimiter word RAW: quotes and
+    backslashes removed, QUOTED when any of them was present."""
+    out = []
+    quoted = False
+    i = 0
+    n = len(raw)
+    while i < n:
+        c = raw[i]
+        if c == "\\" and i + 1 < n:
+            quoted = True
+            out.append(raw[i + 1])
+            i += 2
+        elif c == "'":
+            quoted = True
+            j = raw.find("'", i + 1)
+            out.append(raw[i + 1 : j])
+            i = j + 1
+        elif c == '"':
+            quoted = True
+            j = raw.find('"', i + 1)
+            body = raw[i + 1 : j]
+            k = 0
+            while k < len(body):
+                if body[k] == "\\" and k + 1 < len(body) and body[k + 1] in '$`"\\':
+                    k += 1
+                out.append(body[k])
+                k += 1
+            i = j + 1
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out), quoted
+
+
+def _heredoc_operator(text, i):
+    """(end, delimiter, quoted) of the here-document operator at I, or None."""
+    m = HEREDOC_WORD_OP.match(text, i)
+    if m is not None:
+        nxt = text[m.end()] if m.end() < len(text) else ""
+        if nxt not in ("'", '"', "\\"):
+            delimiter, quoted = _heredoc_delimiter(m.group(1))
+            if delimiter:
+                return m.end(), delimiter, quoted
+    m = HEREDOC_OP.match(text, i)
+    if m is None:
+        return None
+    return m.end(), m.group(2), bool(m.group(1))
 # Commands that run what arrives on stdin, so a here-doc body aimed at one is
 # not data but code, and has to be scanned like any other statement.
 SHELL_SINK = re.compile(r"\b(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
@@ -792,9 +848,45 @@ class _LexLines:
     built on first use, WORD_TO_LINES -- every line that is nothing but a
     bare word, per _delimiter_line_word(), indexed by that word (NFR3)."""
 
-    __slots__ = ("text", "starts", "_word_to_lines")
+    __slots__ = ("text", "starts", "_word_to_lines", "_logical")
+
+    def logical_lines(self):
+        """The delimiter lines an UNQUOTED here-document body can end at when
+        a backslash-newline splits them: bash removes the backslash-newlines
+        of an unquoted body before comparing a line with the delimiter. Maps
+        the bare word of each logical line made of several physical lines to
+        a list of (first, last) physical line indexes, in order."""
+        if self._logical is None:
+            mapping = {}
+            starts = self.starts
+            text = self.text
+            last = len(starts) - 1
+            idx = 0
+            while idx <= last:
+                j = idx
+                parts = []
+                while True:
+                    s = starts[j]
+                    e = starts[j + 1] if j < last else len(text)
+                    line = text[s:e]
+                    if line.endswith("\n") and j < last:
+                        body = line[:-1]
+                        if (len(body) - len(body.rstrip("\\"))) % 2 == 1:
+                            parts.append(body[:-1])
+                            j += 1
+                            continue
+                    parts.append(line)
+                    break
+                if j > idx:
+                    word = _delimiter_line_word("".join(parts))
+                    if word is not None:
+                        mapping.setdefault(word, []).append((idx, j))
+                idx = j + 1
+            self._logical = mapping
+        return self._logical
 
     def __init__(self, text):
+        self._logical = None
         starts = []
         total = 0
         for line in text.splitlines(keepends=True):
@@ -827,7 +919,7 @@ _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
 _LEX_EXTGLOB_SPECIAL = re.compile(r"[\\'\"$`()<>]")
 _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
 _LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
-_LEX_SUBSCRIPT_LINE_SPECIAL = re.compile(r"[\\'\"$`\[\]<>\n \t\r;&|()]")
+_LEX_SUBSCRIPT_LINE_SPECIAL = re.compile(r"[\\'\"$`\[\]<>\n \t;&|()]")
 # From a blank inside a bound subscript: plain text (blanks allowed) up to the
 # `]` that is followed by `=(` / `+=(`. Only then the word is kept going past
 # the blank; any other blank ends the word as bash does.
@@ -1438,9 +1530,9 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     def register_operator(i, m):
         """A real here-document operator at I: queue it for a body (P11).
         Its body is not looked up here -- where it begins depends on the
-        newlines read after it."""
+        newlines read after it. M is (end, delimiter, quoted)."""
         nonlocal hd_trigger, limit
-        op = [i, m.end(), m.group(2), bool(m.group(1)), None, None, None]
+        op = [i, m[0], m[1], m[2], None, None, None]
         ops.append(op)
         if lines is None:
             return
@@ -1573,12 +1665,22 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 for op in hd_pending[cut:]:
                     found_lines = by_word.get(op[2], ())
                     pos = bisect.bisect_left(found_lines, hd_next)
-                    if pos < len(found_lines):
-                        found = found_lines[pos]
+                    found = found_lines[pos] if pos < len(found_lines) else None
+                    found_last = found
+                    if not op[3]:
+                        # Unquoted body: a delimiter split by backslash-newline
+                        # still ends it, when it starts before the plain match.
+                        for first, last_line in lines.logical_lines().get(op[2], ()):
+                            if first >= hd_next:
+                                if found is None or first < found:
+                                    found = first
+                                    found_last = last_line
+                                break
+                    if found is not None:
                         op[4] = starts[hd_next]
                         op[5] = starts[found]
-                        op[6] = starts[found + 1] if found + 1 < len(starts) else n
-                        hd_next = found + 1
+                        op[6] = starts[found_last + 1] if found_last + 1 < len(starts) else n
+                        hd_next = found_last + 1
                         jump = op[6]
                 del hd_pending[cut:]
                 del hd_seqs[cut:]
@@ -1811,10 +1913,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                             begin_discard(i)
                             i += 2
                             continue
-                        m = HEREDOC_OP.match(text, i)
+                        m = _heredoc_operator(text, i)
                         if m is not None and (tail_start is None or i < tail_start):
                             register_operator(i, m)
-                            i = m.end()
+                            i = m[0]
                         else:
                             i += 2
                         continue
@@ -2092,7 +2194,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 i = j
             elif (
                 f.bound
-                and c in " \t\r;&|()<>"
+                and c in " \t;&|()<>"
                 and not (
                     c in "<>"
                     and text.startswith("(", j + 1)
@@ -2103,7 +2205,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 # unquoted blank or metacharacter, so there is no subscript.
                 # The exception is a blank-separated plain span that reaches
                 # a `]` followed by `=(` / `+=(`.
-                if c in " \t\r" and (
+                if c in " \t" and (
                     j < bound_keep_until or _LEX_BOUND_KEEP.match(text, j, limit)
                 ):
                     if j >= bound_keep_until:
@@ -2534,7 +2636,12 @@ class _MarkedText:
             if op.quoted:
                 # The quote characters of `<<'EOF'` are quote delimiters of
                 # the delimiter word, though not a region of their own.
-                quoted.append((op.end - len(op.delimiter) - 2, op.end))
+                word_start = op.start + 2
+                if source.startswith("-", word_start):
+                    word_start += 1
+                while word_start < op.end and source[word_start] in " \t":
+                    word_start += 1
+                quoted.append((word_start, op.end))
         mask_ranges = _map_copy_ranges(posmap, _merge_ranges(masked))
         blank_ranges = _map_copy_ranges(posmap, _merge_ranges(blanked))
         quote_ranges = []
