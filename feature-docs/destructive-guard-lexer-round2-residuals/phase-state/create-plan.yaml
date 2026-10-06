@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-lexer-round2-residuals
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: c40641caf8a5a63a925cea843fde374308da5a3e
 last_input_digest: sha256:0a54db662f891b61cc4b41411b2c684f5fb89ce9d36a7427502c8bc108851067
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
