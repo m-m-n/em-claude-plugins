@@ -827,7 +827,11 @@ _LEX_ARITH_SPECIAL = re.compile(r"[\\'\"$`()]")
 _LEX_EXTGLOB_SPECIAL = re.compile(r"[\\'\"$`()<>]")
 _LEX_BRACKET_SPECIAL = re.compile(r"[\\'\"$`\[\]]")
 _LEX_SUBSCRIPT_SPECIAL = re.compile(r"[\\'\"$`\[\]<>]")
-_LEX_SUBSCRIPT_LINE_SPECIAL = re.compile(r"[\\'\"$`\[\]<>\n]")
+_LEX_SUBSCRIPT_LINE_SPECIAL = re.compile(r"[\\'\"$`\[\]<>\n \t\r;&|()]")
+# From a blank inside a bound subscript: plain text (blanks allowed) up to the
+# `]` that is followed by `=(` / `+=(`. Only then the word is kept going past
+# the blank; any other blank ends the word as bash does.
+_LEX_BOUND_KEEP = re.compile(r"[^\]\[\n;&|()<>'\"`$\\#]*\]\+?=\(")
 _LEX_ANSI_SPECIAL = re.compile(r"[\\']")
 _LEX_BODY_SPECIAL = re.compile(r"[\\$`]")
 _LEX_FUNCTION_HEAD = re.compile(r"\([ \t]*\)")
@@ -1052,6 +1056,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     discard_unclosed = []
     extglob_met = False
     ext_lines = set()
+    bound_keep_until = -1
 
     def new_region(kind, start, f):
         parent = f.reg
@@ -2081,6 +2086,20 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 # read by the frame below, as any other line end.
                 close_bare(f)
                 i = j
+            elif f.bound and c in " \t\r;&|()<>":
+                # A bound subscript (P15): bash ends the word at the first
+                # unquoted blank or metacharacter, so there is no subscript.
+                # The exception is a blank-separated plain span that reaches
+                # a `]` followed by `=(` / `+=(`.
+                if c in " \t\r" and (
+                    j < bound_keep_until or _LEX_BOUND_KEEP.match(text, j, limit)
+                ):
+                    if j >= bound_keep_until:
+                        bound_keep_until = _LEX_BOUND_KEEP.match(text, j, limit).end()
+                    i = j + 1
+                else:
+                    close_bare(f)
+                    i = j
             elif c == "<" or c == ">":
                 if text.startswith("(", j + 1) and (j == 0 or text[j - 1] not in "<>"):
                     # A process substitution runs inside a subscript too.
