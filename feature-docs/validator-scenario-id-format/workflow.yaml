@@ -146,7 +146,8 @@ tasks:
     - FR5
     - NFR1
     - NFR2
-    status: pending
+    status: in_progress
+    branch: em-workflow/validator-scenario-id-format/task0001
     notes: null
   task0002:
     title: State the scenario ID format rule in plan-writing SKILL.md
@@ -160,7 +161,8 @@ tasks:
     requirements:
     - FR3
     - NFR2
-    status: pending
+    status: in_progress
+    branch: em-workflow/validator-scenario-id-format/task0002
     notes: null
 review:
   needs_rework: false
