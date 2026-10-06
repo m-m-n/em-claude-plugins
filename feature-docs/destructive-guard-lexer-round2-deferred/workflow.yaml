@@ -260,7 +260,7 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/destructive-guard-lexer-round2-deferred/task0005
 review:
