@@ -780,7 +780,8 @@ class _LexFrame:
     is the array context (shell rules, but its words are elements, never
     commands): it opens at that `(` and closes at its matching `)`. SUB_AT
     (the offset of the `[` of a `NAME[` word at an assignment position, which
-    opens a subscript right after the word's first run), and the kinds
+    opens a subscript right after the word's first run, or when the pass
+    reaches it past the line continuations the name holds), and the kinds
     `subscript` (a bracketed subscript read to its matching `]`; NAMED says it
     follows `NAME`, so the `=(` after it can open an array) owns an
     `array-subscript` region, unless it is BOUND: a subscript in an argument
@@ -914,6 +915,31 @@ _LEX_ASSIGN_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\+?=")
 # the matching `]` by a `subscript` frame, and the `=` or `+=` after that `]`
 # makes the word an assignment word.
 _LEX_SUBSCRIPTED_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\[")
+# The two parts of that test when the name holds line continuations: a whole
+# name, and the name characters that follow a continuation.
+_LEX_NAME_ONLY = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_LEX_NAME_CHARS = re.compile(r"[A-Za-z0-9_]*")
+
+
+def _lex_subscript_open(text, start, end, first):
+    """The offset in TEXT of the `[` that opens the subscript of a `NAME[`
+    word, or -1 when the word is no such word. FIRST is the plain run the word
+    starts with, TEXT[START:END]; the word's leading characters are tested
+    with every backslash-newline pair removed, as bash removes them before it
+    reads the word (round 2 deferred, FR4), and the `[` is reported at its
+    offset in TEXT, the pairs included. A run that is a whole name followed
+    by a continuation is read on through the pairs and the name characters
+    between them: every character is read once, so the work is proportional
+    to the length of the name."""
+    m = _LEX_SUBSCRIPTED_NAME.match(first)
+    if m is not None:
+        return start + m.end() - 1
+    if not text.startswith("\\\n", end) or _LEX_NAME_ONLY.fullmatch(first) is None:
+        return -1
+    at = end
+    while text.startswith("\\\n", at):
+        at = _LEX_NAME_CHARS.match(text, at + 2).end()
+    return at if at < len(text) and text[at] == "[" else -1
 # The builtins bash parses assignment arguments for: after one of them a
 # `NAME=(` word opens an array compound assignment. `eval` and `let` are
 # assignment-argument builtins in the parser, `alias` is an assignment builtin.
@@ -1438,7 +1464,10 @@ def _lex_pass(
         directly sets ARR_END to its end: that `(` opens an array compound
         assignment. P14: a `NAME[` word in either position sets SUB_AT to the
         offset of its `[`, where a subscript frame opens; its `]` followed by
-        `=(` / `+=(` sets ARR_END."""
+        `=(` / `+=(` sets ARR_END. The `NAME[` test reads the word's leading
+        characters with every backslash-newline pair removed
+        (_lex_subscript_open(), round 2 deferred FR4), so a name that holds
+        continuations opens its subscript at the original offset of the `[`."""
         if f.redir:
             # The target word of a redirection: it is no command or
             # assignment word and leaves the grammar state as it was.
@@ -1538,7 +1567,7 @@ def _lex_pass(
         else:
             f.cmd = False
         array_word = False
-        sub_name = None
+        sub_open = -1
         if (
             first is not None
             and state.discard_end is None
@@ -1546,30 +1575,32 @@ def _lex_pass(
             and (state.tail_start is None or end - len(first) < state.tail_start)
         ):
             # No subscript is read from the tail start on (round 2 residuals,
-            # FR3): its `[` stays literal there, as every opener does.
-            sub_name = _LEX_SUBSCRIPTED_NAME.match(first)
+            # FR3): its `[` stays literal there, as every opener does. The
+            # word's own start offset is the one compared with it, whatever
+            # line continuations the name holds (round 2 deferred, FR4).
+            sub_open = _lex_subscript_open(text, end - len(first), end, first)
         if assign_pos:
             if first is not None and _LEX_ASSIGN_WORD.match(first):
                 f.asg = True
                 f.decl = False
                 array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
-            elif sub_name is not None:
+            elif sub_open >= 0:
                 # `NAME[`: an assignment word when the `=` / `+=` follows the
                 # subscript's `]`, which close_subscript() finds out; until
                 # then it is taken for one, and the subscript opens at its `[`.
                 f.asg = True
                 f.decl = False
-                f.sub_at = end - len(first) + sub_name.end() - 1
+                f.sub_at = sub_open
                 f.sub_bound = False
             else:
                 f.asg = False
                 f.decl = w in _LEX_DECLARATION_BUILTINS
         elif decl_pos:
-            if sub_name is not None:
+            if sub_open >= 0:
                 # In a declaration-builtin argument bash reads the word with
                 # the ordinary word rules: the subscript is BOUND, ending with
                 # the word at an unquoted blank or metacharacter.
-                f.sub_at = end - len(first) + sub_name.end() - 1
+                f.sub_at = sub_open
                 f.sub_bound = True
             else:
                 array_word = first is not None and _LEX_ASSIGN_WORD.fullmatch(first)
@@ -2125,6 +2156,16 @@ def _lex_pass(
             run = _LEX_WORD_RUN.match(text, i, state.limit)
             end = run.end()
             if f.in_word:
+                if i <= f.sub_at < end:
+                    # The `[` of a `NAME[` word whose name held line
+                    # continuations (FR4): word_transition() found it past the
+                    # pairs, and this run, read after the last of them, holds
+                    # it. The subscript opens at the `[` in the original text.
+                    at = f.sub_at
+                    f.sub_at = -1
+                    open_bare(f, "subscript", at, True, f.sub_bound)
+                    i = at + 1
+                    continue
                 i = end
                 continue
             if (
@@ -2142,11 +2183,13 @@ def _lex_pass(
                 i = end
                 continue
             complete = end >= n or text[end] in _LEX_WORD_END
+            f.sub_at = -1
             word_transition(f, text[i:end] if complete else None, end, text[i:end])
             f.in_word = True
-            if f.sub_at >= 0:
+            if 0 <= f.sub_at < end:
                 # A `NAME[` word at an assignment position: its subscript
-                # opens at the `[` (P14).
+                # opens at the `[` (P14). A `[` past this run, after line
+                # continuations in the name, opens when the pass reaches it.
                 at = f.sub_at
                 f.sub_at = -1
                 open_bare(f, "subscript", at, True, f.sub_bound)
@@ -2778,13 +2821,17 @@ class _MarkedText:
     - MASK_RANGES: the (start, end) ranges of TEXT that VIEW masks, sorted.
       Values are restored from them by position, never by searching a text
       for the mask character.
+    - SUBSCRIPT_RANGES: the (start, end) ranges of TEXT that are the array
+      subscripts the lexer read (the `array-subscript` regions), sorted. A
+      subscript read across a newline is one word: the parse-failure path of
+      _lex_layout() splits a chunk outside them only.
 
     Built from the lexer's map of SOURCE alone: no stage that reads VIEW
     classifies a character itself."""
 
     __slots__ = (
         "source", "text", "posmap", "view", "mask_char", "mask_ranges",
-        "_mask_starts", "_quote_starts", "_quote_ends",
+        "subscript_ranges", "_mask_starts", "_quote_starts", "_quote_ends",
     )
 
     def __init__(self, source, text, posmap):
@@ -2792,10 +2839,13 @@ class _MarkedText:
         masked = []
         blanked = []
         quoted = []
+        subscripts = []
         for region in lexmap.regions:
             kind = region.kind
             if kind in LEX_MASKED_KINDS:
                 masked.append((region.start, region.end))
+                if kind == "array-subscript":
+                    subscripts.append((region.start, region.end))
             elif kind == "comment":
                 blanked.append((region.start, region.end))
             if kind in LEX_QUOTE_KINDS:
@@ -2814,6 +2864,7 @@ class _MarkedText:
                 quoted.append((_heredoc_word_start(source, op.start), op.end))
         mask_ranges = _map_copy_ranges(posmap, _merge_ranges(masked))
         blank_ranges = _map_copy_ranges(posmap, _merge_ranges(blanked))
+        subscript_ranges = _map_copy_ranges(posmap, _merge_ranges(subscripts))
         quote_ranges = []
         for lo, hi in _merge_ranges(quoted):
             start = posmap.to_new(lo)
@@ -2833,6 +2884,7 @@ class _MarkedText:
         self.view = "".join(chars)
         self.mask_char = mask_char
         self.mask_ranges = mask_ranges
+        self.subscript_ranges = subscript_ranges
         self._mask_starts = [lo for lo, _hi in mask_ranges]
         self._quote_starts = [lo for lo, _hi in quote_ranges]
         self._quote_ends = [hi for _lo, hi in quote_ranges]
@@ -3007,6 +3059,32 @@ def _lex_segments_with_ends(chunk):
     return segments, seg_ends
 
 
+def _split_outside_subscripts(text, ranges):
+    """SEGMENT_SPLIT.split(TEXT), except that a separator inside one of RANGES
+    -- sorted, disjoint (start, end) ranges of TEXT, the array subscripts the
+    lexer read (_MarkedText.subscript_ranges) -- does not split. The
+    parse-failure path of _lex_layout() splits by this: a subscript that
+    closes on a later line is one word (`a[1` + newline + `]=x`), and
+    each half read alone is a subscript the lexer cannot settle, which would
+    turn the lines after it into an `ask` instead of the verdict they have
+    (round 2 deferred, FR1). With no RANGES it is SEGMENT_SPLIT.split(TEXT)."""
+    if not ranges:
+        return SEGMENT_SPLIT.split(text)
+    out = []
+    start = 0
+    k = 0
+    for m in SEGMENT_SPLIT.finditer(text):
+        pos = m.start()
+        while k < len(ranges) and ranges[k][1] <= pos:
+            k += 1
+        if k < len(ranges) and ranges[k][0] <= pos:
+            continue
+        out.append(text[start:pos])
+        start = m.end()
+    out.append(text[start:])
+    return out
+
+
 def _lex_layout(chunk, track):
     """lex_segments()'s one lexing pass: (segments, layout, operators).
     SEGMENTS is lex_segments()'s own return value, unchanged.
@@ -3046,7 +3124,7 @@ def _lex_layout(chunk, track):
     except ValueError:
         return [
             (tokens(seg), False, None)
-            for seg in SEGMENT_SPLIT.split(text)
+            for seg in _split_outside_subscripts(text, marked.subscript_ranges)
             if seg.strip()
         ], None, None
 
