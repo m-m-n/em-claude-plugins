@@ -1973,7 +1973,12 @@ def _lex_pass(
             push(f, "cmdsub", "command-substitution", i, cmd=True)
             return i + 2
         if c2 == "{":
-            if i + 2 < n and text[i + 2] in _LEX_BRACE_COMMAND_FOLLOW:
+            # Bash removes backslash-newline before reading, so look past any
+            # run of them for the character that follows `${`.
+            j2 = i + 2
+            while text.startswith("\\\n", j2):
+                j2 += 2
+            if j2 < n and text[j2] in _LEX_BRACE_COMMAND_FOLLOW:
                 # The bash 5.3 command form `${ cmd; }` / `${|cmd; }` (FR7):
                 # decided before any settle or tail decision. Its content is
                 # read as commands from a command position; it is never
@@ -1983,7 +1988,7 @@ def _lex_pass(
                 stack[-1].in_bt = f.kind == "backtick" or (
                     f.kind == "bracecmd" and f.in_bt
                 )
-                return i + 3 if text[i + 2] == "|" else i + 2
+                return j2 + 1 if text[j2] == "|" else j2
             # The parameter form: the command form `${ ` / `${|` is decided
             # before this point (task0005) and is never refused.
             if i in settled or not tail_gate("parameter-expansion", i):
