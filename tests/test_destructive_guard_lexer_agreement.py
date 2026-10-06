@@ -96,8 +96,14 @@ H = _load_hook()
 
 TAIL = "\nrm -rf /home/sakura/valuable\n2"
 
+BRACE_KIND = "brace-command-substitution"
 SUBSTITUTION_KINDS = frozenset(
-    {"command-substitution", "backtick-substitution", "process-substitution"}
+    {
+        "command-substitution",
+        "backtick-substitution",
+        "process-substitution",
+        BRACE_KIND,
+    }
 )
 QUOTE_KINDS = frozenset({"single-quote", "double-quote", "ansi-c-quote", "locale-quote"})
 OPAQUE_KINDS = QUOTE_KINDS | SUBSTITUTION_KINDS | frozenset(
@@ -2668,7 +2674,10 @@ class TestDelimiterWordStageAgreement(TestStageAgreement):
 
 
 class TestUnclosedOpeners(unittest.TestCase):
-    OPENERS = ["${", "$((", "$[", "((", "$'"]
+    # `${` followed by a blank is the bash 5.3 command form (nested command
+    # forms, never settled); `${x` is the parameter form, settled when it never
+    # closes: the bulk test covers both readings (1fcae1f76f2a20f0, SPEC A8).
+    OPENERS = ["${", "${x", "$((", "$[", "((", "$'"]
     DESTRUCTIVE = "\nrm -rf /home/sakura/valuable\n"
 
     def bulk(self, opener, size=60000):
@@ -2713,16 +2722,578 @@ class TestUnclosedOpeners(unittest.TestCase):
                 self.assertLessEqual(large.work, H.LEX_WORK_FACTOR * len(unit * 400) + 1024)
 
     def test_many_unclosed_openers_are_settled_without_a_rescan_per_opener(self):
-        command = "${ " * 20000
+        command = "${x " * 20000
         lexmap = H.lex_shell(command)
         self.assertLessEqual(lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024)
         self.assertEqual(len(lexmap.unopened), 20000)
         self.assertEqual(lexmap.tail_start, 0)
 
+    def test_many_unclosed_command_forms_are_read_in_linear_work_and_never_settled(self):
+        command = "${ " * 20000
+        lexmap = H.lex_shell(command)
+        self.assertLessEqual(lexmap.work, H.LEX_WORK_FACTOR * len(command) + 1024)
+        self.assertEqual(list(lexmap.unopened), [])
+        self.assertIsNone(lexmap.tail_start)
+        self.assertEqual(lexmap.rounds, 1)
+
     def test_budget_exceeded_is_an_ask_never_an_allow(self):
         command = "(( ;" * 15000 + self.DESTRUCTIVE
         decision, _reason = hook_verdict(command)
         self.assertIn(decision, ("ask", "deny"))
+
+
+# ---------------------------------------------------------------------------
+# The bash 5.3 command form of `${` (destructive-guard-lexer-round2-deferred,
+# task0005: FR7, FR9-FR11, NFR1-NFR7; review finding 1fcae1f76f2a20f0).
+# `${` directly followed by a space, a tab, a newline or `|` is a command
+# substitution (`${ cmd; }` / `${|cmd; }`) whose content is read as commands;
+# every other `${` is the parameter form. Expectations are written out by hand
+# (D6); the forms marked "bash 5.3.9" were run there with `rm` replaced by
+# `echo`.
+# ---------------------------------------------------------------------------
+
+BRACE_LABEL_ID = "1fcae1f76f2a20f0 round2-deferred"
+# The first index a block appended by a task of this feature can sit at.
+BRACE_BLOCK_FLOOR = 769
+RM_VALUABLE = "rm -rf /home/sakura/valuable"
+
+# The seven cases of the task plan and the four it adds beyond SPEC.md (the
+# first three confirmed on bash 5.3.9, the last one a deny that keeps a
+# conservative verdict): tag -> (expected verdict, command).
+BRACE_CASES = {
+    "FR7.1": ("deny", "echo ${ " + RM_VALUABLE + "; }"),
+    "FR7.2": ("deny", "echo ${|" + RM_VALUABLE + "; }"),
+    "FR7.3": ("deny", "echo ${\n" + RM_VALUABLE + "\n}"),
+    "FR7.4": ("deny", "cat <<E\n${ " + RM_VALUABLE + "; }\nE"),
+    "FR7.5": ("deny", "echo ${ " + RM_VALUABLE),
+    "FR7.6": ("allow", "echo ${x} ${x:-y} ${#x}"),
+    "FR7.7": ("allow", "cat <<'E'\n${ " + RM_VALUABLE + "; }\nE"),
+    "FR7.8": ("deny", 'echo "${ ' + RM_VALUABLE + '; }"'),
+    "FR7.9": ("deny", "echo ${x:-${ " + RM_VALUABLE + "; }}"),
+    "FR7.10": ("deny", "echo ${ { " + RM_VALUABLE + "; }; }"),
+    "FR7.11": ("deny", "git reset --hard`${ x`"),
+}
+BRACE_REQUIRED_TAGS = ["FR7.%d" % n for n in range(1, 8)]
+
+# (command, the literal of the one region, its inner text): cases 1 to 3. The
+# inner text is exactly what lies between the opener (`${`, or `${|`) and the
+# final `}`.
+BRACE_CLOSED_FORMS = [
+    (
+        BRACE_CASES["FR7.1"][1],
+        "${ " + RM_VALUABLE + "; }",
+        " " + RM_VALUABLE + "; ",
+    ),
+    (
+        BRACE_CASES["FR7.2"][1],
+        "${|" + RM_VALUABLE + "; }",
+        RM_VALUABLE + "; ",
+    ),
+    (
+        BRACE_CASES["FR7.3"][1],
+        "${\n" + RM_VALUABLE + "\n}",
+        "\n" + RM_VALUABLE + "\n",
+    ),
+]
+
+# Where the close lands (SPEC A7; bash 5.3.9): (command, the command form's
+# literal, or None when it never closes). A `}` closes at a reserved-word
+# position (the start of the content, after `;`, `&`, a newline, after a
+# closer), as a token of its own: what follows it is not part of it.
+BRACE_CLOSE_FORMS = [
+    ("echo ${ echo hi;}", "${ echo hi;}"),
+    ("echo ${ echo hi; }}", "${ echo hi; }"),
+    ("echo ${ echo hi; }x", "${ echo hi; }"),
+    ("echo ${ echo hi &}", "${ echo hi &}"),
+    ("echo ${ }", "${ }"),
+    ("echo ${|}", "${|}"),
+    ("echo ${ echo hi\n}", "${ echo hi\n}"),
+    ("echo ${ echo hi; } }", "${ echo hi; }"),
+    ("echo ${ { echo hi; } }", "${ { echo hi; } }"),
+    ("echo ${ { echo hi; }; }", "${ { echo hi; }; }"),
+    ("echo ${ { { echo hi; }; }; }", "${ { { echo hi; }; }; }"),
+    ("echo ${ ( echo hi ) }", "${ ( echo hi ) }"),
+    ("echo ${ if true; then echo hi; fi }", "${ if true; then echo hi; fi }"),
+    ("echo ${ case x in x) echo hi;; esac }", "${ case x in x) echo hi;; esac }"),
+    # A `}` that is an argument, part of a word or quoted closes nothing.
+    ("echo ${ echo }", None),
+    ("echo ${ echo hi}", None),
+    ("echo ${ echo \\}", None),
+    ("echo ${ echo a}b; }", "${ echo a}b; }"),
+    ("echo ${ echo \\}; }", "${ echo \\}; }"),
+    ("echo ${ echo $x}; }", "${ echo $x}; }"),
+    ("echo ${ >f }", None),
+    ("echo ${ { echo hi; }", None),
+    ("echo ${ case x in }) echo hi;; esac; }", "${ case x in }) echo hi;; esac; }"),
+]
+
+# (command, [(kind, literal[, n]), ...], the child region's parent literal):
+# the command form read inside another region (AC-3).
+BRACE_NESTED_FORMS = [
+    (
+        BRACE_CASES["FR7.8"][1],
+        [("double-quote", '"${ ' + RM_VALUABLE + '; }"'), (BRACE_KIND, "${ " + RM_VALUABLE + "; }")],
+        "double-quote",
+    ),
+    (
+        BRACE_CASES["FR7.9"][1],
+        [
+            ("parameter-expansion", "${x:-${ " + RM_VALUABLE + "; }}"),
+            (BRACE_KIND, "${ " + RM_VALUABLE + "; }"),
+        ],
+        "parameter-expansion",
+    ),
+    (
+        BRACE_CASES["FR7.10"][1],
+        [(BRACE_KIND, "${ { " + RM_VALUABLE + "; }; }")],
+        None,
+    ),
+]
+
+# The two forms of AC-4 that are not cases: a `}` that closes nothing, and a
+# command form after a `<<` whose delimiter word cannot be read (D4).
+BRACE_ARGUMENT_FORM = "echo ${ echo }"
+BRACE_TAIL_FORM = "cat <<E${x}\necho ${ " + RM_VALUABLE + "; }"
+
+# Existing cases whose discarded line holds a command form (AC-5): label
+# fragment -> the text the form is cut at (the newline that ends the line).
+BRACE_DISCARDED_LABELS = [
+    "heredoc-syntax-error E-12 ",
+    "heredoc-syntax-error T2 AC-5.5 ",
+    "heredoc-syntax-error T2 AC-5.7 ",
+]
+
+
+def brace_cases():
+    """{tag: (verdict, command, index)} of the cases this task appended,
+    found by label (never by an absolute index)."""
+    found = {}
+    for index, (want, label, cmd) in enumerate(case_commands()):
+        if label.startswith(BRACE_LABEL_ID + " FR7."):
+            tag = label.split(" ")[2]
+            assert tag not in found, tag
+            found[tag] = (want, cmd, index)
+    return found
+
+
+def brace_regions(lexmap):
+    return [r for r in lexmap.regions if r.kind == BRACE_KIND]
+
+
+class TestBraceCommandSubstitution(unittest.TestCase):
+    def verdicts(self, command):
+        return hook_verdict(command)[0], hook_verdict(command, batch=True)[0]
+
+    def assert_both_modes(self, command, want):
+        self.assertEqual(self.verdicts(command), (want, want), msg=repr(command))
+
+    # AC-1, AC-7: the cases are in the table, after the feature base.
+    def test_the_cases_are_in_the_case_table_after_the_base(self):
+        found = brace_cases()
+        for tag in BRACE_REQUIRED_TAGS:
+            self.assertIn(tag, found)
+        for tag, (want, cmd, index) in found.items():
+            with self.subTest(tag=tag):
+                self.assertEqual((want, cmd), BRACE_CASES[tag])
+                self.assertGreaterEqual(index, BRACE_BLOCK_FLOOR)
+        indexes = sorted(index for _w, _c, index in found.values())
+        self.assertEqual(indexes, list(range(indexes[0], indexes[0] + len(indexes))))
+
+    def test_the_cases_label_and_text_match_the_plan(self):
+        found = brace_cases()
+        labels = {
+            index: label for index, (_w, label, _c) in enumerate(case_commands())
+        }
+        for tag, (_want, _cmd, index) in found.items():
+            self.assertTrue(
+                labels[index].startswith("%s %s " % (BRACE_LABEL_ID, tag)), msg=labels[index]
+            )
+
+    # AC-2: cases 1 to 3.
+    def test_a_closed_command_form_is_one_region_and_one_span(self):
+        for command, literal, inner in BRACE_CLOSED_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(
+                    actual_regions(lexmap),
+                    expected_regions(command, [(BRACE_KIND, literal)]),
+                )
+                (region,) = lexmap.regions
+                self.assertTrue(region.closed)
+                self.assertIsNone(region.parent)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+                self.assertEqual(list(lexmap.heredocs), [])
+                spans, parent_of, unmatched, opaque, _containing = H.scan_structure(command)
+                self.assertEqual(spans, [(region.start, region.end)])
+                self.assertEqual(parent_of, {(region.start, region.end): None})
+                self.assertEqual(unmatched, [])
+                self.assertEqual(opaque, [(region.start, region.end)])
+                got_inner, inner_start = H._span_inner(command, spans[0])
+                self.assertEqual(got_inner, inner)
+                self.assertEqual(command[inner_start : inner_start + len(inner)], inner)
+
+    def test_the_map_is_the_same_after_clearing_the_lexer_cache(self):
+        closed = [form[0] for form in BRACE_CLOSED_FORMS]
+        for command in closed + [cmd for _tag, (_want, cmd) in BRACE_CASES.items()]:
+            with self.subTest(command=command):
+                first = H.lex_shell(command)
+                H._LEX_CACHE.clear()
+                second = H.lex_shell(command)
+                self.assertIsNot(first, second)
+                self.assertEqual(first.as_tuple(), second.as_tuple())
+                if command in closed:
+                    # The map being compared is the one with the command
+                    # form in it.
+                    self.assertEqual(len(brace_regions(first)), 1)
+                    self.assertEqual(len(brace_regions(second)), 1)
+
+    def test_the_closed_command_forms_are_deny_in_both_modes(self):
+        for command, _literal, _inner in BRACE_CLOSED_FORMS:
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "deny")
+
+    def test_a_command_form_in_a_heredoc_body_is_one_substitution(self):
+        # Case 4: the here-document body extraction reports the form, its
+        # inner text exactly what lies between `${` and `}` (`${|` from after
+        # the `|`).
+        for opener, inner in (
+            ("${ ", " " + RM_VALUABLE + "; "),
+            ("${|", RM_VALUABLE + "; "),
+            ("${\n", "\n" + RM_VALUABLE + "; "),
+        ):
+            command = "cat <<E\n" + opener + RM_VALUABLE + "; }\nE"
+            with self.subTest(opener=opener):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(len(lexmap.heredocs), 1)
+                body = heredoc_body(command, lexmap.heredocs[0])
+                self.assertEqual(body, opener + RM_VALUABLE + "; }\n")
+                bodies, needs_whole_body = H._extract_heredoc_body_substitutions(body)
+                self.assertEqual(bodies, [(inner, 0)])
+                self.assertFalse(needs_whole_body)
+                body_map = H.lex_shell(body, "heredoc-body")
+                self.assertEqual(
+                    actual_regions(body_map),
+                    expected_regions(body, [(BRACE_KIND, opener + RM_VALUABLE + "; }")]),
+                )
+                self.assert_both_modes(command, "deny")
+
+    def test_case_4_is_deny_in_both_modes(self):
+        self.assert_both_modes(BRACE_CASES["FR7.4"][1], "deny")
+
+    def test_an_unclosed_command_form_in_a_heredoc_body_is_inspected(self):
+        # The body is read as the here-document reads it: a quote or `#`
+        # before an unclosed form opens nothing there, so the form's content
+        # is inspected whatever precedes it.
+        for prefix in ("", "it's\n", "# note\n", '"\n', "'\n", "a'b\n"):
+            for opener in ("${ ", "${|", "${\n"):
+                command = "cat <<E\n" + prefix + opener + RM_VALUABLE + "\nE"
+                with self.subTest(command=command):
+                    self.assert_both_modes(command, "deny")
+
+    def test_a_benign_unclosed_command_form_in_a_heredoc_body_is_allowed(self):
+        for command in (
+            "cat <<E\nit's\n${ echo hi\nE",
+            "cat <<E\nit's\n${|echo hi\nE",
+            "cat <<'E'\nit's\n${ " + RM_VALUABLE + "\nE",
+        ):
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "allow")
+
+    # AC-3: the form inside other regions.
+    def test_a_command_form_inside_another_region(self):
+        for command, items, outer in BRACE_NESTED_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(
+                    actual_regions(lexmap), expected_regions(command, items)
+                )
+                (region,) = brace_regions(lexmap)
+                self.assertTrue(region.closed)
+                if outer is None:
+                    self.assertIsNone(region.parent)
+                else:
+                    self.assertEqual(lexmap.regions[region.parent].kind, outer)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+                self.assert_both_modes(command, "deny")
+
+    def test_the_command_form_in_double_quotes_is_a_span_of_the_quote(self):
+        command = BRACE_CASES["FR7.8"][1]
+        spans, parent_of, unmatched, opaque, _containing = H.scan_structure(command)
+        form = span_of(command, "${ " + RM_VALUABLE + "; }")
+        quote = span_of(command, '"${ ' + RM_VALUABLE + '; }"')
+        self.assertEqual(spans, [form])
+        self.assertEqual(unmatched, [])
+        self.assertEqual(opaque, [quote])
+
+    def test_an_inner_brace_group_does_not_close_the_form(self):
+        command = BRACE_CASES["FR7.10"][1]
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertEqual((region.start, region.end), (command.index("${"), len(command)))
+
+    # SPEC A7: where the close lands.
+    def test_where_the_close_lands(self):
+        for command, literal in BRACE_CLOSE_FORMS:
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                regions = brace_regions(lexmap)
+                self.assertEqual(len(regions), 1)
+                region = regions[0]
+                self.assertEqual(region.start, command.index("${"))
+                if literal is None:
+                    self.assertFalse(region.closed)
+                    self.assertEqual(region.end, len(command))
+                else:
+                    self.assertTrue(region.closed)
+                    self.assertEqual(
+                        command[region.start : region.end], literal
+                    )
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assertIsNone(lexmap.tail_start)
+
+    def test_a_brace_group_count_is_per_form(self):
+        # The `}` of a group opened in the outer form does not close the form
+        # inside it, and the form's own `}` is not taken for the group's.
+        command = "{ echo ${ echo hi; }; }; " + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertTrue(region.closed)
+        self.assertEqual(command[region.start : region.end], "${ echo hi; }")
+        self.assert_both_modes(command, "deny")
+
+    def test_the_text_after_a_closed_form_is_read_at_the_outer_level(self):
+        for command in (
+            "echo ${ echo hi; }; " + RM_VALUABLE,
+            "echo ${ echo hi; }\n" + RM_VALUABLE,
+            "echo ${ echo hi; }}; " + RM_VALUABLE,
+            "echo ${ echo hi;}x; " + RM_VALUABLE,
+        ):
+            with self.subTest(command=command):
+                self.assert_both_modes(command, "deny")
+
+    # AC-4: an unclosed form, the parameter form, a tail source.
+    def test_an_unclosed_command_form_runs_to_the_end_and_is_inspected(self):
+        command = BRACE_CASES["FR7.5"][1]
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            actual_regions(lexmap),
+            [(BRACE_KIND, command.index("${"), len(command))],
+        )
+        (region,) = lexmap.regions
+        self.assertFalse(region.closed)
+        self.assertEqual(list(lexmap.unopened), [])
+        self.assertIsNone(lexmap.tail_start)
+        spans, _parent_of, unmatched, _opaque, _containing = H.scan_structure(command)
+        self.assertEqual(spans, [])
+        self.assertEqual(unmatched, [region.start])
+        self.assertEqual(
+            H._unclosed_command_forms(command), [(" " + RM_VALUABLE, region.start)]
+        )
+        self.assert_both_modes(command, "deny")
+
+    def test_only_the_outermost_unclosed_form_is_queued(self):
+        command = "echo ${ echo ${ echo ${|" + RM_VALUABLE
+        outer = command.index("${")
+        self.assertEqual(
+            H._unclosed_command_forms(command),
+            [(" echo ${ echo ${|" + RM_VALUABLE, outer)],
+        )
+        self.assert_both_modes(command, "deny")
+
+    def test_a_closed_form_is_not_in_the_unclosed_list(self):
+        self.assertEqual(H._unclosed_command_forms("echo ${ echo hi; }"), [])
+        self.assertEqual(H._unclosed_command_forms("echo ${x"), [])
+
+    def test_a_close_that_never_comes_closes_nothing(self):
+        lexmap = H.lex_shell(BRACE_ARGUMENT_FORM)
+        (region,) = brace_regions(lexmap)
+        self.assertFalse(region.closed)
+        self.assertEqual(region.end, len(BRACE_ARGUMENT_FORM))
+        self.assertEqual(
+            H._unclosed_command_forms(BRACE_ARGUMENT_FORM), [(" echo }", region.start)]
+        )
+
+    def test_the_parameter_form_stays_a_parameter_expansion(self):
+        command = BRACE_CASES["FR7.6"][1]
+        lexmap = H.lex_shell(command)
+        self.assertEqual(
+            actual_regions(lexmap),
+            expected_regions(
+                command,
+                [
+                    ("parameter-expansion", "${x}"),
+                    ("parameter-expansion", "${x:-y}"),
+                    ("parameter-expansion", "${#x}"),
+                ],
+            ),
+        )
+        self.assertEqual(brace_regions(lexmap), [])
+        self.assertEqual(list(lexmap.unopened), [])
+        self.assertIsNone(lexmap.tail_start)
+        self.assert_both_modes(command, "allow")
+
+    def test_a_backtick_ends_a_command_form_opened_inside_it(self):
+        # A backtick substitution ends at the next unescaped backtick whatever
+        # it holds (bash 5.3.9 runs the command before it here, the
+        # substitution being a syntax error of its own): the form opened inside
+        # it ends unclosed there, and the substitution stays a closed span, so
+        # the word before it is still read as it was.
+        for command, forms in (
+            ("git reset --hard`${ x`", ["${ x"]),
+            ("git reset --hard`${ ${|x`", ["${ ${|x", "${|x"]),
+            ("git reset --hard`echo ${ x`", ["${ x"]),
+        ):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                (backtick,) = [
+                    r for r in lexmap.regions if r.kind == "backtick-substitution"
+                ]
+                self.assertTrue(backtick.closed)
+                self.assertEqual(command[backtick.start : backtick.end][-1], "`")
+                self.assertEqual(backtick.end, len(command))
+                got = [command[r.start : r.end] for r in brace_regions(lexmap)]
+                self.assertEqual(got, forms)
+                for region in brace_regions(lexmap):
+                    self.assertFalse(region.closed)
+                    self.assertEqual(region.end, backtick.end - 1)
+                spans, _parent_of, unmatched, _opaque, _c = H.scan_structure(command)
+                self.assertEqual(spans, [(backtick.start, backtick.end)])
+                self.assertEqual(len(unmatched), len(forms))
+                self.assert_both_modes(command, "deny")
+
+    def test_a_command_form_closed_inside_a_backtick_substitution_is_closed(self):
+        command = "echo `echo ${ echo hi; }` ; " + RM_VALUABLE
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertTrue(region.closed)
+        self.assertEqual(command[region.start : region.end], "${ echo hi; }")
+        self.assert_both_modes(command, "deny")
+
+    def test_a_blank_other_than_space_tab_newline_does_not_open_the_form(self):
+        for command in ("echo ${\rx}", "echo ${\x0cx}", "echo ${\x0bx}"):
+            with self.subTest(command=command):
+                lexmap = H.lex_shell(command)
+                self.assertEqual(brace_regions(lexmap), [])
+
+    def test_a_tab_opens_the_form(self):
+        command = "echo ${\t" + RM_VALUABLE + "; }"
+        lexmap = H.lex_shell(command)
+        (region,) = brace_regions(lexmap)
+        self.assertTrue(region.closed)
+        self.assert_both_modes(command, "deny")
+
+    def test_a_quoted_delimiter_body_keeps_the_form_as_text(self):
+        command = BRACE_CASES["FR7.7"][1]
+        lexmap = H.lex_shell(command)
+        self.assertEqual(lexmap.regions, [])
+        self.assertEqual(len(lexmap.heredocs), 1)
+        self.assertTrue(lexmap.heredocs[0].quoted)
+        self.assert_both_modes(command, "allow")
+
+    def test_the_form_opens_after_a_delimiter_word_that_cannot_be_read(self):
+        # D4: a tail source refuses the parameter form, never the command form.
+        lexmap = H.lex_shell(BRACE_TAIL_FORM)
+        regions = brace_regions(lexmap)
+        self.assertEqual(len(regions), 1)
+        self.assertGreater(regions[0].start, BRACE_TAIL_FORM.index("<<"))
+        self.assertEqual(regions[0].start, BRACE_TAIL_FORM.index("${ "))
+        self.assertTrue(regions[0].closed)
+        self.assertNotIn(regions[0].start, list(lexmap.unopened))
+        self.assert_both_modes(BRACE_TAIL_FORM, "deny")
+
+    # AC-5: the form on a discarded line.
+    def test_a_form_on_a_discarded_line_closes_at_the_newline(self):
+        cases = case_commands()
+        for fragment in BRACE_DISCARDED_LABELS:
+            matching = [
+                (want, label, cmd) for want, label, cmd in cases if fragment in label
+            ]
+            self.assertEqual(len(matching), 1, msg=fragment)
+            want, _label, command = matching[0]
+            with self.subTest(label=fragment):
+                self.assertEqual(want, "deny")
+                lexmap = H.lex_shell(command)
+                regions = brace_regions(lexmap)
+                self.assertEqual(len(regions), 1)
+                region = regions[0]
+                self.assertFalse(region.closed)
+                newline = command.index("\n", region.start)
+                self.assertEqual(region.end, newline)
+                self.assertEqual(list(lexmap.unopened), [])
+                self.assert_both_modes(command, "deny")
+
+    # AC-6: work.
+    def test_lexing_work_is_linear_for_every_case_repeated(self):
+        found = brace_cases()
+        for tag in BRACE_REQUIRED_TAGS:
+            _want, command, _index = found[tag]
+            with self.subTest(tag=tag):
+                small = H.lex_shell("\n".join([command] * 200))
+                large_text = "\n".join([command] * 400)
+                large = H.lex_shell(large_text)
+                self.assertLessEqual(large.work, 2.5 * small.work + 100)
+                self.assertLessEqual(
+                    large.work, H.LEX_WORK_FACTOR * len(large_text) + 1024
+                )
+
+    def test_repeated_unclosed_forms_get_a_non_allow_decision_in_time(self):
+        for tag in ("FR7.1", "FR7.5"):
+            command = ("\n".join([BRACE_CASES[tag][1]] * 1000))[:60000]
+            with self.subTest(tag=tag):
+                start = time.monotonic()
+                decision, _reason = hook_verdict(command)
+                self.assertNotIn(decision, ("allow", "(timeout)"))
+                self.assertLess(time.monotonic() - start, GUARD_TIMEOUT_SECONDS)
+
+    def test_nested_unclosed_forms_followed_by_a_destructive_line_are_never_allow(self):
+        command = "${ " * 20000 + "\n" + RM_VALUABLE + "\n"
+        start = time.monotonic()
+        decision, _reason = hook_verdict(command)
+        self.assertIn(decision, ("ask", "deny"))
+        self.assertEqual(hook_verdict(command, batch=True)[0], "deny")
+        self.assertLess(time.monotonic() - start, 2 * GUARD_TIMEOUT_SECONDS)
+
+
+class TestBraceCommandStageAgreement(TestStageAgreement):
+    """The stage agreement properties (a)-(f) of TestStageAgreement, over the
+    command form of `${`: cases 1 to 7 (and the three beyond the SPEC), the
+    nested, close and unclosed forms, so the lexer's regions, the structure
+    scan, marking, the layout layer and the position maps agree on the new
+    region kind."""
+
+    @classmethod
+    def setUpClass(cls):
+        forms = [cmd for _want, cmd in BRACE_CASES.values()]
+        forms += [form[0] for form in BRACE_CLOSED_FORMS]
+        forms += [form[0] for form in BRACE_CLOSE_FORMS]
+        forms += [form[0] for form in BRACE_NESTED_FORMS]
+        forms += [BRACE_ARGUMENT_FORM, BRACE_TAIL_FORM]
+        forms += [
+            "cat <<E\n${|" + RM_VALUABLE + "; }\nE",
+            "echo ${ cat <<E\n" + RM_VALUABLE + "\nE\n}",
+            "echo ${ echo hi; } ${|echo ho; } $(echo ${ echo hu; })",
+        ]
+        seen = []
+        for form in forms:
+            if form not in seen:
+                seen.append(form)
+        cls.commands = [form for form in seen if _lexer_reads(form)]
+
+    def test_the_command_forms_are_there_to_check(self):
+        # The properties run over these forms; each is read as a command
+        # form, so they meet the new region kind and do not pass over a form
+        # the lexer reads another way. (A form in a here-document body is
+        # read by the body mode, not by the shell-mode map of the command.)
+        forms = [cmd for want, cmd in BRACE_CASES.values() if want == "deny"]
+        forms += [form[0] for form in BRACE_CLOSED_FORMS]
+        forms += [form[0] for form in BRACE_NESTED_FORMS]
+        for form in forms:
+            with self.subTest(command=form):
+                self.assertIn(form, self.commands)
+                if "<<" not in form:
+                    self.assertTrue(brace_regions(H.lex_shell(form)))
 
 
 # ---------------------------------------------------------------------------

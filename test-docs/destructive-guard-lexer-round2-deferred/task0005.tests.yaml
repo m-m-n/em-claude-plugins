@@ -1,0 +1,60 @@
+task_id: task0005
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 8554 tests, OK (skipped=1)
+final_failures: []             # re-run after the implementation: Ran 8597 tests, OK (skipped=1); runner 785/785; agreement module 253 tests OK
+# Red observations: the new tests and the case table were run against the
+# unmodified hook (git show 6fa3a500:em-workflow/hooks/destructive-guard.py).
+# Test names below are in tests/test_destructive_guard_lexer_agreement.py unless
+# a runner entry is named.
+acceptance_tests:
+  AC-1:
+    tests:
+      - "run-destructive-guard.py: 1fcae1f76f2a20f0 round2-deferred FR7.1"
+      - "run-destructive-guard.py: 1fcae1f76f2a20f0 round2-deferred FR7.2"
+      - "run-destructive-guard.py: 1fcae1f76f2a20f0 round2-deferred FR7.3"
+      - "run-destructive-guard.py: 1fcae1f76f2a20f0 round2-deferred FR7.4"
+      - "run-destructive-guard.py: 1fcae1f76f2a20f0 round2-deferred FR7.5"
+    red_confirmed: true
+    red_reason: "runner over the case table with the cases appended, hook unmodified: 777/785 passed; FR7.1-FR7.5 and FR7.8-FR7.10 FAIL with got=allow (FR7.6 and FR7.7 are allow cases and passed). History order: commits 71a83348 (FR7.1-FR7.7), 64b7fc8c (FR7.8-FR7.10) and 1fbf4aae (FR7.11) change only destructive-guard-cases.json and precede the commit that changes destructive-guard.py."
+  AC-2:
+    tests:
+      - TestBraceCommandSubstitution.test_a_closed_command_form_is_one_region_and_one_span
+      - TestBraceCommandSubstitution.test_the_map_is_the_same_after_clearing_the_lexer_cache
+      - TestBraceCommandSubstitution.test_the_closed_command_forms_are_deny_in_both_modes
+      - TestBraceCommandSubstitution.test_a_command_form_in_a_heredoc_body_is_one_substitution
+      - TestBraceCommandSubstitution.test_case_4_is_deny_in_both_modes
+    red_confirmed: true
+    red_reason: "regions were [('parameter-expansion', 5, 39)] where [('brace-command-substitution', 5, 39)] is expected; the heredoc body extraction returned [] where [(' rm -rf /home/sakura/valuable; ', 0)] is expected; verdict ('allow', 'allow') where ('deny', 'deny') is expected"
+  AC-3:
+    tests:
+      - TestBraceCommandSubstitution.test_a_command_form_inside_another_region
+      - TestBraceCommandSubstitution.test_the_command_form_in_double_quotes_is_a_span_of_the_quote
+      - TestBraceCommandSubstitution.test_an_inner_brace_group_does_not_close_the_form
+    red_confirmed: true
+    red_reason: "regions were [('double-quote', 5, 41), ('parameter-expansion', 6, 40)] where the command-form region inside the double-quote region is expected; scan_structure reported spans [] where [(6, 40)] is expected; the brace-group form had no command-form region (ValueError: not enough values to unpack)"
+  AC-4:
+    tests:
+      - TestBraceCommandSubstitution.test_an_unclosed_command_form_runs_to_the_end_and_is_inspected
+      - TestBraceCommandSubstitution.test_a_close_that_never_comes_closes_nothing
+      - TestBraceCommandSubstitution.test_the_form_opens_after_a_delimiter_word_that_cannot_be_read
+      - TestBraceCommandSubstitution.test_an_unclosed_command_form_in_a_heredoc_body_is_inspected
+      - TestBraceCommandSubstitution.test_only_the_outermost_unclosed_form_is_queued
+    red_confirmed: true
+    red_reason: "regions were [] where [('brace-command-substitution', 5, 36)] is expected; no command-form region for `echo ${ echo }`; the tail form `cat <<E${x}` + newline + `echo ${ rm ...; }` had no command-form region; the unclosed form in a heredoc body gave ('allow', 'allow') where ('deny', 'deny') is expected (also when an apostrophe, a quote or a # line precedes it); AttributeError: no attribute '_unclosed_command_forms'"
+  AC-5:
+    tests:
+      - TestBraceCommandSubstitution.test_a_form_on_a_discarded_line_closes_at_the_newline
+    red_confirmed: true
+    red_reason: "for each of the three labels (heredoc-syntax-error E-12, T2 AC-5.5, T2 AC-5.7) the discarded line had no command-form region: AssertionError: 0 != 1"
+  AC-6:
+    tests:
+      - TestBraceCommandSubstitution.test_repeated_unclosed_forms_get_a_non_allow_decision_in_time
+      - TestUnclosedOpeners.test_many_unclosed_command_forms_are_read_in_linear_work_and_never_settled
+    red_confirmed: true
+    red_reason: "FR7.1 and FR7.5 repeated gave 'allow' ('allow' unexpectedly found in ('allow', '(timeout)')); 20000 unclosed command forms were all listed as unopened (a list of 20000 offsets where [] is expected)"
+  AC-7:
+    tests:
+      - TestBraceCommandStageAgreement.test_the_command_forms_are_there_to_check
+      - TestBraceCommandSubstitution.test_a_backtick_ends_a_command_form_opened_inside_it
+      - TestBraceCommandSubstitution.test_where_the_close_lands
+    red_confirmed: true
+    red_reason: "the forms of the stage-agreement subclass had no command-form region (AssertionError: [] is not true, 14 subtests); the backtick form had no command-form region (Lists differ: [] != ['${ x']); the close-position forms had none (AssertionError: 0 != 1)"
