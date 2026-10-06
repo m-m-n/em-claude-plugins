@@ -146,7 +146,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-heredoc-bypass-fixes/task0001
   task0002:
     title: Declaration-builtin NAME[ no longer defers here-document bodies; eval / let / alias handled separately
