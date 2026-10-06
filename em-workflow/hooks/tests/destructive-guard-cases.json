@@ -696,5 +696,10 @@
   ["deny", "9381769d7116fab2 round2-residuals FR3.35 case の本体の a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "case x in x) a[1<<2]=y;; esac\nrm -rf /home/sakura/valuable\n2]=y"],
   ["deny", "9381769d7116fab2 round2-residuals FR3.36 パイプの後ろの a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "echo hi | a[1<<2]=y\nrm -rf /home/sakura/valuable\n2]=y"],
   ["deny", "9381769d7116fab2 round2-residuals FR3.37 fd 番号つきのリダイレクトの後ろの a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "2>/dev/null a[1<<2]=y\nrm -rf /home/sakura/valuable\n2]=y"],
-  ["deny", "9381769d7116fab2 round2-residuals FR3.38 if の条件位置の a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "if a[1<<2]=y; then :; fi\nrm -rf /home/sakura/valuable\n2]=y"]
+  ["deny", "9381769d7116fab2 round2-residuals FR3.38 if の条件位置の a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "if a[1<<2]=y; then :; fi\nrm -rf /home/sakura/valuable\n2]=y"],
+  ["deny", "1baa909f9b288847 round2-residuals FR4.1 読めない区切り語 E${x} の << の後ろの # は注釈を開かず、その行の $( ) の rm -rf は deny", "cat <<E${x}\n# $(rm -rf /home/sakura/valuable)\nE\nE${x}"],
+  ["deny", "1baa909f9b288847 round2-residuals FR4.2 読めない区切り語 E`x` の << の後ろの ' は引用を開かず、その後ろの rm -rf は deny", "cat <<E`x`\n'\nE`x`\nrm -rf /home/sakura/valuable\n'"],
+  ["deny", "19edf404b5cbeb2b round2-residuals FR4.3 <<END-X の本文は空白で字下げした END-X の行で閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<END-X\n END-X\n# $(rm -rf /home/sakura/valuable)\nEND\nEND-X"],
+  ["deny", "19edf404b5cbeb2b round2-residuals FR4.4 <<END の本文は空白で字下げした END の行で閉じず、後続の # の中の $( ) の rm -rf は deny", "cat <<END\n END\n# $(rm -rf /home/sakura/valuable)\nEND"],
+  ["allow", "19edf404b5cbeb2b round2-residuals FR4.5 引用した空白入りの区切り語 E' X' は E X の行で閉じ、本文は allow", "cat <<E' X'\nhello\nE X"]
 ]
