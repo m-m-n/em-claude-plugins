@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-bypass-fixes
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 2d32471733ae219d9f6339dc81313556a062a291
 last_input_digest: sha256:704f5aa5bacfded40a140ec25e7d544d1261cef3211dcf58959905b5bdfb0b82
