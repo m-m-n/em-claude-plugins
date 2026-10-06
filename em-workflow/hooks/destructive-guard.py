@@ -206,9 +206,13 @@ def _heredoc_operator(text, i):
     read the way bash does: quotes and backslashes are removed, a
     backslash-newline is dropped, and `$name` and a backquoted span stay
     literal. A word that cannot be read (`$(`, `${`, `$'`, a quote or a
-    backquote never closed) gives (end, None, False), END being where the
-    reading stopped: the caller takes no body for this operator nor for any
-    later operator on the same line."""
+    backquote never closed, an extglob group, a word that spans lines) gives
+    (end, None, False), END being where the reading stopped: bash takes a
+    body for that operator, but which lines it is cannot be told, so the
+    lexer makes the judgment of the whole text an ask (P16) and no body is
+    placed for it. Substitution marker residue in an unquoted word (a text
+    marked by _mark_substitutions()) is the same: the `$(` or backquote the
+    word held there is what a raw word reads as unreadable."""
     head = _HEREDOC_OP_HEAD.match(text, i)
     if head is None:
         return None
@@ -220,9 +224,18 @@ def _heredoc_operator(text, i):
     while p < n:
         plain = _HEREDOC_PLAIN.match(text, p)
         if plain is not None:
-            out.append(plain.group())
+            word = plain.group()
+            if UNRESOLVED_MARK in word or QUOTED_MARK in word:
+                # Marker residue of a substitution (_mark_substitutions()) in
+                # an unquoted word: in the text the marked one was made from
+                # this word held a `$(` or a backquote, which a raw word
+                # reads as unreadable below -- an `eval` / `-c` payload only
+                # reaches here marked, and each marker carries its own index,
+                # so no body line could equal the word.
+                return p, None, False
+            out.append(word)
             p = plain.end()
-            if plain.group()[-1] in "@!+*?" and text[p : p + 1] == "(":
+            if word[-1] in "@!+*?" and text[p : p + 1] == "(":
                 # extglob `@(`, `!(`, ...: bash reads through the `)`.
                 return p, None, False
             continue
@@ -717,6 +730,25 @@ class _TrackingLexer(shlex.shlex):
 #              operators. A `NAME[` word at a command position is unchanged:
 #              bash matches its brackets across lines.
 #
+# destructive-guard-heredoc-bypass-fixes (review round 1 findings
+# 267e8e9657658f40, 643305535d3c874d, 1f64cb294e6ffe41, d9c0ee86072979fe) adds:
+#
+#   P16        a real here-document operator whose delimiter word the lexer
+#              cannot read (`$(`, `${`, `$'`, `$[`, a backquote, a quote never
+#              closed, an extended-glob group, a word that spans lines) makes
+#              the lexing raise LexUnreadableDelimiter, a LexBudgetExceeded the
+#              hook answers with its own `ask` (ask_lex_unsettled()), never an
+#              `allow`. bash takes a body for such an operator and skips its
+#              lines up to the delimiter line; those lines cannot be placed, so
+#              they must not be read as commands -- a `<<WORD` or an unclosed
+#              quote on one of them would hide a line bash executes after the
+#              real body ends. The operator is noted where it is read, in the
+#              scan that reads it, and the raise is made by the pass that
+#              settles the text, so it is the same for every stage and every
+#              reading that lexes the text: a text whose lexing raises raises
+#              on every call, and no map of it is cached. A delimiter word the
+#              lexer can read keeps its handling.
+#
 # Work bound (P7, D4). A pass reads the text once, left to right, with an
 # explicit stack (no recursion). An opener that never closes cannot be known
 # to be one until the end of the text, so the text is read again with every
@@ -747,6 +779,21 @@ class LexUnmatchedSubscript(LexBudgetExceeded):
     be placed. It is a LexBudgetExceeded -- the text cannot be settled -- that
     the hook answers with its own `ask` (ask_unmatched_subscript()), never an
     `allow`."""
+
+
+class LexUnreadableDelimiter(LexBudgetExceeded):
+    """lex_shell() met a here-document operator whose delimiter word it cannot
+    read (P16): bash takes a body for that operator and skips its lines up to
+    the delimiter line, but which lines those are cannot be told, so the body
+    lines cannot be placed. It is a LexBudgetExceeded -- the text cannot be
+    settled -- that the hook answers with its own `ask`
+    (ask_unreadable_heredoc_delimiter()), never an `allow`. AMBIGUOUS is the
+    pass's `an extended-glob parenthesis was met directly inside an array`
+    fact, which lex_shell() would have handed on with a map."""
+
+    def __init__(self, ambiguous=False):
+        super().__init__()
+        self.ambiguous = ambiguous
 
 
 LexRegion = collections.namedtuple(
@@ -1182,8 +1229,10 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     AMBIGUOUS says an extended-glob parenthesis was met directly inside an
     array, so the other reading could differ -- or
     ("restart", new_settled, new_reparen, iterations) when this pass learned
-    of openers to settle; raises LexBudgetExceeded past BUDGET iterations and
-    LexUnmatchedSubscript when a subscript's `]` never comes.
+    of openers to settle; raises LexBudgetExceeded past BUDGET iterations,
+    LexUnmatchedSubscript when a subscript's `]` never comes and
+    LexUnreadableDelimiter when a real here-document operator's delimiter word
+    cannot be read.
 
     The grammar state a shell-rule frame carries (CMD, RW, CS and the small
     markers on _LexFrame) is advanced one word at a time by word_transition():
@@ -1256,7 +1305,17 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     of the text is no LexUnmatchedSubscript. Quotes and substitutions opened
     inside it are regions as ever, and defer a pending body as they do
     anywhere. A `NAME[` word at a command position keeps its unbound
-    subscript: bash matches its brackets across lines."""
+    subscript: bash matches its brackets across lines.
+
+    Unreadable delimiter words (P16). A real here-document operator -- one
+    registered at a position where the lexer would register an operator -- whose
+    delimiter word _heredoc_operator() cannot read is noted as the scan reads
+    it, and the pass that ends with a settled text raises
+    LexUnreadableDelimiter for it: bash takes a body for that operator that
+    the lexer cannot place, so the text is no map. A `<<` that is no operator
+    (on a discarded line, directly in an array, past the earliest opener
+    settled as not opened) is never noted, and a pass that ends in a restart
+    discards what it noted."""
     n = len(text)
     tail_start = min(settled) if settled else None
     regions = []  # [kind, start, end, parent, closed, nearest substitution ancestor]
@@ -1278,7 +1337,7 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
     extglob_met = False
     ext_lines = set()
     bound_keep_until = -1
-    unknown_until = 0
+    unreadable_delimiter = False
 
     def new_region(kind, start, f):
         parent = f.reg
@@ -2068,16 +2127,15 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                         m = _heredoc_operator(text, i)
                         if m is not None and (tail_start is None or i < tail_start):
                             if m[1] is None:
-                                # Delimiter word unreadable: no body for this
-                                # operator nor any later one on this line.
-                                nl = text.find("\n", m[0])
-                                unknown_until = n if nl < 0 else nl
-                                i = m[0]
-                            elif i < unknown_until:
-                                i += 2
+                                # Delimiter word unreadable (P16): bash takes
+                                # a body for this operator that cannot be
+                                # placed. Noted here, in the scan that reads
+                                # the operator; the pass that ends the
+                                # lexing raises for it.
+                                unreadable_delimiter = True
                             else:
                                 register_operator(i, m)
-                                i = m[0]
+                            i = m[0]
                         else:
                             i += 2
                         continue
@@ -2471,6 +2529,12 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
         # A subscript whose `]` never comes (P14): bash keeps reading for it.
         # One bound to its line (P15) is no subscript past the line's end.
         raise LexUnmatchedSubscript()
+    if unreadable_delimiter:
+        # A real here-document operator whose delimiter word cannot be read
+        # (P16). Decided by the pass that settles the text: an operator an
+        # earlier pass read before an opener was settled as not opened is no
+        # operator in this one.
+        raise LexUnreadableDelimiter(extglob_met)
     for f in stack[1:]:
         if f.region is not None:
             regions[f.region][2] = n
@@ -2567,7 +2631,8 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     flag _lex_extglob_met is raised whenever a lexing met such a parenthesis,
     that is, whenever the other reading could give another map. Raises
     LexUnmatchedSubscript (a LexBudgetExceeded) for a subscript whose `]`
-    never comes.
+    never comes, and LexUnreadableDelimiter (a LexBudgetExceeded) for a real
+    here-document operator whose delimiter word cannot be read (P16).
 
     The result is cached on (TEXT, MODE, BODIES, EXTGLOB): the maps are never
     modified, and every stage that needs the lexer's reading of one chunk
@@ -2592,7 +2657,14 @@ def lex_shell(text, mode="shell", bodies=True, extglob=None):
     rounds = 0
     while True:
         rounds += 1
-        result = _lex_pass(text, mode, settled, reparen, lines, budget - used, extglob)
+        try:
+            result = _lex_pass(text, mode, settled, reparen, lines, budget - used, extglob)
+        except LexUnreadableDelimiter as exc:
+            # No map is made, but the other extended-glob reading could still
+            # give a text with no unreadable operator: say it was met.
+            if exc.ambiguous:
+                _lex_extglob_met = True
+            raise
         if result[0] == "done":
             break
         used += result[3]
@@ -5287,11 +5359,29 @@ def ask_unmatched_subscript():
     )
 
 
+def ask_unreadable_heredoc_delimiter():
+    """Emit the `ask` decision for a here-document operator whose delimiter
+    word lex_shell() cannot read (LexUnreadableDelimiter, P16): bash takes a
+    body for the operator and skips its lines up to the delimiter line, so the
+    lines it skips cannot be placed statically. Never an `allow`; under
+    claude-batch decide() demotes the `ask` to `deny`."""
+    decide(
+        "ask",
+        "unreadable-heredoc-delimiter",
+        "ヒアドキュメントの区切り語を読み取れない。bash が読み飛ばす本文の行を"
+        "静的に決められず、後続の行のどれを bash が実行するか確定できない。"
+        "安全側で確認を挟む。",
+    )
+
+
 def ask_lex_unsettled(exc):
     """The `ask` decision for a text lex_shell() could not settle: its own
-    for an unmatched subscript, the scan-budget one for everything else."""
+    for an unmatched subscript and for an unreadable here-document delimiter
+    word, the scan-budget one for everything else."""
     if isinstance(exc, LexUnmatchedSubscript):
         ask_unmatched_subscript()
+    if isinstance(exc, LexUnreadableDelimiter):
+        ask_unreadable_heredoc_delimiter()
     ask_scan_budget_exceeded()
 
 
@@ -7901,8 +7991,10 @@ def _judge_under(payload, extglob):
     """main() under the lexer reading EXTGLOB (P14), its decision held back:
     returns the output decide() would have printed, or None when main() ended
     without one. A text lex_shell() could not settle -- within its linear work
-    bound, or for lack of a subscript's `]` -- gets an `ask` (the scan-budget
-    one, or ask_unmatched_subscript()), never an `allow`
+    bound, for lack of a subscript's `]`, or for a here-document delimiter
+    word it cannot read -- gets an `ask` (the scan-budget one,
+    ask_unmatched_subscript() or ask_unreadable_heredoc_delimiter()), never an
+    `allow`
     (destructive-guard-unified-lexer D4, NFR3)."""
     global _capture_decisions, _lex_extglob
     _capture_decisions = True
