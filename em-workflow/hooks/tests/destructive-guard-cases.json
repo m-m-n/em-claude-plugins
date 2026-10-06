@@ -696,5 +696,6 @@
   ["deny", "9381769d7116fab2 round2-residuals FR3.35 case の本体の a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "case x in x) a[1<<2]=y;; esac\nrm -rf /home/sakura/valuable\n2]=y"],
   ["deny", "9381769d7116fab2 round2-residuals FR3.36 パイプの後ろの a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "echo hi | a[1<<2]=y\nrm -rf /home/sakura/valuable\n2]=y"],
   ["deny", "9381769d7116fab2 round2-residuals FR3.37 fd 番号つきのリダイレクトの後ろの a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "2>/dev/null a[1<<2]=y\nrm -rf /home/sakura/valuable\n2]=y"],
-  ["deny", "9381769d7116fab2 round2-residuals FR3.38 if の条件位置の a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "if a[1<<2]=y; then :; fi\nrm -rf /home/sakura/valuable\n2]=y"]
+  ["deny", "9381769d7116fab2 round2-residuals FR3.38 if の条件位置の a[1<<2]=y は終端行 2]=y があっても添字で、後続の rm -rf は deny", "if a[1<<2]=y; then :; fi\nrm -rf /home/sakura/valuable\n2]=y"],
+  ["deny", "48e1f462b0dd164f round2-residuals FR2.1 time -p の後ろの 2 つ目の -p はコマンド語で、続く a[1<<2]=x の << は演算子として読まれ、終端行 2]=x の後ろの rm -rf は deny", "time -p -p a[1<<2]=x\n'\n2]=x\nrm -rf /home/sakura/valuable\n'"]
 ]
