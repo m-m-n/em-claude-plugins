@@ -148,3 +148,49 @@ task0001 (task0005's command form is never refused).
 ## Open Questions
 - None blocking. D4 records how FR2 and FR7 combine for a `${` after a tail
   source.
+
+## Review Round 1 Rework (task0006 to task0008)
+
+Three tasks run in parallel on the integrated tree and share the same three
+files as the first five. Every Convention above applies to them unchanged.
+
+### Shared Components (additions)
+
+| Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
+|-----------|----------------|------------------------------|---------------|
+| Backtick substitution extent | Where a backtick substitution ends | Owned by task0006. When a backtick opens a substitution, its extent ends at the next backtick not escaped by a backslash pair read from the opening backtick on; quotes, comments and expansions inside play no part. The content is read only up to that offset: every frame or region still open there ends unclosed at it, and the backtick closes the substitution. A here-document whose operator lies inside the extent takes its body only from inside it. This replaces the command-form-specific backtick handling. Finding the extents is linear in the text length overall. | task0006 (owner), task0007 |
+| Reading bound of a look-ahead | How far a look-ahead of the lexer pass may read | Any look-ahead past characters (task0007's skip over continuation pairs after `$`) stops at the current reading's bound: the end of the text, the end of a discarded line, or the extent of the innermost backtick substitution (task0006). | task0006, task0007 (owner of the look-ahead) |
+| Line continuation before `$` openers and in the word split | Where a backslash-newline pair is taken out before reading | Owned by task0007. The `$` handling finds the character after `$`, and the second `(` of `$((`, past any run of backslash-newline pairs; the region starts at the `$`; the recognized opener is then decided as before (the `${` dispatch row and the tail gate row apply unchanged). Downstream inner text of a command form starts after its opener and every pair in it. The tokenizer splits a view with every backslash-newline pair outside single-quoted text removed and reports offsets in the original text; `_tokenize_marked(marked, layout)` and `_MarkedText.plain(text)` keep their call shape and meaning otherwise. A backslash before any other character, `\r` included, is untouched. | task0007 (owner), task0006 |
+| Trailing `\r` in the decision layer | What a `\r` at the end of a word means to the decisions | Owned by task0008; narrows task0004's rule. The trailing `\r` is still disregarded for every match that can only lead to ask or deny. The safe-delete exception, and any other decision that turns a delete target into an allow, reads the target with its trailing `\r`, whether it was unquoted, escaped or quoted and whether the words came from the tokenizer or the fallback split. | task0008 |
+
+### Rework case label rule
+
+A rework task's case-table labels begin with the finding's stable_id, then
+`round2-deferred`, then the tag `R1.<group><n>` (`R1.BT` task0006, `R1.LC`
+task0007, `R1.CR` task0008), then a Japanese description. Each rework task
+finds its cases by label and command text at index 769 or later and checks
+that no label below 769 carries its own stable_ids; D3's placement test is
+not changed.
+
+### Cross-task Design Decisions (additions)
+
+#### D6: Extent first, content second, for backticks
+The four backtick findings of review round 1 share one root cause, so they
+are closed by fixing the extent when the substitution opens, not by
+repairing each frame kind that can swallow the closing backtick. Affected:
+task0006, task0007 (its look-ahead respects the extent).
+
+#### D7: A trailing `\r` never grants allow
+Disregarding a trailing `\r` exists so a CRLF line end keeps a deny. It
+must not make a target match the safe-delete exception, because bash
+deletes the name with the `\r`. `rm -rf ./build\r` therefore changes from
+allow to deny; the only expectation pinning allow was task0004's own
+agreement-test entry, which task0008 rewrites. Affected: task0008.
+
+### Risk Assessment (additions)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Bounding every frame by the backtick extent changes the reading of a pre-existing case | Low | High | Existing cases are fixed points; task0006 pins the `heredoc-syntax-error E-7` reading and keeps the command-form backtick test unchanged |
+| task0006 and task0007 both change the `$` handling and the backtick frame of the single pass | High | Medium | Ownership rows above; parent-side adoption re-implements on the parent's version |
+| Removing continuation pairs from the tokenizer view shifts reported offsets | Medium | High | Offsets stay in the original text (row above); `TestPositionMap` and the stage agreement run over every case |
