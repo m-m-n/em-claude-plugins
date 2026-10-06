@@ -120,7 +120,8 @@ workflow:
   failed_kind: null
   base_commit: d1f3077dbfce58a59f8289c42e3e2b0089cac229
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 147ca892fa0e8a60e0c18b6d3cc1b63c8b5c7634
 - id: verify
   status: pending
   result: null
@@ -244,7 +245,7 @@ tasks:
       - '730712dde1bd3462'
       review_round: 1
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -255,15 +256,15 @@ review:
     - perspective: performance
       reason: フックは全 Bash 呼び出しで走る字句解析で、今回の変更が NFR2（作業量の上限）に関わる走査を増やすため
     cross_validation: true
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
   - architecture
   - spec
   - performance
-  residual_critical_high: 5
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: 語の内部の行継続を除いた論理的な語で代入語と組み込み命令名を判定する（b0734a006de6f4d7）
