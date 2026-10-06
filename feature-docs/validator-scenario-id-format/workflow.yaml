@@ -161,7 +161,7 @@ tasks:
     requirements:
     - FR3
     - NFR2
-    status: in_progress
+    status: merged
     branch: em-workflow/validator-scenario-id-format/task0002
     notes: null
 review:
