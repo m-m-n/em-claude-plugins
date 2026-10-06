@@ -1,10 +1,10 @@
 task_id: task0005
-baseline_failures: []          # refreshed after the parent-side adoption (conflict cycle 1): the suite of the parent branch, Ran 8629 tests, OK (skipped=1)
-final_failures: []             # re-run after the re-implementation on the adopted parent: Ran 8672 tests, OK (skipped=1); runner 818/818; agreement module 328 tests OK
+baseline_failures: []          # refreshed after the parent-side adoption (conflict cycle 2): the suite of the parent branch, Ran 8649 tests, OK (skipped=1)
+final_failures: []             # re-run after the cases were re-appended on the adopted parent: Ran 8692 tests, OK (skipped=1); runner 822/822; agreement module 348 tests OK
 # Red observations: the new tests and the case table were run against the
 # hook without this task's change, first the hook at the task's base
 # (git show 6fa3a500:em-workflow/hooks/destructive-guard.py) and again, after
-# the parent-side adoption, the adopted parent hook; the failing set was the same.
+# each parent-side adoption, the parent's hook; the failing set was the same.
 # Test names below are in tests/test_destructive_guard_lexer_agreement.py unless
 # a runner entry is named.
 acceptance_tests:
@@ -16,7 +16,7 @@ acceptance_tests:
       - "run-destructive-guard.py: 1fcae1f76f2a20f0 round2-deferred FR7.4"
       - "run-destructive-guard.py: 1fcae1f76f2a20f0 round2-deferred FR7.5"
     red_confirmed: true
-    red_reason: "runner over the case table with the cases appended, hook without the change: 777/785 passed on the task's base hook and 810/818 on the adopted parent hook; FR7.1-FR7.5 and FR7.8-FR7.10 FAIL with got=allow (FR7.6 and FR7.7 are allow cases and passed). History order: commits 71a83348 (FR7.1-FR7.7), 64b7fc8c (FR7.8-FR7.10) and 1fbf4aae (FR7.11) change only destructive-guard-cases.json and precede the commit that changes destructive-guard.py."
+    red_reason: "runner over the case table with the cases appended, hook without the change: 777/785 passed on the task's base hook and 814/822 on the parent's hook after the last adoption; FR7.1-FR7.5 and FR7.8-FR7.10 FAIL with got=allow (FR7.6 and FR7.7 are allow cases and passed). History order: commits 71a83348 (FR7.1-FR7.7), 64b7fc8c (FR7.8-FR7.10) and 1fbf4aae (FR7.11) change only destructive-guard-cases.json and precede the commit that changes destructive-guard.py."
   AC-2:
     tests:
       - TestBraceCommandSubstitution.test_a_closed_command_form_is_one_region_and_one_span
