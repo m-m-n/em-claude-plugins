@@ -144,57 +144,6 @@ REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|<>|>&|<&|&>>?)\d*")
 # `<<<`, which are read-only) and must join the write-target set.
 READWRITE_REDIRECT = re.compile(r"\d*<>\d*")
 
-# A here-document operator on its own -- the opening `<<`/`<<-` plus its
-# delimiter word, quoted or not -- matched per line rather than swallowing
-# the body in one regex: several operators can share a line (task0001 FR3),
-# and each operator's own body/delimiter-line search is now a separate,
-# index-assisted lookup (see strip_heredocs()) rather than backtracking
-# regex match. `<<<` (a here-string, not a here-document) stays excluded by
-# the negative lookahead, unchanged from before this task.
-HEREDOC_OP = re.compile(r"<<-?(?!<)[ \t]*(['\"]?)(\w+)\1")
-# The delimiter read as a shell word: plain characters, backslash escapes and
-# quoted parts joined (`E'OF'` is the word EOF). Used by the lexer so the
-# closing line is matched against the delimiter bash itself would use.
-HEREDOC_WORD_OP = re.compile(
-    r"<<-?(?!<)[ \t]*((?:\\.|'[^']*'|\"[^\"]*\"|[^\s;|&()<>'\"\\`$])+)"
-)
-
-
-def _heredoc_delimiter(raw):
-    """(delimiter, quoted) of the raw delimiter word RAW: quotes and
-    backslashes removed, QUOTED when any of them was present."""
-    out = []
-    quoted = False
-    i = 0
-    n = len(raw)
-    while i < n:
-        c = raw[i]
-        if c == "\\" and i + 1 < n:
-            quoted = True
-            out.append(raw[i + 1])
-            i += 2
-        elif c == "'":
-            quoted = True
-            j = raw.find("'", i + 1)
-            out.append(raw[i + 1 : j])
-            i = j + 1
-        elif c == '"':
-            quoted = True
-            j = raw.find('"', i + 1)
-            body = raw[i + 1 : j]
-            k = 0
-            while k < len(body):
-                if body[k] == "\\" and k + 1 < len(body) and body[k + 1] in '$`"\\':
-                    k += 1
-                out.append(body[k])
-                k += 1
-            i = j + 1
-        else:
-            out.append(c)
-            i += 1
-    return "".join(out), quoted
-
-
 _HEREDOC_OP_HEAD = re.compile(r"<<-?(?!<)[ \t]*")
 _HEREDOC_PLAIN = re.compile(r"[^ \t\n;|&()<>'\"\\`$]+")
 _HEREDOC_DQ_SPECIAL = re.compile(r"[\"\\]")
@@ -2120,28 +2069,22 @@ def _lex_pass(text, mode, settled, reparen, lines, budget, extglob=False):
                 f.prev_plain = f.time_p = False
                 f.kw = ""
                 if c == "<":
-                    if text.startswith("<\\\n<", i):
-                        # Backslash-newline is removed before tokenizing, so
-                        # this is a `<<` split across lines: its delimiter
-                        # and body cannot be placed. Fail closed (P16), but
-                        # only for a real here-document operator.
-                        if text.startswith("<\\\n<<", i):
-                            # Split `<<<`: a here-string, not a here-document.
-                            if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
+                    _j = i + 1
+                    while text.startswith("\\\n", _j):
+                        _j += 2
+                    if _j > i + 1 and text.startswith("<", _j):
+                        # Backslash-newline (one or more) is removed before
+                        # tokenizing, so this is `<<` / `<<<` split across
+                        # lines: its delimiter and body cannot be placed.
+                        # Fail closed (P16). Only the first `<` is consumed;
+                        # the main loop handles the continuations as usual.
+                        if discard_end is None:
+                            if kind == "array":
                                 begin_discard(i)
-                            f.redir = True
-                            i += 5
-                            continue
-                        if discard_end is not None:
-                            i += 3
-                            continue
-                        if kind == "array":
-                            begin_discard(i)
-                            i += 3
-                            continue
-                        if tail_start is None or i < tail_start:
-                            unreadable_delimiter = True
-                        i += 3
+                            elif tail_start is None or i < tail_start:
+                                unreadable_delimiter = True
+                        f.redir = True
+                        i += 1
                         continue
                     if text.startswith("<<<", i):
                         if kind == "array" and discard_end is None and (tail_start is None or i < tail_start):
