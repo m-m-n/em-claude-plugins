@@ -1,0 +1,12 @@
+schema_version: 2
+feature: routeback-record-direct-key
+tier: reduced
+bases:
+  - basis: description_only
+    score: {"probabilities": {"0": 0.0, "1": 0.97, "2": 0.03, "3": 0.0}, "expectation_clear": 0.91, "confidence": 0.97}
+    observed_at: "2026-10-07T10:06:07+09:00"
+  - basis: description_plus_code
+    score: {"probabilities": {"0": 0.0, "1": 0.97, "2": 0.03, "3": 0.0}, "expectation_clear": 0.91, "confidence": 0.96}
+    observed_at: "2026-10-07T10:08:30+09:00"
+pre_survey_estimate: {"files_expected": ["em-workflow/hooks/queue_stop_guard.py", "tests/test_queue_stop_guard_routeback_record.py"], "changed_lines_approx": 0, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "work_still_required_evidence": "em-workflow/hooks/queue_stop_guard.py:194 と :212 はタスクキーより深い行を返し、:243 と :246 は直下キーかを確認せず最初の一致を採用する。候補列挙と入出力をメモリ上に置き換えた現行コードの確認では、notes 本文が 3、直下の記録が 1 の場合に {'task0001': '3'} が返った。failed が記録の1行目にある場合、notes 本文が 1 で直下の記録がないと hook_main は 2 を返し、notes 本文が 3 で直下の記録が 1 だと 0 を返した。入れ子のマッピングでも同じ結果だった。tests/test_queue_stop_guard_routeback_record.py:181 と :196 に一致・記録なしの既存テストがあるが、:92 の notes は null で、指定された本文内の値を検証する2ケースはない。tests/test_queue_stop_guard.py:100 も notes は null を使う。記録読取関数は em-workflow/hooks/queue_stop_guard.py:240 で iter_task_block_lines を利用し、:474 で evaluate_feature から呼ばれる。changed_lines_approx の 0 は今回の実変更行数であり、修正に必要な行数は未確定。", "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 2, "body_change_kind": "new_logic", "change_containment": "single_module", "caller_and_dependency_count": 2, "changes_external_contract": false, "changes_behavior": true}
+decided_at: "2026-10-07T10:08:40+09:00"
