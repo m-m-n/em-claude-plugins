@@ -122,7 +122,12 @@ workflow:
   status: completed
   completed_at_commit: 256863cec09623e51d95f34b41c17f7b930f707f
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: cc535fb2f4f360573930a2d61cd0e65b986db480
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'TS-1..TS-7, TS-9 pass (python3 -m unittest discover -s tests: 8838 tests OK, 1 skipped); TS-8 / TS-11 manual review pass; TS-10 mutation (TS-\\d+) fails 6 new tests, change discarded; TM-1 covered by TS-5/TS-6/TS-7'
 - id: retrospect
   status: pending
 tasks:
