@@ -97,7 +97,7 @@ workflow:
   failed_items: []
   summary: 'full suite 8977 tests OK (skipped=1); targeted 186 OK; TS-7/TS-8/TS-9 inspection pass; check-plugin-invariants pass'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Close the two remaining quoted-value false-open paths in the multiline value
