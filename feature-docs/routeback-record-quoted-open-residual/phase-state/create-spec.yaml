@@ -1,0 +1,17 @@
+schema_version: 1
+feature: routeback-record-quoted-open-residual
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 4e0ca66718462eafe7ba64e61e626ea6c62b9a2d
+last_input_digest: sha256:cf4ec6e279a816f18a39204346bf9e0cb53fc16c501fa1ce276f5e19a5f072ca
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
