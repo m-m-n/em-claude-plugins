@@ -1,0 +1,147 @@
+schema_version: 1
+feature: task-status-key-exact-match
+created: 2026-10-07
+base_branch: main
+goal: |
+  # queue_stop_guard の TASK_STATUS_KEY_RE がコロンを含む別キー（status:detail など）を直下の status キーと誤認する
+
+  Notion: https://www.notion.so/3f23509ec8ee8194b8c4d28bf89c3fe9
+
+  ## 現象 (必須)
+  `em-workflow/hooks/queue_stop_guard.py` の `TASK_STATUS_KEY_RE`（`^\s+status:`）は、コロンの直後に空白や行末を求めていない。そのため `tasks.{T}` 直下の `status:detail: x` のような別キーの行を status キーと誤認し、`task_statuses_from_workflow` がそのタスクを決定済みとして扱う。値は取り出せないので結果から外れ、後ろにある本来の直下キー `status: pending` は読まれない。
+  feature `task-status-direct-key` の差分で入った後退（main のフックでは `{'task0001': 'pending'}` を返す）。review round 1 で medium として検出し、評価者が再現を確認した。
+  ## 再現手順 (必須)
+  1. workflow.yaml のタスクブロックで、直下に `status:detail: ignored` を置き、その後ろに `status: pending` を置く
+  2. `task_statuses_from_workflow` を呼ぶ
+  3. 結果が `{}` になる
+  ## 期待する挙動 (必須)
+  キー名が `status` と一致する行だけを決定行として扱い、`{'task0001': 'pending'}` を返す。裸の `    status:`（値なし）が決定行になる既存挙動は保つ。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  ## 該当箇所 (任意)
+  `em-workflow/hooks/queue_stop_guard.py:80`（`TASK_STATUS_KEY_RE`）、`task_statuses_from_workflow`
+  ## 実害・発生条件 (任意)
+  起きる可能性は低い。オーケストレーターが書くタスクキーにこの形は無く、notes の本文は直下より深いインデントにある。外れる方向は Stop フックが終了を許す側。出典: em-workflow feature `task-status-direct-key` の review round 1（stable_id `75f58935e46781c9`）。
+parent_branch: em-workflow/task-status-key-exact-match/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.97
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  at: '2026-10-07T20:17:50+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no two tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 36a105c4e5ab8a9c2f4ba1686a6347e2237e9bd4
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: tier reduced subtracts the design step; also no UI (Python Stop-hook regex fix)
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: "status の決定行はキー名が status と一致する行だけにする"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "値なしの status: が決定行になる既存挙動を保つ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "再発を検出するテスト"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "依存"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "堅牢性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "互換性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "テスト規約"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
