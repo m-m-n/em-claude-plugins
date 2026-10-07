@@ -1,7 +1,7 @@
 schema_version: 1
 feature: routeback-record-quoted-continuation
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: fbbdd9bdb6eae0d4dd392b5b7bf7d78a5e87cc38
 last_input_digest: sha256:f31e32a2166048b031d87dde64524b8eeb7c4f173db099647dbd51a9aa1ea014
