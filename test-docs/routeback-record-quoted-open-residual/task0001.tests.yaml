@@ -1,0 +1,57 @@
+task_id: task0001
+baseline_failures: []          # full suite before any edit: 8957 tests, OK (skipped=1)
+final_failures: []             # full suite re-run after implementation: 8977 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestMidScalarQuestionMarkDoesNotOpen.test_quote_after_a_mid_scalar_question_mark_does_not_open
+    red_confirmed: true
+    red_reason: "base exited 0 instead of 2 in all four subTests (one-line-sequence, one-line-mapping, two-line-sequence, two-line-mapping): AssertionError: 0 != 2 (a `?` before a space or at the end of the line was taken as an indicator, so the quote opened and hid the record and task0002)"
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineDoesNotOpen.test_follow_up_after_a_non_ascii_blank_line_does_not_open
+    red_confirmed: true
+    red_reason: "base exited 0 instead of 2 in all six subTests (U+3000 and U+00A0, each with the `- '`, `\"` and `[` follow-up lines): AssertionError: 0 != 2 (the non-ASCII whitespace line was treated as blank, so the follow-up line opened)"
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestBlockScalarKeepsANonAsciiBlankLine.test_the_non_ascii_line_stays_a_block_scalar_body_line
+    red_confirmed: false
+    red_reason: "block-scalar non-regression: the U+3000 line is indented deeper than the key, so it was a body line at the base revision as well; the test passed before the implementation existed and no red state occurred. A fixture that does differ between base and change (a column-0 U+3000 line ending the block scalar) is covered under AC-5 as an additional case"
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkAndNonAsciiBlankReadersDirectly.test_task_ids_include_task0001_and_task0002
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkAndNonAsciiBlankReadersDirectly.test_record_of_task0001_is_read
+    red_confirmed: true
+    red_reason: "base: AssertionError: Lists differ: ['task0001'] != ['task0001', 'task0002'] and KeyError: 'task0001' (records was {}) on all ten fixtures (the four AC-1 forms and the six AC-2 forms)"
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkIndicatorAtAnEntryStartStillOpens.test_indicator_at_an_entry_start_still_opens
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkIndicatorAtAnEntryStartStillOpens.test_a_flow_sequence_entry_after_a_comma_still_opens
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkBeforeAQuoteWithoutASpaceStaysNonOpening.test_no_space_after_the_question_mark_does_not_open
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkBeforeAQuoteWithoutASpaceStaysNonOpening.test_readers_read_the_record_and_task0002
+      - tests.test_queue_stop_guard_routeback_record.TestColumnZeroNonAsciiBlankLine.test_double_quote_or_bracket_follow_up_opens_nothing
+      - tests.test_queue_stop_guard_routeback_record.TestColumnZeroNonAsciiBlankLine.test_dash_quote_follow_up_still_opens
+      - tests.test_queue_stop_guard_routeback_record.TestColumnZeroNonAsciiBlankLine.test_dash_quote_follow_up_hides_the_record_and_task0002
+      - tests.test_queue_stop_guard_routeback_record.TestOtherNonAsciiWhitespaceIsNotBlank.test_the_record_and_task0002_are_read_by_the_hook
+      - tests.test_queue_stop_guard_routeback_record.TestOtherNonAsciiWhitespaceIsNotBlank.test_the_record_and_task0002_are_read_by_the_readers
+      - tests.test_queue_stop_guard_routeback_record.TestBlockScalarEndsAtANonAsciiBlankLineByIndentation.test_the_block_scalar_ends_at_the_column_zero_non_ascii_line
+      - tests.test_queue_stop_guard_routeback_record.TestBlockScalarEndsAtANonAsciiBlankLineByIndentation.test_a_deeper_non_ascii_line_stays_a_body_line
+    red_confirmed: true
+    red_reason: "mixed. Observed red at base: case (3) test_double_quote_or_bracket_follow_up_opens_nothing (AssertionError: 0 != 2, four subTests); case (4) both U+000B / U+000C tests (AssertionError: 0 != 2 from the hook, Lists differ: ['task0001'] != ['task0001', 'task0002'] from the readers, six subTests each); the additional block-scalar case test_the_block_scalar_ends_at_the_column_zero_non_ascii_line (AssertionError: \"      y'\\n\" unexpectedly found in the block scan, because the base treated the column-0 U+3000 line as blank and kept the block scalar open). Green at base by design, non-regression pins of behavior that pre-existed (no red state occurred): case (1) both TestQuestionMarkIndicatorAtAnEntryStartStillOpens tests, case (2) both TestQuestionMarkBeforeAQuoteWithoutASpaceStaysNonOpening tests, the `- '` half of case (3) (test_dash_quote_follow_up_still_opens and test_dash_quote_follow_up_hides_the_record_and_task0002), and test_a_deeper_non_ascii_line_stays_a_body_line"
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkAndNonAsciiBlankReadersNeverRaise.test_every_fixture_of_the_acceptance_criteria
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkAndNonAsciiBlankReadersNeverRaise.test_unclosed_values_up_to_the_end_of_the_file
+      - tests.test_queue_stop_guard_routeback_record.TestQuestionMarkAndNonAsciiBlankReadersNeverRaise.test_seeded_random_input_with_question_marks_and_non_ascii_blanks
+    red_confirmed: false
+    red_reason: "no-exception (fail-open) property: the readers returned normally on every new fixture at the base revision too, so the tests passed before the implementation and no red state occurred"
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestRealMappingIndicatorsStillOpen.test_question_mark_indicator_followed_by_a_space_still_opens
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing tests.test_queue_stop_guard_routeback_record.TestRealMappingIndicatorsStillOpen.test_question_mark_indicator_followed_by_a_space_still_opens (`{? 'tried }`) and the rest of the existing suite (tests/test_queue_stop_guard.py, tests/test_queue_stop_guard_routeback_record.py and the other modules that reference em-workflow/hooks/queue_stop_guard.py) detect a regression of the unchanged behavior; no red state occurred for this change. The diff of the tests module is additions only, and the blank-line checks of the three readers outside the tracker are untouched"
+  AC-8:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestHookImportsStdlibOnly.test_only_stdlib_imports
+    red_confirmed: false
+    red_reason: "the wording of the tracker class docstring and the `_scan_flow` `:` / `?` comment has no executable check (no test reads the tracker docstring or that comment; the docstring tests read the module and reader docstrings only), so it is verified by inspection in review and verify; the standard-library-only import part is covered by the existing TestHookImportsStdlibOnly, which passed before and after; the two-file diff scope is checked from git diff. No red state occurred"
