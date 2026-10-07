@@ -82,8 +82,7 @@ workflow:
   status: completed
   completed_at_commit: de7fea183c0bf80478a751705005fd7873963d4c
 - id: implement
-  status: completed
-  completed_at_commit: f9724d83dc8aef9defd9ef8b275b4f1742c315d2
+  status: pending
   base_commit: 07555fd45a01d910640f6b573ba52099ea4a034f
 - id: review
   status: pending
@@ -122,6 +121,36 @@ tasks:
     status: merged
     branch: em-workflow/routeback-record-quoted-continuation/task0001
     notes: null
+  task0002:
+    title: "Open quoted values only at real value-start positions in flow plain scalars and plain-scalar continuation lines"
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/queue_stop_guard.py
+    - tests/test_queue_stop_guard_routeback_record.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR4
+    - FR5
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    provenance:
+      source: review
+      source_ids:
+      - 6bd6c5a5788b3ddf
+      - b342ff634000d263
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -148,6 +177,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -155,6 +185,8 @@ requirements:
     - TS-4
     - TS-5
     - TS-6
+    - TS-10
+    - TS-11
   FR2:
     title: 共有の読み取りを通じて status と記録にも効かせる
     status: ok
@@ -174,8 +206,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-6
+    - TS-10
   FR4:
     title: 開きとみなす位置
     status: ok
@@ -183,8 +217,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-6
+    - TS-10
+    - TS-11
   FR5:
     title: 1 行で閉じる値と既存の規則
     status: ok
@@ -192,10 +229,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-3
     - TS-6
     - TS-7
+    - TS-10
   FR6:
     title: docstring とコメント
     status: ok
@@ -212,6 +251,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -219,6 +259,8 @@ requirements:
     - TS-4
     - TS-5
     - TS-6
+    - TS-10
+    - TS-11
   NFR1:
     title: 依存
     status: ok
@@ -226,6 +268,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
   NFR2:
@@ -235,6 +278,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
     - TS-7
@@ -245,6 +289,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
   NFR4:
@@ -254,6 +299,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
     - TS-9
@@ -264,6 +310,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-9
   NFR6:
@@ -273,10 +320,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
