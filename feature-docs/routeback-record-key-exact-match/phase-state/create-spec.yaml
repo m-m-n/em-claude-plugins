@@ -1,11 +1,11 @@
 schema_version: 1
 feature: routeback-record-key-exact-match
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 726c125d8315521a0820d770a427f80023bfe8c1
 last_input_digest: sha256:e36c4b2ff8fa3ab3854e6af5643e9669f943d909acb54841ea60b5aaf19279dc
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,13 @@ worker_runs:
   input_digest: sha256:3f679e26d2ed3922bd3eee304b1a1adce81f791f8fa4f968d18d8fe69a34c602
   output_digest: sha256:82efeb70b38af1d6ecdefca4a2eccc5f59ddbbd1a099f9dd836e6a84b8b60bc2
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:e36c4b2ff8fa3ab3854e6af5643e9669f943d909acb54841ea60b5aaf19279dc
-  output_digest: null
-artifacts: []
+  output_digest: sha256:87794ae673c524c7f8ccfac16d366cbef28714491ceb9b2d648faed8d857645a
+artifacts:
+- path: feature-docs/routeback-record-key-exact-match/SPEC.md
+  sha256: sha256:87794ae673c524c7f8ccfac16d366cbef28714491ceb9b2d648faed8d857645a
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
