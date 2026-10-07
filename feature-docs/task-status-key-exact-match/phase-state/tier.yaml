@@ -1,0 +1,12 @@
+schema_version: 2
+feature: task-status-key-exact-match
+tier: reduced
+bases:
+  - basis: description_only
+    score: {"type": "score", "score": 1.0, "confidence": 0.97, "legend": {"0": "0: Only a wording or rule-text change: no new logic, and no test change.", "1": "1: A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "2: New logic, a change reaching across several modules, or a change to an external contract.", "3": "3: A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.02, "1": 0.97, "2": 0.01, "3": 0.0}, "expectation_clear": 0.9}
+    observed_at: "2026-10-07T20:16:30+09:00"
+  - basis: description_plus_code
+    score: {"type": "score", "score": 1.02, "confidence": 0.98, "legend": {"0": "0: Only a wording or rule-text change: no new logic, and no test change.", "1": "1: A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "2: New logic, a change reaching across several modules, or a change to an external contract.", "3": "3: A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.0, "1": 0.98, "2": 0.02, "3": 0.0}, "expectation_clear": 0.91}
+    observed_at: "2026-10-07T20:24:10+09:00"
+pre_survey_estimate: {"files_expected": ["em-workflow/hooks/queue_stop_guard.py", "tests/test_queue_stop_guard_task_status_direct_key.py"], "changed_lines_approx": 10, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "test_change_kind": "extend_existing_one_to_one", "added_test_cases_approx": 1, "body_change_kind": "new_logic", "change_containment": "single_module", "caller_and_dependency_count": 2, "changes_external_contract": false, "changes_behavior": true, "evidence": "現在の main（f2cf74f9）で、status:detail: ignored の後に status: pending を置くと {} を返した。通常の pending は読め、裸の status: が決定行になる挙動も確認した。既存の直下キー読み取りテストはあるが、この再現ケースはない。ファイル変更はない"}
+decided_at: "2026-10-07T20:24:30+09:00"
