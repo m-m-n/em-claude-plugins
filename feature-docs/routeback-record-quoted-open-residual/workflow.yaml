@@ -88,7 +88,7 @@ workflow:
   completed_at_commit: db02255de8a9b7e6c8110b8c78b88d8114fc6a91
   base_commit: fa21b80e41f5eb464616a98ff9453d6e78f8db7d
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -112,8 +112,12 @@ tasks:
     status: merged
     branch: em-workflow/routeback-record-quoted-open-residual/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: '? を指示子とみなすのは flow エントリの先頭だけ'
