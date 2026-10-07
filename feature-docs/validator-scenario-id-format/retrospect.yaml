@@ -1,0 +1,47 @@
+feature: validator-scenario-id-format
+collected_at: "2026-10-07T09:19:09+09:00"
+session_ids: [01a113b9-a216-7463-afa7-7563003baab4]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: null
+      category: architecture
+      resolution_reason: "false positive — implementation-planner.md:239 が TS-n のみを定める指摘（high）。SPEC FR3 が planner の変更を範囲外としているため棄却（reviews/round1.yaml dismissed_sites）"
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の読みでバケット 1（確率 0.95、score 1.04）— 規則追加とテスト追加の小規模変更"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.01
+          confidence: 0.97
+          probabilities: {"0": 0.01, "1": 0.97, "2": 0.02, "3": 0.0}
+        observed_at: "2026-10-07T08:23:59+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.04
+          confidence: 0.95
+          probabilities: {"0": 0.0, "1": 0.95, "2": 0.05, "3": 0.0}
+        observed_at: "2026-10-07T08:25:47+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/validate-worker-output.py
+        - em-workflow/skills/plan-writing/SKILL.md
+        - tests/test_validate_worker_output.py
+      changed_lines_approx: 25
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "comprehensive#0: TSn 形式は左側の区切り条件が無く DTS13 から TS13 を抽出する（low に格下げ、TS-n にも同じ既存の性質）"
