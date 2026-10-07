@@ -1,7 +1,7 @@
 schema_version: 1
 feature: routeback-record-key-exact-match
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 726c125d8315521a0820d770a427f80023bfe8c1
 last_input_digest: sha256:e36c4b2ff8fa3ab3854e6af5643e9669f943d909acb54841ea60b5aaf19279dc
