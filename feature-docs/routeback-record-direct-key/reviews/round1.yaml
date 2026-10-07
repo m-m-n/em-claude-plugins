@@ -1,0 +1,67 @@
+round: 1
+executed_at: "2026-10-07T11:03:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: a1970748b7f998623266f719d1b271e45257f1a7
+  head_commit: 7f6d1a6bb637eefac1bc93fa39e3977b2f6df99d
+  changed_files:
+  - em-workflow/hooks/queue_stop_guard.py
+  - test-docs/routeback-record-direct-key/task0001.tests.yaml
+  - tests/test_queue_stop_guard_routeback_record.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "spec#1", perspective: spec, role: primary, source: codex, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 6ed302170de498f8
+    severity: medium
+    category: security
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 260
+    title: "TM-1: 直下キーと同じ字下げの引用文字列継続行が記録として読まれる"
+    description: "記録の読み取りは字下げだけで直下キーかどうかを判定している。そのため、notes の複数行ダブルクォート値で、継続行が直下キーと同じ 4 個の空白で字下げされていると、routeback_failed_journal_line: N の行がタスクの記録として採用される。PyYAML はこの形を受け付け、その行を notes の文字列として読む。(a) 直下キーの記録が無い pending/failed のタスクで偽の値が failed イベントの物理行と一致すると hook が exit 2 を返し、利用者の判断待ちを迂回する。(b) notes が記録より前にあるため、一致しない値が本物の記録を隠し、hook が exit 0 になる。YAML 1.2 の文法を厳密に適用するとこの継続行は 5 個以上の空白が要り、再現入力は厳密には不正な YAML で、SPEC A1 の前提の外にある。単一引用符の複数行スカラーや複数行のフロー形式コレクションにも同じ種類の穴がある。追加テスト notes_double_quoted は継続行を 6 個の空白で字下げしており、この境界を検証していない。"
+    suggestion: "直下キーの行の値が引用符またはフロー形式の括弧で始まりその行で閉じない場合は、閉じるまで後続行を記録候補から外す（エスケープを考慮する）。continuation_indent=4 の偽造と隠蔽の回帰テストを足す。A1 のまま据え置くなら、この制限を hook の docstring と THREAT-MODEL の残存リスクに明記し、notes をブロックスカラーで書く書き手側の規則を別タスクとして起票する。"
+    sources: [codex:security, codex:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため自動修正の対象外。SPEC A1（正しい YAML の前提）の外にあり、対策には仕様の拡張が要るため別タスクとして起票する"
+evaluation:
+  round_summary: "1 ラウンド目。medium 1 件を引き継ぎ、critical/high は無い。security#0 と comprehensive#0 が独立に報告し評価者も再現した、直下キーと同じ字下げの引用文字列継続行が記録として読まれる件を TM-1 の残存リスクとして記録した。comprehensive#0 のもう 1 件（別の行に置いたアンカー/タグが直下キーの字下げの基準になる）は、workflow.yaml のスキーマがアンカーもタグも使わず結果も fail-open 側のため降格した。対象 3 モジュールのテスト 117 件は通った。プラグインの version は変更されていない。インジェクションの試み: 検出なし。観点ごとの照合: comprehensive / security / architecture / spec いずれも corroborated（spec#0 は harness_unavailable で skip、spec#1 で照合）。"
+  recommended_action: complete
+  action_rationale: "critical/high は無い。残る medium 1 件は SPEC A1 の前提の外にあり、直すには仕様の拡張か書き手側の規則が要る。記録したうえで完了とし、追加の対策は人間の判断に委ねる。"
+dismissed_sites:
+  - file: em-workflow/hooks/queue_stop_guard.py
+    line: 260
+    run_id: "comprehensive#0"
+    reason: "duplicate of another finding"
+  - file: em-workflow/hooks/queue_stop_guard.py
+    line: 256
+    run_id: "comprehensive#0"
+    reason: "demoted"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-routeback-record-direct-key-20261007T020215Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
