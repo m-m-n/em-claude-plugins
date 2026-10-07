@@ -133,6 +133,7 @@ tasks:
     files:
     - em-workflow/scripts/validate-worker-output.py
     - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
     skills:
     - backend-impl
     domains:
@@ -146,7 +147,7 @@ tasks:
     - FR5
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     branch: em-workflow/validator-scenario-id-format/task0001
     notes: null
   task0002:
