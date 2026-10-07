@@ -1,0 +1,39 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> 9023 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation: 9038 tests (9023 + 15 new), OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestKeyLookalikeDoesNotHideTheRecord.test_reproduction_block_yields_the_record
+    red_confirmed: true
+    red_reason: "Against the unmodified hook: the reproduction block (routeback_failed_journal_line:x: 1 then routeback_failed_journal_line: 1) -> \"AssertionError: {} != {'task0001': '1'}\" (the lookalike line was taken as the first occurrence and its non-canonical value yielded no record)"
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestKeyLookalikeHookScenario.test_reproduction_block_is_unlaunched
+    red_confirmed: true
+    red_reason: "Against the unmodified hook, the hook subprocess exited 0 instead of 2 (\"AssertionError: 0 != 2\"): the lookalike line hid the genuine record, so task0001 was classified failed and never named after launch="
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestKeyLookalikeDoesNotHideTheRecord.test_a_value_glued_to_the_colon_does_not_hide_the_record
+    red_confirmed: true
+    red_reason: "Against the unmodified hook: routeback_failed_journal_line:1 then routeback_failed_journal_line: 1 -> \"AssertionError: {} != {'task0001': '1'}\""
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestExactKeyLinesKeepTheirReading.test_a_tab_after_the_colon_is_an_exact_key_line
+      - tests.test_queue_stop_guard_routeback_record.TestExactKeyLinesKeepTheirReading.test_an_empty_value_line_is_the_first_occurrence
+      - tests.test_queue_stop_guard_routeback_record.TestExactKeyLinesKeepTheirReading.test_a_lone_lookalike_line_is_no_record
+    red_confirmed: false
+    red_reason: "Preservation tests: the three behaviours (tab after the colon yields the record, an empty-value line is the first occurrence, a lone lookalike line yields no record) are the base revision's behaviour as well, so all three passed before the change. No executable red exists for behaviour the change keeps unchanged."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Process criterion with no executable check that can be made to fail: that the AC-1 to AC-4 tests live in tests/test_queue_stop_guard_routeback_record.py and that the AC-1, AC-2 and AC-3 tests were seen failing before the change is evidenced by the red observations recorded under AC-1, AC-2 and AC-3 above and in the module docstring's routeback-record-key-exact-match paragraph. A search of tests/ by the repository-relative path and by the basename test_queue_stop_guard_routeback_record found only comment references in tests/test_queue_stop_guard.py and tests/test_queue_stop_guard_task_status_direct_key.py, and no test that reads this module's docstring."
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestHookImportsStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard_routeback_record.TestDirectKeyWording
+      - tests.test_queue_stop_guard_routeback_record.TestBodyLineStatements
+      - tests.test_queue_stop_guard_routeback_record.TestRecordValueParsing.test_value_without_a_space_after_the_colon_is_no_record
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests listed detect the stdlib-only imports of the hook and of the test module, the wording phrases kept in the comment and docstrings, and the glued-value no-record case; no red state occurred for this change (all passed before it and after it). The full suite was re-run after the change: python3 -m unittest discover -s tests -> 9038 tests, OK (skipped=1)."

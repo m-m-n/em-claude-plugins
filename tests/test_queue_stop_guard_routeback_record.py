@@ -48,6 +48,18 @@ made only of whitespace other than U+0020 / U+0009 (U+3000, U+00A0, U+000B,
 U+000C) is not blank for the tracker. Observed red (base revision): the
 genuine direct-key record and task0002 are swallowed, so the hook exits 0
 instead of 2.
+
+routeback-record-key-exact-match (task0001): the sections headed with that name
+pin that a direct-child line is a record key line only when its key is exactly
+`routeback_failed_journal_line` (the colon after the name is followed by a
+space, a tab or the end of the line). A line whose key merely starts with
+`routeback_failed_journal_line:` (`routeback_failed_journal_line:x: 1`,
+`routeback_failed_journal_line:1`) is not a key line and never hides the genuine
+record after it. Observed red (base revision, such a line taken as the first
+occurrence): the reader returns {} instead of {"task0001": "1"} for the
+reproduction block and for the glued-value block, and the hook exits 0 instead
+of 2 for the reproduction block. The preservation cases (tab after the colon,
+empty value before a record, a lone lookalike line) pass on both revisions.
 """
 
 import ast
@@ -2789,6 +2801,126 @@ class TestQuestionMarkAndNonAsciiBlankReadersNeverRaise(unittest.TestCase):
                 records = call_reader("task_routeback_records_from_workflow", data)
                 self.assertLessEqual({task for task, _line in scanned}, set(ids))
                 self.assertLessEqual(set(records), set(ids))
+
+
+# --- routeback-record-key-exact-match: only an exact-key line is a record key ------
+#
+# A direct-child line is a record key line only when its key is exactly
+# `routeback_failed_journal_line`: the colon right after the name is followed by
+# a space, a tab or the end of the line (the colon rule of `_find_key_colon` and
+# TASK_STATUS_KEY_RE). A line whose key merely starts with
+# `routeback_failed_journal_line:` is not a key line, so it never becomes the
+# first occurrence and never hides the genuine record after it.
+#
+# "The reproduction block" below is a task0001 block, `pending`, in which a
+# `routeback_failed_journal_line:x: 1` line comes before a
+# `routeback_failed_journal_line: 1` line, both at the block's direct-child
+# indentation (the indentation of `title:` and `status:`: 4 spaces).
+# Observed red (base revision): the lookalike line is taken as the first
+# occurrence and its non-canonical value yields no record, so the reader returns
+# {} instead of {"task0001": "1"} and the hook exits 0 instead of 2.
+
+RECORD_READER = "task_routeback_records_from_workflow"
+LOOKALIKE_BEFORE_THE_RECORD = [
+    "    %s:x: 1" % RECORD_KEY,
+    "    %s: 1" % RECORD_KEY,
+]
+
+
+def records_read_from(extra):
+    """The record reader's result on a workflow.yaml whose task0001 block carries
+    `extra` lines (4-space direct-child indentation) after its status line."""
+    workflow = build_workflow([task_spec(TARGET, extra=extra)])
+    return call_reader(RECORD_READER, workflow)
+
+
+class TestKeyLookalikeDoesNotHideTheRecord(unittest.TestCase):
+    """The reader, called directly: a line whose key only starts with the record
+    key never decides the task, so the exact-key line after it is read."""
+
+    def test_reproduction_block_yields_the_record(self):  # AC-1
+        self.assertEqual(
+            records_read_from(LOOKALIKE_BEFORE_THE_RECORD), {TARGET: "1"}
+        )
+
+    def test_a_value_glued_to_the_colon_does_not_hide_the_record(self):  # AC-3
+        extra = ["    %s:1" % RECORD_KEY, "    %s: 1" % RECORD_KEY]
+        self.assertEqual(records_read_from(extra), {TARGET: "1"})
+
+    def test_a_second_colon_after_the_name_is_not_a_key_line(self):
+        extra = ["    %s::" % RECORD_KEY, "    %s: 1" % RECORD_KEY]
+        self.assertEqual(records_read_from(extra), {TARGET: "1"})
+
+    def test_a_letter_after_the_colon_is_not_a_key_line(self):
+        extra = ["    %s:a" % RECORD_KEY, "    %s: 1" % RECORD_KEY]
+        self.assertEqual(records_read_from(extra), {TARGET: "1"})
+
+    def test_non_ascii_whitespace_after_the_colon_is_not_a_key_line(self):
+        # U+3000 is whitespace, but only an ASCII space or tab ends the key.
+        extra = ["    %s:\u3000" % RECORD_KEY, "    %s: 1" % RECORD_KEY]
+        self.assertEqual(records_read_from(extra), {TARGET: "1"})
+
+    def test_several_lookalikes_in_a_row_are_all_skipped(self):
+        extra = [
+            "    %s:x: 7" % RECORD_KEY,
+            "    %s:2" % RECORD_KEY,
+            "    %s: 3" % RECORD_KEY,
+            "    %s: 4" % RECORD_KEY,
+        ]
+        # The first exact-key line decides: "3", never a later "4".
+        self.assertEqual(records_read_from(extra), {TARGET: "3"})
+
+    def test_lookalike_in_another_task_does_not_touch_this_tasks_record(self):
+        workflow = build_workflow(
+            [
+                task_spec(TARGET, extra=LOOKALIKE_BEFORE_THE_RECORD),
+                task_spec("task0002", extra=["    %s:x: 2" % RECORD_KEY]),
+            ]
+        )
+        self.assertEqual(call_reader(RECORD_READER, workflow), {TARGET: "1"})
+
+
+class TestExactKeyLinesKeepTheirReading(unittest.TestCase):
+    """The reader, called directly: reading that does not depend on the colon
+    rule is unchanged (preservation, not red)."""
+
+    def test_a_tab_after_the_colon_is_an_exact_key_line(self):  # AC-4 (a)
+        extra = ["    %s:\t1" % RECORD_KEY]
+        self.assertEqual(records_read_from(extra), {TARGET: "1"})
+
+    def test_an_empty_value_line_is_the_first_occurrence(self):  # AC-4 (b)
+        extra = ["    %s:" % RECORD_KEY, "    %s: 1" % RECORD_KEY]
+        self.assertNotIn(TARGET, records_read_from(extra))
+
+    def test_a_lone_lookalike_line_is_no_record(self):  # AC-4 (c)
+        extra = ["    %s:x: 1" % RECORD_KEY]
+        self.assertNotIn(TARGET, records_read_from(extra))
+
+    def test_a_lone_value_glued_to_the_colon_is_no_record(self):
+        extra = ["    %s:1" % RECORD_KEY]
+        self.assertNotIn(TARGET, records_read_from(extra))
+
+    def test_a_first_exact_key_line_with_a_bad_value_still_decides(self):
+        extra = ["    %s: x" % RECORD_KEY, "    %s: 1" % RECORD_KEY]
+        self.assertNotIn(TARGET, records_read_from(extra))
+
+    def test_a_lookalike_deeper_than_the_direct_keys_is_still_never_read(self):
+        # Indentation rule unchanged: a deeper exact-key line is not a direct key.
+        extra = ["    context:", "      %s: 1" % RECORD_KEY]
+        self.assertNotIn(TARGET, records_read_from(extra))
+
+
+class TestKeyLookalikeHookScenario(QuotedValueHookCase):
+    """The hook as a subprocess: the journal's `failed` event of task0001 sits
+    on physical line 1 and task0001 is `pending`."""
+
+    def test_reproduction_block_is_unlaunched(self):  # AC-2
+        result = self.run_target(extra=LOOKALIKE_BEFORE_THE_RECORD)
+        self.assert_launches_target(result)
+
+    def test_a_lone_lookalike_line_is_failed(self):
+        result = self.run_target(extra=["    %s:x: 1" % RECORD_KEY])
+        self.assert_failed(result)
 
 
 # --- routeback-record-quoted-continuation: AC-7 (docstrings and comments) --------
