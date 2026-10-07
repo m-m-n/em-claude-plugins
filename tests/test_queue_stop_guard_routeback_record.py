@@ -23,6 +23,7 @@ of the target `failed` event is known by construction.
 """
 
 import ast
+import importlib.util
 import json
 import os
 import re
@@ -62,11 +63,46 @@ def record_lines(value):
     return ["    %s: %s" % (RECORD_KEY, value)]
 
 
-def task_spec(task_id, status="pending", extra=(), after=()):
+def notes_block_scalar(indicator, body_lines, body_indent=6):
+    """The workflow.yaml lines of a non-null `notes` value written as a block
+    scalar: `notes: <indicator>` at the task mapping's direct-child indent,
+    then each body line indented by `body_indent` spaces."""
+    return ["    notes: %s" % indicator] + [
+        " " * body_indent + line for line in body_lines
+    ]
+
+
+def notes_double_quoted(*parts, continuation_indent=6):
+    """The workflow.yaml lines of a non-null `notes` value written as a
+    multi-line double-quoted scalar: the first part opens the quote, the last
+    part closes it, and every part after the first is a continuation line
+    indented by `continuation_indent` spaces."""
+    if len(parts) < 2:
+        raise ValueError("a multi-line scalar needs at least two parts")
+    lines = ['    notes: "%s' % parts[0]]
+    lines.extend(" " * continuation_indent + part for part in parts[1:-1])
+    lines.append(" " * continuation_indent + parts[-1] + '"')
+    return lines
+
+
+def task_spec(
+    task_id, status="pending", extra=(), after=(), notes=None, head=()
+):
     """`extra`: lines emitted verbatim inside the task's own block, after its
     status line. `after`: lines emitted right after the block, at whatever
-    indentation the caller wrote."""
-    return {"id": task_id, "status": status, "extra": list(extra), "after": list(after)}
+    indentation the caller wrote. `notes`: the lines of a non-null `notes`
+    entry (see notes_block_scalar / notes_double_quoted), emitted right after
+    the status line and before `extra`; None keeps the historical
+    `notes: null` line after `extra`. `head`: lines emitted right after the
+    `taskNNNN:` key line, before `title`."""
+    return {
+        "id": task_id,
+        "status": status,
+        "extra": list(extra),
+        "after": list(after),
+        "notes": None if notes is None else list(notes),
+        "head": list(head),
+    }
 
 
 def build_workflow(tasks, top_lines=(), step_lines=(), tail_lines=()):
@@ -86,10 +122,15 @@ def build_workflow(tasks, top_lines=(), step_lines=(), tail_lines=()):
     lines.extend(["  - id: review", "    status: pending", "", "tasks:"])
     for task in tasks:
         lines.append("  %s:" % task["id"])
+        lines.extend(task["head"])
         lines.append('    title: "task %s"' % task["id"])
         lines.append("    status: %s" % task["status"])
-        lines.extend(task["extra"])
-        lines.append("    notes: null")
+        if task["notes"] is None:
+            lines.extend(task["extra"])
+            lines.append("    notes: null")
+        else:
+            lines.extend(task["notes"])
+            lines.extend(task["extra"])
         lines.extend(task["after"])
     lines.extend(tail_lines)
     return "\n".join(lines) + "\n"
@@ -568,6 +609,218 @@ class TestPhysicalLineCounting(HookAssertions):
                 self.assert_failed(run_scenario(journal, record="3"))
 
 
+# --- routeback-record-direct-key: fixture builder (AC-6) -----------------------
+
+
+class TestFixtureBuilderNotes(unittest.TestCase):
+    """AC-6 (routeback-record-direct-key task0001): the builder emits a
+    non-null multi-line `notes` value when asked, and `notes: null` when not."""
+
+    def test_default_fixture_still_contains_notes_null(self):
+        text = build_workflow(standard_tasks("1"))
+        self.assertEqual(text.count("    notes: null\n"), 3)
+
+    def test_block_scalar_notes_option_emits_a_non_null_multi_line_value(self):
+        notes = notes_block_scalar("|", ["first line", "second line"])
+        text = build_workflow([task_spec(TARGET, notes=notes)])
+        self.assertNotIn("notes: null", text)
+        self.assertIn("    notes: |\n      first line\n      second line\n", text)
+
+    def test_double_quoted_notes_option_emits_a_non_null_multi_line_value(self):
+        notes = notes_double_quoted("first part", "second part", "last part")
+        text = build_workflow([task_spec(TARGET, notes=notes)])
+        self.assertNotIn("notes: null", text)
+        self.assertIn(
+            '    notes: "first part\n      second part\n      last part"\n', text
+        )
+
+    def test_notes_option_places_notes_before_the_record_key(self):
+        notes = notes_block_scalar("|", ["body"])
+        text = build_workflow(
+            [task_spec(TARGET, notes=notes, extra=record_lines("1"))]
+        )
+        self.assertLess(text.index("    notes: |"), text.index("    " + RECORD_KEY))
+
+
+# --- routeback-record-direct-key: only direct keys are read (AC-1..AC-3) -------
+
+# (label, indicator, body indent in spaces). A block scalar's body is indented
+# deeper than its `notes` key (4 spaces); an explicit indentation indicator
+# counts from the key's own indent.
+BLOCK_SCALAR_INDICATORS = [
+    ("literal", "|", 6),
+    ("literal-strip", "|-", 6),
+    ("folded", ">", 6),
+    ("folded-strip", ">-", 6),
+    ("literal-indent-2", "|2", 6),
+    ("literal-keep-indent-2", "|+2", 6),
+    ("folded-strip-indent-1", ">-1", 5),
+]
+
+
+def forged_body(value):
+    """A notes body whose middle line looks like the route-back record."""
+    return ["reason text", "%s: %s" % (RECORD_KEY, value), "more text"]
+
+
+def load_hook_module():
+    """The hook module loaded from its file path (module-level execution is
+    guarded by `if __name__ == "__main__":`, so loading does no hook work).
+    Only the AC-1 function-level tests use this."""
+    spec = importlib.util.spec_from_file_location(
+        "queue_stop_guard_direct_key_probe", HOOK_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestRecordReadFunction(unittest.TestCase):
+    """AC-1: task_routeback_records_from_workflow, called directly."""
+
+    def records_for(self, workflow_text):
+        module = load_hook_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "workflow.yaml")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(workflow_text)
+            return module.task_routeback_records_from_workflow(path)
+
+    def test_notes_body_record_does_not_shadow_the_direct_key_record(self):  # AC-1 (a)
+        workflow = build_workflow(
+            [
+                task_spec(
+                    TARGET,
+                    notes=notes_block_scalar("|", ["%s: 3" % RECORD_KEY]),
+                    extra=record_lines("1"),
+                )
+            ]
+        )
+        self.assertEqual(self.records_for(workflow), {TARGET: "1"})
+
+    def test_record_after_an_empty_block_scalar_at_the_direct_indent_is_read(self):  # AC-1 (b)
+        # An empty `notes: |` has no body: the next line at the direct-child
+        # indent is a sibling key of `notes`, and is read as the record.
+        workflow = build_workflow(
+            [
+                task_spec(
+                    TARGET,
+                    notes=notes_block_scalar("|", []),
+                    extra=record_lines("1"),
+                )
+            ]
+        )
+        self.assertEqual(self.records_for(workflow), {TARGET: "1"})
+
+    def test_notes_body_record_alone_is_no_record(self):  # AC-1
+        workflow = build_workflow(
+            [task_spec(TARGET, notes=notes_block_scalar("|", forged_body("1")))]
+        )
+        self.assertEqual(self.records_for(workflow), {})
+
+    def test_blank_and_comment_lines_before_the_first_key_keep_the_direct_indent(self):  # AC-1
+        # The direct-child indent comes from the first line that is neither
+        # blank nor a comment, so deeper-indented comments above `title:` must
+        # not become the reference indent.
+        head = ["", "        # deeper comment", "      # another comment"]
+        workflow = build_workflow(
+            [task_spec(TARGET, head=head, extra=record_lines("1"))]
+        )
+        self.assertEqual(self.records_for(workflow), {TARGET: "1"})
+
+    def test_block_with_only_blank_and_comment_lines_yields_no_record(self):  # AC-1
+        workflow = "\n".join(
+            [
+                "tasks:",
+                "  task0001:",
+                "",
+                "    # %s: 1" % RECORD_KEY,
+                "  task0002:",
+                '    title: "task0002"',
+                "    %s: 2" % RECORD_KEY,
+                "",
+            ]
+        )
+        self.assertEqual(self.records_for(workflow), {"task0002": "2"})
+
+
+class TestForgedRecordIsNotRead(HookAssertions):
+    """AC-2 (TM-1): the journal's `failed` event sits on physical line 1 and
+    the task is `pending`, so a record-shaped line with value 1 would make the
+    hook demand a relaunch if it were read. No direct-key record exists, so
+    the task is failed and the hook exits 0."""
+
+    def setUp(self):
+        self.journal = journal_bytes([event_line("failed", TARGET)])
+
+    def run_with_task(self, **spec):
+        workflow = build_workflow([task_spec(TARGET, **spec), task_spec("task0002")])
+        return run_scenario(self.journal, workflow_text=workflow)
+
+    def test_block_scalar_body_is_not_read_for_every_indicator(self):
+        for label, indicator, body_indent in BLOCK_SCALAR_INDICATORS:
+            with self.subTest(indicator=indicator, form=label):
+                notes = notes_block_scalar(indicator, forged_body("1"), body_indent)
+                self.assert_failed(self.run_with_task(notes=notes))
+
+    def test_key_of_a_mapping_nested_under_another_direct_key_is_not_read(self):
+        extra = ["    context:", "      %s: 1" % RECORD_KEY]
+        self.assert_failed(self.run_with_task(extra=extra))
+
+    def test_key_of_a_mapping_inside_a_sequence_item_is_not_read(self):
+        extra = [
+            "    attempts:",
+            "      - number: 1",
+            "        %s: 1" % RECORD_KEY,
+        ]
+        self.assert_failed(self.run_with_task(extra=extra))
+
+    def test_continuation_line_of_a_multi_line_double_quoted_notes_is_not_read(self):
+        notes = notes_double_quoted(
+            "tried twice", "%s: 1" % RECORD_KEY, "gave up"
+        )
+        self.assert_failed(self.run_with_task(notes=notes))
+
+    def test_a_genuine_direct_key_record_is_still_read_next_to_such_content(self):
+        notes = notes_block_scalar("|", forged_body("9"))
+        result = self.run_with_task(notes=notes, extra=record_lines("1"))
+        self.assert_unlaunched(result, launch="task0001,task0002")
+
+
+class TestNotesBodyDoesNotShadowTheRecord(HookAssertions):
+    """AC-3 (TM-1): `notes` precedes the record in the schema key order, so a
+    `notes` body line comes before the direct-key record. The journal's
+    `failed` event sits on physical line 1 and the task is `pending`."""
+
+    def setUp(self):
+        self.journal = journal_bytes([event_line("failed", TARGET)])
+
+    def run_with_notes(self, notes, record):
+        workflow = build_workflow(
+            [
+                task_spec(TARGET, notes=notes, extra=record_lines(record)),
+                task_spec("task0002"),
+                task_spec("task0003"),
+            ]
+        )
+        return run_scenario(self.journal, workflow_text=workflow)
+
+    def test_non_matching_notes_body_value_does_not_hide_a_matching_record(self):  # AC-3 (a)
+        for label, indicator, body_indent in BLOCK_SCALAR_INDICATORS:
+            with self.subTest(indicator=indicator, form=label):
+                notes = notes_block_scalar(indicator, forged_body("3"), body_indent)
+                result = self.run_with_notes(notes, record="1")
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("task0001", result.stderr.split("launch=")[1])
+                self.assert_unlaunched(result)
+
+    def test_matching_notes_body_value_does_not_replace_a_non_matching_record(self):  # AC-3 (b)
+        for label, indicator, body_indent in BLOCK_SCALAR_INDICATORS:
+            with self.subTest(indicator=indicator, form=label):
+                notes = notes_block_scalar(indicator, forged_body("1"), body_indent)
+                self.assert_failed(self.run_with_notes(notes, record="2"))
+
+
 # --- AC-5: module docstring -------------------------------------------------
 
 # Verbatim module docstring of queue_stop_guard.py at this task's base
@@ -656,6 +909,65 @@ class TestModuleDocstring(unittest.TestCase):
 
     def test_live_docstring_does_not_reintroduce_the_recycled_id_description(self):
         self.assertNotIn(REMOVED_RECYCLED, normalize_whitespace(live_docstring()))
+
+
+DIRECT_KEY_WORDINGS = ("direct keys", "block scalar bodies", "nested")
+RECORD_READ_FUNCTION = "task_routeback_records_from_workflow"
+
+
+def live_record_read_docstring():
+    with open(HOOK_PATH, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == RECORD_READ_FUNCTION:
+            return ast.get_docstring(node, clean=False)
+    raise AssertionError("%s not found" % RECORD_READ_FUNCTION)
+
+
+def live_record_regex_comment():
+    """The comment block directly above `ROUTEBACK_RECORD_KEY = ...`."""
+    with open(HOOK_PATH, encoding="utf-8") as fh:
+        lines = fh.read().splitlines()
+    anchor = next(
+        index
+        for index, line in enumerate(lines)
+        if line.startswith("ROUTEBACK_RECORD_KEY =")
+    )
+    comment = []
+    index = anchor - 1
+    while index >= 0 and lines[index].startswith("#"):
+        comment.insert(0, lines[index].lstrip("#"))
+        index -= 1
+    return " ".join(comment)
+
+
+class TestDirectKeyWording(unittest.TestCase):
+    """AC-5 (routeback-record-direct-key task0001): the module docstring, the
+    record-read function docstring and the record regex comment state that
+    only direct keys of the task's own mapping are read and that block scalar
+    bodies and nested lines are not."""
+
+    def assert_states_direct_keys(self, text):
+        text = normalize_whitespace(text)
+        self.assertTrue(text, "expected a non-empty docstring or comment")
+        for wording in DIRECT_KEY_WORDINGS:
+            with self.subTest(wording=wording):
+                self.assertIn(wording, text)
+
+    def test_module_docstring_states_direct_keys_only(self):
+        self.assert_states_direct_keys(live_docstring())
+
+    def test_record_read_function_docstring_states_direct_keys_only(self):
+        self.assert_states_direct_keys(live_record_read_docstring())
+
+    def test_record_regex_comment_states_direct_keys_only(self):
+        self.assert_states_direct_keys(live_record_regex_comment())
+
+    def test_wording_matchers_do_not_fire_on_the_pre_change_docstring(self):
+        # Negative proof: the same matchers do not fire on the base sample.
+        text = normalize_whitespace(PRE_CHANGE_DOCSTRING)
+        self.assertNotIn("direct keys", text)
+        self.assertNotIn("block scalar bodies", text)
 
 
 # --- AC-6: fail-open on unreadable or garbled input ----------------------------
