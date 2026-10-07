@@ -144,7 +144,8 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/routeback-record-quoted-continuation/task0002
     provenance:
       source: review
       source_ids:
