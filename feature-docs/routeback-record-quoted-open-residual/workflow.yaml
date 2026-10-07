@@ -88,7 +88,8 @@ workflow:
   completed_at_commit: db02255de8a9b7e6c8110b8c78b88d8114fc6a91
   base_commit: fa21b80e41f5eb464616a98ff9453d6e78f8db7d
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: e9e6681e19847f16f135e13cd4b44f945ab6d22c
 - id: verify
   status: pending
   result: null
@@ -112,8 +113,11 @@ tasks:
     status: merged
     branch: em-workflow/routeback-record-quoted-open-residual/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
