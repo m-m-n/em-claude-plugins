@@ -1,0 +1,53 @@
+round: 1
+executed_at: "2026-10-07T09:13:30+09:00"
+scope:
+  review_mode: diff
+  base_commit: 2ef2afce77de811d58f39ffc935461241b6252f5
+  head_commit: 256863cec09623e51d95f34b41c17f7b930f707f
+  changed_files:
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/skills/plan-writing/SKILL.md
+    - test-docs/validator-scenario-id-format/task0001.tests.yaml
+    - test-docs/validator-scenario-id-format/task0002.tests.yaml
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_validate_worker_output.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "4 観点すべて完了。critical/high は architecture#0 の high 1 件（implementation-planner.md が TS-n のみを定める）のみで、SKILL.md の「新規ファイルは TS-n」と一致し、SPEC FR3 が planner の変更を範囲外としているため誤検知として棄却。architecture#0 の medium（文法の二重記述）は IMPLEMENTATION.md Shared Components が一元管理しているため不採用。comprehensive#0 の medium（TSn 形式に左側の区切り条件が無く DTS13 から TS13 を抽出）は再現したが、TS-n 形式にも変更前から同じ性質があり、説明欄に TS13 と書くだけで新規扱いになる既存の性質から新しい迂回路にならないため low に下げた（R3b step 2 により severity low は記録対象外）。reviewer 出力に指示注入の試みは無し。spec: FR1-FR5 / AC1-AC4 / TS-1-TS-6 がテストと文書に対応。sha256 固定値は実ファイルと一致。"
+  recommended_action: complete
+  action_rationale: "critical / high / medium の指摘は残っていない。残る 1 件は low の補強案で SPEC の受け入れ条件は求めていない。"
+dismissed_sites:
+  - file: em-workflow/agents/implementation-planner.md
+    line: 239
+    run_id: "architecture#0"
+    reason: "false positive"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-validator-scenario-id-format-20261007T001257Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
