@@ -129,7 +129,7 @@ workflow:
   excluded: []
   summary: 'TS-1..TS-7, TS-9 pass (python3 -m unittest discover -s tests: 8838 tests OK, 1 skipped); TS-8 / TS-11 manual review pass; TS-10 mutation (TS-\\d+) fails 6 new tests, change discarded; TM-1 covered by TS-5/TS-6/TS-7'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Recognize hyphen-less scenario IDs in the worker-output validator
