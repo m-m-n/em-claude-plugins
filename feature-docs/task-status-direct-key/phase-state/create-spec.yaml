@@ -4,14 +4,56 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: f9d4d51dd72a0e82feefe19c1f8a222551d2c254
-last_input_digest: sha256:7b2153edbcec71d3941991e2af09c7b5ee00cc184a4dffe06aa7e8015d108deb
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:481eca127f77d47c19d475e592c9b098dd486f91d970fc7c34d83e4bf5c13d6c
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    path: null
+    status: answered
+    digest: sha256:4f75c5ddd9d7262647e096fd8336defe7cab1e226cd0caca28d7e31e792a5f71
+answers:
+  requirement.quoted-continuation-scope:
+    question_id: requirement.quoted-continuation-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-07T15:34:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - block_and_nested_only
+    freeform: null
+    normalized_answer: 'Scope is block-scalar bodies and nested-mapping lines only
+      (direct-child-indent rule, same as PR #113). Multi-line quoted-scalar continuation
+      lines are out of scope for this feature; recorded as an assumption.'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (harness entry: codex, 1 turn);
+      Codex suggested block_and_nested_only: open PR #114 already makes iter_task_block_lines
+      drop multi-line quoted-scalar/flow bodies, which also covers task_statuses_from_workflow
+      once merged, so implementing it again on main would duplicate #114. Orchestrator
+      verified #114''s iter_task_block_lines change and adopted the mapping. Residual
+      risk until #114 merges: a quoted continuation line at the direct-child indent
+      can still be read. Second point (orchestrator-raised): Codex recommended implementing
+      the direct-child check inline in task_statuses_from_workflow mirroring #113''s
+      rule, leaving task_routeback_records_from_workflow untouched; adopted. Opus
+      escalation: not run.'
+  design-step:
+    question_id: design-step
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-07T15:34:24+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'Accept recommendation: design step skipped (no UI).'
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml option decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:7b2153edbcec71d3941991e2af09c7b5ee00cc184a4dffe06aa7e8015d108deb
+  output_digest: sha256:a3c882f6a774e5cc15566ba617a6a35767897d362c27c5f8ade1b92191bd61b7
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:481eca127f77d47c19d475e592c9b098dd486f91d970fc7c34d83e4bf5c13d6c
   output_digest: null
 artifacts: []
 patches: []
