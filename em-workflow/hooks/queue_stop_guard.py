@@ -94,14 +94,21 @@ TASK_STATUS_KEY_RE = re.compile(r"^\s+status:(?=[ \t]|$)")
 # only: the line's indentation must equal the task block's direct-child
 # indentation (checked in task_routeback_records_from_workflow), so block
 # scalar bodies and nested lines are never read. This regex only recognizes
-# the key. The key match and the canonical-value match are both ASCII-only:
-# a non-ASCII digit or whitespace character never qualifies. Body lines of
-# multi-line quoted-scalar and flow-collection values are never read as a task
-# boundary, task id, status or record: the block scan drops them before this
-# regex sees a line, so a record-shaped line inside such a value is not a record.
+# the key, and only an exact-key line: after its leading whitespace the line
+# begins with the key name and that colon is followed by a space, a tab or the
+# end of the line -- the colon rule of _find_key_colon and TASK_STATUS_KEY_RE.
+# A key that merely starts with the record key and a colon
+# (`routeback_failed_journal_line:x: 1`, `routeback_failed_journal_line:1`) is a
+# different key: it does not match, so it never decides the task and a genuine
+# record line after it is still read. The key match and the canonical-value
+# match are both ASCII-only: a non-ASCII digit or whitespace character never
+# qualifies. Body lines of multi-line quoted-scalar and flow-collection values
+# are never read as a task boundary, task id, status or record: the block scan
+# drops them before this regex sees a line, so a record-shaped line inside such
+# a value is not a record.
 ROUTEBACK_RECORD_KEY = "routeback_failed_journal_line"
 ROUTEBACK_RECORD_LINE_RE = re.compile(
-    r"^\s+" + ROUTEBACK_RECORD_KEY + r":(.*)$", re.ASCII
+    r"^\s+" + ROUTEBACK_RECORD_KEY + r":(?=[ \t]|$)(.*)$", re.ASCII
 )
 ROUTEBACK_RECORD_VALUE_RE = re.compile(r"^[ \t]+([1-9][0-9]*)\s*$", re.ASCII)
 
@@ -567,8 +574,11 @@ def task_routeback_records_from_workflow(workflow_yaml_path):
     blank nor a comment; a record-shaped line indented deeper is never read,
     so block scalar bodies (every indicator form), continuation lines of
     multi-line scalars and keys nested under another direct key cannot
-    create or shadow the record. Among the direct keys the first occurrence
-    of the key wins, and only the canonical form is a record: an unquoted run
+    create or shadow the record. Among the direct keys only a line whose key
+    is exactly the record key counts as an occurrence: a key that merely
+    starts with the record key and a colon (`routeback_failed_journal_line:x: 1`)
+    is skipped and never hides a later genuine line. Among those occurrences
+    the first one wins, and only the canonical form is a record: an unquoted run
     of ASCII digits whose first digit is 1-9, optionally followed by trailing
     whitespace. The returned value is that digit string, never an int. A task
     id whose first direct-key occurrence is absent, `null`, empty or
