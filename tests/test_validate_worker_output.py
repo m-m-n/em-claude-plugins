@@ -1446,6 +1446,120 @@ class TestReworkIndexRequiresBaselineForNewScenarios(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# validator-scenario-id-format / task0001: VERIFICATION.md scenario IDs are
+# recognized in both the TS-n form and the TSn form, as literal strings (no
+# normalization between the forms). AC-1..AC-4 map to the tests below.
+# ---------------------------------------------------------------------------
+
+def _scenarios_section(*scenario_ids):
+    lines = ["### Test Scenarios from SPEC.md", ""]
+    lines.extend(f"| {tid} | something | ok | Unit |" for tid in scenario_ids)
+    return "\n".join(lines) + "\n"
+
+
+class TestScenarioIdExtractionAcceptsBothForms(unittest.TestCase):
+    def test_ac1_hyphenless_ids_are_extracted(self):
+        # AC-1 (TS-1): TS1, TS2 and TS13 in the section.
+        ids = VWO.extract_verification_scenario_ids(_scenarios_section("TS1", "TS2", "TS13"))
+        self.assertEqual(ids, {"TS1", "TS2", "TS13"})
+
+    def test_ac1_multi_digit_hyphenless_id_is_not_truncated(self):
+        # AC-1 (TS-3): a lone TS13 yields exactly TS13, never a TS1 made of
+        # its leading digit.
+        ids = VWO.extract_verification_scenario_ids(_scenarios_section("TS13"))
+        self.assertEqual(ids, {"TS13"})
+
+    def test_ac2_mixed_forms_keep_their_literal_values(self):
+        # AC-2 (TS-2): one hyphenated and one hyphen-less ID, each in its
+        # own literal form.
+        ids = VWO.extract_verification_scenario_ids(_scenarios_section("TS-1", "TS2"))
+        self.assertEqual(ids, {"TS-1", "TS2"})
+
+    def test_hyphenated_ids_are_unchanged(self):
+        # Shared Components contract: every ID the hyphenated-only rule
+        # finds is still found with the same literal value (multi-digit
+        # included, all consecutive digits consumed).
+        ids = VWO.extract_verification_scenario_ids(_scenarios_section("TS-1", "TS-2", "TS-13"))
+        self.assertEqual(ids, {"TS-1", "TS-2", "TS-13"})
+
+    def test_same_number_in_both_forms_stays_two_distinct_ids(self):
+        # AC-4 / D1: TS13 and TS-13 are distinct literal IDs.
+        ids = VWO.extract_verification_scenario_ids(_scenarios_section("TS-13", "TS13"))
+        self.assertEqual(ids, {"TS-13", "TS13"})
+
+    def test_every_id_the_hyphenated_only_rule_finds_is_still_found(self):
+        # Shared Components contract: widening the rule never loses a
+        # hyphenated ID, with or without surrounding characters (no
+        # word-boundary constraint is introduced).
+        texts = [
+            "TS-1",
+            "see TS-1, TS-22 and TS-333.",
+            "TS-1TS-2",
+            "XTS-4 and TS-004",
+            "TS-12abc",
+            "TS--5 TS- TS-7",
+            "(TS-8)[TS-9]",
+        ]
+        for text in texts:
+            expected = set(re.findall(r"TS-\d+", text))
+            section = "### Test Scenarios from SPEC.md\n\n| " + text + " |\n"
+            with self.subTest(text=text):
+                ids = VWO.extract_verification_scenario_ids(section)
+                self.assertTrue(expected.issubset(ids), (expected, ids))
+
+
+class TestReworkIndexNoveltyWithBothScenarioIdForms(unittest.TestCase):
+    def _check(self, baseline_ids, current_ids, new_scenarios, tests_append):
+        rework_index = {"task0007": {"covered_by_existing": [], "new_scenarios": new_scenarios, "rationale": "new case"}}
+        workflow_patch = {
+            "tasks_patch": {"entries": {"task0007": {}}},
+            "requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": tests_append}}}},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir = tmp_path / "feature-dir"
+            baseline_dir = tmp_path / "baseline-dir"
+            _write_verification_md(feature_dir, current_ids)
+            _write_verification_md(baseline_dir, baseline_ids)
+            return VWO._validate_rework_index(
+                rework_index, workflow_patch, envelope=None, feature_dir=feature_dir, baseline_dir=baseline_dir
+            )
+
+    def test_ac3_new_hyphenless_scenario_is_accepted(self):
+        # AC-3 (TS-4): baseline TS1..TS12, current TS1..TS13, TS13 declared.
+        baseline_ids = [f"TS{n}" for n in range(1, 13)]
+        current_ids = [f"TS{n}" for n in range(1, 14)]
+        errors = self._check(baseline_ids, current_ids, ["TS13"], ["TS13"])
+        self.assertEqual(errors, [])
+
+    def test_ac4_preexisting_hyphenless_scenario_is_rejected(self):
+        # AC-4 (TS-5, TM-1): TS12 in both documents is not new.
+        baseline_ids = [f"TS{n}" for n in range(1, 13)]
+        current_ids = [f"TS{n}" for n in range(1, 13)]
+        errors = self._check(baseline_ids, current_ids, ["TS12"], ["TS12"])
+        messages = [e["message"] for e in errors]
+        self.assertTrue(
+            any("new_scenarios 'TS12' is not a new VERIFICATION.md scenario" in m for m in messages),
+            messages,
+        )
+
+    def test_ac4_hyphenless_id_is_new_when_baseline_holds_only_the_hyphenated_form(self):
+        # AC-4 (TS-6): the two forms are not collapsed into one ID.
+        errors = self._check(["TS-13"], ["TS13"], ["TS13"], ["TS13"])
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("is not a new VERIFICATION.md scenario", messages)
+
+    def test_preexisting_hyphenated_scenario_is_still_rejected(self):
+        # TM-1 for the hyphenated form (unchanged behavior).
+        errors = self._check(["TS-12"], ["TS-12"], ["TS-12"], ["TS-12"])
+        messages = [e["message"] for e in errors]
+        self.assertTrue(
+            any("new_scenarios 'TS-12' is not a new VERIFICATION.md scenario" in m for m in messages),
+            messages,
+        )
+
+
+# ---------------------------------------------------------------------------
 # as5 / AC-2: rework_index completeness against tasks_patch.entries, in both
 # directions, plus shared_contract_rationale as a required payload key.
 # ---------------------------------------------------------------------------

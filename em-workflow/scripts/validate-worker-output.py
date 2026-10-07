@@ -385,7 +385,10 @@ _FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 _HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _BACKTICK_RE = re.compile(r"`([^`]+)`")
 _BULLET_RE = re.compile(r"^[ \t]*-\s+(.*)$", re.MULTILINE)
-_TS_ID_RE = re.compile(r"TS-\d+")
+# Scenario ID grammar: the TS-n form (TS, one hyphen, digits) and the TSn form
+# (TS immediately followed by digits). All consecutive digits are consumed.
+# IDs are literal strings; neither form is normalized into the other.
+_TS_ID_RE = re.compile(r"TS-?\d+")
 
 
 def _strip_noise(text):
@@ -455,7 +458,9 @@ def implementation_md_has_shared_components(markdown_text):
 
 def extract_verification_scenario_ids(markdown_text):
     """### Test Scenarios from SPEC.md under ## Test Verification ->
-    TS-<n> identifiers (plan-writing/SKILL.md 131-139)."""
+    scenario IDs in either accepted form: TS-<n> (hyphenated) or TS<n>
+    (hyphen-less). IDs are literal strings; the two forms are not
+    normalized into one another, so TS13 and TS-13 are distinct IDs."""
     text = _strip_noise(markdown_text)
     section = extract_markdown_section(
         text, "### Test Scenarios from SPEC.md", ("## ", "### ")

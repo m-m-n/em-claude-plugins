@@ -1252,8 +1252,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # record), in both `replace_all` and `append`. PINNED_VALIDATOR_TEST_LINE
     # below is unaffected and still asserted. Same rationale: refresh,
     # don't remove.
+    #
+    # Refreshed again by validator-scenario-id-format/task0001: the scenario
+    # ID pattern `_TS_ID_RE` accepts the TSn form alongside the TS-n form,
+    # and the docstring of `extract_verification_scenario_ids` names both
+    # forms. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "6644900ffc609c08b3a578f997a30896974456d93aee2ef1acae618041cc3de8"
+        "e91c262923e082b91b86ba4bef36b55487e2a2899d5b6c3a796590fcb9985e40"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -1334,8 +1340,16 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # test_rejection_message_states_the_surviving_rationale (the
     # message-rationale pin). PINNED_VALIDATOR_TEST_LINE below is
     # unaffected and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by validator-scenario-id-format/task0001:
+    # TestScenarioIdExtractionAcceptsBothForms and
+    # TestReworkIndexNoveltyWithBothScenarioIdForms are new, pinning that
+    # TS-n and TSn scenario IDs are both extracted as literal strings and
+    # that the rework_index novelty check treats both forms. PINNED_
+    # VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
+    # rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "295f1843403079f58fe1506de63b574ed81e3d01bb764ddf087970d5fe2f2760"
+        "3181b6ac44db62138b2627d82b2211c49958069167701e37bf4cba44ad39a49b"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
