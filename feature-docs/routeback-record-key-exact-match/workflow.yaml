@@ -71,7 +71,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 9d563921a7d93c64b3617295d8ae0beefeea9b2d
 - id: implement
   status: pending
 - id: review
@@ -80,7 +81,20 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: "Exact-key match for the route-back record key line, with regression tests"
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/queue_stop_guard.py
+    - tests/test_queue_stop_guard_routeback_record.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: low
+    requirements: [FR1, FR2, FR3, NFR1, NFR2]
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -92,36 +106,36 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2, TS-3, TS-4]
   FR2:
     title: コロンの直後に空白以外が続く行は記録キーの出現に数えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2, TS-3]
   FR3:
     title: 再発を検出するテストを追加する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2, TS-3]
   NFR1:
     title: 標準ライブラリだけを使う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-5]
   NFR2:
     title: 既存テストが全て通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-5]
 batch:
   review_rework_count: 0
   verify_rework:
