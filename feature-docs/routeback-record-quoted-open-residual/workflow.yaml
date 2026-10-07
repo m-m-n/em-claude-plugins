@@ -1,0 +1,164 @@
+schema_version: 1
+feature: routeback-record-quoted-open-residual
+created: '2026-10-07'
+base_branch: main
+goal: |
+  # queue_stop_guard の複数行値追跡に残る引用値の誤開き 2 件（フロー内の「? 」・Unicode 空白だけの行）
+
+  ## 現象 (必須)
+  `em-workflow/hooks/queue_stop_guard.py` の複数行値の追跡処理に、引用値を誤って開いて後続行をすべて本文として捨てる穴が 2 つ残っている。どちらも本物の `routeback_failed_journal_line` 記録と後続タスクが読み落とされ、本来 exit 2 の Stop フックが exit 0 になる（THREAT-MODEL TM-2 の隠蔽）。
+  - フロー内の通常文字列の途中にある「`?` と空白」を明示キーの指示子とみなし、続く引用符を開きとして扱う（`_scan_flow`、374〜384 行目付近）。例: `notes: [retry? 'failed]`、`{reason: retry? 'failed}`
+  - U+3000 や U+00A0 だけの行を `strip()` で空行とみなし、値待ちを残したまま次の行で引用値を開く（`_read_line`、240 行目付近。230 行目の `feed` の空行判定も同じ）。例: `notes:` の次に U+3000 だけの行、その次に `      - 'unclosed`
+  ## 再現手順 (必須)
+  1. workflow.yaml に、pending の task0001（ジャーナル 1 行目が task0001 の failed）、上記いずれかの形の `notes`、その後ろに本物の直下キー `routeback_failed_journal_line: 1`、さらに後ろに task0002 を置く
+  2. `task_routeback_records_from_workflow` と task_ids の読み取りを呼ぶ
+  3. records が `{}`、task_ids が `['task0001']` になり、Stop フックが exit 0 になる
+  ## 期待する挙動 (必須)
+  `?` を指示子とみなすのはフロー項目の先頭（`_at_start` が真）で、かつ直後が空白・タブ・行末のときに限る。空行判定は半角空白とタブだけで行う。どちらの形でも本物の記録と task0002 が読まれ、exit 2 になる。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  	- `[retry? 'failed]`、`{reason: retry? 'failed}`、行末に `?` がある形で exit 2
+  	- U+3000 / U+00A0 だけの行の後に `- '…`、`"…`、`[…` が続く形で exit 2
+  	- 既存の `{? 'tried }` が開くテストは維持する
+  ## 該当箇所 (任意)
+  - `em-workflow/hooks/queue_stop_guard.py:381`
+  - `em-workflow/hooks/queue_stop_guard.py:240`
+  - `tests/test_queue_stop_guard_routeback_record.py`
+  ## 実害・発生条件 (任意)
+  出典: feature `routeback-record-quoted-continuation` の review round 2、medium `bdf5e244985b5626`（security / comprehensive が独立に報告）と `96c348fefb8267f3`（comprehensive）。評価者がメモリ内で再現した。記録は統合ブランチ `em-workflow/routeback-record-quoted-continuation/integration` の `feature-docs/routeback-record-quoted-continuation/reviews/round2.yaml`。batch の review rework 上限（1 回）に達したため deferred として持ち越した。
+  1 件目は YAML 1.2.2 では有効だが PyYAML 6.0.3 は構文エラーにする入力。フックは YAML 1.2.2 の読み方を採っている。
+  元タスク: https://www.notion.so/3f23509ec8ee81ee9ca4f076b4481f50
+
+  Notion task: https://www.notion.so/3f23509ec8ee81c28647fe1a17377754
+parent_branch: em-workflow/routeback-record-quoted-open-residual/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  at: '2026-10-07T18:46:00+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no two tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 2ac4b3f4bc88d8dc2c215b7a0e6e51aa6a267136
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: tier reduced subtracts the design step; also no UI (Python Stop-hook
+    line parser fix)
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: fa21b80e41f5eb464616a98ff9453d6e78f8db7d
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: '? を指示子とみなすのは flow エントリの先頭だけ'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: トラッカーの空行判定は空白とタブだけ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 変えない挙動
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: docstring とコメントの文言
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: fail-open
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 変更範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 回帰
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
