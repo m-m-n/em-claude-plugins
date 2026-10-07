@@ -79,7 +79,8 @@ workflow:
   base_commit: a2c98c3a81fd8890e980c54e8b12c1daf854ccc1
   completed_at_commit: a2906f559701aade5097a9adf0f371d06aeef5e3
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 7a1303d092fbcd4493beca087fafec86b62e61d3
 - id: verify
   status: pending
 - id: retrospect
@@ -100,12 +101,17 @@ tasks:
     status: merged
     branch: em-workflow/task-status-key-exact-match/task0001
 review:
-  status: in_progress
+  status: completed
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:

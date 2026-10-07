@@ -1,0 +1,46 @@
+round: 1
+executed_at: "2026-10-07T20:58:40+09:00"
+scope:
+  review_mode: diff
+  base_commit: a2c98c3a81fd8890e980c54e8b12c1daf854ccc1
+  head_commit: 7a1303d092fbcd4493beca087fafec86b62e61d3
+  changed_files:
+    - em-workflow/hooks/queue_stop_guard.py
+    - test-docs/task-status-key-exact-match/task0001.tests.yaml
+    - tests/test_queue_stop_guard_task_status_key_exact_match.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "4 観点（comprehensive / security / architecture / spec）はいずれも完了し、medium 以上の指摘は 0 件。cross_validation=true のため評価者が変更 3 ファイルを独自に確認した。TASK_STATUS_KEY_RE は ^\\s+status:(?=[ \\t]|$) に絞られ、_find_key_colon のコロン規則と一致する。値なし status: は決定行のまま（FR2）。TM-1 の除外（ブロックスカラー本文・ネスト・複数行値）は維持。テスト 87 件 + routeback_record 186 件が成功。base revision では AC-1 / AC-2 / AC-6 の該当ケースが失敗し、tests.yaml の赤の記録と一致した。注入の試みは無し。観点ごとの確認: comprehensive / security / architecture / spec いずれも corroborated。"
+  recommended_action: complete
+  action_rationale: "medium 以上の指摘は reviewer からも評価者自身の確認からも出なかった。正規表現の変更は SPEC の FR1 どおりの局所的な修正で、FR2 の挙動とテストの赤・緑の記録も確認済み。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-task-status-key-exact-match-20261007T115825Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
