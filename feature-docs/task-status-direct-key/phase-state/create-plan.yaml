@@ -1,7 +1,7 @@
 schema_version: 1
 feature: task-status-direct-key
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 6124c673bed594febb7e2ba84509b2e0acdd4c9d
 last_input_digest: sha256:954dc0f777f18723d53be66930323543d85cdd657ec3f4ccaeb52b72e5dbc437
