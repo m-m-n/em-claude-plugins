@@ -87,7 +87,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: dfc76947266bf58763ab7cf38bf041248a772b3b
 tasks:
   task0001:
     title: Read task status from direct-child keys only
