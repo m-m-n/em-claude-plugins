@@ -78,7 +78,7 @@ workflow:
   base_commit: c7c150226b25dde8c1282bf8f9ef5e22c18b8b8b
   completed_at_commit: 6140002b2baaf37049050a2e34bdb7633e533983
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -99,10 +99,14 @@ tasks:
     status: merged
     branch: em-workflow/routeback-record-key-exact-match/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor: [comprehensive, security, spec]
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: 記録キーの行はキー名の完全一致で判定する
