@@ -91,7 +91,7 @@ workflow:
     hook at implement.base_commit and pass in the integration worktree.
     Build/format: not configured. Excluded requirements: none.
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: "Exact-key match for the route-back record key line, with regression tests"
