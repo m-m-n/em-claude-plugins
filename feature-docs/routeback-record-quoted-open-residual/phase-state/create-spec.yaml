@@ -4,11 +4,26 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 4e0ca66718462eafe7ba64e61e626ea6c62b9a2d
-last_input_digest: sha256:cf4ec6e279a816f18a39204346bf9e0cb53fc16c501fa1ce276f5e19a5f072ca
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:1150346ce4c95f6d04a103c16673507e48f1ba9612f155881fd72747ed3239a0
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
-worker_runs: []
+answers:
+  design.step.recommendation:
+    packet_id: null
+    answered_at: '2026-10-07T18:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: decide_autonomously
+    resolution_note: 'gate create-spec.design-step: batch policy decide_autonomously
+      -> analyst recommendation skip accepted'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:cf4ec6e279a816f18a39204346bf9e0cb53fc16c501fa1ce276f5e19a5f072ca
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
