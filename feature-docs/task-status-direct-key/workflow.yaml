@@ -105,7 +105,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/task-status-direct-key/task0001
     notes: null
 review:
