@@ -1,0 +1,57 @@
+feature: routeback-record-quoted-open-residual
+collected_at: '2026-10-07T19:42:00+09:00'
+session_ids:
+- 01a115f3-6b93-76a3-b6f4-d249dd8859da.jsonl
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みでバケット 1 が 0.97（confidence 0.97）となり reduced を採用した
+    bases:
+    - basis: description_only
+      score:
+        probabilities:
+          '0': 0.0
+          '1': 0.99
+          '2': 0.01
+          '3': 0.0
+        expectation_clear: 0.85
+        confidence: 0.99
+      observed_at: '2026-10-07T18:32:46+09:00'
+    - basis: description_plus_code
+      score:
+        probabilities:
+          '0': 0.0
+          '1': 0.97
+          '2': 0.03
+          '3': 0.0
+        expectation_clear: 0.86
+        confidence: 0.97
+      observed_at: '2026-10-07T18:45:04+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/queue_stop_guard.py
+      - tests/test_queue_stop_guard_routeback_record.py
+      changed_lines_approx: 28
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      work_still_required_evidence: 指定ブランチ先端 fa21b80e41f5eb464616a98ff9453d6e78f8db7d では、? の判定に _at_start の条件がなく（em-workflow/hooks/queue_stop_guard.py:381）、空行判定も Unicode 空白を除去する strip() のまま残っている（em-workflow/hooks/queue_stop_guard.py:230、em-workflow/hooks/queue_stop_guard.py:240）。ファイル入出力・候補列挙・状態保存を置換したメモリ内実行で、フローの2形と行末の?、U+3000/U+00A0×3種類の後続行という9入力すべてについて records={}、task_ids=['task0001']、hook_main()=0 を確認した。本文扱いの行を飛ばす読み取りと、記録が一致しない failed タスクで停止を許可する処理がこの結果につながる（em-workflow/hooks/queue_stop_guard.py:413、em-workflow/hooks/queue_stop_guard.py:454、em-workflow/hooks/queue_stop_guard.py:774、em-workflow/hooks/queue_stop_guard.py:786、em-workflow/hooks/queue_stop_guard.py:916）。既存のフロー試験は?直後に空白がない入力で、継続行試験にも指定のUnicode空白入力はない（tests/test_queue_stop_guard_routeback_record.py:2050、tests/test_queue_stop_guard_routeback_record.py:2054）。U+3000を含む乱数試験は集合の包含を確認している（tests/test_queue_stop_guard_routeback_record.py:2024、tests/test_queue_stop_guard_routeback_record.py:2037）。既存の {? 'tried } 試験は存在する（tests/test_queue_stop_guard_routeback_record.py:2185）。既存3メソッドの条件・説明と既存2試験表をメモリ内で変更した案は追加21行・削除7行で、関数・ファイル・依存の追加なしに9入力すべてで記録とtask0002を読み、hook_main()=2になった（em-workflow/hooks/queue_stop_guard.py:208、em-workflow/hooks/queue_stop_guard.py:230、em-workflow/hooks/queue_stop_guard.py:240、em-workflow/hooks/queue_stop_guard.py:375、tests/test_queue_stop_guard_routeback_record.py:2050、tests/test_queue_stop_guard_routeback_record.py:2054）。試験表を使う既存試験を拡張できる（tests/test_queue_stop_guard_routeback_record.py:2147、tests/test_queue_stop_guard_routeback_record.py:2160、tests/test_queue_stop_guard_routeback_record.py:2166、tests/test_queue_stop_guard_routeback_record.py:2212）。呼び出し元数3は変更対象メソッドへの直接呼び出し箇所を数えた値で、本文変更はこの1モジュール内に収まる（em-workflow/hooks/queue_stop_guard.py:235、em-workflow/hooks/queue_stop_guard.py:334、em-workflow/hooks/queue_stop_guard.py:395）。終了コードの既存契約を維持し、誤った0を2へ修正する挙動変更になる（em-workflow/hooks/queue_stop_guard.py:20、em-workflow/hooks/queue_stop_guard.py:44、em-workflow/hooks/queue_stop_guard.py:914）。
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 9
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 3
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- FR2 で空行判定を空白・タブだけに絞った結果、ブロックスカラー/プレーン継続の状態を親の字下げ以下の非 ASCII 空白だけの行が終わらせる新しい隠蔽経路が生じた（review round1 medium 7e768361409599cb、SPEC FR2 / A2 どおりの挙動のため deferred）。値の開始位置と継続状態の終了判定で空行の定義を分けるべきかは仕様判断が要る
