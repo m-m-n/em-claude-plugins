@@ -1,0 +1,12 @@
+schema_version: 2
+feature: task-status-direct-key
+tier: reduced
+bases:
+  - basis: description_only
+    score: {"probabilities": {"0": 0.0, "1": 0.99, "2": 0.01, "3": 0.0}, "confidence": 0.99}
+    observed_at: "2026-10-07T15:23:28+09:00"
+  - basis: description_plus_code
+    score: {"probabilities": {"0": 0.0, "1": 0.96, "2": 0.04, "3": 0.0}, "confidence": 0.96}
+    observed_at: "2026-10-07T15:27:23+09:00"
+pre_survey_estimate: {"files_expected": ["em-workflow/hooks/queue_stop_guard.py", "tests/test_queue_stop_guard.py"], "changed_lines_approx": 80, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": false, "spillover_modules": [], "work_still_required": true, "work_still_required_evidence": "変更のない main で確認した。em-workflow/hooks/queue_stop_guard.py:76 の正規表現は字下げの深さを限定せず、同ファイル:212 はタスク内の深い行も返し、同ファイル:223-226 は最初に一致した status を採用する。ファイルを書かないメモリ上の再現で、notes 本文に status: pending を置き、直下の status: failed を後置した場合と直下の status を省略した場合の両方で pending が返った。入れ子のマッピングでも再現した。同ファイル:478-485 では、この値と一致する route-back 記録により failed タスクが起動対象になる。既存テストは tests/test_queue_stop_guard.py:580 の status 欠落と同ファイル:624 の工程との区別を扱うが、notes 本文・入れ子の status を除外するテストは確認できなかった。見積もりは既存関数内の字下げ判定と既存テストファイルへの6ケース追加を想定する。メモリ上の関数変更案では6ケースの期待値を確認した。呼び出し元は同フック:473 の evaluate_feature、直接利用する関数は同フック:223 の iter_task_block_lines の計2つ。ファイルの変更・作成・削除は行っていない", "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 6, "body_change_kind": "new_logic", "change_containment": "single_function", "caller_and_dependency_count": 2, "changes_external_contract": false, "changes_behavior": true}
+decided_at: "2026-10-07T15:28:10+09:00"
