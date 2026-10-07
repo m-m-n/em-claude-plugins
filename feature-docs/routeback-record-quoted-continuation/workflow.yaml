@@ -1,0 +1,197 @@
+schema_version: 1
+feature: routeback-record-quoted-continuation
+created: '2026-10-07'
+base_branch: main
+goal: |
+  # queue_stop_guard が直下キーと同じ字下げの引用文字列継続行を route-back 記録として読む
+
+  Notion task: https://www.notion.so/3f23509ec8ee81ee9ca4f076b4481f50
+
+  ## 現象 (必須)
+  `em-workflow/hooks/queue_stop_guard.py` の route-back 記録の読み取りは、字下げだけで `tasks.{T}` 直下のキーかどうかを判定している。`notes` の値が複数行のダブルクォート文字列で、継続行が直下キーと同じ 4 個の空白で字下げされていると、継続行の `routeback_failed_journal_line: N` がタスクの記録として採用される。PyYAML はこの形を受け付け、その行を `notes` の文字列として読む。
+  - 直下キーの記録が無い pending + failed のタスクで、偽の値が failed イベントの行と一致すると、Stop フックが exit 2 になり、利用者の判断待ちを迂回して再起動を求める。
+  - `notes` が記録より前にあるため、一致しない値が本物の記録を隠し、本来ブロックすべき場面で exit 0 になる。
+  - 単一引用符の複数行スカラーや、複数行のフロー形式コレクションにも同じ種類の穴がある。
+  ## 再現手順 (必須)
+  1. workflow.yaml のタスクブロックに、`status: pending` と、次の 3 行（すべて 4 空白字下げ）の `notes` を置く: `notes: "tried twice` / `routeback_failed_journal_line: 1` / `gave up"`
+  2. `task_routeback_records_from_workflow` を呼ぶ
+  3. `{'task0001': '1'}` が返る
+  ## 期待する挙動 (必須)
+  引用文字列やフロー形式の値の本文にある行は記録として読まない。`notes` 内の値は判定に影響しない。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  	- 継続行を直下キーと同じ字下げにした引用文字列で、偽造（本物の記録が無ければ exit 0）と隠蔽（本物の記録が一致すれば exit 2）の両方
+  ## 該当箇所 (任意)
+  - `em-workflow/hooks/queue_stop_guard.py:260`
+  - `tests/test_queue_stop_guard_routeback_record.py`（既存の notes_double_quoted は継続行を 6 空白で字下げしており、この境界を検証していない）
+  ## 実害・発生条件 (任意)
+  出典: feature `routeback-record-direct-key` の review round 1、medium `6ed302170de498f8`（security / comprehensive の 2 観点が独立に報告し、評価者も再現）。記録は統合ブランチ `em-workflow/routeback-record-direct-key/integration` の `feature-docs/routeback-record-direct-key/reviews/round1.yaml`。
+  YAML 1.2 の文法を厳密に適用すると、この継続行は 5 個以上の空白が必要で、再現入力は厳密には不正な YAML になる（SPEC A1 の前提外）。ただし `notes` は implement-phase.md Step I.2.c でオーケストレーターが手で書いており、厳密な検証器は無い。
+  対策案は 2 つ。値が引用符またはフロー形式の括弧で始まり行内で閉じない場合は、閉じるまで後続行を記録候補から外す（エスケープを考慮する）。または、この制限を hook の docstring と THREAT-MODEL の残存リスクに明記し、`notes` をブロックスカラーで書く書き手側の規則を設ける。
+  元タスク: https://www.notion.so/3f03509ec8ee818ab58aebe52dbf47b4
+parent_branch: em-workflow/routeback-record-quoted-continuation/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.95
+      '2': 0.04
+      '3': 0.0
+  at: '2026-10-07T13:19:00+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no two tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: c4f3ffc393180dfc9583726e9926799757991140
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: tier reduced subtracts the design step; also no UI (Python Stop-hook line parser fix)
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 07555fd45a01d910640f6b573ba52099ea4a034f
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 引用文字列とフロー形式の本文を読み飛ばす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 共有の読み取りを通じて status と記録にも効かせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 閉じの判定とエスケープ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 開きとみなす位置
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 1 行で閉じる値と既存の規則
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: docstring とコメント
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: fail-open
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テスト規約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: status 読み取りの識別子
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: バージョン
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: 回帰
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
