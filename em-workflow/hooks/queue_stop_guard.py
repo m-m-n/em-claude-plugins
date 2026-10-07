@@ -209,9 +209,17 @@ class _MultilineValueTracker:
     of a flow entry or after a real mapping indicator. A `:` is such an
     indicator when a space, a tab or the end of the line follows it, or when
     it follows the closing quote of an inner string or the closing bracket of
-    a nested collection (a JSON-like key); a `?` is one only when a space, a
-    tab or the end of the line follows it. Any other `:` or `?` is an
-    ordinary plain-scalar character."""
+    a nested collection (a JSON-like key); a `?` is one only at the start of a
+    flow entry (directly after `[`, `{` or `,`, with or without whitespace in
+    between) and only when a space, a tab or the end of the line follows it.
+    Any other `:` or `?` is an ordinary plain-scalar character, so a `?` in the
+    middle of a plain flow scalar (`[retry? 'x]`) never lets a quote open.
+
+    A blank line is a line made only of spaces (U+0020) and tabs (U+0009), the
+    empty line included. A line made only of any other whitespace character
+    (U+3000, U+00A0, U+000B, U+000C) is not blank: it is read by the normal
+    rules, as a plain scalar at a value start, or by its indentation inside a
+    block scalar."""
 
     def __init__(self):
         self._mode = None  # None, "dq", "sq" or "flow": the open value kind
@@ -231,7 +239,7 @@ class _MultilineValueTracker:
             self._scan(text, 0)
             return True
         if self._block_parent is not None:
-            if text.strip() == "":
+            if self._is_blank(text):
                 return False
             if len(text) - len(text.lstrip(" \t")) > self._block_parent:
                 return False  # a block scalar body line: never an opening
@@ -239,9 +247,16 @@ class _MultilineValueTracker:
         self._read_line(text)
         return False
 
+    @staticmethod
+    def _is_blank(text):
+        """The tracker's blank-line rule: a line (its line terminator already
+        removed) made only of U+0020 spaces and U+0009 tabs, the empty line
+        included. Any other whitespace character makes the line non-blank."""
+        return text.lstrip(" \t") == ""
+
     def _read_line(self, text):
         stripped = text.lstrip(" \t")
-        if stripped.strip() == "" or stripped.startswith("#"):
+        if self._is_blank(text) or stripped.startswith("#"):
             return  # blank and comment lines never open and never decide
         pos = len(text) - len(stripped)
         if self._plain_parent is not None:
@@ -378,13 +393,15 @@ class _MultilineValueTracker:
             elif char in ":?":
                 # A mapping indicator only before a space, a tab or the end of
                 # the line; a `:` also right after a closed inner string or
-                # nested collection (a JSON-like key). Otherwise the `:` / `?`
-                # is an ordinary plain-scalar character, so a quote right
-                # after it does not open.
-                follower = text[index + 1:index + 2]
-                indicator = follower in ("", " ", "\t") or (
-                    char == ":" and self._after_close
-                )
+                # nested collection (a JSON-like key), and a `?` only at the
+                # start of a flow entry (`_at_start`). Otherwise the `:` / `?`
+                # is an ordinary plain-scalar character, so a quote after it
+                # (on this line or a later one) does not open.
+                before_space = text[index + 1:index + 2] in ("", " ", "\t")
+                if char == ":":
+                    indicator = before_space or self._after_close
+                else:
+                    indicator = before_space and self._at_start
                 self._at_start, self._after_close = indicator, False
             else:
                 self._at_start = self._after_close = False

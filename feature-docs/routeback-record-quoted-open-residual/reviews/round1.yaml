@@ -1,0 +1,84 @@
+round: 1
+executed_at: '2026-10-07T19:32:32+09:00'
+scope:
+  review_mode: diff
+  base_commit: fa21b80e41f5eb464616a98ff9453d6e78f8db7d
+  head_commit: e9e6681e19847f16f135e13cd4b44f945ab6d22c
+  changed_files:
+  - em-workflow/hooks/queue_stop_guard.py
+  - test-docs/routeback-record-quoted-open-residual/task0001.tests.yaml
+  - tests/test_queue_stop_guard_routeback_record.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 7e768361409599cb
+  severity: medium
+  category: security
+  file: em-workflow/hooks/queue_stop_guard.py
+  line: 238
+  title: 親キー以下の字下げにある非 ASCII 空白だけの行がブロックスカラー/プレーン継続を終わらせ、後続の `- '…` が開いて記録と後続タスクを隠す（基準では隠れなかった入力）
+  description: 'FR2 で `_is_blank` が空白・タブだけを空行とみなすようになった結果、`feed` のブロックスカラー分岐（238–242 行）と `_read_line` のプレーンスカラー継続判定（258–261 行）で、親キー以下の字下げ（0 桁目や 4 桁目）にある U+3000 / U+00A0 だけの行が状態を終わらせる。後ろの `      - ''x` が値の開始として読まれて単一引用符を開き、以降の行をすべて本文として扱う。トラッカー外の読み取り関数（FR3 で不変）はこの行を `line.strip()` で空行として読み飛ばすため tasks セクションも終わらない。基準 fa21b80e と比較: (1) `notes: |` / 本文 / 0 桁目の U+3000 / `      - ''x`、(2) (1) の U+3000 を 4 桁目に置いた形、(3) `notes: hello` / 0 桁目の U+3000 / `      - ''x` のいずれも、基準では task_ids=[task0001, task0002]・記録=1、変更後は task_ids=[task0001]・記録={}（Stop hook が exit 0）。(1) は新テスト TestBlockScalarEndsAtANonAsciiBlankLineByIndentation が意図した挙動として固定しており、SPEC FR2 と A2 に沿う。THREAT-MODEL.md の Residual は A1 しか挙げていない。緩和要因: どの入力も YAML として不正で、同じ形の ASCII 版は基準でも隠蔽できる。'
+  suggestion: (a) ブロックスカラー状態とプレーンスカラー継続状態では、空白・タブ以外の空白文字だけの行が親の字下げ以下にあっても状態を終わらせない（基準と同じ）。値の開始位置での FR2 の挙動は残す。SPEC FR2 と AC-5 のテストの変更が要る。(b) 直さない場合は THREAT-MODEL.md / VERIFICATION.md の残余にこの 3 形を A1 と並べて記録する。
+  sources:
+  - claude:evaluator
+  confidence: 70
+  resolution: deferred
+  resolution_reason: medium（完了ゲート対象外）。SPEC FR2 / A2 が明示的に要求しテストで固定された挙動のため auto-fix 対象外。仕様変更の要否は人の判断に回し、残件として別タスクに起票する
+evaluation:
+  round_summary: レビュアー 4 件の指摘はすべて空。評価者が独自確認で、FR2 により親キー以下の字下げにある非 ASCII 空白だけの行の後ろに `- '…` が続く 3 形が新しく隠蔽経路になった回帰を 1 件（medium）挙げた。YAML として不正な入力に限られ、同じ形の ASCII 版は基準から隠蔽できる。186 件のテストは全件通過。FR1–FR4 は SPEC どおり。
+  recommended_action: complete
+  action_rationale: 指摘は SPEC FR2 と A2 が明示的に求める挙動で、auto-fix は SPEC から外れる。攻撃能力の増分は小さい。ラウンドは完了とし、残余の記録または SPEC 修正は人の判断に回す。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-routeback-record-quoted-open-residual-20261007T103208Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
