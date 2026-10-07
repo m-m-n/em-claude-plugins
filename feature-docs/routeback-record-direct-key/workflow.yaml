@@ -1,0 +1,167 @@
+schema_version: 1
+feature: routeback-record-direct-key
+created: 2026-10-07
+base_branch: main
+goal: |
+  # queue_stop_guard が notes の複数行文字列内の routeback_failed_journal_line を route-back 記録として誤読する
+
+  Notion: https://www.notion.so/3f03509ec8ee818ab58aebe52dbf47b4
+
+  ## 現象 (必須)
+  `em-workflow/hooks/queue_stop_guard.py` の route-back 記録の読み取り（`task_routeback_records_from_workflow`、240〜249 行）が、`iter_task_block_lines`（160〜212 行）が返すタスクブロック内の全行から `routeback_failed_journal_line:` に合う最初の行を採用する。このため `notes: |` の複数行文字列の本文にある行も記録として読まれる。
+  - 記録が無い、または一致しない pending + failed のタスクが、notes 本文の値との一致で未起動に分類され、Stop フックが I.2.c の判断を経ない再起動を求めて exit 2 になる。
+  - workflow-schema.md の並びでは notes が記録より前にあるため、notes 本文の不一致値が本物の記録を隠し、本来ブロックすべき場面で exit 0 になる。
+  `tasks.{T}.notes` は Step I.2.c が実装者の報告から書く欄で、信頼できない文字列が入る（THREAT-MODEL TB-2 / TM-2）。
+  ## 再現手順 (必須)
+  1. workflow.yaml のタスクブロックで `status: pending`、`notes: |` の本文に `routeback_failed_journal_line: 3`、本物の `routeback_failed_journal_line: 1` を持たせる
+  2. `task_routeback_records_from_workflow` を呼ぶ
+  3. `{'task0001': '3'}` が返る（評価者がスクラッチパッドで再現）
+  ## 期待する挙動 (必須)
+  記録は `tasks.{T}` 直下のキーだけから読み、ブロックスカラーの本文や入れ子のマッピングの行は読まない。notes 内の値は判定に影響しない。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  	- notes 本文に一致値があり本物の記録が無ければ exit 0
+  	- notes 本文に不一致値があっても本物の記録が一致すれば exit 2
+  ## 該当箇所 (任意)
+  - `em-workflow/hooks/queue_stop_guard.py:243`
+  - `tests/test_queue_stop_guard_routeback_record.py`（フィクスチャが常に `notes: null`）
+  ## 実害・発生条件 (任意)
+  出典: feature `prelaunch-inprogress-routeback` の review round 2、medium `425ad71ec84f3214`（comprehensive / security / spec の 3 観点が独立に報告）。記録は `feature-docs/prelaunch-inprogress-routeback/reviews/round2.yaml`。発生には pending + failed の状態（中断や 2 回目の exit 4 の後）と行番号の一致が要る。
+parent_branch: em-workflow/routeback-record-direct-key/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  at: '2026-10-07T10:08:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no two tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: ba356f731462f8bd1a6627d9963fbbd76831ab87
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: tier reduced subtracts the design step; also no UI (Python Stop-hook bug fix)
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: a1970748b7f998623266f719d1b271e45257f1a7
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Record read restricted to direct keys of tasks.{T}
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Existing record semantics unchanged among direct keys
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Hook docstring/comments state the direct-key restriction
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Regression tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Standard library only, line-based workflow.yaml read
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Fail-open behavior preserved
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Test code conventions (stdlib only, no cross-import, subprocess)
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Plugin version unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Full existing suite stays green
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

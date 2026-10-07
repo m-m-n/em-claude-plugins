@@ -1,7 +1,7 @@
 schema_version: 1
 feature: routeback-record-direct-key
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 91f5e9d8c6ccb3298b9e64282c9b7e6c518e66ed
 last_input_digest: sha256:8e2b7ddd32f2a91a486f6f0fce2e9cd6a33c0b10e6f19b14fdd7e10f6792181d
@@ -16,7 +16,7 @@ worker_runs:
 - request_id: create-spec-run-0002
   status: completed
   input_digest: sha256:8e2b7ddd32f2a91a486f6f0fce2e9cd6a33c0b10e6f19b14fdd7e10f6792181d
-  output_digest: sha256:spec-writer-result-recorded
+  output_digest: sha256:1ae26cbe808762100931f442be79a03c16ea08d15d0953be79ead40cb1b56a7f
 artifacts:
 - path: feature-docs/routeback-record-direct-key/SPEC.md
   sha256: sha256:873b7db172d633c6d5871224378f36e5c15a1fa6e5f1bbac38a309fcc3073bef
