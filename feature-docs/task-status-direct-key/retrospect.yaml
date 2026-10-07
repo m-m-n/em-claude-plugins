@@ -1,0 +1,25 @@
+feature: task-status-direct-key
+collected_at: "2026-10-07T16:19:00+09:00"
+session_ids: [01a11539-2070-7711-8da9-446118c365db.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1 が 0.96（単一関数内の変更・既存契約不変）となり reduced と判定"
+    bases:
+      - basis: description_only
+        score: {"probabilities": {"0": 0.0, "1": 0.99, "2": 0.01, "3": 0.0}, "confidence": 0.99}
+        observed_at: "2026-10-07T15:23:28+09:00"
+      - basis: description_plus_code
+        score: {"probabilities": {"0": 0.0, "1": 0.96, "2": 0.04, "3": 0.0}, "confidence": 0.96}
+        observed_at: "2026-10-07T15:27:23+09:00"
+    pre_survey_estimate: {"files_expected": ["em-workflow/hooks/queue_stop_guard.py", "tests/test_queue_stop_guard.py"], "changed_lines_approx": 80, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": false, "spillover_modules": [], "work_still_required": true, "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 6, "body_change_kind": "new_logic", "change_containment": "single_function", "caller_and_dependency_count": 2, "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 指摘 75f58935e46781c9（TASK_STATUS_KEY_RE が status:detail のような別キーを直下 status と誤認する）は auto-fix 対象外のため unresolved のまま残った。critical/high 以外の再現済み後退を拾う経路が無い"
+  - "事前調査は既存テストファイルへの追加を見込んだが、実装は新規テストファイル tests/test_queue_stop_guard_task_status_direct_key.py を作った（計画の files 宣言とは一致）"
