@@ -56,7 +56,7 @@ findings:
   - codex:security
   confidence: 100
   resolution: unresolved
-  resolution_reason: residual medium; not an auto-fix candidate (severity below high); filed as a follow-up task
+  resolution_reason: residual medium (not an auto-fix candidate); batch review rework requested after Codex consultation -> task0002
 - stable_id: b342ff634000d263
   severity: medium
   category: security
@@ -69,7 +69,7 @@ findings:
   - codex:security
   confidence: 100
   resolution: unresolved
-  resolution_reason: residual medium; not an auto-fix candidate (severity below high); filed as a follow-up task
+  resolution_reason: residual medium (not an auto-fix candidate); batch review rework requested after Codex consultation -> task0002
 - stable_id: 6bd6c5a5788b3ddf
   severity: medium
   category: comprehensive
@@ -82,7 +82,7 @@ findings:
   - codex:comprehensive
   confidence: 100
   resolution: unresolved
-  resolution_reason: residual medium; not an auto-fix candidate (severity below high); filed as a follow-up task
+  resolution_reason: residual medium (not an auto-fix candidate); batch review rework requested after Codex consultation -> task0002
 - stable_id: b342ff634000d263
   severity: medium
   category: comprehensive
@@ -95,7 +95,7 @@ findings:
   - codex:comprehensive
   confidence: 100
   resolution: unresolved
-  resolution_reason: residual medium; not an auto-fix candidate (severity below high); filed as a follow-up task
+  resolution_reason: residual medium (not an auto-fix candidate); batch review rework requested after Codex consultation -> task0002
 evaluation:
   round_summary: '第 1 ラウンド（差分モード、cross_validation 有効）。security と comprehensive が、同じ 2 件の中程度の不具合を独立に報告した。1 件目はフロー内の通常文字列中の `:''` / `?''` を引用値の開始と誤認するもの、2 件目は通常文字列の継続行の `- ` で引用値を開くもの。どちらもメモリ内の再現と PyYAML による YAML の妥当性確認で裏付けた。いずれも本物の記録と後続タスクを隠し、exit 2 を exit 0 に倒す TM-2 の穴で、SPEC FR4 にも反する。architecture の high（独自の YAML 部分解析器）は、NFR1（標準ライブラリのみ、YAML ライブラリを使わない）と NFR4（共通化するなら queue_stop_guard.py の中）が求める設計そのものになっている。解析は `_multiline_value_body_flags` という 1 つの入口にまとまっているので、誤検知として dismissed_sites に記録した。architecture の medium（task_ids_from_workflow と iter_task_block_lines の走査ループの重複）は変更前からある構造で、差分は FR1 が両関数に求める同じ 3 行を足しただけなので、持ち越していない。指定された 4 つのテストスイート（261 件）が通ること、作業ツリーが変更されていないことも確認した。注入の試みは見つからなかった。観点ごとの確認結果は次のとおり。security: corroborated（2 件とも再現した）。comprehensive: corroborated（2 件とも再現した）。architecture: corroborated（変更ファイルを自分で読み、報告どおりの構造を確認した。この観点の欠陥はほかに見つからなかった。ただし high は誤検知として除外し、medium は持ち越さない）。spec: findings（空の結果は裏付けられなかった。上の 2 箇所に FR4 からの逸脱があり、重複を避けて security と comprehensive の指摘に含めた。FR6 の固定文言と禁止文言、NFR5
     の version 据え置きは満たしている）。読んだファイルは project_root 配下の 6 件で、上限の 10 件以内に収まっている。'
@@ -113,7 +113,7 @@ auto_fix:
   applied_total: 0
   termination: clean
 residual_critical_high: 0
-rework_required: false
+rework_required: true
 triage_filing:
   executed: true
   branch: report
