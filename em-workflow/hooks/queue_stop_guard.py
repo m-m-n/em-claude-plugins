@@ -74,6 +74,10 @@ STEP_STATUS_RE = re.compile(r"^\s*status:\s*(\S+)\s*$")
 TASKS_SECTION_RE = re.compile(r"^tasks:\s*$")
 TASK_KEY_RE = re.compile(r"^\s+(task[0-9]+):\s*$")
 TASK_STATUS_RE = re.compile(r"^\s+status:\s*(\S+)\s*$")
+# A line that carries the `status:` key at all (value or not); the direct-child
+# status read uses it to find the deciding line, then TASK_STATUS_RE to extract
+# the value from that same line.
+TASK_STATUS_KEY_RE = re.compile(r"^\s+status:")
 # The route-back record, read from a task's own block only. The key match
 # and the canonical-value match are both ASCII-only: a non-ASCII digit or
 # whitespace character never qualifies.
@@ -215,14 +219,41 @@ def iter_task_block_lines(workflow_yaml_path):
 def task_statuses_from_workflow(workflow_yaml_path):
     """Per-task workflow status, scoped to each task's own indented block
     under the top-level `tasks:` mapping (D2 -- the carve-out's
-    discriminator). A task id with no status line inside its own block (key
-    absent, or the value after the colon undeterminable) is simply absent
-    from the returned mapping; callers treat that the same as any other
-    non-`pending` classification (D1)."""
+    discriminator) and read from direct-child keys only.
+
+    The direct-child indentation of a task block is the indentation of the
+    first line in the block that is neither blank nor a comment line (a
+    comment line before the first key never shifts it). Only lines at exactly
+    that indentation are status candidates: block-scalar body lines (every
+    header form, including the untrusted `notes` text) and nested-mapping
+    lines sit deeper and are never read, whether the direct `status:` key
+    comes before them, after them, or not at all. The first direct-child line
+    carrying the `status:` key decides: its value is recorded when it can be
+    extracted, and otherwise the task is left out; later lines are not
+    consulted either way. A task id with no direct `status:` key (or an
+    undeterminable direct value) is simply absent from the returned mapping;
+    callers treat that the same as any other non-`pending` classification
+    (D1). Block content is never interpreted beyond indentation, so no input
+    makes this raise."""
     statuses = {}
+    direct_indent = {}  # task id -> indentation of its direct-child keys
+    decided = set()  # task ids whose first direct status key was consulted
     for task_id, line in iter_task_block_lines(workflow_yaml_path):
+        if task_id in decided:
+            continue
+        stripped = line.lstrip()
+        if stripped == "" or stripped.startswith("#"):
+            continue  # blank / comment lines never set the direct indent
+        indent = len(line) - len(line.lstrip(" "))
+        if task_id not in direct_indent:
+            direct_indent[task_id] = indent
+        if indent != direct_indent[task_id]:
+            continue
+        if not TASK_STATUS_KEY_RE.match(line):
+            continue
+        decided.add(task_id)
         status_match = TASK_STATUS_RE.match(line)
-        if status_match and task_id not in statuses:
+        if status_match:
             statuses[task_id] = status_match.group(1)
     return statuses
 
