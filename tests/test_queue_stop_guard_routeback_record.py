@@ -30,6 +30,15 @@ Observed red (base revision, body lines read like any other line): the 4-space
 record-shaped continuation line of a `notes` value is taken as the record, so a
 forged record exits 2 instead of 0 and a non-matching one hides the genuine
 direct-key record (exit 0 instead of 2).
+
+routeback-record-quoted-continuation (task0002): the sections headed "task0002"
+pin two further non-openings. A quote after a `:` or `?` that is not a mapping
+indicator inside a plain flow scalar (`[retry:'failed]`) never opens an inner
+string, while a quote after a real indicator (`{"a":'b`, `[a: 'b`) still does.
+An item indicator, quote or bracket at the start of a plain-scalar continuation
+line never opens a value, and the continuation state ends at the parent
+indentation. Observed red (base revision): the genuine direct-key record and
+task0002 are swallowed, so the hook exits 0 instead of 2.
 """
 
 import ast
@@ -2025,6 +2034,377 @@ class TestUnclosedValuesReadDirectly(unittest.TestCase):
                 scanned = call_reader("iter_task_block_lines", data)
                 records = call_reader("task_routeback_records_from_workflow", data)
                 call_reader("task_statuses_from_workflow", data)
+                self.assertLessEqual({task for task, _line in scanned}, set(ids))
+                self.assertLessEqual(set(records), set(ids))
+
+
+# --- routeback-record-quoted-continuation (task0002): value-start positions -------
+#
+# Review round 1 rework. Two kinds of plain-scalar text never open a quoted
+# scalar or flow collection: a quote after a `:` or `?` that is not a mapping
+# indicator inside a plain flow scalar, and an item indicator, quote or bracket
+# at the start of a plain-scalar continuation line.
+
+# One-line flow `notes` values whose quote follows a `:` or `?` that is part of
+# a plain flow scalar (no space after it, no closed value before it).
+FLOW_PLAIN_VALUES = ("[retry:'failed]", "{a:'b}", "[retry?'failed]")
+
+# Plain-scalar `notes` followed by a continuation line that starts with an item
+# indicator and an unclosed quote or bracket (a valid multi-line plain scalar).
+PLAIN_CONTINUATION_NOTES = {
+    "single-quoted-item": ["    notes: retry failed", "      - 'unclosed"],
+    "double-quoted-item": ["    notes: retry failed", '      - "unclosed'],
+    "bracketed-item": ["    notes: retry failed", "      - [unclosed"],
+    "next-line-value": ["    notes:", "      retry failed", "      - 'unclosed"],
+}
+
+# Multi-line flow `notes` values whose inner single-quoted string opens after a
+# real mapping indicator. The record-shaped line is inside the inner string; the
+# bracket in the first line only stays uncounted while that string is open.
+REAL_INDICATOR_NOTES = {
+    "json-like-key-bracket-in-string": [
+        "    notes: {\"a\":'tried }",
+        ROW,
+        "    gave up'",
+        "    }",
+    ],
+    "json-like-key-string-spans-lines": [
+        "    notes: {\"a\":'tried",
+        ROW,
+        "    gave up'}",
+    ],
+    "indicator-and-space-bracket-in-string": [
+        "    notes: [a: 'tried ]",
+        ROW,
+        "    gave up'",
+        "    ]",
+    ],
+    "indicator-and-space-string-spans-lines": [
+        "    notes: [a: 'tried",
+        ROW,
+        "    gave up']",
+    ],
+}
+
+# The continuation state ends at the parent indentation (forgery setup: the
+# record-shaped line is inside a quoted value that really opens).
+CONTINUATION_RELEASE_NOTES = {
+    "plain-title-then-direct-key-quoted-notes": [
+        "    title: plain title",
+        '    notes: "tried twice',
+        ROW,
+        '    gave up"',
+    ],
+    "quoted-item-at-the-column-of-a-plain-item": [
+        "    notes:",
+        "    - retry",
+        "    - 'tried",
+        ROW,
+        "    gave up'",
+    ],
+}
+
+
+def plain_flow_workflow(value):
+    """task0001 (pending, one-line flow `notes` `value`, direct-key record 1)
+    followed by a pending task0002 block."""
+    return build_workflow(
+        [
+            task_spec(TARGET, notes=["    notes: " + value], extra=record_lines("1")),
+            task_spec("task0002"),
+        ]
+    )
+
+
+def continuation_workflow(notes):
+    """task0001 (pending, `notes` lines `notes`, direct-key record 1) followed
+    by a pending task0002 block."""
+    return build_workflow(
+        [
+            task_spec(TARGET, notes=notes, extra=record_lines("1")),
+            task_spec("task0002"),
+        ]
+    )
+
+
+class OpeningPositionHookCase(QuotedValueHookCase):
+    """Hook-subprocess base: task0001's `failed` event is journal line 1,
+    task0001 and task0002 are `pending`, task0002 has no journal event."""
+
+    def assert_launches_both(self, result):
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("BLOCK", result.stderr)
+        launched = result.stderr.split("launch=")[1].strip().split(",")
+        self.assertIn(TARGET, launched)
+        self.assertIn("task0002", launched)
+
+
+class TestFlowPlainScalarQuotesAreNotOpenings(OpeningPositionHookCase):
+    """task0002 AC-1 (FR4, FR5, FR1; TM-2): a quote after a `:` or `?` that is
+    not a mapping indicator is plain-scalar text, so the one-line flow value
+    closes on its own line and the genuine record and task0002 are read."""
+
+    def test_quote_after_a_non_indicator_colon_or_question_mark_does_not_open(self):  # AC-1
+        for value in FLOW_PLAIN_VALUES:
+            with self.subTest(notes=value):
+                result = self.run_target(
+                    notes=["    notes: " + value], extra=record_lines("1")
+                )
+                self.assert_launches_both(result)
+
+
+class TestFlowPlainScalarQuotesAreNotOpeningsDirectly(unittest.TestCase):
+    """task0002 AC-2 (FR1, FR4): the task-id and record readers, called
+    directly on the AC-1 fixtures."""
+
+    def test_task_ids_include_task0001_and_task0002(self):  # AC-2
+        for value in FLOW_PLAIN_VALUES:
+            with self.subTest(notes=value):
+                ids = call_reader("task_ids_from_workflow", plain_flow_workflow(value))
+                self.assertEqual(ids, [TARGET, "task0002"])
+
+    def test_record_of_task0001_is_read(self):  # AC-2
+        for value in FLOW_PLAIN_VALUES:
+            with self.subTest(notes=value):
+                records = call_reader(
+                    "task_routeback_records_from_workflow", plain_flow_workflow(value)
+                )
+                self.assertEqual(records[TARGET], "1")
+
+
+class TestRealMappingIndicatorsStillOpen(QuotedValueHookCase):
+    """task0002 AC-3 (FR3, FR4; TM-1): a quote after a real mapping indicator
+    (a JSON-like key with no space, or an indicator followed by a space) still
+    opens an inner quoted string, so the record-shaped line inside it is body."""
+
+    def test_inner_string_opens_after_a_real_indicator(self):  # AC-3
+        for label, notes in REAL_INDICATOR_NOTES.items():
+            with self.subTest(form=label):
+                self.assert_failed(self.run_target(notes=notes))
+
+    def test_question_mark_indicator_followed_by_a_space_still_opens(self):  # AC-3
+        notes = ["    notes: {? 'tried }", ROW, "    gave up': x", "    }"]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_whitespace_between_the_closed_key_and_the_colon_is_ignored(self):  # AC-3
+        notes = ["    notes: {\"a\" :'tried }", ROW, "    gave up'", "    }"]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_nested_collection_as_the_key_makes_the_colon_an_indicator(self):  # AC-3
+        notes = ["    notes: {[x]:'tried }", ROW, "    gave up'", "    }"]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_apostrophe_inside_a_plain_word_before_a_colon_is_not_a_closed_string(self):  # AC-3
+        # `it's:` has an apostrophe in a plain word, not a closed inner string,
+        # so the colon without a space after it is a plain character and the
+        # quote after it does not open: the value closes on its first line.
+        notes = ["    notes: [it's:'x]"]
+        result = self.run_target(notes=notes, extra=record_lines("1"))
+        self.assert_launches_target(result)
+
+
+class TestPlainScalarContinuationLinesAreNotOpenings(OpeningPositionHookCase):
+    """task0002 AC-4 (FR4, FR1; TM-2): a plain-scalar value followed by a
+    deeper line that starts with an item indicator and an unclosed quote or
+    bracket is one multi-line plain scalar; nothing opens, so the genuine
+    record and task0002 are read."""
+
+    def test_item_indicator_quote_or_bracket_on_a_continuation_line_does_not_open(self):  # AC-4
+        for label, notes in PLAIN_CONTINUATION_NOTES.items():
+            with self.subTest(form=label):
+                result = self.run_target(notes=notes, extra=record_lines("1"))
+                self.assert_launches_both(result)
+
+    def test_continuation_after_a_blank_line_or_a_comment_line_is_still_a_continuation(self):  # AC-4
+        # Blank lines and comment lines neither continue nor end the state.
+        for filler in ("", "      # a comment", "    # a shallow comment"):
+            with self.subTest(filler=filler):
+                notes = ["    notes: retry failed", filler, "      - 'unclosed"]
+                result = self.run_target(notes=notes, extra=record_lines("1"))
+                self.assert_launches_both(result)
+
+    def test_nested_key_value_continuation_does_not_open(self):  # AC-4
+        extra = [
+            "    context:",
+            "      reason: first part",
+            "        - 'unclosed",
+        ] + record_lines("1")
+        self.assert_launches_both(self.run_target(extra=extra))
+
+    def test_sequence_item_content_continuation_does_not_open(self):  # AC-4
+        extra = [
+            "    attempts:",
+            "      - first part",
+            "        - 'unclosed",
+        ] + record_lines("1")
+        self.assert_launches_both(self.run_target(extra=extra))
+
+    def test_key_after_an_item_indicator_continuation_does_not_open(self):  # AC-4
+        extra = [
+            "    attempts:",
+            "      - reason: first part",
+            "          - \"unclosed",
+        ] + record_lines("1")
+        self.assert_launches_both(self.run_target(extra=extra))
+
+    def test_item_whose_plain_value_starts_on_the_next_line_does_not_open(self):  # AC-4
+        extra = [
+            "    attempts:",
+            "      -",
+            "        first part",
+            "        - 'unclosed",
+        ] + record_lines("1")
+        self.assert_launches_both(self.run_target(extra=extra))
+
+    def test_a_key_line_on_a_continuation_line_does_not_open_its_value(self):  # AC-4
+        extra = [
+            "    reason: first part",
+            "      second: 'unclosed",
+        ] + record_lines("1")
+        self.assert_launches_both(self.run_target(extra=extra))
+
+
+class TestContinuationStateEndsAtTheParentIndentation(QuotedValueHookCase):
+    """task0002 AC-5 (FR4, FR1; TM-1): the first line at or shallower than the
+    parent indentation ends the continuation state and is read with the normal
+    rules, so a quoted value that really opens hides its record-shaped body."""
+
+    def test_the_state_ends_at_the_parent_indentation(self):  # AC-5
+        for label, notes in CONTINUATION_RELEASE_NOTES.items():
+            with self.subTest(form=label):
+                self.assert_failed(self.run_target(notes=notes))
+
+    def test_a_shallower_line_ends_the_state_and_may_open(self):  # AC-5
+        notes = [
+            "    context:",
+            "      reason: first part",
+            "        more text",
+            "      other: 'tried",
+            ROW,
+            "      gave up'",
+        ]
+        self.assert_failed(self.run_target(extra=notes))
+
+    def test_a_comment_line_does_not_end_the_state_but_the_next_shallow_line_does(self):  # AC-5
+        notes = [
+            "    notes: retry failed",
+            "      # a deeper comment",
+            "    # a shallow comment",
+            "      - 'unclosed",
+            "    other: 'tried",
+            ROW,
+            "    gave up'",
+        ]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_a_sibling_task_key_ends_the_state(self):  # AC-5
+        workflow = build_workflow(
+            [
+                task_spec(TARGET, notes=["    notes: retry failed"]),
+                task_spec("task0002", notes=["    notes: 'tried", ROW, "    gave up'"]),
+            ]
+        )
+        # task0002's `failed` event is journal line 1; its only record-shaped
+        # line is inside a quoted value that really opens, so it is failed.
+        journal = journal_bytes([event_line("failed", "task0002")])
+        self.assert_failed(run_scenario(journal, workflow_text=workflow))
+
+
+class TestOpeningPositionReadersNeverRaise(unittest.TestCase):
+    """task0002 AC-6 (NFR2): the task-id, block-scan and record readers, called
+    directly, return without raising on every fixture above and on files whose
+    plain-scalar continuation lines and plain flow scalars are followed by
+    unclosed quotes and brackets up to the end of the file."""
+
+    READERS = (
+        "task_ids_from_workflow",
+        "iter_task_block_lines",
+        "task_routeback_records_from_workflow",
+    )
+
+    def fixtures(self):
+        texts = {}
+        for value in FLOW_PLAIN_VALUES:
+            texts["flow-plain %s" % value] = plain_flow_workflow(value)
+        for table in (
+            PLAIN_CONTINUATION_NOTES,
+            REAL_INDICATOR_NOTES,
+            CONTINUATION_RELEASE_NOTES,
+        ):
+            for label, notes in table.items():
+                texts[label] = continuation_workflow(notes)
+        return texts
+
+    def test_every_fixture_of_the_acceptance_criteria(self):  # AC-6
+        for label, text in self.fixtures().items():
+            for reader in self.READERS:
+                with self.subTest(fixture=label, reader=reader):
+                    call_reader(reader, text)  # must not raise
+
+    UNCLOSED_TAILS = {
+        "continuation-then-unclosed-quotes-and-brackets": [
+            "    notes: retry failed",
+            "      - 'unclosed",
+            '      - "unclosed',
+            "      - [unclosed",
+            "      - {unclosed",
+            "    flow: [retry:'failed, {a?'b",
+            "    more: [x:'",
+        ],
+        "next-line-plain-then-unclosed": [
+            "    notes:",
+            "      retry failed",
+            "      - 'unclosed",
+            "      - [a, {b",
+        ],
+        "plain-flow-scalars-then-unclosed": [
+            "    a: [retry:'failed, \"unclosed",
+            "    b: {k:'v, [x",
+            "    c: [a?'b",
+        ],
+        "plain-flow-scalar-closed-then-unclosed-quote": [
+            "    a: [retry:'failed]",
+            "    b: 'unclosed",
+        ],
+    }
+
+    def test_unclosed_quotes_and_brackets_up_to_the_end_of_the_file(self):  # AC-6
+        for label, tail in self.UNCLOSED_TAILS.items():
+            text = build_workflow([task_spec(TARGET, notes=tail), task_spec("task0002")])
+            for reader in self.READERS:
+                with self.subTest(tail=label, reader=reader):
+                    call_reader(reader, text)  # must not raise
+
+    def test_invalid_utf8_in_continuation_lines_and_plain_flow_scalars(self):  # AC-6
+        data = (
+            b"tasks:\n  task0001:\n    status: pending\n"
+            b"    notes: retry \xff failed\n      - '\xfe unclosed\n      - [\xc3(\n"
+            b"    flow: [retry:'\xff, {a?'\xfe\n"
+            b"    " + RECORD_KEY.encode("ascii") + b": 1\n"
+            b"  task0002:\n    notes:\n      plain \xff\n      - \"x\n"
+        )
+        for reader in self.READERS:
+            with self.subTest(reader=reader):
+                call_reader(reader, data)  # must not raise
+
+    def test_seeded_random_input_with_continuation_fragments_never_raises(self):  # AC-6
+        rng = random.Random(20261007)
+        fragments = [
+            b"notes:", b"notes: plain", b"key: ", b"- ", b"-", b"  ", b"    ",
+            b"      ", b"'", b'"', b"[", b"]", b"{", b"}", b":", b"?", b"retry:'",
+            b"a?'", b": ", b"? ", b", ", b"#", b"# ", b"|", b">", b"\xff",
+            b"tasks:", b"task0001:", b"task0002:", b"status: pending", b"\\",
+        ]
+        for case in range(300):
+            lines = [
+                b"".join(rng.choice(fragments) for _ in range(rng.randint(0, 7)))
+                for _ in range(rng.randint(1, 14))
+            ]
+            data = b"\n".join(lines)
+            with self.subTest(case=case):
+                ids = call_reader("task_ids_from_workflow", data)
+                scanned = call_reader("iter_task_block_lines", data)
+                records = call_reader("task_routeback_records_from_workflow", data)
                 self.assertLessEqual({task for task, _line in scanned}, set(ids))
                 self.assertLessEqual(set(records), set(ids))
 

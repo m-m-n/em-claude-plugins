@@ -156,6 +156,10 @@ def implement_in_progress(workflow_yaml_path):
 # is honoured). It never raises; a value that never closes makes every later
 # line a body line, which falls to "no record, no block".
 _ITEM_INDICATOR_RE = re.compile(r"-(?=[ \t]|$)")
+# First characters a plain scalar never starts with (the same set for a value
+# after a key and for an item's content): a quote, a bracket, a block scalar
+# header, a comment, an anchor, a tag, an alias.
+_NOT_PLAIN_START = "\"'[{|>#&!*"
 _BLOCK_SCALAR_HEADER_RE = re.compile(
     r"^[|>](?:[+-][1-9]?|[1-9][+-]?)?(?:[ \t]+#.*|[ \t]*)$"
 )
@@ -186,15 +190,34 @@ class _MultilineValueTracker:
     scalar bodies, comment lines, plain scalars and plain-scalar continuation
     lines never open one, nor does anything after a value closed on its line.
     Anchors, tags and quoted keys before a value are not value-start
-    prefixes."""
+    prefixes.
+
+    Plain-scalar continuation: once a key's or an item's value is a plain
+    scalar (on the same line, or on the first deeper line after a key or item
+    that carried none), every later non-blank, non-comment line indented deeper
+    than the key's (or item indicator's) column is a continuation line of that
+    scalar. An item indicator, a key, a quote or a bracket on it opens
+    nothing. The first line at or shallower than that column ends the state
+    and is read with the normal rules; blank and comment lines neither
+    continue nor end it.
+
+    Inside a flow collection a quote opens an inner string only at the start
+    of a flow entry or after a real mapping indicator. A `:` is such an
+    indicator when a space, a tab or the end of the line follows it, or when
+    it follows the closing quote of an inner string or the closing bracket of
+    a nested collection (a JSON-like key); a `?` is one only when a space, a
+    tab or the end of the line follows it. Any other `:` or `?` is an
+    ordinary plain-scalar character."""
 
     def __init__(self):
         self._mode = None  # None, "dq", "sq" or "flow": the open value kind
         self._depth = 0  # flow nesting depth
         self._inner = None  # flow only: None, "dq" or "sq" (an inner string)
-        self._prev = "["  # flow only: last significant char outside strings
+        self._at_start = True  # flow only: a quote here opens an inner string
+        self._after_close = False  # flow only: just after a closed string / collection
         self._block_parent = None  # indent a block scalar's body must exceed
         self._pending = None  # column of a key / item whose value comes next
+        self._plain_parent = None  # column a plain scalar's continuation lines exceed
 
     def feed(self, line):
         """Consume the next physical line; return True iff it is a body
@@ -217,6 +240,10 @@ class _MultilineValueTracker:
         if stripped.strip() == "" or stripped.startswith("#"):
             return  # blank and comment lines never open and never decide
         pos = len(text) - len(stripped)
+        if self._plain_parent is not None:
+            if pos > self._plain_parent:
+                return  # a plain-scalar continuation line: never a value start
+            self._plain_parent = None  # at or above the parent: the scalar ended
         pending, self._pending = self._pending, None
         dash_col = None
         while True:
@@ -246,7 +273,16 @@ class _MultilineValueTracker:
             return
         colon = _find_key_colon(rest)
         if colon is None:
-            return  # a plain scalar: nothing opens inside it
+            # A plain scalar: nothing opens inside it, and the deeper lines
+            # after it continue it. An item's content continues past the item
+            # indicator's column; a value that started on the line after its
+            # key (or item indicator) continues past that key's column.
+            if first not in _NOT_PLAIN_START:
+                if dash_col is not None:
+                    self._plain_parent = dash_col
+                elif value_start:
+                    self._plain_parent = pending
+            return
         value = rest[colon + 1:].lstrip(" \t")
         value_pos = len(text) - len(value)
         if value == "" or value.startswith("#"):
@@ -255,6 +291,8 @@ class _MultilineValueTracker:
             self._open(text, value_pos)
         elif value[0] in "|>" and _BLOCK_SCALAR_HEADER_RE.match(value):
             self._block_parent = pos
+        elif value[0] not in _NOT_PLAIN_START:
+            self._plain_parent = pos  # a plain scalar value: deeper lines continue it
 
     def _open(self, text, pos):
         char = text[pos]
@@ -266,7 +304,8 @@ class _MultilineValueTracker:
             self._mode = "flow"
             self._depth = 1
             self._inner = None
-            self._prev = char
+            self._at_start = True
+            self._after_close = False
         self._scan(text, pos + 1)
 
     def _scan(self, text, index):
@@ -304,33 +343,47 @@ class _MultilineValueTracker:
                     continue
                 if char == '"':
                     self._inner = None
-                    self._prev = char
+                    self._at_start, self._after_close = False, True
             elif self._inner == "sq":
                 if char == "'":
                     if text[index + 1:index + 2] == "'":
                         index += 2
                         continue
                     self._inner = None
-                    self._prev = char
+                    self._at_start, self._after_close = False, True
             elif char in " \t":
                 pass
             elif char == "#" and (index == 0 or text[index - 1] in " \t"):
                 return  # a comment: its brackets are not counted
             elif char in "[{":
                 self._depth += 1
-                self._prev = char
+                self._at_start, self._after_close = True, False
             elif char in "]}":
                 self._depth -= 1
-                self._prev = char
+                self._at_start, self._after_close = False, True
                 if self._depth <= 0:
                     self._mode = None
                     return
-            elif char in "\"'" and self._prev in "[{,:?":
+            elif char == ",":
+                self._at_start, self._after_close = True, False
+            elif char in "\"'" and self._at_start:
                 # A quote opens an inner string only at the start of a flow
                 # entry or a flow mapping value, never inside a plain scalar.
                 self._inner = "dq" if char == '"' else "sq"
+                self._at_start = self._after_close = False
+            elif char in ":?":
+                # A mapping indicator only before a space, a tab or the end of
+                # the line; a `:` also right after a closed inner string or
+                # nested collection (a JSON-like key). Otherwise the `:` / `?`
+                # is an ordinary plain-scalar character, so a quote right
+                # after it does not open.
+                follower = text[index + 1:index + 2]
+                indicator = follower in ("", " ", "\t") or (
+                    char == ":" and self._after_close
+                )
+                self._at_start, self._after_close = indicator, False
             else:
-                self._prev = char
+                self._at_start = self._after_close = False
             index += 1
 
 
