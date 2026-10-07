@@ -1,0 +1,58 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> 9002 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation: 9023 tests (9002 + 21 new), OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestOtherKeyWithStatusPrefixIsSkipped.test_ignored_other_key_does_not_hide_the_direct_status
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestOtherKeyWithStatusPrefixIsSkipped.test_valueless_other_key_does_not_hide_the_direct_status
+    red_confirmed: true
+    red_reason: "Against the unmodified hook: status:detail: ignored then status: pending -> \"AssertionError: {} != {'task0001': 'pending'}\" (the status:detail line decided and its value could not be extracted); status:detail: then status: failed -> \"AssertionError: {'task0001': 'detail:'} != {'task0001': 'failed'}\""
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestStatusColonWithoutSeparatorIsNotAKeyLine.test_only_status_colon_pending_without_space_omits_the_task
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestStatusColonWithoutSeparatorIsNotAKeyLine.test_status_colon_failed_without_space_is_skipped
+    red_confirmed: true
+    red_reason: "Against the unmodified hook: only status:pending -> \"AssertionError: {'task0001': 'pending'} != {}\"; status:failed then status: pending -> \"AssertionError: {'task0001': 'failed'} != {'task0001': 'pending'}\""
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestTabAfterColonIsAKeyLine.test_status_colon_tab_value_decides
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestTabAfterColonIsAKeyLine.test_tab_form_decides_before_a_later_status_line
+    red_confirmed: false
+    red_reason: "Regression guard: the base revision already treats status: followed by a tab as a deciding line (the old pattern matched any status: prefix), so both tests passed before the fix. No executable red exists for behavior the fix keeps unchanged."
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestValuelessStatusStillDecides.test_bare_colon_with_newline_omits_the_task
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestValuelessStatusStillDecides.test_bare_colon_as_last_line_without_final_newline_omits_the_task
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestValuelessStatusStillDecides.test_bare_colon_then_status_line_without_final_newline_omits_the_task
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestValuelessStatusStillDecides.test_bare_colon_after_a_skipped_other_key_still_decides
+      - tests.test_queue_stop_guard_task_status_direct_key.TestStatusClassificationDetails.test_unextractable_first_direct_value_omits_the_task
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
+    red_confirmed: false
+    red_reason: "Regression guard: a value-less status: is a deciding line on the base revision as well and the fix must keep it so (FR2), so every listed test passed before the fix. The two existing tests in the direct-key module and in test_queue_stop_guard.py were run after the fix and pass unchanged."
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestHookBlocksAfterSkippedOtherKey.test_hook_blocks_and_names_the_task
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestHookBlocksAfterSkippedOtherKey.test_hook_blocks_with_the_value_less_other_key_form
+    red_confirmed: true
+    red_reason: "Against the unmodified hook, the hook subprocess exited 0 instead of 2 (\"AssertionError: 0 != 2\"): the status:detail line left task0001 out of the status read, so the failed-journal block never named it"
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_reader_never_reads_the_block_scalar_body
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_reader_never_reads_the_nested_mapping
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_hook_does_not_block_for_the_block_scalar_body
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_hook_does_not_block_for_the_nested_mapping
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_glued_status_line_inside_a_body_is_never_read
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_skipped_first_line_still_sets_the_direct_indent
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_body_value_after_a_skipped_line_does_not_replace_a_direct_status
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestSkippedOtherKeyKeepsReadScope.test_comment_line_after_a_skipped_line_is_never_the_status
+    red_confirmed: false
+    red_reason: "The cases AC-6 states (no direct status key line; the only status: pending sits in a notes body or a nested mapping; reader returns {} and the hook exits 0) passed on the base revision, because the base hook never reads those lines either: they guard TM-1 for the new skip path and no executable red exists for them. Two further cases in the same class that put a direct status: pending after the skipped line (test_body_value_after_a_skipped_line_does_not_replace_a_direct_status, test_comment_line_after_a_skipped_line_is_never_the_status) did fail on the base revision with \"AssertionError: {} != {'task0001': 'pending'}\". Every existing test of the direct-key module passes after the fix, with no test in that module modified or removed."
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestOtherKeyWithStatusPrefixIsSkipped.test_ignored_other_key_does_not_hide_the_direct_status
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestStatusColonWithoutSeparatorIsNotAKeyLine.test_only_status_colon_pending_without_space_omits_the_task
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestStatusColonWithoutSeparatorIsNotAKeyLine.test_status_colon_failed_without_space_is_skipped
+      - tests.test_queue_stop_guard_task_status_key_exact_match.TestContractIdentifiers.test_identifiers_exist
+    red_confirmed: true
+    red_reason: "The AC-1 first case and both AC-2 cases were observed failing against the unmodified hook (see AC-1 and AC-2) and pass after the fix; the module docstring records the observation. The remaining parts of the criterion (new module under tests/ as test_*.py, unittest only, temporary-directory fixtures, hook run as a subprocess with Stop-hook JSON on stdin, standard-library-only hook imports, identifier names, full suite green) are checked by the final full run: python3 -m unittest discover -s tests -> 9023 tests, OK (skipped=1)."
