@@ -94,7 +94,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: d0cc30654ee654fb05e17431ef3c48e7d26590a9
 tasks:
   task0001:
     title: "Skip quoted-scalar and flow-collection bodies in the Stop hook's task-block scan"
