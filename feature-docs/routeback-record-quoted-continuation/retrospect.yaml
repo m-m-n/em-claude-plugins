@@ -1,0 +1,75 @@
+feature: routeback-record-quoted-continuation
+collected_at: '2026-10-07T15:20:00+09:00'
+session_ids:
+- 01a11503-508c-701c-a18b-39ba14f69349.jsonl
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みでバケット 1 が 0.95（confidence 0.95）となり reduced を採用した
+    bases:
+    - basis: description_only
+      score:
+        probabilities:
+          '0': 0.0
+          '1': 0.94
+          '2': 0.06
+          '3': 0.0
+        expectation_clear: 0.93
+        confidence: 0.94
+      observed_at: '2026-10-07T13:15:14+09:00'
+    - basis: description_plus_code
+      score:
+        probabilities:
+          '0': 0.01
+          '1': 0.95
+          '2': 0.04
+          '3': 0.0
+        expectation_clear: 0.92
+        confidence: 0.95
+      observed_at: '2026-10-07T13:18:31+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/queue_stop_guard.py
+      - tests/test_queue_stop_guard_routeback_record.py
+      changed_lines_approx: 0
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      work_still_required_evidence: 'main（a1970748b7f998623266f719d1b271e45257f1a7）と未統合ブランチ em-workflow/routeback-record-direct-key/integration（07555fd45a01d910640f6b573ba52099ea4a034f）のコード・対応テストを確認した。
+
+
+        再現入力は「tasks:\n  task0001:\n    status: pending\n    notes: "tried twice\n    routeback_failed_journal_line: 1\n    gave up"\n」。両版の task_routeback_records_from_workflow が {''task0001'': ''1''} を返した。ブランチでも再現するため、作業は残っている。
+
+
+        隠蔽の入力では、notes 内の値を 9 に変更し、引用文字列の終了後に本物の直下キー routeback_failed_journal_line: 1 を追加した。両版とも {''task0001'': ''9''} を返した。ジャーナルの物理行1に {"event":"failed","task":"task0001"} を置いたメモリ上の検証では、main() の戻り値は偽造で2、隠蔽で0だった。偽造時の stderr は「queue_stop_guard: BLOCK feature=probe free_slots=6 launch=task0001」、隠蔽時は空だった。候補探索とファイル入出力を代替し、状態ファイルの保存を無効化したため、これは実際のサブプロセス終了コードの測定ではない。
+
+
+        単一引用符、フロー形式の配列・マッピングでも、4空白の継続行では両版が同じ偽造・隠蔽結果になった。継続行を6空白にすると、main は同じ誤読を続ける一方、ブランチは偽造で {}／戻り値0、隠蔽で {''task0001'': ''1''}／戻り値2になった。本物の記録だけの入力は両版で {''task0001'': ''1''}／戻り値2、記録なしの入力は両版で {}／戻り値0だった。PyYAML 6.0.3 は4空白の再現入力を受け付け、記録に見える行を notes の値として読んだ。
+
+
+        main の em-workflow/hooks/queue_stop_guard.py:230 に読み取り関数があり、:243 で字下げ比較なしにキーを照合する。ブランチでは関数が :235、字下げ比較が :260、キー照合が :262、最初の出現を確定する処理が :265 にある。引用文字列・フロー形式の値が継続中かを追跡する処理はない。呼び出し元は evaluate_feature（main :474、ブランチ :493）で、記録が失敗イベントの行番号と一致するかを判定する。
+
+
+        ブランチの tests/test_queue_stop_guard_routeback_record.py:75 の notes_double_quoted は継続行の既定値が6空白で、:778 の既存テストはこの既定値を使う。:808 の隠蔽テストはブロックスカラーを使う。4空白の引用文字列で偽造・隠蔽を検証するテストはなく、main にはこれらの追加テスト自体がない。依頼の完了条件では、引用文字列・フロー形式の本文を記録候補から除外し、4空白での偽造・隠蔽を検出するテストが求められている。
+
+
+        ファイル作成禁止と読み取り専用制約を守り、コミットのソースをメモリ上で読み込んで検証した。/tmp への入力・ソース・出力の保存は行っていない。リポジトリの変更もない'
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 0
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 2
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- '行単位の手書き YAML 走査に引用・フロー形式の追跡を足すと、review の各ラウンドで別の開き位置の誤認（round1: フロー内の通常文字列中の :'' / ?''、継続行先頭の "- "、round2: 通常文字列途中の "? "、Unicode 空白だけの行）が見つかり続けた。rework cap 到達で medium 2 件を deferred にした'
