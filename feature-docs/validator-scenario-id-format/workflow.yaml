@@ -10,12 +10,11 @@ goal: '# em-workflow: validate-worker-output.py の検証シナリオ ID 正規�
 
   ## 現象 (必須)
 
-  `em-workflow/scripts/validate-worker-output.py` は VERIFICATION.md のシナリオ ID を `_TS_ID_RE
-  = re.compile(r"TS-\d+")` で拾う。ハイフン付きの `TS-n` 書式しか一致しない。
+  `em-workflow/scripts/validate-worker-output.py` は VERIFICATION.md のシナリオ ID を `_TS_ID_RE = re.compile(r"TS-\d+")`
+  で拾う。ハイフン付きの `TS-n` 書式しか一致しない。
 
-  implementation-planner が `TS1`, `TS2` … の書式で VERIFICATION.md を書いた feature では、rework-planner
-  が新しく足したシナリオを検証器が見つけられない。結果として「new_scenarios ''TS13'' is not a new VERIFICATION.md
-  scenario」というエラーで正しい出力を拒否する。
+  implementation-planner が `TS1`, `TS2` … の書式で VERIFICATION.md を書いた feature では、rework-planner が新しく足したシナリオを検証器が見つけられない。結果として「new_scenarios
+  ''TS13'' is not a new VERIFICATION.md scenario」というエラーで正しい出力を拒否する。
 
 
   ## 再現手順 (必須)
@@ -23,8 +22,7 @@ goal: '# em-workflow: validate-worker-output.py の検証シナリオ ID 正規�
   1. VERIFICATION.md のシナリオ ID が `TSn` 書式の feature で review の rework を走らせる（例: destructive-guard-heredoc-bypass-fixes
   の review round 1）
 
-  2. rework-planner が `TS13` などの行を VERIFICATION.md に足し、`payload.rework_index.*.new_scenarios`
-  に並べる
+  2. rework-planner が `TS13` などの行を VERIFICATION.md に足し、`payload.rework_index.*.new_scenarios` に並べる
 
   3. `validate-worker-output.py` で出力を検証する
 
@@ -50,14 +48,14 @@ goal: '# em-workflow: validate-worker-output.py の検証シナリオ ID 正規�
 
   ## 実害・発生条件 (任意)
 
-  無人実行では、検証が拒否するとオーケストレーターが Codex に判断を仰ぐか停止するしかなくなる。destructive-guard-heredoc-bypass-fixes
-  では、Codex に相談したうえで監査記録を残してパッチを適用した（phase-state/batch-audit.yaml の rework.validator-scenario-id-format）。
+  無人実行では、検証が拒否するとオーケストレーターが Codex に判断を仰ぐか停止するしかなくなる。destructive-guard-heredoc-bypass-fixes では、Codex に相談したうえで監査記録を残してパッチを適用した（phase-state/batch-audit.yaml
+  の rework.validator-scenario-id-format）。
 
 
   ## 追加指示（起動時）
 
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration
-  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモート両方に残す（base_branch
+  へ自動マージしない）
 
   - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する
 
@@ -108,8 +106,7 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI を持たない検証器の正規表現・テスト・スキル文書の変更であるため（design-step 推奨: skipped。tier
-    reduced でも design は削減対象）'
+  skipped_reason: 'UI を持たない検証器の正規表現・テスト・スキル文書の変更であるため（design-step 推奨: skipped。tier reduced でも design は削減対象）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -122,7 +119,7 @@ workflow:
   base_commit: 2ef2afce77de811d58f39ffc935461241b6252f5
   completed_at_commit: b395220428f1a0bc72e6d16aaeed97916020d6fa
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -168,6 +165,14 @@ tasks:
     notes: null
 review:
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Recognize both scenario ID formats
