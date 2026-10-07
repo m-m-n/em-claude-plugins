@@ -108,7 +108,8 @@ tasks:
     - input-handling
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, NFR1, NFR2, NFR3, NFR4]
-    status: pending
+    status: in_progress
+    branch: em-workflow/routeback-record-quoted-open-residual/task0001
 review:
   status: pending
   rounds_completed: 0
