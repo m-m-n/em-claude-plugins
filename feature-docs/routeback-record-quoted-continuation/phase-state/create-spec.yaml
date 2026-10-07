@@ -1,0 +1,17 @@
+schema_version: 1
+feature: routeback-record-quoted-continuation
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: fbbdd9bdb6eae0d4dd392b5b7bf7d78a5e87cc38
+last_input_digest: sha256:0ada49314d6efed83ef944fada9d4d320bc4b86d8217ee9d6f65cbe24ea78ab5
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
