@@ -1,0 +1,58 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> 8838 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation: 8863 tests (8838 + 25 new), OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_task_status_direct_key.TestBlockScalarBodyIsNotAStatus.test_hook_does_not_block_for_every_header_form
+      - tests.test_queue_stop_guard_task_status_direct_key.TestBlockScalarBodyIsNotAStatus.test_reader_omits_the_task_for_every_header_form
+      - tests.test_queue_stop_guard_task_status_direct_key.TestBlockScalarBodyIsNotAStatus.test_pipe_form_hook_does_not_block
+      - tests.test_queue_stop_guard_task_status_direct_key.TestBlockScalarBodyIsNotAStatus.test_pipe_form_reader_omits_the_task
+    red_confirmed: true
+    red_reason: "Against the unmodified hook, for each of the header forms |, >, |-, |+ and |2: hook subprocess 'AssertionError: 2 != 0 : queue_stop_guard: BLOCK feature=status-direct-key-feature free_slots=6 launch=task0001' and reader \"AssertionError: 'task0001' unexpectedly found in {'task0001': 'pending'}\" (the notes body line was read as the status)"
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectStatusAfterBlockScalar.test_hook_does_not_block
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectStatusAfterBlockScalar.test_reader_returns_the_direct_value_not_the_body_value
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectStatusAfterBlockScalar.test_direct_value_wins_for_every_header_form
+    red_confirmed: true
+    red_reason: "Against the unmodified hook: hook subprocess 'AssertionError: 2 != 0 : queue_stop_guard: BLOCK ... launch=task0001' and reader \"AssertionError: 'pending' != 'failed'\" (the notes body status was read before the direct status key placed after it)"
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_task_status_direct_key.TestNestedMappingIsNotAStatus.test_reader_omits_the_task
+      - tests.test_queue_stop_guard_task_status_direct_key.TestNestedMappingIsNotAStatus.test_hook_does_not_block
+      - tests.test_queue_stop_guard_task_status_direct_key.TestNestedMappingIsNotAStatus.test_nested_status_before_a_direct_status_is_skipped
+      - tests.test_queue_stop_guard_task_status_direct_key.TestNestedMappingIsNotAStatus.test_nested_status_after_a_direct_status_does_not_replace_it
+    red_confirmed: true
+    red_reason: "Against the unmodified hook: reader \"AssertionError: {'task0001': 'pending'} != {}\" and hook subprocess 'AssertionError: 2 != 0 : queue_stop_guard: BLOCK ... launch=task0001' (the nested meta.status line was read as the task status). test_nested_status_after_a_direct_status_does_not_replace_it passed on the base revision (the direct key comes first there); it guards the first-direct-key-wins rule and was not observed red."
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectPendingStillBlocks.test_pending_before_notes_blocks_and_names_the_task
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectPendingStillBlocks.test_pending_after_notes_blocks_and_names_the_task
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectPendingStillBlocks.test_reader_returns_pending_before_and_after_notes
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectPendingStillBlocks.test_comment_before_first_key_does_not_shift_the_direct_indent
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectPendingStillBlocks.test_comment_before_first_key_hook_still_blocks
+      - tests.test_queue_stop_guard_task_status_direct_key.TestDirectPendingStillBlocks.test_comment_line_inside_the_block_is_never_the_status
+    red_confirmed: true
+    red_reason: "Against the unmodified hook, the pending-after-notes case failed: hook subprocess 'AssertionError: 0 != 2' (the notes body status: failed was read before the direct status: pending) and reader \"AssertionError: 'failed' != 'pending'\". The pending-before-notes case and the comment-inside-block test passed on the base revision (guards). The leading-comment tests (indent 3, 6, 8) failed on base only because of the notes body; their comment-specific check was confirmed red under a temporary mutation of the new reader that let comment lines set the direct indent (4 failures: the three comment_indent subTests and the hook case), and the mutation was discarded."
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_task_status_direct_key.TestCraftedContentFailsOpen.test_reader_returns_without_raising_and_omits_the_task
+      - tests.test_queue_stop_guard_task_status_direct_key.TestCraftedContentFailsOpen.test_hook_exits_zero_without_a_traceback
+      - tests.test_queue_stop_guard_task_status_direct_key.TestCraftedContentFailsOpen.test_block_with_no_lines_at_all_is_omitted
+      - tests.test_queue_stop_guard_task_status_direct_key.TestCraftedContentFailsOpen.test_crafted_bytes_do_not_raise
+    red_confirmed: true
+    red_reason: "Against the unmodified hook the cases whose notes body holds status: pending failed: reader \"AssertionError: {'task0001': 'pending'} != {}\" and hook subprocess 'AssertionError: 2 != 0' (first-key-is-a-notes-block-scalar-header, header-with-unexpected-trailing-characters, header-with-trailing-characters-after-indicators, body-reaches-end-of-file-without-final-newline, and the crafted-bytes suffixes). The blank-and-comment-only block and the empty block passed on base (no status line exists there); they guard the no-raise / omit outcome and were not observed red."
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard
+      - tests.test_queue_stop_guard_routeback_record
+      - tests.test_queue_hook_status_read_pin
+      - tests.test_queue_stop_guard_task_status_direct_key.TestContractIdentifiers.test_identifiers_exist
+    red_confirmed: false
+    red_reason: "The existing modules (which read the hook by path and by basename queue_stop_guard.py, and pin the module docstring, the stdlib-only imports, the status-read identifiers and the three-condition exclusion) detect any regression of these behaviours; no red state occurred for this change. They passed unmodified before and after the implementation (122 tests in the four modules, full suite 8863 OK). That iter_task_block_lines and task_routeback_records_from_workflow are unmodified is a diff property checked with git diff, not a test."
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard_task_status_direct_key
+    red_confirmed: true
+    red_reason: "Observed: run against the unmodified hook, the new module failed 43 subtests/tests across 25 tests, including the AC-1 | form (TestBlockScalarBodyIsNotAStatus.test_pipe_form_hook_does_not_block and test_pipe_form_reader_omits_the_task), AC-2 (TestDirectStatusAfterBlockScalar.test_hook_does_not_block) and AC-3 (TestNestedMappingIsNotAStatus.test_reader_omits_the_task). The module is collected by python3 -m unittest discover -s tests (full suite grew from 8838 to 8863 tests)."
