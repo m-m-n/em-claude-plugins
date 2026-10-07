@@ -20,12 +20,23 @@ other test module is imported: the fixture helpers below are rebuilt locally
 
 Each journal case is built from explicit physical lines, so the physical line
 of the target `failed` event is known by construction.
+
+routeback-record-quoted-continuation (task0001): the sections headed with that
+name pin that the body lines of a multi-line double-quoted scalar, single-quoted
+scalar, flow sequence or flow mapping (notably `tasks.{T}.notes`) are never read
+as a task boundary, task id, status or record, whatever their indentation, while
+a quote or bracket that is not at a value-start position never opens a value.
+Observed red (base revision, body lines read like any other line): the 4-space
+record-shaped continuation line of a `notes` value is taken as the record, so a
+forged record exits 2 instead of 0 and a non-matching one hides the genuine
+direct-key record (exit 0 instead of 2).
 """
 
 import ast
 import importlib.util
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -83,6 +94,49 @@ def notes_double_quoted(*parts, continuation_indent=6):
     lines.extend(" " * continuation_indent + part for part in parts[1:-1])
     lines.append(" " * continuation_indent + parts[-1] + '"')
     return lines
+
+
+def notes_single_quoted(*parts, continuation_indent=6):
+    """The workflow.yaml lines of a non-null `notes` value written as a
+    multi-line single-quoted scalar: the first part opens the quote, the last
+    part closes it, and every part after the first is a continuation line
+    indented by `continuation_indent` spaces. `parts` are written verbatim
+    (a doubled quote is the caller's to write)."""
+    if len(parts) < 2:
+        raise ValueError("a multi-line scalar needs at least two parts")
+    lines = ["    notes: '%s" % parts[0]]
+    lines.extend(" " * continuation_indent + part for part in parts[1:-1])
+    lines.append(" " * continuation_indent + parts[-1] + "'")
+    return lines
+
+
+def _notes_flow(opener, closer, parts, continuation_indent, closer_indent):
+    if len(parts) < 2:
+        raise ValueError("a multi-line flow collection needs at least two parts")
+    if closer_indent is None:
+        closer_indent = continuation_indent
+    lines = ["    notes: %s%s" % (opener, parts[0])]
+    lines.extend(" " * continuation_indent + part for part in parts[1:])
+    lines.append(" " * closer_indent + closer)
+    return lines
+
+
+def notes_flow_sequence(*parts, continuation_indent=6, closer_indent=None):
+    """The workflow.yaml lines of a non-null `notes` value written as a
+    multi-line flow sequence: the first part follows `[` on the opening line,
+    every part after the first is a continuation line indented by
+    `continuation_indent` spaces, and the closing `]` is on a line of its own
+    after the last part, indented by `closer_indent` (default: the
+    continuation indent). `parts` are written verbatim: the caller supplies
+    any `,` separator, so a record- or status-shaped last part stays
+    canonical on its own (no trailing comma)."""
+    return _notes_flow("[", "]", parts, continuation_indent, closer_indent)
+
+
+def notes_flow_mapping(*parts, continuation_indent=6, closer_indent=None):
+    """Like notes_flow_sequence, for a multi-line flow mapping: `{` opens on
+    the `notes:` line and a closing `}` is on a line of its own."""
+    return _notes_flow("{", "}", parts, continuation_indent, closer_indent)
 
 
 def task_spec(
@@ -1033,6 +1087,1015 @@ class TestFailOpen(HookAssertions):
         lines = [event_line("failed", TARGET), b"\xff\xfe garbled"]
         journal = journal_bytes(lines)
         self.assert_failed(run_scenario(journal, record="2"))
+
+
+# --- routeback-record-quoted-continuation: fixture helpers ---------------------
+
+FORM_LABELS = ("double-quoted", "single-quoted", "flow-sequence", "flow-mapping")
+
+
+def record_entry(value):
+    return "%s: %s" % (RECORD_KEY, value)
+
+
+def form_notes(
+    label, middle, continuation_indent=4, last="gave up", closer_indent=None
+):
+    """`notes` lines of the `label` form: an opening line holding "tried
+    twice", then the `middle` parts as continuation lines. The quoted forms
+    end with a closing part (`last`) that carries the closing quote; the flow
+    forms end with the last `middle` part and a closing bracket on a line of
+    its own (indented by `closer_indent`, default the continuation indent), so
+    a record- or status-shaped last `middle` part has no trailing comma."""
+    middle = list(middle)
+    kwargs = {"continuation_indent": continuation_indent}
+    if label == "double-quoted":
+        return notes_double_quoted("tried twice", *middle, last, **kwargs)
+    if label == "single-quoted":
+        return notes_single_quoted("tried twice", *middle, last, **kwargs)
+    kwargs["closer_indent"] = closer_indent
+    if label == "flow-sequence":
+        return notes_flow_sequence("tried twice,", *middle, **kwargs)
+    if label == "flow-mapping":
+        return notes_flow_mapping("reason: tried twice,", *middle, **kwargs)
+    raise ValueError(label)
+
+
+def call_reader(name, content):
+    """Calls the hook module's reader `name` on a workflow.yaml holding
+    `content` (text or bytes) and returns its result; a generator reader is
+    fully consumed into a list."""
+    module = load_hook_module()
+    data = content if isinstance(content, bytes) else content.encode("utf-8")
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "workflow.yaml")
+        with open(path, "wb") as fh:
+            fh.write(data)
+        result = getattr(module, name)(path)
+        if name == "iter_task_block_lines":
+            result = list(result)
+        return result
+
+
+class QuotedValueHookCase(HookAssertions):
+    """Base for the hook-subprocess cases: the journal's `failed` event of
+    task0001 sits on physical line 1, and task0001 is `pending`."""
+
+    def setUp(self):
+        self.journal = journal_bytes([event_line("failed", TARGET)])
+
+    def run_target(self, notes=None, extra=(), head=(), journal=None, **build):
+        tasks = [
+            task_spec(TARGET, notes=notes, extra=extra, head=head),
+            task_spec("task0002"),
+            task_spec("task0003"),
+        ]
+        workflow = build_workflow(tasks, **build)
+        data = self.journal if journal is None else journal
+        return run_scenario(data, workflow_text=workflow)
+
+    def assert_launches_target(self, result):
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("BLOCK", result.stderr)
+        launched = result.stderr.split("launch=")[1].strip().split(",")
+        self.assertIn(TARGET, launched)
+
+
+class TestQuotedFormFixtureBuilders(unittest.TestCase):
+    """The builders for single-quoted and flow-form multi-line `notes`."""
+
+    def test_single_quoted_notes_emits_a_multi_line_value(self):
+        notes = notes_single_quoted("first part", "second part", "last part")
+        text = build_workflow([task_spec(TARGET, notes=notes)])
+        self.assertNotIn("notes: null", text)
+        self.assertIn(
+            "    notes: 'first part\n      second part\n      last part'\n", text
+        )
+
+    def test_flow_sequence_notes_emits_a_multi_line_value(self):
+        notes = notes_flow_sequence("first,", "second")
+        text = build_workflow([task_spec(TARGET, notes=notes)])
+        self.assertIn("    notes: [first,\n      second\n      ]\n", text)
+
+    def test_flow_mapping_notes_emits_a_multi_line_value(self):
+        notes = notes_flow_mapping("a: 1,", "b: 2")
+        text = build_workflow([task_spec(TARGET, notes=notes)])
+        self.assertIn("    notes: {a: 1,\n      b: 2\n      }\n", text)
+
+    def test_continuation_indent_applies_to_every_continuation_line(self):
+        for indent in (4, 2, 0):
+            with self.subTest(indent=indent):
+                pad = " " * indent
+                self.assertEqual(
+                    notes_single_quoted("a", "b", "c", continuation_indent=indent),
+                    ["    notes: 'a", pad + "b", pad + "c'"],
+                )
+                self.assertEqual(
+                    notes_flow_sequence("a,", "b", continuation_indent=indent),
+                    ["    notes: [a,", pad + "b", pad + "]"],
+                )
+                self.assertEqual(
+                    notes_flow_mapping("a: 1,", "b: 2", continuation_indent=indent),
+                    ["    notes: {a: 1,", pad + "b: 2", pad + "}"],
+                )
+
+    def test_flow_closer_indent_overrides_only_the_closing_line(self):
+        self.assertEqual(
+            notes_flow_sequence("a,", "b", continuation_indent=0, closer_indent=4),
+            ["    notes: [a,", "b", "    ]"],
+        )
+
+    def test_form_notes_covers_every_form_with_the_record_as_the_last_flow_entry(self):
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                lines = form_notes(label, [record_entry(1)])
+                self.assertEqual(lines[0].split(":", 1)[0], "    notes")
+                self.assertIn("    " + record_entry(1), lines)
+        self.assertEqual(
+            form_notes("double-quoted", [record_entry(1)]),
+            ['    notes: "tried twice', "    " + record_entry(1), '    gave up"'],
+        )
+        self.assertEqual(
+            form_notes("flow-sequence", [record_entry(1)]),
+            ["    notes: [tried twice,", "    " + record_entry(1), "    ]"],
+        )
+
+    def test_a_single_part_is_rejected(self):
+        for builder in (notes_single_quoted, notes_flow_sequence, notes_flow_mapping):
+            with self.subTest(builder=builder.__name__):
+                with self.assertRaises(ValueError):
+                    builder("only")
+
+
+# --- routeback-record-quoted-continuation: AC-1 (the reader, called directly) ---
+
+
+class TestQuotedValueBodyRecordRead(unittest.TestCase):
+    """AC-1: task_routeback_records_from_workflow on the reproduction fixture
+    returns no record. The body lines sit at the direct keys' indentation (4)
+    and, for the shallower cases, at 2 and 0."""
+
+    def test_reproduction_fixture_has_no_record_in_every_form(self):  # AC-1
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = form_notes(label, [record_entry(1)], 4)
+                workflow = build_workflow([task_spec(TARGET, notes=notes)])
+                self.assertEqual(
+                    call_reader("task_routeback_records_from_workflow", workflow), {}
+                )
+
+    def test_the_literal_reproduction_lines_have_no_record(self):  # AC-1
+        workflow = "\n".join(
+            [
+                "tasks:",
+                "  task0001:",
+                '    title: "task task0001"',
+                "    status: pending",
+                '    notes: "tried twice',
+                "    routeback_failed_journal_line: 1",
+                '    gave up"',
+                "",
+            ]
+        )
+        self.assertEqual(
+            call_reader("task_routeback_records_from_workflow", workflow), {}
+        )
+
+    def test_shallower_body_lines_are_not_read_either(self):  # AC-1
+        for label in FORM_LABELS:
+            for indent in (2, 0):
+                with self.subTest(form=label, indent=indent):
+                    notes = form_notes(label, [record_entry(1)], indent)
+                    workflow = build_workflow([task_spec(TARGET, notes=notes)])
+                    self.assertEqual(
+                        call_reader("task_routeback_records_from_workflow", workflow),
+                        {},
+                    )
+
+    def test_direct_key_record_after_the_value_is_read_in_every_form(self):  # AC-1
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = form_notes(label, [record_entry(3)], 4)
+                workflow = build_workflow(
+                    [task_spec(TARGET, notes=notes, extra=record_lines("1"))]
+                )
+                self.assertEqual(
+                    call_reader("task_routeback_records_from_workflow", workflow),
+                    {TARGET: "1"},
+                )
+
+    def test_body_lines_are_not_yielded_and_the_opening_line_is(self):  # AC-1
+        notes = form_notes("double-quoted", [record_entry(1), "status: merged"], 4)
+        workflow = build_workflow([task_spec(TARGET, notes=notes)])
+        yielded = call_reader("iter_task_block_lines", workflow)
+        self.assertEqual({task for task, _line in yielded}, {TARGET})
+        texts = [line for _task, line in yielded]
+        self.assertIn('    notes: "tried twice\n', texts)
+        self.assertFalse([line for line in texts if RECORD_KEY in line])
+        self.assertFalse([line for line in texts if "gave up" in line])
+
+
+# --- routeback-record-quoted-continuation: AC-2 / AC-3 (forgery and hiding) -----
+
+
+class TestQuotedValueRecordForgery(QuotedValueHookCase):
+    """AC-2 (TM-1): the only record-shaped line is a 4-space continuation line
+    of a multi-line `notes` value; there is no direct-key record, so the task
+    is failed and the hook exits 0 without BLOCK."""
+
+    def test_record_shaped_continuation_line_is_not_read_in_every_form(self):  # AC-2
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = form_notes(label, [record_entry(1)], 4)
+                self.assert_failed(self.run_target(notes=notes))
+
+    def test_shallower_continuation_lines_are_not_read_either(self):  # AC-2
+        for label in FORM_LABELS:
+            for indent in (2, 0):
+                with self.subTest(form=label, indent=indent):
+                    notes = form_notes(label, [record_entry(1)], indent)
+                    self.assert_failed(self.run_target(notes=notes))
+
+
+class TestQuotedValueDoesNotHideTheRecord(QuotedValueHookCase):
+    """AC-3 (TM-2): a non-matching record-shaped continuation line comes
+    before the genuine direct-key record; the genuine one is still read."""
+
+    def test_non_matching_body_value_does_not_hide_the_genuine_record(self):  # AC-3
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = form_notes(label, [record_entry(3)], 4)
+                result = self.run_target(notes=notes, extra=record_lines("1"))
+                self.assert_launches_target(result)
+
+    def test_shallower_body_lines_do_not_hide_the_genuine_record(self):  # AC-3
+        for label in FORM_LABELS:
+            for indent in (2, 0):
+                with self.subTest(form=label, indent=indent):
+                    notes = form_notes(label, [record_entry(3)], indent)
+                    result = self.run_target(notes=notes, extra=record_lines("1"))
+                    self.assert_launches_target(result)
+
+    def test_matching_body_value_does_not_replace_a_non_matching_record(self):  # AC-3
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = form_notes(label, [record_entry(1)], 4)
+                self.assert_failed(self.run_target(notes=notes, extra=record_lines("2")))
+
+
+# --- routeback-record-quoted-continuation: AC-4 (task keys inside a body) ---------
+
+
+def task_key_shaped_notes(label, middle, last="    gave up"):
+    """A `notes` value whose body holds the `middle` lines, written verbatim
+    (explicit leading spaces), with the closing line at 4 spaces."""
+    return form_notes(
+        label, middle, continuation_indent=0, last=last, closer_indent=4
+    )
+
+
+class TestQuotedValueTaskKeys(QuotedValueHookCase):
+    """AC-4 (TM-1, TM-2): a task-key-shaped line inside a body never moves the
+    lines after it to another task and never ends the section."""
+
+    def test_forged_record_for_another_task_is_not_read(self):  # AC-4 (a)
+        # task0002's `failed` event is journal line 1; real task0002 is
+        # `pending` with no record, so it is failed -> exit 0. task0001 has no
+        # event, so exit 0 can only come from task0002 being failed.
+        journal = journal_bytes([event_line("failed", "task0002")])
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = task_key_shaped_notes(
+                    label, ["  task0002:", "    " + record_entry(1)]
+                )
+                self.assert_failed(self.run_target(notes=notes, journal=journal))
+
+    def test_forged_status_for_another_task_is_not_read(self):  # AC-4 (b)
+        journal = journal_bytes([event_line("failed", "task0002")])
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = task_key_shaped_notes(
+                    label, ["  task0002:", "    status: pending"]
+                )
+                workflow = build_workflow(
+                    [
+                        task_spec(TARGET, notes=notes),
+                        task_spec(
+                            "task0002", status="failed", extra=record_lines("1")
+                        ),
+                    ]
+                )
+                self.assert_failed(
+                    run_scenario(journal, workflow_text=workflow)
+                )
+
+    def test_forged_task_key_never_reaches_the_launch_list(self):  # AC-4 (c)
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = task_key_shaped_notes(label, ["  task0099:"])
+                result = self.run_target(notes=notes, journal=b"")
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertNotIn("task0099", result.stderr)
+                self.assertIn("launch=task0001,task0002,task0003", result.stderr)
+
+    def test_column_zero_continuation_does_not_end_the_section(self):  # AC-4 (d)
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = form_notes(label, ["middle line"], continuation_indent=0)
+                result = self.run_target(notes=notes, journal=b"")
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("launch=task0001,task0002,task0003", result.stderr)
+
+    def test_column_zero_continuation_values_enumerate_the_following_tasks(self):  # AC-4 (d)
+        for label in FORM_LABELS:
+            with self.subTest(form=label):
+                notes = form_notes(label, ["middle line"], continuation_indent=0)
+                workflow = build_workflow(
+                    [task_spec(TARGET, notes=notes), task_spec("task0002")]
+                )
+                self.assertEqual(
+                    call_reader("task_ids_from_workflow", workflow),
+                    ["task0001", "task0002"],
+                )
+
+
+# --- routeback-record-quoted-continuation: AC-5 (opening and closing boundaries) --
+
+ROW = "    " + record_entry(1)  # a record-shaped line at the direct keys' indent
+
+
+class TestQuotedValueEscapesDoNotClose(QuotedValueHookCase):
+    """AC-5 (a): an escaped quote never closes, so the 4-space record-shaped
+    line before the real close is body (exit 0, no direct-key record)."""
+
+    def test_backslash_escaped_double_quote_does_not_close(self):
+        notes = [
+            '    notes: "tried twice',
+            '      he said \\"stop\\" and left',
+            ROW,
+            '      gave up"',
+        ]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_doubled_single_quote_does_not_close(self):
+        notes = [
+            "    notes: 'tried twice",
+            "      it''s done",
+            ROW,
+            "      gave up'",
+        ]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_double_quoted_line_ending_in_a_backslash_continues(self):
+        notes = [
+            '    notes: "tried twice \\',
+            ROW,
+            '      gave up"',
+        ]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_escaped_quote_on_the_opening_line_does_not_close(self):
+        notes = ['    notes: "tried \\" twice', ROW, '      gave up"']
+        self.assert_failed(self.run_target(notes=notes))
+
+
+class TestQuotedValueRealClosesClose(QuotedValueHookCase):
+    """AC-5 (b): a real close closes; the genuine direct-key record after it
+    is read (exit 2, task0001 named)."""
+
+    def test_escaped_backslash_then_quote_closes(self):
+        notes = ['    notes: "tried twice', '      path C:\\\\"']
+        self.assert_launches_target(
+            self.run_target(notes=notes, extra=record_lines("1"))
+        )
+
+    def test_one_line_value_followed_by_a_comment_with_a_lone_quote(self):
+        extra = ['    title: "x" # "'] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_one_line_single_quoted_value_followed_by_a_comment_with_a_quote(self):
+        extra = ["    label: 'x' # '", '    other: [a] # ["'] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_doubled_quote_then_a_real_single_quote_close(self):
+        notes = ["    notes: 'it''s", "      done'"]
+        self.assert_launches_target(
+            self.run_target(notes=notes, extra=record_lines("1"))
+        )
+
+    def test_closing_line_text_after_the_quote_is_not_an_opening(self):
+        notes = ['    notes: "tried twice', '      gave up" # "lone quote']
+        self.assert_launches_target(
+            self.run_target(notes=notes, extra=record_lines("1"))
+        )
+
+
+class TestQuotedValueNotOpenings(QuotedValueHookCase):
+    """AC-5 (c): a quote or bracket that is not at a value-start position never
+    opens, so the genuine direct-key record after it is read (exit 2)."""
+
+    def test_block_scalar_bodies_never_open(self):
+        for label, indicator, body_indent in BLOCK_SCALAR_INDICATORS:
+            with self.subTest(indicator=indicator, form=label):
+                notes = notes_block_scalar(
+                    indicator,
+                    ['said "never', "and an unclosed [ bracket", "{ brace"],
+                    body_indent,
+                )
+                self.assert_launches_target(
+                    self.run_target(notes=notes, extra=record_lines("1"))
+                )
+
+    def test_block_scalar_body_lines_starting_with_a_quote_or_bracket_never_open(self):
+        for indicator in ("|", ">-"):
+            with self.subTest(indicator=indicator):
+                notes = notes_block_scalar(
+                    indicator, ['"unclosed', "'unclosed", "[unclosed", "{unclosed"]
+                )
+                self.assert_launches_target(
+                    self.run_target(notes=notes, extra=record_lines("1"))
+                )
+
+    def test_sequence_item_block_scalar_body_never_opens(self):
+        extra = ["    attempts:", "      - |", '        unclosed " and [ here'] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_comment_lines_never_open(self):
+        extra = [
+            '    # an unclosed " quote',
+            "    # an unclosed ' quote",
+            "    # an unclosed [ bracket",
+            "    # an unclosed { brace",
+        ] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_comment_line_inside_a_nested_mapping_never_opens(self):
+        extra = ["    context:", '      # "unclosed', "      key: value"] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_plain_scalars_never_open(self):
+        extra = [
+            "    reason: don't give up",
+            "    memo: it's [fine",
+            '    said: he said "hi',
+            "    brace: a { b",
+        ] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_plain_scalar_continuation_lines_never_open(self):
+        extra = [
+            "    reason: first part",
+            '      "second part [',
+            "      it's {here",
+            "      '[third",
+        ] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_top_level_block_scalar_before_the_tasks_section_never_opens(self):
+        for indicator in ("|", ">-"):
+            with self.subTest(indicator=indicator):
+                top = [
+                    "summary: %s" % indicator,
+                    '  unclosed " quote',
+                    "  and an unclosed [ bracket",
+                ]
+                result = self.run_target(
+                    extra=record_lines("1"), top_lines=top
+                )
+                self.assert_launches_target(result)
+
+    def test_step_level_block_scalar_never_opens(self):
+        step = ["    notes: |", '      unclosed " quote', "      and [ bracket"]
+        self.assert_launches_target(
+            self.run_target(extra=record_lines("1"), step_lines=step)
+        )
+
+    def test_quoted_key_value_is_not_a_value_start(self):
+        # A quote after a quoted key is not an opening (SPEC A6): the line is
+        # read as it was before, the genuine record after it is still read.
+        extra = ['    "quoted key": "value'] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_anchor_or_tag_prefixed_values_are_not_openings(self):
+        extra = ['    a: &anchor "unclosed', '    b: !!str "unclosed'] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+
+class TestQuotedValueStartsOnTheNextLine(QuotedValueHookCase):
+    """AC-5 (d): a value that starts on the line after its key is a value
+    start too."""
+
+    def test_double_quoted_value_on_the_next_line_hides_its_body(self):
+        notes = [
+            "    notes:",
+            '      "tried twice',
+            ROW,
+            '      gave up"',
+        ]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_single_quoted_and_flow_values_on_the_next_line_hide_their_body(self):
+        cases = {
+            "single-quoted": ["    notes:", "      'tried twice", ROW, "      gave up'"],
+            "flow-sequence": ["    notes:", "      [tried twice,", ROW, "      ]"],
+            "flow-mapping": ["    notes:", "      {reason: tried twice,", ROW, "      }"],
+        }
+        for label, notes in cases.items():
+            with self.subTest(form=label):
+                self.assert_failed(self.run_target(notes=notes))
+
+    def test_value_after_a_comment_line_following_the_key_is_a_value_start(self):
+        notes = ["    notes:", "      # a comment", "", '      "tried twice', ROW, '      gave up"']
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_genuine_record_after_such_a_value_is_read(self):
+        notes = ["    notes:", '      "tried twice', '      gave up"']
+        self.assert_launches_target(
+            self.run_target(notes=notes, extra=record_lines("1"))
+        )
+
+    def test_a_less_indented_quoted_line_after_a_null_key_is_not_a_value_start(self):
+        # `notes:` has no value; the next line is a sibling (a quoted key), so
+        # its unclosed quote does not hide the record that follows.
+        extra = ["    notes:", '    "sibling": "unclosed'] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+
+class TestQuotedValueNestedAndItemValues(QuotedValueHookCase):
+    """AC-5: values in nested keys and sequence items are value starts."""
+
+    def test_nested_key_value_hides_its_body(self):
+        extra = [
+            "    context:",
+            '      reason: "tried twice',
+            ROW,
+            '      gave up"',
+        ]
+        self.assert_failed(self.run_target(extra=extra))
+
+    def test_sequence_item_value_hides_its_body(self):
+        extra = [
+            "    attempts:",
+            '      - "tried twice',
+            ROW,
+            '        gave up"',
+        ]
+        self.assert_failed(self.run_target(extra=extra))
+
+    def test_sequence_item_key_value_hides_its_body(self):
+        extra = [
+            "    attempts:",
+            "      - reason: 'tried twice",
+            ROW,
+            "        gave up'",
+        ]
+        self.assert_failed(self.run_target(extra=extra))
+
+    def test_flow_sequence_item_value_hides_its_body(self):
+        extra = [
+            "    attempts:",
+            "      - [tried twice,",
+            ROW,
+            "      ]",
+        ]
+        self.assert_failed(self.run_target(extra=extra))
+
+    def test_item_whose_value_starts_on_the_next_line_hides_its_body(self):
+        extra = [
+            "    attempts:",
+            "      -",
+            '        "tried twice',
+            ROW,
+            '        gave up"',
+        ]
+        self.assert_failed(self.run_target(extra=extra))
+
+    def test_top_level_and_step_level_values_hide_their_body(self):
+        top = ['summary: "tried twice', "tasks:", "  task0099:", 'gave up"']
+        step = ["    notes: 'tried twice", "tasks:", "  task0098:", "    gave up'"]
+        result = self.run_target(extra=record_lines("1"), top_lines=top, step_lines=step)
+        self.assert_launches_target(result)
+        self.assertNotIn("task0099", result.stderr)
+        self.assertNotIn("task0098", result.stderr)
+
+
+class TestFlowValueBoundaries(QuotedValueHookCase):
+    """AC-5 (e): flow collections nest, and a bracket inside an inner quoted
+    string or a comment is not counted."""
+
+    FLOW_LINES = [
+        "    notes: [tried twice,",
+        "      {nested: [1, 2]},",
+        '      "closing ] and } in a string",',
+        "      'another ] in a string',",
+        "      # a comment with ] and }",
+        "      plain, # trailing comment ]",
+    ]
+
+    def flow_notes(self, last_entry):
+        return list(self.FLOW_LINES) + [last_entry, "      ]"]
+
+    def test_record_shaped_entry_inside_the_flow_value_is_not_read(self):
+        self.assert_failed(self.run_target(notes=self.flow_notes(ROW)))
+
+    def test_genuine_record_after_the_real_close_is_read(self):
+        notes = self.flow_notes("      last entry")
+        self.assert_launches_target(
+            self.run_target(notes=notes, extra=record_lines("1"))
+        )
+
+    def test_flow_mapping_with_nested_collections(self):
+        lines = [
+            "    notes: {reason: tried twice,",
+            '      detail: {text: "a } in a string", list: [1, {x: 2}]},',
+            "      # } in a comment",
+            ROW,
+            "      }",
+        ]
+        self.assert_failed(self.run_target(notes=lines))
+        lines[3] = "      last: entry"
+        self.assert_launches_target(
+            self.run_target(notes=lines, extra=record_lines("1"))
+        )
+
+    def test_nesting_depth_must_return_to_zero_before_the_value_closes(self):
+        notes = [
+            "    notes: [[tried twice,",
+            "      ],",
+            ROW,
+            "      ]",
+        ]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_inner_quoted_string_may_span_lines(self):
+        notes = [
+            "    notes: [tried twice,",
+            '      "a string with ] that',
+            "    continues and has a } too\",",
+            ROW,
+            "      ]",
+        ]
+        self.assert_failed(self.run_target(notes=notes))
+
+    def test_quote_inside_a_plain_flow_scalar_is_not_an_inner_string(self):
+        # The apostrophe in `it's` is inside a plain flow scalar, so the `]`
+        # on the same line is counted and closes the value there.
+        notes = ["    notes: [it's a plain entry]"]
+        self.assert_launches_target(
+            self.run_target(notes=notes, extra=record_lines("1"))
+        )
+
+
+class TestOneLineValuesAreUnchanged(QuotedValueHookCase):
+    """AC-5 (f): a value that closes on its own line leaves every following
+    line read as before."""
+
+    def test_one_line_quoted_and_flow_values_before_the_record(self):
+        extra = [
+            "    files: []",
+            "    skills: [infra-impl]",
+            "    requirements: [FR1, FR2]",
+            '    label: "a"',
+            "    other: 'b'",
+            "    map: {a: 1, b: [2, 3]}",
+        ] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_one_line_values_in_sequence_items_before_the_record(self):
+        extra = [
+            "    files:",
+            '      - "em-workflow/hooks/queue_stop_guard.py"',
+            "      - 'tests/test_x.py'",
+            "      - [a, b]",
+        ] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_one_line_value_with_trailing_comment_before_the_record(self):
+        extra = [
+            '    a: "x" # "',
+            "    b: 'y' # '",
+            "    c: [z] # [",
+            "    d: {k: v} # {",
+        ] + record_lines("1")
+        self.assert_launches_target(self.run_target(extra=extra))
+
+    def test_one_line_value_status_is_still_read(self):
+        workflow = build_workflow(
+            [
+                task_spec(TARGET, head=['    label: "x"', "    list: [a, b]"]),
+                task_spec("task0002", status="failed"),
+            ]
+        )
+        self.assertEqual(
+            call_reader("task_statuses_from_workflow", workflow),
+            {TARGET: "pending", "task0002": "failed"},
+        )
+
+
+# --- routeback-record-quoted-continuation: direct task-id enumeration cases -------
+
+# (label, workflow.yaml text, expected task ids). Every body line below looks
+# like a task key or a `tasks:` line; none of them is read.
+ENUMERATION_CASES = [
+    (
+        "double-quoted-with-task-key-and-tasks-line",
+        'tasks:\n  task0001:\n    notes: "a\n  task0002:\ntasks:\nb"\n  task0003:\n',
+        ["task0001", "task0003"],
+    ),
+    (
+        "single-quoted-with-doubled-quote",
+        "tasks:\n  task0001:\n    notes: 'it''s\n  task0002:\n''s done'\n  task0003:\n",
+        ["task0001", "task0003"],
+    ),
+    (
+        "flow-sequence-column-zero",
+        "tasks:\n  task0001:\n    notes: [a,\n  task0002:\nb\n]\n  task0003:\n",
+        ["task0001", "task0003"],
+    ),
+    (
+        "flow-mapping-nested",
+        "tasks:\n  task0001:\n    notes: {a: [1,\n  task0002:\n], b: {c: 1}\n}\n  task0003:\n",
+        ["task0001", "task0003"],
+    ),
+    (
+        "value-opened-before-the-tasks-section",
+        'summary: "line\ntasks:\n  task0099:\nend"\ntasks:\n  task0001:\n',
+        ["task0001"],
+    ),
+    (
+        "step-list-value-opened-before-the-tasks-section",
+        "workflow:\n  - id: implement\n    notes: 'x\ntasks:\n  task0099:\n    y'\ntasks:\n  task0001:\n",
+        ["task0001"],
+    ),
+    (
+        "sequence-item-value",
+        'tasks:\n  task0001:\n    files:\n      - "a\n  task0002:\n      b"\n  task0003:\n',
+        ["task0001", "task0003"],
+    ),
+    (
+        "nested-key-value",
+        "tasks:\n  task0001:\n    ctx:\n      k: [a,\n  task0002:\n      ]\n  task0003:\n",
+        ["task0001", "task0003"],
+    ),
+    (
+        "next-line-value",
+        'tasks:\n  task0001:\n    notes:\n      "a\n  task0002:\n      b"\n  task0003:\n',
+        ["task0001", "task0003"],
+    ),
+    (
+        "block-scalar-body-quote-does-not-open",
+        'tasks:\n  task0001:\n    notes: |\n      a " b\n  task0002:\n    title: x\n',
+        ["task0001", "task0002"],
+    ),
+    (
+        "comment-quote-does-not-open",
+        'tasks:\n  task0001:\n    # a " b\n  task0002:\n',
+        ["task0001", "task0002"],
+    ),
+    (
+        "plain-apostrophe-does-not-open",
+        "tasks:\n  task0001:\n    title: don't\n  task0002:\n",
+        ["task0001", "task0002"],
+    ),
+    (
+        "crlf-line-endings",
+        'tasks:\r\n  task0001:\r\n    notes: "a\r\n  task0002:\r\nb"\r\n  task0003:\r\n',
+        ["task0001", "task0003"],
+    ),
+    (
+        "escaped-backslash-closes",
+        'tasks:\n  task0001:\n    notes: "a\\\\"\n  task0002:\n',
+        ["task0001", "task0002"],
+    ),
+    (
+        "escaped-quote-does-not-close",
+        'tasks:\n  task0001:\n    notes: "a\\"\n  task0002:\nb"\n  task0003:\n',
+        ["task0001", "task0003"],
+    ),
+]
+
+
+class TestTaskIdEnumeration(unittest.TestCase):
+    """FR1: task_ids_from_workflow reads no body line of a multi-line quoted
+    scalar or flow collection, whatever its indentation."""
+
+    def test_enumeration_cases(self):
+        for label, text, expected in ENUMERATION_CASES:
+            with self.subTest(case=label):
+                self.assertEqual(
+                    call_reader("task_ids_from_workflow", text), expected
+                )
+
+    def test_block_scan_attributes_lines_only_to_real_tasks(self):
+        for label, text, expected in ENUMERATION_CASES:
+            with self.subTest(case=label):
+                scanned = call_reader("iter_task_block_lines", text)
+                self.assertLessEqual({task for task, _line in scanned}, set(expected))
+
+
+# --- routeback-record-quoted-continuation: AC-6 (fail-open) ---------------------
+
+
+class TestUnclosedValuesFailOpen(QuotedValueHookCase):
+    """AC-6 (a) (TM-3): a value that never closes before end of file hides
+    every later line from the hook, which then falls to the non-blocking side
+    without crashing."""
+
+    UNCLOSED_FORMS = {
+        "double-quoted": ['    notes: "tried twice'],
+        "single-quoted": ["    notes: 'tried twice"],
+        "flow-sequence": ["    notes: [tried twice,"],
+        "flow-mapping": ["    notes: {reason: tried twice,"],
+        "nested-flow": ["    notes: [tried twice, [{a: 1},"],
+    }
+
+    def test_unclosed_value_with_record_and_task_key_lines_after_it(self):
+        for label, opening in self.UNCLOSED_FORMS.items():
+            with self.subTest(form=label):
+                notes = opening + [ROW, "  task0002:", "    status: pending"]
+                self.assert_failed(self.run_target(notes=notes))
+
+    def test_unclosed_value_never_lets_later_tasks_be_launched(self):
+        # The lines after the opening hold no quote, so a double-quoted or
+        # single-quoted value really is unclosed up to the end of the file.
+        tail = [
+            "  task0002:",
+            "    title: plain",
+            "    status: pending",
+            "  task0003:",
+            "    title: plain",
+            "    status: pending",
+        ]
+        for label, opening in self.UNCLOSED_FORMS.items():
+            with self.subTest(form=label):
+                workflow = build_workflow(
+                    [task_spec(TARGET, notes=opening)], tail_lines=tail
+                )
+                result = run_scenario(b"", workflow_text=workflow)
+                # task0001 is the only task the hook can see: it blocks to
+                # launch exactly that one.
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("launch=task0001\n", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+
+
+class TestUnclosedValuesReadDirectly(unittest.TestCase):
+    """AC-6 (b): the readers, called directly on unclosed values and on bytes
+    that are not valid UTF-8, return without raising and take nothing from
+    the lines after the unclosed opening."""
+
+    READERS = (
+        "task_ids_from_workflow",
+        "iter_task_block_lines",
+        "task_routeback_records_from_workflow",
+        "task_statuses_from_workflow",
+    )
+
+    def unclosed_text(self, opening):
+        lines = (
+            ["tasks:", "  task0001:", '    title: "task task0001"', "    status: pending"]
+            + [opening, ROW, "    status: merged", "  task0002:", ROW, "    status: pending"]
+        )
+        return "\n".join(lines) + "\n"
+
+    def test_unclosed_values_contribute_nothing_after_the_opening(self):
+        for opening in (
+            '    notes: "tried twice',
+            "    notes: 'tried twice",
+            "    notes: [tried twice,",
+            "    notes: {a: [1,",
+        ):
+            with self.subTest(opening=opening):
+                text = self.unclosed_text(opening)
+                self.assertEqual(call_reader("task_ids_from_workflow", text), [TARGET])
+                self.assertEqual(
+                    call_reader("task_routeback_records_from_workflow", text), {}
+                )
+                self.assertEqual(
+                    call_reader("task_statuses_from_workflow", text),
+                    {TARGET: "pending"},
+                )
+                scanned = call_reader("iter_task_block_lines", text)
+                self.assertEqual({task for task, _line in scanned}, {TARGET})
+                self.assertEqual(scanned[-1][1], opening + "\n")
+
+    def test_invalid_utf8_mixed_with_unclosed_quotes_and_brackets(self):
+        data = (
+            b'tasks:\n  task0001:\n    title: "t\xff"\n    status: pending\n'
+            b'    notes: "bad \xff\xfe bytes [{\n    '
+            + RECORD_KEY.encode("ascii")
+            + b": 1\n  task0002:\n    notes: [unclosed \xc3(\n    "
+            + RECORD_KEY.encode("ascii")
+            + b": 1\n"
+        )
+        for reader in self.READERS:
+            with self.subTest(reader=reader):
+                call_reader(reader, data)  # must not raise
+        self.assertEqual(call_reader("task_ids_from_workflow", data), [TARGET])
+        self.assertEqual(
+            call_reader("task_routeback_records_from_workflow", data), {}
+        )
+
+    def test_invalid_utf8_inside_closed_values_still_closes(self):
+        data = (
+            b'tasks:\n  task0001:\n    notes: "bad \xff\n    \xfe"\n  task0002:\n'
+            b"    notes: [\xc3(,\n  task0099:\n]\n  task0003:\n"
+        )
+        self.assertEqual(
+            call_reader("task_ids_from_workflow", data),
+            ["task0001", "task0002", "task0003"],
+        )
+
+    def test_seeded_random_input_never_raises(self):
+        rng = random.Random(20260707)
+        fragments = [
+            b'"', b"'", b"[", b"]", b"{", b"}", b"\\", b"#", b":", b": ", b" ",
+            b"- ", b"-", b"|", b">", b"|-", b">+2", b"tasks:", b"task0001:",
+            b"task0002:", b"status: pending", b"notes:", b"key: ", b"\xff",
+            "\u3000".encode("utf-8"), b"\t", b"'' ", b'\\"', b"# ", b", ",
+        ]
+        for case in range(300):
+            lines = [
+                b"".join(rng.choice(fragments) for _ in range(rng.randint(0, 7)))
+                for _ in range(rng.randint(1, 14))
+            ]
+            data = b"\n".join(lines)
+            with self.subTest(case=case):
+                ids = call_reader("task_ids_from_workflow", data)
+                scanned = call_reader("iter_task_block_lines", data)
+                records = call_reader("task_routeback_records_from_workflow", data)
+                call_reader("task_statuses_from_workflow", data)
+                self.assertLessEqual({task for task, _line in scanned}, set(ids))
+                self.assertLessEqual(set(records), set(ids))
+
+
+# --- routeback-record-quoted-continuation: AC-7 (docstrings and comments) --------
+
+BODY_STATEMENT = (
+    "body lines of multi-line quoted-scalar and flow-collection values are "
+    "never read as a task boundary, task id, status or record"
+)
+BODY_STATEMENT_FUNCTIONS = (
+    "iter_task_block_lines",
+    "task_ids_from_workflow",
+    "task_routeback_records_from_workflow",
+)
+
+
+def live_function_docstring(name):
+    with open(HOOK_PATH, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return ast.get_docstring(node, clean=False)
+    raise AssertionError("%s not found" % name)
+
+
+class TestBodyLineStatements(unittest.TestCase):
+    """AC-7 (a): each of the five locations states that body lines of
+    quoted-scalar and flow-collection values are not read as a task boundary,
+    task id, status or record."""
+
+    def assert_states_it(self, text):
+        text = normalize_whitespace(text or "").lower()
+        self.assertTrue(text, "expected a non-empty docstring or comment")
+        self.assertIn(BODY_STATEMENT, text)
+
+    def test_module_docstring_states_it(self):
+        self.assert_states_it(live_docstring())
+
+    def test_function_docstrings_state_it(self):
+        for name in BODY_STATEMENT_FUNCTIONS:
+            with self.subTest(function=name):
+                self.assert_states_it(live_function_docstring(name))
+
+    def test_record_key_comment_states_it(self):
+        self.assert_states_it(live_record_regex_comment())
+
+    def test_statement_is_absent_from_the_pre_change_docstring(self):
+        # Negative proof: the same matcher does not fire on the base sample.
+        self.assertNotIn(
+            BODY_STATEMENT, normalize_whitespace(PRE_CHANGE_DOCSTRING).lower()
+        )
+
+
+class TestHookImportsStdlibOnly(unittest.TestCase):
+    """AC-7 (c): the hook imports only the standard library."""
+
+    def test_only_stdlib_imports(self):
+        with open(HOOK_PATH, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read(), filename=HOOK_PATH)
+        imported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.update(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                imported.add(node.module.split(".")[0])
+        self.assertTrue(imported)
+        stdlib_names = getattr(sys, "stdlib_module_names", None)
+        for name in imported:
+            if stdlib_names is not None:
+                self.assertIn(name, stdlib_names, "%s is not a stdlib module" % name)
 
 
 # --- AC-7: module discipline -------------------------------------------------
