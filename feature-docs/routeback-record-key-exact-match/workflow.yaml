@@ -81,7 +81,15 @@ workflow:
   status: completed
   completed_at_commit: 36e248bea16474617ea9544e45c51944b384b4bd
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 437fcbe1f03bfb724936fdd3e97eabcef34ae62c
+  result: pass
+  failed_items: []
+  summary: >-
+    python3 -m unittest discover -s tests: 9038 tests OK (skipped=1).
+    TS-1..TS-5 pass. AC-5 red check: the TS-1/TS-2/TS-3 cases fail against the
+    hook at implement.base_commit and pass in the integration worktree.
+    Build/format: not configured. Excluded requirements: none.
 - id: retrospect
   status: pending
 tasks:
