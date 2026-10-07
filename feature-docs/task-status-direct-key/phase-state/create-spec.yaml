@@ -1,0 +1,21 @@
+schema_version: 1
+feature: task-status-direct-key
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: f9d4d51dd72a0e82feefe19c1f8a222551d2c254
+last_input_digest: sha256:7b2153edbcec71d3941991e2af09c7b5ee00cc184a4dffe06aa7e8015d108deb
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:7b2153edbcec71d3941991e2af09c7b5ee00cc184a4dffe06aa7e8015d108deb
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
