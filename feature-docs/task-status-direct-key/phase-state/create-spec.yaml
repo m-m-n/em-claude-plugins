@@ -1,11 +1,11 @@
 schema_version: 1
 feature: task-status-direct-key
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: f9d4d51dd72a0e82feefe19c1f8a222551d2c254
 last_input_digest: sha256:481eca127f77d47c19d475e592c9b098dd486f91d970fc7c34d83e4bf5c13d6c
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     path: null
@@ -56,10 +56,13 @@ worker_runs:
   input_digest: sha256:481eca127f77d47c19d475e592c9b098dd486f91d970fc7c34d83e4bf5c13d6c
   output_digest: sha256:e9d215460cbfdfc99dcd4c81b75cfcc1de7eda3abd27f321a809ea48a16c5356
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:21f39c16d0ea5d74e32109eb24c9fa83564145b0821310a1a4951ec7a24009d7
-  output_digest: null
-artifacts: []
+  output_digest: sha256:8c0e9f0217f982c8481060c684a1cece721399bb5b6bada29dcd76162c1e67db
+artifacts:
+- path: feature-docs/task-status-direct-key/SPEC.md
+  sha256: sha256:dbcdfff771ec1179a5447b376ce0407adb502674cb7b480f9e7128aea6f03f79
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
