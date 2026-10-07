@@ -1,0 +1,106 @@
+task_id: task0001
+baseline_failures: []          # full suite before any edit: 8858 tests, OK (skipped=1)
+final_failures: []             # full suite re-run after implementation: 8934 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueBodyRecordRead.test_reproduction_fixture_has_no_record_in_every_form
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueBodyRecordRead.test_the_literal_reproduction_lines_have_no_record
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueBodyRecordRead.test_shallower_body_lines_are_not_read_either
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueBodyRecordRead.test_direct_key_record_after_the_value_is_read_in_every_form
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueBodyRecordRead.test_body_lines_are_not_yielded_and_the_opening_line_is
+    red_confirmed: true
+    red_reason: "base reader returned the forged body-line record: AssertionError: {'task0001': '1'} != {} (test_the_literal_reproduction_lines_have_no_record and the double-quoted, single-quoted, flow-sequence and flow-mapping subTests of test_reproduction_fixture_has_no_record_in_every_form); the 2- and 0-column variants were green on the base revision by construction (guard)"
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueRecordForgery.test_record_shaped_continuation_line_is_not_read_in_every_form
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueRecordForgery.test_shallower_continuation_lines_are_not_read_either
+    red_confirmed: true
+    red_reason: "base read the 4-space continuation line as the record: AssertionError: 2 != 0 : queue_stop_guard: BLOCK ... launch=task0001,task0002,task0003, in all four forms (double-quoted, single-quoted, flow-sequence, flow-mapping); the 2- and 0-column variants were green on the base revision by construction (guard)"
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueDoesNotHideTheRecord.test_non_matching_body_value_does_not_hide_the_genuine_record
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueDoesNotHideTheRecord.test_shallower_body_lines_do_not_hide_the_genuine_record
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueDoesNotHideTheRecord.test_matching_body_value_does_not_replace_a_non_matching_record
+    red_confirmed: true
+    red_reason: "base let the non-matching body value shadow the genuine direct-key record: AssertionError: 0 != 2 in all four forms (double-quoted, single-quoted, flow-sequence, flow-mapping) at continuation indent 4, and again at continuation indents 2 and 0; test_matching_body_value_does_not_replace_a_non_matching_record failed with AssertionError: 2 != 0 because the matching body value replaced the non-matching record"
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueTaskKeys.test_forged_record_for_another_task_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueTaskKeys.test_forged_status_for_another_task_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueTaskKeys.test_forged_task_key_never_reaches_the_launch_list
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueTaskKeys.test_column_zero_continuation_does_not_end_the_section
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueTaskKeys.test_column_zero_continuation_values_enumerate_the_following_tasks
+    red_confirmed: true
+    red_reason: "(a)(b) AssertionError: 2 != 0 : BLOCK ... launch=task0001,task0002,task0002,task0003 (a forged task0002 key moved the next lines to task0002); (c) 'task0099' unexpectedly found in 'BLOCK ... launch=task0001,task0002,task0003,task0099'; (d) 'launch=task0001,task0002,task0003' not found in 'BLOCK ... launch=task0001' (a column-0 continuation line ended the tasks section)"
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueEscapesDoNotClose.test_backslash_escaped_double_quote_does_not_close
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueEscapesDoNotClose.test_doubled_single_quote_does_not_close
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueEscapesDoNotClose.test_double_quoted_line_ending_in_a_backslash_continues
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueEscapesDoNotClose.test_escaped_quote_on_the_opening_line_does_not_close
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueRealClosesClose.test_escaped_backslash_then_quote_closes
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueRealClosesClose.test_one_line_value_followed_by_a_comment_with_a_lone_quote
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueRealClosesClose.test_one_line_single_quoted_value_followed_by_a_comment_with_a_quote
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueRealClosesClose.test_doubled_quote_then_a_real_single_quote_close
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueRealClosesClose.test_closing_line_text_after_the_quote_is_not_an_opening
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_block_scalar_bodies_never_open
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_block_scalar_body_lines_starting_with_a_quote_or_bracket_never_open
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_sequence_item_block_scalar_body_never_opens
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_comment_lines_never_open
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_comment_line_inside_a_nested_mapping_never_opens
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_plain_scalars_never_open
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_plain_scalar_continuation_lines_never_open
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_top_level_block_scalar_before_the_tasks_section_never_opens
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_step_level_block_scalar_never_opens
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_quoted_key_value_is_not_a_value_start
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_anchor_or_tag_prefixed_values_are_not_openings
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueStartsOnTheNextLine.test_double_quoted_value_on_the_next_line_hides_its_body
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueStartsOnTheNextLine.test_single_quoted_and_flow_values_on_the_next_line_hide_their_body
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueStartsOnTheNextLine.test_value_after_a_comment_line_following_the_key_is_a_value_start
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueStartsOnTheNextLine.test_genuine_record_after_such_a_value_is_read
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueStartsOnTheNextLine.test_a_less_indented_quoted_line_after_a_null_key_is_not_a_value_start
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNestedAndItemValues.test_nested_key_value_hides_its_body
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNestedAndItemValues.test_sequence_item_value_hides_its_body
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNestedAndItemValues.test_sequence_item_key_value_hides_its_body
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNestedAndItemValues.test_flow_sequence_item_value_hides_its_body
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNestedAndItemValues.test_item_whose_value_starts_on_the_next_line_hides_its_body
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNestedAndItemValues.test_top_level_and_step_level_values_hide_their_body
+      - tests.test_queue_stop_guard_routeback_record.TestFlowValueBoundaries.test_record_shaped_entry_inside_the_flow_value_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestFlowValueBoundaries.test_genuine_record_after_the_real_close_is_read
+      - tests.test_queue_stop_guard_routeback_record.TestFlowValueBoundaries.test_flow_mapping_with_nested_collections
+      - tests.test_queue_stop_guard_routeback_record.TestFlowValueBoundaries.test_nesting_depth_must_return_to_zero_before_the_value_closes
+      - tests.test_queue_stop_guard_routeback_record.TestFlowValueBoundaries.test_inner_quoted_string_may_span_lines
+      - tests.test_queue_stop_guard_routeback_record.TestFlowValueBoundaries.test_quote_inside_a_plain_flow_scalar_is_not_an_inner_string
+      - tests.test_queue_stop_guard_routeback_record.TestOneLineValuesAreUnchanged.test_one_line_quoted_and_flow_values_before_the_record
+      - tests.test_queue_stop_guard_routeback_record.TestOneLineValuesAreUnchanged.test_one_line_values_in_sequence_items_before_the_record
+      - tests.test_queue_stop_guard_routeback_record.TestOneLineValuesAreUnchanged.test_one_line_value_with_trailing_comment_before_the_record
+      - tests.test_queue_stop_guard_routeback_record.TestOneLineValuesAreUnchanged.test_one_line_value_status_is_still_read
+      - tests.test_queue_stop_guard_routeback_record.TestTaskIdEnumeration.test_enumeration_cases
+      - tests.test_queue_stop_guard_routeback_record.TestTaskIdEnumeration.test_block_scan_attributes_lines_only_to_real_tasks
+    red_confirmed: true
+    red_reason: "observed red on the base revision for (a) escapes (AssertionError: 2 != 0 : BLOCK ... launch=task0001,task0002,task0003 in all four tests), (d) next-line value (2 != 0), (e) flow boundaries (2 != 0 for the record-shaped entry inside the flow value, the nested mapping, the depth case and the multi-line inner string), the next-line and nested/item values, and the enumeration table (e.g. next-line-value: ['task0001', 'task0003'] expected, task0002 listed too); (b) real closes, (c) not-openings and (f) one-line values were green on the base revision by design: they guard against the new tracking over-reaching, so no red state occurred for those sub-parts"
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestUnclosedValuesFailOpen.test_unclosed_value_with_record_and_task_key_lines_after_it
+      - tests.test_queue_stop_guard_routeback_record.TestUnclosedValuesFailOpen.test_unclosed_value_never_lets_later_tasks_be_launched
+      - tests.test_queue_stop_guard_routeback_record.TestUnclosedValuesReadDirectly.test_unclosed_values_contribute_nothing_after_the_opening
+      - tests.test_queue_stop_guard_routeback_record.TestUnclosedValuesReadDirectly.test_invalid_utf8_mixed_with_unclosed_quotes_and_brackets
+      - tests.test_queue_stop_guard_routeback_record.TestUnclosedValuesReadDirectly.test_invalid_utf8_inside_closed_values_still_closes
+      - tests.test_queue_stop_guard_routeback_record.TestUnclosedValuesReadDirectly.test_seeded_random_input_never_raises
+    red_confirmed: true
+    red_reason: "base kept reading lines after an unclosed opening: (a) AssertionError: 2 != 0 : BLOCK ... launch=task0001,task0002,task0002,task0003 and 'launch=task0001' not found in the launch list; (b) task ids ['task0001', 'task0002'] != ['task0001'] and invalid-UTF-8 enumeration ['task0001', 'task0002', 'task0099'] != ['task0001', 'task0002', 'task0003']; test_seeded_random_input_never_raises was green on the base revision (no-raise guard)"
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestBodyLineStatements.test_module_docstring_states_it
+      - tests.test_queue_stop_guard_routeback_record.TestBodyLineStatements.test_function_docstrings_state_it
+      - tests.test_queue_stop_guard_routeback_record.TestBodyLineStatements.test_record_key_comment_states_it
+      - tests.test_queue_stop_guard_routeback_record.TestBodyLineStatements.test_statement_is_absent_from_the_pre_change_docstring
+      - tests.test_queue_stop_guard_routeback_record.TestHookImportsStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard
+      - tests.test_queue_stop_guard_routeback_record
+      - tests.test_queue_hook_status_read_pin
+      - tests.test_routeback_record_carve_out
+    red_confirmed: true
+    red_reason: "(a) the five-location statement tests failed on the base revision: AssertionError: 'body lines of multi-line quoted-scalar and flow-collection values are never read as a task boundary, task id, status or record' not found in the module docstring, in each of the three function docstrings and in the ROUTEBACK_RECORD_KEY comment; (b) the four named suites and the full suite are regression checks with no red state (green before and after); (c) the stdlib-import tests were green on the base revision (guard); (d) the diff scope has no executable check"

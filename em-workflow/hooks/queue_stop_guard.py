@@ -32,6 +32,13 @@ name, that has refillable work):
     record. Journal lines are delimited by LF only (a CR never starts a
     line); blank, malformed, unknown-event and invalid-task-id lines
     advance the line count but never become a task's event.
+  - Body lines of multi-line quoted-scalar and flow-collection values are
+    never read as a task boundary, task id, status or record (for example,
+    the continuation lines of a multi-line double-quoted `notes`), whatever
+    their indentation, column 0 included. The line-based reader tracks the
+    opening and closing of such values from the first line of the file; a
+    value that never closes hides every later line, which falls to "no
+    record, no block".
   - No unlaunched tasks, or no free slot (>= MAX_PARALLEL_IMPLEMENTERS
     in-flight) -> exit 0.
   - Otherwise -> BLOCK: exit 2, stderr names the feature, the free-slot
@@ -81,7 +88,10 @@ TASK_STATUS_RE = re.compile(r"^\s+status:\s*(\S+)\s*$")
 # indentation (checked in task_routeback_records_from_workflow), so block
 # scalar bodies and nested lines are never read. This regex only recognizes
 # the key. The key match and the canonical-value match are both ASCII-only:
-# a non-ASCII digit or whitespace character never qualifies.
+# a non-ASCII digit or whitespace character never qualifies. Body lines of
+# multi-line quoted-scalar and flow-collection values are never read as a task
+# boundary, task id, status or record: the block scan drops them before this
+# regex sees a line, so a record-shaped line inside such a value is not a record.
 ROUTEBACK_RECORD_KEY = "routeback_failed_journal_line"
 ROUTEBACK_RECORD_LINE_RE = re.compile(
     r"^\s+" + ROUTEBACK_RECORD_KEY + r":(.*)$", re.ASCII
@@ -134,8 +144,210 @@ def implement_in_progress(workflow_yaml_path):
     return implement_status == "in_progress"
 
 
+# Multi-line quoted scalars and flow collections. A line that opens a
+# double-quoted scalar, a single-quoted scalar, a flow sequence or a flow
+# mapping and does not close it on the same line starts a value whose
+# following lines (up to and including the line that closes it) are that
+# value's BODY. A body line is free text: it is never read as a `tasks:`
+# section start or end, a task key, a task block end, a status or a record,
+# whatever its indentation (even column 0). The opening line itself keeps the
+# ordinary line-based reading. The tracking below is stdlib-only and carries
+# its state from the first line of the file (a value opened anywhere earlier
+# is honoured). It never raises; a value that never closes makes every later
+# line a body line, which falls to "no record, no block".
+_ITEM_INDICATOR_RE = re.compile(r"-(?=[ \t]|$)")
+_BLOCK_SCALAR_HEADER_RE = re.compile(
+    r"^[|>](?:[+-][1-9]?|[1-9][+-]?)?(?:[ \t]+#.*|[ \t]*)$"
+)
+
+
+def _find_key_colon(text):
+    """Index of the colon of a plain `key: value` / `key:` pair in `text`
+    (the content of a line after any item indicators), or None. A colon
+    counts only when followed by a space, a tab or the end of the text; a
+    comment (`#` after whitespace) before it means there is no key."""
+    length = len(text)
+    for index, char in enumerate(text):
+        if char == "#" and index > 0 and text[index - 1] in " \t":
+            return None
+        if char == ":" and (index + 1 == length or text[index + 1] in " \t"):
+            return index if index > 0 else None
+    return None
+
+
+class _MultilineValueTracker:
+    """Decides, line by line in file order, whether a line is a BODY line of a
+    multi-line quoted scalar or flow collection (see the comment above).
+
+    A quote or bracket opens a value only at a value-start position: after a
+    mapping key on the same line, after an item indicator, or as the first
+    content of the next non-blank, non-comment line that is indented deeper
+    than a key (or item indicator) whose own line carried no value. Block
+    scalar bodies, comment lines, plain scalars and plain-scalar continuation
+    lines never open one, nor does anything after a value closed on its line.
+    Anchors, tags and quoted keys before a value are not value-start
+    prefixes."""
+
+    def __init__(self):
+        self._mode = None  # None, "dq", "sq" or "flow": the open value kind
+        self._depth = 0  # flow nesting depth
+        self._inner = None  # flow only: None, "dq" or "sq" (an inner string)
+        self._prev = "["  # flow only: last significant char outside strings
+        self._block_parent = None  # indent a block scalar's body must exceed
+        self._pending = None  # column of a key / item whose value comes next
+
+    def feed(self, line):
+        """Consume the next physical line; return True iff it is a body
+        line."""
+        text = line.rstrip("\r\n")
+        if self._mode is not None:
+            self._scan(text, 0)
+            return True
+        if self._block_parent is not None:
+            if text.strip() == "":
+                return False
+            if len(text) - len(text.lstrip(" \t")) > self._block_parent:
+                return False  # a block scalar body line: never an opening
+            self._block_parent = None
+        self._read_line(text)
+        return False
+
+    def _read_line(self, text):
+        stripped = text.lstrip(" \t")
+        if stripped.strip() == "" or stripped.startswith("#"):
+            return  # blank and comment lines never open and never decide
+        pos = len(text) - len(stripped)
+        pending, self._pending = self._pending, None
+        dash_col = None
+        while True:
+            match = _ITEM_INDICATOR_RE.match(text, pos)
+            if match is None:
+                break
+            dash_col = pos
+            pos = match.end()
+            while pos < len(text) and text[pos] in " \t":
+                pos += 1
+        value_start = dash_col is not None or (
+            pending is not None and pos > pending
+        )
+        rest = text[pos:]
+        if rest == "" or rest.startswith("#"):
+            if dash_col is not None:
+                self._pending = dash_col  # the item's value is on later lines
+            return
+        first = rest[0]
+        if first in "\"'[{":
+            if value_start:
+                self._open(text, pos)
+            return  # elsewhere: a quoted key or a plain continuation line
+        if first in "|>":
+            if value_start and _BLOCK_SCALAR_HEADER_RE.match(rest):
+                self._block_parent = dash_col if dash_col is not None else pending
+            return
+        colon = _find_key_colon(rest)
+        if colon is None:
+            return  # a plain scalar: nothing opens inside it
+        value = rest[colon + 1:].lstrip(" \t")
+        value_pos = len(text) - len(value)
+        if value == "" or value.startswith("#"):
+            self._pending = pos  # the key's value is on later lines
+        elif value[0] in "\"'[{":
+            self._open(text, value_pos)
+        elif value[0] in "|>" and _BLOCK_SCALAR_HEADER_RE.match(value):
+            self._block_parent = pos
+
+    def _open(self, text, pos):
+        char = text[pos]
+        if char == '"':
+            self._mode = "dq"
+        elif char == "'":
+            self._mode = "sq"
+        else:
+            self._mode = "flow"
+            self._depth = 1
+            self._inner = None
+            self._prev = char
+        self._scan(text, pos + 1)
+
+    def _scan(self, text, index):
+        """Advance the open value over `text` from `index`; a close ends the
+        value and leaves the rest of the line (whitespace, a comment) unread."""
+        length = len(text)
+        if self._mode == "dq":
+            while index < length:
+                if text[index] == "\\":
+                    index += 2  # an escape, an escaped newline included
+                    continue
+                if text[index] == '"':
+                    self._mode = None
+                    return
+                index += 1
+        elif self._mode == "sq":
+            while index < length:
+                if text[index] == "'":
+                    if text[index + 1:index + 2] == "'":
+                        index += 2  # a doubled quote is an escaped quote
+                        continue
+                    self._mode = None
+                    return
+                index += 1
+        else:
+            self._scan_flow(text, index)
+
+    def _scan_flow(self, text, index):
+        length = len(text)
+        while index < length:
+            char = text[index]
+            if self._inner == "dq":
+                if char == "\\":
+                    index += 2
+                    continue
+                if char == '"':
+                    self._inner = None
+                    self._prev = char
+            elif self._inner == "sq":
+                if char == "'":
+                    if text[index + 1:index + 2] == "'":
+                        index += 2
+                        continue
+                    self._inner = None
+                    self._prev = char
+            elif char in " \t":
+                pass
+            elif char == "#" and (index == 0 or text[index - 1] in " \t"):
+                return  # a comment: its brackets are not counted
+            elif char in "[{":
+                self._depth += 1
+                self._prev = char
+            elif char in "]}":
+                self._depth -= 1
+                self._prev = char
+                if self._depth <= 0:
+                    self._mode = None
+                    return
+            elif char in "\"'" and self._prev in "[{,:?":
+                # A quote opens an inner string only at the start of a flow
+                # entry or a flow mapping value, never inside a plain scalar.
+                self._inner = "dq" if char == '"' else "sq"
+            else:
+                self._prev = char
+            index += 1
+
+
+def _multiline_value_body_flags(lines):
+    """One bool per line of `lines` (physical lines of workflow.yaml in file
+    order, as the readers below obtain them): True iff the line is a body line
+    of a multi-line quoted scalar or flow collection."""
+    tracker = _MultilineValueTracker()
+    return [tracker.feed(line) for line in lines]
+
+
 def task_ids_from_workflow(workflow_yaml_path):
-    """Task ids declared as keys under the top-level `tasks:` mapping."""
+    """Task ids declared as keys under the top-level `tasks:` mapping. Body
+    lines of multi-line quoted-scalar and flow-collection values are never
+    read as a task boundary, task id, status or record: such a line neither
+    starts nor ends the `tasks:` section (not even at column 0) and is never
+    a task key, whatever its indentation."""
     try:
         with open(workflow_yaml_path, encoding="utf-8", errors="replace") as fh:
             lines = fh.readlines()
@@ -144,7 +356,9 @@ def task_ids_from_workflow(workflow_yaml_path):
 
     ids = []
     in_tasks = False
-    for line in lines:
+    for line, is_body in zip(lines, _multiline_value_body_flags(lines)):
+        if is_body:
+            continue
         if TASKS_SECTION_RE.match(line):
             in_tasks = True
             continue
@@ -169,7 +383,11 @@ def iter_task_block_lines(workflow_yaml_path):
     belonging to that task's own `taskNNNN:` key -- never a workflow-step
     line, never another task's, never a line at or above the task key's own
     indent. The key line itself is not yielded. An unreadable file yields
-    nothing."""
+    nothing. Body lines of multi-line quoted-scalar and flow-collection
+    values are never read as a task boundary, task id, status or record: such
+    a line is skipped before every other check, so it is never yielded and
+    never ends the current task block or the `tasks:` section, whatever its
+    indentation (the line that opens such a value is read as before)."""
     try:
         with open(workflow_yaml_path, encoding="utf-8", errors="replace") as fh:
             lines = fh.readlines()
@@ -179,7 +397,9 @@ def iter_task_block_lines(workflow_yaml_path):
     in_tasks = False
     current_task = None
     current_task_indent = None
-    for line in lines:
+    for line, is_body in zip(lines, _multiline_value_body_flags(lines)):
+        if is_body:
+            continue
         if TASKS_SECTION_RE.match(line):
             in_tasks = True
             current_task = None
@@ -245,7 +465,10 @@ def task_routeback_records_from_workflow(workflow_yaml_path):
     of ASCII digits whose first digit is 1-9, optionally followed by trailing
     whitespace. The returned value is that digit string, never an int. A task
     id whose first direct-key occurrence is absent, `null`, empty or
-    otherwise non-canonical is absent from the mapping."""
+    otherwise non-canonical is absent from the mapping. Body lines of
+    multi-line quoted-scalar and flow-collection values are never read as a
+    task boundary, task id, status or record: this read consumes only the
+    block scan's output, which never contains them."""
     records = {}
     seen = set()
     direct_indent = {}
