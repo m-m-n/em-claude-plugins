@@ -1,0 +1,12 @@
+schema_version: 1
+feature: routeback-record-quoted-continuation
+records:
+- question_id: review.medium-findings-rework
+  packet_id: null
+  answered_at: '2026-10-07T14:33:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'B: fix the two residual medium findings inside this feature via review-sourced rework'
+  normalized_answer: 'B: fix the two residual medium findings inside this feature via review-sourced rework'
+  resolution_note: 'gate: review round 1 residual medium findings (6bd6c5a5788b3ddf, b342ff634000d263) — no gate_id; protocol default would complete review and leave them unresolved; options: A = complete review per protocol and file a follow-up task / B = deviate and fix them in this feature via review-sourced rework; codex_consulted: true; Codex chose B: both findings flip exit 2 to exit 0 and violate SPEC FR4 / THREAT-MODEL TM-2, so passing the completion gate does not mean the spec is met, and fixing in-feature beats opening a PR with a known defect; opus_escalation: false; launch instruction: adopt the option Codex judges comparatively better; consumes batch.review_rework_count (cap 1)'
