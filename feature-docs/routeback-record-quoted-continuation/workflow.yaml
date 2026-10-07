@@ -86,8 +86,7 @@ workflow:
   completed_at_commit: f9724d83dc8aef9defd9ef8b275b4f1742c315d2
   base_commit: 07555fd45a01d910640f6b573ba52099ea4a034f
 - id: review
-  status: completed
-  completed_at_commit: 23eb46915447c78db08e52583994999b57098f5d
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -124,7 +123,7 @@ tasks:
     branch: em-workflow/routeback-record-quoted-continuation/task0001
     notes: null
 review:
-  status: completed
+  status: pending
   rounds_completed: 1
   perspectives:
   - comprehensive
@@ -132,7 +131,7 @@ review:
   - architecture
   - spec
   residual_critical_high: 0
-  needs_rework: false
+  needs_rework: true
   plan:
     floor:
     - comprehensive
