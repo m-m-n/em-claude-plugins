@@ -23,8 +23,10 @@ name, that has refillable work):
     `routeback_failed_journal_line` record in its own workflow.yaml block.
     Any other task whose last event is `failed` is failed -> exit 0 (no
     block; user decision pending).
-  - The record is read only from the task's own `taskNNNN:` block, first
-    occurrence wins, and counts only as an unquoted decimal integer of
+  - The record is read only from the direct keys of the task's own
+    `taskNNNN:` mapping (lines at the mapping's direct-child indentation),
+    first occurrence wins; block scalar bodies (such as `notes`) and nested
+    lines are not read. It counts only as an unquoted decimal integer of
     ASCII digits whose first digit is 1-9, optionally followed by trailing
     whitespace. An absent, null or otherwise non-canonical value is no
     record. Journal lines are delimited by LF only (a CR never starts a
@@ -74,9 +76,12 @@ STEP_STATUS_RE = re.compile(r"^\s*status:\s*(\S+)\s*$")
 TASKS_SECTION_RE = re.compile(r"^tasks:\s*$")
 TASK_KEY_RE = re.compile(r"^\s+(task[0-9]+):\s*$")
 TASK_STATUS_RE = re.compile(r"^\s+status:\s*(\S+)\s*$")
-# The route-back record, read from a task's own block only. The key match
-# and the canonical-value match are both ASCII-only: a non-ASCII digit or
-# whitespace character never qualifies.
+# The route-back record, read from the direct keys of a task's own mapping
+# only: the line's indentation must equal the task block's direct-child
+# indentation (checked in task_routeback_records_from_workflow), so block
+# scalar bodies and nested lines are never read. This regex only recognizes
+# the key. The key match and the canonical-value match are both ASCII-only:
+# a non-ASCII digit or whitespace character never qualifies.
 ROUTEBACK_RECORD_KEY = "routeback_failed_journal_line"
 ROUTEBACK_RECORD_LINE_RE = re.compile(
     r"^\s+" + ROUTEBACK_RECORD_KEY + r":(.*)$", re.ASCII
@@ -229,17 +234,31 @@ def task_statuses_from_workflow(workflow_yaml_path):
 
 def task_routeback_records_from_workflow(workflow_yaml_path):
     """Per-task `routeback_failed_journal_line` record, read from each task's
-    own block only (the same scoping as the status read). Within a block the
-    first occurrence of the key wins, and only the canonical form is a
-    record: an unquoted run of ASCII digits whose first digit is 1-9,
-    optionally followed by trailing whitespace. The returned value is that
-    digit string, never an int. A task id whose first occurrence is absent,
-    `null`, empty or otherwise non-canonical is absent from the mapping."""
+    own block only (the same scoping as the status read) and only from the
+    direct keys of that task's own mapping. The direct-child indentation is
+    the space indentation of the first line in the block that is neither
+    blank nor a comment; a record-shaped line indented deeper is never read,
+    so block scalar bodies (every indicator form), continuation lines of
+    multi-line scalars and keys nested under another direct key cannot
+    create or shadow the record. Among the direct keys the first occurrence
+    of the key wins, and only the canonical form is a record: an unquoted run
+    of ASCII digits whose first digit is 1-9, optionally followed by trailing
+    whitespace. The returned value is that digit string, never an int. A task
+    id whose first direct-key occurrence is absent, `null`, empty or
+    otherwise non-canonical is absent from the mapping."""
     records = {}
     seen = set()
+    direct_indent = {}
     for task_id, line in iter_task_block_lines(workflow_yaml_path):
         if task_id in seen:
             continue
+        indent = len(line) - len(line.lstrip(" "))
+        if task_id not in direct_indent:
+            if line.lstrip(" \t").startswith("#"):
+                continue  # a comment never sets the direct-child indent
+            direct_indent[task_id] = indent
+        if indent != direct_indent[task_id]:
+            continue  # nested deeper than a direct key: never a record
         key_match = ROUTEBACK_RECORD_LINE_RE.match(line)
         if not key_match:
             continue
