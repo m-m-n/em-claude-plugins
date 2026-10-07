@@ -110,8 +110,9 @@ tasks:
     branch: em-workflow/task-status-direct-key/task0001
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
