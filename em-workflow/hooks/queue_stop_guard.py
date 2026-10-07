@@ -83,10 +83,13 @@ STEP_STATUS_RE = re.compile(r"^\s*status:\s*(\S+)\s*$")
 TASKS_SECTION_RE = re.compile(r"^tasks:\s*$")
 TASK_KEY_RE = re.compile(r"^\s+(task[0-9]+):\s*$")
 TASK_STATUS_RE = re.compile(r"^\s+status:\s*(\S+)\s*$")
-# A line that carries the `status:` key at all (value or not); the direct-child
-# status read uses it to find the deciding line, then TASK_STATUS_RE to extract
-# the value from that same line.
-TASK_STATUS_KEY_RE = re.compile(r"^\s+status:")
+# A line whose key is exactly `status` (value or not): after its leading
+# whitespace it begins with `status:` and that colon is followed by a space, a
+# tab or the end of the line -- the colon rule of _find_key_colon. A key that
+# merely starts with `status:` (`status:detail: x`, `status:pending`) does not
+# match. The direct-child status read uses it to find the deciding line, then
+# TASK_STATUS_RE to extract the value from that same line.
+TASK_STATUS_KEY_RE = re.compile(r"^\s+status:(?=[ \t]|$)")
 # The route-back record, read from the direct keys of a task's own mapping
 # only: the line's indentation must equal the task block's direct-child
 # indentation (checked in task_routeback_records_from_workflow), so block
@@ -523,13 +526,16 @@ def task_statuses_from_workflow(workflow_yaml_path):
     header form, including the untrusted `notes` text) and nested-mapping
     lines sit deeper and are never read, whether the direct `status:` key
     comes before them, after them, or not at all. The first direct-child line
-    carrying the `status:` key decides: its value is recorded when it can be
-    extracted, and otherwise the task is left out; later lines are not
-    consulted either way. A task id with no direct `status:` key (or an
-    undeterminable direct value) is simply absent from the returned mapping;
-    callers treat that the same as any other non-`pending` classification
-    (D1). Block content is never interpreted beyond indentation, so no input
-    makes this raise."""
+    whose key is exactly `status` (the colon followed by a space, a tab or the
+    end of the line) decides: its value is recorded when it can be extracted,
+    and otherwise the task is left out; later lines are not consulted either
+    way. A direct-child line whose key only starts with `status:` (for example
+    `status:detail: x` or `status:pending`) is not a status key line: it is
+    skipped and the scan continues with the next line of the block. A task id
+    with no direct `status:` key (or an undeterminable direct value) is simply
+    absent from the returned mapping; callers treat that the same as any other
+    non-`pending` classification (D1). Block content is never interpreted
+    beyond indentation, so no input makes this raise."""
     statuses = {}
     direct_indent = {}  # task id -> indentation of its direct-child keys
     decided = set()  # task ids whose first direct status key was consulted
@@ -545,7 +551,7 @@ def task_statuses_from_workflow(workflow_yaml_path):
         if indent != direct_indent[task_id]:
             continue
         if not TASK_STATUS_KEY_RE.match(line):
-            continue
+            continue  # not a status key line: keep reading this block
         decided.add(task_id)
         status_match = TASK_STATUS_RE.match(line)
         if status_match:
