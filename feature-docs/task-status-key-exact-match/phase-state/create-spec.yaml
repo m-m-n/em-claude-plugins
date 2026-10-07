@@ -1,7 +1,7 @@
 schema_version: 1
 feature: task-status-key-exact-match
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: de761952843076fb15ffbf709e54b5ed8a835642
 last_input_digest: sha256:2253f3331eebe3cc15739fae3d876deba77e5fb577a60d22993064fa888dfa5a
