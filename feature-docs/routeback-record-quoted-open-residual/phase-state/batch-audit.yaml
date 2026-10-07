@@ -1,0 +1,12 @@
+schema_version: 1
+feature: routeback-record-quoted-open-residual
+records:
+- question_id: develop.tier-decision.base-branch
+  packet_id: null
+  answered_at: '2026-10-07T18:41:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'B: cut the integration branch from the tip of em-workflow/routeback-record-quoted-continuation/integration (fa21b80e, PR #114) and open the PR against main with a "merge #113, #114 first" dependency note'
+  normalized_answer: 'B: cut the integration branch from the tip of em-workflow/routeback-record-quoted-continuation/integration (fa21b80e, PR #114) and open the PR against main with a "merge #113, #114 first" dependency note'
+  resolution_note: 'gate: Step A tier decision — Codex pre-survey on main reported work_still_required=false because the multi-line value tracking (_scan_flow / _read_line) exists only on unmerged PR #114 (stacked on #113) — no gate_id; options: A = stop as no-work-required / B = branch from #114 tip, PR to main with dependency note / C = branch from #114 tip, PR against #114 branch / D = wait for #114 to merge; codex_consulted: true; Codex chose B: the two holes are deferred findings of #114 review, #114 itself followed the same stacking precedent (cut from #113 tip, PR to main), and B honours the launch instruction to open the PR against base_branch; not chosen: A misses the defect that exists on #114, C deviates from the PR target instruction, D delays the fix and needs a re-run; risks: until #113/#114 merge the PR diff includes their changes, and a squash/rebase merge of #114 would require rebasing this branch and re-verifying; follow-up: pre-survey re-run on the #114 tip reproduced all 9 inputs (work_still_required=true); recorded to Notion task comment; opus_escalation: false; launch instruction: adopt the option Codex judges comparatively better'
