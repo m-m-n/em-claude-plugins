@@ -1,14 +1,62 @@
 schema_version: 1
 feature: routeback-record-quoted-continuation
 phase: create-spec
-status: in_progress
+status: dispatching
 generation: 1
 base_revision: fbbdd9bdb6eae0d4dd392b5b7bf7d78a5e87cc38
 last_input_digest: sha256:0ada49314d6efed83ef944fada9d4d320bc4b86d8217ee9d6f65cbe24ea78ab5
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
-worker_runs: []
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-07T13:29:03+09:00'
+    questions:
+    - question_id: requirement.scope.block-boundary
+      status: answered
+    - question_id: requirement.scope.writer-rule
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  requirement.scope.block-boundary:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-07T13:29:03+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - shared_block_scan
+    freeform: null
+    normalized_answer: shared_block_scan
+    resolution_note: 'gate create-spec.requirement-clarification (codex_consultation,
+      record_as_assumption). Codex: 引用文字列内の `  task0002:` がタスク境界と誤認され本物の記録まで別タスクに割り当てられることを確認。記録の読み取りだけでは誤割り当てが残るため、共通の走査で本文を除外する。not
+      chosen: record_read_only'
+  requirement.scope.writer-rule:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-07T13:29:03+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - reader_fix_only
+    freeform: null
+    normalized_answer: reader_fix_only
+    resolution_note: 'gate create-spec.requirement-clarification. Codex: 書き込み規則を足しても既存の引用文字列の誤判定は解消しない。読み取り修正と回帰テストで完了条件を満たせ、Step
+      I.2.c の固定テスト更新を避ける。not chosen: add_writer_rule'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-07T13:29:03+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: decide_autonomously
+    resolution_note: 'gate create-spec.design-step: batch policy decide_autonomously
+      -> analyst recommendation skip accepted'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:0ada49314d6efed83ef944fada9d4d320bc4b86d8217ee9d6f65cbe24ea78ab5
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
