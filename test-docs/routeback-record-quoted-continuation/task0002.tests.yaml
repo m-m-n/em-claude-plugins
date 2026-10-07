@@ -1,0 +1,63 @@
+task_id: task0002
+baseline_failures: []          # full suite before any edit: 8934 tests, OK (skipped=1)
+final_failures: []             # full suite re-run after implementation: 8957 tests, OK (skipped=1); the four targeted suites also re-run: 284 tests, OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestFlowPlainScalarQuotesAreNotOpenings.test_quote_after_a_non_indicator_colon_or_question_mark_does_not_open
+      - tests.test_queue_stop_guard_routeback_record.TestRealMappingIndicatorsStillOpen.test_apostrophe_inside_a_plain_word_before_a_colon_is_not_a_closed_string
+    red_confirmed: true
+    red_reason: "base hook exited 0 instead of 2 because the quote after the non-indicator colon or question mark opened an inner string and swallowed the genuine record and task0002: AssertionError: 0 != 2 for each of the three subTests (notes=[retry:'failed], {a:'b}, [retry?'failed]); the extra [it's:'x] case failed the same way"
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestFlowPlainScalarQuotesAreNotOpeningsDirectly.test_task_ids_include_task0001_and_task0002
+      - tests.test_queue_stop_guard_routeback_record.TestFlowPlainScalarQuotesAreNotOpeningsDirectly.test_record_of_task0001_is_read
+    red_confirmed: true
+    red_reason: "base readers lost task0002 and the record: AssertionError: Lists differ: ['task0001'] != ['task0001', 'task0002'] and KeyError: 'task0001' (empty record mapping), for all three notes values"
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestRealMappingIndicatorsStillOpen.test_inner_string_opens_after_a_real_indicator
+      - tests.test_queue_stop_guard_routeback_record.TestRealMappingIndicatorsStillOpen.test_question_mark_indicator_followed_by_a_space_still_opens
+      - tests.test_queue_stop_guard_routeback_record.TestRealMappingIndicatorsStillOpen.test_whitespace_between_the_closed_key_and_the_colon_is_ignored
+      - tests.test_queue_stop_guard_routeback_record.TestRealMappingIndicatorsStillOpen.test_nested_collection_as_the_key_makes_the_colon_an_indicator
+    red_confirmed: false
+    red_reason: "guard against over-reach of the new colon / question mark rule: real indicators already opened inner strings on the base revision, so these tests passed before the implementation and no red state occurred (they stay green only because the new rule keeps a closed-key colon and a colon before a space as indicators)"
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestPlainScalarContinuationLinesAreNotOpenings.test_item_indicator_quote_or_bracket_on_a_continuation_line_does_not_open
+      - tests.test_queue_stop_guard_routeback_record.TestPlainScalarContinuationLinesAreNotOpenings.test_continuation_after_a_blank_line_or_a_comment_line_is_still_a_continuation
+      - tests.test_queue_stop_guard_routeback_record.TestPlainScalarContinuationLinesAreNotOpenings.test_nested_key_value_continuation_does_not_open
+      - tests.test_queue_stop_guard_routeback_record.TestPlainScalarContinuationLinesAreNotOpenings.test_sequence_item_content_continuation_does_not_open
+      - tests.test_queue_stop_guard_routeback_record.TestPlainScalarContinuationLinesAreNotOpenings.test_key_after_an_item_indicator_continuation_does_not_open
+      - tests.test_queue_stop_guard_routeback_record.TestPlainScalarContinuationLinesAreNotOpenings.test_item_whose_plain_value_starts_on_the_next_line_does_not_open
+      - tests.test_queue_stop_guard_routeback_record.TestPlainScalarContinuationLinesAreNotOpenings.test_a_key_line_on_a_continuation_line_does_not_open_its_value
+      - tests.test_queue_stop_guard_routeback_record.TestContinuationStateEndsAtTheParentIndentation.test_a_comment_line_does_not_end_the_state_but_the_next_shallow_line_does
+    red_confirmed: true
+    red_reason: "base hook exited 0 instead of 2 because the item indicator on the continuation line opened a quoted scalar or flow collection and hid the genuine record and task0002: AssertionError: 0 != 2 for the single-quoted-item, double-quoted-item, bracketed-item and next-line-value subTests, and for each of the further tests in this list (the comment-line test failed with AssertionError: 2 != 0 on the base revision)"
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestContinuationStateEndsAtTheParentIndentation.test_the_state_ends_at_the_parent_indentation
+      - tests.test_queue_stop_guard_routeback_record.TestContinuationStateEndsAtTheParentIndentation.test_a_shallower_line_ends_the_state_and_may_open
+      - tests.test_queue_stop_guard_routeback_record.TestContinuationStateEndsAtTheParentIndentation.test_a_sibling_task_key_ends_the_state
+    red_confirmed: false
+    red_reason: "guard against over-reach of the new continuation state: the base revision has no such state, so these tests passed before the implementation and no red state occurred (the AC-5 fixtures are covered by test_the_state_ends_at_the_parent_indentation)"
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestOpeningPositionReadersNeverRaise.test_every_fixture_of_the_acceptance_criteria
+      - tests.test_queue_stop_guard_routeback_record.TestOpeningPositionReadersNeverRaise.test_unclosed_quotes_and_brackets_up_to_the_end_of_the_file
+      - tests.test_queue_stop_guard_routeback_record.TestOpeningPositionReadersNeverRaise.test_invalid_utf8_in_continuation_lines_and_plain_flow_scalars
+      - tests.test_queue_stop_guard_routeback_record.TestOpeningPositionReadersNeverRaise.test_seeded_random_input_with_continuation_fragments_never_raises
+    red_confirmed: false
+    red_reason: "fail-open guard (NFR2) for the added state: the base readers do not raise on these inputs, so these tests passed before the implementation and no red state occurred; they exist to catch an exception introduced by the new continuation state or indicator tracking"
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestQuotedValueNotOpenings.test_plain_scalar_continuation_lines_never_open
+      - tests.test_queue_stop_guard_routeback_record.TestFlowValueBoundaries.test_quote_inside_a_plain_flow_scalar_is_not_an_inner_string
+      - tests.test_queue_stop_guard_routeback_record.TestHookImportsStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard
+      - tests.test_queue_stop_guard_routeback_record
+      - tests.test_queue_hook_status_read_pin
+      - tests.test_routeback_record_carve_out
+    red_confirmed: false
+    red_reason: "regression criterion: a dedicated new module is out of scope, but the existing tests above detect a regression of the existing non-openings (including test_quote_inside_a_plain_flow_scalar_is_not_an_inner_string and test_plain_scalar_continuation_lines_never_open), the stdlib-only imports of the hook and of the test module, and the status-read pin; no red state occurred for this change. Part (c), that the diff touches only the two files under Scope, has no test: it is checked by git diff of the task branch against its base"
