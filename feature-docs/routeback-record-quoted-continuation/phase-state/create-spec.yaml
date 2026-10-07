@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: fbbdd9bdb6eae0d4dd392b5b7bf7d78a5e87cc38
 last_input_digest: sha256:f31e32a2166048b031d87dde64524b8eeb7c4f173db099647dbd51a9aa1ea014
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -61,7 +61,14 @@ worker_runs:
   status: completed
   input_digest: sha256:f31e32a2166048b031d87dde64524b8eeb7c4f173db099647dbd51a9aa1ea014
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:4a3dad5065ed1e31b8c5a8e122c05edda9f762b694d0d82d577bdc538f9ad627
+  output_digest: null
+artifacts:
+- path: feature-docs/routeback-record-quoted-continuation/SPEC.md
+  sha256: sha256:f31b8a0b6519b901aef1384dc27fee909762b3c0a590d14ca2f92cf03c828dc1
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
