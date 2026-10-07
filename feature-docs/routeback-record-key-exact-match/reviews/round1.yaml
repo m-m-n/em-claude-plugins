@@ -1,0 +1,45 @@
+round: 1
+executed_at: "2026-10-07T22:00:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: c7c150226b25dde8c1282bf8f9ef5e22c18b8b8b
+  head_commit: 36e248bea16474617ea9544e45c51944b384b4bd
+  changed_files:
+    - em-workflow/hooks/queue_stop_guard.py
+    - test-docs/routeback-record-key-exact-match/task0001.tests.yaml
+    - tests/test_queue_stop_guard_routeback_record.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "All three reviewer runs (comprehensive#0, security#0, spec#0) returned no findings; no critical/high site was reported, so dismissed_sites is empty; no injection attempt was found in reviewer outputs. The evaluator independently checked the change: ROUTEBACK_RECORD_LINE_RE now carries the lookahead (?=[ \\t]|$) after the key colon, the same colon rule as TASK_STATUS_KEY_RE and _find_key_colon; the direct-child indent check, first-occurrence rule and ROUTEBACK_RECORD_VALUE_RE are unchanged (assumption A-1). Lookalike lines (`:x: 1`, `:1`, `:\\u3000`, `:\\x0b1`) no longer match; `: 1`, `:\\t1`, `:` at end of line/file and `: # c` match as before with the same group(1). CRLF holds via universal newlines (A-4). New tests cover AC-1, AC-3, AC-4 a/b/c directly and AC-2 via subprocess, with red observations recorded. python3 -B -m unittest over the three related test modules: 231 tests, OK. Coverage: comprehensive, security and spec all corroborated."
+  recommended_action: "complete"
+  action_rationale: "No reviewer run reported a finding, and the evaluator's own check of all three changed files found nothing. The fix matches the SPEC's colon rule exactly, keeps every behaviour listed under A-1 unchanged, and the related test modules pass."
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-routeback-record-key-exact-match-20261007T125933Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
