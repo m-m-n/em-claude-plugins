@@ -1,0 +1,21 @@
+schema_version: 1
+feature: task-status-key-exact-match
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: de761952843076fb15ffbf709e54b5ed8a835642
+last_input_digest: sha256:c5c481979bc4af77998d7676c76dcb0f840aaf800ca973f6c86b6cad60f29000
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:c5c481979bc4af77998d7676c76dcb0f840aaf800ca973f6c86b6cad60f29000
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
