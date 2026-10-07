@@ -39,6 +39,15 @@ An item indicator, quote or bracket at the start of a plain-scalar continuation
 line never opens a value, and the continuation state ends at the parent
 indentation. Observed red (base revision): the genuine direct-key record and
 task0002 are swallowed, so the hook exits 0 instead of 2.
+
+routeback-record-quoted-open-residual (task0001): the sections headed with that
+name pin two more non-openings. A `?` in the middle of a flow scalar
+(`[retry? 'failed]`) is an ordinary character, a mapping-key indicator only at
+a flow-entry start before a space, a tab or the end of the line, and a line
+made only of whitespace other than U+0020 / U+0009 (U+3000, U+00A0, U+000B,
+U+000C) is not blank for the tracker. Observed red (base revision): the
+genuine direct-key record and task0002 are swallowed, so the hook exits 0
+instead of 2.
 """
 
 import ast
@@ -2394,6 +2403,379 @@ class TestOpeningPositionReadersNeverRaise(unittest.TestCase):
             b"      ", b"'", b'"', b"[", b"]", b"{", b"}", b":", b"?", b"retry:'",
             b"a?'", b": ", b"? ", b", ", b"#", b"# ", b"|", b">", b"\xff",
             b"tasks:", b"task0001:", b"task0002:", b"status: pending", b"\\",
+        ]
+        for case in range(300):
+            lines = [
+                b"".join(rng.choice(fragments) for _ in range(rng.randint(0, 7)))
+                for _ in range(rng.randint(1, 14))
+            ]
+            data = b"\n".join(lines)
+            with self.subTest(case=case):
+                ids = call_reader("task_ids_from_workflow", data)
+                scanned = call_reader("iter_task_block_lines", data)
+                records = call_reader("task_routeback_records_from_workflow", data)
+                self.assertLessEqual({task for task, _line in scanned}, set(ids))
+                self.assertLessEqual(set(records), set(ids))
+
+
+# --- routeback-record-quoted-open-residual (task0001): the two remaining false opens --
+#
+# Two kinds of plain-scalar text never open a quoted scalar or flow collection:
+# a `?` in the middle of a flow scalar (it is a mapping-key indicator only at a
+# flow-entry start and only before a space, a tab or the end of the line), and a
+# line made only of whitespace other than U+0020 / U+0009 (U+3000, U+00A0,
+# U+000B, U+000C), which is not a blank line for the multiline value tracker.
+# Observed red (base revision): the genuine direct-key record and task0002 are
+# swallowed, so the hook exits 0 instead of 2.
+
+# Flow `notes` values whose `?` follows a plain word (`_at_start` is false), so
+# the quote after it opens no inner string, on the same line or on a later one.
+MID_SCALAR_QUESTION_MARK_NOTES = {
+    "one-line-sequence": ["    notes: [retry? 'failed]"],
+    "one-line-mapping": ["    notes: {reason: retry? 'failed}"],
+    "two-line-sequence": ["    notes: [retry?", "      'failed]"],
+    "two-line-mapping": ["    notes: {reason: retry?", "      'failed}"],
+}
+
+# A line of 6 spaces followed only by a non-ASCII whitespace character.
+NON_ASCII_BLANKS = {"U+3000": "　", "U+00A0": " "}
+# The same for the vertical-tab and form-feed characters (AC-5 case 4).
+CONTROL_BLANKS = {"U+000B": "\x0b", "U+000C": "\x0c"}
+# The follow-up line, indented deeper than the `notes` key.
+BLANK_FOLLOW_UPS = {
+    "single-quoted-item": "      - 'unclosed",
+    "double-quoted": '      "unclosed',
+    "bracketed": "      [unclosed",
+}
+
+
+def blank_like_notes(blank, follow_up, blank_indent=6):
+    """`notes:` with no value, then a line of `blank_indent` spaces followed
+    only by `blank`, then `follow_up`."""
+    return ["    notes:", " " * blank_indent + blank, follow_up]
+
+
+def blank_like_fixtures(blanks):
+    return {
+        "%s %s" % (blank_label, follow_label): blank_like_notes(blank, follow_up)
+        for blank_label, blank in blanks.items()
+        for follow_label, follow_up in BLANK_FOLLOW_UPS.items()
+    }
+
+
+NON_ASCII_BLANK_NOTES = blank_like_fixtures(NON_ASCII_BLANKS)
+CONTROL_BLANK_NOTES = blank_like_fixtures(CONTROL_BLANKS)
+
+
+def entry_start_notes(opening_lines, closer):
+    """A multi-line flow `notes` value whose `?` sits at a flow-entry start and
+    is followed by a space, a tab or the end of the line: the quote after it
+    opens an inner string that holds the closing bracket of the first lines and
+    the record-shaped line, so the value only closes at the end."""
+    return list(opening_lines) + [ROW, "    gave up'", "    " + closer]
+
+
+# `?` at a flow-entry start (after `[`, `{` or `,`, with or without whitespace
+# in between) before a space, a tab or the end of the line: still an indicator.
+ENTRY_START_INDICATOR_NOTES = {
+    "after-bracket": entry_start_notes(["    notes: [? 'tried ]"], "]"),
+    "after-bracket-and-space": entry_start_notes(["    notes: [ ? 'tried ]"], "]"),
+    "after-brace": entry_start_notes(["    notes: {? 'tried }"], "}"),
+    "after-brace-and-space": entry_start_notes(["    notes: { ? 'tried }"], "}"),
+    "after-comma": entry_start_notes(["    notes: [a,? 'tried ]"], "]"),
+    "after-comma-and-space": entry_start_notes(["    notes: [a, ? 'tried ]"], "]"),
+    "after-comma-and-tabs": entry_start_notes(["    notes: [a,\t?\t'tried ]"], "]"),
+    "followed-by-a-tab": entry_start_notes(["    notes: [?\t'tried ]"], "]"),
+    "at-end-of-line-after-bracket": entry_start_notes(
+        ["    notes: [?", "      'tried ]"], "]"
+    ),
+    "at-end-of-line-after-brace": entry_start_notes(
+        ["    notes: {?", "      'tried }"], "}"
+    ),
+    "at-end-of-line-after-comma": entry_start_notes(
+        ["    notes: [a, ?", "      'tried ]"], "]"
+    ),
+}
+
+
+class TestMidScalarQuestionMarkDoesNotOpen(OpeningPositionHookCase):
+    """task0001 AC-1 (FR1; TM-1): a `?` in the middle of a flow scalar is an
+    ordinary character, so the quote after it opens no inner string and the
+    genuine record and task0002 are read."""
+
+    def test_quote_after_a_mid_scalar_question_mark_does_not_open(self):  # AC-1
+        for label, notes in MID_SCALAR_QUESTION_MARK_NOTES.items():
+            with self.subTest(form=label):
+                result = self.run_target(notes=notes, extra=record_lines("1"))
+                self.assert_launches_both(result)
+
+
+class TestNonAsciiBlankLineDoesNotOpen(OpeningPositionHookCase):
+    """task0001 AC-2 (FR2; TM-2): a line made only of U+3000 or U+00A0 is not
+    blank for the tracker; it is a plain scalar at the value start and the
+    deeper follow-up line continues it, so nothing opens."""
+
+    def test_follow_up_after_a_non_ascii_blank_line_does_not_open(self):  # AC-2
+        for label, notes in NON_ASCII_BLANK_NOTES.items():
+            with self.subTest(form=label):
+                result = self.run_target(notes=notes, extra=record_lines("1"))
+                self.assert_launches_both(result)
+
+
+class TestNonAsciiBlankFixturesCarryTheRealCodePoints(unittest.TestCase):
+    """The fixtures hold the actual code points, never ASCII spaces, so the
+    AC-2 and AC-5 tests cannot pass vacuously."""
+
+    def test_blank_lines_carry_the_real_code_point(self):
+        for table in (NON_ASCII_BLANKS, CONTROL_BLANKS):
+            for label, char in table.items():
+                with self.subTest(code_point=label):
+                    self.assertEqual(ord(char), int(label[2:], 16))
+                    self.assertNotIn(char, " \t")
+                    workflow = continuation_workflow(
+                        blank_like_notes(char, BLANK_FOLLOW_UPS["double-quoted"])
+                    )
+                    self.assertIn(("      " + char + "\n").encode("utf-8"),
+                                  workflow.encode("utf-8"))
+
+
+class TestBlockScalarKeepsANonAsciiBlankLine(QuotedValueHookCase):
+    """task0001 AC-3 (FR2): block-scalar non-regression. A line of 6 spaces and
+    U+3000 inside a block scalar body is indented deeper than the key, so it
+    stays a body line and so does the `- 'x` line after it; the direct child
+    record key ends the block scalar and is read."""
+
+    def test_the_non_ascii_line_stays_a_block_scalar_body_line(self):  # AC-3
+        notes = ["    notes: |", "      body line", "      　", "      - 'x"]
+        result = self.run_target(notes=notes, extra=record_lines("1"))
+        self.assert_launches_target(result)
+
+
+class TestQuestionMarkAndNonAsciiBlankReadersDirectly(unittest.TestCase):
+    """task0001 AC-4 (FR1, FR2): the task-id and record readers, called
+    directly on every AC-1 and AC-2 fixture."""
+
+    def fixtures(self):
+        tables = (MID_SCALAR_QUESTION_MARK_NOTES, NON_ASCII_BLANK_NOTES)
+        return {
+            label: continuation_workflow(notes)
+            for table in tables
+            for label, notes in table.items()
+        }
+
+    def test_task_ids_include_task0001_and_task0002(self):  # AC-4
+        for label, text in self.fixtures().items():
+            with self.subTest(fixture=label):
+                ids = call_reader("task_ids_from_workflow", text)
+                self.assertEqual(ids, [TARGET, "task0002"])
+
+    def test_record_of_task0001_is_read(self):  # AC-4
+        for label, text in self.fixtures().items():
+            with self.subTest(fixture=label):
+                records = call_reader("task_routeback_records_from_workflow", text)
+                self.assertEqual(records[TARGET], "1")
+
+
+class TestQuestionMarkIndicatorAtAnEntryStartStillOpens(QuotedValueHookCase):
+    """task0001 AC-5 (1) (FR1, FR3): a `?` at a flow-entry start followed by a
+    space, a tab or the end of the line is still a mapping-key indicator, so
+    the quote after it opens an inner string and hides the record-shaped line
+    (the bracket on the opening line stays uncounted while the string is open)."""
+
+    def test_indicator_at_an_entry_start_still_opens(self):  # AC-5
+        for label, notes in ENTRY_START_INDICATOR_NOTES.items():
+            with self.subTest(form=label):
+                self.assert_failed(self.run_target(notes=notes))
+
+    def test_a_flow_sequence_entry_after_a_comma_still_opens(self):  # AC-5
+        notes = ["    notes: [a, ? 'x]", ROW, "    gave up']"]
+        self.assert_failed(self.run_target(notes=notes))
+
+
+class TestQuestionMarkBeforeAQuoteWithoutASpaceStaysNonOpening(OpeningPositionHookCase):
+    """task0001 AC-5 (2) (FR1): `[retry?'failed]` keeps its non-opening
+    behavior."""
+
+    def test_no_space_after_the_question_mark_does_not_open(self):  # AC-5
+        notes = ["    notes: [retry?'failed]"]
+        result = self.run_target(notes=notes, extra=record_lines("1"))
+        self.assert_launches_both(result)
+
+    def test_readers_read_the_record_and_task0002(self):  # AC-5
+        text = continuation_workflow(["    notes: [retry?'failed]"])
+        self.assertEqual(
+            call_reader("task_ids_from_workflow", text), [TARGET, "task0002"]
+        )
+        records = call_reader("task_routeback_records_from_workflow", text)
+        self.assertEqual(records[TARGET], "1")
+
+
+class TestColumnZeroNonAsciiBlankLine(OpeningPositionHookCase):
+    """task0001 AC-5 (3) (FR2): a column-0 line made only of U+3000 or only of
+    U+00A0 is read as a plain scalar that decides nothing about the next line
+    (it is not deeper than the key). A `"…` or `[…` follow-up line opens
+    nothing; a `- '…` follow-up line still opens, as at the base revision."""
+
+    def test_double_quote_or_bracket_follow_up_opens_nothing(self):  # AC-5
+        for label, char in NON_ASCII_BLANKS.items():
+            for follow_label in ("double-quoted", "bracketed"):
+                with self.subTest(blank=label, follow_up=follow_label):
+                    notes = ["    notes:", char, BLANK_FOLLOW_UPS[follow_label]]
+                    result = self.run_target(notes=notes, extra=record_lines("1"))
+                    self.assert_launches_both(result)
+
+    def test_dash_quote_follow_up_still_opens(self):  # AC-5
+        for label, char in NON_ASCII_BLANKS.items():
+            with self.subTest(blank=label):
+                notes = ["    notes:", char, BLANK_FOLLOW_UPS["single-quoted-item"]]
+                result = self.run_target(notes=notes, extra=record_lines("1"))
+                self.assert_failed(result)
+
+    def test_dash_quote_follow_up_hides_the_record_and_task0002(self):  # AC-5
+        for label, char in NON_ASCII_BLANKS.items():
+            with self.subTest(blank=label):
+                text = continuation_workflow(
+                    ["    notes:", char, BLANK_FOLLOW_UPS["single-quoted-item"]]
+                )
+                self.assertEqual(call_reader("task_ids_from_workflow", text), [TARGET])
+                records = call_reader("task_routeback_records_from_workflow", text)
+                self.assertNotIn(TARGET, records)
+
+
+class TestOtherNonAsciiWhitespaceIsNotBlank(OpeningPositionHookCase):
+    """task0001 AC-5 (4) (FR2): a line of 6 spaces followed only by U+000B or
+    only by U+000C behaves like the U+3000 case: the record and task0002 are
+    read."""
+
+    def test_the_record_and_task0002_are_read_by_the_hook(self):  # AC-5
+        for label, notes in CONTROL_BLANK_NOTES.items():
+            with self.subTest(form=label):
+                result = self.run_target(notes=notes, extra=record_lines("1"))
+                self.assert_launches_both(result)
+
+    def test_the_record_and_task0002_are_read_by_the_readers(self):  # AC-5
+        for label, notes in CONTROL_BLANK_NOTES.items():
+            with self.subTest(form=label):
+                text = continuation_workflow(notes)
+                self.assertEqual(
+                    call_reader("task_ids_from_workflow", text), [TARGET, "task0002"]
+                )
+                records = call_reader("task_routeback_records_from_workflow", text)
+                self.assertEqual(records[TARGET], "1")
+
+
+class TestBlockScalarEndsAtANonAsciiBlankLineByIndentation(unittest.TestCase):
+    """task0001 AC-5 (additional case) (FR2): in block-scalar state the
+    tracker's blank-line rule is the same one. A column-0 line of U+3000 is not
+    blank, so its indentation (0) ends the block scalar: the `- 'x` line after
+    it is read and opens a single-quoted value, whose continuation line is a
+    body line and is never yielded by the block scan."""
+
+    def test_the_block_scalar_ends_at_the_column_zero_non_ascii_line(self):  # AC-5
+        notes = ["    notes: |", "      body line", "　", "      - 'x", "      y'"]
+        text = continuation_workflow(notes)
+        lines = [line for _task, line in call_reader("iter_task_block_lines", text)]
+        self.assertIn("      body line\n", lines)
+        self.assertIn("      - 'x\n", lines)
+        self.assertNotIn("      y'\n", lines)
+
+    def test_a_deeper_non_ascii_line_stays_a_body_line(self):  # AC-5
+        notes = ["    notes: |", "      body line", "      　", "      - 'x", "      y'"]
+        text = continuation_workflow(notes)
+        lines = [line for _task, line in call_reader("iter_task_block_lines", text)]
+        self.assertIn("      - 'x\n", lines)
+        self.assertIn("      y'\n", lines)
+
+
+class TestQuestionMarkAndNonAsciiBlankReadersNeverRaise(unittest.TestCase):
+    """task0001 AC-6 (NFR2; TM-3): the task-id, block-scan and record readers,
+    called directly, return without raising on every fixture of AC-1 through
+    AC-5, including values left unclosed to the end of the file."""
+
+    READERS = (
+        "task_ids_from_workflow",
+        "iter_task_block_lines",
+        "task_routeback_records_from_workflow",
+    )
+
+    def fixtures(self):
+        texts = {}
+        for table in (
+            MID_SCALAR_QUESTION_MARK_NOTES,
+            NON_ASCII_BLANK_NOTES,
+            CONTROL_BLANK_NOTES,
+            ENTRY_START_INDICATOR_NOTES,
+        ):
+            for label, notes in table.items():
+                texts[label] = continuation_workflow(notes)
+        texts["no-space-quote"] = continuation_workflow(["    notes: [retry?'failed]"])
+        texts["block-scalar-non-ascii-line"] = continuation_workflow(
+            ["    notes: |", "      body line", "      　", "      - 'x"]
+        )
+        texts["block-scalar-column-zero-line"] = continuation_workflow(
+            ["    notes: |", "      body line", "　", "      - 'x", "      y'"]
+        )
+        for label, char in NON_ASCII_BLANKS.items():
+            for follow_label, follow_up in BLANK_FOLLOW_UPS.items():
+                texts["column-zero %s %s" % (label, follow_label)] = (
+                    continuation_workflow(["    notes:", char, follow_up])
+                )
+        return texts
+
+    def test_every_fixture_of_the_acceptance_criteria(self):  # AC-6
+        for label, text in self.fixtures().items():
+            for reader in self.READERS:
+                with self.subTest(fixture=label, reader=reader):
+                    call_reader(reader, text)  # must not raise
+
+    UNCLOSED_TAILS = {
+        "unclosed-flow-after-a-mid-scalar-question-mark": [
+            "    notes: [retry? 'failed, {a?",
+            "      'x, [y?",
+            "      \"z",
+        ],
+        "unclosed-inner-string-after-an-entry-start-indicator": [
+            "    notes: [a, ? 'tried ]",
+            ROW,
+        ],
+        "unclosed-indicator-at-end-of-line": ["    notes: {?", "      'tried }"],
+        "unclosed-after-a-non-ascii-blank-line": [
+            "    notes:",
+            "      　",
+            "      - 'unclosed",
+            "      - [unclosed",
+        ],
+        "unclosed-after-a-column-zero-non-ascii-line": [
+            "    notes:",
+            " ",
+            "      - 'unclosed",
+            "      \"unclosed",
+        ],
+        "unclosed-block-scalar-with-non-ascii-lines": [
+            "    notes: |",
+            "　",
+            "      \x0b",
+            "      \x0c",
+            "      - \"unclosed",
+        ],
+    }
+
+    def test_unclosed_values_up_to_the_end_of_the_file(self):  # AC-6
+        for label, tail in self.UNCLOSED_TAILS.items():
+            text = build_workflow([task_spec(TARGET, notes=tail), task_spec("task0002")])
+            for reader in self.READERS:
+                with self.subTest(tail=label, reader=reader):
+                    call_reader(reader, text)  # must not raise
+
+    def test_seeded_random_input_with_question_marks_and_non_ascii_blanks(self):  # AC-6
+        rng = random.Random(20261008)
+        fragments = [
+            b"notes:", b"notes: |", b"notes: [", b"notes: {", b"- ", b"-", b"  ",
+            b"    ", b"      ", b"'", b'"', b"[", b"]", b"{", b"}", b":", b"?",
+            b"? ", b"?\t", b", ", b",", b"retry?", b"retry? '", b"a?'", b"#",
+            "　".encode("utf-8"), " ".encode("utf-8"), b"\x0b", b"\x0c",
+            b"\xff", b"tasks:", b"task0001:", b"task0002:", b"status: pending",
+            b"|", b">", b"\\",
         ]
         for case in range(300):
             lines = [
