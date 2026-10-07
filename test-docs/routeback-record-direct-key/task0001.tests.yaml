@@ -1,0 +1,102 @@
+task_id: task0001
+# baseline run (before any edit): 8838 tests, OK (skipped=1)
+baseline_failures: []
+# re-executed after implementation: 8858 tests, OK (skipped=1)
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_queue_stop_guard_routeback_record.TestRecordReadFunction.test_notes_body_record_does_not_shadow_the_direct_key_record
+      - test_queue_stop_guard_routeback_record.TestRecordReadFunction.test_record_after_an_empty_block_scalar_at_the_direct_indent_is_read
+    red_confirmed: true
+    red_reason: >-
+      Case (a), run against the unmodified hook: AssertionError:
+      {'task0001': '3'} != {'task0001': '1'} (the notes body line was read as
+      the record). Case (b) passed before the fix by design: it pins that the
+      indentation-only rule keeps reading a genuine sibling key, so only case
+      (a) of this criterion was observed red.
+  AC-2:
+    tests:
+      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_block_scalar_body_is_not_read_for_every_indicator
+      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_key_of_a_mapping_nested_under_another_direct_key_is_not_read
+      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_key_of_a_mapping_inside_a_sequence_item_is_not_read
+      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_continuation_line_of_a_multi_line_double_quoted_notes_is_not_read
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, every indicator subtest (|, |-, >, >-,
+      |2, |+2, >-1), the nested-mapping case, the sequence-item case and the
+      double-quoted continuation case failed with AssertionError: 2 != 0 :
+      queue_stop_guard: BLOCK feature=routeback-record-feature
+      launch=task0001,task0002 (the forged line was read as the record).
+  AC-3:
+    tests:
+      - test_queue_stop_guard_routeback_record.TestNotesBodyDoesNotShadowTheRecord.test_non_matching_notes_body_value_does_not_hide_a_matching_record
+      - test_queue_stop_guard_routeback_record.TestNotesBodyDoesNotShadowTheRecord.test_matching_notes_body_value_does_not_replace_a_non_matching_record
+      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_a_genuine_direct_key_record_is_still_read_next_to_such_content
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, case (a) failed for every indicator
+      with AssertionError: 0 != 2 (the notes body value 3 shadowed the real
+      record 1, so the hook did not block), and case (b) failed for every
+      indicator with AssertionError: 2 != 0 : queue_stop_guard: BLOCK
+      feature=routeback-record-feature launch=task0001,task0002,task0003 (the
+      notes body value 1 replaced the real record 2). The related test
+      test_a_genuine_direct_key_record_is_still_read_next_to_such_content
+      failed the same way as case (a): AssertionError: 0 != 2.
+  AC-4:
+    tests:
+      - test_queue_stop_guard
+      - test_queue_stop_guard_routeback_record
+      - test_queue_hook_status_read_pin
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      test_queue_stop_guard, test_queue_stop_guard_routeback_record and
+      test_queue_hook_status_read_pin modules detect any change to the
+      record-value, first-occurrence, block-range, fail-open and status-read
+      behavior; no red state occurred for this change. The criterion states
+      that pre-existing behavior is preserved and no assertion of an existing
+      test is modified (the diff removes no assertion line).
+  AC-5:
+    tests:
+      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_module_docstring_states_direct_keys_only
+      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_record_read_function_docstring_states_direct_keys_only
+      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_record_regex_comment_states_direct_keys_only
+      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_wording_matchers_do_not_fire_on_the_pre_change_docstring
+      - test_queue_stop_guard_routeback_record.TestModuleDocstring
+    red_confirmed: true
+    red_reason: >-
+      With the hook file temporarily reverted to its base revision, the
+      three direct-key wording tests failed with AssertionError: 'direct
+      keys' not found in <the base module docstring / function docstring /
+      regex comment> (the file was restored afterwards and compared
+      byte-for-byte with the saved implementation). The pinned-phrase tests
+      of TestModuleDocstring passed before and after; they only guard that
+      the four pinned phrases stay and the excluded phrase stays absent.
+  AC-6:
+    tests:
+      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_block_scalar_notes_option_emits_a_non_null_multi_line_value
+      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_double_quoted_notes_option_emits_a_non_null_multi_line_value
+      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_notes_option_places_notes_before_the_record_key
+      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_default_fixture_still_contains_notes_null
+    red_confirmed: true
+    red_reason: >-
+      Before the builder gained the option, the three notes-option tests
+      errored with NameError: name 'notes_block_scalar' (or
+      'notes_double_quoted') is not defined. The default-fixture test passed
+      before the builder change by design: it pins that a fixture built
+      without the option still contains notes: null.
+  AC-7:
+    tests:
+      - test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_only_stdlib_imports
+      - test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      test_queue_stop_guard.TestQueueStopGuardStdlibOnly detects non-stdlib
+      imports in the hook and the existing
+      test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly
+      detects non-stdlib imports in the test module; no red state occurred
+      for this change. That the AC-2 and AC-3 tests run the hook as a
+      subprocess and only the AC-1 tests load the hook module by file path
+      is a structural property checked by inspection of the test file.
