@@ -78,7 +78,8 @@ workflow:
   base_commit: c7c150226b25dde8c1282bf8f9ef5e22c18b8b8b
   completed_at_commit: 6140002b2baaf37049050a2e34bdb7633e533983
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 36e248bea16474617ea9544e45c51944b384b4bd
 - id: verify
   status: pending
 - id: retrospect
@@ -99,8 +100,9 @@ tasks:
     status: merged
     branch: em-workflow/routeback-record-key-exact-match/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, spec]
   residual_critical_high: 0
   needs_rework: false
   plan:
