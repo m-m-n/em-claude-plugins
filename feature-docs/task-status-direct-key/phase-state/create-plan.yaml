@@ -1,0 +1,21 @@
+schema_version: 1
+feature: task-status-direct-key
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 3bc057837c1a9c35bce2ca2a6cdcdb63d6866e5d
+last_input_digest: sha256:954dc0f777f18723d53be66930323543d85cdd657ec3f4ccaeb52b72e5dbc437
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:954dc0f777f18723d53be66930323543d85cdd657ec3f4ccaeb52b72e5dbc437
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
