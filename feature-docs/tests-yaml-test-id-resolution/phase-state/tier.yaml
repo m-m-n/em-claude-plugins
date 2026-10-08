@@ -1,0 +1,194 @@
+schema_version: 2
+feature: tests-yaml-test-id-resolution
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.98
+    confidence: 0.47
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.47000000000000003
+      '3': 0.26
+  observed_at: '2026-10-09T00:17:16+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.03
+    confidence: 0.84
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.06
+      '2': 0.84
+      '3': 0.1
+  observed_at: '2026-10-09T00:25:16+09:00'
+pre_survey_estimate:
+  files_expected:
+  - test-docs/abort-docs-commit-precedence/task0001.tests.yaml
+  - test-docs/abort-docs-commit-precedence/task0002.tests.yaml
+  - test-docs/abort-phase-terminal/task0001.tests.yaml
+  - test-docs/abort-phase-terminal/task0002.tests.yaml
+  - test-docs/agent-separation/task0002.tests.yaml
+  - test-docs/agent-separation/task0005.tests.yaml
+  - test-docs/agent-separation/task0013.tests.yaml
+  - test-docs/agent-separation/task0016.tests.yaml
+  - test-docs/agent-separation/task0017.tests.yaml
+  - test-docs/agent-separation/task0018.tests.yaml
+  - test-docs/agent-separation/task0023.tests.yaml
+  - test-docs/assumptions-reversible-criteria/task0003.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0001.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0002.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0003.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0004.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0005.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0006.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0007.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0008.tests.yaml
+  - test-docs/batch-policy-option-id-consistency/task0003.tests.yaml
+  - test-docs/batch-quiet-output/task0001.tests.yaml
+  - test-docs/batch-quiet-output/task0002.tests.yaml
+  - test-docs/batch-quiet-output/task0003.tests.yaml
+  - test-docs/batch-quiet-output/task0004.tests.yaml
+  - test-docs/batch-quiet-output/task0005.tests.yaml
+  - test-docs/batch-quiet-output/task0006.tests.yaml
+  - test-docs/batch-stop-contract/task0001.tests.yaml
+  - test-docs/batch-stop-contract/task0002.tests.yaml
+  - test-docs/batch-stop-contract/task0003.tests.yaml
+  - test-docs/batch-stop-contract/task0004.tests.yaml
+  - test-docs/batch-stop-contract/task0005.tests.yaml
+  - test-docs/batch-structured-result-output/task0001.tests.yaml
+  - test-docs/batch-structured-result-output/task0003.tests.yaml
+  - test-docs/batch-verify-rework-lineage-cap/task0002.tests.yaml
+  - test-docs/batch-verify-rework-lineage-cap/task0005.tests.yaml
+  - test-docs/codex-wrapper-fallback-removal/task0003.tests.yaml
+  - test-docs/codex-wrapper-fallback-removal/task0004.tests.yaml
+  - test-docs/create-plan-status-conflict/task0004.tests.yaml
+  - test-docs/destructive-guard-command-name-substitution/task0002.tests.yaml
+  - test-docs/destructive-guard-command-substitution/task0001.tests.yaml
+  - test-docs/destructive-guard-grouping-spec-drift/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0004.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0005.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0006.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0007.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0001.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0004.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0005.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0006.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0007.tests.yaml
+  - test-docs/destructive-guard-rm-holes/task0001.tests.yaml
+  - test-docs/destructive-guard-rm-reason-positions/task0002.tests.yaml
+  - test-docs/destructive-guard-write-target-scoping/task0003.tests.yaml
+  - test-docs/develop-once-option/task0002.tests.yaml
+  - test-docs/develop-once-option/task0003.tests.yaml
+  - test-docs/develop-once-option/task0004.tests.yaml
+  - test-docs/develop-once-option/task0007.tests.yaml
+  - test-docs/failed-run-cleanup-guard/task0001.tests.yaml
+  - test-docs/failed-run-cleanup-guard/task0002.tests.yaml
+  - test-docs/failed-run-cleanup-guard/task0004.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0002.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0004.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0005.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0006.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0011.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0012.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0017.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0019.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0022.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0027.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0028.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0029.tests.yaml
+  - test-docs/heredoc-stdin-guard/task0001.tests.yaml
+  - test-docs/implement-failed-kind/task0002.tests.yaml
+  - test-docs/implement-failed-kind/task0003.tests.yaml
+  - test-docs/implement-failed-kind/task0004.tests.yaml
+  - test-docs/implement-failed-kind/task0005.tests.yaml
+  - test-docs/implement-guard-compatible-git-ops/task0002.tests.yaml
+  - test-docs/implement-routeback-gate/task0001.tests.yaml
+  - test-docs/llm-led-review/task0001.tests.yaml
+  - test-docs/llm-led-review/task0002.tests.yaml
+  - test-docs/llm-led-review/task0005.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0003.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0008.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0009.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0003.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0004.tests.yaml
+  - test-docs/recycled-task-id-carveout/task0001.tests.yaml
+  - test-docs/recycled-task-id-carveout/task0003.tests.yaml
+  - test-docs/recycled-task-id-carveout/task0004.tests.yaml
+  - test-docs/recycled-task-id-consistency/task0001.tests.yaml
+  - test-docs/recycled-task-id-consistency/task0003.tests.yaml
+  - test-docs/recycled-task-id-contract/task0001.tests.yaml
+  - test-docs/recycled-task-id-contract/task0003.tests.yaml
+  - test-docs/resume-conditions-newline-rejection/task0002.tests.yaml
+  - test-docs/review-sca-axis/task0005.tests.yaml
+  - test-docs/review-sca-axis/task0008.tests.yaml
+  - test-docs/review-sca-axis/task0010.tests.yaml
+  - test-docs/rework-contract-drift/task0001.tests.yaml
+  - test-docs/rework-contract-drift/task0002.tests.yaml
+  - test-docs/rework-contract-drift/task0004.tests.yaml
+  - test-docs/rework-contract-drift/task0006.tests.yaml
+  - test-docs/routeback-admissibility-exits/task0001.tests.yaml
+  - test-docs/routeback-admissibility-exits/task0002.tests.yaml
+  - test-docs/routeback-record-quoted-open-residual/task0001.tests.yaml
+  - test-docs/routeback-reset-scope-consistency/task0002.tests.yaml
+  - test-docs/routeback-ssot-drift/task0001.tests.yaml
+  - test-docs/routeback-ssot-drift/task0002.tests.yaml
+  - test-docs/sca-per-project-scan-binding/task0001.tests.yaml
+  - test-docs/sca-scanner-project-config-isolation/task0001.tests.yaml
+  - test-docs/security-review-repro-steps/task0005.tests.yaml
+  - test-docs/spec-file-set-completeness/task0001.tests.yaml
+  - test-docs/spec-file-set-completeness/task0002.tests.yaml
+  - test-docs/spec-file-set-completeness/task0003.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0002.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0004.tests.yaml
+  - test-docs/stop-reason-coverage/task0004.tests.yaml
+  - test-docs/stopguard-retired-failed/task0002.tests.yaml
+  - test-docs/stopguard-worktree-paths/task0001.tests.yaml
+  - test-docs/task-tier-reduction/task0001.tests.yaml
+  - test-docs/task-tier-reduction/task0004.tests.yaml
+  - test-docs/task-tier-reduction/task0006.tests.yaml
+  - test-docs/task-tier-reduction/task0012.tests.yaml
+  - test-docs/task-tier-reduction/task0013.tests.yaml
+  - test-docs/tip-capture-idiom-unification/task0001.tests.yaml
+  - test-docs/tip-capture-idiom-unification/task0002.tests.yaml
+  - test-docs/validator-scenario-id-format/task0001.tests.yaml
+  - tests/test_exit4_ac2_test_id_drift.py
+  changed_lines_approx: 2300
+  new_functions_needed: 8
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_exit4_ac2_test_id_drift.py
+  work_still_required: true
+  work_still_required_evidence: Python 3.14.4で全409ファイルを読み、リポジトリルートとtests/をsys.pathに追加して再現した。空白を含む819要素を除外した8,352件のうち、133ファイルの1,035件が解決できなかった。重複を除く失敗IDは941件で、すべてloader.errorsに記録され、末尾の例外はAttributeErrorが410件、ModuleNotFoundErrorが625件だった。YAMLの読み取り失敗、例外送出、テスト数0はなかった。例えばfailed-run-cleanup-guard/task0001.tests.yamlは41件、llm-led-review/task0001.tests.yamlは39件、abort-phase-terminal/task0001.tests.yamlは38件失敗した。tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_abort_bullet_opens_with_exact_literalは記録された書式では読み込めず、test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2はメソッドが存在しなかった。パスと::をドット形式に変換すると257件は解決したが、123ファイルの778件は残った。省略名TBE.test_*や独自実行器のhooks:TS-1も記録されているため、失敗すべてをリネーム漏れとは断定できない。既存のtests/test_exit4_ac2_test_id_drift.pyはexit4-tip-argument/task0002.tests.yamlだけを対象にしている。書き込みを伴わない既存27テストはすべて成功したが、既存の抽出関数は全409ファイル中90ファイルを自由記述や非空のインライン配列などで拒否した。見積もりは、不正IDを持つ133記録の修正と既存検査1ファイルへの全件検査追加を前提とする。不正IDの記載行は1,032行あり、各行の置換を削除・追加で数えた2,064行に検査拡張約200行を加え、約2,300行とした。新規関数数は補助関数2個と追加テスト6個を含む。依存数10は既存検査の直接import先で、すべて標準ライブラリだった。他のテストモジュールから同検査の関数を呼ぶ箇所は検索で見つからなかった。外部契約の変更は見積もりに含めず、挙動の変更は記録の解決結果と全件検査の成否を指す。ファイルは変更せず、調査前後のgit
+    status --shortは空だった。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 6
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 10
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-09T00:25:40+09:00'
