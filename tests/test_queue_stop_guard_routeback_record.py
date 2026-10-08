@@ -60,6 +60,14 @@ occurrence): the reader returns {} instead of {"task0001": "1"} for the
 reproduction block and for the glued-value block, and the hook exits 0 instead
 of 2 for the reproduction block. The preservation cases (tab after the colon,
 empty value before a record, a lone lookalike line) pass on both revisions.
+
+queue-stop-guard-nonascii-blank-state (task0001): the sections headed with that
+name pin that, in the block-scalar state and in the plain-scalar continuation
+state, a line made only of non-ASCII whitespace (U+3000, U+00A0, U+000B,
+U+000C) neither continues nor ends the state, whatever its indentation, so a
+following `- 'x` line opens nothing. Observed red (base revision): that line
+ends the state, the `- 'x` line opens a single-quoted value, and the genuine
+direct-key record and task0002 are swallowed, so the hook exits 0 instead of 2.
 """
 
 import ast
@@ -2677,19 +2685,21 @@ class TestOtherNonAsciiWhitespaceIsNotBlank(OpeningPositionHookCase):
 
 
 class TestBlockScalarEndsAtANonAsciiBlankLineByIndentation(unittest.TestCase):
-    """task0001 AC-5 (additional case) (FR2): in block-scalar state the
-    tracker's blank-line rule is the same one. A column-0 line of U+3000 is not
-    blank, so its indentation (0) ends the block scalar: the `- 'x` line after
-    it is read and opens a single-quoted value, whose continuation line is a
-    body line and is never yielded by the block scan."""
+    """task0001 AC-5 (additional case) (FR2), as rewritten by
+    queue-stop-guard-nonascii-blank-state (FR5): in block-scalar state a
+    non-ASCII blank line neither continues nor ends the state, whatever its
+    indentation. A column-0 line of U+3000 does not end the block scalar: the
+    `- 'x` line after it is still a body line of the block scalar and opens
+    nothing, so the `y'` line after that is yielded by the block scan too. The
+    class name is kept: the sibling test below is referenced by it."""
 
-    def test_the_block_scalar_ends_at_the_column_zero_non_ascii_line(self):  # AC-5
+    def test_the_block_scalar_does_not_end_at_the_column_zero_non_ascii_line(self):  # AC-5
         notes = ["    notes: |", "      body line", "　", "      - 'x", "      y'"]
         text = continuation_workflow(notes)
         lines = [line for _task, line in call_reader("iter_task_block_lines", text)]
         self.assertIn("      body line\n", lines)
         self.assertIn("      - 'x\n", lines)
-        self.assertNotIn("      y'\n", lines)
+        self.assertIn("      y'\n", lines)
 
     def test_a_deeper_non_ascii_line_stays_a_body_line(self):  # AC-5
         notes = ["    notes: |", "      body line", "      　", "      - 'x", "      y'"]
@@ -2990,6 +3000,294 @@ class TestHookImportsStdlibOnly(unittest.TestCase):
         for name in imported:
             if stdlib_names is not None:
                 self.assertIn(name, stdlib_names, "%s is not a stdlib module" % name)
+
+
+# --- queue-stop-guard-nonascii-blank-state (task0001): state kept across non-ASCII blank lines ---
+#
+# In the block-scalar state and in the plain-scalar continuation state, a line
+# made only of non-ASCII whitespace (U+3000, U+00A0, U+000B, U+000C) neither
+# continues nor ends the state, whatever its indentation (column 0, the parent's
+# indentation or deeper); the next line that is not such a line is judged
+# against the unchanged state, as if the line were absent. Such a line is a
+# "non-ASCII blank line": empty after `str.strip()`, yet not made only of
+# U+0020 spaces and U+0009 tabs.
+#
+# Observed red (base revision): the line ends the state, the `- 'x` line after
+# it opens a single-quoted value, and the genuine record and task0002 are
+# swallowed (the hook exits 0 instead of 2, the readers return {} and
+# ['task0001']).
+#
+# The hook reads workflow.yaml with `readlines()` in text mode, which splits
+# lines at LF, CR and CRLF only: a line of U+000B or U+000C stays one physical
+# line of its own and does not reduce to an empty line.
+
+U3000 = "　"
+U00A0 = " "
+U000B = "\x0b"
+U000C = "\x0c"
+
+
+def is_non_ascii_blank_line(line):
+    """The tracker's non-ASCII blank class, spelled out for the fixtures."""
+    return line.strip() == "" and line.strip(" \t") != ""
+
+
+def reported_form_notes(form, char):
+    """`notes` lines of the three reported forms; `char` is the whitespace
+    character that makes up the blank line."""
+    if form == "block-scalar-column-zero":
+        return ["    notes: |", "      body line", char, "      - 'x"]
+    if form == "block-scalar-parent-indent":
+        return ["    notes: |", "      body line", "    " + char, "      - 'x"]
+    if form == "plain-continuation":
+        return ["    notes: hello", char, "      - 'x"]
+    raise ValueError(form)
+
+
+REPORTED_FORMS = (
+    "block-scalar-column-zero",
+    "block-scalar-parent-indent",
+    "plain-continuation",
+)
+# The three reported forms x {U+3000, U+00A0}: six fixtures.
+REPORTED_FORM_NOTES = {
+    "%s %s" % (form, code_point): reported_form_notes(form, char)
+    for form in REPORTED_FORMS
+    for code_point, char in (("U+3000", U3000), ("U+00A0", U00A0))
+}
+
+# Edge cases: every one keeps the genuine record and task0002 readable. A
+# `- 'x` line after the blank line is a body line of the block scalar (deeper
+# than its parent) or a continuation line of the plain scalar (deeper than the
+# key's or the item indicator's column), so it opens nothing.
+EDGE_CASE_NOTES = {
+    "U+000B column zero in a block scalar": [
+        "    notes: |", "      body line", U000B, "      - 'x",
+    ],
+    "U+000C column zero in a block scalar": [
+        "    notes: |", "      body line", U000C, "      - 'x",
+    ],
+    "U+000B column zero in a plain continuation": [
+        "    notes: hello", U000B, "      - 'x",
+    ],
+    "U+000C column zero in a plain continuation": [
+        "    notes: hello", U000C, "      - 'x",
+    ],
+    "U+3000 at column 2 in a block scalar": [
+        "    notes: |", "      body line", "  " + U3000, "      - 'x",
+    ],
+    "U+00A0 at column 2 in a plain continuation": [
+        "    notes: hello", "  " + U00A0, "      - 'x",
+    ],
+    "item content plain scalar": [
+        "    notes:", "      - hello", U3000, "        - 'x",
+    ],
+    "plain scalar on the line after the key": [
+        "    notes:", "      retry failed", U3000, "      - 'x",
+    ],
+    "block scalar header >": [
+        "    notes: >", "      body line", U3000, "      - 'x",
+    ],
+    "block scalar header |-": [
+        "    notes: |-", "      body line", U3000, "      - 'x",
+    ],
+    "block scalar header item - |": [
+        "    notes:", "      - |", "        body line", U3000, "        - 'x",
+    ],
+    "two consecutive blank lines in a block scalar": [
+        "    notes: |", "      body line", U3000, U00A0, "      - 'x",
+    ],
+    "three consecutive blank lines at mixed columns in a block scalar": [
+        "    notes: |", "      body line", U3000, "  " + U00A0, "    " + U000B,
+        "      - 'x",
+    ],
+    "two consecutive blank lines in a plain continuation": [
+        "    notes: hello", U3000, U00A0, "      - 'x",
+    ],
+    "three consecutive blank lines at mixed columns in a plain continuation": [
+        "    notes: hello", "    " + U000C, U3000, "  " + U00A0, "      - 'x",
+    ],
+}
+
+
+def non_blank_lines(notes):
+    return [line for line in notes if not is_non_ascii_blank_line(line)]
+
+
+def read_all(text):
+    """The three readers' results on `text`, as comparable values."""
+    return (
+        call_reader("task_ids_from_workflow", text),
+        call_reader("iter_task_block_lines", text),
+        call_reader("task_routeback_records_from_workflow", text),
+    )
+
+
+class TestStateFixturesCarryNonAsciiBlankLines(unittest.TestCase):
+    """Every fixture holds a real non-ASCII blank line (never a space or tab
+    line), so the tests below cannot pass vacuously."""
+
+    def test_each_fixture_holds_a_non_ascii_blank_line(self):
+        for table in (REPORTED_FORM_NOTES, EDGE_CASE_NOTES):
+            for label, notes in table.items():
+                with self.subTest(fixture=label):
+                    self.assertTrue(any(is_non_ascii_blank_line(l) for l in notes))
+
+    def test_the_six_reported_fixtures_are_distinct(self):
+        self.assertEqual(len(REPORTED_FORM_NOTES), 6)
+        distinct = {tuple(notes) for notes in REPORTED_FORM_NOTES.values()}
+        self.assertEqual(len(distinct), 6)
+
+
+class TestNonAsciiBlankLineKeepsTheStateHook(OpeningPositionHookCase):
+    """task0001 AC-1 (FR1, FR2; TM-1): the hook, run as a subprocess with
+    Stop-hook JSON on stdin, blocks (BLOCK, exit 2) and launches task0001 and
+    task0002 on each of the six reported fixtures."""
+
+    def test_the_hook_blocks_and_launches_task0001_and_task0002(self):  # AC-1
+        for label, notes in REPORTED_FORM_NOTES.items():
+            with self.subTest(fixture=label):
+                result = run_scenario(
+                    self.journal, workflow_text=continuation_workflow(notes)
+                )
+                self.assert_launches_both(result)
+
+
+class TestNonAsciiBlankLineKeepsTheStateReaders(unittest.TestCase):
+    """task0001 AC-2 (FR1, FR2; TM-1) and AC-3 (FR1, FR2, FR3; TM-1): the
+    readers, called directly on the module loaded from its file path, return
+    `[task0001, task0002]` and map task0001 to "1" on every reported fixture
+    and every edge case."""
+
+    def assert_record_and_task0002_are_read(self, notes):
+        text = continuation_workflow(notes)
+        self.assertEqual(
+            call_reader("task_ids_from_workflow", text), [TARGET, "task0002"]
+        )
+        records = call_reader("task_routeback_records_from_workflow", text)
+        self.assertEqual(records.get(TARGET), "1")
+
+    def test_the_reported_forms_read_the_record_and_task0002(self):  # AC-2
+        for label, notes in REPORTED_FORM_NOTES.items():
+            with self.subTest(fixture=label):
+                self.assert_record_and_task0002_are_read(notes)
+
+    def test_the_edge_cases_read_the_record_and_task0002(self):  # AC-3
+        for label, notes in EDGE_CASE_NOTES.items():
+            with self.subTest(fixture=label):
+                self.assert_record_and_task0002_are_read(notes)
+
+    def test_the_state_is_judged_as_if_the_blank_lines_were_absent(self):  # AC-2, AC-3
+        # The postcondition of the rule: with the non-ASCII blank lines
+        # removed the readers return exactly the same results.
+        for table in (REPORTED_FORM_NOTES, EDGE_CASE_NOTES):
+            for label, notes in table.items():
+                with self.subTest(fixture=label):
+                    with_blanks = read_all(continuation_workflow(notes))
+                    without = read_all(continuation_workflow(non_blank_lines(notes)))
+                    self.assertEqual(with_blanks, without)
+
+
+class TestNonAsciiWhitespaceWithTextStillEndsTheState(OpeningPositionHookCase):
+    """task0001 AC-3 (FR3): a line of non-ASCII whitespace followed by a
+    non-whitespace character is not a non-ASCII blank line; it is judged by
+    its indentation and still ends the state, so the `- 'x` line after it
+    opens a quoted value that hides the record (unchanged behavior)."""
+
+    def test_whitespace_followed_by_text_is_judged_by_indentation(self):  # AC-3
+        forms = {
+            "block-scalar": [
+                "    notes: |", "      body line", U3000 + "x", "      - 'x",
+            ],
+            "plain-continuation": ["    notes: hello", U3000 + "x", "      - 'x"],
+        }
+        for label, notes in forms.items():
+            with self.subTest(fixture=label):
+                result = run_scenario(
+                    self.journal, workflow_text=continuation_workflow(notes)
+                )
+                self.assert_failed(result)
+
+
+class TestNonAsciiBlankLineStateReadersNeverRaise(unittest.TestCase):
+    """task0001 AC-4 (NFR2; TM-2): the task-id, block-scan and record readers
+    return without raising on every reported fixture, every edge case, and on
+    block-scalar, plain-continuation and single-quoted values that stay
+    unclosed to the end of the file and contain non-ASCII blank lines."""
+
+    READERS = (
+        "task_ids_from_workflow",
+        "iter_task_block_lines",
+        "task_routeback_records_from_workflow",
+    )
+
+    UNCLOSED_TAILS = {
+        "block-scalar-to-end-of-file": [
+            "  task0003:", "    notes: |", "      body line", U3000, "      more",
+            "  " + U00A0,
+        ],
+        "plain-continuation-to-end-of-file": [
+            "  task0003:", "    notes: hello", U3000, "      more text", U00A0,
+        ],
+        "single-quoted-item-to-end-of-file": [
+            "  task0003:", "    notes:", "      - 'unclosed", U3000, "      more",
+            "  " + U00A0,
+        ],
+        "non-ascii-blank-line-as-the-last-line": [
+            "  task0003:", "    notes: |", "      body line", U3000,
+        ],
+    }
+
+    def test_every_reported_fixture_and_edge_case(self):  # AC-4
+        for table in (REPORTED_FORM_NOTES, EDGE_CASE_NOTES):
+            for label, notes in table.items():
+                text = continuation_workflow(notes)
+                for reader in self.READERS:
+                    with self.subTest(fixture=label, reader=reader):
+                        call_reader(reader, text)  # must not raise
+
+    def test_values_left_unclosed_to_the_end_of_the_file(self):  # AC-4
+        for label, tail in self.UNCLOSED_TAILS.items():
+            text = build_workflow(
+                [task_spec(TARGET, extra=record_lines("1")), task_spec("task0002")],
+                tail_lines=tail,
+            )
+            for reader in self.READERS:
+                with self.subTest(tail=label, reader=reader):
+                    call_reader(reader, text)  # must not raise
+
+
+# AC-5 (FR5) is the rewritten test in
+# TestBlockScalarEndsAtANonAsciiBlankLineByIndentation above.
+
+
+def live_class_docstring(name):
+    with open(HOOK_PATH, encoding="utf-8") as fh:
+        tree = ast.parse(fh.read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == name:
+            return ast.get_docstring(node, clean=False)
+    raise AssertionError("%s not found" % name)
+
+
+class TestTrackerClassDocstring(unittest.TestCase):
+    """task0001 AC-6 (FR4): the tracker's class docstring no longer says that a
+    non-ASCII blank line is read "by its indentation inside a block scalar".
+    The positive statement (such a line neither continues nor ends the
+    block-scalar and plain-continuation states) is checked by reading the
+    docstring: the SPEC fixes its meaning, not its wording."""
+
+    REMOVED_PHRASE = "or by its indentation inside a block scalar"
+
+    def test_the_removed_phrase_is_absent(self):  # AC-6
+        text = normalize_whitespace(live_class_docstring("_MultilineValueTracker"))
+        self.assertTrue(text)
+        self.assertNotIn(self.REMOVED_PHRASE, text)
+
+    def test_the_class_docstring_mentions_the_non_ascii_blank_line_rule(self):  # AC-6
+        text = normalize_whitespace(live_class_docstring("_MultilineValueTracker"))
+        self.assertIn("neither continues nor ends", text)
+        self.assertIn("non-ASCII blank line", text)
 
 
 # --- AC-7: module discipline -------------------------------------------------
