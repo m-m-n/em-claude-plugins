@@ -291,10 +291,13 @@ FROZEN_SECTIONS = [
         "70cec02e098416fb3a2b800b017e141eb17f24f121bec5abd45cde6969e6ecf4",
     ),
     (
+        # Refreshed by feature-docs/security-review-repro-steps/tasks/task0001.md:
+        # the Output Schema section gained the `reproduction` example field
+        # and its four value rules.
         "Output Schema",
         "## Output Schema",
         "## Round Continuity",
-        "8a40ceb994ad00288c6c9dcf412c13fcba2be1e2faafd02e7fde856f19f1344e",
+        "adf9e29498986782e7eb4ab7aafadd432c5cd94dd7a5909b7d4e77e539ba3f41",
     ),
     (
         "Read-only Constraint",
@@ -432,6 +435,8 @@ FROZEN_SCHEMA_ROOT = {
     "additionalProperties": False,
 }
 
+# Refreshed by feature-docs/security-review-repro-steps/tasks/task0001.md:
+# the finding `required` list gained `reproduction` after `suggestion`.
 FROZEN_FINDING_REQUIRED = [
     "file",
     "line",
@@ -441,6 +446,7 @@ FROZEN_FINDING_REQUIRED = [
     "title",
     "description",
     "suggestion",
+    "reproduction",
 ]
 
 FROZEN_SEVERITY_ENUM = ["critical", "high", "medium"]
