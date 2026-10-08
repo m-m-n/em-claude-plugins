@@ -4,7 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_id_with_pending_status_is_unlaunched_and_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_id_with_pending_status_is_unlaunched_and_blocks
     red_confirmed: true
     red_reason: "AssertionError: 0 != 2 — the hook exited 0 (suppressed by \
       the residual `failed` event) because the classification branch did \
@@ -12,11 +12,11 @@ acceptance_tests:
       `pending` in this fixture."
   AC-2:
     tests:
-      - test_queue_stop_guard.TestQueueStopGuardFailedTask.test_failed_task_present_never_blocks
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_non_pending_status_still_suppresses
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_absent_status_key_still_suppresses
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_mixed_retired_and_genuinely_failed_tasks_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailedTask.test_failed_task_present_never_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_non_pending_status_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_absent_status_key_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_mixed_retired_and_genuinely_failed_tasks_suppresses
     red_confirmed: false
     red_reason: "These assert exit 0 (suppression), which the PRE-existing \
       hook already produced for every `failed` last event regardless of \
@@ -28,7 +28,7 @@ acceptance_tests:
       counterpart (the carve-out itself)."
   AC-3:
     tests:
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_status_scoped_to_own_task_block_not_confused_with_step_status
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_status_scoped_to_own_task_block_not_confused_with_step_status
     red_confirmed: false
     red_reason: "Same reason as AC-2: this fixture's task status (\"skipped\", \
       borrowed from the `design` step's own vocabulary to probe cross-block \
@@ -40,10 +40,10 @@ acceptance_tests:
       red-then-green criterion test."
   AC-4:
     tests:
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_consecutive_block_cap_still_works_with_reclassified_task
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_task_id_absent_from_tasks_mapping_is_ignored_even_if_failed_in_journal
-      - test_queue_stop_guard.TestQueueStopGuardRetryAfterFailure.test_retried_task_counts_as_in_flight
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_consecutive_block_cap_still_works_with_reclassified_task
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_task_id_absent_from_tasks_mapping_is_ignored_even_if_failed_in_journal
+      - tests.test_queue_stop_guard.TestQueueStopGuardRetryAfterFailure.test_retried_task_counts_as_in_flight
     red_confirmed: true
     red_reason: "test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list \
       and test_consecutive_block_cap_still_works_with_reclassified_task both \
@@ -57,12 +57,12 @@ acceptance_tests:
       test, unaffected since its last event is `launched`, not `failed`."
   AC-5:
     tests:
-      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_journal_directory_passes
-      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_journal_line_is_skipped_not_fatal
-      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_stdin_passes
-      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_feature_docs_passes
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_absent_status_key_still_suppresses
-      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_journal_directory_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_journal_line_is_skipped_not_fatal
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_stdin_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_feature_docs_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_absent_status_key_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
     red_confirmed: false
     red_reason: "The fail-open sweep is pre-existing coverage, unaffected by \
       this task (no new failure mode was introduced — \

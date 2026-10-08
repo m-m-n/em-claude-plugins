@@ -60,7 +60,7 @@ acceptance_tests:
     red_reason: "AC-6 asserts an existing invariant of em-workflow/scripts/validate-worker-output.py, which this task's Out of Scope explicitly forbids changing. The positive case (empty requirements map + empty requirements list, exit 0) and the negative proof (missing complexity, exit 1 naming 'complexity') both passed on first run, before any implementation in this task touched the script -- there was no red state to observe because no code change was needed to satisfy this criterion. Verified directly by re-running this test file before any doc/template edit existed: it was already green (see notes)."
   AC-7:
     tests:
-      - tests/test_tier_phase_preconditions.py
+      - tests.test_tier_phase_preconditions
     red_confirmed: true
     red_reason: "The module itself only exists once written; before that, 'python3 -m unittest discover -s tests' could not discover it. Once written (before doc/template implementation), 20 of 28 initial test methods failed (7 content-assertion failures + 1 setUpClass ERROR for the missing template file), confirming the module's own assertions were exercising real, then-missing content rather than being vacuously true."
 notes: >

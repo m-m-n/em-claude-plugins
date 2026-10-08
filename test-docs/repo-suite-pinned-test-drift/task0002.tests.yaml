@@ -33,7 +33,7 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+      - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
     red_confirmed: true
     red_reason: >-
       AssertionError: 'argument-hint: "[feature-path] [--report-only]
@@ -42,7 +42,7 @@ acceptance_tests:
       [task-description], so the old constant without --pr did not match).
   AC-2:
     tests:
-      - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+      - tests.test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
     red_confirmed: true
     red_reason: >-
       AssertionError: 'batch:質問せず自動で「ブランチを残す」を選ぶ。
@@ -51,7 +51,7 @@ acceptance_tests:
       prefix the old constant lacked).
   AC-3:
     tests:
-      - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+      - tests.test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
     red_confirmed: true
     red_reason: >-
       AssertionError: '`batch-mode.md` の Non-packet gates 表' not found in
@@ -60,11 +60,11 @@ acceptance_tests:
       "の" and "Non-packet", which a plain assertIn could not bridge.
   AC-4:
     tests:
-      - test_develop_once_option.TestArgumentHintTokenMatcherCanFail.test_matcher_rejects_line_missing_pr
-      - test_step_c_verify_failed_default.TestBatchAutoSelectMatcherCanFail.test_matcher_rejects_old_phrase_only_text
-      - test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_accepts_wrapped_reference
-      - test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_missing_reference
-      - test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_reference_with_altered_word
+      - tests.test_develop_once_option.TestArgumentHintTokenMatcherCanFail.test_matcher_rejects_line_missing_pr
+      - tests.test_step_c_verify_failed_default.TestBatchAutoSelectMatcherCanFail.test_matcher_rejects_old_phrase_only_text
+      - tests.test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_accepts_wrapped_reference
+      - tests.test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_missing_reference
+      - tests.test_step_c_verify_failed_default.TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_reference_with_altered_word
     red_confirmed: true
     red_reason: >-
       Matcher and its negative-proof test were authored together (same
@@ -77,7 +77,7 @@ acceptance_tests:
       once the correct strip_ws-based matcher was restored.
   AC-5:
     tests:
-      - test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_askuserquestion_and_three_way_wording_present
+      - tests.test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_askuserquestion_and_three_way_wording_present
     red_confirmed: false
     red_reason: >-
       Pre-existing passing test, untouched by this task; verified it still

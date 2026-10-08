@@ -31,33 +31,33 @@ final_failures:
   - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
 acceptance_tests:
   AC-1:
-    tests: [test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged]
+    tests: [tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged]
     red_confirmed: true
     red_reason: "assertIn('baseline: [comprehensive]', self.text) failed -- the file's actual line is 'baseline: [comprehensive, security]' (observed in the 4a baseline run, exit 1)"
   AC-2:
-    tests: [test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged]
+    tests: [tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged]
     red_confirmed: true
     red_reason: "assertEqual on the rules block failed -- expected block had 5 rules (including an auth/input-handling rule and require: [security, performance]) but the file has 4 rules starting with if_domains: [data-persistence] / require: [performance] (observed in the 4a baseline run, exit 1)"
   AC-3:
-    tests: [test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged]
+    tests: [tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged]
     red_confirmed: true
     red_reason: "assertEqual on the when_any block failed -- expected block had two conditions (complexity: high, selected_perspective: security) but the file's when_any holds only complexity: high (observed in the 4a baseline run, exit 1)"
   AC-4:
-    tests: [test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose]
+    tests: [tests.test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose]
     red_confirmed: true
     red_reason: "assertIn('re-evaluates it after Layer 2', self.norm) failed -- the normalized header contains 'so Layer 1 settles the value and Layer 2 cannot change it' instead (observed in the 4a baseline run, exit 1)"
   AC-5:
     tests:
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_baseline_rejects_prior_value_without_security
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_baseline_rejects_value_lacking_security
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_rules_block_rejects_prior_five_rule_set
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_rules_block_rejects_missing_rule
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_rules_block_rejects_extra_rule
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_when_any_rejects_prior_dual_condition_value
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_when_any_rejects_condition_other_than_complexity_high
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_prose_rejects_text_with_only_the_retired_phrase
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_prose_accepts_current_phrase_wrapped_at_a_different_word
-      - test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_prose_rejects_current_phrase_with_one_word_altered
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_baseline_rejects_prior_value_without_security
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_baseline_rejects_value_lacking_security
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_rules_block_rejects_prior_five_rule_set
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_rules_block_rejects_missing_rule
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_rules_block_rejects_extra_rule
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_when_any_rejects_prior_dual_condition_value
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_when_any_rejects_condition_other_than_complexity_high
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_prose_rejects_text_with_only_the_retired_phrase
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_prose_accepts_current_phrase_wrapped_at_a_different_word
+      - tests.test_reviewers_primary_chains.TestReviewRulesMatchersRejectForgedInput.test_prose_rejects_current_phrase_with_one_word_altered
     red_confirmed: true
     red_reason: "NameError: name 'baseline_matches_current' is not defined (and likewise for the other four matcher functions) -- observed by running TestReviewRulesMatchersRejectForgedInput alone before any matcher function existed in the module"
   AC-6:

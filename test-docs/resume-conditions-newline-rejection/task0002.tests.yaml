@@ -14,10 +14,9 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_manifest_name_is_em_workflow
-      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_manifest_has_a_version_key
-      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_version_is_on_the_0_1_x_line
-      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_manifest_name_is_em_workflow
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_manifest_has_a_version_key
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
     red_confirmed: true
     red_reason: >
       Before the manifest was edited, running
@@ -31,9 +30,9 @@ acceptance_tests:
       guards for the rest of AC-1's claim.
   AC-2:
     tests:
-      - test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_succeeds_and_has_a_version_key
-      - test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
-      - test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_succeeds_and_has_a_version_key
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
     red_confirmed: true
     red_reason: >
       Before the manifest was edited, test_em_workflow_entry_version_is_past_baseline
@@ -47,8 +46,8 @@ acceptance_tests:
       passed from the first run (the lookup is correct by construction).
   AC-3:
     tests:
-      - test_resume_conditions_newline_rejection_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
-      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
     red_confirmed: false
     red_reason: >
       This task never touches the em-review plugin or its marketplace
@@ -61,14 +60,14 @@ acceptance_tests:
       correct by construction.
   AC-4:
     tests:
-      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_negative_proof_versions_parse_cleanly
-      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
-      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
-      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
-      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
-      - test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
-      - test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_version_tuple_orders_two_digit_patch_correctly
-      - test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_negative_proof_versions_parse_cleanly
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_version_tuple_orders_two_digit_patch_correctly
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
     red_confirmed: false
     red_reason: >
       These are hermetic proofs against synthetic values, exercised via
@@ -83,7 +82,7 @@ acceptance_tests:
       Carried into the implementer report per tdd-testing's carve-out.
   AC-5:
     tests:
-      - test_resume_conditions_newline_rejection_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_resume_conditions_newline_rejection_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
     red_confirmed: false
     red_reason: >
       Discovery under `python3 -m unittest discover -s tests` and the

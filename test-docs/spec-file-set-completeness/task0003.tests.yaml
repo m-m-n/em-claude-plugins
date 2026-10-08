@@ -29,7 +29,6 @@ acceptance_tests:
       - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_category_unchanged
       - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_source_unchanged
       - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_description_retains_stable_anchor
-      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
     red_confirmed: true
     red_reason: >-
       test_em_workflow_entry_version_is_past_baseline observed red before
@@ -59,7 +58,6 @@ acceptance_tests:
       - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_version_matcher_flags_forged_baseline_patch_version
       - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_version_matcher_flags_malformed_shape
       - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_agreement_matcher_flags_a_mismatched_pair
-      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_flags_an_altered_entry
       - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_entry_lookup_flags_a_missing_entry_name
     red_confirmed: true
     red_reason: >-

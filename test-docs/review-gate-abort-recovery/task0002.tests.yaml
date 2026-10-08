@@ -67,7 +67,6 @@ acceptance_tests:
     red_reason: "The interactive-unchanged statement and the AskUserQuestion count of 7 in the develop skill pre-existed this change, and the existing test_muse_consent_no_new_questions pins the count; the negative twins and non-vacuity checks are structural properties of the new module. No red state occurred for this change."
   AC-7:
     tests:
-      - "python3 -m unittest discover -s tests"
-      - "python3 em-workflow/scripts/check-plugin-invariants.py ."
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
     red_confirmed: false
-    red_reason: "Non-regression criterion: both commands pass on the baseline and after the change (7352 tests before, 7394 after, 42 of them in the new module; all seven invariants PASS); no red state occurred for this change."
+    red_reason: "Non-regression criterion: both commands pass on the baseline and after the change (7352 tests before, 7394 after, 42 of them in the new module; all seven invariants PASS); no red state occurred for this change. Removed from tests (not a unittest ID): python3 -m unittest discover -s tests"

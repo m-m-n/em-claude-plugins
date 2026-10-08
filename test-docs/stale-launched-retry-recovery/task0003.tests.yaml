@@ -4,11 +4,11 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_all_six_codes_present
-      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_codes_appear_in_fixed_relative_order
-      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_termination_conjunct_present
-      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_stop_result_conjunct_present
-      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_insufficiency_statement_present
+      - tests.test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_all_six_codes_present
+      - tests.test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_codes_appear_in_fixed_relative_order
+      - tests.test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_termination_conjunct_present
+      - tests.test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_stop_result_conjunct_present
+      - tests.test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_insufficiency_statement_present
     red_confirmed: true
     red_reason: >-
       Verified directly against the pre-edit snapshot (git show HEAD for
@@ -23,8 +23,8 @@ acceptance_tests:
       same-session-extension paragraph was written.
   AC-2:
     tests:
-      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_recorded_identity_never_stop_target
-      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_stale_launched_invocation_named
+      - tests.test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_recorded_identity_never_stop_target
+      - tests.test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_stale_launched_invocation_named
     red_confirmed: true
     red_reason: >-
       Verified against the same pre-edit snapshot: "The recorded session
@@ -35,8 +35,8 @@ acceptance_tests:
       paragraph existed, passed after.
   AC-3:
     tests:
-      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_covers_neither_event_stop
-      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_names_extended_same_session_branch
+      - tests.test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_covers_neither_event_stop
+      - tests.test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_names_extended_same_session_branch
     red_confirmed: true
     red_reason: >-
       Verified against the pre-edit snapshot: the Stale-`launched` caveat
@@ -46,8 +46,8 @@ acceptance_tests:
       passed once the fifth-mechanism sentence was appended.
   AC-4:
     tests:
-      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_states_stale_launched_additive_value
-      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_writer_set_enumeration_unchanged
+      - tests.test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_states_stale_launched_additive_value
+      - tests.test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_writer_set_enumeration_unchanged
     red_confirmed: true
     red_reason: >-
       The additive-value half is genuinely new: the pre-edit
@@ -66,8 +66,8 @@ acceptance_tests:
       matcher does reject a forged addition/removal.
   AC-5:
     tests:
-      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_abort_bullet_attributes_orphaned_or_stale_launched
-      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_batch_paragraph_byte_identical_to_pre_change_text
+      - tests.test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_abort_bullet_attributes_orphaned_or_stale_launched
+      - tests.test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_batch_paragraph_byte_identical_to_pre_change_text
     red_confirmed: true
     red_reason: >-
       The attribution half is genuinely new: pre-edit, the abort-phase
@@ -82,20 +82,20 @@ acceptance_tests:
       "Batch mode (`references/batch-mode.md`") has zero changed lines.
   AC-6:
     tests:
-      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_negative_proof_missing_code_is_detected
-      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_negative_proof_out_of_order_codes_detected
-      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_termination_conjunct_absent_when_removed
-      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_stop_result_conjunct_absent_when_removed
-      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_insufficiency_absent_when_removed
-      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_negative_proof_identity_statement_absent_when_removed
-      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_negative_proof_invocation_absent_when_removed
-      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_negative_proof_neither_event_phrase_absent_when_removed
-      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_negative_proof_extended_branch_absent_when_removed
-      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_additive_phrase_absent_when_removed
-      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_added_writer_is_detected
-      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_removed_writer_is_detected
-      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_negative_proof_stale_launched_disjunct_absent_when_removed
-      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_negative_proof_batch_paragraph_mismatch_detected
+      - tests.test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_negative_proof_missing_code_is_detected
+      - tests.test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_negative_proof_out_of_order_codes_detected
+      - tests.test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_termination_conjunct_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_stop_result_conjunct_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_insufficiency_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_negative_proof_identity_statement_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_negative_proof_invocation_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_negative_proof_neither_event_phrase_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_negative_proof_extended_branch_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_additive_phrase_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_added_writer_is_detected
+      - tests.test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_removed_writer_is_detected
+      - tests.test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_negative_proof_stale_launched_disjunct_absent_when_removed
+      - tests.test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_negative_proof_batch_paragraph_mismatch_detected
     red_confirmed: false
     red_reason: >-
       Structural property of the new module itself (every positive
@@ -125,7 +125,7 @@ acceptance_tests:
       and the abort-phase bullet's phrase.
   AC-8:
     tests:
-      - test_stale_launched_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+      - tests.test_stale_launched_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
     red_confirmed: false
     red_reason: >-
       The module was authored with only `ast`, `re`, `unittest` and

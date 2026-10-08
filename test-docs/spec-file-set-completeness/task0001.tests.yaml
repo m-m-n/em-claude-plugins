@@ -22,7 +22,6 @@ acceptance_tests:
       - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_every_feature_docs_member_named
       - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_design_artifacts_phrase_named
       - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_test_docs_member_named
-      - tests.test_spec_template_declared_change_set.TestPlaceholderSlot.test_author_placeholder_present
     red_confirmed: true
     red_reason: >-
       setUpClass for TestRootLiteralsPresent and TestEnumerationAndCitation,
@@ -75,7 +74,6 @@ acceptance_tests:
       - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_root_literals_matcher_flags_absence_in_pre_change_sample
       - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_enumeration_and_citation_matcher_flags_absence_in_pre_change_sample
       - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_semantics_matcher_flags_absence_in_pre_change_sample
-      - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_placeholder_matcher_flags_absence_in_pre_change_sample
       - tests.test_spec_template_declared_change_set.TestPreChangeSampleGuards.test_sample_retains_file_structure_anchor
       - tests.test_spec_template_declared_change_set.TestPreChangeSampleGuards.test_sample_retains_test_scenarios_anchor
     red_confirmed: false

@@ -4,11 +4,11 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCaptureResolvesBranchRef::test_every_site_captures_from_the_branch_ref
-      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCaptureNeverUsesWorktreeHead::test_no_site_captures_from_head
-      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteRefreshNeverTargetsCapturedValue::test_no_site_refreshes_to_its_own_captured_variable
-      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteExplicitRefreshTargetsBranchName::test_explicit_refresh_commands_target_the_branch_name
-      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCapturePrecedesRefresh::test_capture_precedes_refresh_in_every_site
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteCaptureResolvesBranchRef.test_every_site_captures_from_the_branch_ref
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteCaptureNeverUsesWorktreeHead.test_no_site_captures_from_head
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteRefreshNeverTargetsCapturedValue.test_no_site_refreshes_to_its_own_captured_variable
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteExplicitRefreshTargetsBranchName.test_explicit_refresh_commands_target_the_branch_name
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteCapturePrecedesRefresh.test_capture_precedes_refresh_in_every_site
     red_confirmed: true
     red_reason: >-
       Stashed the implement-phase.md edit (restoring the pre-conversion
@@ -24,9 +24,9 @@ acceptance_tests:
       the stash and re-ran: all green.
   AC-2:
     tests:
-      - tests/test_tip_capture_idiom_uniformity.py::TestExit4RecoveryBulletStatesRecaptureBeforeRefresh::test_states_recapture_from_branch_ref
-      - tests/test_tip_capture_idiom_uniformity.py::TestExit4RecoveryBulletStatesRecaptureBeforeRefresh::test_recapture_precedes_refresh
-      - tests/test_tip_capture_idiom_uniformity.py::TestExit4RecoveryBulletStatesRecaptureBeforeRefresh::test_refresh_targets_branch_name
+      - tests.test_tip_capture_idiom_uniformity.TestExit4RecoveryBulletStatesRecaptureBeforeRefresh.test_states_recapture_from_branch_ref
+      - tests.test_tip_capture_idiom_uniformity.TestExit4RecoveryBulletStatesRecaptureBeforeRefresh.test_recapture_precedes_refresh
+      - tests.test_tip_capture_idiom_uniformity.TestExit4RecoveryBulletStatesRecaptureBeforeRefresh.test_refresh_targets_branch_name
     red_confirmed: false
     red_reason: >-
       The Branch & Worktree Model's exit-4 recovery bullet already stated
@@ -40,10 +40,10 @@ acceptance_tests:
       AC-1's per-site tests, which did go red.
   AC-3:
     tests:
-      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCaptureResolvesBranchRef::test_every_site_captures_from_the_branch_ref
-      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCapturePrecedesRefresh::test_capture_precedes_refresh_in_every_site
-      - tests/test_review_implement_develop_lock_contracts.py::TestImplementPhaseWakePhaseOrdering::test_wake_phase_refresh_precedes_workflow_yaml_edit_and_commit
-      - tests/test_review_implement_develop_lock_contracts.py::TestImplementPhaseWakePhaseOrdering::test_wake_phase_commit_references_exit4_recovery
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteCaptureResolvesBranchRef.test_every_site_captures_from_the_branch_ref
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteCapturePrecedesRefresh.test_capture_precedes_refresh_in_every_site
+      - tests.test_review_implement_develop_lock_contracts.TestImplementPhaseWakePhaseOrdering.test_wake_phase_refresh_precedes_workflow_yaml_edit_and_commit
+      - tests.test_review_implement_develop_lock_contracts.TestImplementPhaseWakePhaseOrdering.test_wake_phase_commit_references_exit4_recovery
     red_confirmed: true
     red_reason: >-
       The 'Step I.2.b wake reconcile' subTest failed in both
@@ -58,12 +58,12 @@ acceptance_tests:
       newly-red criterion.
   AC-4:
     tests:
-      - tests/test_tip_capture_idiom_uniformity.py::TestExpectedBaseTipDescribesBranchRefCapture::test_states_new_branch_ref_capture_wording
-      - tests/test_tip_capture_idiom_uniformity.py::TestExpectedBaseTipDescribesBranchRefCapture::test_old_refresh_time_capture_phrasing_absent
-      - tests/test_tip_capture_idiom_uniformity.py::TestRecoveryContractStatesRecaptureThenRefresh::test_states_recapture_before_refresh
-      - tests/test_tip_capture_idiom_uniformity.py::TestRecoveryContractStatesRecaptureThenRefresh::test_old_refresh_first_phrasing_absent
-      - tests/test_tip_capture_idiom_uniformity.py::TestRecoveryContractStatesRecaptureThenRefresh::test_carve_out_sentence_is_byte_identical
-      - tests/test_tip_capture_idiom_uniformity.py::TestCommitDocsShExecutableBodyUnchanged::test_comment_stripped_body_matches_pre_change
+      - tests.test_tip_capture_idiom_uniformity.TestExpectedBaseTipDescribesBranchRefCapture.test_states_new_branch_ref_capture_wording
+      - tests.test_tip_capture_idiom_uniformity.TestExpectedBaseTipDescribesBranchRefCapture.test_old_refresh_time_capture_phrasing_absent
+      - tests.test_tip_capture_idiom_uniformity.TestRecoveryContractStatesRecaptureThenRefresh.test_states_recapture_before_refresh
+      - tests.test_tip_capture_idiom_uniformity.TestRecoveryContractStatesRecaptureThenRefresh.test_old_refresh_first_phrasing_absent
+      - tests.test_tip_capture_idiom_uniformity.TestRecoveryContractStatesRecaptureThenRefresh.test_carve_out_sentence_is_byte_identical
+      - tests.test_tip_capture_idiom_uniformity.TestCommitDocsShExecutableBodyUnchanged.test_comment_stripped_body_matches_pre_change
     red_confirmed: true
     red_reason: >-
       Stashed the commit-docs.sh edit and re-ran: test_states_new_branch_ref_capture_wording
@@ -81,9 +81,9 @@ acceptance_tests:
       re-ran: all six green.
   AC-5:
     tests:
-      - tests/test_implement_routeback_gate.py::TestGateDecisionPrecedesAllSideEffects::test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_tip_capture
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_order_refresh_before_tip_before_write_before_commit
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_states_tip_capture
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_order_refresh_before_tip_before_write_before_commit
     red_confirmed: true
     red_reason: >-
       Stashed the implement-phase.md edit (keeping these three amended
@@ -95,16 +95,16 @@ acceptance_tests:
       HEAD`). Popped the stash and re-ran: all three green.
   AC-6:
     tests:
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_step_i1_bash_block_has_no_refresh_line
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_step_i1_capture_assignment_matcher_flags_head_form
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_reconcile_step2_refresh_precedes_capture
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_routeback_clause_refresh_precedes_capture
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_rejected_clause_refresh_precedes_capture
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_abort_clause_refresh_precedes_capture
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_samples_are_not_vacuous
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_expected_base_tip_matcher_flags_pre_change_block
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_recovery_contract_matcher_flags_pre_change_block
-      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_stripped_body_matcher_flags_a_changed_executable_line
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_old_step_i1_bash_block_has_no_refresh_line
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_old_step_i1_capture_assignment_matcher_flags_head_form
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_old_reconcile_step2_refresh_precedes_capture
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_old_routeback_clause_refresh_precedes_capture
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_old_rejected_clause_refresh_precedes_capture
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_old_abort_clause_refresh_precedes_capture
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_old_samples_are_not_vacuous
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_expected_base_tip_matcher_flags_pre_change_block
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_recovery_contract_matcher_flags_pre_change_block
+      - tests.test_tip_capture_idiom_uniformity.TestValidationDetectsRegressions.test_stripped_body_matcher_flags_a_changed_executable_line
     red_confirmed: false
     red_reason: >-
       These TS-7 negative-proof tests assert properties of hardcoded
