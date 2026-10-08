@@ -1,0 +1,12 @@
+schema_version: 1
+feature: queue-stop-guard-nonascii-blank-state
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-10-08T20:17:26+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "not auto-added"
+    normalized_answer: "not auto-added"
+    resolution_note: "task_id: task0001; deviation: AC-3 item-content fixture uses `        - 'x` at 8 spaces instead of the plan's 6-space literal (the 6-space form is a real sibling item and hides the record before and after the fix). Not auto-added to the declared change set: the deviation names no path being added (missing part: the path), so there is nothing to append to tasks.task0001.files; no file outside expected_files was touched."
