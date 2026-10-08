@@ -1,0 +1,151 @@
+schema_version: 1
+feature: queue-stop-guard-nonascii-blank-state
+created: '2026-10-08'
+base_branch: main
+goal: "# queue_stop_guard: 親キー以下の字下げにある非 ASCII 空白だけの行がブロックスカラー・プレーン継続を終わらせ、後続の - '…' が引用値を開いて記録を隠す（回帰）\n\nNotion: https://www.notion.so/3f23509ec8ee81b48ec7f7bb99bf7252\n\n## 現象 (必須)\n`em-workflow/hooks/queue_stop_guard.py` の複数行値の追跡処理で、親キー以下の字下げ（0 桁目や 4 桁目）にある U+3000 / U+00A0 だけの行が、ブロックスカラーの状態とプレーンスカラー継続の状態を終わらせる。その後ろの `      - 'x` が値の開始として読まれて単一引用符を開き、以降の行をすべて本文として捨てる。トラッカーの外の読み取り関数はこの行を `line.strip()` で空行として読み飛ばすため tasks セクションも終わらず、本物の `routeback_failed_journal_line` 記録と後続タスクが読み落とされる。本来 exit 2 の Stop フックが exit 0 になる（THREAT-MODEL TM-2 の隠蔽）。\nfeature `routeback-record-quoted-open-residual` の FR2（トラッカーの空行判定を半角空白とタブだけにする）で新しく生じた経路で、基準リビジョン `fa21b80e` では隠れなかった入力。\n## 再現手順 (必須)\n1. workflow.yaml に、pending の task0001（ジャーナル 1 行目が task0001 の failed）、次のいずれかの形の `notes`、その後ろに本物の直下キー `routeback_failed_journal_line: 1`、さらに後ろに task0002 を置く\n\t- `notes: |` / 本文 / 0 桁目に U+3000 だけの行 / `      - 'x`\n\t- 上の U+3000 の行を 4 桁目に置いた形\n\t- `notes: hello` / 0 桁目に U+3000 だけの行 / `      - 'x`\n2. `task_routeback_records_from_workflow`\
+  \ と task_ids の読み取りを呼ぶ\n3. records が `{}`、task_ids が `['task0001']` になり、Stop フックが exit 0 になる（基準では task_ids=\\[task0001, task0002\\]、記録=1）\n## 期待する挙動 (必須)\nブロックスカラーの状態とプレーンスカラー継続の状態では、半角空白・タブ以外の空白文字だけを含む行が親の字下げ以下にあっても、状態を終わらせない（基準と同じく、続けもせず終わらせもしない）。値の開始位置（pending）での FR2 の挙動は残す。上の 3 形で本物の記録と task0002 が読まれ、exit 2 になる。\n直さない判断をする場合は、THREAT-MODEL.md / VERIFICATION.md の残余にこの 3 形を A1 と並べて記録する。\n## 完了の定義 (必須)\n- [ ] 再現手順で現象が起きない\n- [ ] 再発を検出するテストがある\n- [ ] SPEC FR2 の文言と、0 桁目の非 ASCII 空白行でブロックスカラーが終わることを固定している既存テスト `TestBlockScalarEndsAtANonAsciiBlankLineByIndentation.test_the_block_scalar_ends_at_the_column_zero_non_ascii_line` の扱いを決める\n## 該当箇所 (任意)\n- `em-workflow/hooks/queue_stop_guard.py:238`（`feed` のブロックスカラー分岐、238〜242 行目付近）\n- `em-workflow/hooks/queue_stop_guard.py:258`（`_read_line` のプレーンスカラー継続判定、258〜261 行目付近）\n- `tests/test_queue_stop_guard_routeback_record.py`\n## 実害・発生条件 (任意)\n出典: feature `routeback-record-quoted-open-residual` の review round 1、medium `7e768361409599cb`（評価者が基準リビジョンと変更後を直接比べて再現）。記録は統合ブランチ\
+  \ `em-workflow/routeback-record-quoted-open-residual/integration` の `feature-docs/routeback-record-quoted-open-residual/reviews/round1.yaml`。\n緩和要因: どの入力も YAML として不正（U+3000 は YAML の空白ではない）。同じ形の ASCII 版（`    x` の後に `      - 'x`）は基準でも隠蔽できるため、攻撃能力として増えるのはその行が見た目には空行になる点だけ。\n元タスク: https://www.notion.so/3f23509ec8ee81c28647fe1a17377754\n"
+parent_branch: em-workflow/queue-stop-guard-nonascii-blank-state/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.91
+      '2': 0.09
+      '3': 0.0
+  at: '2026-10-08T19:42:49+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no two tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: b9513ccb0e3264690660516a23afd6bcda7f1088
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない Stop フックの行読み取りの不具合修正（create-spec の design-step 判断）。reduced tier でも design step は削減対象
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 3491fec7e0b9e97afe61ff2b1c5b07fd12785156
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: ブロックスカラーの状態では非 ASCII 空白だけの行が状態を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: プレーンスカラー継続の状態では非 ASCII 空白だけの行が状態を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 変えない挙動
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: docstring
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 既存テストの書き換え
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 前の feature の FR2 との関係
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: fail-open
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 変更範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 回帰
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
