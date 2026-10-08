@@ -102,7 +102,8 @@ workflow:
   base_commit: e12196c99959ae62b8f590fb7a4de7ea986879d1
   completed_at_commit: c36faf7cfa723310f56afb04b545fbad2765eaab
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 45d08827f91c6f263b970291b45ec1b5e1862744
 - id: verify
   status: pending
   result: null
@@ -264,7 +265,7 @@ tasks:
       - ba603aab85961eac
       review_round: 1
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -274,15 +275,15 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
   - architecture
   - performance
   - spec
-  residual_critical_high: 2
-  needs_rework: true
+  residual_critical_high: 1
+  needs_rework: false
 requirements:
   FR1:
     title: レビュー出力スキーマに reproduction を追加
