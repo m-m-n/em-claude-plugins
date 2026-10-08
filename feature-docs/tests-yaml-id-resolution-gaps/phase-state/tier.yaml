@@ -1,0 +1,65 @@
+schema_version: 2
+feature: tests-yaml-id-resolution-gaps
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.64
+    confidence: 0.64
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.36
+      '2': 0.64
+      '3': 0.0
+  observed_at: '2026-10-09T08:59:27+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.61
+    confidence: 0.61
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.39
+      '2': 0.61
+      '3': 0.0
+  observed_at: '2026-10-09T08:59:27+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_tests_yaml_id_resolution.py
+  - test/README.md
+  changed_lines_approx: 220
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: tests/test_tests_yaml_id_resolution.py:92 は走査エラー処理なし、:408 と :525 は抽出エラー時に読めた
+    ID を除外、:565 はセグメント数の検査なし、:673 は独自定義のダンダーメソッドを拒否せず、:694 と :700 は戻り値の型検査と反復例外の捕捉なし。:1277
+    と :1413 の既存テストは変更前の挙動を期待している。test/README.md:78 は単一セグメントを許可し、:97 の非実行保証はローダーによるクラス生成・load_tests
+    呼び出しを明記していない
+decided_at: '2026-10-09T08:59:27+09:00'
