@@ -80,7 +80,7 @@ workflow:
   base_commit: 3491fec7e0b9e97afe61ff2b1c5b07fd12785156
   completed_at_commit: 50f2797aae8af9481817b94312fea8011d060491
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -116,6 +116,14 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: ブロックスカラーの状態では非 ASCII 空白だけの行が状態を変えない
