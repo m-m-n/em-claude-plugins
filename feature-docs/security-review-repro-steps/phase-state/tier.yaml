@@ -1,0 +1,82 @@
+schema_version: 2
+feature: security-review-repro-steps
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.12
+    confidence: 0.11
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.31
+      '1': 0.26
+      '2': 0.43
+      '3': 0.0
+  observed_at: '2026-10-08T09:11:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.88
+    confidence: 0.88
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.1
+      '2': 0.89
+      '3': 0.0
+  observed_at: '2026-10-08T09:19:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/review-output-schema.json
+  - em-workflow/skills/review-security/SKILL.md
+  - em-workflow/references/review-protocol.md
+  - em-workflow/agents/codex-reviewer.md
+  - em-workflow/references/review-evaluation-contract.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/scripts/scan-dependencies.py
+  - em-review/references/review-output-schema.json
+  - em-review/skills/review-security/SKILL.md
+  - em-review/references/review-protocol.md
+  - em-review/agents/codex-reviewer.md
+  - em-review/references/review-phase.md
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_sca_axis_schema_enums.py
+  - tests/test_threat_model_review_security.py
+  - tests/test_review_evaluation_contract.py
+  - tests/test_review_phase_llm_led.py
+  - tests/test_sca_scan_normalization.py
+  changed_lines_approx: 200
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow のレビュー評価契約
+  - 両プラグインの指摘集約・自動修正・ラウンド記録
+  - em-workflow の依存脆弱性スキャン
+  - 既存テストの必須項目・文書ハッシュ固定
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 12
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 8
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: 両スキーマは追加項目を禁止し、再現方法の項目がない。両セキュリティスキルにも記載指示がなく、修正条件にも再現確認がない。関連テストはあるが本要件の検証はない。共通必須項目の追加はスキャン出力にも影響する。接続先は入口3スキル、Claudeレビュアー2、評価者1、修正者2を確認した。行数・追加テスト数は確認箇所に基づく概算で、ファイルは変更していない
+decided_at: '2026-10-08T09:20:00+09:00'
