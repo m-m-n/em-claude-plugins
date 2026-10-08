@@ -102,8 +102,8 @@ workflow:
   base_commit: e12196c99959ae62b8f590fb7a4de7ea986879d1
   completed_at_commit: 1188464fb5b76f45f3fa29435768eb36b3780a26
 - id: review
-  status: in_progress
-  completed_at_commit: 45d08827f91c6f263b970291b45ec1b5e1862744
+  status: completed
+  completed_at_commit: 7ed5626aa3c1f5ff830a76daf96c69b2bf8b5661
 - id: verify
   status: pending
   result: fail
@@ -315,14 +315,14 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 2
+  rounds_completed: 3
   perspectives:
   - comprehensive
   - security
   - architecture
   - performance
   - spec
-  residual_critical_high: 1
+  residual_critical_high: 0
   needs_rework: false
 requirements:
   FR1:
