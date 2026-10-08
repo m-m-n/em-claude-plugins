@@ -1,0 +1,44 @@
+task_id: task0005
+baseline_failures: []          # python3 -m unittest discover -s tests: 9428 tests, OK (skipped=1), run before any edit
+final_failures: []             # re-executed after implementation: 9445 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestImplementerStep4cRules.test_rule1_tests_element_is_a_directly_selectable_id
+      - tests.test_tests_yaml_id_rules_docs.TestAddedTextStaysLanguageIndependent.test_added_paragraphs_name_no_language_framework_module_or_prefix
+    red_confirmed: true
+    red_reason: "AssertionError: Step 4c of implementer.md lacks 'Each element of `tests` is an ID that the project's test command can select directly' (and the two other rule 1 phrases) before the rule was added; the wording-constraint test failed with 'no block contains' the same anchor phrase. The wording constraint itself (no language, framework, module or prefix named) is asserted over the added paragraphs by the second test."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestImplementerStep4cRules.test_rule2_project_test_command_runs_after_writing_the_record
+    red_confirmed: true
+    red_reason: "AssertionError: Step 4c of implementer.md lacks 'After writing the record, run `project_commands.test` again' (and the two other rule 2 phrases) before the rule was added"
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestImplementerStep4cRules.test_rule3_other_records_broken_by_a_rename_or_deletion_are_fixed
+    red_confirmed: true
+    red_reason: "AssertionError: Step 4c of implementer.md lacks each of the six rule 3 phrases (for example 'fix that record's IDs as well') before the rule was added"
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeRules.test_rule4_id_format_is_stated
+    red_confirmed: true
+    red_reason: "AssertionError: no heading line containing 'Test ID format' in test/README.md before the section was added"
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeRules.test_rule5_record_notation_is_stated
+    red_confirmed: true
+    red_reason: "AssertionError: no heading line containing 'Record notation read by the record check' in test/README.md before the section was added"
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestRuleChecksDetectRemovedText.test_removing_a_rules_block_makes_its_check_fail
+      - tests.test_tests_yaml_id_rules_docs.TestRuleChecksDetectRemovedText.test_removing_one_implementer_rule_leaves_the_other_rules_passing
+      - tests.test_tests_yaml_id_rules_docs.TestRuleChecksDetectRemovedText.test_removing_the_id_format_leaves_the_notation_rule_passing
+      - tests.test_tests_yaml_id_rules_docs.TestOwnModule.test_only_standard_library_modules_are_imported
+      - tests.test_tests_yaml_id_rules_docs.TestOwnModule.test_no_module_that_imports_or_runs_a_document_is_imported
+      - tests.test_tests_yaml_id_rules_docs.TestOwnModule.test_module_is_placed_and_named_for_unittest_discovery
+    red_confirmed: false
+    red_reason: "The three TestRuleChecksDetectRemovedText tests were watched failing before the documents gained the rules (no block contains / no heading line), but the three TestOwnModule checks describe this module itself and passed on their first run, so no executable red exists for the stdlib-only, no-document-runner and discovery-placement parts. No existing test covers them: the search of tests/ by the path tests/test_tests_yaml_id_rules_docs.py and by the basename test_tests_yaml_id_rules_docs.py finds no test that references this module."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "Diff check, not a test: git diff --name-only against the parent branch lists no file under em-workflow/.claude-plugin/ and not .claude-plugin/marketplace.json. No existing test can fail on an unchanged manifest: the tests/ modules that read plugin.json and marketplace.json (found by searching both the path and the basename) only enforce per-feature version floors or fixture copies, so no red state occurred."

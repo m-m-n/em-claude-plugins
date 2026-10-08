@@ -157,6 +157,11 @@ Every Acceptance Criterion in your task plan gets an entry, including ones
 whose verifiable outcome is a build or a lint check rather than a test
 (`tests: []` with the outcome named in `red_reason`).
 
+Each element of `tests` is an ID that the project's test command can select
+directly: the string you hand to that command to select that test. Free text,
+abbreviations, wildcards and runner script paths are never written in
+`tests`; explanations go in `red_reason`.
+
 When an Acceptance Criterion has no executable check — test, build, lint, or
 similar — that can be made to fail, record it as `tests: []`,
 `red_confirmed: false`, and state why no executable red exists in
@@ -202,6 +207,17 @@ the skip condition holds — a task that changed a document the tests read
 cannot skip. The same run result is never written into both
 `baseline_failures` and `final_failures` as if they were two independent
 observations.
+
+After writing the record, run `project_commands.test` again and confirm that
+no failure absent from the baseline you recorded in Step 4a remains. A
+failure caused by the record is fixed in the record.
+
+When renaming or deleting a test makes a record that belongs to another
+feature or another task fail the project's record check, fix that record's
+IDs as well. File changes outside the planned files (`expected_files`) are
+reported in `deviations`. A request to extend the planned files names the
+existing acceptance criterion that needs it, the path needed, and the check
+that fails without the change.
 
 ### Step 5: Commit
 
