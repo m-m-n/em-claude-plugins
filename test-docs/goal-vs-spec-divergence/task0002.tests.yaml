@@ -39,8 +39,9 @@ acceptance_tests:
     red_reason: "AssertionError: 'workflow.implement.base_commit' / 'does not contradict' not found within the permission-conditions section before the edit"
   AC-6:
     tests:
-      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_count_matches_design_input
-      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_sixteen
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_design_input_still_states_sixteen_rules
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_doc_rule_count_is_design_input_count_plus_two
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_eighteen
       - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_application_rule_5_still_refers_to_the_permission_conditions
       - tests.test_workflow_patch_doc.TestPreserveVocabulary.test_complete_preserve_vocabulary_present
     red_confirmed: false

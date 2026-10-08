@@ -12,11 +12,11 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_plugin_manifest_version_is_pinned_value
-      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_marketplace_entry_version_is_pinned_value
+      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_plugin_manifest_version_is_past_baseline
+      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_marketplace_entry_version_is_past_baseline
       - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_registries_agree_by_reading_both_values
       - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_version_is_strictly_past_baseline
-      - tests.test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+      - tests.test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_identity_and_shape
     red_confirmed: true
     red_reason: >-
       Before the edit, plugin.json and the marketplace entry both read

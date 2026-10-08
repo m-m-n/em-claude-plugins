@@ -31,8 +31,8 @@ acceptance_tests:
       (284/284 passed).
   AC-3:
     tests:
-      - tests/test_destructive_guard_command_substitution.py::TestCaseTableDiscipline::test_every_pre_task_command_preserved_with_only_named_changes
-      - tests/test_destructive_guard_command_substitution.py::TestCaseTableDiscipline::test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Regression guard over pre-existing entries; it was already green at
@@ -52,16 +52,16 @@ acceptance_tests:
       "276/276 passed").
   AC-5:
     tests:
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestPluginManifestVersion::test_version_is_past_baseline
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestPluginManifestVersion::test_name_field_unchanged
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_is_past_baseline
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_matches_plugin_manifest
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_source_unchanged
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_version_not_dragged_along
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_baseline_matcher_rejects_forged_pre_bump_version
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_equality_matcher_rejects_forged_differing_versions
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_forged_pre_bump_version_is_well_formed
-      - tests/test_implement_guard_compatible_git_ops_version_bump.py::TestValidationDetectsRegressions::test_forged_differing_versions_are_both_well_formed
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_version_not_dragged_along
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_implement_guard_compatible_git_ops_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
     red_confirmed: true
     red_reason: >-
       Wrote the module against the unbumped manifests (both still 0.2.8) and

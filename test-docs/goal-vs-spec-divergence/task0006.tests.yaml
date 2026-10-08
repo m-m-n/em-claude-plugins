@@ -39,7 +39,7 @@ acceptance_tests:
       byte-unchanged.
   AC-4:
     tests:
-      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_does_not_imply_other_arms_relaxed
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_states_two_mode_split_naming_all_three_arms
     red_confirmed: true
     red_reason: >-
       Before the edit, the header did not mention "category: security",

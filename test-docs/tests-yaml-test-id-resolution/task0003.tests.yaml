@@ -1,0 +1,33 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: "No committed test: the record check module belongs to task0001 and is not present in this worktree, so the check was a scratch script outside the repository (SC-1 syntax gate, structural resolution, loader confirmation with the at-least-one-test condition). Run against the 97 range2 records at the task base it reported 683 failures over 2175 elements; run after the rewrite it reports 0 failures over 2145 elements. Search for existing tests that read the changed records (by repository-relative path of each of the 45 changed records and by basename) found none."
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: "Same scratch check as AC-1: its SC-1 syntax gate rejected 598 element occurrences at the task base (runner script paths, path::Class::method forms, descriptions, parametrised labels, elements without the tests. prefix) and rejects none after the rewrite. The one non-unittest element with no verifying unittest (the full-suite command in goal-vs-spec-divergence/task0022 AC-7) was removed and its text appended to that AC's existing red_reason; the ACs left without elements became tests: []. Search for existing tests that read the changed records found none."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "Checked by a scratch script outside the repository that parses every changed record at the base commit and at HEAD, counts the elements present at base and absent at HEAD per file and AC as a multiset difference (683 occurrences), and compares them with the rows of id-mapping-range2.md (683 rows, one table, every File, AC and Old ID matching one removed occurrence, every basis an SC-3 category, every renamed row citing an existing commit id). The mapping file did not exist before this task, so no failing state of that check was observed. Search for existing tests that read id-mapping-range2.md or the changed records found none."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Checked by the same base-to-HEAD scratch script: every top-level key other than acceptance_tests, every AC key and field order, red_confirmed, baseline_failures and final_failures are identical; the only changed red_reason (goal-vs-spec-divergence/task0022 AC-7) keeps its parsed base value as the exact prefix of the new value; no red_reason key was added. A textual diff shows only tests item lines, tests key lines that became tests: [], and the one SC-5 appended body. No red state was observed because the base-to-HEAD diff is empty before the rewrite. Search for existing tests that read the changed records found none."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Checked by the scratch SC-2 reader: all 97 range2 records are read without any extraction error, both at the task base and after the rewrite, so the behavior pre-existed and no red state occurred for this change. Search for existing tests that read the changed records found none."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "git diff --name-only shows only the 45 range2 records and the new id-mapping-range2.md and this record under test-docs/; nothing under tests/ and no record outside range2 changed. The full suite (python3 -m unittest discover -s tests) was green at the task base (9428 tests, 0 failures) and green after the rewrite, so no red state occurred for this criterion."
+  AC-7:
+    tests:
+      - tests.test_exit4_ac2_test_id_drift
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_exit4_ac2_test_id_drift detects a changed number of IDs per AC, a changed one-line quoted AC-2 red_reason and a changed red_confirmed in test-docs/exit4-tip-argument/task0002.tests.yaml; no red state occurred for this change. That record was not touched (every element already passed SC-1) and tests/test_exit4_ac2_test_id_drift.py is unchanged."

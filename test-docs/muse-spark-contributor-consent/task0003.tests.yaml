@@ -4,11 +4,9 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_states_muse_spark_selected_entry_trigger
-      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_names_mechanical_check_distinctly
-      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_names_per_dispatch_judgment_distinctly
-      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_states_chain_never_edited_and_single_reading
-      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_mechanical_and_per_dispatch_checks_are_textually_distinct
+      - tests.test_contributor_tier_criteria.TestConsentOnlyRuleInAllFourDocuments.test_states_muse_spark_selected_entry_trigger
+      - tests.test_contributor_tier_criteria.TestConsentOnlyRuleInAllFourDocuments.test_consent_is_the_only_condition
+      - tests.test_contributor_tier_criteria.TestConsentOnlyRuleInAllFourDocuments.test_states_chain_never_edited_and_single_reading
     red_confirmed: true
     red_reason: >-
       Before the reviewers.yaml/review-phase.md edits, none of the four
@@ -17,10 +15,10 @@ acceptance_tests:
       text) for all four documents in each of these tests.
   AC-2:
     tests:
-      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_recorded_next_to_prohibition
-      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_points_at_read_mapping_rule
-      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_states_single_permitted_reading_not_free_choice
-      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_states_judgment_made_before_dispatch
+      - tests.test_contributor_tier_criteria.TestSubstitutionExceptionInReviewPhaseDocs.test_exception_recorded_next_to_prohibition
+      - tests.test_contributor_tier_criteria.TestSubstitutionExceptionInReviewPhaseDocs.test_exception_points_at_read_mapping_rule
+      - tests.test_contributor_tier_criteria.TestSubstitutionExceptionInReviewPhaseDocs.test_exception_states_single_permitted_reading_not_free_choice
+      - tests.test_contributor_tier_criteria.TestSubstitutionExceptionInReviewPhaseDocs.test_exception_uses_the_r0_consent_value
     red_confirmed: true
     red_reason: >-
       Before the review-phase.md edits, "Exception to the prohibition
@@ -29,11 +27,7 @@ acceptance_tests:
       and em-review/references/review-phase.md; text.index() raised
       ValueError (substring not found).
   AC-3:
-    tests:
-      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_headings_are_distinct_and_ordered
-      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_exactly_one_do_not_use_bullet
-      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_exactly_three_outside_scope_bullets
-      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_never_merged_or_interleaved
+    tests: []
     red_confirmed: true
     red_reason: >-
       Before the edits, none of the four documents contained the
@@ -42,8 +36,7 @@ acceptance_tests:
       document in every one of these tests.
   AC-4:
     tests:
-      - tests.test_contributor_tier_criteria.TestAC4PresentStateVisibilityLicenseCheck.test_present_state_dispatch_time_phrasing_positive
-      - tests.test_contributor_tier_criteria.TestAC4PresentStateVisibilityLicenseCheck.test_no_comparison_against_a_recorded_value
+      - tests.test_contributor_tier_criteria.TestConsentOnlyRuleInAllFourDocuments.test_no_comparison_against_a_recorded_value
     red_confirmed: true
     red_reason: >-
       The positive half (test_present_state_dispatch_time_phrasing_positive)

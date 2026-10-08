@@ -32,11 +32,10 @@ acceptance_tests:
       assertion failed against the unmodified document.
   AC-3:
     tests:
-      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_decided_from_orchestrator_held_metadata
-      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_reversible_false_still_aborts_in_addition
-      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_omitting_the_assumption_cannot_remove_the_abort
-      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_orchestrator_held_abort_records_its_reason
-      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_negative_twin_packet_only_wording_fails
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_basis_is_the_packets_own_declaration
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_basis_named_worker_declared_limitation
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_abort_still_records_its_reason
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_negative_twin_bare_bullet_wording_fails
     red_confirmed: true
     red_reason: >-
       Before the edit, irreversibility was decided solely from the
@@ -63,7 +62,7 @@ acceptance_tests:
       go red.
   AC-5:
     tests:
-      - tests.test_classification_gate.TestClassificationGate.test_record_never_supplied_by_the_packet
+      - tests.test_classification_gate.TestClassificationGate.test_neither_bound_set_source_is_ever_supplied_by_the_packet
       - tests.test_classification_gate.TestClassificationGate.test_orchestrator_locates_record_from_r5_position
       - tests.test_classification_gate.TestClassificationGate.test_searches_only_the_located_record
       - tests.test_classification_gate.TestClassificationGate.test_evidence_path_demoted_to_never_opened_hint
@@ -81,7 +80,7 @@ acceptance_tests:
   AC-6:
     tests:
       - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_security_license_or_irreversible
-      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_unmatched_origin
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_not_bound_set_member
       - tests.test_classification_gate.TestClassificationGate.test_origin_verification_records_reason_and_evidence_no_unanswerable_confirmation
     red_confirmed: false
     red_reason: >-
@@ -95,12 +94,12 @@ acceptance_tests:
       step 3, so no new red was expected or produced for it.
   AC-7:
     tests:
-      - tests.test_classification_gate.TestClassificationGate.test_requires_finding_stable_id_on_at_least_one_evidence_entry
-      - tests.test_classification_gate.TestClassificationGate.test_missing_finding_stable_id_aborts_a_spec_change_question
-      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_no_finding_stable_id_requirement_fails
-      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceFindingStableIdField.test_field_table_has_existing_evidence_rows
-      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceFindingStableIdField.test_finding_stable_id_field_present
-      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceFindingStableIdField.test_finding_stable_id_negative_proof_missing_field_is_detected
+      - tests.test_classification_gate.TestClassificationGate.test_requires_origin_id_on_at_least_one_evidence_entry
+      - tests.test_classification_gate.TestClassificationGate.test_missing_origin_id_aborts_a_spec_change_question
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_no_origin_id_requirement_fails
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceOriginIdField.test_field_table_has_existing_evidence_rows
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceOriginIdField.test_origin_id_field_present
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceOriginIdField.test_retired_field_negative_proof_missing_field_is_detected
     red_confirmed: true
     red_reason: >-
       `finding_stable_id` did not exist anywhere in
@@ -110,13 +109,13 @@ acceptance_tests:
       entry carry it.
   AC-8:
     tests:
-      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_names_stable_id_via_finding_stable_id_field
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_names_origins_via_origin_id_field
       - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_does_not_name_the_record_path
       - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_old_packet_names_record_path_wording_is_gone
       - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_does_not_restate_the_r5_position_or_path_formula
-      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_packet_names_stable_id_via_finding_stable_id_field
-      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_packet_does_not_name_the_record_path
-      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_gate_cited_not_restated
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesOriginIdNotRecordPath.test_packet_names_origins_via_origin_id_field
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesOriginIdNotRecordPath.test_packet_does_not_name_the_record_path
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesOriginIdNotRecordPath.test_gate_cited_not_restated
     red_confirmed: true
     red_reason: >-
       Before the edit, rework-planner-contract.md's paragraph read "names
@@ -129,8 +128,8 @@ acceptance_tests:
       AssertionError against the unmodified document in both test files.
   AC-9:
     tests:
-      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_orchestrator_held_abort_records_its_reason
-      - tests.test_classification_gate.TestClassificationGate.test_missing_finding_stable_id_aborts_a_spec_change_question
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_abort_still_records_its_reason
+      - tests.test_classification_gate.TestClassificationGate.test_missing_origin_id_aborts_a_spec_change_question
     red_confirmed: true
     red_reason: >-
       Both stop paths (the orchestrator-held-metadata irreversibility
