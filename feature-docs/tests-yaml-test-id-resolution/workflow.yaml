@@ -144,7 +144,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/tests-yaml-test-id-resolution/task0001
   task0002:
     title: Record ID cleanup, range1 (0-9, a-d)
     plan: tasks/task0002.md
@@ -160,7 +161,8 @@ tasks:
     - FR2
     - FR3
     - FR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/tests-yaml-test-id-resolution/task0002
   task0003:
     title: Record ID cleanup, range2 (e-p)
     plan: tasks/task0003.md
@@ -177,7 +179,8 @@ tasks:
     - FR3
     - FR4
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/tests-yaml-test-id-resolution/task0003
   task0004:
     title: Record ID cleanup, range3 (q-z)
     plan: tasks/task0004.md
@@ -193,7 +196,8 @@ tasks:
     - FR2
     - FR3
     - FR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/tests-yaml-test-id-resolution/task0004
   task0005:
     title: Record-writing rules in implementer.md and test/README.md
     plan: tasks/task0005.md
@@ -212,7 +216,8 @@ tasks:
     - FR12
     - FR13
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/tests-yaml-test-id-resolution/task0005
 review:
   status: pending
   rounds_completed: 0
