@@ -4,7 +4,7 @@ final_failures: []             # full suite (1177 tests) green after implementat
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
       - tests.test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
     red_confirmed: true
     red_reason: >-
@@ -27,7 +27,7 @@ acceptance_tests:
       _KEY_CODE_PAIRS_IN_ORDER.
   AC-3:
     tests:
-      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_no_step_bullet_names_the_stop_points_as_a_set
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_no_step_bullet_names_the_stop_points_as_a_set
     red_confirmed: true
     red_reason: >-
       extracted no-step stop-point set was {stop-condition-6, step-c-abort}
@@ -48,10 +48,7 @@ acceptance_tests:
       were designed to pass from the start (they test the matcher, not the
       document); the real-document assertion is what carried the red state.
   AC-5:
-    tests:
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_detail_normalization_rule
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_detail_bullet_consistent_with_normalization
-      - tests.test_batch_stop_contract.TestDetailNormalizationMatcherNegativeProof.test_missing_normalization_rule_is_rejected
+    tests: []
     red_confirmed: true
     red_reason: >-
       test_states_detail_normalization_rule: 'CR' not found in the real
@@ -63,8 +60,8 @@ acceptance_tests:
       edit (see notes).
   AC-6:
     tests:
-      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_general_no_line_rule
-      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_line
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_general_no_result_rule
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_result
     red_confirmed: true
     red_reason: >-
       test_states_general_no_line_rule: "'has not reached either' not

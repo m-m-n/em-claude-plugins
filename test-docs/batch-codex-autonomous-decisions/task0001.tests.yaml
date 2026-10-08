@@ -92,7 +92,7 @@ acceptance_tests:
       red here since that text was not touched).
   AC-7:
     tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_wrapper_fallback_provider_fact_stated_once_no_name
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_wrapper_fallback_provider_claim_is_absent
       - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_fallback_provider_name_leaked
       - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_rate_limit_detection_description
       - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_new_gate_id_minted

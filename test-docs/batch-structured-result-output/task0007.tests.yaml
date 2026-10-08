@@ -17,7 +17,7 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_general_message_boundary_rule
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_general_message_boundary_rule
     red_confirmed: true
     red_reason: >
       Matcher _states_terminal_turn_message_boundary_general_rule returned
@@ -29,7 +29,7 @@ acceptance_tests:
       function itself was newly authored in this task.
   AC-2:
     tests:
-      - test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_section_states_message_boundary_and_value_carriage
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_section_states_message_boundary_and_value_carriage
     red_confirmed: true
     red_reason: >
       Matcher _states_stop_report_message_boundary_and_value_carriage
@@ -39,9 +39,9 @@ acceptance_tests:
       sentences were added.
   AC-3:
     tests:
-      - test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_general_message_boundary_rule_stated_alongside_cap_specific_pins
-      - test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_one_result_per_run_emitted_right_after_step_c_report
-      - test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_detail_names_step_c_completion
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_general_message_boundary_rule_stated_alongside_cap_specific_pins
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_one_result_per_run_emitted_right_after_step_c_report
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_detail_names_step_c_completion
     red_confirmed: true
     red_reason: >
       The new test_general_message_boundary_rule_stated_alongside_cap_specific_pins
@@ -54,7 +54,7 @@ acceptance_tests:
       pass alongside the new assertion, not because they were red.
   AC-4:
     tests:
-      - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+      - tests.test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
     red_confirmed: true
     red_reason: >
       "AssertionError: 'result following it' not found in ...normalized" --
@@ -67,8 +67,8 @@ acceptance_tests:
       anywhere in the module.
   AC-5:
     tests:
-      - test_batch_stop_contract_skill_wiring.TestGeneralRuleMatcherCanFail.test_matcher_rejects_cap_reached_paragraph_alone
-      - test_batch_stop_contract_skill_wiring.TestGeneralRuleMatcherCanFail.test_forged_cap_only_section_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestGeneralRuleMatcherCanFail.test_matcher_rejects_cap_reached_paragraph_alone
+      - tests.test_batch_stop_contract_skill_wiring.TestGeneralRuleMatcherCanFail.test_forged_cap_only_section_is_well_formed_and_found
     red_confirmed: true
     red_reason: >
       The matcher and its forged cap-reached-only sample are new in this

@@ -28,8 +28,8 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
-      - test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+      - tests.test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
     red_confirmed: true
     red_reason: >-
       Not independently red before the bump (the equality holds trivially
@@ -39,13 +39,13 @@ acceptance_tests:
       61" before the plugin.json / marketplace.json edits.
   AC-2:
     tests:
-      - test_verify_rework_lineage_cap_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
-      - test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_verify_rework_lineage_cap_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
     red_confirmed: true
     red_reason: "AssertionError: 61 not greater than 61 (both registries still at 0.1.61 before the edit)"
   AC-3:
     tests:
-      - test_verify_rework_lineage_cap_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_unchanged
+      - tests.test_verify_rework_lineage_cap_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_is_not_below_baseline
     red_confirmed: false
     red_reason: >-
       This test asserts a non-change (em-review's version stays at its
@@ -57,7 +57,7 @@ acceptance_tests:
       genuinely-no-observable-change criteria.
   AC-4:
     tests:
-      - test_plugin_version_parity
+      - tests.test_plugin_version_parity
     red_confirmed: false
     red_reason: >-
       Regression check, not new behavior: this pre-existing module already
@@ -76,12 +76,12 @@ acceptance_tests:
       to fix.
   AC-5:
     tests:
-      - test_verify_rework_lineage_cap_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
-      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
-      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
-      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
-      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
-      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_malformed_version_shape
+      - tests.test_verify_rework_lineage_cap_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_malformed_version_shape
     red_confirmed: true
     red_reason: >-
       Wrote the module (with its negative-proof tests already present)

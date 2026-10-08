@@ -16,15 +16,15 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_batch_stop_contract.TestContractDocumentStructure.test_nine_level_2_headings_in_order
-      - test_batch_stop_contract.TestContractDocumentStructure.test_stop_reason_codes_immediately_followed_by_stop_point_coverage
-      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_bare_mapping_rule
-      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_example_matches_sc1_key_order
-      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_double_quoted_scalar_rule_including_empty
-      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_eight_physical_line_invariant_and_reason
-      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_no_external_tool_needed
-      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_batch_only_emission
-      - test_batch_stop_contract.TestResultFormatExampleMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_nine_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_stop_reason_codes_immediately_followed_by_stop_point_coverage
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_bare_mapping_rule
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_example_matches_sc1_key_order
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_double_quoted_scalar_rule_including_empty
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_eight_physical_line_invariant_and_reason
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_no_external_tool_needed
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_batch_only_emission
+      - tests.test_batch_stop_contract.TestResultFormatExampleMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively by running the finished test module against
@@ -40,11 +40,11 @@ acceptance_tests:
       shape).
   AC-2:
     tests:
-      - test_batch_stop_contract.TestEscapingSection.test_table_matches_sc3_canonical_mapping
-      - test_batch_stop_contract.TestEscapingSection.test_states_residual_ranges
-      - test_batch_stop_contract.TestEscapingSection.test_states_character_by_character_never_reprocess_rule
-      - test_batch_stop_contract.TestEscapingSection.test_escaping_table_distinguishes_named_tokens_from_literal_characters
-      - test_batch_stop_contract.TestEscapingTableMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestEscapingSection.test_table_matches_sc3_canonical_mapping
+      - tests.test_batch_stop_contract.TestEscapingSection.test_states_residual_ranges
+      - tests.test_batch_stop_contract.TestEscapingSection.test_states_character_by_character_never_reprocess_rule
+      - tests.test_batch_stop_contract.TestEscapingSection.test_escaping_table_distinguishes_named_tokens_from_literal_characters
+      - tests.test_batch_stop_contract.TestEscapingTableMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document: setUpClass
@@ -53,14 +53,14 @@ acceptance_tests:
       key=value line shape).
   AC-3:
     tests:
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_bullet_order_matches_sc1
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_normalization_before_escaping
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_normalization_not_applied
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_per_state_rule
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_feature_bullet_states_derivation_and_empty_case
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_branch_bullet_states_derivation_and_empty_case
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_pr_url_bullet_states_derivation_and_empty_case
-      - test_batch_stop_contract.TestFieldValuesBulletOrderMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_bullet_order_matches_sc1
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_normalization_before_escaping
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_normalization_not_applied
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_per_state_rule
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_feature_bullet_states_derivation_and_empty_case
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_branch_bullet_states_derivation_and_empty_case
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_pr_url_bullet_states_derivation_and_empty_case
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -74,12 +74,12 @@ acceptance_tests:
       a rule that did not exist) was absent.
   AC-4:
     tests:
-      - test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_documented_as_twelfth_never_emitted
-      - test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_absent_as_table_row
-      - test_batch_stop_contract.TestStopPointCoverage.test_context_budget_reached_exception_stated
-      - test_batch_stop_contract.TestStopPointCoverage.test_context_budget_reached_absent_from_coverage_table
-      - test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
-      - test_batch_stop_contract.TestCoverageMatcherRejectsTwelfthCodeAsRow.test_coverage_row_added_for_reserved_code_is_rejected
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_documented_as_fourteenth_never_emitted
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_absent_as_table_row
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_context_budget_reached_exception_stated
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_context_budget_reached_absent_from_coverage_table
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - tests.test_batch_stop_contract.TestCoverageMatcherRejectsTwelfthCodeAsRow.test_coverage_row_added_for_reserved_code_is_rejected
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -98,8 +98,8 @@ acceptance_tests:
       tests above, which did fail correctly.
   AC-5:
     tests:
-      - test_batch_stop_contract.TestConsumerConstraints
-      - test_batch_stop_contract.TestConsumerConstraintsMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestConsumerConstraints
+      - tests.test_batch_stop_contract.TestConsumerConstraintsMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document: setUpClass
@@ -109,10 +109,10 @@ acceptance_tests:
       contract).
   AC-6:
     tests:
-      - test_batch_stop_contract.TestPrefixUniqueness.test_prefix_absent_from_every_file_under_em_workflow
-      - test_batch_stop_contract.TestPrefixUniqueness.test_prefix_constant_is_non_empty
-      - test_batch_stop_contract.TestPrefixUniqueness.test_negative_proof_sweep_would_detect_a_reintroduced_prefix
-      - test_batch_stop_contract.TestContractDocumentStructure.test_no_description_of_removed_shape_remains
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_absent_from_every_file_under_em_workflow
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_constant_is_non_empty
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_negative_proof_sweep_would_detect_a_reintroduced_prefix
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_no_description_of_removed_shape_remains
     red_confirmed: true
     red_reason: >-
       Verified retroactively by temporarily restoring the pre-change
@@ -130,18 +130,18 @@ acceptance_tests:
       old document's prose.
   AC-7:
     tests:
-      - test_batch_stop_contract.TestResponsibilityBoundary.test_states_confidentiality_rule_extended_to_all_four_fields
-      - test_batch_stop_contract.TestResponsibilityBoundary.test_states_no_status_operation_against_external_service
-      - test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_general_no_result_rule
-      - test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_result
-      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_state_domain_includes_all_three_values
-      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_names_the_executed_step
-      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_precedence_stated
-      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_c_asymmetry_stated
-      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_domain_declared
-      - test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration
-      - test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
-      - test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+      - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_states_confidentiality_rule_extended_to_all_four_fields
+      - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_states_no_status_operation_against_external_service
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_general_no_result_rule
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_result
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_state_domain_includes_all_three_values
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_names_the_executed_step
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_precedence_stated
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_c_asymmetry_stated
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_domain_declared
+      - tests.test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:

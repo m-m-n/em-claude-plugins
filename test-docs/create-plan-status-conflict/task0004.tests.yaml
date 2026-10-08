@@ -14,48 +14,48 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_universal_claim_sentence_is_absent_from_whole_file
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_universal_claim_sentence_is_absent_from_whole_file
     red_confirmed: true
     red_reason: "AssertionError: whitespace-stripped universal-claim sentence unexpectedly found in whitespace-stripped SKILL.md text before the paragraph was rewritten (the raw assertNotIn without stripping had falsely passed, since a hard line-wrap splits the sentence mid-word; fixed by stripping all whitespace on both sides before comparing, then re-confirmed red)"
   AC-2:
     tests:
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_generalized_carve_out_is_stated
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_generalized_carve_out_is_stated
     red_confirmed: true
     red_reason: "AssertionError: '自動的に再エントリさせるために' not found in carve_out_section (the old paragraph only exempted create-plan's own retained needs_update, with no generalized statement)"
   AC-3:
     tests:
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_both_qualifying_transitions_enumerated_with_owning_documents
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_enumeration_is_stated_as_exhaustive
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_both_qualifying_transitions_enumerated_with_owning_documents
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_enumeration_is_stated_as_exhaustive
     red_confirmed: true
     red_reason: "AssertionError: 'references/rework-task-synthesis.md' not found in carve_out_section (old paragraph cited only references/implement-phase.md); '網羅的' also absent"
   AC-4:
     tests:
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_negative_case_still_stops_the_loop
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_discriminator_names_unconsumed_rework_yaml_record
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_negative_case_still_stops_the_loop
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_discriminator_names_consumed_rework_yaml_record
     red_confirmed: true
     red_reason: "AssertionError: 'create-spec.stalled' / 'phase-state/rework.yaml' not found in carve_out_section (old paragraph named no negative case and no discriminator)"
   AC-5:
     tests:
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_bullet_3_is_generalized_and_points_at_the_step_b_block
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_bullet_3_is_generalized_and_points_at_the_step_b_block
     red_confirmed: true
     red_reason: "AssertionError: 'create-plan' unexpectedly found in bullet 3's text before it was generalized (bullet 3 named create-plan specifically)"
   AC-6:
     tests:
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_in_progress_exemption_still_create_plan_only
-      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_exemption_names_create_plan_as_the_sole_exempt_step
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_in_progress_exemption_still_create_plan_only
+      - tests.test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_exemption_names_create_plan_as_the_sole_exempt_step
     red_confirmed: false
     red_reason: "regression guard over the create-plan in_progress exemption block, which this task does not modify; both assertions already passed before this task's edit (the exemption block's own text is untouched) and continue to pass after — the guard's purpose is to catch a future regression that widens the exemption or lets the carve-out block claim a second step skips in_progress, not to observe a red-to-green transition"
   AC-7:
     tests:
-      - test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_spec_change_transition_cited_not_restated_with_per_step_statuses
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_spec_change_transition_cited_not_restated_with_per_step_statuses
     red_confirmed: false
     red_reason: "negative-space guard (absence of 'implement を' / 'review を' in carve_out_section); satisfied both before and after this task's edit since neither the removed universal-claim paragraph nor its replacement enumerates per-step status assignments for those two steps — exists to catch a future regression toward restating the spec-change transition inline, not to observe a red-to-green transition"
   AC-8:
     tests:
-      - test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_universal_claim_matcher_detects_the_old_wording
-      - test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_missing_second_transition_citation_is_detected
-      - test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_missing_discriminator_is_detected
-      - test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_bullet_3_still_naming_create_plan_is_detected
+      - tests.test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_universal_claim_matcher_detects_the_old_wording
+      - tests.test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_missing_second_transition_citation_is_detected
+      - tests.test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_missing_discriminator_is_detected
+      - tests.test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_bullet_3_still_naming_create_plan_is_detected
     red_confirmed: false
     red_reason: "canary tests over synthetic fake_section/fake_text strings, proving the production assertions in TestStopCondition3AutomaticReentryCarveOut can fail (same pattern as the file's pre-existing TestDevelopSkillRewiringAssertionsCanFail class) -- they pass immediately by construction and were never meant to go red themselves; the real red observations for the AC-1/AC-3/AC-4/AC-5 assertions they demonstrate are recorded above. Full-suite run after adding all task0004 tests plus the implementation confirms every pre-existing assertion in the file still passes (59/59 in test_develop_skill_rewiring.py)."
   AC-9:

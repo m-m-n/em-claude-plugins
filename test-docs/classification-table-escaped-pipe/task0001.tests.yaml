@@ -4,7 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_hook_cell_raises_with_unsupported_notice
+      - tests.test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_hook_cell_raises_with_unsupported_notice
     red_confirmed: true
     red_reason: >-
       Before the parser change, AssertionError: 'not supported' not found in
@@ -12,7 +12,7 @@ acceptance_tests:
       (the message ended there -- no notice segment existed yet).
   AC-2:
     tests:
-      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_classification_cell_raises_with_unsupported_notice
+      - tests.test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_classification_cell_raises_with_unsupported_notice
     red_confirmed: true
     red_reason: >-
       Same failure as AC-1's test, observed in the same pre-implementation
@@ -23,8 +23,8 @@ acceptance_tests:
       notice.
   AC-3:
     tests:
-      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_hook_cell_raises_with_unsupported_notice
-      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_classification_cell_raises_with_unsupported_notice
+      - tests.test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_hook_cell_raises_with_unsupported_notice
+      - tests.test_hook_classification_pin.TestParseClassificationTableFailureModes.test_escaped_pipe_in_classification_cell_raises_with_unsupported_notice
     red_confirmed: false
     red_reason: >-
       The two-column-expectation wording and the offending row's repr in the
@@ -39,7 +39,7 @@ acceptance_tests:
       are both present in the raised message.
   AC-4:
     tests:
-      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_row_without_escaped_pipe_wrong_column_count_raises_without_notice
+      - tests.test_hook_classification_pin.TestParseClassificationTableFailureModes.test_row_without_escaped_pipe_wrong_column_count_raises_without_notice
     red_confirmed: false
     red_reason: >-
       Per the task plan's own Test Notes ("Case C already passes before the
@@ -61,12 +61,12 @@ acceptance_tests:
       Confirmed by reading the edited docstring directly.
   AC-6:
     tests:
-      - test_hook_classification_pin.TestParseClassificationTable.test_parses_the_real_document_without_error
-      - test_hook_classification_pin.TestParseClassificationTable.test_exactly_four_rows
-      - test_hook_classification_pin.TestParseClassificationTable.test_row_hook_names_match_the_four_queue_hooks_no_more_no_fewer
-      - test_hook_classification_pin.TestParseClassificationTable.test_every_row_path_is_repo_relative_and_resolves
-      - test_hook_classification_pin.TestParseClassificationTable.test_every_classification_is_from_the_fixed_vocabulary
-      - test_hook_classification_pin.TestParseClassificationTableFailureModes.test_malformed_row_wrong_column_count_raises
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_parses_the_real_document_without_error
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_exactly_four_rows
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_row_hook_names_match_the_four_queue_hooks_no_more_no_fewer
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_every_row_path_is_repo_relative_and_resolves
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_every_classification_is_from_the_fixed_vocabulary
+      - tests.test_hook_classification_pin.TestParseClassificationTableFailureModes.test_malformed_row_wrong_column_count_raises
     red_confirmed: false
     red_reason: >-
       Regression guard, not a new-behavior red: these existing tests (all

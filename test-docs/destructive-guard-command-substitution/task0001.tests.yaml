@@ -7,10 +7,7 @@ acceptance_tests:
       - "tests.test_destructive_guard_command_substitution.TestWholeWordSubstitutionReachesDecision.test_each_ac1_command_is_ask_with_rm_unresolvable"
       - "tests.test_destructive_guard_command_substitution.TestWholeWordSubstitutionReachesDecision.test_each_ac1_command_demotes_to_deny_when_unattended"
       - "tests.test_destructive_guard_command_substitution.TestWholeWordSubstitutionReachesDecision.test_none_of_the_four_is_allow_in_either_mode"
-      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): 裸のコマンド置換のみの対象 `$(mktemp -d)` は 1 トークンとして残り ask"
-      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): 裸のコマンド置換のみの対象 `$(cat list)` は 1 トークンとして残り ask"
-      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): $() スペルの裸のコマンド置換のみの対象は ask（両スペル対称性の $() 側）"
-      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): バッククォートスペルの裸のコマンド置換のみの対象は ask（両スペル対称性のバッククォート側）"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Added the four case-table entries first (all four flipped/added to
@@ -51,7 +48,7 @@ acceptance_tests:
       - "tests.test_destructive_guard_command_substitution.TestQuotedWholeWordSubstitutionNeverAllows.test_tier_matches_d4_ask"
       - "tests.test_destructive_guard_command_substitution.TestQuotedWholeWordSubstitutionNeverAllows.test_target_rendering_not_whitespace_only"
       - "tests.test_destructive_guard_command_substitution.TestQuotedWholeWordSubstitutionNeverAllows.test_never_allow_in_either_mode"
-      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): クォート付きコマンド置換のみの対象は裸形と同じ経路で ask"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       test_tier_matches_d4_ask and test_target_rendering_not_whitespace_only
@@ -86,13 +83,9 @@ acceptance_tests:
     tests:
       - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_non_delete_positions_stay_allow"
       - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_nested_substitution_stays_deny"
-      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_dash_c_payload_reaches_same_verdict_as_direct"
+      - tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_dash_c_payload_carrying_literal_path_reaches_same_verdict_as_direct
       - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_unbalanced_quoting_raises_no_exception_and_exits_zero"
-      - "destructive-guard-cases.json: 本物: ネストしたコマンド置換でも内側の rm は本文の再走査で検知され deny のまま"
-      - "destructive-guard-cases.json: 対象外(判定なし): リダイレクト先に置かれた裸のコマンド置換は削除対象ではないため allow"
-      - "destructive-guard-cases.json: 対象外(判定なし): 再帰フラグ無しの delete はコマンド置換のみの対象があっても allow のまま"
-      - "destructive-guard-cases.json: スクラッチ外(rm-recursive): ダブルクォート内で実テキストに隣接するコマンド置換は従来どおり deny"
-      - "destructive-guard-cases.json: 本物: bash -c ペイロード内の実パス rm は直接書いた場合と同じ deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Every sub-scenario here is a regression guard by construction: none of

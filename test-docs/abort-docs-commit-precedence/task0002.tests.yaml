@@ -115,8 +115,8 @@ acceptance_tests:
   AC-7:
     tests:
       - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
-      - tests.test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
-      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+      - tests.test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_well_formed_and_at_least_0_2_1
+      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_well_formed_and_at_least_0_2_1
       - tests.test_routeback_residual_connections_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
       - tests.test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
     red_confirmed: true

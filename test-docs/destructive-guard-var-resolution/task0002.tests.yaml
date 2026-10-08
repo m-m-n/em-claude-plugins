@@ -23,12 +23,12 @@ acceptance_tests:
       the em-review sibling entry still carries no "version" key.
   AC-3:
     tests:
-      - test_plugin_version_parity.TestPluginManifestVersion
-      - test_plugin_version_parity.TestMarketplaceEntryVersion
-      - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey
-      - test_plugin_version_parity.TestVersionComparisonIsDotSeparatedNumeric
-      - test_plugin_version_parity.TestValidationDetectsRegressions
-      - test_plugin_version_parity.TestOwnModuleStdlibOnly
+      - tests.test_plugin_version_parity.TestPluginManifestVersion
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion
+      - tests.test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey
+      - tests.test_plugin_version_parity.TestVersionComparisonIsDotSeparatedNumeric
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions
+      - tests.test_plugin_version_parity.TestOwnModuleStdlibOnly
     red_confirmed: false
     red_reason: >-
       Pre-existing test module (added by an earlier feature's task0004,

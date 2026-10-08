@@ -27,13 +27,7 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - "hooks:TS-1"
-      - "hooks:TS-2"
-      - "hooks:TS-13"
-      - "hooks:TS-14"
-      - "hooks:TS-15"
-      - "hooks:TS-16"
-      - "hooks:TS-17"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       TS-13 through TS-17 (new case-table entries) FAILed (got allow,
@@ -46,8 +40,7 @@ acceptance_tests:
 
   AC-2:
     tests:
-      - "hooks:TS-3"
-      - "hooks:TS-4"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       TS-3/TS-4 already passed before this task's implementation: the prior
@@ -62,20 +55,7 @@ acceptance_tests:
 
   AC-3:
     tests:
-      - "hooks:TS-5"
-      - "hooks:TS-6"
-      - "hooks:TS-7"
-      - "hooks:TS-18"
-      - "hooks:TS-19"
-      - "hooks:TS-20"
-      - "hooks:TS-21"
-      - "hooks:TS-22"
-      - "hooks:TS-23"
-      - "hooks:TS-24"
-      - "hooks:TS-25"
-      - "hooks:TS-26"
-      - "hooks:TS-27"
-      - "hooks:TS-33"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       TS-18 through TS-27 and TS-33 (11 new case-table entries) FAILed (got
@@ -89,8 +69,7 @@ acceptance_tests:
 
   AC-4:
     tests:
-      - "hooks:TS-8"
-      - "hooks:TS-9"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       TS-8/TS-9 were already allow under the old code (the old rm route's
@@ -108,14 +87,7 @@ acceptance_tests:
 
   AC-5:
     tests:
-      - "hooks:TS-10"
-      - "hooks:TS-11"
-      - "hooks:TS-12"
-      - "hooks:TS-28"
-      - "hooks:TS-29"
-      - "hooks:TS-30"
-      - "hooks:TS-31"
-      - "hooks:TS-32"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       TS-28/TS-29/TS-30 (new mixed -c body entries) FAILed (got allow,
@@ -162,9 +134,7 @@ acceptance_tests:
       exempt). No red state applies to documentation wording.
 
   AC-8:
-    tests:
-      - "hooks:full-suite"
-      - "main:full-suite"
+    tests: []
     red_confirmed: true
     red_reason: >
       The case-suite runner (python3 em-workflow/hooks/tests/run-destructive-guard.py)
@@ -184,6 +154,8 @@ acceptance_tests:
       evaluation in the changed judgement path (read_command_name_evidence()
       and route_substitution_headed_statement() are both pure string
       processing over already-collected text/attributes).
+
+      Removed from tests (not a unittest ID): hooks:full-suite; main:full-suite
 
   AC-9:
     tests: []

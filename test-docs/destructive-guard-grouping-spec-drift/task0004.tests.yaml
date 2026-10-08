@@ -30,13 +30,7 @@ acceptance_tests:
       are not expected to go red").
   AC-2:
     tests:
-      - "destructive-guard-cases.json: グルーピング(サブシェル)内の bash -c ペイロード: 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(if/then)内の eval ペイロード: 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(ブレースグループ)内のヒアストリングペイロード: 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(for/do + sudo)内の bash -c ペイロード: 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: ラッパー(command)直後のヒアストリングペイロード: 対象は裸形と同じ deny(回帰ガード)"
-      - "destructive-guard-cases.json: サブシェル内でヒアストリングがコマンドの引数として渡るだけなら data のまま allow"
-      - "destructive-guard-cases.json: if/then 内で bash -c の文字列が echo の引数なら data のまま allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       The four deny rows are among the 23 red-run failures (each reported
@@ -50,17 +44,7 @@ acceptance_tests:
       five deny rows and `ok allow` for both allow guards.
   AC-3:
     tests:
-      - "destructive-guard-cases.json: case アイテムの単独行 ;; 終端子越しでも次アイテムの rm は deny"
-      - "destructive-guard-cases.json: 同一行終端子と単独行終端子が混在する case: git push --force のアイテムも deny"
-      - "destructive-guard-cases.json: case パターン内の `;&` フォールスルー越しでも次アイテムの rm は deny"
-      - "destructive-guard-cases.json: case パターン内の `;|` フォールスルー越しでも次アイテムの rm は deny"
-      - "destructive-guard-cases.json: クォートされた \"case\" は case 構文を開かず、`||` 以降の rm は素のコマンドとして deny"
-      - "destructive-guard-cases.json: ラッパー(command)越しの case は case 構文を開かず、`||` 以降の rm は素のコマンドとして deny"
-      - "destructive-guard-cases.json: time 越しの本物の case: パターン閉じ括弧の後の rm は裸形と同じ deny"
-      - "destructive-guard-cases.json: case パターンの `|` 区切り選択肢中の 'esac' はパターンテキストのまま、閉じ括弧後の rm は deny"
-      - "destructive-guard-cases.json: case パターン自体が 'esac' という文字列でも、閉じ括弧後の rm は deny"
-      - "destructive-guard-cases.json: アイテムの無い空の case(`case x in esac`)は正しく閉じ、後続の rm は素のコマンドとして deny"
-      - "destructive-guard-cases.json: 単独行の ;; の後の次パターンはコマンド語ではなくデータのまま allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       6 of these 11 rows are among the 23 red-run failures: the standalone-
@@ -82,13 +66,7 @@ acceptance_tests:
       11 rows report the verdict named in AC-3.
   AC-4:
     tests:
-      - "destructive-guard-cases.json: case パターン閉じ括弧に融着したサブシェル開き(複数行): 中の rm は deny"
-      - "destructive-guard-cases.json: case パターン閉じ括弧に融着したサブシェル開き(単一行): 中の rm は deny"
-      - "destructive-guard-cases.json: 二重に融着した閉じ括弧(`))`)の中の rm は deny"
-      - "destructive-guard-cases.json: 二重に融着した閉じ括弧(`))`)の中の cp 宛先は ask のまま"
-      - "destructive-guard-cases.json: ネストしたサブシェル内の cp 宛先は ask のまま"
-      - "destructive-guard-cases.json: 二重の閉じ括弧にリダイレクトが融着したスクラッチ削除は allow のまま"
-      - "destructive-guard-cases.json: 二重の閉じ括弧にリダイレクトが融着したスクラッチ削除(単純形)は allow のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       6 of these 7 rows are among the 23 red-run failures: the two case-
@@ -108,15 +86,7 @@ acceptance_tests:
       verdict named in AC-4.
   AC-5:
     tests:
-      - "destructive-guard-cases.json: sudo とオプションの間に挟まったリダイレクト越しの rm は deny のまま"
-      - "destructive-guard-cases.json: sudo とオプションの間に挟まったリダイレクト越しの git push --force は deny のまま"
-      - "destructive-guard-cases.json: sudo とオプションの間に挟まったリダイレクト越しの cp 宛先は ask のまま"
-      - "destructive-guard-cases.json: サブシェル + sudo + 挟まったリダイレクト越しの rm は deny のまま"
-      - "destructive-guard-cases.json: env とオプションの間に挟まったリダイレクト越しの rm は deny のまま"
-      - "destructive-guard-cases.json: time + サブシェルの組み合わせは対象裸形と同じ deny(回帰ガード)"
-      - "destructive-guard-cases.json: ラッパー(command)後のリダイレクト宛先は自己設定書き込みとして ask のまま(回帰ガード)"
-      - "destructive-guard-cases.json: ラッパー(command)後のリダイレクト宛先が transcript なら deny のまま(回帰ガード)"
-      - "destructive-guard-cases.json: sudo と ls の間に挟まったリダイレクトがあっても無害コマンドは allow のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       5 of these 9 rows are among the 23 red-run failures — `sudo
@@ -134,9 +104,7 @@ acceptance_tests:
       After the implementation all 9 rows report the verdict named in AC-5.
   AC-6:
     tests:
-      - "destructive-guard-cases.json: パースに失敗した複数行チャンクのフォールバック: if/then で包まれた rm も deny"
-      - "destructive-guard-cases.json: パースに失敗した複数行チャンクのフォールバック: サブシェルで包まれた rm も deny"
-      - "destructive-guard-cases.json: パースに失敗したフォールバックでも閉じ括弧は rm 対象にならず、スクラッチ削除は allow のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Both fallback deny rows are among the 23 red-run failures (each

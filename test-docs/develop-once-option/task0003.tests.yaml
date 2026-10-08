@@ -4,7 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_state_domain_includes_phase_done
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_state_domain_includes_all_three_values
       - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_phase_done_conditions_stated
     red_confirmed: true
     red_reason: >-
@@ -33,8 +33,7 @@ acceptance_tests:
       pre-change text.
   AC-4:
     tests:
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_no_document_wording_states_a_terminal_state_count
-      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_general_no_line_rule
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_general_no_result_rule
     red_confirmed: true
     red_reason: >-
       Old document still contained "closed set of two values" and "two
@@ -46,13 +45,12 @@ acceptance_tests:
       throwaway red-check script against the extracted pre-change document.
   AC-5:
     tests:
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_seven_level_2_headings_in_order
-      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_nine_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
       - tests.test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
       - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
       - tests.test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
       - tests.test_batch_stop_contract.TestStopPointCoverage.test_source_paths_resolve_to_existing_files
-      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_inside_fenced_blocks
     red_confirmed: false
     red_reason: >-
       AC-5 is a non-regression invariant (heading count/order, reason-code
@@ -63,14 +61,7 @@ acceptance_tests:
       green after -- their continued pass is the proof this criterion holds.
   AC-6:
     tests:
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_restates_no_state_value_shape
-      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_state_value_shape_is_rejected
-      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_bare_boundary_literal_is_rejected
-      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_step_status_vocabulary_does_not_false_positive
-      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_step_status_vocabulary_occurs_in_a_real_pointer_document
-      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_forged_state_value_excerpt_is_otherwise_well_formed
-      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_forged_bare_boundary_excerpt_is_otherwise_well_formed
-      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_step_status_vocabulary_excerpt_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestSc5LiteralGuardMatcher.test_state_value_shape_is_rejected
     red_confirmed: true
     red_reason: >-
       The matcher function `_assert_no_state_value_literal` did not exist

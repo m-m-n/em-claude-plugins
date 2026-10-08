@@ -4,8 +4,7 @@ final_failures: []             # re-executed after the fix: run-destructive-guar
 acceptance_tests:
   AC-1:
     tests:
-      - "here-string 置換のみ + 後続 rm"
-      - "here-string バッククォート置換のみ + 後続 rm"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       AC-1 の対象はケースファイルへの 2 行の追加そのもので、その存在を検査する既存テストは
@@ -16,8 +15,7 @@ acceptance_tests:
       存在と既存ケースの不変）は git diff の目視確認で、実行して失敗させられる検査は無い。
   AC-2:
     tests:
-      - "here-string 置換のみ + 後続 rm"
-      - "here-string バッククォート置換のみ + 後続 rm"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       修正前の destructive-guard.py に対して run-destructive-guard.py を実行し、456/458 passed、
@@ -26,7 +24,7 @@ acceptance_tests:
       でも再現した。
   AC-3:
     tests:
-      - "here-string 置換のみ + 後続 rm"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       修正前は got=(exit 1)。フックが IndexError: list index out of range
@@ -34,16 +32,14 @@ acceptance_tests:
       修正後は exit 0 で permissionDecision が deny。
   AC-4:
     tests:
-      - "here-string バッククォート置換のみ + 後続 rm"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       修正前は got=(exit 1)。AC-3 と同じ IndexError でフックが落ちた。修正後は exit 0 で
       permissionDecision が deny。
   AC-5:
     tests:
-      - "run-destructive-guard.py (全 458 ケース)"
-      - "退行防止(A, TS-32): here-string の対象がクォート無し置換のみのとき、繰り上がる次の語を本文として検査する — 従来どおりの繰り上げ挙動の対照"
-      - "クォート判定(quote-aware, TS-31): here-string の対象が丸ごとクォート付き置換なら空展開でも語が消えないため繰り上げない — 後続引数は実シェルでは $0 であり allow が実シェル意味論と一致する"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       実行した検査「run-destructive-guard.py が exit 0 で全ケース pass」は、実装前
@@ -52,7 +48,7 @@ acceptance_tests:
       TS-32 の deny) は修正前から修正後まで ok のままで赤になっていない。
   AC-6:
     tests:
-      - "run-destructive-guard.py (-c / eval 分岐を通る既存ケース群)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       diff の範囲に関する基準で、diff 範囲の逸脱を検出するテストは存在しない。専用の新規

@@ -4,9 +4,7 @@ final_failures: []             # re-executed after the implementation: unittest 
 acceptance_tests:
   AC-1:
     tests:
-      - "run-destructive-guard.py::f34ee27bc8c323b1 外側と内側の eval が同じ接頭辞 x=(@ を持ち、間で extglob を切り替えても、別の解析単位として数えて ask"
-      - "run-destructive-guard.py::f34ee27bc8c323b1 同じ接頭辞 x=(@ を持つ兄弟の eval の間で extglob を切り替えても、別の解析単位として数えて ask"
-      - "run-destructive-guard.py::f34ee27bc8c323b1 外側と内側の bash -c が同じ接頭辞 x=(@ を持ち、間で extglob を切り替えても、別の解析単位として数えて ask"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the entries appended and the hook unchanged, run-destructive-guard.py
@@ -15,7 +13,7 @@ acceptance_tests:
       破壊的なパターンに一致しない。" while the expected verdict is ask.
   AC-2:
     tests:
-      - "run-destructive-guard.py::f34ee27bc8c323b1 内側の eval の接頭辞が外側と違う y=(@ のときも、同じく ask"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       The entry passed before any implementation (the hook already returned ask
@@ -24,8 +22,7 @@ acceptance_tests:
       Test Notes say; no red state exists for it.
   AC-3:
     tests:
-      - "run-destructive-guard.py::heredoc-syntax-error T2 AC-4.7 配列の中の @(foo|bar) の後のヒアドキュメントは、どちらの読みでも破壊的なコマンドを含まず allow"
-      - "run-destructive-guard.py::every pre-existing case-table entry (717 entries, deny 413 / ask 120 unchanged)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing case-table
@@ -37,8 +34,8 @@ acceptance_tests:
       count 120 not lower (ask is now 124 with the four new entries).
   AC-4:
     tests:
-      - test_destructive_guard_lexer_agreement.TestUnclosedOpeners
-      - test_destructive_guard_lexer_agreement.TestReworkLinearity
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing linearity tests
@@ -51,8 +48,8 @@ acceptance_tests:
       an extended-glob parenthesis).
   AC-5:
     tests:
-      - test_destructive_guard_lexer_agreement.TestStageAgreement
-      - test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing
@@ -63,8 +60,7 @@ acceptance_tests:
       implementation was in place, so no red state occurred for this change.
   AC-6:
     tests:
-      - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
-      - "python3 -m unittest discover -s tests"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the AC-1 entries appended and the hook unchanged, run-destructive-
@@ -74,3 +70,5 @@ acceptance_tests:
       observed for it), and the no-new-import part is checked by the existing
       TestModuleContract (test_hook_and_test_import_only_the_standard_library),
       which passed in that run.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests
