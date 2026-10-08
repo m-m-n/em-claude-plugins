@@ -144,7 +144,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-test-id-resolution/task0001
   task0002:
     title: Record ID cleanup, range1 (0-9, a-d)
