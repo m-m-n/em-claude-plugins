@@ -1,11 +1,11 @@
 schema_version: 1
 feature: queue-stop-guard-nonascii-blank-state
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: 1a5c139d078964ccd4fe1c9cce40cf899ce7c93a
+base_revision: aabbbdd04b899a02fbd7ef0554790c3a345b8818
 last_input_digest: sha256:578af63c8a8f198282c836c89eecbd188e4ce143ca4617d2c0a1464ada17147a
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -29,7 +29,7 @@ artifacts:
   produced_by: create-plan-run-0002
 patches:
 - patch_id: queue-stop-guard-nonascii-blank-state-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:578af63c8a8f198282c836c89eecbd188e4ce143ca4617d2c0a1464ada17147a
   base_workflow_blob: 5982e3f77cc7bcf5416cde0d6a659e5caa12465c
 progress_fingerprint: null
