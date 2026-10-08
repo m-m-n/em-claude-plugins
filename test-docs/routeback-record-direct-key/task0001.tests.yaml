@@ -6,8 +6,8 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_queue_stop_guard_routeback_record.TestRecordReadFunction.test_notes_body_record_does_not_shadow_the_direct_key_record
-      - test_queue_stop_guard_routeback_record.TestRecordReadFunction.test_record_after_an_empty_block_scalar_at_the_direct_indent_is_read
+      - tests.test_queue_stop_guard_routeback_record.TestRecordReadFunction.test_notes_body_record_does_not_shadow_the_direct_key_record
+      - tests.test_queue_stop_guard_routeback_record.TestRecordReadFunction.test_record_after_an_empty_block_scalar_at_the_direct_indent_is_read
     red_confirmed: true
     red_reason: >-
       Case (a), run against the unmodified hook: AssertionError:
@@ -17,10 +17,10 @@ acceptance_tests:
       (a) of this criterion was observed red.
   AC-2:
     tests:
-      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_block_scalar_body_is_not_read_for_every_indicator
-      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_key_of_a_mapping_nested_under_another_direct_key_is_not_read
-      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_key_of_a_mapping_inside_a_sequence_item_is_not_read
-      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_continuation_line_of_a_multi_line_double_quoted_notes_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_block_scalar_body_is_not_read_for_every_indicator
+      - tests.test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_key_of_a_mapping_nested_under_another_direct_key_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_key_of_a_mapping_inside_a_sequence_item_is_not_read
+      - tests.test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_continuation_line_of_a_multi_line_double_quoted_notes_is_not_read
     red_confirmed: true
     red_reason: >-
       Run against the unmodified hook, every indicator subtest (|, |-, >, >-,
@@ -30,9 +30,9 @@ acceptance_tests:
       launch=task0001,task0002 (the forged line was read as the record).
   AC-3:
     tests:
-      - test_queue_stop_guard_routeback_record.TestNotesBodyDoesNotShadowTheRecord.test_non_matching_notes_body_value_does_not_hide_a_matching_record
-      - test_queue_stop_guard_routeback_record.TestNotesBodyDoesNotShadowTheRecord.test_matching_notes_body_value_does_not_replace_a_non_matching_record
-      - test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_a_genuine_direct_key_record_is_still_read_next_to_such_content
+      - tests.test_queue_stop_guard_routeback_record.TestNotesBodyDoesNotShadowTheRecord.test_non_matching_notes_body_value_does_not_hide_a_matching_record
+      - tests.test_queue_stop_guard_routeback_record.TestNotesBodyDoesNotShadowTheRecord.test_matching_notes_body_value_does_not_replace_a_non_matching_record
+      - tests.test_queue_stop_guard_routeback_record.TestForgedRecordIsNotRead.test_a_genuine_direct_key_record_is_still_read_next_to_such_content
     red_confirmed: true
     red_reason: >-
       Run against the unmodified hook, case (a) failed for every indicator
@@ -45,9 +45,9 @@ acceptance_tests:
       failed the same way as case (a): AssertionError: 0 != 2.
   AC-4:
     tests:
-      - test_queue_stop_guard
-      - test_queue_stop_guard_routeback_record
-      - test_queue_hook_status_read_pin
+      - tests.test_queue_stop_guard
+      - tests.test_queue_stop_guard_routeback_record
+      - tests.test_queue_hook_status_read_pin
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing
@@ -59,11 +59,11 @@ acceptance_tests:
       test is modified (the diff removes no assertion line).
   AC-5:
     tests:
-      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_module_docstring_states_direct_keys_only
-      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_record_read_function_docstring_states_direct_keys_only
-      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_record_regex_comment_states_direct_keys_only
-      - test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_wording_matchers_do_not_fire_on_the_pre_change_docstring
-      - test_queue_stop_guard_routeback_record.TestModuleDocstring
+      - tests.test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_module_docstring_states_direct_keys_only
+      - tests.test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_record_read_function_docstring_states_direct_keys_only
+      - tests.test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_record_regex_comment_states_direct_keys_only
+      - tests.test_queue_stop_guard_routeback_record.TestDirectKeyWording.test_wording_matchers_do_not_fire_on_the_pre_change_docstring
+      - tests.test_queue_stop_guard_routeback_record.TestModuleDocstring
     red_confirmed: true
     red_reason: >-
       With the hook file temporarily reverted to its base revision, the
@@ -75,10 +75,10 @@ acceptance_tests:
       the four pinned phrases stay and the excluded phrase stays absent.
   AC-6:
     tests:
-      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_block_scalar_notes_option_emits_a_non_null_multi_line_value
-      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_double_quoted_notes_option_emits_a_non_null_multi_line_value
-      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_notes_option_places_notes_before_the_record_key
-      - test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_default_fixture_still_contains_notes_null
+      - tests.test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_block_scalar_notes_option_emits_a_non_null_multi_line_value
+      - tests.test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_double_quoted_notes_option_emits_a_non_null_multi_line_value
+      - tests.test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_notes_option_places_notes_before_the_record_key
+      - tests.test_queue_stop_guard_routeback_record.TestFixtureBuilderNotes.test_default_fixture_still_contains_notes_null
     red_confirmed: true
     red_reason: >-
       Before the builder gained the option, the three notes-option tests
@@ -88,8 +88,8 @@ acceptance_tests:
       without the option still contains notes: null.
   AC-7:
     tests:
-      - test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_only_stdlib_imports
-      - test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing

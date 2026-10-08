@@ -36,7 +36,6 @@ acceptance_tests:
       - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_old_absence_degrades_phrase_absent_from_file
       - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_new_absence_orchestrator_unresolvable_present
       - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_new_absence_residual_outcome_present
-      - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_no_agent_entry_token_present
       - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_cites_i2b_recovery_residual_block_for_absence_behavior
       - tests.test_routeback_ssot_drift_agent_index.TestAgentsJsonlParagraphAbsenceBehavior.test_stale_agent_entry_token_absent_from_file
     red_confirmed: true

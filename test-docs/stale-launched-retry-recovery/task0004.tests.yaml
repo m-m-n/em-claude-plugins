@@ -68,7 +68,6 @@ acceptance_tests:
       - tests.test_stale_launched_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_succeeds_on_a_present_entry_name
       - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_forged_baseline_version_is_well_formed
       - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_patch_bump_matcher_rejects_forged_baseline_version
-      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_patch_bump_matcher_rejects_minor_or_major_drift
       - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_patch_bump_matcher_rejects_malformed_version_shape
       - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
       - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed

@@ -17,8 +17,8 @@ acceptance_tests:
     tests:
       - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_terminal_journal_event_reports_noop_terminal
       - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_non_launched_final_event_reports_journal_not_launched
-      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_worktree_absent_reports_task_artifacts_missing
-      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_branch_absent_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_worktree_observation_absent_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_branch_observation_absent_reports_task_artifacts_missing
       - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_no_agent_entry_reports_no_agent_entry
       - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_entry_outside_binding_tolerance_reports_stale_agent_entry
       - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_absent_session_id_reports_no_session_id
@@ -63,9 +63,7 @@ acceptance_tests:
       cases (confirmed by the same revert-and-rerun check).
   AC-5:
     tests:
-      - tests.test_recover_orphaned_task (all pre-existing tests, e.g.
-        TestEndToEndDecide.test_ac2b_identity_equal_to_current_reports_same_session
-        and TestEndToEndDecide.test_ac1_proven_orphan_reports_recovered_and_invokes_helper_once)
+      - tests.test_recover_orphaned_task
       - tests.test_stale_launched_recovery_chain.TestChainEntryGating.test_no_evidence_supplied_keeps_same_session_on_a_fully_proving_fixture
     red_confirmed: false
     red_reason: >-
@@ -96,10 +94,8 @@ acceptance_tests:
   AC-7:
     tests:
       - tests.test_stale_launched_recovery_chain.TestChainByteIdentityAndNoCreation.test_residual_creates_neither_journal_file_nor_parent_directory
-      - tests.test_stale_launched_recovery_chain (every TestChainOrderedUnmetConditions
-        and TestChainInsufficientEvidence case asserts byte-identical journal
-        content and zero helper invocations via the shared _assert_residual
-        / _assert_noop_terminal helpers)
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions
+      - tests.test_stale_launched_recovery_chain.TestChainInsufficientEvidence
     red_confirmed: true
     red_reason: >-
       The dedicated test raised the same AttributeError as AC-6 (calls

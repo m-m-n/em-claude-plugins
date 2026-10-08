@@ -33,7 +33,6 @@ acceptance_tests:
       - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_category_unchanged
       - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
       - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_description_retains_stable_anchor
-      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
     red_confirmed: false
     red_reason: >-
       These are pure regression guards over the em-review entry, which this

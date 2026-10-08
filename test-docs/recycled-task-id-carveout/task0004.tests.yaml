@@ -3,8 +3,7 @@ baseline_failures: []
 final_failures: []
 acceptance_tests:
   AC-1:
-    tests:
-      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+    tests: []
     red_confirmed: false
     red_reason: >
       This is a proof over a fixed, verbatim-captured historical sample
@@ -24,8 +23,7 @@ acceptance_tests:
       the real anchored-slice matcher cannot even form its slice against
       this sample, proving it does not match. See notes / unconfirmed_reds.
   AC-2:
-    tests:
-      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+    tests: []
     red_confirmed: false
     red_reason: >
       Inspection-verified alongside AC-1's test: the sample is a captured
@@ -43,8 +41,7 @@ acceptance_tests:
       as-is. The comparison runs through _normalize_ws, the module's
       existing normalization helper.
   AC-3:
-    tests:
-      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_pre_stopguard_retired_failed_sample_retains_never_consulted_phrase
+    tests: []
     red_confirmed: false
     red_reason: >
       Data-integrity guard over the same fixed sample as AC-1/AC-2, added
@@ -74,9 +71,7 @@ acceptance_tests:
       class docstring was re-read against its actual assertions and
       already matched (no change needed there).
   AC-5:
-    tests:
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_three_journal_only_hooks_named_in_anchored_never_consult_slice
-      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+    tests: []
     red_confirmed: false
     red_reason: >
       Inspection criterion (constant reader-count audit), per the task

@@ -17,9 +17,9 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_batch_stop_contract.TestConsumerConstraints.test_own_rules_preamble_stated
-      - test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_otherwise_well_formed
-      - test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_rejected
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_own_rules_preamble_stated
+      - tests.test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_rejected
     red_confirmed: true
     red_reason: >-
       test_own_rules_preamble_stated raised AssertionError: 'cannot fire'
@@ -30,7 +30,7 @@ acceptance_tests:
 
   AC-2:
     tests:
-      - test_batch_stop_contract.TestConsumerConstraints.test_detail_own_rule_states_line_terminator_and_normalization_reason
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_detail_own_rule_states_line_terminator_and_normalization_reason
     red_confirmed: true
     red_reason: >-
       AssertionError: '`detail` rejects a line terminator' not found in
@@ -40,10 +40,10 @@ acceptance_tests:
 
   AC-3:
     tests:
-      - test_batch_stop_contract.TestConsumerConstraints.test_resume_conditions_exemption_stated
-      - test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_carried_over_text_alone_does_not_satisfy_the_matcher
-      - test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_otherwise_well_formed
-      - test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_rejected
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_resume_conditions_exemption_stated
+      - tests.test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_carried_over_text_alone_does_not_satisfy_the_matcher
+      - tests.test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_rejected
     red_confirmed: true
     red_reason: >-
       test_resume_conditions_exemption_stated raised AssertionError:
@@ -52,10 +52,10 @@ acceptance_tests:
 
   AC-4:
     tests:
-      - test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_result_format_section_unchanged
-      - test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_escaping_section_unchanged
-      - test_batch_stop_contract.TestConsumerConstraints.test_five_carried_over_constraints_still_present_and_still_five
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_normalization_not_applied
+      - tests.test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_result_format_section_unchanged
+      - tests.test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_escaping_section_unchanged
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_five_carried_over_constraints_still_present_and_still_five
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_normalization_not_applied
     red_confirmed: false
     red_reason: >-
       TDD-awkward per the task plan's Test Notes: these are pure
@@ -73,10 +73,10 @@ acceptance_tests:
 
   AC-5:
     tests:
-      - test_batch_stop_contract.TestConsumerConstraints.test_own_hardening_rules_stated
-      - test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof.test_carried_over_text_alone_does_not_satisfy_the_matcher
-      - test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof.test_forged_partial_rules_is_otherwise_well_formed
-      - test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof.test_forged_partial_rules_missing_shape_checks_is_rejected
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_own_hardening_rules_stated
+      - tests.test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof.test_carried_over_text_alone_does_not_satisfy_the_matcher
+      - tests.test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof.test_forged_partial_rules_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof.test_forged_partial_rules_missing_shape_checks_is_rejected
     red_confirmed: false
     red_reason: >-
       Per FR7/FR8 the existing matcher's assertions are unchanged and the
@@ -89,13 +89,13 @@ acceptance_tests:
 
   AC-6:
     tests:
-      - test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_otherwise_well_formed
-      - test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_rejected
-      - test_batch_stop_contract.TestConsumerConstraints.test_own_rules_preamble_stated
-      - test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_carried_over_text_alone_does_not_satisfy_the_matcher
-      - test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_otherwise_well_formed
-      - test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_rejected
-      - test_batch_stop_contract.TestConsumerConstraints.test_resume_conditions_exemption_stated
+      - tests.test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestOwnRulesPreambleMatcherNegativeProof.test_forged_pre_change_preamble_is_rejected
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_own_rules_preamble_stated
+      - tests.test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_carried_over_text_alone_does_not_satisfy_the_matcher
+      - tests.test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestResumeConditionsExemptionMatcherNegativeProof.test_forged_pre_change_bullet_is_rejected
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_resume_conditions_exemption_stated
     red_confirmed: true
     red_reason: >-
       Both new matchers' positive assertions (against the real document)

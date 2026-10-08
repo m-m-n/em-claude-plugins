@@ -4,11 +4,11 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_review_gate_abort_review_phase.TestSc1BlockInDocument.test_each_sc1_element_is_stated
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_blocks_are_placed_after_batch_paragraphs_and_before_r6
-      - test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_variant_lacking_one_element_is_rejected_by_that_matcher_only
-      - test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_each_weakened_mutant_is_rejected_by_its_matcher
-      - test_review_gate_abort_review_phase.TestLabelNegativeTwins.test_sc2_before_sc1_is_rejected_by_placement_matcher
+      - tests.test_review_gate_abort_review_phase.TestSc1BlockInDocument.test_each_sc1_element_is_stated
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_blocks_are_placed_after_batch_paragraphs_and_before_r6
+      - tests.test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_variant_lacking_one_element_is_rejected_by_that_matcher_only
+      - tests.test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_each_weakened_mutant_is_rejected_by_its_matcher
+      - tests.test_review_gate_abort_review_phase.TestLabelNegativeTwins.test_sc2_before_sc1_is_rejected_by_placement_matcher
     red_confirmed: true
     red_reason: >-
       Before the document edit, test_each_sc1_element_is_stated failed for
@@ -18,10 +18,10 @@ acceptance_tests:
       because the SC1 label was absent from Phase R5.
   AC-2:
     tests:
-      - test_review_gate_abort_review_phase.TestSc1BlockInDocument.test_each_sc1_element_is_stated
-      - test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_variant_lacking_one_element_is_rejected_by_that_matcher_only
-      - test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_each_weakened_mutant_is_rejected_by_its_matcher
-      - test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_overreaching_obsolescence_claim_is_rejected_by_scope_guard
+      - tests.test_review_gate_abort_review_phase.TestSc1BlockInDocument.test_each_sc1_element_is_stated
+      - tests.test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_variant_lacking_one_element_is_rejected_by_that_matcher_only
+      - tests.test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_each_weakened_mutant_is_rejected_by_its_matcher
+      - tests.test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_overreaching_obsolescence_claim_is_rejected_by_scope_guard
     red_confirmed: true
     red_reason: >-
       Before the document edit, test_each_sc1_element_is_stated failed for
@@ -30,9 +30,9 @@ acceptance_tests:
       likewise for the others).
   AC-3:
     tests:
-      - test_review_gate_abort_review_phase.TestSc2BlockInDocument.test_each_sc2_element_is_stated
-      - test_review_gate_abort_review_phase.TestSc2NegativeTwins.test_variant_lacking_one_element_is_rejected_by_that_matcher_only
-      - test_review_gate_abort_review_phase.TestSc2NegativeTwins.test_each_weakened_mutant_is_rejected_by_its_matcher
+      - tests.test_review_gate_abort_review_phase.TestSc2BlockInDocument.test_each_sc2_element_is_stated
+      - tests.test_review_gate_abort_review_phase.TestSc2NegativeTwins.test_variant_lacking_one_element_is_rejected_by_that_matcher_only
+      - tests.test_review_gate_abort_review_phase.TestSc2NegativeTwins.test_each_weakened_mutant_is_rejected_by_its_matcher
     red_confirmed: true
     red_reason: >-
       Before the document edit, test_each_sc2_element_is_stated failed for
@@ -40,14 +40,14 @@ acceptance_tests:
       stated in the SC2 block", and likewise R2..R6).
   AC-4:
     tests:
-      - test_review_gate_abort_review_phase.TestReservationParagraphInDocument.test_reservation_scope_statement_is_present
-      - test_review_gate_abort_review_phase.TestReservationParagraphInDocument.test_reservation_sentence_is_verbatim
-      - test_review_gate_abort_review_phase.TestReservationNegativeTwins.test_scope_matcher_rejects_the_pre_change_paragraph_verbatim
-      - test_review_gate_abort_review_phase.TestReservationNegativeTwins.test_scope_matcher_rejects_each_weakened_variant
-      - test_review_gate_abort_review_phase.TestSchemaStatusSetsUnchanged.test_step_status_value_set_is_unchanged
-      - test_review_gate_abort_review_phase.TestSchemaStatusSetsUnchanged.test_review_block_status_value_set_is_unchanged
-      - test_review_gate_abort_review_phase.TestSchemaNegativeTwins.test_forged_step_comment_with_an_extra_value_is_rejected
-      - test_review_gate_abort_review_phase.TestSchemaNegativeTwins.test_forged_review_comment_with_an_extra_value_is_rejected
+      - tests.test_review_gate_abort_review_phase.TestReservationParagraphInDocument.test_reservation_scope_statement_is_present
+      - tests.test_review_gate_abort_review_phase.TestReservationParagraphInDocument.test_reservation_sentence_is_verbatim
+      - tests.test_review_gate_abort_review_phase.TestReservationNegativeTwins.test_scope_matcher_rejects_the_pre_change_paragraph_verbatim
+      - tests.test_review_gate_abort_review_phase.TestReservationNegativeTwins.test_scope_matcher_rejects_each_weakened_variant
+      - tests.test_review_gate_abort_review_phase.TestSchemaStatusSetsUnchanged.test_step_status_value_set_is_unchanged
+      - tests.test_review_gate_abort_review_phase.TestSchemaStatusSetsUnchanged.test_review_block_status_value_set_is_unchanged
+      - tests.test_review_gate_abort_review_phase.TestSchemaNegativeTwins.test_forged_step_comment_with_an_extra_value_is_rejected
+      - tests.test_review_gate_abort_review_phase.TestSchemaNegativeTwins.test_forged_review_comment_with_an_extra_value_is_rejected
     red_confirmed: true
     red_reason: >-
       Before the document edit, test_reservation_scope_statement_is_present
@@ -56,17 +56,17 @@ acceptance_tests:
       before and after, as they guard text that stays unchanged.
   AC-5:
     tests:
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc1_label_bold_form_occurs_exactly_once
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc2_label_bold_form_occurs_exactly_once
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_gate_id_substring_is_absent
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_rework_gate_literal_is_absent
-      - test_review_gate_abort_review_phase.TestLabelNegativeTwins.test_label_twice_is_rejected_by_single_occurrence_matcher
-      - test_review_gate_abort_review_phase.TestLabelNegativeTwins.test_gate_id_in_text_is_rejected_by_absence_matcher
-      - test_batch_quiet_output_phase_wiring
-      - test_muse_consent_no_new_questions
-      - test_step_c_verify_failed_default
-      - test_rework_synthesis_contract
-      - test_review_phase_llm_led
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc1_label_bold_form_occurs_exactly_once
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc2_label_bold_form_occurs_exactly_once
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_gate_id_substring_is_absent
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_rework_gate_literal_is_absent
+      - tests.test_review_gate_abort_review_phase.TestLabelNegativeTwins.test_label_twice_is_rejected_by_single_occurrence_matcher
+      - tests.test_review_gate_abort_review_phase.TestLabelNegativeTwins.test_gate_id_in_text_is_rejected_by_absence_matcher
+      - tests.test_batch_quiet_output_phase_wiring
+      - tests.test_muse_consent_no_new_questions
+      - tests.test_step_c_verify_failed_default
+      - tests.test_rework_synthesis_contract
+      - tests.test_review_phase_llm_led
     red_confirmed: true
     red_reason: >-
       Before the document edit, the two label single-occurrence tests failed
@@ -75,13 +75,13 @@ acceptance_tests:
       the edit and stayed green after it.
   AC-6:
     tests:
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_phase_r5_region_is_present_and_non_empty
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc1_region_is_present_and_non_empty
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc2_region_is_present_and_non_empty
-      - test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_reservation_paragraph_is_present_and_non_empty
-      - test_review_gate_abort_review_phase.TestRegionNonVacuityTwins
-      - test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_every_sc1_element_has_a_removal_twin
-      - test_review_gate_abort_review_phase.TestSc2NegativeTwins.test_every_sc2_element_has_a_matcher_and_a_mutant_or_removal_twin
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_phase_r5_region_is_present_and_non_empty
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc1_region_is_present_and_non_empty
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_sc2_region_is_present_and_non_empty
+      - tests.test_review_gate_abort_review_phase.TestPinnedDocumentRegions.test_reservation_paragraph_is_present_and_non_empty
+      - tests.test_review_gate_abort_review_phase.TestRegionNonVacuityTwins
+      - tests.test_review_gate_abort_review_phase.TestSc1NegativeTwins.test_every_sc1_element_has_a_removal_twin
+      - tests.test_review_gate_abort_review_phase.TestSc2NegativeTwins.test_every_sc2_element_has_a_matcher_and_a_mutant_or_removal_twin
     red_confirmed: true
     red_reason: >-
       Before the document edit, test_sc1_region_is_present_and_non_empty and
@@ -91,13 +91,13 @@ acceptance_tests:
       text and were green from the first run.
   AC-7:
     tests:
-      - test_batch_policies
-      - test_tier_record_schema_v2
-      - test_batch_quiet_output_phase_wiring
-      - test_muse_consent_no_new_questions
-      - test_step_c_verify_failed_default
-      - test_rework_synthesis_contract
-      - test_review_phase_llm_led
+      - tests.test_batch_policies
+      - tests.test_tier_record_schema_v2
+      - tests.test_batch_quiet_output_phase_wiring
+      - tests.test_muse_consent_no_new_questions
+      - tests.test_step_c_verify_failed_default
+      - tests.test_rework_synthesis_contract
+      - tests.test_review_phase_llm_led
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing suite

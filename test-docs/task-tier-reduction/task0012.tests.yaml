@@ -55,10 +55,7 @@ acceptance_tests:
       failed: "'hypothetical' != 'full'"; the paired non-vacuity test also
       failed since both cases returned the same tier).
   AC-3:
-    tests:
-      - tests.test_tier_evaluator_contract.TestAbsentOrNonNumericMemberFallsThroughWithNoFallthroughRow.test_absent_p0_with_no_fallthrough_row_yields_safest_tier
-      - tests.test_tier_evaluator_contract.TestAbsentOrNonNumericMemberFallsThroughWithNoFallthroughRow.test_non_numeric_p0_with_no_fallthrough_row_yields_safest_tier
-      - tests.test_tier_evaluator_contract.TestAbsentOrNonNumericMemberFallsThroughWithNoFallthroughRow.test_non_vacuity_a_satisfying_score_still_matches_against_this_table
+    tests: []
     red_confirmed: false
     red_reason: >-
       This behaviour (absent/non-numeric member -> row does not match,
@@ -71,13 +68,7 @@ acceptance_tests:
       and were red beforehand. Carried forward per tdd-testing skill
       guidance for a criterion whose behaviour genuinely pre-existed.
   AC-4:
-    tests:
-      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_p0_above_one_yields_safest_tier_with_named_reason
-      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_p0_below_zero_yields_safest_tier
-      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_expectation_clear_nan_yields_safest_tier_not_minimal
-      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_expectation_clear_infinite_yields_safest_tier
-      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_p1_out_of_range_blocks_reduced_even_when_p0_alone_qualifies
-      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_non_vacuity_the_same_p0_in_range_reaches_minimal
+    tests: []
     red_confirmed: true
     red_reason: >-
       Against the pre-change decide-tier.py there was no range/finiteness
@@ -91,10 +82,7 @@ acceptance_tests:
       (test_expectation_clear_infinite_yields_safest_tier failed:
       "'minimal' != 'full'").
   AC-5:
-    tests:
-      - tests.test_tier_evaluator_contract.TestNoNonFiniteTokenInEmittedResult.test_nan_probability_input_produces_strictly_parseable_output
-      - tests.test_tier_evaluator_contract.TestNoNonFiniteTokenInEmittedResult.test_infinite_expectation_clear_input_produces_strictly_parseable_output
-      - tests.test_tier_evaluator_contract.TestNoNonFiniteTokenInEmittedResult.test_non_vacuity_the_raw_output_of_the_nan_case_really_did_carry_a_bare_token_pre_sanitization
+    tests: []
     red_confirmed: true
     red_reason: >-
       Against the pre-change decide-tier.py, echoing an input probability
@@ -105,13 +93,7 @@ acceptance_tests:
       errored on that ValueError); the same for an infinite
       expectation_clear ("...encountered: Infinity").
   AC-6:
-    tests:
-      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_two_readings_agreeing_use_that_tier
-      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_two_readings_disagreeing_yield_safest_tier
-      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_non_vacuity_two_readings_agreeing_on_full_is_not_flagged_as_disagreement
-      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_single_reading_via_readings_list_behaves_like_today
-      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_top_level_basis_score_single_reading_still_accepted
-      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_cli_accepts_two_readings_end_to_end
+    tests: []
     red_confirmed: true
     red_reason: >-
       Against the pre-change decide-tier.py, the `readings` field did not
@@ -125,11 +107,7 @@ acceptance_tests:
       "'fallback_matrix:malformed_input' !=
       'fallback_matrix:readings_disagree'").
   AC-7:
-    tests:
-      - tests.test_tier_rules.TestThresholdRowEvaluation
-      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations
-      - tests.test_tier_rules.TestDegradedInputUnitLevel
-      - tests.test_tier_rules.TestDegradedInputCliLevel
+    tests: []
     red_confirmed: false
     red_reason: >-
       This is a non-regression criterion by definition: these are the

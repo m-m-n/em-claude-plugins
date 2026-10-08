@@ -16,7 +16,7 @@ acceptance_tests:
       FILENAMES) name files with no paired classification, matching the
       criterion's explicit carve-out for structural guards.
   AC-2:
-    tests: [TestHookClassificationPin::test_documented_classification_matches_observed_classification_for_every_row]
+    tests: [tests.test_hook_classification_pin.TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row]
     red_confirmed: false
     red_reason: >-
       Already true before this task started: TestHookClassificationPin held
@@ -37,11 +37,11 @@ acceptance_tests:
       by path) continuing to pass in the full-suite run.
   AC-4:
     tests:
-      - TestObserveHookSource::test_raw_text_search_would_have_misclassified_queue_taskstop_net
-      - TestObserveHookSource::test_unresolvable_path_raises
-      - TestObserveHookSource::test_bash_guard_reads_workflow_yaml_but_not_task_status
-      - TestObserveHookSource::test_bare_workflow_yaml_mention_without_status_accessor_is_false
-      - TestObserveHookSource::test_removing_the_status_carveout_flips_observation_to_false
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_raw_text_search_would_have_misclassified_queue_taskstop_net
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_unresolvable_path_raises
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bare_workflow_yaml_mention_without_status_accessor_is_false
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_removing_the_status_carveout_flips_observation_to_false
     red_confirmed: false
     red_reason: >-
       These five methods pre-existed this task and were already green
@@ -50,7 +50,7 @@ acceptance_tests:
       confirms. No red->green transition applies to a "keep this passing"
       criterion.
   AC-5:
-    tests: [TestObserveHookSource::test_workflow_yaml_mention_moved_from_docstring_to_code_flips_observation]
+    tests: [tests.test_hook_classification_pin.TestObserveHookSource.test_workflow_yaml_mention_moved_from_docstring_to_code_flips_observation]
     red_confirmed: false
     red_reason: >-
       Task plan's own Test Notes direct this test to be written and run

@@ -26,11 +26,10 @@ acceptance_tests:
       citation to references/workflow-patch.md for the field definitions).
   AC-3:
     tests:
-      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_rule_nineteen_is_the_last_rule
-      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_states_recognition_of_an_already_applied_patch
-      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_states_no_op_on_repeated_consumption
-      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_states_same_state_after_any_number_of_resumptions
-      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_cites_phase_state_for_flag_location_without_restating
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_states_recognition_of_an_already_applied_patch
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_states_no_op_on_repeated_consumption
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_states_same_state_after_any_number_of_resumptions
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_cites_phase_state_for_flag_location_without_restating
     red_confirmed: true
     red_reason: >-
       Against the pre-change document (rule 19 did not exist), setUpClass
@@ -72,8 +71,7 @@ acceptance_tests:
       tests that establish AC-6's "paired with a negative proof" and "does
       not match itself" clauses, not because they went red first.
   AC-7:
-    tests:
-      - tests.test_gate_option_vocabulary.TestFrozenFilesByteIdentity.test_workflow_patch_md_byte_identical
+    tests: []
     red_confirmed: true
     red_reason: >-
       Against the refreshed workflow-patch.md content with the pre-task0002
