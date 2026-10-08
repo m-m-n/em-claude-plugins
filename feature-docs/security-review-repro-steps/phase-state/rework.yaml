@@ -1,0 +1,51 @@
+schema_version: 1
+feature: security-review-repro-steps
+phase: rework
+status: dispatching
+generation: 1
+base_revision: 275144668d852e0c6f845af2214ff24f9a9ff2f9
+last_input_digest: sha256:fe3f331a02b2bb587b7af60d67eab0bb1f8361d0b9d6be99c687e955fdc7945b
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: '2026-10-08T11:53:08+09:00'
+    questions:
+    - question_id: rework.sc5.spec-change
+      status: answered
+answers:
+  rework.sc5.spec-change:
+    packet_id: rework-q0001
+    answered_at: '2026-10-08T11:53:08+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep-spec-partial
+    freeform: null
+    normalized_answer: 'SPEC は変えず FR6 の範囲内で直す: 根拠を確認できない unverifiable は declined にせず
+      round_context の抑制にも乗せない（次ラウンドで再検証）。修正・差し戻し・残件数の対象外は FR6 のまま。task0004 AC-2 と
+      D2 の対応付けを rework タスクで改める'
+worker_runs:
+- request_id: rework-verify-r1-bc8ec982
+  status: needs_user_input
+  input_digest: sha256:fe3f331a02b2bb587b7af60d67eab0bb1f8361d0b9d6be99c687e955fdc7945b
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+classification:
+- classifier: codex
+  verdict: not_applicable
+  evidence_ids:
+  - FR6
+  - FR7
+  - FR8
+  - task0004 AC-2
+  decision: stop
+  reason: 'spec-change route not taken: direction 2 tripped on bound-set category
+    unknown (SC5), so the question left the gate via the batch relaxed route; Codex
+    classified it as neither goal_not_met nor spec_gap; no SPEC change. The run continues
+    via the relaxed-route consultation answer keep-spec-partial (see batch-audit.yaml)'
