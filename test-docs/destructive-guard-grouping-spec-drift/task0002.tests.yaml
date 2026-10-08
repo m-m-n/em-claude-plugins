@@ -7,8 +7,7 @@ final_failures: []             # same two commands re-run after implementation: 
 acceptance_tests:
   AC-1:
     tests:
-      - em-workflow/hooks/tests/destructive-guard-cases.json (destination-family + rm-pinning block, tar create/list rows)
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       After adding the FR7/FR8 case rows but before changing destructive-guard.py,
@@ -21,8 +20,7 @@ acceptance_tests:
       passed on that same run, matching the plan's Test Notes.
   AC-2:
     tests:
-      - em-workflow/hooks/tests/destructive-guard-cases.json (tar extract rows)
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       These four tar-extract rows already passed on the baseline hook (pre-fix,
@@ -32,14 +30,12 @@ acceptance_tests:
       one recorded under AC-1/AC-3.
   AC-3:
     tests:
-      - em-workflow/hooks/tests/destructive-guard-cases.json (tar create/list rows)
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: "Same red run as AC-1 -- see AC-1's red_reason; these are the five rows that failed."
   AC-4:
     tests:
-      - em-workflow/hooks/tests/destructive-guard-cases.json (rsync/git clone/unzip/curl/wget rows)
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Per the task plan's Test Notes, every FR7 row outside the tar create/list
@@ -49,8 +45,7 @@ acceptance_tests:
       state was observed for these rows because none was expected.
   AC-5:
     tests:
-      - em-workflow/hooks/tests/destructive-guard-cases.json (rm input-shaping block)
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Per the task plan's Test Notes, all seven FR8 rows pin rm verdicts that
@@ -59,8 +54,8 @@ acceptance_tests:
       observed because none was expected.
   AC-6:
     tests:
-      - tests/test_destructive_guard_command_substitution.py::TestCaseTableDiscipline::test_every_pre_task_command_preserved_with_only_named_changes
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Searched tests/ and em-workflow/hooks/tests/ by path and by filename before
@@ -77,8 +72,7 @@ acceptance_tests:
       directs ("AC-6 is checked by reading the case-table diff").
   AC-7:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py
-      - tests/ (python3 -m unittest discover -s tests)
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Same red run as AC-1: with the FR7/FR8 rows added but before the
@@ -89,6 +83,8 @@ acceptance_tests:
       `python3 -m unittest discover -s tests` was OK both before and after
       (6188/6188 both times), since it does not read the case table's
       destination-family rows itself -- only run-destructive-guard.py does.
+
+      Removed from tests (not a unittest ID): tests/ (python3 -m unittest discover -s tests)
   AC-8:
     tests: []
     red_confirmed: false

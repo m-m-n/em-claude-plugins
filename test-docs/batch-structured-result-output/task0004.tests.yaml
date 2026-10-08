@@ -16,11 +16,11 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_structured_result_conformance.TestDocumentShapePerState.test_each_state_produces_a_single_eight_key_string_mapping
-      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_real_assembled_document_has_no_violations
-      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_leading_blank_line_is_flagged
-      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_an_extra_trailing_key_is_flagged
-      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_reordered_key_pair_is_flagged
+      - tests.test_structured_result_conformance.TestDocumentShapePerState.test_each_state_produces_a_single_eight_key_string_mapping
+      - tests.test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_real_assembled_document_has_no_violations
+      - tests.test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_leading_blank_line_is_flagged
+      - tests.test_structured_result_conformance.TestWellFormedDocumentChecker.test_an_extra_trailing_key_is_flagged
+      - tests.test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_reordered_key_pair_is_flagged
     red_confirmed: true
     red_reason: >-
       Manually broke assemble() to drop the resume_conditions key: the
@@ -30,12 +30,12 @@ acceptance_tests:
       values before the fix.
   AC-2:
     tests:
-      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_exactly_fourteen_adversarial_cases_are_declared
-      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_case_names_are_unique
-      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_each_case_round_trips_in_every_key_position
-      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_control_and_noncharacter_mix_round_trips_by_code_point
-      - test_structured_result_conformance.TestAlreadyEscapedSequenceIsNeverReprocessed.test_round_trips_unchanged
-      - test_structured_result_conformance.TestAlreadyEscapedSequenceIsNeverReprocessed.test_emitted_text_carries_a_doubled_backslash
+      - tests.test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_exactly_fourteen_adversarial_cases_are_declared
+      - tests.test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_case_names_are_unique
+      - tests.test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_each_case_round_trips_in_every_key_position
+      - tests.test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_control_and_noncharacter_mix_round_trips_by_code_point
+      - tests.test_structured_result_conformance.TestAlreadyEscapedSequenceIsNeverReprocessed.test_round_trips_unchanged
+      - tests.test_structured_result_conformance.TestAlreadyEscapedSequenceIsNeverReprocessed.test_emitted_text_carries_a_doubled_backslash
     red_confirmed: true
     red_reason: >-
       Manually broke escape_value() to stop escaping backslash: the
@@ -44,8 +44,8 @@ acceptance_tests:
       backslash'".
   AC-3:
     tests:
-      - test_structured_result_conformance.TestRoundTripIsNotVacuous.test_broken_lf_escaping_fails_the_round_trip
-      - test_structured_result_conformance.TestRoundTripIsNotVacuous.test_correct_escaping_of_the_same_source_does_round_trip
+      - tests.test_structured_result_conformance.TestRoundTripIsNotVacuous.test_broken_lf_escaping_fails_the_round_trip
+      - tests.test_structured_result_conformance.TestRoundTripIsNotVacuous.test_correct_escaping_of_the_same_source_does_round_trip
     red_confirmed: true
     red_reason: >-
       This AC's test IS the red proof: the broken applier folds the literal
@@ -55,10 +55,10 @@ acceptance_tests:
       surrounding suite.
   AC-4:
     tests:
-      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_cr_lf_tab_and_space_runs_collapse_to_single_spaces
-      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_emitted_detail_carries_no_newline_escape
-      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_whitespace_only_source_normalizes_to_the_fixed_placeholder
-      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_normalization_is_not_vacuous_against_an_identity_function
+      - tests.test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_cr_lf_tab_and_space_runs_collapse_to_single_spaces
+      - tests.test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_emitted_detail_carries_no_newline_escape
+      - tests.test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_whitespace_only_source_normalizes_to_the_fixed_placeholder
+      - tests.test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_normalization_is_not_vacuous_against_an_identity_function
     red_confirmed: true
     red_reason: >-
       Manually broke normalize_detail() to skip space-run collapsing:
@@ -66,8 +66,8 @@ acceptance_tests:
       'line one  line two tabbed   multiple   spaces'".
   AC-5:
     tests:
-      - test_structured_result_conformance.TestResumeConditionsEscapingOnly.test_emitted_value_carries_newline_escapes
-      - test_structured_result_conformance.TestResumeConditionsEscapingOnly.test_round_trips_with_indentation_and_trailing_spaces_intact
+      - tests.test_structured_result_conformance.TestResumeConditionsEscapingOnly.test_emitted_value_carries_newline_escapes
+      - tests.test_structured_result_conformance.TestResumeConditionsEscapingOnly.test_round_trips_with_indentation_and_trailing_spaces_intact
     red_confirmed: true
     red_reason: >-
       Manually made assemble() apply detail's normalization to
@@ -77,18 +77,18 @@ acceptance_tests:
       - re-run develop\n").
   AC-6:
     tests:
-      - test_structured_result_consumer_constraints.TestStoppedWithNoneReasonRejected.test_stopped_with_none_reason_is_rejected
-      - test_structured_result_consumer_constraints.TestStoppedWithNoneReasonRejected.test_stopped_with_a_non_none_reason_is_accepted
-      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresNoneReason.test_phase_done_with_a_non_none_reason_is_rejected
-      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresNoneReason.test_phase_done_with_none_reason_is_accepted
-      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresEmptyResumeConditions.test_phase_done_with_nonempty_resume_conditions_is_rejected
-      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresEmptyResumeConditions.test_phase_done_with_empty_resume_conditions_is_accepted
-      - test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_clean_branch_and_pr_url_are_accepted
-      - test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_a_terminal_control_code_point_is_rejected_after_parsing
-      - test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_a_line_terminator_is_rejected_after_parsing
-      - test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_exactly_at_the_bound_is_accepted
-      - test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_just_below_the_bound_is_accepted
-      - test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_just_above_the_bound_is_rejected
+      - tests.test_structured_result_consumer_constraints.TestStoppedWithNoneReasonRejected.test_stopped_with_none_reason_is_rejected
+      - tests.test_structured_result_consumer_constraints.TestStoppedWithNoneReasonRejected.test_stopped_with_a_non_none_reason_is_accepted
+      - tests.test_structured_result_consumer_constraints.TestPhaseDoneRequiresNoneReason.test_phase_done_with_a_non_none_reason_is_rejected
+      - tests.test_structured_result_consumer_constraints.TestPhaseDoneRequiresNoneReason.test_phase_done_with_none_reason_is_accepted
+      - tests.test_structured_result_consumer_constraints.TestPhaseDoneRequiresEmptyResumeConditions.test_phase_done_with_nonempty_resume_conditions_is_rejected
+      - tests.test_structured_result_consumer_constraints.TestPhaseDoneRequiresEmptyResumeConditions.test_phase_done_with_empty_resume_conditions_is_accepted
+      - tests.test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_clean_branch_and_pr_url_are_accepted
+      - tests.test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_a_terminal_control_code_point_is_rejected_after_parsing
+      - tests.test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_a_line_terminator_is_rejected_after_parsing
+      - tests.test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_exactly_at_the_bound_is_accepted
+      - tests.test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_just_below_the_bound_is_accepted
+      - tests.test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_just_above_the_bound_is_rejected
     red_confirmed: true
     red_reason: >-
       Manually removed each of the five constraint checks from
@@ -100,12 +100,12 @@ acceptance_tests:
       confirming the check must run on the PARSED value per AC-6.
   AC-7:
     tests:
-      - test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_this_modules_own_source_has_no_disallowed_import
-      - test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_checker_accepts_a_forged_stdlib_and_yaml_only_source
-      - test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_checker_rejects_a_forged_extra_third_party_import
-      - test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_this_modules_own_source_has_no_disallowed_import
-      - test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_checker_accepts_a_forged_stdlib_and_yaml_only_source
-      - test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_checker_rejects_a_forged_extra_third_party_import
+      - tests.test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_this_modules_own_source_has_no_disallowed_import
+      - tests.test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_checker_accepts_a_forged_stdlib_and_yaml_only_source
+      - tests.test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_checker_rejects_a_forged_extra_third_party_import
+      - tests.test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_this_modules_own_source_has_no_disallowed_import
+      - tests.test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_checker_accepts_a_forged_stdlib_and_yaml_only_source
+      - tests.test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_checker_rejects_a_forged_extra_third_party_import
     red_confirmed: true
     red_reason: >-
       test_checker_rejects_a_forged_extra_third_party_import (per module)

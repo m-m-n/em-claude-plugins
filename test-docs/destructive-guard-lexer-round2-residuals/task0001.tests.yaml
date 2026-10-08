@@ -5,7 +5,7 @@ acceptance_tests:
   AC-1:
     tests:
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_cases_come_only_after_the_base_entries
-      - em-workflow/hooks/tests/run-destructive-guard.py (cases 453963d025537b11 FR1.1-FR1.3, 681fab61e1d9ff2c FR2.1-FR2.3)
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: "Case table committed first (bc13bf60) and run-destructive-guard.py then printed 628/634 with six 'FAIL deny ... got=allow' lines, before any commit that changes destructive-guard.py. The placement test was written after the cases existed; run against the base-commit case table (cases absent) it fails with 'AssertionError: 0 != 1' for each of the six forms. The commit order itself is a git history property (git log shows bc13bf60, adc71f6f, then the hook commit)."
   AC-2:
@@ -40,7 +40,7 @@ acceptance_tests:
     red_reason: "The test was written after the cases were committed; run against the base-commit case table (cases absent, the state before this task's block) it fails 'AssertionError: 0 != 1' for each of the six forms (len(located) == 0). Observed by running the test with CASES_JSON pointed at the base table."
   AC-7:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract
     red_confirmed: false

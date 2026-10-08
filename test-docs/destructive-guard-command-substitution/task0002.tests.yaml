@@ -18,7 +18,7 @@ acceptance_tests:
     red_reason: "These are pure regression guards over fields the task never touches (plugin name, sibling plugin's source/version) -- they were already green before the manifest edit and stay green after. No behavior change to prove red first; the plan's Design explicitly excuses fields with no new wording from a negative proof."
   AC-3:
     tests:
-      - tests.test_destructive_guard_command_substitution_version_bump (module discovery)
+      - tests.test_destructive_guard_command_substitution_version_bump
     red_confirmed: false
     red_reason: "Discoverability and JSON-parsing/name-lookup structure are properties of the module's own code, not something that can go red/green via a manifest edit; verified by running python3 -m unittest discover -s tests and inspecting the module source (json.loads + _marketplace_entry lookup by name, no text pattern-matching)."
   AC-4:

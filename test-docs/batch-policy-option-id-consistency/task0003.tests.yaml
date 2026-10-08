@@ -16,7 +16,7 @@ acceptance_tests:
     red_reason: "AssertionError: 41 not greater than 41 (marketplace em-workflow entry version was 0.1.41, not yet past the 0.1.41 baseline); the equality sub-check was already passing since both fields already agreed at 0.1.41 pre-bump"
   AC-3:
     tests:
-      - tests.test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+      - tests.test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
     red_confirmed: false
     red_reason: "This test asserts a non-change (the em-review entry stays byte-identical). It could not be made to fail before implementation because no implementation touches this entry -- the criterion is a non-regression guarantee, not new behavior; the negative-proof direction is instead demonstrated structurally by pinning the full pre-task snapshot as the expected value (a forged/altered snapshot would fail the equality)."
   AC-4:

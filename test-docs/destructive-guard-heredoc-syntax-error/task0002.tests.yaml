@@ -4,7 +4,7 @@ final_failures: []             # re-executed after the implementation (a differe
 acceptance_tests:
   AC-1:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the cases appended and the hook unchanged (the HEAD copy of
@@ -16,7 +16,7 @@ acceptance_tests:
       guard against opening an array where none opens.
   AC-2:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-2.1, AC-2.2, AC-2.3, AC-2.4, AC-2.5, AC-2.6, AC-2.7, AC-2.8"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Unchanged HEAD hook: AC-2.1 (x["0"]=( ), AC-2.2 (x[$i]=( ), AC-2.3
@@ -27,7 +27,7 @@ acceptance_tests:
       change.
   AC-3:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-3.1, AC-3.2, AC-3.3"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Unchanged HEAD hook: AC-3.1 returned allow where deny was expected (the
@@ -39,7 +39,7 @@ acceptance_tests:
       subscript rule does not suppress it.
   AC-4:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-4.1, AC-4.2, AC-4.3, AC-4.4, AC-4.5, AC-4.6, AC-4.7"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscriptAndExtglobReadings.test_the_extended_glob_reading_decides_whether_the_line_is_discarded
       - tests.test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
     red_confirmed: true
@@ -55,7 +55,7 @@ acceptance_tests:
       verdict.
   AC-5:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 AC-5.1, AC-5.2, AC-5.3, AC-5.4, AC-5.5, AC-5.6, AC-5.7, AC-5.8, AC-5.9"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       All nine cases already pass with the committed round-1 fixes: they record
@@ -72,9 +72,8 @@ acceptance_tests:
       fix reverted, so they do not pin it by themselves; AC-5.6 and AC-5.7 do.
   AC-6:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (all 718 checks)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
-      - "python3 -m unittest discover -s tests (all 8434 tests)"
     red_confirmed: true
     red_reason: >-
       The case runner, one of the two commands of the criterion, was observed
@@ -84,12 +83,14 @@ acceptance_tests:
       the JSON and comparing the first 668 entries; deny 378 -> 413, ask 118 ->
       120, allow 168 -> 180, so deny plus ask went from 496 to 533) and both
       commands pass after the change.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests (all 8434 tests)
   AC-7:
     tests:
-      - tests.test_destructive_guard_lexer_agreement (all 98 tests, including TestStageAgreement over every table command and TestStageAgreementUnderExtglobOn over the extended-glob forms read under extglob on)
+      - tests.test_destructive_guard_lexer_agreement
       - tests.test_destructive_guard_lexer_agreement.TestArraySubscriptAndExtglobReadings
       - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_budget_exceeded_is_an_ask_never_an_allow
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error E-9, E-10 (scan-budget ask), T2 AC-2.6, T2 E-11 (unmatched subscript ask)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       TestArraySubscriptAndExtglobReadings and TestStageAgreementUnderExtglobOn

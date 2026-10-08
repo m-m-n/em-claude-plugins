@@ -7,7 +7,7 @@ acceptance_tests:
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_once_boundary_occasion
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_is_placed_immediately_after_stop_report_section
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_instructs_reading_the_contract_doc_before_emitting
-      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_terminal_line_is_last_line_of_final_message
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_result_is_whole_final_message
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_no_line_rule_is_generalized_over_non_terminal_turn_ends
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_the_terminating_stops
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_step_a_and_docs_commit_conflict_stops
@@ -122,7 +122,7 @@ acceptance_tests:
   AC-6:
     tests:
       - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_step_status_words_actually_occur_in_the_real_files
-      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_does_not_flag_bare_stopped_if_it_were_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_does_not_flag_step_status_vocabulary_in_a_synthetic_sample
       - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_skill_md
       - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_batch_mode_md
     red_confirmed: false

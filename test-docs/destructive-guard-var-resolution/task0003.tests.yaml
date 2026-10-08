@@ -21,9 +21,7 @@ final_failures: []             # hooks-suite now 108/108, unittest still
 acceptance_tests:
   AC-1:
     tests:
-      - "変数解決: 削除より後ろの代入は未解決のまま(HOME)"
-      - "変数解決: 短絡評価で実行されない代入は未解決のまま"
-      - "変数解決: バックグラウンド代入は未解決のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       pre-fix allowed all three (allow); base denied/asked (deny/rm-root,
@@ -33,17 +31,7 @@ acceptance_tests:
 
   AC-2:
     tests:
-      - "変数解決: export による再束縛は未解決のまま"
-      - "変数解決: declare による再束縛は未解決のまま"
-      - "変数解決: typeset による再束縛は未解決のまま"
-      - "変数解決: local による再束縛は未解決のまま"
-      - "変数解決: readonly による再束縛は未解決のまま"
-      - "変数解決: += による追記は未解決のまま"
-      - "変数解決: read による再束縛は未解決のまま"
-      - "変数解決: mapfile による再束縛は未解決のまま"
-      - "変数解決: printf -v による再束縛は未解決のまま"
-      - "変数解決: eval 以降は全変数が無効化される"
-      - "変数解決: source 以降は全変数が無効化される"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       pre-fix allowed all eleven (allow, via the stale first bare-assignment
@@ -59,8 +47,7 @@ acceptance_tests:
 
   AC-3:
     tests:
-      - "変数解決: コマンド置換$()を含む代入は未解決のまま"
-      - "変数解決: コマンド置換(バッククォート)を含む代入は未解決のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       pre-fix DENIED both (rm-recursive, target resolved to the empty
@@ -74,14 +61,7 @@ acceptance_tests:
 
   AC-4:
     tests:
-      - "変数解決: パイプライン先頭要素の代入はパイプ外へ漏れない"
-      - "変数解決: パイプライン後続要素の代入はパイプ外へ漏れない"
-      - "変数解決: バックグラウンド代入は後続文へ漏れない"
-      - "変数解決: 閉じ括弧とリダイレクトの融合でもスコープが漏れない"
-      - "変数解決: セミコロン区切りサブシェル内で解決される"
-      - "変数解決: 改行区切りサブシェル内で解決される(一貫性)"
-      - "変数解決: セミコロン区切りサブシェル外は未解決のまま"
-      - "変数解決: 改行区切りサブシェル外は未解決のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Four of the eight were genuinely red pre-fix (allow, should stay
@@ -95,6 +75,8 @@ acceptance_tests:
       unresolved cases) were already correct pre-fix; kept as regression
       guards proving the fix does not disturb them. Direct invocation
       confirms rule identifier rm-unresolvable on every ask entry.
+
+      Removed from tests (not a unittest ID): 変数解決: セミコロン区切りサブシェル内で解決される; 変数解決: 改行区切りサブシェル内で解決される(一貫性)
     notes: >-
       AC-8 EXCEPTION, recorded here per the task's own instruction to make
       the no-weakening direction auditable rather than asserted: for
@@ -120,10 +102,7 @@ acceptance_tests:
 
   AC-5:
     tests:
-      - "変数解決: 空白を含む解決値は先頭語だけで許可されない"
-      - "変数解決: 空文字への解決は未解決扱い"
-      - "変数解決: 空白のみへの解決は未解決扱い"
-      - "変数解決: 変数経由の再帰フラグも再帰削除として扱われる"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Word-splitting case: pre-fix allowed (first word "/tmp/x" matched
@@ -144,10 +123,10 @@ acceptance_tests:
       rm-recursive (last one), and neither empty/whitespace reason names the
       current working directory.
 
+      Removed from tests (not a unittest ID): 変数解決: 変数経由の再帰フラグも再帰削除として扱われる
+
   AC-6:
-    tests:
-      - "変数解決: スクラッチ領域から親参照で脱出する対象は許可されない"
-      - "変数解決: 前方一致だけで安全領域と誤認されない"
+    tests: []
     red_confirmed: true
     red_reason: >-
       Both pre-fix allowed (SAFE_DELETE.match() ran on the raw, un-
@@ -166,6 +145,8 @@ acceptance_tests:
       pattern definitions (SAFE_DELETE, SELF_CONFIG, TRANSCRIPT, DYNAMIC)
       are unedited; only is_safe_delete()'s containment DECISION (which
       text it tests, and where a bare-name match must end) changed.
+
+      Removed from tests (not a unittest ID): 変数解決: スクラッチ領域から親参照で脱出する対象は許可されない; 変数解決: 前方一致だけで安全領域と誤認されない
 
   AC-7:
     tests: []

@@ -23,92 +23,83 @@ acceptance_tests:
     red_reason: "AC-1 is a history check (the plan's Test Notes say so): the commit that appends the ten cases precedes the commit that changes the hook. No executable check can be made to fail for the order of commits: tests/ was searched for tests that read git history (git log, rev-list) and for tests that name em-workflow/hooks/tests/destructive-guard-cases.json by path and filename; none checks the order of the commits that change the case table and the hook. The order was read from git log: ecff3701 changes only destructive-guard-cases.json and precedes 3b4aef3b, the first commit that changes destructive-guard.py. After the parent-side adoption the cases were appended again, in ba4aef04 (only destructive-guard-cases.json), before 9f8425e7, the commit that puts the change back into the hook; the adoption commit 7fa3c2ec carries the parent's hook and case table as they are. Before the hook change the runner was run and 9 cases failed with got=allow (see the header); the placement of the cases in the table is checked under AC-7."
   AC-2:
     tests:
-      - "run-destructive-guard.py: e79128f331828941 round2-deferred R1.BT1"
-      - "run-destructive-guard.py: e79128f331828941 round2-deferred R1.BT2"
-      - "run-destructive-guard.py: e79128f331828941 round2-deferred R1.BT3"
-      - "run-destructive-guard.py: e6478d6af2a50e57 round2-deferred R1.BT4"
-      - "run-destructive-guard.py: e6478d6af2a50e57 round2-deferred R1.BT5"
-      - "run-destructive-guard.py: e6478d6af2a50e57 round2-deferred R1.BT6"
-      - "run-destructive-guard.py: e6478d6af2a50e57 round2-deferred R1.BT7"
-      - "run-destructive-guard.py: 31165687b890b8bc round2-deferred R1.BT8"
-      - "run-destructive-guard.py: d1d035263eb03a8a round2-deferred R1.BT9"
-      - "run-destructive-guard.py: e79128f331828941 round2-deferred R1.BT10"
-      - TBE.test_cases_1_to_9_are_deny_and_case_10_is_allow_in_both_modes
-      - TBE.test_in_cases_1_2_3_and_10_the_substitution_ends_at_the_next_backtick
-      - TBE.test_case_2_has_a_statement_after_the_substitution_with_the_destructive_words
-      - TBE.test_case_3_reads_the_second_substitution_as_a_substitution
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_cases_1_to_9_are_deny_and_case_10_is_allow_in_both_modes
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_in_cases_1_2_3_and_10_the_substitution_ends_at_the_next_backtick
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_case_2_has_a_statement_after_the_substitution_with_the_destructive_words
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_case_3_reads_the_second_substitution_as_a_substitution
     red_confirmed: true
     red_reason: "runner with the ten cases and the unchanged hook: R1.BT1 to R1.BT9 FAIL with got=allow (R1.BT10 is an allow case, green at base). TBE.test_cases_1_to_9...: AssertionError: Tuples differ: ('allow', 'allow') != ('deny', 'deny'); test_in_cases_1_2_3_and_10...: AssertionError: False is not true (the region does not end right after the next backtick); test_case_3...: regions ['`echo \"`; echo `rm -rf src`', '`; echo `', '`'] where ['`echo \"`', '`rm -rf src`'] is expected; test_case_2...: TypeError: statements() takes 1 positional argument but 2 were given (the test reads the shaped words through statements(command, []), the signature this task adds, so this red is the missing signature)"
   AC-3:
     tests:
-      - TBE.test_every_opener_ends_with_the_substitution
-      - TBE.test_every_opener_leaves_the_statement_after_it_shaped_as_rm
-      - TBE.test_every_opener_is_deny_in_both_modes
-      - TBE.test_an_extended_glob_group_opened_inside_the_substitution_ends_with_it
-      - TBE.test_an_unclosed_expansion_inside_the_substitution_is_literal_text
-      - TBE.test_the_extent_holds_in_every_context_the_lexer_opens_one_in
-      - TBE.test_a_statement_after_a_substitution_in_every_context_is_still_inspected
-      - TBE.test_a_substitution_in_the_literal_top_level_of_a_heredoc_body
-      - TBE.test_a_subscript_open_at_the_extent_ends_unclosed_and_the_command_reads_fine
-      - TBE.test_a_chunk_whose_subscript_never_closes_is_left_out_when_asked_to
-      - TBE.test_the_command_itself_is_never_left_out
-      - TBE.test_an_unreadable_chunk_asks_unless_the_rest_is_a_deny
-      - TBE.test_a_deny_found_in_the_rest_wins_over_the_unreadable_chunk
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_every_opener_ends_with_the_substitution
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_every_opener_leaves_the_statement_after_it_shaped_as_rm
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_every_opener_is_deny_in_both_modes
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_extended_glob_group_opened_inside_the_substitution_ends_with_it
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_unclosed_expansion_inside_the_substitution_is_literal_text
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_extent_holds_in_every_context_the_lexer_opens_one_in
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_statement_after_a_substitution_in_every_context_is_still_inspected
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_substitution_in_the_literal_top_level_of_a_heredoc_body
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_subscript_open_at_the_extent_ends_unclosed_and_the_command_reads_fine
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_chunk_whose_subscript_never_closes_is_left_out_when_asked_to
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_command_itself_is_never_left_out
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_unreadable_chunk_asks_unless_the_rest_is_a_deny
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_deny_found_in_the_rest_wins_over_the_unreadable_chunk
     red_confirmed: true
     red_reason: "every_opener_is_deny_in_both_modes: Tuples differ: ('allow', 'allow') != ('deny', 'deny'); every_opener_ends_with_the_substitution, the_extent_holds_in_every_context... and a_subscript_open_at_the_extent...: LexUnmatchedSubscript raised for the a[ opener (the subscript crosses the closing backtick); every_opener_leaves_the_statement_after_it_shaped_as_rm, the_command_itself_is_never_left_out and a_chunk_whose_subscript_never_closes...: TypeError: statements() takes 1 positional argument but 2 were given (the signature this task adds); a_statement_after_a_substitution_in_every_context... and a_deny_found_in_the_rest_wins...: Tuples differ: ('ask', 'deny') != ('deny', 'deny'); an_extended_glob_group...: AssertionError: 2 != 1 (two backtick regions); a_substitution_in_the_literal_top_level_of_a_heredoc_body: the region is '`# x` b\\n$(echo c)\\n' where '`# x`' is expected. Green at base: an_unclosed_expansion_inside_the_substitution_is_literal_text and an_unreadable_chunk_asks_unless_the_rest_is_a_deny (they pin a reading and an ask the lexer already gave)"
   AC-4:
     tests:
-      - TBE.test_the_backtick_after_two_backslashes_ends_the_extent
-      - TBE.test_the_backtick_after_one_backslash_does_not_end_the_extent
-      - TBE.test_an_odd_run_of_backslashes_escapes_the_backtick_and_an_even_run_does_not
-      - TBE.test_an_escaped_backtick_in_a_single_quote_does_not_end_the_extent
-      - TBE.test_a_substitution_without_a_closing_backtick_runs_to_the_end
-      - TBE.test_an_unclosed_substitution_is_the_same_reading_as_before
-      - TBE.test_the_heredoc_of_case_E_7_has_its_body_inside_the_extent
-      - TBE.test_a_delimiter_line_after_the_extent_gives_the_operator_no_body
-      - TBE.test_a_delimiter_line_inside_the_extent_closes_the_body
-      - TBE.test_an_operator_on_the_closing_line_takes_no_body_from_after_the_extent
-      - TBE.test_an_operator_before_the_substitution_takes_its_body_after_the_substitution
-      - TBE.test_a_delimiter_word_that_runs_past_the_extent_is_not_read_as_a_word
-      - TestBraceCommandSubstitution.test_a_backtick_ends_a_command_form_opened_inside_it
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_backtick_after_two_backslashes_ends_the_extent
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_backtick_after_one_backslash_does_not_end_the_extent
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_odd_run_of_backslashes_escapes_the_backtick_and_an_even_run_does_not
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_escaped_backtick_in_a_single_quote_does_not_end_the_extent
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_substitution_without_a_closing_backtick_runs_to_the_end
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_unclosed_substitution_is_the_same_reading_as_before
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_heredoc_of_case_E_7_has_its_body_inside_the_extent
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_delimiter_line_after_the_extent_gives_the_operator_no_body
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_delimiter_line_inside_the_extent_closes_the_body
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_operator_on_the_closing_line_takes_no_body_from_after_the_extent
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_an_operator_before_the_substitution_takes_its_body_after_the_substitution
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_delimiter_word_that_runs_past_the_extent_is_not_read_as_a_word
+      - tests.test_destructive_guard_lexer_agreement.TestBraceCommandSubstitution.test_a_backtick_ends_a_command_form_opened_inside_it
     red_confirmed: true
     red_reason: "an_escaped_backtick_in_a_single_quote...: the region is \"`${ echo '\\\\`\" where \"`${ echo '\\\\` ignored'; }`\" is expected (case 8 of the plan, FR7); a_delimiter_line_after_the_extent_gives_the_operator_no_body: AssertionError: False is not true; an_operator_on_the_closing_line_takes_no_body_from_after_the_extent: AssertionError: 20 is not None (the operator took a body from after the extent). Green at base, because the lexer already ended a plain substitution at the next unescaped backtick and the tests pin it: the two backslash tests and the parity test, the unclosed-substitution tests, the E-7 heredoc test, the delimiter line inside the extent, the operator before the substitution, the delimiter word past the extent; TestBraceCommandSubstitution.test_a_backtick_ends_a_command_form_opened_inside_it is the existing test the criterion requires to pass unchanged, and it is not edited"
   AC-5:
     tests:
-      - TBE.test_the_map_is_the_same_after_clearing_the_lexer_cache
-      - TBE.test_every_form_reads_as_the_whole_text_restart_reads_it
-      - TBE.test_the_pass_state_has_a_classified_field_for_the_extent
-      - TBE.test_a_resume_inside_a_substitution_restores_its_extent
-      - TBESA.test_the_forms_are_there_to_check
-      - TBESA.test_a_scan_structure_follows_the_lexer
-      - TBESA.test_b_separators_lie_outside_every_region
-      - TBESA.test_c_no_record_lies_inside_a_region
-      - TBESA.test_d_tok_provenance_matches_the_contract
-      - TBESA.test_e_unmasked_spans_equal_their_shlex_reading
-      - TBESA.test_f_position_maps_meet_their_contract
-      - TestResumeSnapshot.test_restore_returns_every_declared_field_to_its_captured_value
-      - TestResumeSnapshot.test_every_pass_state_field_is_in_exactly_one_list
-      - TestNonAdjacentCloseRereading.test_every_known_command_reads_as_the_whole_text_restart_reads_it
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_map_is_the_same_after_clearing_the_lexer_cache
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_every_form_reads_as_the_whole_text_restart_reads_it
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_pass_state_has_a_classified_field_for_the_extent
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_a_resume_inside_a_substitution_restores_its_extent
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtentStageAgreement.test_the_forms_are_there_to_check
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtentStageAgreement.test_a_scan_structure_follows_the_lexer
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtentStageAgreement.test_b_separators_lie_outside_every_region
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtentStageAgreement.test_c_no_record_lies_inside_a_region
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtentStageAgreement.test_d_tok_provenance_matches_the_contract
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtentStageAgreement.test_e_unmasked_spans_equal_their_shlex_reading
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtentStageAgreement.test_f_position_maps_meet_their_contract
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_restore_returns_every_declared_field_to_its_captured_value
+      - tests.test_destructive_guard_lexer_agreement.TestResumeSnapshot.test_every_pass_state_field_is_in_exactly_one_list
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_every_known_command_reads_as_the_whole_text_restart_reads_it
     red_confirmed: true
     red_reason: "the_map_is_the_same_after_clearing_the_lexer_cache and every_form_reads_as_the_whole_text_restart_reads_it: LexUnmatchedSubscript raised for the a[ forms; a_resume_inside_a_substitution_restores_its_extent: AssertionError: False is not true for `echo `((echo a) | wc -c) #`; rm ...`; TBESA.test_the_forms_are_there_to_check: the a[ form is not in the forms the lexer reads; TBESA.test_b_separators_lie_outside_every_region: separator at 12 lies inside a region; TBESA.test_d_tok_provenance_matches_the_contract: True != False : ';'. Green at base: the other TBESA properties, the classification test of the pass state fields and the existing TestResumeSnapshot and TestNonAdjacentCloseRereading tests (they are the pre-existing checks the criterion requires to keep passing; none is edited)"
   AC-6:
     tests:
-      - TBE.test_lexing_work_is_linear_for_every_case_repeated
-      - TBE.test_lexing_work_is_linear_for_a_backtick_in_double_quotes_repeated
-      - TBE.test_lexing_work_is_linear_for_every_opener_form_repeated
-      - TBE.test_the_extent_of_each_substitution_costs_no_rescan
-      - TBE.test_repeated_substitutions_get_a_decision_in_time
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_lexing_work_is_linear_for_every_case_repeated
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_lexing_work_is_linear_for_a_backtick_in_double_quotes_repeated
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_lexing_work_is_linear_for_every_opener_form_repeated
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_extent_of_each_substitution_costs_no_rescan
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_repeated_substitutions_get_a_decision_in_time
     red_confirmed: true
     red_reason: "lexing_work_is_linear_for_every_opener_form_repeated: LexUnmatchedSubscript raised for the a[ opener repeated; repeated_substitutions_get_a_decision_in_time: AssertionError: 'allow' != 'deny'. Green at base: lexing_work_is_linear_for_every_case_repeated, ..._for_a_backtick_in_double_quotes_repeated and the_extent_of_each_substitution_costs_no_rescan (the work of the old lexer was already linear on these forms; they are the guard that the one-index extent keeps it linear)"
   AC-7:
     tests:
-      - TBE.test_the_cases_are_in_the_case_table_after_the_base
-      - TBE.test_the_cases_label_follows_the_rework_label_rule
-      - TBE.test_no_label_below_the_block_floor_carries_one_of_the_stable_ids
-      - TBE.test_the_command_form_specific_backtick_handling_is_gone
-      - TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
-      - TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
-      - TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
-      - "run-destructive-guard.py: the whole table, 846/846"
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_cases_are_in_the_case_table_after_the_base
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_cases_label_follows_the_rework_label_rule
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_no_label_below_the_block_floor_carries_one_of_the_stable_ids
+      - tests.test_destructive_guard_lexer_agreement.TestBacktickExtent.test_the_command_form_specific_backtick_handling_is_gone
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: "the_cases_are_in_the_case_table_after_the_base: AssertionError: Lists differ: [] != ['R1.BT1', 'R1.BT2', 'R1.BT3', 'R1.BT4', ...] (the ten cases are absent from the base table); the_command_form_specific_backtick_handling_is_gone: AssertionError: 'unwind_to_bracecmd' unexpectedly found in the hook source. Green at base: the label rule test (vacuous without the cases, so it only means something next to the placement test), the block floor test and the pre-existing table tests of TestNonAdjacentCloseRereading and TestModuleContract, which pin that no earlier entry is removed, edited or reordered (none is edited). The full suite, the runner and the agreement module pass after the change: Ran 8803 tests, OK (skipped=1); 846/846"

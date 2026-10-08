@@ -18,7 +18,7 @@ acceptance_tests:
       `resolution_note` instead of `records[]` / `records[].resolution_note`).
   AC-2:
     tests:
-      - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_source_map_still_has_six_rows
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_source_map_has_eight_rows
       - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_assumption_row_unchanged_character_for_character
     red_confirmed: false
     red_reason: >-
@@ -71,7 +71,7 @@ acceptance_tests:
       - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_first_writer_bullet_states_out_of_step_reach_point
       - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_first_writer_bullet_names_the_loss_prevented
       - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_exception_list_names_both_step_a5_and_per_command_fallback
-      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_three_writers_sentence_occurs_exactly_once
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_four_writers_sentence_occurs_exactly_once
       - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_append_only_sentence_retains_core_phrase
       - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_append_only_rule_retained
     red_confirmed: true
@@ -104,8 +104,8 @@ acceptance_tests:
       file -- none of the five named files appear.
   AC-8:
     tests:
-      - tests.test_batch_quiet_output_version_bump (pre-existing, unmodified)
-      - tests.test_plugin_version_parity (pre-existing, unmodified)
+      - tests.test_batch_quiet_output_version_bump
+      - tests.test_plugin_version_parity
     red_confirmed: false
     red_reason: >-
       The pre-existing version-bump test only pins the relation

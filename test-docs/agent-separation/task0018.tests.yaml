@@ -3,10 +3,7 @@ baseline_failures: []
 final_failures: []
 acceptance_tests:
   AC-1:
-    tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_codex_consultation_by_position
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_record_tbd_by_position
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_consultation_precedes_record_tbd_by_position
+    tests: []
     red_confirmed: true
     red_reason: >-
       Against the pre-rework doc, test_classification_precedes_codex_consultation_by_position
@@ -72,9 +69,7 @@ acceptance_tests:
       turn cap, or availability probe), so every element assertion and
       the section-lookup helper itself failed.
   AC-6:
-    tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_codex_consultation_by_position
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_record_tbd_by_position
+    tests: []
     red_confirmed: true
     red_reason: >-
       This criterion is about how AC-1 is verified (index comparison

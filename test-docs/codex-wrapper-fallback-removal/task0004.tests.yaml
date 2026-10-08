@@ -4,7 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_77
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
       - tests.test_codex_wrapper_fallback_removal_version_bump.TestPluginVersionBumps.test_manifest_version_is_a_patch_bump_over_its_own_baseline
     red_confirmed: true
     red_reason: >-
@@ -14,7 +14,7 @@ acceptance_tests:
       patch-bump matcher for the em-workflow subTest.
   AC-2:
     tests:
-      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_reads_0_5_10
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
       - tests.test_codex_wrapper_fallback_removal_version_bump.TestPluginVersionBumps.test_manifest_version_is_a_patch_bump_over_its_own_baseline
     red_confirmed: true
     red_reason: >-

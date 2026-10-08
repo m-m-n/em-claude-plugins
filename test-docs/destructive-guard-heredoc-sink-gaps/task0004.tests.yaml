@@ -3,33 +3,33 @@ baseline_failures: []   # 4a, before any change: python3 -m unittest discover -s
 final_failures: []      # re-executed after the implementation and the re-implementation on the updated parent: unittest discover = 6497 tests OK; run-destructive-guard.py = 534/534 passed
 acceptance_tests:
   AC-1:
-    tests: ["destructive-guard-cases.json lines 499-503 (511cd470522973d8 AC-7.1 .. AC-7.5), run by em-workflow/hooks/tests/run-destructive-guard.py"]
+    tests: [tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing]
     red_confirmed: true
     red_reason: "All five cases FAILed against the pre-change guard: expected deny, got allow (the host cat/jq/git was judged data, so the body was never scanned)."
   AC-2:
-    tests: ["destructive-guard-cases.json lines 504-519 (511cd470522973d8 task0004 AC-2(a), AC-2(b), AC-2(c)), run by run-destructive-guard.py"]
+    tests: [tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing]
     red_confirmed: true
     red_reason: "15 of 16 cases FAILed against the pre-change guard (expected deny, got allow). Line 507 (env -iS 'bash -s' cat) already denied before the change: the clustered -iS is not in WRAPPER_VALUE_FLAGS, so the pre-change resolution read 'bash -s' as the command word."
   AC-3:
-    tests: ["destructive-guard-cases.json lines 4, 36, 416-419, 468, 469 as numbered before this task (existing allow cases; cases 468 and 469 are still the first two FR6 allow cases)", "destructive-guard-cases.json lines 520-529 (task0004 AC-3, new allow cases)"]
+    tests: [tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing]
     red_confirmed: false
     red_reason: "Allow-direction guards against over-triggering: the criterion requires these to stay allow, so they PASS before and after the change and no red state exists. The new script-writing case (line 520) was checked allow against the pre-change guard first, as the task plan requires. The existing cases are also exercised by tests/test_destructive_guard_command_substitution.py and tests/test_guard_deferral_parity.py, which read destructive-guard.py; no red state occurred for this change."
   AC-4:
-    tests: ["destructive-guard-cases.json lines 530-534 (b8fd289ca7750a04 AC-8.1 .. AC-8.5), run by run-destructive-guard.py"]
+    tests: [tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing]
     red_confirmed: true
     red_reason: "All five cases FAILed against the pre-change guard: expected deny, got allow."
   AC-5:
-    tests: ["destructive-guard-cases.json lines 535-552 (b8fd289ca7750a04 task0004 AC-5), run by run-destructive-guard.py"]
+    tests: [tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing]
     red_confirmed: true
     red_reason: "14 of 18 cases FAILed against the pre-change guard (expected deny, got allow): enable, standalone PATH, export PATH, space-before-parens definition, function NAME()( ... ), env PATH=, PATH+=, builtin alias, definitions inside a substitution (three spellings), alias inside a substitution, alias inside bash -c, alias in a sink heredoc body. Lines 535, 536, 537 and 542 (brace-bodied function definitions at the top level) already denied before the change, incidentally: the closing } is read as an unmatched group closer, which makes the whole chunk undetermined. The substitution-nested variants have no such closer in the outer chunk and are the red cases for the brace-bodied constructs."
   AC-6:
-    tests: ["python3 em-workflow/hooks/tests/run-destructive-guard.py <copy of the guard before this task's change> (the parent branch's guard at the start of the re-implementation)"]
+    tests: []
     red_confirmed: true
-    red_reason: "The cases were committed before the guard change (commit 'task0004: add skipped-word sink and command-name override cases'). Run against the pre-change guard the runner reported 495/534: 39 FAIL, all of them added cases, including all five 511cd470522973d8 AC-7 forms and all five b8fd289ca7750a04 AC-8 forms. Per-case results are in added_cases below."
+    red_reason: "The cases were committed before the guard change (commit 'task0004: add skipped-word sink and command-name override cases'). Run against the pre-change guard the runner reported 495/534: 39 FAIL, all of them added cases, including all five 511cd470522973d8 AC-7 forms and all five b8fd289ca7750a04 AC-8 forms. Per-case results are in added_cases below. Removed from tests (not a unittest ID): python3 em-workflow/hooks/tests/run-destructive-guard.py <copy of the guard before this task's change> (the parent branch's guard at the start of the re-implementation)"
   AC-7:
-    tests: ["python3 em-workflow/hooks/tests/run-destructive-guard.py", "python3 -m unittest discover -s tests", "tests/test_destructive_guard_command_substitution.py", "tests/test_destructive_guard_rm_reason.py", "tests/test_guard_deferral_parity.py", "tests/test_protocol_git_ops_pass_destructive_guard.py"]
+    tests: [tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing, tests.test_destructive_guard_command_substitution, tests.test_destructive_guard_rm_reason, tests.test_guard_deferral_parity, tests.test_protocol_git_ops_pass_destructive_guard]
     red_confirmed: false
-    red_reason: "Regression guard: the 479 entries present when this task's cases were appended are an exact prefix of the new 533-entry array (checked by loading both and comparing), and all of them PASS before and after. A dedicated new module is out of scope, but the existing tests/test_destructive_guard_command_substitution.py, test_guard_deferral_parity.py and the runner detect any change to those verdicts; no red state occurred for this change."
+    red_reason: "Regression guard: the 479 entries present when this task's cases were appended are an exact prefix of the new 533-entry array (checked by loading both and comparing), and all of them PASS before and after. A dedicated new module is out of scope, but the existing tests/test_destructive_guard_command_substitution.py, test_guard_deferral_parity.py and the runner detect any change to those verdicts; no red state occurred for this change. Removed from tests (not a unittest ID): python3 -m unittest discover -s tests"
 added_cases:
   # Every case appended by this task. pre_change = verdict-vs-expectation against the guard without this task's change;
   # post_change = against the guard with it. Key = line number in destructive-guard-cases.json.

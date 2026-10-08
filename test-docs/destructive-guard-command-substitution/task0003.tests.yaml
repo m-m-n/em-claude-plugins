@@ -7,12 +7,7 @@ acceptance_tests:
       - "tests.test_destructive_guard_command_substitution.TestPayloadCarriedSubstitutionMatchesDirectForm.test_payload_forms_match_direct_form_attended"
       - "tests.test_destructive_guard_command_substitution.TestPayloadCarriedSubstitutionMatchesDirectForm.test_payload_forms_demote_to_deny_when_unattended"
       - "tests.test_destructive_guard_command_substitution.TestPayloadCarriedSubstitutionMatchesDirectForm.test_payload_forms_never_allow_in_either_mode"
-      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): bash -c ペイロード内の $() のみの対象は直接書いた場合と同じ ask"
-      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): bash -c ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）"
-      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): eval ペイロード内の $() のみの対象は直接書いた場合と同じ ask"
-      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): eval ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）"
-      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): here-string ペイロード内の $() のみの対象は直接書いた場合と同じ ask"
-      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): here-string ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Added the six case-table entries and the new
@@ -55,8 +50,7 @@ acceptance_tests:
       - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_reason_states_the_substitution_fact"
       - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_reason_ends_with_an_actionable_instruction"
       - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_no_control_characters_in_output"
-      - "destructive-guard-cases.json: 評価境界(rm-recursive): スクラッチルート配下パスの直後にクォート境界でコマンド置換が続いても evidence lost により deny"
-      - "destructive-guard-cases.json: 評価境界(rm-recursive): 置換の後にさらにセグメントが続く形も同じ理由で deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Ran the new TestSafeRootBoundaryReasonTextIsTruthful class against the
@@ -88,7 +82,6 @@ acceptance_tests:
   AC-5:
     tests:
       - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
-      - "run-destructive-guard.py direct run: 195/195 passed (187 pre-existing + 8 new entries + trailing unattended-demotion case)"
     red_confirmed: true
     red_reason: >-
       Covered by the same case-table run cited under AC-1: against the
@@ -120,7 +113,6 @@ acceptance_tests:
       - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_determinism_across_repeated_runs"
       - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_shell_payload_expansion_cap_left_in_place"
       - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_unbalanced_quoting_raises_no_exception_and_exits_zero"
-      - "python3 -m unittest discover -s tests: full repository suite, 4402/4402 green"
     red_confirmed: false
     red_reason: >-
       AC-7 is a hygiene/non-regression criterion (no new filesystem/stat/
@@ -133,3 +125,5 @@ acceptance_tests:
       364.207s) plus two independent runs of
       em-workflow/hooks/tests/run-destructive-guard.py and
       em-workflow/scripts/check-plugin-invariants.py ., both exit 0.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests: full repository suite, 4402/4402 green
