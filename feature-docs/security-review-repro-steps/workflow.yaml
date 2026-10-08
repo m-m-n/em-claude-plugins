@@ -105,14 +105,10 @@ workflow:
   status: completed
   completed_at_commit: 7ed5626aa3c1f5ff830a76daf96c69b2bf8b5661
 - id: verify
-  status: in_progress
-  result: fail
-  failed_items:
-  - id: SC5
-    note: 'review ended with residual_critical_high == 1 (deferred high finding 8375ef92ce5f2f2a,
-      TM-2: unverifiable alone must not decline a finding); test suite, TS17 and plugin
-      invariants pass'
-    category: unknown
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 0d30f1e2d019469eb79c0da940172565a0f7cffe
 - id: retrospect
   status: pending
 tasks:
