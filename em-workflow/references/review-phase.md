@@ -616,10 +616,11 @@ on these paths:
 - `not reproduced`: `resolution: declined`, with a `resolution_reason`
   beginning `not reproduced`.
 - `unverifiable`: the finding stays a target only when the orchestrator
-  confirms the basis by reading; otherwise it is `declined`, with a
-  `resolution_reason` beginning `unverified`. A `reproduction` value that
-  ends in step 4's truncation marker, or that exceeds 4096 bytes when it
-  reaches this step, is `unverifiable`.
+  confirms the basis by reading; otherwise it is recorded with
+  `resolution: unresolved` and a `resolution_reason` beginning
+  `unverified`. A `reproduction` value that ends in step 4's truncation
+  marker, or that exceeds 4096 bytes when it reaches this step, is
+  `unverifiable`.
 - no steps (`reproduction` null, empty or whitespace-only): the orchestrator
   judges whether to address the finding; a finding it judges not to address is
   `declined`, with that judgment as the `resolution_reason`; any other
@@ -635,6 +636,14 @@ not to hold and `reproduction_overflow` is false. Otherwise the finding is
 `not reproduced`. The effects of each outcome are unchanged and apply to the
 finding-level outcome. For example, a short value that holds, merged with a
 longer value that does not, leaves the finding `reproduced` and a target.
+
+An `unverifiable` finding whose basis the orchestrator does not confirm by
+its own reading is never `declined`: it is recorded with
+`resolution: unresolved` and a `resolution_reason` beginning `unverified`.
+Such a finding is neither an auto-fix candidate nor counted in the residual
+critical/high count, so it is never sent back for a fix on that ground;
+round-context suppression does not drop it, because it is not `declined`, and
+the next round verifies it again.
 
 A finding `declined` here is neither an auto-fix candidate nor counted in the
 residual critical/high count (Phase R4), and a later round's `round_context`
@@ -706,7 +715,9 @@ of `shape`, requiring AskUserQuestion interactively and `skip this site`,
 never `Apply as-is`, in batch mode). The candidate gate also excludes a
 finding `declined` by reproduction verification (Phase R3b, "Reproduction
 verification on orchestrator paths"), and the residual critical/high count
-excludes it too.
+excludes it too. A finding left `unresolved` with a `resolution_reason`
+beginning `unverified` by that verification is excluded from the candidate
+gate and from the residual critical/high count.
 
 Classification (mechanical only — never fuzzy semantic judgment):
 
@@ -1073,7 +1084,12 @@ keys is read with an empty list and false, and produces the same
 Phase R0 step 8 reads those back into `round_context` in later rounds. A
 finding `declined` by the orchestrator's reproduction verification is recorded
 as an ordinary finding with `resolution: declined` and its
-`resolution_reason`.
+`resolution_reason`. A finding left `unverifiable` by that verification
+without a confirmed basis is recorded as an ordinary finding with
+`resolution: unresolved` and a `resolution_reason` beginning `unverified`; it
+is not counted in `residual_critical_high`, is not among the residual findings
+rework-planner receives, and is not re-marked `deferred` by the batch
+rework-cap step.
 
 The round record also persists the evaluation's `round_summary`,
 `recommended_action`, and `action_rationale` under a root `evaluation`
