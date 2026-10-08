@@ -3,19 +3,24 @@ feature: queue-stop-guard-nonascii-blank-state
 phase: create-plan
 status: dispatching
 generation: 1
-base_revision: b22e5830f4189cdfa8c1791401575f0b422af86a
-last_input_digest: sha256:23fd7c7675850083b1b31d81994a0a9a6de9fddd0715c342589ce8e4897b61ce
-active_request_id: create-plan-run-0001
+base_revision: 224ecf03dcc94e191b696af550e87f1f0f7cdea6
+last_input_digest: sha256:578af63c8a8f198282c836c89eecbd188e4ce143ca4617d2c0a1464ada17147a
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: invalid_input
   input_digest: sha256:23fd7c7675850083b1b31d81994a0a9a6de9fddd0715c342589ce8e4897b61ce
+  output_digest: null
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:578af63c8a8f198282c836c89eecbd188e4ce143ca4617d2c0a1464ada17147a
   output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-plan-run-0001: validate-worker-output layer 6 task-plan-files
+  (Files to Create ''None.'' bullet; multi-path bullet; files mismatch)'
