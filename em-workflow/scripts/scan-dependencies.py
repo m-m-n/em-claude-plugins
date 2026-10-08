@@ -1547,7 +1547,11 @@ def _build_finding(*, manifest_file, package, advisory_id, title, affected_range
     the title is composed and truncated, so the title is one line that
     `recover_package_advisory` can always parse back. `package` and
     `advisory_id` are passed through untouched, as are the description and
-    suggestion."""
+    suggestion.
+
+    `reproduction` is always None: the vulnerability axis is not the
+    security perspective, and the reviewer output schema requires the key on
+    every finding."""
     title_text = truncate_untrusted(
         f"{package}: {advisory_id} — {_collapse_short_title(title)}"
     )
@@ -1573,6 +1577,7 @@ def _build_finding(*, manifest_file, package, advisory_id, title, affected_range
         "title": title_text,
         "description": description_text,
         "suggestion": suggestion_text,
+        "reproduction": None,
     }
 
 

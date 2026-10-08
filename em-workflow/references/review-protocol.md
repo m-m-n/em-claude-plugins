@@ -177,7 +177,8 @@ Every reviewer outputs **ONLY** a JSON object matching
       "category": "<perspective>",
       "title": "Short title",
       "description": "What the bug is and why it matters",
-      "suggestion": "How to fix"
+      "suggestion": "How to fix",
+      "reproduction": "Steps that reproduce the finding, or null"
     }
   ],
   "summary": "1-2 sentence overall note",
@@ -192,6 +193,14 @@ Rules:
 - ALL root-level fields and ALL finding fields MUST be present (`null` for
   unknown `line` / `line_end`, and for `skip_reason` whenever `skipped` is
   `false`) — required for OpenAI structured-output compatibility.
+- `reproduction` is one of the finding fields that MUST always be present; its
+  value is a string or `null`.
+- For the `security` perspective, `reproduction` holds the steps that reproduce
+  the finding, or an equivalent confirmation method, naming the input, the path
+  by which it reaches the code, and the observable result; `null` only when
+  neither can be given. The perspective skill details what exactly to write.
+- For every other perspective, `reproduction` is always `null`.
+- An empty or whitespace-only `reproduction` is treated as `null` (no steps).
 - `category` MUST equal the injected `perspective`.
 - `file` MUST be relative to the project root — never absolute, no `..`
   segments, no NUL. If a relative path cannot be resolved, omit the finding.

@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 9045 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation: Ran 9083 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reproduction_output_contract.TestReproductionSchemaProperty
+      - tests.test_reproduction_output_contract.TestSchemaAssertionsCatchForgery
+    red_confirmed: true
+    red_reason: "Before the schema edit, test_reproduction_accepts_exactly_string_or_null failed for em-workflow and em-review ('reproduction' not found among the finding properties), test_finding_required_is_existing_eight_then_reproduction failed for both (eight-name list, expected nine), and test_reproduction_property_is_placed_after_suggestion failed for both"
+  AC-2:
+    tests:
+      - tests.test_reproduction_output_contract.TestSchemaInvariantsUnchanged
+      - tests.test_reproduction_output_contract.TestSchemaAssertionsCatchForgery
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened
+      - tests.test_sca_axis_schema_enums.TestSchemaInvarianceSideUnchanged
+    red_confirmed: false
+    red_reason: "Invariance criterion: root required, severity / category / source enums are the pre-change values by definition, so TestSchemaInvariantsUnchanged passed before any implementation and no red state can occur for this change. The forged-input self-checks (replaced category value, changed root required, removed source value, extra severity value) pass because the assertion helper raises on a replacement; the existing TestReviewOutputSchemaCategoryWidened and TestSchemaInvarianceSideUnchanged detect the same drift for the em-workflow file"
+  AC-3:
+    tests:
+      - tests.test_reproduction_output_contract.TestProtocolOutputSchemaSection
+      - tests.test_reproduction_output_contract.TestProtocolAssertionsCatchForgery
+    red_confirmed: true
+    red_reason: "Before the protocol edit, test_example_finding_has_reproduction_after_suggestion failed for em-workflow and em-review (example keys were the eight existing names), test_rules_state_the_four_reproduction_rules failed for both (no Rules bullet mentioning reproduction), and the two identical-text parity tests failed"
+  AC-4:
+    tests:
+      - tests.test_reproduction_output_contract.TestScannerFindingBuilderEmitsNullReproduction
+      - tests.test_reproduction_output_contract.TestScannerAssertionsCatchForgery
+      - tests.test_sca_scan_normalization
+      - tests.test_sca_scan_execution
+      - tests.test_sca_per_project_scan_binding
+      - tests.test_sca_go_govulncheck_real_output
+    red_confirmed: true
+    red_reason: "Before the scanner edit, test_every_built_finding_has_reproduction_null failed in all three argument cases (missing key 'reproduction' in the dict returned by _build_finding) and test_finding_is_json_serializable failed for the same reason. The four existing schema-driven SCA modules are unmodified and passed in the final full run"
+  AC-5:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_finding_required_and_additional_properties_unchanged
+      - tests.test_sca_axis_schema_enums.TestSchemaInvarianceSideUnchanged.test_finding_required_unchanged
+      - tests.test_reviewer_roles_protocol.TestFrozenSectionsUnchanged.test_frozen_sections_hash_unchanged
+    red_confirmed: true
+    red_reason: "After FROZEN_FINDING_REQUIRED and EXPECTED_FINDING_REQUIRED were set to the nine-name list and before the schema edit, test_finding_required_and_additional_properties_unchanged and test_finding_required_unchanged failed (eight-name list in the schema). After the protocol edit and before the digest refresh, the Output Schema subtest failed (expected sha256 8a40ceb9..., got adf9e294...) while the Inputs, Investigation Budget, Severity, Read-only Constraint and Untrusted-Input Handling subtests and the reviewer / codex-reviewer step digests stayed green and were not edited"
+  AC-6:
+    tests:
+      - tests.test_reproduction_output_contract.TestModuleImportsStandardLibraryOnly
+    red_confirmed: false
+    red_reason: "The criterion describes the new test module itself (AC-1 to AC-4 coverage for both plugins, standard-library-only imports, full suite passing); the import check was green on its first run because the module imports only standard-library modules and no implementation affects it. The AC-1 to AC-4 coverage part is evidenced by the red observations of those criteria; the full suite passed in the final run"
