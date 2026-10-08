@@ -1,0 +1,98 @@
+schema_version: 1
+feature: security-review-repro-steps
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 7e02522816dc9b680edcd200ba955ee8040f1816
+last_input_digest: sha256:30d46550dd10a932cb471cd1763276b26b1e0a81912f03f493dc8d67d0e367b0
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:30d46550dd10a932cb471cd1763276b26b1e0a81912f03f493dc8d67d0e367b0
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/references/review-output-schema.json
+    - em-review/references/review-output-schema.json
+    - em-workflow/skills/review-security/SKILL.md
+    - em-review/skills/review-security/SKILL.md
+    - em-workflow/references/review-protocol.md
+    - em-review/references/review-protocol.md
+    - em-workflow/references/review-phase.md
+    - em-review/references/review-phase.md
+    - em-workflow/references/review-evaluation-contract.md
+    - em-workflow/agents/codex-reviewer.md
+    - em-review/agents/codex-reviewer.md
+    - em-workflow/agents/reviewer.md
+    - em-review/agents/reviewer.md
+    - em-workflow/agents/review-editor.md
+    - em-review/agents/review-editor.md
+    - em-workflow/agents/review-evaluator.md
+    - em-workflow/scripts/scan-dependencies.py
+    - em-workflow/references/vuln-scanners.yaml
+    - em-review/README.md
+    - em-workflow/skills/review/SKILL.md
+    - em-review/skills/multi-review/SKILL.md
+    - tests/test_reviewer_roles_protocol.py
+    - tests/test_sca_axis_schema_enums.py
+    - tests/test_review_evaluation_contract.py
+    - tests/test_sca_scan_normalization.py
+    - tests/test_threat_model_review_security.py
+    - tests/test_review_phase_llm_led.py
+    - tests/test_codex_wrapper_fallback_removal_integrated_checks.py
+    - tests/test_sca_per_project_scan_binding.py
+    - tests/test_sca_scan_execution.py
+    - tests/test_sca_go_govulncheck_real_output.py
+    digests:
+      em-workflow/references/review-output-schema.json: sha256:8781c684ed0a847654cc816faaf33d64429727db3daa196d297b4450d7dc3b00
+      em-review/references/review-output-schema.json: sha256:73c0ae6b687fb174d94a3d79983aad2e42d6e27a114569cd005e79e6f761a072
+      em-workflow/skills/review-security/SKILL.md: sha256:eea2fc57de91f03c6fffefa4341c3d53e8c957d0458a8119d8125e766f43b596
+      em-review/skills/review-security/SKILL.md: sha256:d29ed16d0ece2cd06966bae7342135fecee034b06f1749f50e46dede1132943a
+      em-workflow/references/review-protocol.md: sha256:99db6497e336d23d9352be2f618ce60426efef503fdb3c5882ed0fdf30a3183c
+      em-review/references/review-protocol.md: sha256:84325e64bab9288b42ac058852d6f096349d9415dec80414ed3b0ddd3cb2ac31
+      em-workflow/references/review-phase.md: sha256:bcbbe2c145853fb8981ffaa0265a4c9d47ca72b132f3b9b7859f035d7aa508c8
+      em-review/references/review-phase.md: sha256:e96f1b53f680298c27f34cb5b069d808fb53d020cdd0312eb18a03685befc155
+      em-workflow/references/review-evaluation-contract.md: sha256:ee82bcce9ced787e8c4aedc5707dc78f8d0dbaf357a1a1b1f066047ef85b24a7
+      em-workflow/agents/codex-reviewer.md: sha256:543b185aef1b84a5725f359103a3e8a482d1a8b8502212c033c40b0cae19afd9
+      em-review/agents/codex-reviewer.md: sha256:941dceeec62679d3323216619ed1dfe46a97c107a7189d69c2d2b0704fd9bf3c
+      em-workflow/agents/reviewer.md: sha256:49a3db46037446a339b3e7917e9f00b3ca9abbde489aefd83fc1a85613b2bc86
+      em-review/agents/reviewer.md: sha256:20cf533af5ee63a7530a290ae482a13b9433abe35f8283c6dfa35189ce059921
+      em-workflow/agents/review-editor.md: sha256:c1902cd116bcfecdd2e3fe130dbfb406f633f7c23800dbfdc0a6b75871af2b46
+      em-review/agents/review-editor.md: sha256:c25331cc7ec4eff426c0bd3fee8e15348764399f254f8e85d61aabfca9bdf78a
+      em-workflow/agents/review-evaluator.md: sha256:15f8e14157d9f8ee525be447e62b452f695bfbe9c0ed25e7c1d90885dd909931
+      em-workflow/scripts/scan-dependencies.py: sha256:96d2876ef8732ae878eab19751d9ade59568c8e7f5d9fc7903c2b362ae18c2ab
+      em-workflow/references/vuln-scanners.yaml: sha256:9a70baa5966181ebf59013ab5ca6c085c0ec5f3cf05d4fe6deb7d438b403fa37
+      em-review/README.md: sha256:201f547080235d4621c2ea022381c14e83278ef806f33eb3abf6aba1fd886852
+      em-workflow/skills/review/SKILL.md: sha256:8e197fa5f58ae2da9454476135b92ad530079c428bedd2e00cb4e6fb711380bc
+      em-review/skills/multi-review/SKILL.md: sha256:ad1bdc23fed012ac1a58e6b0254b86d54474167b9a180dc3fedbd360e0275fe3
+      tests/test_reviewer_roles_protocol.py: sha256:2e5b82b9770b28d91e29d5a3789b814ea46ed0981ef0c3e581da8efa04a6ca9d
+      tests/test_sca_axis_schema_enums.py: sha256:1c71dcfceb9129dc55988e3764b389259940395fed15c4ebd804cb4499fa10ed
+      tests/test_review_evaluation_contract.py: sha256:06f4adfb4a3148506c1c047e521dc83c5bb05cef221c6ed0b93892ddd7667060
+      tests/test_sca_scan_normalization.py: sha256:81925c810f074357c074448e43def67ca427fcb3c188016c69ddcb976444c597
+      tests/test_threat_model_review_security.py: sha256:827ad623822454d2f0168fa46ecf8ed3a4589560a4a65f079b2282b52ac908ff
+      tests/test_review_phase_llm_led.py: sha256:8bd8728a07722e16b4bf76664172409036ad3a3b142bdec73030444589ba6bba
+      tests/test_codex_wrapper_fallback_removal_integrated_checks.py: sha256:3f944fffc195c1ffeaaa1b89f7f607c6c0855180475350397ce37bcdd29cd351
+      tests/test_sca_per_project_scan_binding.py: sha256:77e8489ddf461e284c64ee835b5f0d235344ac5477d6cb58071ead9bfb8c8c6e
+      tests/test_sca_scan_execution.py: sha256:3fac1799085e0b2cf9b812e2f9db25c54b8325dd1eb689c6c55caa6db4a1849c
+      tests/test_sca_go_govulncheck_real_output.py: sha256:5ec83f0052468a8da56cd8325ad74c9dfb11ea7fb84fd956e5c96a1a591a8c85
+    truncated: false
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  e2e:
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null
