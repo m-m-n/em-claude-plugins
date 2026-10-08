@@ -263,7 +263,7 @@ class TestSubstitutionExceptionInReviewPhaseDocs(unittest.TestCase):
 # what changed.
 EM_REVIEW_EXPECTED_CHAINS = {
     "security": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6-astra"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "performance": [

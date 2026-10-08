@@ -6,6 +6,7 @@
 # Model: the wrapper passes --ignore-user-config (auth is kept), so Codex
 # resolves its recommended default model (auto-track); the user's
 # ~/.codex/config.toml model pin does not apply to wrapper invocations.
+# A caller pins a model with the wrapper's -m flag (reviewers.yaml `model`).
 # Run `codex --help` or check Codex docs for the current model list.
 
 # Timeout in seconds (default; for open-ended investigations)

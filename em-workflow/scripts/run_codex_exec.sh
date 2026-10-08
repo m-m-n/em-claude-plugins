@@ -6,11 +6,14 @@
 #   run_codex_exec.sh readwrite "prompt"           # Code generation (file changes allowed)
 #   run_codex_exec.sh readonly  -C /path "prompt"  # With working directory
 #   run_codex_exec.sh readonly  --output-schema schema.json "prompt"
+#   run_codex_exec.sh readonly  -m gpt-6-astra "prompt"
 #   run_codex_exec.sh readonly  --litellm muse-spark "prompt"
 #
 # Options passed through to codex exec:
 #   -C DIR             Set working directory
 #   --output-schema F  Pass JSON Schema for structured output
+#   -m MODEL           Pass `-m MODEL` to codex exec verbatim. Omitted, Codex
+#                      resolves its recommended default model.
 #   --litellm MODEL    Route through the local LiteLLM proxy: expands to
 #                      `-p litellm -m MODEL` and drops --ignore-user-config,
 #                      because that flag suppresses the profile layering
@@ -18,10 +21,11 @@
 #                      The launch runs in a launch-dedicated Codex home that
 #                      holds only the user's litellm profile (see "Launch
 #                      home on the --litellm route" below).
+#                      Not combinable with -m.
 #
 # Model: --ignore-user-config skips ~/.codex/config.toml (auth is kept), so
 # with no -m flag Codex resolves its recommended default model (auto-track).
-# --litellm names the model explicitly instead.
+# -m or --litellm names the model explicitly instead.
 # Timeout and flags are read from references/codex-cli.yaml.
 # Reasoning effort: readonly (review) mode forces xhigh via -c override;
 # readwrite mode runs with the model's default effort.
@@ -53,7 +57,7 @@ TIMEOUT="$(parse_yaml_value 'timeout')"
 
 # --- Parse arguments ---
 if [[ $# -lt 2 ]]; then
-  echo "Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] [--output-schema F] [--litellm MODEL] \"prompt\"" >&2
+  echo "Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] [--output-schema F] [-m MODEL] [--litellm MODEL] \"prompt\"" >&2
   exit 1
 fi
 
@@ -81,6 +85,7 @@ esac
 # Parse optional flags
 WORKDIR_FLAG=()
 SCHEMA_FLAG=()
+MODEL_FLAG=()
 PROFILE_FLAG=()
 # Cleared by --litellm: see the flag's entry below.
 USER_CONFIG_FLAG=(--ignore-user-config)
@@ -104,6 +109,14 @@ while [[ "${1:-}" == -* ]]; do
       SCHEMA_FLAG=(--output-schema "$2")
       shift 2
       ;;
+    -m)
+      if [[ $# -lt 3 ]]; then
+        echo "ERROR: -m requires a model argument" >&2
+        exit 1
+      fi
+      MODEL_FLAG=(-m "$2")
+      shift 2
+      ;;
     --litellm)
       if [[ $# -lt 3 ]]; then
         echo "ERROR: --litellm requires a model argument" >&2
@@ -125,6 +138,11 @@ while [[ "${1:-}" == -* ]]; do
       ;;
   esac
 done
+
+if [[ ${#MODEL_FLAG[@]} -gt 0 && "$LITELLM_ROUTE" -eq 1 ]]; then
+  echo "ERROR: -m and --litellm cannot be combined" >&2
+  exit 1
+fi
 
 # Remaining argument is the prompt
 if [[ $# -lt 1 ]]; then
@@ -320,6 +338,7 @@ timeout "$TIMEOUT" codex exec \
   "${EFFORT_FLAG[@]}" \
   "${WORKDIR_FLAG[@]}" \
   "${SCHEMA_FLAG[@]}" \
+  "${MODEL_FLAG[@]}" \
   "${PROFILE_FLAG[@]}" \
   "${USER_CONFIG_FLAG[@]}" \
   "${OTEL_FLAG[@]}" \

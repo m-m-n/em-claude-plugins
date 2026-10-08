@@ -6,10 +6,13 @@
 #   run_codex_exec.sh readwrite "prompt"           # Code generation (file changes allowed)
 #   run_codex_exec.sh readonly  -C /path "prompt"  # With working directory
 #   run_codex_exec.sh readonly  --output-schema schema.json "prompt"
+#   run_codex_exec.sh readonly  -m gpt-6-astra "prompt"
 #
 # Options passed through to codex exec:
 #   -C DIR             Set working directory
 #   --output-schema F  Pass JSON Schema for structured output
+#   -m MODEL           Pass `-m MODEL` to codex exec verbatim. Omitted, Codex
+#                      resolves its recommended default model.
 #
 # Model: --ignore-user-config skips ~/.codex/config.toml (auth is kept), so
 # with no -m flag Codex resolves its recommended default model (auto-track).
@@ -38,7 +41,7 @@ TIMEOUT="$(parse_yaml_value 'timeout')"
 
 # --- Parse arguments ---
 if [[ $# -lt 2 ]]; then
-  echo "Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] [--output-schema F] \"prompt\"" >&2
+  echo "Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] [--output-schema F] [-m MODEL] \"prompt\"" >&2
   exit 1
 fi
 
@@ -66,6 +69,7 @@ esac
 # Parse optional flags
 WORKDIR_FLAG=()
 SCHEMA_FLAG=()
+MODEL_FLAG=()
 while [[ "${1:-}" == -* ]]; do
   case "$1" in
     -C)
@@ -82,6 +86,14 @@ while [[ "${1:-}" == -* ]]; do
         exit 1
       fi
       SCHEMA_FLAG=(--output-schema "$2")
+      shift 2
+      ;;
+    -m)
+      if [[ $# -lt 3 ]]; then
+        echo "ERROR: -m requires a model argument" >&2
+        exit 1
+      fi
+      MODEL_FLAG=(-m "$2")
       shift 2
       ;;
     *)
@@ -211,6 +223,7 @@ timeout "$TIMEOUT" codex exec \
   "${EFFORT_FLAG[@]}" \
   "${WORKDIR_FLAG[@]}" \
   "${SCHEMA_FLAG[@]}" \
+  "${MODEL_FLAG[@]}" \
   "${OTEL_FLAG[@]}" \
   "${HOOK_FLAG[@]}" \
   "$FULL_PROMPT" </dev/null 2>&1 || exit_code=$?
