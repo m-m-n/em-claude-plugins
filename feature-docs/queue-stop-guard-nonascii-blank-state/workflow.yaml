@@ -80,7 +80,8 @@ workflow:
   base_commit: 3491fec7e0b9e97afe61ff2b1c5b07fd12785156
   completed_at_commit: 50f2797aae8af9481817b94312fea8011d060491
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 95bb0047d743a8b314f215e82a6c7f8d6e34b782
 - id: verify
   status: pending
   result: null
@@ -114,8 +115,15 @@ tasks:
     branch: em-workflow/queue-stop-guard-nonascii-blank-state/task0001
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
