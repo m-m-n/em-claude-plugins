@@ -5,10 +5,134 @@ status: in_progress
 generation: 1
 base_revision: e56253fccdf8fce03467681923bd3d36e3fa8402
 last_input_digest: sha256:81f1f63ceeda1dd52e4492670c79c8940800082673cddff0f86116691c257881
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
-worker_runs: []
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    worker: requirements-analyst
+    request_id: create-spec-run-0001
+answers:
+  req.canonical-id-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - rewrite_to_tests_dotted
+    freeform: null
+    normalized_answer: rewrite_to_tests_dotted — tests.付きのドット形式へ統一する。ただし、直接選択できるモジュールID・クラスIDも認め、メソッドIDだけに限定しない
+  req.non-unittest-entries:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - move_to_red_reason
+    freeform: null
+    normalized_answer: 'move_to_red_reason — 対応する既存のunittestが実際に対象を検証する場合はそのIDを使い、それ以外はtests: []にする。移動した説明は既存のred_reasonへ追記し、過去の記述とred_confirmedを維持する'
+  req.stale-ids:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - remap_else_remove_with_log
+    freeform: null
+    normalized_answer: remap_else_remove_with_log — 略称は記録内の定義、変更・統合はgit履歴から対応を確認する。対象を特定できるワイルドカードは実IDへ展開する。対応不明なら削除し、この機能のfeature-docsへファイル・AC・旧ID・新IDまたは削除・根拠を記録する。ID整理では既存のred_confirmed/red_reasonを変更しない
+  req.fields-in-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - acceptance_tests_only
+    freeform: null
+    normalized_answer: acceptance_tests_only
+  req.recurrence-test-shape:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - new_module_glob
+    freeform: null
+    normalized_answer: new_module_glob — 標準ライブラリだけで新しい全件検査を作り、抽出エラーと解決エラーをファイル・AC・ID付きで集約する。解決したテストは実行しない
+  req.record-shape:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - accept_block_and_flow
+    freeform: null
+    normalized_answer: accept_block_and_flow — 対応するYAML表記の範囲を明示し、引用・コメント・複数行スカラーを考慮して抽出した後にIDを検証する。未対応形式、重複キー、testsキー欠落はファイルとACを示して失敗させる
+  req.write-side-rule:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - agnostic_rule_plus_repo_form
+    freeform: null
+    normalized_answer: agnostic_rule_plus_repo_form — implementer.mdには各プロジェクトのテスト実行コマンドで直接選択できるIDを書く規則を追加し、このリポジトリのtests.付きドット形式はtest/README.mdへ記載する
+  req.check-surface:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - in_discover_suite
+    freeform: null
+    normalized_answer: in_discover_suite — 名前変更で壊れた他機能の記録も修正対象にする。予定外の変更はdeviationsへ報告し、変更範囲への追加には既存AC・必要なパス・修正しない場合に失敗する検査を示す
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: decide_autonomously (design step skipped per recommendation)
+  create-spec.requirement-clarification.codex-1:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-09T00:45:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "{\n \"answers\": [\n  {\n   \"q\": \"Q1\",\n   \"option_id\": \"rewrite_to_tests_dotted\"\
+      ,\n   \"refinement\": \"tests.付きのドット形式へ統一する。ただし、直接選択できるモジュールID・クラスIDも認め、メソッドIDだけに限定しない\",\n   \"\
+      reason\": \"test-docs/exit4-tip-argument/task0002.tests.yaml:21にはモジュールIDがあり、tests/test_exit4_ac2_test_id_drift.pyのTestResolutionJudgeもモジュール・クラス・メソッドを認めている\"\
+      \n  },\n  {\n   \"q\": \"Q2\",\n   \"option_id\": \"move_to_red_reason\",\n   \"refinement\": \"\
+      対応する既存のunittestが実際に対象を検証する場合はそのIDを使い、それ以外はtests: []にする。移動した説明は既存のred_reasonへ追記し、過去の記述とred_confirmedを維持する\"\
+      ,\n   \"reason\": \"test-docs/destructive-guard-command-name-substitution/task0002.tests.yamlには別実行器の記録があり、tests/test_destructive_guard_command_substitution.py:574には実行器全体を検証する既存のunittestがある\"\
+      \n  },\n  {\n   \"q\": \"Q3\",\n   \"option_id\": \"remap_else_remove_with_log\",\n   \"refinement\"\
+      : \"略称は記録内の定義、変更・統合はgit履歴から対応を確認する。対象を特定できるワイルドカードは実IDへ展開する。対応不明なら削除し、この機能のfeature-docsへファイル・AC・旧ID・新IDまたは削除・根拠を記録する。ID整理では既存のred_confirmed/red_reasonを変更しない\"\
+      ,\n   \"reason\": \"test-docs/destructive-guard-lexer-round2-deferred/task0006.tests.yaml:16にはTBEの正式名が明記され、既存のID検査にもSTALE_IDとREPLACEMENT_IDによる置換例がある\"\
+      \n  },\n  {\n   \"q\": \"Q4\",\n   \"option_id\": \"acceptance_tests_only\",\n   \"refinement\"\
+      : \"\",\n   \"reason\": \"em-workflow/references/implement-phase.md:450ではbaseline_failures/final_failuresを実装時の失敗帰属に使う観測記録として扱っているため、現在のIDへ書き換える対象に含めない\"\
+      \n  },\n  {\n   \"q\": \"Q5\",\n   \"option_id\": \"new_module_glob\",\n   \"refinement\": \"標準ライブラリだけで新しい全件検査を作り、抽出エラーと解決エラーをファイル・AC・ID付きで集約する。解決したテストは実行しない\"\
+      ,\n   \"reason\": \"tests/test_exit4_ac2_test_id_drift.py:46のFR6とTestTargetEnumerationは対象を1記録に固定し、TestIdExtractionはフロー形式の拒否を検証しているため、既存モジュールの一般化は契約を壊す\"\
+      \n  },\n  {\n   \"q\": \"Q6\",\n   \"option_id\": \"accept_block_and_flow\",\n   \"refinement\"\
+      : \"対応するYAML表記の範囲を明示し、引用・コメント・複数行スカラーを考慮して抽出した後にIDを検証する。未対応形式、重複キー、testsキー欠落はファイルとACを示して失敗させる\"\
+      ,\n   \"reason\": \"em-workflow/agents/implementer.md:147の例とtest-docs/repo-suite-pinned-test-drift/task0005.tests.yaml:34はフロー形式を使っており、ブロック形式への限定は既存の記録形式と合わない\"\
+      \n  },\n  {\n   \"q\": \"Q7\",\n   \"option_id\": \"agnostic_rule_plus_repo_form\",\n   \"refinement\"\
+      : \"implementer.mdには各プロジェクトのテスト実行コマンドで直接選択できるIDを書く規則を追加し、このリポジトリのtests.付きドット形式はtest/README.mdへ記載する\"\
+      ,\n   \"reason\": \"em-workflow/agents/implementer.md:101はproject_commands.testを使い、記録例はRust形式なので、Python固有の形式はtest/README.mdのunittest規則と合わせて定義するのが適切だよ\"\
+      \n  },\n  {\n   \"q\": \"Q8\",\n   \"option_id\": \"in_discover_suite\",\n   \"refinement\": \"\
+      名前変更で壊れた他機能の記録も修正対象にする。予定外の変更はdeviationsへ報告し、変更範囲への追加には既存AC・必要なパス・修正しない場合に失敗する検査を示す\",\n   \"reason\"\
+      : \"test/README.md:18の通常実行で再発を検出でき、em-workflow/agents/implementer.md:123とem-workflow/references/implement-phase.md:910には必要な予定外変更を扱う規則がある\"\
+      \n  }\n ],\n \"other_risks\": [\n  \"loadTestsFromNameは例外を投げずloader.errorsと_FailedTestで失敗を返す場合があるため、例外の有無だけで成功判定しない。既存検査の_loader_failureがこの場合を扱っている\"\
+      ,\n  \"implementer.mdでは最終テスト確認の後にStep 4cで記録を書くため、新しい記録が同じ実行では検査されない。記録を書いた後にも全件検査を通す必要がある\",\n \
+      \ \"全件検査を1つのテストに集約すると、そのテストが開始時点ですでに失敗している場合、不正IDが増えても失敗したテスト名の差分には現れない。implementer.md:132の差分判定だけでは新たな不整合を検出できない\"\
+      ,\n  \"tests: []だけの記録も実在するため、既存検査の記録ごとの非空条件は流用できない。一方、抽出失敗を空配列へ変換すると見逃すので、正当な空配列と読み取り失敗を区別する必要がある\"\
+      \n ]\n}"
+    normalized_answer: 'Codex consultation turn 1 (converged): all 8 analyst recommendations adopted with
+      Codex refinements; other_risks carried into requirements'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:81f1f63ceeda1dd52e4492670c79c8940800082673cddff0f86116691c257881
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
