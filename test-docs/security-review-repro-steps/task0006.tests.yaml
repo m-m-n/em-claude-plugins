@@ -1,0 +1,77 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []   # re-executed after implementation: python3 -m unittest discover -s tests, Ran 9357 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_other_distinct_values_go_to_alternates_in_bounded_order
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_overflow_is_true_exactly_when_more_than_three_distinct
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_unmerged_finding_has_empty_list_and_false
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_new_sentences_follow_the_existing_longest_value_sentence
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_existing_dedupe_merge_text_is_kept
+      - test_reproduction_review_phase_workflow.TestAC1CapNormalizeAndDedupe.test_dedupe_merge_keeps_longest_non_null_reproduction
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- the em-workflow Phase R3b dedupe merge text carried no reproduction_alternates / reproduction_overflow sentence (observed for the em-workflow subTest before any document edit)"
+  AC-2:
+    tests:
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_other_distinct_values_go_to_alternates_in_bounded_order
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_overflow_is_true_exactly_when_more_than_three_distinct
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_unmerged_finding_has_empty_list_and_false
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_added_dedupe_sentences_are_identical_in_both_documents
+      - test_reproduction_dedupe_alternates.TestAc1Ac2DedupeMerge.test_em_review_reaggregation_applies_the_dedupe_rule
+      - test_reproduction_dedupe_alternates.TestAc1Ac2NegativeProof.test_parity_detects_a_one_word_drift
+      - test_reproduction_review_phase_em_review.TestAc1Step6AndDedupe.test_dedupe_keeps_longest_non_null_reproduction
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (em-review Phase R3 dedupe had no alternates / overflow sentence; Phase R4 re-aggregation had no dedupe sentence) and ValueError: substring not found (the added dedupe block, needed for the parity comparison, did not exist)"
+  AC-3:
+    tests:
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_every_kept_value_is_verified
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_reproduced_when_at_least_one_kept_value_is
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_not_reproduced_only_when_all_fail_and_no_overflow
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_otherwise_unverifiable_and_overflow_never_declines
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_worked_case_is_stated
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_whole_ac3_check_passes_on_both_documents
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_verification_still_follows_round_context_suppression
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_workflow_verification_still_follows_floor_and_degradation
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_added_verification_sentences_are_identical_in_both_documents
+      - test_reproduction_dedupe_alternates.TestAc3NegativeProof.test_real_paragraph_edited_to_decline_on_any_failure_is_rejected
+      - test_reproduction_dedupe_alternates.TestAc3NegativeProof.test_real_paragraph_edited_to_ignore_overflow_is_rejected
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- neither verification paragraph stated verification over the kept values, the all-fail-and-no-overflow rule for not reproduced, the unverifiable fallback or the worked case; ValueError: substring not found for the parity extraction"
+  AC-4:
+    tests:
+      - test_reproduction_dedupe_alternates.TestAc4VerifierConstraints.test_constraints_name_alternates_with_the_same_rules
+      - test_reproduction_dedupe_alternates.TestAc4VerifierConstraints.test_added_constraints_sentence_is_identical_in_both_documents
+      - test_reproduction_dedupe_alternates.TestAc4NegativeProof.test_constraints_without_alternates_are_rejected
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- no sentence of either document's verifier constraints named reproduction_alternates; ValueError: substring not found for the parity extraction"
+  AC-5:
+    tests:
+      - test_reproduction_dedupe_alternates.TestAc5RecordAndEditorInput.test_r5_finding_entries_carry_both_keys
+      - test_reproduction_dedupe_alternates.TestAc5RecordAndEditorInput.test_older_records_read_as_empty_list_and_false
+      - test_reproduction_dedupe_alternates.TestAc5RecordAndEditorInput.test_added_r5_paragraph_is_identical_in_both_documents
+      - test_reproduction_dedupe_alternates.TestAc5RecordAndEditorInput.test_review_editor_finding_json_excludes_both_keys
+      - test_reproduction_dedupe_alternates.TestAc5RecordAndEditorInput.test_existing_editor_exclusion_sentence_is_kept
+      - test_reproduction_dedupe_alternates.TestAc5RecordAndEditorInput.test_editor_dispatch_still_names_reproduction_exactly_once
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- the Phase R5 YAML finding entries had no reproduction_alternates / reproduction_overflow keys, no older-record sentence existed, and the review-editor dispatch sentence excluded only reproduction"
+  AC-6:
+    tests:
+      - test_reproduction_dedupe_alternates.TestAc6PinnedText.test_question_tool_name_counts_are_unchanged
+      - test_reproduction_dedupe_alternates.TestAc6PinnedText.test_added_text_does_not_name_the_question_tool
+      - test_reproduction_dedupe_alternates.TestAc6PinnedText.test_no_gate_identifier_is_added
+      - test_reproduction_dedupe_alternates.TestAc6PinnedText.test_evaluator_dispatch_literal_occurs_exactly_once
+      - test_reproduction_dedupe_alternates.TestAc6PinnedText.test_em_review_added_text_references_no_em_workflow_file
+      - test_reproduction_dedupe_alternates.TestAc6PinnedText.test_named_existing_dedupe_tests_pass
+      - test_reproduction_review_phase_workflow.TestAC6PinnedTextAndSiblingSuites
+      - test_reproduction_review_phase_em_review.TestAc7PinnedTextAndImports
+    red_confirmed: false
+    red_reason: "Invariant criterion: the pinned question-tool counts, the single evaluator dispatch literal and the absence of gate_id / batch-policies.yaml held before this change, so the guard tests passed with no red state; only test_added_text_does_not_name_the_question_tool errored beforehand (ValueError: substring not found, the added text did not exist yet). The existing review-phase suites were run after the edit and caught two regressions I then fixed (the em-review review-editor dispatch line wrap, and the whole-file sha256 pin in test_tier_record_schema_v2.py)."
+  AC-7:
+    tests:
+      - test_reproduction_dedupe_alternates.TestAc7StandardLibraryOnly.test_imports_are_standard_library_modules
+      - test_reproduction_dedupe_alternates.TestAc7StandardLibraryOnly.test_self_check_forged_third_party_import_is_detected
+      - test_reproduction_dedupe_alternates.TestAc3NegativeProof.test_forged_paragraph_declining_when_one_kept_value_fails_is_rejected
+      - test_reproduction_dedupe_alternates.TestAc3NegativeProof.test_forged_paragraph_verifying_reproduction_alone_is_rejected
+    red_confirmed: false
+    red_reason: "These assert properties of the new module itself (standard-library imports) and that forged samples are rejected by AC-3's check; they passed on their first run because the module and the forged samples existed before any document edit, so no red state occurred. The real-document AC-3 tests the forgeries are compared against were red (see AC-3). The full suite python3 -m unittest discover -s tests was run after the edit: Ran 9357 tests, OK (skipped=1)."
