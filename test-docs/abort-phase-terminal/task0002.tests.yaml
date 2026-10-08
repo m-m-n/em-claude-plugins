@@ -7,9 +7,9 @@ final_failures: []             # same command after implementation: 1404 tests
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_status_written_to_failed
-      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_the_write_is_committed
-      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_no_longer_claims_implement_stays_failed
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_status_written_to_failed
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_the_write_is_committed
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_no_longer_claims_implement_stays_failed
     red_confirmed: true
     red_reason: >-
       Watched all three fail against the pre-edit row: "`implement` step's
@@ -18,10 +18,10 @@ acceptance_tests:
       passed immediately after the batch-mode.md row edit.
   AC-2:
     tests:
-      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_gate_id_present
-      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_retry_clause_survives
-      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_route_back_clause_survives
-      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_detail_pointer_survives
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_gate_id_present
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_retry_clause_survives
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_route_back_clause_survives
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_detail_pointer_survives
     red_confirmed: false
     red_reason: >-
       Retention matchers: the task plan requires these four elements to
@@ -44,9 +44,9 @@ acceptance_tests:
       never red at any point in this task.
   AC-4:
     tests:
-      - tests.test_abort_phase_terminal_batch_mode.TestValidationDetectsRegressions.test_removed_phrase_matcher_flags_pre_change_row
-      - tests.test_abort_phase_terminal_batch_mode.TestValidationDetectsRegressions.test_pre_change_row_sample_is_not_vacuous
-      - tests.test_abort_phase_terminal_batch_mode.TestValidationDetectsRegressions.test_new_wording_matcher_flags_absence_in_pre_change_row
+      - tests.test_implement_routeback_gate.TestBatchModeGateRowRegressionGuard.test_removed_phrase_matcher_flags_pre_change_row
+      - tests.test_implement_routeback_gate.TestBatchModeGateRowRegressionGuard.test_pre_change_row_sample_is_not_vacuous
+      - tests.test_implement_routeback_gate.TestBatchModeGateRowRegressionGuard.test_new_wording_matcher_flags_absence_in_pre_change_row
     red_confirmed: false
     red_reason: >-
       The module's existence was the negated outcome before it was written

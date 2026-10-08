@@ -8,9 +8,7 @@ baseline_failures: []
 final_failures: []
 acceptance_tests:
   AC-1:
-    tests:
-      - "grep -c 'three sources' feature-docs/destructive-guard-write-target-scoping/SPEC.md"
-      - "grep -c 'extract mode only' feature-docs/destructive-guard-write-target-scoping/SPEC.md"
+    tests: []
     red_confirmed: true
     red_reason: >
       Before the edit (git show HEAD:feature-docs/destructive-guard-write-target-scoping/SPEC.md),
@@ -20,9 +18,10 @@ acceptance_tests:
       set is drawn from four sources" with (a)-(d) matching
       IMPLEMENTATION.md's "Write-target sources" verbatim, including "tar
       `-C` / `--directory` in extract mode only".
+
+      Removed from tests (not a unittest ID): grep -c 'three sources' feature-docs/destructive-guard-write-target-scoping/SPEC.md; grep -c 'extract mode only' feature-docs/destructive-guard-write-target-scoping/SPEC.md
   AC-2:
-    tests:
-      - "grep -c 'only the last one is the destination' feature-docs/destructive-guard-write-target-scoping/SPEC.md"
+    tests: []
     red_confirmed: true
     red_reason: >
       Before the edit, SPEC.md's Edge Cases line read "`mv a b c dir/` with
@@ -31,10 +30,10 @@ acceptance_tests:
       and the line reads "a, b, c and dir/ are all write targets (mv
       unlinks each source it names)"; no line in SPEC.md states only the
       last argument is the destination for mv.
+
+      Removed from tests (not a unittest ID): grep -c 'only the last one is the destination' feature-docs/destructive-guard-write-target-scoping/SPEC.md
   AC-3:
-    tests:
-      - "grep -c WRAPPER_VALUE_FLAGS feature-docs/destructive-guard-write-target-scoping/SPEC.md feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md"
-      - "manual stdin-JSON invocation of em-workflow/hooks/destructive-guard.py for 'sudo -u root rm -rf $HOME/x', \"bash -c 'rm -rf $HOME/x'\" and \"eval 'rm -rf $HOME/x'\", with and without CLAUDE_BATCH=1"
+    tests: []
     red_confirmed: true
     red_reason: >
       Before the edit, neither document mentioned WRAPPER_VALUE_FLAGS or
@@ -52,10 +51,10 @@ acceptance_tests:
       input-shaping changes (head()'s WRAPPER_VALUE_FLAGS consumption and
       statements()'s -c/eval/here-string re-scan), and state the three
       commands went from allow to ask (deny under CLAUDE_BATCH).
+
+      Removed from tests (not a unittest ID): grep -c WRAPPER_VALUE_FLAGS feature-docs/destructive-guard-write-target-scoping/SPEC.md feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md; manual stdin-JSON invocation of em-workflow/hooks/destructive-guard.py for 'sudo -u root rm -rf $HOME/x', "bash -c 'rm -rf $HOME/x'" and "eval 'rm -rf $HOME/x'", with and without CLAUDE_BATCH=1
   AC-4:
-    tests:
-      - "grep -c 'is the only function changed' feature-docs/destructive-guard-write-target-scoping/SPEC.md"
-      - "grep -n 'rm / mv / cp / ln / chmod / chown' feature-docs/destructive-guard-write-target-scoping/SPEC.md"
+    tests: []
     red_confirmed: true
     red_reason: >
       Before the edit, SPEC.md's component diagram read
@@ -69,9 +68,10 @@ acceptance_tests:
       diagram, Dependencies or Data Flow sections; all four now also note
       the statements()/head() input-shaping change to what check_rm
       receives (FR6).
+
+      Removed from tests (not a unittest ID): grep -c 'is the only function changed' feature-docs/destructive-guard-write-target-scoping/SPEC.md; grep -n 'rm / mv / cp / ln / chmod / chown' feature-docs/destructive-guard-write-target-scoping/SPEC.md
   AC-5:
-    tests:
-      - "grep -c '3 つ' feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md"
+    tests: []
     red_confirmed: true
     red_reason: >
       Before the edit, REQUIREMENTS.md had 4 occurrences of "3 つ" across
@@ -82,10 +82,10 @@ acceptance_tests:
       item) was edited individually. After the edit, 0 occurrences of "3
       つ" remain and the content agrees with the revised SPEC.md's (a)-(d)
       source list and mv/rm wording.
+
+      Removed from tests (not a unittest ID): grep -c '3 つ' feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md
   AC-6:
-    tests:
-      - "grep -n 'three sources\\|3 つ\\|3つ\\|only the last one is the destination\\|最後の 1 つを宛先として扱い、rm\\|is the only function changed\\|唯一の関数' feature-docs/destructive-guard-write-target-scoping/SPEC.md feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md"
-      - "grep -n tar feature-docs/destructive-guard-write-target-scoping/SPEC.md feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md"
+    tests: []
     red_confirmed: true
     red_reason: >
       Run before any edit, the combined search matched multiple lines in
@@ -95,6 +95,8 @@ acceptance_tests:
       in either file, and every remaining `tar` mention in both documents
       is qualified "extract mode only" / "extract モードのみ" with no
       unqualified all-mode statement.
+
+      Removed from tests (not a unittest ID): grep -n 'three sources\|3 つ\|3つ\|only the last one is the destination\|最後の 1 つを宛先として扱い、rm\|is the only function changed\|唯一の関数' feature-docs/destructive-guard-write-target-scoping/SPEC.md feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md; grep -n tar feature-docs/destructive-guard-write-target-scoping/SPEC.md feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md
   AC-7:
     tests: []
     red_confirmed: false

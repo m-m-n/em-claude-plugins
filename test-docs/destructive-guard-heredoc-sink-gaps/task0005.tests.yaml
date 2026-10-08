@@ -10,11 +10,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(a) 再現形: $'a\\'b' を引用の読み違いで跨ぐ bash 宛てヒアドキュメントは deny(ホスト文が自身の演算子を持たない)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) sink を sh、破壊的コマンドを rm -rf に変えた形も deny(引用の読み違いが演算子の手前の同じ行にある)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) sink を bash -s にし、$'...' を前の行に置いた形も deny(引用の読み違いが演算子の前の行にある)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) 引用を閉じる ' が演算子と同じ行の後ろにある形も deny(読み違えた引用が演算子を跨いで同じ行で閉じる)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) <<- と引用付き区切り語でも deny(区切り語の引用で読み違えた引用の範囲が変わる)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       The five deny cases (the reproduction form AC-1(a) and four further forms
@@ -31,11 +27,7 @@ acceptance_tests:
       the body was judged data.
   AC-2:
     tests:
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(a) 再現形: $'a\\'b' を引用の読み違いで跨ぐ bash 宛てヒアドキュメントは deny(ホスト文が自身の演算子を持たない)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) sink を sh、破壊的コマンドを rm -rf に変えた形も deny(引用の読み違いが演算子の手前の同じ行にある)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) sink を bash -s にし、$'...' を前の行に置いた形も deny(引用の読み違いが演算子の前の行にある)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) 引用を閉じる ' が演算子と同じ行の後ろにある形も deny(読み違えた引用が演算子を跨いで同じ行で閉じる)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) <<- と引用付き区切り語でも deny(区切り語の引用で読み違えた引用の範囲が変わる)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Same five cases and the same pre-change run as AC-1 (5 FAIL, got=allow).
@@ -45,11 +37,7 @@ acceptance_tests:
       the git reset --hard bodies, rm-recursive for the rm -rf bodies.
   AC-3:
     tests:
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(a) 再現形: $'a\\'b' を引用の読み違いで跨ぐ bash 宛てヒアドキュメントは deny(ホスト文が自身の演算子を持たない)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) sink を sh、破壊的コマンドを rm -rf に変えた形も deny(引用の読み違いが演算子の手前の同じ行にある)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) sink を bash -s にし、$'...' を前の行に置いた形も deny(引用の読み違いが演算子の前の行にある)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) 引用を閉じる ' が演算子と同じ行の後ろにある形も deny(読み違えた引用が演算子を跨いで同じ行で閉じる)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-1(b) <<- と引用付き区切り語でも deny(区切り語の引用で読み違えた引用の範囲が変わる)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       A copy of the changed guard was written outside the repository (scratch
@@ -63,10 +51,7 @@ acceptance_tests:
       repository copy was not modified for this run.
   AC-4:
     tests:
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-4 演算子がコマンド語に融合した cat<<EOF は allow(演算子を記録できる)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-4 <<- が融合した cat<<-EOF は allow(演算子を記録できる)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-4 引用付き区切り語が融合した cat<<'EOF' は allow(演算子を記録できる)"
-      - "destructive-guard-cases.json::bc9a99dd0d07ffa5 task0005 AC-4 リダイレクトの後ろに融合した cat >notes.txt<<EOF は allow(演算子を記録できる)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       The four allow cases (cat<<EOF, cat<<-EOF, cat<<'EOF', cat >notes.txt<<EOF;
@@ -84,7 +69,6 @@ acceptance_tests:
       a modified copy, not a red observed with the implementation absent.
   AC-5:
     tests:
-      - "run-destructive-guard.py::every case that was in destructive-guard-cases.json before this task (554 entries; 4, 36, 416-419, 428, 434, 435, 455, 456, 457, 468, 469 and every earlier case of this feature included)"
       - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
     red_confirmed: false
@@ -104,7 +88,7 @@ acceptance_tests:
       only for the variants of the five new AC-1 cases, always allow -> deny.
   AC-6:
     tests:
-      - "destructive-guard-cases.json::26ab9a3d83649eff AC-4: 単一引用符内に $( を 30000 個並べた約 60KB の入力でも 10 秒以内に deny を返す"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       A dedicated new module is out of scope (NFR4 allows no new test file), but

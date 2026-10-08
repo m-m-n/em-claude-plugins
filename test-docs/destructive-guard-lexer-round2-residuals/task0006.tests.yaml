@@ -4,7 +4,7 @@ final_failures: []             # re-executed after the hook change: discover -s 
 acceptance_tests:
   AC-1:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py (case 48e1f462b0dd164f round2-residuals FR2.1)
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestTimeOptions.test_the_case_is_in_the_case_table_after_the_base_entries
     red_confirmed: true
     red_reason: "Case table committed first (fb8e31bc) and run-destructive-guard.py then printed 678/679 with 'FAIL deny 48e1f462b0dd164f round2-residuals FR2.1 ... got=allow', before any commit that changes destructive-guard.py (git log shows fb8e31bc, e9a31eb3, then the hook commit). The placement test was written after the case existed, so it was never observed red; the runner failure is the observed red. The commit order itself is a git history property."
@@ -36,7 +36,7 @@ acceptance_tests:
     red_reason: "Confirmed on bash 5.3.9 with echo in place of rm (bash -c with the form time -p -p a[1<<2]=x, a body line ', the line 2]=x and an echo line: bash printed '-p: command not found', closed the body at 2]=x and ran the echo line). It is a probe of the shell, independent of the hook, so no hook-side check can be made to fail first. Searched tests/ and em-workflow/hooks/tests/ by path em-workflow/hooks/destructive-guard.py and basename destructive-guard.py: no existing test runs bash on these forms."
   AC-6:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract
       - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged

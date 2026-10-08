@@ -59,6 +59,6 @@ acceptance_tests:
       - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract
       - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "A dedicated new module is out of scope, but the existing TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged detects an edited, removed or reordered case-table entry (digest of the first 627 entries), and the runner and the module's stage-agreement and module-contract tests detect a changed verdict or module shape; no red state occurred for this change (the case table is not edited and no verdict changes: git diff shows no change to em-workflow/hooks/tests/destructive-guard-cases.json)."

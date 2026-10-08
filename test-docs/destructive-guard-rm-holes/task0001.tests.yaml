@@ -4,7 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (case suite against em-workflow/hooks/tests/destructive-guard-cases.json)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       Every form AC-1 requires (the three hole-1 deny forms, the
@@ -122,7 +122,6 @@ acceptance_tests:
       - tests.test_destructive_guard_command_substitution.TestPayloadCarriedSubstitutionMatchesDirectForm.test_payload_forms_match_direct_form_attended
       - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_determinism_across_repeated_runs
       - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
-      - "python3 -m unittest discover -s tests"
     red_confirmed: true
     red_reason: >
       Running `python3 -m unittest tests.test_destructive_guard_command_substitution`
@@ -139,10 +138,12 @@ acceptance_tests:
       "[`...`]"-bracket notation (STANDIN_RENDERING) and the new expected
       wording; the discover-wide run and the two unaffected pins
       (determinism, stdlib/no-new-syscall) passed throughout.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests
   AC-9:
     tests:
-      - tests/test_plugin_version_parity.py
-      - em-workflow/scripts/check-plugin-invariants.py
+      - tests.test_plugin_version_parity
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
     red_confirmed: false
     red_reason: >
       No executable check is tied to the specific HEAD version (0.3.3) this

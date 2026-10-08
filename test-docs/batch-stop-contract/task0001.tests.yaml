@@ -5,12 +5,9 @@ acceptance_tests:
   AC-1:
     tests:
       - tests.test_batch_stop_contract.TestContractDocumentStructure.test_document_exists
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_seven_level_2_headings_in_order
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_prefix_literal_is_defined
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_fixed_four_field_order
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_same_prefix_and_fields_for_both_terminal_states
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_no_external_tool_needed
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_batch_only_emission
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_nine_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_no_external_tool_needed
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_batch_only_emission
     red_confirmed: true
     red_reason: >-
       Before em-workflow/references/batch-terminal-line.md existed, every
@@ -21,8 +18,8 @@ acceptance_tests:
     tests:
       - tests.test_batch_stop_contract.TestStopReasonCodes.test_table_has_rows
       - tests.test_batch_stop_contract.TestStopReasonCodes.test_codes_are_well_formed
-      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_nine_fixed_codes
-      - tests.test_batch_stop_contract.TestStopReasonCodes.test_none_documented_as_reserved_for_completed
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_none_documented_as_reserved_for_non_stop_states
       - tests.test_batch_stop_contract.TestStopReasonCodes.test_states_step_and_detail_fields_also_carried
       - tests.test_batch_stop_contract.TestStopReasonCodes.test_extractor_ignores_reason_codes_mentioned_only_in_prose
       - tests.test_batch_stop_contract.TestReasonCodeExtractorNegativeProofs.test_duplicate_table_is_otherwise_well_formed
@@ -68,8 +65,8 @@ acceptance_tests:
       tests in this AC pass afterward.
   AC-4:
     tests:
-      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_line
-      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_field_values_defines_the_sentinel_and_its_condition
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_result
+      - tests.test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_field_values_defines_the_sentinel_and_its_condition
     red_confirmed: true
     red_reason: >-
       TestNoLineOnWaitTurnAndSentinel.setUpClass errored with the same
@@ -77,7 +74,7 @@ acceptance_tests:
   AC-5:
     tests:
       - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_states_no_status_operation_against_external_service
-      - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_states_detail_carries_no_confidential_information
+      - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_states_confidentiality_rule_extended_to_all_four_fields
     red_confirmed: true
     red_reason: >-
       TestResponsibilityBoundary.setUpClass errored with the same
@@ -91,13 +88,8 @@ acceptance_tests:
       green.
   AC-6:
     tests:
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_names_the_contract_document
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_restates_no_contract_literal
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_non_packet_gates_table_row_count_unchanged
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_d7_pinned_strings_still_absent
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_catch_all_paragraph_unchanged
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_diff_size_gate_row_unchanged
-      - tests.test_batch_stop_contract.TestBatchModePointer.test_per_command_approval_row_unchanged
+      - tests.test_batch_stop_contract.TestBatchModePointerSc5Compliance.test_names_the_contract_document
+      - tests.test_batch_stop_contract.TestBatchModePointerSc5Compliance.test_restates_no_sc5_literal
     red_confirmed: true
     red_reason: >-
       Before batch-mode.md carried the pointer,
@@ -113,10 +105,7 @@ acceptance_tests:
       satisfies D7" clause, confirmed correct against the retained
       pre-edit file first.
   AC-7:
-    tests:
-      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_in_the_contract_document
-      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_appears_in_the_contract_document
-      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_inside_fenced_blocks
+    tests: []
     red_confirmed: true
     red_reason: >-
       test_prefix_appears_in_the_contract_document and

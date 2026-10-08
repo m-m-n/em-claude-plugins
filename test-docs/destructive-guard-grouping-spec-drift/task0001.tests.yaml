@@ -25,11 +25,7 @@ acceptance_tests:
       expected to go red").
   AC-2:
     tests:
-      - "destructive-guard-cases.json: グルーピング(サブシェル): チケット再現、$HOME 対象は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(ブレースグループ): チケット再現、$HOME 対象は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(if/then): チケット再現、$HOME 対象は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(for/do): チケット再現、$HOME 対象は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(!): チケット再現、$HOME 対象は裸形と同じ ask"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       All 5 rows are among the 36 red-run failures (each reported
@@ -38,36 +34,7 @@ acceptance_tests:
       `rm -rf $HOME/x` form.
   AC-3:
     tests:
-      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース有り): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース無し): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(ブレースグループ): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(if/then): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(if/elif/else): else 節の対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(if の条件式): 条件位置のコマンドも対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(while/do): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(until の条件式): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(for/do): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(!): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(case パターン): パターン閉じ括弧の直後の対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(case パターン、任意の先頭括弧付き): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(case パターン、パイプ区切りの選択肢): パターンが文をまたいでも対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(case パターン、複数行): パターンが改行をまたいでも対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(関数定義、NAME() {}): 定義と同一コマンド内の呼び出しで本文が実行されたものとして deny"
-      - "destructive-guard-cases.json: グルーピング(関数定義、function NAME {}): 定義と同一コマンド内の呼び出しで本文が実行されたものとして deny"
-      - "destructive-guard-cases.json: グルーピング(ネスト: サブシェル内のブレースグループ): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(ネスト: if/then 内のサブシェル + sudo): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(bash -c ペイロード内のサブシェル): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(コマンド置換本文内の if/then): 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(サブシェル)の git: reset --hard は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の git: force push は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(if/then)の git: git clean -fdx は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の自己設定書き込み: tee 宛先は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(for/do)の自己設定書き込み: mv 宛先は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(for/do の終端子 done に付いたリダイレクト): コマンドを持たない文でも書き込み先は判定対象"
-      - "destructive-guard-cases.json: グルーピング(サブシェル)の transcript 書き込み: mv 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(if/then)の transcript 書き込み: cp 宛先は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(サブシェル)の find -delete: 対象は裸形と同じ deny"
-      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の chmod -R: 対象は裸形と同じ ask"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       29 of these 30 rows are among the 36 red-run failures. The one
@@ -87,10 +54,7 @@ acceptance_tests:
       Notes grouping.
   AC-4:
     tests:
-      - "destructive-guard-cases.json: グルーピング(サブシェル)の自己設定書き込み: cp 宛先は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(サブシェル + 閉じ括弧とリダイレクトの融着): cp 宛先は裸形と同じ ask"
-      - "destructive-guard-cases.json: グルーピング(サブシェル + 閉じ括弧とリダイレクトの融着)の安全対象: allow のまま"
-      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース無し)のビルド成果物: allow のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       The two ask rows, `(cp /tmp/x ~/.claude/settings.json)` and
@@ -111,18 +75,7 @@ acceptance_tests:
       showing this row's text untouched.
   AC-5:
     tests:
-      - "destructive-guard-cases.json: グルーピング(サブシェル、スペース有り)の安全対象: allow のまま"
-      - "destructive-guard-cases.json: グルーピング(if/then)の安全対象: allow のまま"
-      - "destructive-guard-cases.json: グルーピング(サブシェル)の無害コマンド: allow のまま"
-      - "destructive-guard-cases.json: グルーピング(ブレースグループ)の無害コマンド + リダイレクト: allow のまま"
-      - "destructive-guard-cases.json: グルーピング(関数定義)の無害な本文: allow のまま"
-      - "destructive-guard-cases.json: 予約語が引数位置にあるだけなら data のまま allow"
-      - "destructive-guard-cases.json: クォート内のグルーピング文字列(サブシェル形)は data のまま allow"
-      - "destructive-guard-cases.json: クォート内のグルーピング文字列(ブレースグループ形)は data のまま allow"
-      - "destructive-guard-cases.json: for/select ヘッダの WORDS は for ヘッダ自体を通じては判定対象にならず allow"
-      - "destructive-guard-cases.json: case パターンの文字列がコマンド名と同じでも data のまま allow"
-      - "destructive-guard-cases.json: シェルシンク宛てでないヒアドキュメント本文内の if/then は data のまま allow(複数行)"
-      - "destructive-guard-cases.json: コミットメッセージ内のグルーピング文字列は data のまま allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Preservation criterion, per the task plan's own Test Notes ("group

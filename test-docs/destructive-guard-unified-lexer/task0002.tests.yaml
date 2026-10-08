@@ -4,7 +4,7 @@ final_failures: []             # re-executed after the implementation: python3 -
 acceptance_tests:
   AC-1:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (the 23 appended cases)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_rework_cases_are_appended_after_every_earlier_entry
     red_confirmed: true
     red_reason: >-
@@ -79,7 +79,7 @@ acceptance_tests:
       (unittest discover -s tests: Ran 8260 tests, OK).
   AC-6:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (all 628 entries, each bounded at 10 seconds)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
       - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_each_input_gets_deny_within_the_time_limit
       - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity.test_lexing_work_stays_within_the_linear_bound

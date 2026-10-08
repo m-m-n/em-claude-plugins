@@ -29,14 +29,14 @@ acceptance_tests:
       they are not listed here.
   AC-3:
     tests:
-      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_trusts_the_working_directory_readonly
-      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_trusts_the_working_directory_readwrite
-      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_without_trust_readonly
-      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_without_trust_readwrite
-      - test_codex_repo_hook_trust.TestRoutesNotObservedExecutingKeepTheirLaunch.test_codex_home_and_isolation_flags_are_exactly_as_before
-      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readonly_user_config_trusts_the_repository
-      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_user_config_trusts_the_repository
-      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_repository_not_trusted_by_the_user_config
+      - tests.test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_trusts_the_working_directory_readonly
+      - tests.test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_trusts_the_working_directory_readwrite
+      - tests.test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_without_trust_readonly
+      - tests.test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_user_config_without_trust_readwrite
+      - tests.test_codex_repo_hook_trust.TestRoutesNotObservedExecutingKeepTheirLaunch.test_codex_home_and_isolation_flags_are_exactly_as_before
+      - tests.test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readonly_user_config_trusts_the_repository
+      - tests.test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_user_config_trusts_the_repository
+      - tests.test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_repository_not_trusted_by_the_user_config
     red_confirmed: true
     red_reason: >
       Observed by running the new module against a copy of the em-workflow tree as committed before
@@ -51,12 +51,12 @@ acceptance_tests:
       the findings record and is a document check.
   AC-4:
     tests:
-      - test_codex_hook_wrapper_args
-      - test_consultation_harness_chain
-      - test_codex_wrapper_single_invocation
-      - test_codex_reviewer_temp_file_isolation
-      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_launch_composition_other_than_the_home_is_kept
-      - test_codex_repo_hook_trust.TestRoutesNotObservedExecutingKeepTheirLaunch.test_codex_home_and_isolation_flags_are_exactly_as_before
+      - tests.test_codex_hook_wrapper_args
+      - tests.test_consultation_harness_chain
+      - tests.test_codex_wrapper_single_invocation
+      - tests.test_codex_reviewer_temp_file_isolation
+      - tests.test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute.test_ts1_launch_composition_other_than_the_home_is_kept
+      - tests.test_codex_repo_hook_trust.TestRoutesNotObservedExecutingKeepTheirLaunch.test_codex_home_and_isolation_flags_are_exactly_as_before
     red_confirmed: false
     red_reason: >
       The contract in this criterion (guard registration, --ignore-rules, --ignore-user-config on
@@ -69,9 +69,9 @@ acceptance_tests:
       composition checks, so it is not evidence that those checks can fail.
   AC-5:
     tests:
-      - test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute
-      - test_codex_repo_hook_trust.TestSpecificationCheckIsNotVacuous
-      - test_codex_repo_hook_trust.TestCredentialValueStaysOutOfOutput
+      - tests.test_codex_repo_hook_trust.TestProtectiveSpecificationOnLitellmRoute
+      - tests.test_codex_repo_hook_trust.TestSpecificationCheckIsNotVacuous
+      - tests.test_codex_repo_hook_trust.TestCredentialValueStaysOutOfOutput
     red_confirmed: true
     red_reason: >
       Observed against the pre-change wrapper copy (same run as AC-3). In
@@ -88,12 +88,12 @@ acceptance_tests:
       and sentinel parts and are reported in unconfirmed_reds.
   AC-6:
     tests:
-      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readonly_user_config_trusts_the_repository
-      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_user_config_trusts_the_repository
-      - test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_repository_not_trusted_by_the_user_config
-      - test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_codex_absent_skips
-      - test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_other_codex_version_skips
-      - test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_control_without_marker_skips
+      - tests.test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readonly_user_config_trusts_the_repository
+      - tests.test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_user_config_trusts_the_repository
+      - tests.test_codex_repo_hook_trust.TestRepositoryHooksDoNotRunThroughTheWrapper.test_ts2_readwrite_repository_not_trusted_by_the_user_config
+      - tests.test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_codex_absent_skips
+      - tests.test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_other_codex_version_skips
+      - tests.test_codex_repo_hook_trust.TestRealCodexCheckSkipsInsteadOfPassing.test_control_without_marker_skips
     red_confirmed: true
     red_reason: >
       TS2 on the pre-change wrapper copy: all three cases failed with "repository hooks ran through
@@ -119,10 +119,10 @@ acceptance_tests:
       SPEC.md untouched.
   AC-8:
     tests:
-      - test_codex_hook_wrapper_args
-      - test_consultation_harness_chain
-      - test_codex_wrapper_single_invocation
-      - test_codex_reviewer_temp_file_isolation
+      - tests.test_codex_hook_wrapper_args
+      - tests.test_consultation_harness_chain
+      - tests.test_codex_wrapper_single_invocation
+      - tests.test_codex_reviewer_temp_file_isolation
     red_confirmed: false
     red_reason: >
       Two parts. (a) The suite outcome (python3 -m unittest discover -s tests, including the four

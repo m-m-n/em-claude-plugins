@@ -13,7 +13,6 @@ acceptance_tests:
       - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
       - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
       - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
-      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
     red_confirmed: true
     red_reason: "test_em_workflow_entry_version_is_past_baseline failed with AssertionError: 39 not greater than 39 on the un-bumped 0.1.39 tree"
   AC-3:

@@ -26,15 +26,13 @@ acceptance_tests:
     red_reason: "question-resolution.md did not exist; setUpClass raised FileNotFoundError before any test in the class could run"
   AC-3:
     tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_unlisted_gate_fallback_present
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_fail_closed_categories_named
       - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_intentional_behaviour_change_stated
     red_confirmed: true
     red_reason: "question-resolution.md did not exist; setUpClass raised FileNotFoundError before any test in the class could run"
   AC-4:
     tests:
       - tests.test_batch_policies.TestBatchPoliciesYaml.test_parses_as_yaml
-      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_listing
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_minus_non_packet
       - tests.test_batch_policies.TestBatchPoliciesYaml.test_rework_spec_change_absent
       - tests.test_batch_policies.TestBatchPoliciesYaml.test_every_entry_has_an_action
       - tests.test_batch_policies.TestBatchPoliciesYaml.test_select_entries_carry_an_option_id

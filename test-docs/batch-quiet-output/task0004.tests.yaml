@@ -13,7 +13,6 @@ acceptance_tests:
       - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
       - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
       - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
-      - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
     red_confirmed: true
     red_reason: "AssertionError: 51 not greater than 51 (marketplace em-workflow entry's patch was still 51, pre-bump)"
   AC-3:

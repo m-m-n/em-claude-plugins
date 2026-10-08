@@ -5,14 +5,7 @@ final_failures: []             # both suites still fully green after the change
 acceptance_tests:
   AC-1:
     tests:
-      - "本物: transcript を mv で退避"
-      - "本物: hooks ファイルを mv"
-      - "本物: settings を mv"
-      - "本物: skills ディレクトリを mv"
-      - "本物: cp -t で hooks へ"
-      - "本物: mv -t で hooks へ"
-      - "本物: cp --target-directory= で hooks へ"
-      - "本物: クォート内の疑似リダイレクトの後で settings へ書き込み"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Added these 8 cases (unmodified mv correction still "allow" at this
@@ -23,15 +16,7 @@ acceptance_tests:
       "failing on exactly those cases" requirement verbatim.
   AC-2:
     tests:
-      - "本物: transcript を mv で退避"
-      - "本物: hooks ファイルを mv"
-      - "本物: settings を mv"
-      - "本物: skills ディレクトリを mv"
-      - "本物: cp -t で hooks へ"
-      - "本物: mv -t で hooks へ"
-      - "本物: cp --target-directory= で hooks へ"
-      - "本物: クォート内の疑似リダイレクトの後で settings へ書き込み"
-      - "cp ソースのみ protected"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       The first 8 tests were already red-confirmed under AC-1 (same test
@@ -44,7 +29,7 @@ acceptance_tests:
       observable change to red-confirm for that case specifically.
   AC-3:
     tests:
-      - "mv 複数ソース + 宛先のみ判定 (case table entry correction)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       Verified by diff inspection, not by a red-then-green run: `git diff
@@ -55,12 +40,7 @@ acceptance_tests:
       passing run cannot establish by itself.
   AC-4:
     tests:
-      - "skills 再帰 grep + stderr 破棄"
-      - "skills ls + stderr 破棄 + pager"
-      - "settings リダイレクトコピー"
-      - "transcript 読み取り + stderr 破棄"
-      - "transcript グロブ検索 + stderr 破棄"
-      - "クォート内のリダイレクト"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       Non-regression criterion, not new behavior: `git diff 0664ee0 --
@@ -72,7 +52,7 @@ acceptance_tests:
       ever expected to fail.
   AC-5:
     tests:
-      - "run-destructive-guard.py (full suite, 59 cases + unattended-demotion case)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       Asserts final state, not a red-then-green transition of its own: the
@@ -80,13 +60,14 @@ acceptance_tests:
       "無人実行では ask が deny に降格" case. The red state for the subset
       of cases that required it is documented under AC-1.
   AC-6:
-    tests:
-      - "python3 -m unittest discover -s tests (repository-wide unit suite)"
+    tests: []
     red_confirmed: false
     red_reason: >
       No test in the repository-wide suite targets this hook; this AC
       verifies the change has no side effects elsewhere. 2830/2830 passed
       both before (baseline) and after the change — nothing to red-confirm.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests (repository-wide unit suite)
   AC-7:
     tests: []
     red_confirmed: false

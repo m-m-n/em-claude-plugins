@@ -15,6 +15,6 @@ acceptance_tests:
     red_confirmed: false
     red_reason: "Diff-scope criterion with no executable test in the suite. Verified after the edit with git diff --name-only against the merge-base (only feature-docs/codex-interactive-guard-hook/SPEC.md) and the full diff (only the FR7 item and the interpreter-table note). REQUIREMENTS.md and reviews/round1.yaml are unchanged."
   AC-4:
-    tests: ["python3 -m unittest discover -s tests", "python3 em-workflow/scripts/check-plugin-invariants.py ."]
+    tests: [tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root]
     red_confirmed: false
-    red_reason: "Both commands were already green at the baseline (7352 tests OK, all invariants PASS) and stayed green after the edit; the criterion is a no-regression gate, so no red state occurred."
+    red_reason: "Both commands were already green at the baseline (7352 tests OK, all invariants PASS) and stayed green after the edit; the criterion is a no-regression gate, so no red state occurred. Removed from tests (not a unittest ID): python3 -m unittest discover -s tests"

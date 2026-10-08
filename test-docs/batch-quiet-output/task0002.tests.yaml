@@ -117,7 +117,7 @@ acceptance_tests:
       - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_heading_present
       - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_placed_immediately_after_stop_report_section
       - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_read_before_emit_instruction_present
-      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_last_line_rule_present
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_result_is_whole_final_message_rule_present
       - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_generalized_no_line_rule_present
       - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_stop_point_enumeration_present
       - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_once_occasion_present

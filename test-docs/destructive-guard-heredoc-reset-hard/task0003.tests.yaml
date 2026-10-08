@@ -22,13 +22,6 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "run-destructive-guard.py::GIT_CONFIG_* でエイリアス定義した git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
-      - "run-destructive-guard.py::--config-env のエイリアス値をクォート文字で分割した sink 名は deny(フォールバックがクォート除去後に一致)"
-      - "run-destructive-guard.py::コマンド外で定義されたエイリアスへの git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
-      - "run-destructive-guard.py::sink 名をクォート文字で分割した timeout 経由ヒアドキュメントは deny(フォールバックがクォート除去後に一致)"
-      - "run-destructive-guard.py::-c でも組み込みサブコマンド commit 宛てのヒアドキュメントは allow のまま"
-      - "run-destructive-guard.py::--exec-path は未対応の global option なので git 宛てヒアドキュメントは deny(宛先不明、任意のサブコマンド前)"
-      - "run-destructive-guard.py::サブコマンドが変数展開の git 宛てヒアドキュメントは deny(静的に読めないサブコマンド)"
       - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
@@ -53,8 +46,7 @@ acceptance_tests:
       (asserting "N/N passed" against a runner that reported 449/456).
   AC-2:
     tests:
-      - "run-destructive-guard.py::GIT_CONFIG_* でエイリアス定義した git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
-      - "run-destructive-guard.py::コマンド外で定義されたエイリアスへの git 宛てヒアドキュメントは deny(組み込み外のサブコマンドは宛先不明)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Both cases (TS-47, TS-49) returned got=allow against the unmodified
@@ -70,15 +62,7 @@ acceptance_tests:
       return deny via the (unchanged) undeterminable-heredoc fallback.
   AC-3:
     tests:
-      - "run-destructive-guard.py::--config-env のエイリアス値をクォート文字で分割した sink 名は deny(フォールバックがクォート除去後に一致)"
-      - "run-destructive-guard.py::sink 名をクォート文字で分割した timeout 経由ヒアドキュメントは deny(フォールバックがクォート除去後に一致)"
-      - "run-destructive-guard.py::宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
-      - "run-destructive-guard.py::複数行ヒアドキュメント本文に git reset --hard の記述があっても宛先が cat なら allow"
-      - "run-destructive-guard.py::複合コマンドの閉じ({ ... } <<EOF)に付いたヒアドキュメントは deny(宛先不明の保守的フォールバック)"
-      - "run-destructive-guard.py::timeout 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
-      - "run-destructive-guard.py::exec 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
-      - "run-destructive-guard.py::外側の文に実行プレフィックスがあれば置換内ヒアドキュメントも deny(宛先不明)"
-      - "run-destructive-guard.py::プロセス置換 tee >(bash) を伴うヒアドキュメントは deny(宛先不明)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       TS-48 and TS-50 (the two new quote-split-sink-name cases) returned
@@ -101,9 +85,7 @@ acceptance_tests:
       criterion this task makes newly testable.
   AC-4:
     tests:
-      - "run-destructive-guard.py::-c でも組み込みサブコマンド commit 宛てのヒアドキュメントは allow のまま"
-      - "run-destructive-guard.py::-C と置換内 commit -m の組み込みサブコマンド宛てのヒアドキュメントは allow のまま"
-      - "run-destructive-guard.py::コミットメッセージ内の git reset --hard 言及は allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       TS-51's `-c` case (git host with a listed built-in subcommand behind
