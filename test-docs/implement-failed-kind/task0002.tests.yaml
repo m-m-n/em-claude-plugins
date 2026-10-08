@@ -41,7 +41,7 @@ acceptance_tests:
   AC-4:
     tests:
       - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_write_set_clears_failed_kind
-      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_states_reason_is_leaving_failed
+      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_states_own_accurate_role_as_a_reassertion
       - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_clear_is_member_of_the_same_write_set_before_the_commit
     red_confirmed: true
     red_reason: >-
@@ -70,7 +70,7 @@ acceptance_tests:
       change.
   AC-6:
     tests:
-      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_first_failed_kind_occurrence_is_the_write_set_clear
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_first_failed_kind_occurrence_is_the_phase_start_write
       - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_first_use_cites_workflow_schema
       - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_no_definition_shaped_restatement_in_i2c_section
       - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_negative_proof_detector_fires_on_both_values_enumeration

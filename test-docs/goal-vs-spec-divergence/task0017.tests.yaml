@@ -10,11 +10,11 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_validate_worker_output.TestCanonicalReentryInvocation.test_canonical_invocation_form_accepts_merged_task_reentry
-      - test_validate_worker_output.TestCanonicalReentryInvocation.test_missing_feature_dir_rework_yaml_is_rejected_under_the_same_invocation
-      - test_validate_worker_output.TestCanonicalReentryInvocation.test_rework_file_passed_directly_as_phase_state_is_an_equivalence_case_not_this_ac
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_feature_dir_rework_yaml_is_an_equivalent_source
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_missing_feature_dir_rework_yaml_falls_back_to_initial_planning
+      - tests.test_validate_worker_output.TestCanonicalReentryInvocation.test_canonical_invocation_form_accepts_merged_task_reentry
+      - tests.test_validate_worker_output.TestCanonicalReentryInvocation.test_missing_feature_dir_rework_yaml_is_rejected_under_the_same_invocation
+      - tests.test_validate_worker_output.TestCanonicalReentryInvocation.test_rework_file_passed_directly_as_phase_state_is_an_equivalence_case_not_this_ac
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_feature_dir_rework_yaml_is_an_equivalent_source
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_missing_feature_dir_rework_yaml_falls_back_to_initial_planning
     red_confirmed: true
     red_reason: >-
       Reverted validate-worker-output.py to its pre-task0017 HEAD content and
@@ -27,14 +27,14 @@ acceptance_tests:
       took only 2 positional args, no feature_dir parameter existed).
   AC-2:
     tests:
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_missing_phase_key_is_not_a_reentry
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_phase_other_than_rework_is_not_a_reentry
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_feature_mismatch_is_not_a_reentry
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_spec_change_missing_mandatory_field_is_not_a_reentry
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_spec_change_missing_consumed_field_is_not_a_reentry
-      - test_validate_worker_output.TestReplanningReentrySignalHelper.test_consumed_true_is_not_a_reentry
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_consumed_spec_change_record_is_rejected
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_missing_reentry_signal_defaults_to_initial_planning
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_missing_phase_key_is_not_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_phase_other_than_rework_is_not_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_feature_mismatch_is_not_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_spec_change_missing_mandatory_field_is_not_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_missing_consumed_field_does_not_block_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_consumed_true_no_longer_blocks_reentry
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_spent_replan_authorization_record_is_rejected
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_missing_reentry_signal_defaults_to_initial_planning
     red_confirmed: true
     red_reason: >-
       Reverted validate-worker-output.py to its pre-task0017 HEAD content and
@@ -54,9 +54,9 @@ acceptance_tests:
       itself enumerates.
   AC-3:
     tests:
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_on_replanning_path_rejected
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_rejected_for_exactly_one_reason
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_still_accepted_on_initial_planning_path
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_on_replanning_path_rejected
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_rejected_for_exactly_one_reason
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_still_accepted_on_initial_planning_path
     red_confirmed: true
     red_reason: >-
       Reverted validate-worker-output.py to its pre-task0017 HEAD content and
@@ -70,8 +70,8 @@ acceptance_tests:
       green before this task; no code path for it changed).
   AC-4:
     tests:
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_replanning_reentry_with_merged_task_passes
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_replanning_reentry_with_merged_task_passes
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
     red_confirmed: true
     red_reason: >-
       Ran the NEW validator code (task0017's implementation) against the
@@ -87,7 +87,7 @@ acceptance_tests:
       (phase/feature/preserve/entries) was necessary, not cosmetic.
   AC-5:
     tests:
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_drops_existing_registered_task_id_rejected
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_drops_existing_registered_task_id_rejected
     red_confirmed: true
     red_reason: >-
       Reverted validate-worker-output.py to its pre-task0017 HEAD content and
@@ -97,15 +97,15 @@ acceptance_tests:
       workflow.yaml's registered task ids on the replace_all path.
   AC-6:
     tests:
-      - test_workflow_patch_doc.TestApplicationRules.test_doc_rule_count_is_design_input_count_plus_one
-      - test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_seventeen
-      - test_workflow_patch_doc.TestApplicationRules.test_rule_seventeen_states_the_task_id_allocation_rule
-      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_pending_reentry_case_states_recognizable_signal
-      - test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_reading_position_names_both_sources
-      - test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_feature_match_required
-      - test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_unconsumed_definition_stated
-      - test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_fail_closed_fallback_to_initial_planning_stated
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_replace_all_must_redeclare_every_registered_id
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_doc_rule_count_is_design_input_count_plus_two
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_eighteen
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_seventeen_states_the_task_id_allocation_rule
+      - tests.test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_pending_reentry_case_states_recognizable_signal
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_reading_position_names_both_sources
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_feature_match_required
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_unspent_authorization_definition_stated
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_fail_closed_fallback_to_initial_planning_stated
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_replace_all_must_carry_every_registered_id_via_carried_task_ids
     red_confirmed: true
     red_reason: >-
       Reverted workflow-patch.md to its pre-task0017 HEAD content and re-ran
@@ -122,13 +122,13 @@ acceptance_tests:
       "MUST re-declare" sentence in the pre-change section).
   AC-7:
     tests:
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_with_replace_all_not_permitted
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_for_exactly_one_reason
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_needs_update_passes
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_pending_passes
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_initial_planning_with_merged_task_still_rejected
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_after_implementation_started_rejected_on_replanning_path_too
-      - test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_with_replace_all_not_permitted
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_for_exactly_one_reason
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_needs_update_passes
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_pending_passes
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_initial_planning_with_merged_task_still_rejected
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_after_implementation_started_rejected_on_replanning_path_too
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
     red_confirmed: false
     red_reason: >-
       These are retention (non-regression) assertions over the five named
@@ -147,10 +147,10 @@ acceptance_tests:
       absent).
   AC-8:
     tests:
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
     red_confirmed: true
     red_reason: >-
       Before refreshing the three SHA256 constants, re-ran

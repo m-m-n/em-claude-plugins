@@ -6,13 +6,13 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - tests/test_review_evaluation_contract.py::TestContractDocExists::test_file_exists
-      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_orchestrator_supplied_path_is_preferred
-      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_missing_file_fails_closed_with_no_silent_fallback
-      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_plugin_root_fallback
-      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_trusted_plugin_install_locations_fallback
-      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_explicitly_prohibits_resolving_from_cwd
-      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_same_order_reviewers_resolve_protocol_path
+      - tests.test_review_evaluation_contract.TestContractDocExists.test_file_exists
+      - tests.test_review_evaluation_contract.TestFailClosedResolution.test_states_orchestrator_supplied_path_is_preferred
+      - tests.test_review_evaluation_contract.TestFailClosedResolution.test_states_missing_file_fails_closed_with_no_silent_fallback
+      - tests.test_review_evaluation_contract.TestFailClosedResolution.test_states_plugin_root_fallback
+      - tests.test_review_evaluation_contract.TestFailClosedResolution.test_states_trusted_plugin_install_locations_fallback
+      - tests.test_review_evaluation_contract.TestFailClosedResolution.test_explicitly_prohibits_resolving_from_cwd
+      - tests.test_review_evaluation_contract.TestFailClosedResolution.test_states_same_order_reviewers_resolve_protocol_path
     red_confirmed: true
     red_reason: >
       Directly observed: ran `python3 -m unittest tests.test_review_evaluation_contract -v`
@@ -25,11 +25,11 @@ acceptance_tests:
       All went green after the document was written.
   AC-2:
     tests:
-      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_documents_every_top_level_input_field
-      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_documents_perspectives_dispatched_entry_keys
-      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_documents_reviewer_outputs_entry_keys
-      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_marks_spec_path_as_conditional_on_spec_perspective
-      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_marks_lessons_as_optional
+      - tests.test_review_evaluation_contract.TestInputBlockFields.test_documents_every_top_level_input_field
+      - tests.test_review_evaluation_contract.TestInputBlockFields.test_documents_perspectives_dispatched_entry_keys
+      - tests.test_review_evaluation_contract.TestInputBlockFields.test_documents_reviewer_outputs_entry_keys
+      - tests.test_review_evaluation_contract.TestInputBlockFields.test_marks_spec_path_as_conditional_on_spec_perspective
+      - tests.test_review_evaluation_contract.TestInputBlockFields.test_marks_lessons_as_optional
     red_confirmed: true
     red_reason: >
       Same shared observation as AC-1: every TestInputBlockFields test
@@ -40,11 +40,11 @@ acceptance_tests:
       backtick token.
   AC-3:
     tests:
-      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_documents_every_root_field
-      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_documents_every_finding_field
-      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_documents_recommended_action_closed_vocabulary
-      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_states_object_returned_alone_no_prose
-      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_states_every_field_always_present_unknown_line_null
+      - tests.test_review_evaluation_contract.TestOutputObjectFields.test_documents_every_root_field
+      - tests.test_review_evaluation_contract.TestOutputObjectFields.test_documents_every_finding_field
+      - tests.test_review_evaluation_contract.TestOutputObjectFields.test_documents_recommended_action_closed_vocabulary
+      - tests.test_review_evaluation_contract.TestOutputObjectFields.test_states_object_returned_alone_no_prose
+      - tests.test_review_evaluation_contract.TestOutputObjectFields.test_states_every_field_always_present_unknown_line_null
     red_confirmed: true
     red_reason: >
       Same shared observation as AC-1: every TestOutputObjectFields test
@@ -53,11 +53,11 @@ acceptance_tests:
       every root/finding field and the closed recommended_action set.
   AC-4:
     tests:
-      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_stable_id_orchestrator_owned_and_recomputed
-      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_sources_derived_from_source_run_ids
-      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_unmatched_category_dropped_never_relabelled
-      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_evaluation_is_advisory
-      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_recommended_action_never_overrides_gates
+      - tests.test_review_evaluation_contract.TestOwnershipBoundary.test_states_stable_id_orchestrator_owned_and_recomputed
+      - tests.test_review_evaluation_contract.TestOwnershipBoundary.test_states_sources_derived_from_evaluator_supplied_run_ids
+      - tests.test_review_evaluation_contract.TestOwnershipBoundary.test_states_unmatched_category_dropped_never_relabelled
+      - tests.test_review_evaluation_contract.TestOwnershipBoundary.test_states_evaluation_is_advisory
+      - tests.test_review_evaluation_contract.TestOwnershipBoundary.test_states_recommended_action_never_overrides_gates
     red_confirmed: true
     red_reason: >
       Same shared observation as AC-1: every TestOwnershipBoundary test
@@ -71,9 +71,9 @@ acceptance_tests:
       before declaring the assertion satisfied.
   AC-5:
     tests:
-      - tests/test_review_evaluation_contract.py::TestUntrustedInputHandling::test_states_reviewer_output_is_untrusted_data
-      - tests/test_review_evaluation_contract.py::TestUntrustedInputHandling::test_states_injection_becomes_finding_under_dispatched_perspective
-      - tests/test_review_evaluation_contract.py::TestUntrustedInputHandling::test_states_evaluators_own_output_is_untrusted_to_orchestrator
+      - tests.test_review_evaluation_contract.TestUntrustedInputHandling.test_states_reviewer_output_is_untrusted_data
+      - tests.test_review_evaluation_contract.TestUntrustedInputHandling.test_states_injection_becomes_finding_under_dispatched_perspective
+      - tests.test_review_evaluation_contract.TestUntrustedInputHandling.test_states_evaluators_own_output_is_untrusted_to_orchestrator
     red_confirmed: true
     red_reason: >
       Same shared observation as AC-1: every TestUntrustedInputHandling test
@@ -82,10 +82,10 @@ acceptance_tests:
       written.
   AC-6:
     tests:
-      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_states_no_write_commit_branch_switch_formatter
-      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_states_ten_file_verification_budget
-      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_states_unusable_evaluation_degrades_round_not_abort
-      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_does_not_define_the_orchestrator_procedure_itself
+      - tests.test_review_evaluation_contract.TestReadOnlyConstraintAndDegradation.test_states_no_write_commit_branch_switch_formatter
+      - tests.test_review_evaluation_contract.TestReadOnlyConstraintAndDegradation.test_states_ten_file_verification_budget
+      - tests.test_review_evaluation_contract.TestReadOnlyConstraintAndDegradation.test_states_unusable_evaluation_degrades_round_not_abort
+      - tests.test_review_evaluation_contract.TestReadOnlyConstraintAndDegradation.test_does_not_define_the_orchestrator_procedure_itself
     red_confirmed: true
     red_reason: >
       Same shared observation as AC-1: every
@@ -100,16 +100,16 @@ acceptance_tests:
       established pattern in tests/test_worker_contract_docs.py.
   AC-7:
     tests:
-      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_input_block_cell_contains_every_top_level_field
-      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_input_block_cell_contains_perspectives_dispatched_entry_fields
-      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_input_block_cell_contains_reviewer_outputs_entry_fields
-      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_output_object_cell_contains_every_root_field
-      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_output_object_cell_contains_every_finding_field
-      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_recommended_action_cell_contains_every_vocabulary_value
-      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_use_reviewer_only_root_field_skipped
-      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_use_reviewer_only_finding_field_line_end
-      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_restate_retryable_skip_vocabulary
-      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_restate_confidence_correction_arithmetic
+      - tests.test_review_evaluation_contract.TestImplementationFixturesSelfCheck.test_input_block_cell_contains_every_top_level_field
+      - tests.test_review_evaluation_contract.TestImplementationFixturesSelfCheck.test_input_block_cell_contains_perspectives_dispatched_entry_fields
+      - tests.test_review_evaluation_contract.TestImplementationFixturesSelfCheck.test_input_block_cell_contains_reviewer_outputs_entry_fields
+      - tests.test_review_evaluation_contract.TestImplementationFixturesSelfCheck.test_output_object_cell_contains_every_root_field
+      - tests.test_review_evaluation_contract.TestImplementationFixturesSelfCheck.test_output_object_cell_contains_every_finding_field
+      - tests.test_review_evaluation_contract.TestImplementationFixturesSelfCheck.test_recommended_action_cell_contains_every_vocabulary_value
+      - tests.test_review_evaluation_contract.TestDoesNotRestateReviewerOutputSchema.test_does_not_use_reviewer_only_root_field_skipped
+      - tests.test_review_evaluation_contract.TestDoesNotRestateReviewerOutputSchema.test_does_not_use_reviewer_only_finding_field_line_end
+      - tests.test_review_evaluation_contract.TestDoesNotRestateReviewerOutputSchema.test_does_not_restate_retryable_skip_vocabulary
+      - tests.test_review_evaluation_contract.TestDoesNotRestateReviewerOutputSchema.test_does_not_restate_confidence_correction_arithmetic
     red_confirmed: false
     red_reason: >
       TestImplementationFixturesSelfCheck parses IMPLEMENTATION.md (which

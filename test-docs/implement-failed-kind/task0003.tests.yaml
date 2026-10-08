@@ -41,7 +41,7 @@ acceptance_tests:
     red_reason: "same setUpClass ValueError as AC-1 -- new block absent"
   AC-6:
     tests:
-      - tests.test_failed_kind_stop_condition.TestAC6NotAStopNotABoundary.test_states_no_terminal_line_no_new_stop_reason_code
+      - tests.test_failed_kind_stop_condition.TestAC6NotAStopNotABoundary.test_states_no_result_no_new_stop_reason_code
       - tests.test_failed_kind_stop_condition.TestAC6NotAStopNotABoundary.test_states_not_an_once_boundary
     red_confirmed: true
     red_reason: "same setUpClass ValueError as AC-1 -- new block absent"

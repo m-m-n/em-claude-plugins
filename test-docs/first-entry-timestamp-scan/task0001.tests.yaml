@@ -16,7 +16,7 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
+      - tests.test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
     red_confirmed: false
     red_reason: >-
       The test passed on its first run against the unchanged script: the behaviour it
@@ -29,14 +29,14 @@ acceptance_tests:
       current-session-unknown instead of recovered.
   AC-2:
     tests:
-      - test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
+      - tests.test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
     red_confirmed: false
     red_reason: >-
       Same test as AC-1 (its journal assertions); passed on first run against the
       unchanged script, behaviour pre-existed, no red state occurred.
   AC-3:
     tests:
-      - test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
+      - tests.test_recover_orphaned_task.TestCLIEntryPoint.test_first_entry_scan_cli_form2_timestampless_lead_recovers_with_real_helper
     red_confirmed: false
     red_reason: >-
       Fixture-shape criterion, asserted inside the same test (first record has no
@@ -45,7 +45,7 @@ acceptance_tests:
       built to that shape; no red state occurred.
   AC-4:
     tests:
-      - test_recover_orphaned_task.TestCurrentSessionResolution.test_first_entry_scan_timestampless_lead_resolves_earliest_not_first_timestamp
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_first_entry_scan_timestampless_lead_resolves_earliest_not_first_timestamp
     red_confirmed: false
     red_reason: >-
       Passed on first run against the unchanged script (behaviour pre-existed, D2); no

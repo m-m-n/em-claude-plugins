@@ -22,7 +22,7 @@ acceptance_tests:
     red_reason: "Against the pre-implementation planner-contract.md text, test_states_carried_task_ids_alongside_entries failed with AssertionError: 'carried_task_ids' not found in the `completed` payload section, and test_defers_to_workflow_patch_for_field_meaning failed the same way (no carried_task_ids sentence existed yet, so no citation to Re-planning task-id allocation existed either). test_states_no_eligibility_disjointness_or_copying_rule_of_its_own already passed pre-implementation (the doc restated nothing before this task touched it either) -- it is retained as a guard against a future restatement, not as evidence of this AC's red state; the two tests above carry that evidence. test_matcher_detects_a_synthetic_doc_omitting_carried_task_ids is a self-contained negative proof."
   AC-3:
     tests:
-      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_two_branches_present_keyed_on_create_plan_status
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_two_branch_headers_present
       - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_initial_planning_branch_numbers_from_task0001
       - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_requires_carried_task_ids_for_registered_ids
       - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_requires_entries_only_unregistered_above_high_water_mark

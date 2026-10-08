@@ -22,49 +22,49 @@ acceptance_tests:
     red_reason: "python3 -m unittest discover -s tests exited 1 with 11 failures (the baseline_failures list above) before any edit; after all nine modules were corrected it exits 0 with 3009 tests, 0 failures, 0 errors. Not assertable from inside a module in this suite (Test Notes), so recorded here rather than as a dedicated test."
   AC-2:
     tests:
-      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
-      - test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
-      - test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
-      - test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
-      - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
-      - test_plugin_version_parity.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_plugin_version_parity.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_a_dotted_numeric_version
-      - test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
-      - test_rework_contract_drift_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_rework_contract_drift_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
-      - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
-      - test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
-      - test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
-      - test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
-      - test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_new_unexpected_key
-      - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_matches_expected_shape
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+      - tests.test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_rework_contract_drift_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_rework_contract_drift_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+      - tests.test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_new_unexpected_key
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_matches_expected_shape
     red_confirmed: true
     red_reason: "The `_assert_em_review_entry_matches` (or module-local equivalent) function and its negative-proof tests were authored together, so there was no independent pre-implementation run of these exact tests against a not-yet-written matcher. Genuine red was instead confirmed directly, post-authoring but pre-commit, by deliberately weakening the shared matcher body in tests/test_routeback_reset_scope_version_bump.py (whose logic is byte-identical across all nine modules) and re-running: removing the four identity-field assertEqual lines made test_em_review_matcher_rejects_altered_identity_field fail with 'AssertionError: AssertionError not raised' (4 subTests); removing the version-shape assertTrue line made test_em_review_matcher_rejects_missing_or_malformed_version fail the same way. Both weakenings were reverted immediately after observing the failure, and the file's own suite (13 tests) was re-confirmed green afterward. The other eight modules share the identical assertion logic (copied verbatim, verified by diff), so the same failure mode applies to each; this was not re-run independently per file."
   AC-3:
     tests:
-      - test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_plugin_version_parity.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_rework_contract_drift_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
-      - test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_rework_contract_drift_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
     red_confirmed: true
     red_reason: "Confirmed genuinely, post-authoring but pre-commit, on tests/test_routeback_reset_scope_version_bump.py: replaced the matcher's dotted-numeric shape check with a literal-value pin (test.assertEqual(entry.get('version'), '0.5.7'), simulating the exact stale-pin failure mode AC-3 exists to prevent) and re-ran test_em_review_matcher_accepts_forged_higher_version, which failed with \"AssertionError: '99.0.0' != '0.5.7'\" -- proving the test is non-vacuous against that regression. Reverted immediately; the file's own suite was re-confirmed green afterward. The other eight modules assert the same shape via the same DOTTED_NUMERIC_VERSION_RE pattern (verified by diff), so the same failure mode applies to each; not re-run independently per file."
   AC-4:

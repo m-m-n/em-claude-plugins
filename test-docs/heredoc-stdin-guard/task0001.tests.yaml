@@ -75,10 +75,10 @@ acceptance_tests:
       existed, so the stdlib-only import check could not even run.
   AC-8:
     tests:
-      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_exactly_seven_entries
-      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_seventh_entry_invokes_the_heredoc_guard_in_the_pinned_form
-      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_first_six_entries_are_unchanged_verbatim
-      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_reordering_the_first_six_would_be_caught
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_exactly_nine_entries
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_last_entry_invokes_the_heredoc_guard_in_the_pinned_form
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_entries_before_heredoc_guard_are_unchanged_verbatim
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_reordering_the_pinned_entries_would_be_caught
       - tests.test_hooks_registration.TestEveryRegisteredHookIsWellFormed.test_every_registered_hook_command_is_well_formed
       - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_bash_guards_are_declared_in_the_required_order
       - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_destructive_guard_is_last_among_decision_capable_guards

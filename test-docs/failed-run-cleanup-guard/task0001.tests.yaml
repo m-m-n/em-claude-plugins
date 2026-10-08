@@ -4,10 +4,10 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests/test_guardrail_hooks_migration.py::TestPreToolUseBashGuardOrder::test_bash_guards_are_declared_in_the_required_order
-      - tests/test_guardrail_hooks_migration.py::TestPreToolUseBashGuardOrder::test_destructive_guard_is_last
-      - tests/test_guardrail_hooks_migration.py::TestPreToolUseBashGuardOrder::test_bash_guard_still_precedes_the_blanket_allow
-      - tests/test_hooks_registration.py::TestEveryRegisteredHookIsWellFormed::test_every_registered_hook_command_is_well_formed
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_bash_guards_are_declared_in_the_required_order
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_destructive_guard_is_last_among_decision_capable_guards
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_bash_guard_still_precedes_the_blanket_allow
+      - tests.test_hooks_registration.TestEveryRegisteredHookIsWellFormed.test_every_registered_hook_command_is_well_formed
     red_confirmed: true
     red_reason: >
       Directly observed: temporarily reverted EXPECTED_BASH_GUARD_ORDER to
@@ -19,11 +19,11 @@ acceptance_tests:
       5-entry list afterward; suite green again.
   AC-2:
     tests:
-      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_unrelated_command_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_git_status_is_not_classified
-      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_quoted_worktree_remove_mention_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_heredoc_body_mention_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_worktree_remove_mentioned_as_an_argument_to_another_command_is_not_an_invocation
+      - tests.test_failed_run_cleanup_guard.TestOnlyTargetShapesAreEvaluated.test_unrelated_command_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestOnlyTargetShapesAreEvaluated.test_git_status_is_not_classified
+      - tests.test_failed_run_cleanup_guard.TestOnlyTargetShapesAreEvaluated.test_quoted_worktree_remove_mention_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestOnlyTargetShapesAreEvaluated.test_heredoc_body_mention_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestOnlyTargetShapesAreEvaluated.test_worktree_remove_mentioned_as_an_argument_to_another_command_is_not_an_invocation
     red_confirmed: true
     red_reason: >
       Observed via a deliberately naive stand-in implementation (raw
@@ -42,16 +42,16 @@ acceptance_tests:
       independently red-confirmed here — see report unconfirmed_reds.
   AC-3:
     tests:
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_absolute_path_resolves_feature
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_relative_path_resolves_feature
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_path_with_trailing_separator_resolves_feature
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_non_em_workflow_worktree_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_branch_delete_resolves_feature_via_ancestor_walk
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_branch_delete_force_spelling_is_not_classified
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_branch_delete_dash_d_with_force_flag_is_not_classified
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_pr_create_cwd_inside_integration_worktree_resolves_feature
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_pr_create_cwd_below_integration_worktree_resolves_feature
-      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_pr_create_cwd_outside_worktree_yields_no_decision_even_with_head_argument
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_worktree_remove_absolute_path_resolves_feature
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_worktree_remove_relative_path_resolves_feature
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_worktree_remove_path_with_trailing_separator_resolves_feature
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_worktree_remove_non_em_workflow_worktree_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_branch_delete_resolves_feature_via_ancestor_walk
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_branch_delete_force_spelling_is_not_classified
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_branch_delete_dash_d_with_force_flag_is_not_classified
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_pr_create_cwd_inside_integration_worktree_resolves_feature
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_pr_create_cwd_below_integration_worktree_resolves_feature
+      - tests.test_failed_run_cleanup_guard.TestTargetResolution.test_pr_create_cwd_outside_worktree_yields_no_decision_even_with_head_argument
     red_confirmed: true
     red_reason: >
       Observed against a silent no-op stub (always exit 0, no output):
@@ -71,9 +71,9 @@ acceptance_tests:
       independently red-confirmed; see report unconfirmed_reds.
   AC-4:
     tests:
-      - tests/test_failed_run_cleanup_guard.py::TestDenyOnFailedStep::test_worktree_remove_deny_reason_names_feature_and_step
-      - tests/test_failed_run_cleanup_guard.py::TestDenyOnFailedStep::test_branch_delete_deny_reason_names_feature_and_step
-      - tests/test_failed_run_cleanup_guard.py::TestDenyOnFailedStep::test_pr_create_deny_reason_names_feature_and_step
+      - tests.test_failed_run_cleanup_guard.TestDenyOnFailedStep.test_worktree_remove_deny_reason_names_feature_and_step
+      - tests.test_failed_run_cleanup_guard.TestDenyOnFailedStep.test_branch_delete_deny_reason_names_feature_and_step
+      - tests.test_failed_run_cleanup_guard.TestDenyOnFailedStep.test_pr_create_deny_reason_names_feature_and_step
     red_confirmed: true
     red_reason: >
       Observed against the silent no-op stub: all three tests failed
@@ -86,14 +86,14 @@ acceptance_tests:
       assertions are load-bearing.
   AC-5:
     tests:
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_all_completed_with_design_skipped_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_needs_update_pending_in_progress_only_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_healthy_goal_text_quoting_the_failure_phrase_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_instruction_shaped_natural_language_does_not_influence_the_decision
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_missing_workflow_yaml_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_unparsable_workflow_yaml_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_malformed_payload_yields_no_decision
-      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_workflow_field_that_is_not_a_list_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_all_completed_with_design_skipped_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_needs_update_pending_in_progress_only_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_healthy_goal_text_quoting_the_failure_phrase_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_instruction_shaped_natural_language_does_not_influence_the_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_missing_workflow_yaml_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_unparsable_workflow_yaml_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_malformed_payload_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases.test_workflow_field_that_is_not_a_list_yields_no_decision
     red_confirmed: true
     red_reason: >
       Observed against the naive text-scan stub (raw substring search for
@@ -120,11 +120,11 @@ acceptance_tests:
       independently red-confirmed; see report unconfirmed_reds.
   AC-6:
     tests:
-      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_variable_expansion_operand_yields_ask_without_batch
-      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_variable_expansion_operand_yields_deny_with_batch_set
-      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_command_substitution_operand_is_unresolvable
-      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_glob_operand_is_unresolvable
-      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_dynamic_branch_name_operand_is_unresolvable
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetDemotion.test_variable_expansion_operand_yields_ask_without_batch
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetDemotion.test_variable_expansion_operand_yields_deny_with_batch_set
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetDemotion.test_command_substitution_operand_is_unresolvable
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetDemotion.test_glob_operand_is_unresolvable
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetDemotion.test_dynamic_branch_name_operand_is_unresolvable
     red_confirmed: true
     red_reason: >
       Observed against both the silent stub and the naive text-scan stub:
@@ -135,11 +135,11 @@ acceptance_tests:
       is_dynamic() + demotion logic.
   AC-7:
     tests:
-      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_source_never_imports_or_calls_subprocess
-      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_decide_is_never_invoked_with_allow_in_source
-      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_permission_decision_is_never_allow_across_representative_inputs
-      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_fixture_tree_is_byte_identical_after_a_deny_run
-      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_fixture_tree_is_byte_identical_after_a_no_decision_run
+      - tests.test_failed_run_cleanup_guard.TestNeverAllowStaticAndUnmodified.test_source_never_imports_or_calls_subprocess
+      - tests.test_failed_run_cleanup_guard.TestNeverAllowStaticAndUnmodified.test_decide_is_never_invoked_with_allow_in_source
+      - tests.test_failed_run_cleanup_guard.TestNeverAllowStaticAndUnmodified.test_permission_decision_is_never_allow_across_representative_inputs
+      - tests.test_failed_run_cleanup_guard.TestNeverAllowStaticAndUnmodified.test_fixture_tree_is_byte_identical_after_a_deny_run
+      - tests.test_failed_run_cleanup_guard.TestNeverAllowStaticAndUnmodified.test_fixture_tree_is_byte_identical_after_a_no_decision_run
     red_confirmed: false
     red_reason: >
       Not independently red-confirmed. The two source-inspection tests
@@ -156,7 +156,7 @@ acceptance_tests:
       unimplemented -- see report unconfirmed_reds / notes.
   D4-parser-unavailable:
     tests:
-      - tests/test_failed_run_cleanup_guard.py::TestFailsOpenWhenYamlParserUnavailable::test_no_decision_when_yaml_cannot_be_imported
+      - tests.test_failed_run_cleanup_guard.TestFailsOpenWhenYamlParserUnavailable.test_no_decision_when_yaml_cannot_be_imported
     red_confirmed: true
     red_reason: >
       Observed against the naive text-scan stub (which never imports
