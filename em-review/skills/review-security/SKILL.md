@@ -34,3 +34,13 @@ Style hardening unrelated to a concrete attacker-controlled path. Speculative
 ## category
 
 Every finding MUST have `"category": "security"`.
+
+## reproduction
+
+For every security finding, write into `reproduction` the steps that
+reproduce it, or an equivalent confirmation method. Name concretely the
+input, the path by which that input reaches the vulnerable code, and the
+observable result.
+
+`reproduction` is null only when neither steps nor a confirmation method
+can be given.
