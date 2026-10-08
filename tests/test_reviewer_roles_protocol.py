@@ -640,11 +640,17 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # (FR13): Step 4's `<grounding_rules>` prose gained one rule forbidding
 # interactive-mode interpreter and shell launches and naming the
 # non-interactive alternatives. Nothing else in Steps 0-6 changed.
+#
+# Refreshed again by feature-docs/security-review-repro-steps/tasks/task0002.md
+# (FR2/FR4): Step 2 gained a sentence adding the skill's `## reproduction`
+# section to the perspective brief, and Step 4's `<task>` bullet gained a
+# sentence stating that the reproduction instructions are part of the
+# `<task>` block. Nothing else in Steps 0-6 changed.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "fc3079e6715ab2005eaa8b611c3344677c304457ffb45ee47c1af8b25a60d494"
+    "29479e3a3ac72856a3e5a48624739ce0af0deb1326954e3c2797cdde105de02f"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"
