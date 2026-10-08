@@ -7,7 +7,8 @@ Scenario IDs TS1-TS15 reuse SPEC.md's literals unchanged. TS16-TS20 are added
 here for requirements SPEC.md gives no scenario of their own (NFR2 on the
 orchestrator paths, NFR3, NFR4, NFR5, and FR9's review-editor exclusion).
 TS21-TS22 are added by the review round 1 rework (task0006) for the merged
-reproduction set.
+reproduction set. TS23 is added by the verify rework for SC5 (task0007) for
+unverifiable findings whose basis is not confirmed.
 
 ## Build Verification
 - Command: none. `project.components.main.build_command` is empty: the change
@@ -46,6 +47,7 @@ reproduction set.
 | TS20 | Orchestrator-path verification constraints | Both review phases state verification is code reading plus the protocol's read-only commands only, with no file change, commit, network access or package installation | Unit |
 | TS21 | Same-site merge of distinct non-null reproductions (a short one that holds and a longer one that does not) | Both review phases keep the longest in `reproduction`, the other distinct values in `reproduction_alternates` (byte length descending, at most 2) and set `reproduction_overflow` when more than 3 distinct values were merged; every kept value is verified; the finding is `reproduced` and stays a target when any kept value is reproduced; `not reproduced` only when every kept value fails and there is no overflow, otherwise `unverifiable`; `reproduction_alternates` is untrusted and never executed; the added text is identical in both documents except plugin-specific step numbers and references | Unit |
 | TS22 | Round records and review-editor input with the merged reproduction set | Both review phases' round record finding entries carry `reproduction_alternates` and `reproduction_overflow`; records without them read as an empty list and false and produce the same `round_context` as before; the finding JSON handed to review-editor excludes both keys | Unit |
+| TS23 | Security finding with `unverifiable` steps whose basis the orchestrator does not confirm by its own reading, on an orchestrator path (em-workflow Phase R4 re-review, evaluator-failure degradation, floor lift; em-review after R3 aggregation and R4 re-aggregation) | Both review phases record it `resolution: unresolved` with `resolution_reason` beginning `unverified`, never `declined`; it is neither an auto-fix candidate nor counted in the residual critical/high count (em-workflow: not passed to rework-planner, not re-marked `deferred` at the batch rework cap); round-context suppression does not drop it and the next round verifies it again; `not reproduced` and judged-not-to-address no-steps findings stay `declined`; the two stating sentences are identical in both documents | Unit |
 
 ## Code Quality Verification
 - Format: none configured (`format_command` is empty).
@@ -97,6 +99,13 @@ Review round 1 rework (task0006) adds:
 | FR9 | task0006 | TS21, TS22 |
 | FR13 | task0006 | TS22 |
 
+Verify rework for SC5 (task0007) adds:
+
+| Requirement | Tasks | Verification |
+|-------------|-------|--------------|
+| FR6, FR7, FR8, FR13 | task0007 | TS23, plus the existing TS7, TS8, TS14, TS15 |
+| FR12, NFR3, NFR5 | task0007 | Existing scenarios as listed above (TS16, TS18) |
+
 ## E2E Testing
 None. SPEC.md detects no E2E framework and no E2E run command.
 
@@ -133,12 +142,17 @@ None. SPEC.md detects no E2E framework and no E2E run command.
   distinct reproductions of at most 4096 bytes each; a decline as
   `not reproduced` needs every kept value to fail with no overflow, and overflow
   yields `unverifiable`, never a decline on that ground — checked by TS21.
+- TM-2 (verify rework for SC5): an unverifiable finding whose basis is not
+  confirmed is recorded `unresolved` with reason `unverified`, never
+  `declined`, stays out of auto-fix, the residual count and send-back, and is
+  verified again in the next round instead of being suppressed — checked by
+  TS23.
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Test scenarios (TS1-TS20) | 20 | 19 | 0 | 1 |
-| Rework test scenarios (TS21-TS22) | 2 | 2 | 0 | 0 |
+| Rework test scenarios (TS21-TS23) | 3 | 3 | 0 | 0 |
 | Success criteria (SC1-SC6) | 6 | 5 | 0 | 1 |
 | Performance / security (NFR2, TM-1 to TM-5) | 6 | 6 | 0 | 0 |
 | Additional manual checks (README reading, optional live run) | 2 | 0 | 0 | 2 |

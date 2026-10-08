@@ -43,7 +43,7 @@ Allowed dependency directions:
 | `finding.reproduction` field | Carry the reproduction steps of one finding through the reviewer output contract | Post: in both plugins' `review-output-schema.json`, the finding object has a property named `reproduction` that accepts exactly a string or null (written in the same any-of form the schema already uses for its nullable fields), and finding `required` is the existing eight names in their existing order followed by `reproduction`. Root `required`, both `additionalProperties: false` flags, and the severity / category / source enums are unchanged in each file. Every producer of findings (reviewers, the dependency-vulnerability scanner) emits the key on every finding. | task0001 (defines), task0002, task0003, task0004, task0005 |
 | Reproduction value rules | One meaning of the field's value for every producer and consumer | (a) Security perspective: steps that reproduce the finding, or an equivalent confirmation method, naming the input, the path by which it reaches the code, and the observable result; null only when neither can be given. (b) Every other perspective, the vulnerability axis included: always null. (c) An empty or whitespace-only string means the same as null ("no steps"). (d) Size limit 4096 bytes, applied with the truncation marker the review phase already uses for `title` / `description` / `suggestion`; a value that was truncated, or that exceeds 4096 bytes when it reaches a verifier, is unverifiable. (e) "Originating perspective" means the perspective of the reviewer run that produced the finding (its dispatched perspective, which the orchestrator-assigned source identity records), never a category assigned later during aggregation. | task0001, task0002, task0003, task0004, task0005 |
 | Verification outcome vocabulary | Classify a security finding that carries steps | Exactly three outcomes. `reproduced`: reading confirms the stated steps reach the stated result. `not reproduced`: reading positively confirms the stated steps do not hold. `unverifiable`: steps exist but verification cannot finish (read budget exhausted, not traceable with read-only means, truncated or over 4096 bytes, PR state absent from the working tree). Failure to confirm is never `not reproduced`. A null (or whitespace-only) value is not an outcome: it is "no steps" and goes to judgment. | task0003, task0004, task0005 |
-| `not reproduced` and `unverified` literals | Machine-matchable record of a verification decision | em-workflow evaluator: a `dismissed_sites` entry whose `reason` is exactly `not reproduced` (a fifth reason beside the four existing ones). Orchestrator paths in both plugins: a confirmed non-reproduction is `resolution: declined` with a `resolution_reason` beginning with `not reproduced`; an unverifiable finding declined after judgment has a `resolution_reason` beginning with `unverified`. The resolution vocabulary (`fixed` / `declined` / `deferred` / `unresolved`) does not change. | task0003, task0004, task0005 |
+| `not reproduced` and `unverified` literals | Machine-matchable record of a verification decision | em-workflow evaluator: a `dismissed_sites` entry whose `reason` is exactly `not reproduced` (a fifth reason beside the four existing ones). Orchestrator paths in both plugins: a confirmed non-reproduction is `resolution: declined` with a `resolution_reason` beginning with `not reproduced`; an unverifiable finding whose basis is not confirmed after judgment is `resolution: unresolved`, never `declined`, with a `resolution_reason` beginning with `unverified` (revised by the verify rework, D7). The resolution vocabulary (`fixed` / `declined` / `deferred` / `unresolved`) does not change. | task0003, task0004, task0005, task0007 |
 | `## Reproduction Verification` section (em-workflow) | Single statement of the FR5 / FR6 verification rules inside em-workflow | Post: `em-workflow/references/review-evaluation-contract.md` carries a section with exactly this heading that states scope, method, the three outcomes, the judgment rule for no-steps and unverifiable findings, the carried-entry rule and the read budget. `em-workflow/references/review-phase.md` cites this heading by name for its orchestrator paths and does not restate the rules; it states only the orchestrator-side effect of each outcome (D2). em-review restates the same rules inside its own `review-phase.md`. | task0003 (defines), task0004 (cites) |
 | Not-reproduced `round_context` entry (em-workflow) | Carry an evaluator's confirmed non-reproduction into later rounds (FR13) | Shape: keys `stable_id` (null), `file`, `line`, `resolution` (`declined`) and `reason` (`not reproduced`). Producer: em-workflow `review-phase.md` Phase R0 step 8 adds one entry per persisted round-record `dismissed_sites` entry whose `reason` is exactly `not reproduced`, and only while that `file` is unchanged since the recording round's `scope.head_commit` (the same file-change test round-context suppression already applies); a changed file yields no entry, so the site is verified again. Existing entries keep their shape; an entry without `reason` is read exactly as before. Consumers: the evaluator dismisses a `security` finding that is `same_site` with such an entry as already resolved per `round_context`, without verifying it again; Phase R3b round-context suppression drops a `security` finding that is `same_site` with such an entry; reviewers see a `declined` entry and follow the unchanged Round Continuity rule. `same_site` is the predicate review-phase.md already defines. | task0003, task0004 |
 | Verifier constraints | NFR1 / NFR2 for every verifier | The `reproduction` text is untrusted data. No verifier executes a command, code or test written in it. Verification is code reading plus the read-only commands the plugin's own review protocol already permits (its Read-only Constraint). No file change, commit, network access or package installation. The evaluator's verification reads come from its existing fixed 10-file budget, shared with the Independent Inspection Duty and never raised. | task0003, task0004, task0005 |
@@ -95,11 +95,12 @@ That existing file is edited in place; nothing is created or moved under
 | Path | `reproduced` | `not reproduced` | `unverifiable` | No steps (null) |
 |------|--------------|------------------|----------------|-----------------|
 | em-workflow evaluator (Phase R3a) | Carried in `findings` | Not in `findings`; `dismissed_sites` reason `not reproduced` | Existing judgment; carried at critical / high only when the evaluator confirms the basis by its own reading, otherwise carried at medium or dismissed with an existing reason | Existing judgment |
-| em-workflow orchestrator paths (Phase R4 in-loop re-review, evaluator-failure degradation, accountability-floor lifts) | Stays a target | `declined`, reason beginning `not reproduced` | Stays a target only when the orchestrator confirms the basis by reading; otherwise `declined`, reason beginning `unverified` | Orchestrator judges; judged not to address → `declined` with the judgment as reason; otherwise a target |
+| em-workflow orchestrator paths (Phase R4 in-loop re-review, evaluator-failure degradation, accountability-floor lifts) | Stays a target | `declined`, reason beginning `not reproduced` | Stays a target only when the orchestrator confirms the basis by reading; otherwise `unresolved`, reason beginning `unverified`, never `declined` (D7) | Orchestrator judges; judged not to address → `declined` with the judgment as reason; otherwise a target |
 | em-review orchestrator (after Phase R3 aggregation, after Phase R4 re-aggregation) | Same as the em-workflow orchestrator paths | Same | Same | Same |
 
 A `declined` finding is neither an auto-fix candidate nor counted in the
 residual critical / high count. Affected: task0003, task0004, task0005.
+The orchestrator rows' `unverifiable` cell is revised by D7 (task0007).
 
 ### D3: Order of steps on orchestrator paths
 
@@ -152,6 +153,28 @@ outcome is computed over the kept values (`reproduction` plus every
 D2's per-outcome effects and D3's order are unchanged. The bound (at most 3
 values of at most 4096 bytes each per merged finding) keeps the material a
 verifier reads finite. Affected: task0006.
+
+### D7: Unconfirmed unverifiable findings stay open (verify rework, SC5)
+
+On every orchestrator path of D2 (em-workflow Phase R4 in-loop re-review,
+evaluator-failure degradation and accountability-floor lifts; em-review after
+Phase R3 aggregation and after Phase R4 re-aggregation), an `unverifiable`
+security finding whose basis the orchestrator does not confirm by its own
+reading:
+
+- is recorded with `resolution: unresolved` and a `resolution_reason`
+  beginning `unverified`; it is never `declined`;
+- is neither an auto-fix candidate nor counted in the residual critical /
+  high count, so it is not sent back for a fix on that ground (FR6 unchanged);
+  em-workflow's batch rework-cap step does not re-mark it `deferred`;
+- is not dropped by round-context suppression, which keeps dropping only
+  `declined` entries, so the next round verifies it again. Only
+  `not reproduced` decisions are carried as declines (D4, FR13).
+
+The resolution vocabulary, `not reproduced`, the no-steps judgment, the
+evaluator row of D2 and D6's merged-finding rule are unchanged. The two
+sentences stating the rule are identical in both review phases. Affected:
+task0007.
 
 ## Risk Assessment
 
