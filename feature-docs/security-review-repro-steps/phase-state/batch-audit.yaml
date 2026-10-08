@@ -74,3 +74,43 @@ records:
     pin refreshed); declined: missing evidence part 2 (no AC-n / requirement id named)
     and part 3 (no named test that cannot pass stated as evidence of a dropped criterion);
     surfaced as an ordinary deviation'
+- question_id: review.auto-fix-test-regression
+  packet_id: null
+  answered_at: '2026-10-08T11:38:43+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - revert_and_defer
+  freeform: null
+  normalized_answer: reverted loop 2 auto-fix of 8375ef92ce5f2f2a and deferred it
+  resolution_note: 'gate: unlisted (review round 2 auto-fix loop 2 edit passed scope
+    verification but failed 2 existing tests); options: A revert and defer / B keep and
+    commit with failing tests / C keep and fix tests outside review-editor; choice: A;
+    codex_consulted: true; opus_escalation: false; key points: the edit contradicts SPEC
+    FR6 and task0004 AC-2, so updating tests alone does not resolve it; B carries a known
+    failure into verify; C leaves the single-file editor scope; the TM-2 concern stays
+    as a deferred finding for a follow-up task and must not be treated as not reproduced'
+- question_id: review.residual-critical-high
+  packet_id: null
+  answered_at: '2026-10-08T11:38:43+09:00'
+  source: batch-decision-table
+  answer_mode: select
+  selected_option_ids:
+  - defer_at_cap
+  freeform: null
+  normalized_answer: deferred 8375ef92ce5f2f2a (batch mode rework cap reached)
+  resolution_note: 'gate: review.residual-critical-high (non-packet); batch.review_rework_count
+    already 1; residual high marked deferred and review step completed; codex_consulted:
+    false'
+- question_id: review.spec-skip-review-data-too-large
+  packet_id: null
+  answered_at: '2026-10-08T11:38:43+09:00'
+  source: orchestrator-rule
+  answer_mode: select
+  selected_option_ids:
+  - keep_skip
+  freeform: null
+  normalized_answer: spec#0 skip kept (review_data_too_large is non-retryable per review-protocol)
+  resolution_note: 'round 2 spec#0 skipped with review_data_too_large; protocol marks it
+    non-retryable so no chain walk; spec#loop1 later completed with no findings; codex_consulted:
+    false'

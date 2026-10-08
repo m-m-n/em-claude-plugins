@@ -1,0 +1,168 @@
+round: 2
+executed_at: "2026-10-08T11:38:43+09:00"
+scope:
+  review_mode: diff
+  base_commit: e12196c99959ae62b8f590fb7a4de7ea986879d1
+  head_commit: f31e76439dae0d13161a39b0744b2e59833c6750
+  changed_files:
+    - em-review/README.md
+    - em-review/agents/codex-reviewer.md
+    - em-review/references/review-output-schema.json
+    - em-review/references/review-phase.md
+    - em-review/references/review-protocol.md
+    - em-review/skills/review-security/SKILL.md
+    - em-workflow/agents/codex-reviewer.md
+    - em-workflow/agents/review-evaluator.md
+    - em-workflow/references/review-evaluation-contract.md
+    - em-workflow/references/review-output-schema.json
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/review-protocol.md
+    - em-workflow/scripts/scan-dependencies.py
+    - em-workflow/skills/review-security/SKILL.md
+    - test-docs/security-review-repro-steps/task0001.tests.yaml
+    - test-docs/security-review-repro-steps/task0002.tests.yaml
+    - test-docs/security-review-repro-steps/task0003.tests.yaml
+    - test-docs/security-review-repro-steps/task0004.tests.yaml
+    - test-docs/security-review-repro-steps/task0005.tests.yaml
+    - test-docs/security-review-repro-steps/task0006.tests.yaml
+    - tests/test_reproduction_dedupe_alternates.py
+    - tests/test_reproduction_evaluation_contract.py
+    - tests/test_reproduction_output_contract.py
+    - tests/test_reproduction_review_phase_em_review.py
+    - tests/test_reproduction_review_phase_workflow.py
+    - tests/test_reproduction_reviewer_instructions.py
+    - tests/test_reviewer_roles_protocol.py
+    - tests/test_sca_axis_schema_enums.py
+    - tests/test_tier_record_schema_v2.py
+plan:
+  floor: [comprehensive, security, architecture, performance, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: skipped, skip_reason: "review_data_too_large"}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+  - {run_id: "security#loop1", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#loop1", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#loop1", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "performance#loop1", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#loop1", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+findings:
+  - stable_id: ee0630d8d4a5123f
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/review-evaluation-contract.md
+    line: 103
+    title: "評価担当の経路には同一サイト統合時に複数の reproduction を検証する規則が無く、正しい手順を持つ security 指摘が not reproduced で棄却され得る"
+    description: "task0006 は両プラグインの review-phase.md に複数値の規則（保持したすべての reproduction を検証し、1本でも成立すれば reproduced）を入れたが、em-workflow での適用はオーケストレーター経路だけだった。評価担当の契約は reproduction を単数で運び、Reproduction Verification 節に複数値の扱いが無い。review-evaluator.md の Step 1 は重複統合を検証より先に行うため、成立しない方の手順だけを検証して finding ごと dismissed_sites に not reproduced で記録できる。accountability floor は same_site で一致するので補完されない。"
+    suggestion: "契約の Reproduction Verification 節に、same_site で統合される security 指摘は転記元すべての reproduction を対象にし、1本でも reproduced なら findings に残し、すべて成立しないと確認できたときだけ not reproduced とする規則を置く。"
+    sources: [codex:comprehensive]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 (Apply as-is, batch); loop 1 re-review (comprehensive#loop1) reported no finding"
+  - stable_id: 8375ef92ce5f2f2a
+    severity: high
+    category: security
+    file: em-workflow/references/review-phase.md
+    line: 618
+    title: "TM-2: 検証不能だけで指摘を却下しない"
+    description: "THREAT-MODEL.md の TB-1 / TM-2 が要求する「検証未完了だけでは却下しない」対策が、オーケストレーター経路の unverifiable 分岐では実装されていない。読み取り上限に達して根拠を確認できない場合も declined となり、重大な指摘が残件数から除外される。攻撃者の影響を受ける reproduction が読み取り枠を使い切らせると、反証なしで完了条件を満たせる。declined は round_context の抑制にも乗るため、ファイルが変わるまで再提起も再検証もされない。同じ問題が em-review/references/review-phase.md の 340〜343 行にもある。（round 2 初回の medium 指摘 75d350e0173faaff と same_site で統合）"
+    suggestion: "確認できない指摘は未解決として残し、重大な残件数に含める。却下には、検証不能とは別の根拠を必須にする。両プラグインへ適用する。SPEC FR6 と task0004 AC-2 の記述、および関係テストの固定値も同じ変更で改める。"
+    sources: [codex:security]
+    confidence: 70
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached. Loop 2 auto-fix (Apply as-is) was reverted: it contradicted SPEC FR6 / task0004 AC-2 and failed 2 tests (test_reproduction_review_phase_workflow AC-2, test_tier_record_schema_v2 hash pin); Codex consulted, option A (revert and defer). Not a not-reproduced decision; must not feed FR13 carry-over."
+  - stable_id: 2327e5bacd20dad2
+    severity: medium
+    category: security
+    file: em-workflow/references/review-phase.md
+    line: 111
+    title: "再現できなかった一つの指摘で周辺の別の指摘まで抑制しない"
+    description: "dismissed_sites を stable_id: null の記録へ変換するため、元の指摘の識別情報が失われ、後続処理は同じファイルの前後5行にある security 指摘を内容に関係なく抑制する。R0 step 8 は dismissed_sites の not reproduced を、run_id が security run を指すことやその run が同じ site を報告していたことを確認せずに取り込むため、評価担当の出力1件が検証されていない抑制を作れる。失効条件も指摘先ファイルの変更だけで、呼出元や検証処理が別ファイルで変わっても再検証されない。（round 2 初回の df4003a9fded2bab / 475a3bbdbc85031f と same_site で統合。round 1 の 475a3bbdbc85031f・ba8773d0e72b6e47 の再提起）"
+    suggestion: "却下記録に元の指摘を識別できる情報を保持し、位置の一致だけで別の指摘を除外しない。保存前に run_id がこのラウンドの security run であり、その run の same_site の報告に切り詰められていない reproduction があることを確かめる。検証で辿った呼出元・検証処理のファイルも記録し、どれかが変わったら失効させる。"
+    sources: [codex:security]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 363e39c89e45cc3d
+    severity: medium
+    category: security
+    file: em-workflow/references/review-phase.md
+    line: 551
+    title: "TM-5: 修正ループ後にも却下記録の有効性を確認する"
+    description: "TB-3 / TM-5 が要求するファイル変更後の再検証が保証されていない。変更確認は R0 の読み込み時だけで、R3b の not-reproduced 抑制は same_site の指摘を無条件に除外する（line が null ならファイル全体）。R4 がそのファイルを修正した後も同じ round_context が再利用されるため、修正で問題が実在するようになっても再レビューの指摘が古い判断で抑制される。（round 2 初回の 910c896129038039 と same_site で統合。round 1 の decbe80ad43ddb0c の再提起）"
+    suggestion: "抑制する時点で記録時のファイル状態と比較するか、各修正ループで変更されたファイルの却下記録を無効化してから再レビューする。line が null のエントリはファイル全体に適用しない。"
+    sources: [codex:security]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: e528fd443647e992
+    severity: medium
+    category: security
+    file: em-review/references/review-phase.md
+    line: 548
+    title: "TM-5: 再現不能の却下記録を security の指摘だけに適用する"
+    description: "TB-3 / TM-5 が要求する「security の同一箇所だけに適用する」対策が欠けている。em-review の round_context には観点と却下理由が引き継がれず、抑制に使う stable_id も category を含まないため、security の再現手順を理由にした却下が、同じ識別子を持つ別観点の指摘まで除外する。em-workflow の通常 findings 経由の引き継ぎにも同じ問題がある。（round 2 初回の 298cbc8409cbab37 と same_site で統合。round 1 の 1104fd3d193e7b6a の再提起）"
+    suggestion: "再現手順による却下の理由と元の観点を引き継ぎ、この種類の記録は security 由来の同一箇所の指摘にだけ適用する。通常の declined とは判定を分ける。"
+    sources: [codex:security]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: ebd6cf3491699f53
+    severity: medium
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    line: 537
+    title: "reproduction の統合・検証規則が契約と両 review-phase.md に分散し、すでに内容が食い違っている"
+    description: "em-workflow の review-phase.md は契約の Reproduction Verification 節を参照すると書きつつ、複数値の検証規則を自分だけが持っていた（loop 1 で契約側にも規則を追加済み）。em-review は別プラグインのため独自の写しを持ち、上限・統合順序・判定を直すたびにすべての写しを揃える必要がある。"
+    suggestion: "em-workflow では複数値の規則を契約に寄せて review-phase.md は引用だけにする。em-review の写しと規則文が一致することをテストで固定する。"
+    sources: [litellm:muse-spark-contributor:architecture]
+    confidence: 55
+    resolution: unresolved
+    resolution_reason: "not re-reported by architecture#loop1"
+evaluation:
+  round_summary: "round 2（diff、cross_validation）。task0006 で両プラグインの review-phase.md に複数 reproduction の検証規則が入ったが、評価担当の契約には同じ規則が無く、通常経路で正しい手順を持つ security 指摘が not reproduced で棄却され得る（comprehensive の high、契約と review-phase.md を読んで確認）。security#0 の5件はすべて medium（うち4件は round 1 の未解決 medium の再提起、新規1件は unverifiable を declined にして round_context で抑制し続ける点で TM-2 に反する）。architecture#0 の high 3件: スキーマ逸脱は誤検出として除外（reviewer 出力スキーマは round 記録のスキーマではない）、集約手順の肥大化は具体的な不具合が無いので除外、規則の三重管理は medium に下げて残した。round_context の二重識別は security の same_site 指摘と重なるので別指摘にしていない。注入の試みは無し。観点ごとの確認状況: security corroborated / comprehensive corroborated / architecture corroborated / performance corroborated / spec not verified — read budget exhausted（spec#0 は review_data_too_large で skipped）。読み取りは 10 ファイルで上限に達した。"
+  recommended_action: rework
+  action_rationale: "high の1件を直すには評価契約・review-evaluator.md・関連テストの固定値をまとめて変える必要がある。security の medium 群も not reproduced／unverified の引き継ぎ設計が TM-2・TM-5・FR13 と合っていない点で共通しており、まとめて設計し直すのがよい。"
+dismissed_sites:
+  - file: em-review/references/review-phase.md
+    line: 302
+    run_id: "architecture#0"
+    reason: "false positive"
+  - file: em-workflow/references/review-phase.md
+    line: 601
+    run_id: "architecture#0"
+    reason: "demoted"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 2
+  applied_total: 1
+  termination: no-progress
+  loops:
+    - loop: 1
+      mode: sequential
+      applied: [ee0630d8d4a5123f]
+      commit: 45d08827f91c6f263b970291b45ec1b5e1862744
+    - loop: 2
+      mode: sequential
+      applied: []
+      aborted: [8375ef92ce5f2f2a]
+      note: "editor applied, scope verification passed, but the change failed 2 existing tests and contradicted SPEC FR6 / task0004 AC-2; restored from backup and aborted (Codex consulted, option A)"
+residual_critical_high: 1
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-security-review-repro-steps-20261008T023841Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
