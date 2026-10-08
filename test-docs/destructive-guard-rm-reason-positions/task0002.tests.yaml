@@ -20,7 +20,7 @@ acceptance_tests:
     red_reason: "All 5 position subtests failed against the unfixed hook: AssertionError 'guard produced no output' (the hook died before emitting a decision, so there was no stdout to check). The control-character check itself passes on the fixed hook, whose stdout is byte-length-identical to the base hook's."
   AC-4:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_rm_reason_positions
     red_confirmed: false
     red_reason: "A dedicated new module is out of scope; the existing run-destructive-guard.py cases and tests/test_destructive_guard_rm_reason_positions.py (task0001 cases) detect any verdict or rule id change in the hook; no red state occurred for this change (both passed in the baseline and still pass, cases file and task0001 expectations unchanged)."

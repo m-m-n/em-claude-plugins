@@ -18,7 +18,7 @@ acceptance_tests:
       - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_batch_mode_surviving_clauses_each_present
       - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_phase_state_surviving_clauses_each_present
       - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_reporting_list_still_ends_the_same_way_once
-      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_batch_quiet_output_source_map_still_has_seven_rows
+      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_batch_quiet_output_source_map_has_eight_rows
     red_confirmed: false
     red_reason: >-
       Preservation criterion (Test Notes): the surviving clauses, the

@@ -47,7 +47,7 @@ acceptance_tests:
   AC-3:
     tests:
       - tests.test_reference_sweep.TestOldAgentDeleted.test_requirements_spec_creator_file_absent
-      - tests.test_reference_sweep.TestOldAgentDeleted.test_no_task_owned_file_references_old_agent_name
+      - tests.test_reference_sweep.TestOldAgentDeleted.test_no_file_under_the_plugin_directory_references_old_agent_name
     red_confirmed: true
     red_reason: >-
       Pre-task, em-workflow/agents/requirements-spec-creator.md existed

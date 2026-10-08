@@ -15,7 +15,7 @@ acceptance_tests:
     red_reason: "AssertionError: 63 not greater than 63 (marketplace.json em-workflow entry version was still 0.1.63); the matches-manifest test was already passing pre-bump (both sides equal at 0.1.63) but the past-baseline sibling test in the same class proves the criterion was unmet before the edit"
   AC-3:
     tests:
-      - tests.test_batch_codex_autonomous_decisions_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_unchanged
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_is_not_below_baseline
     red_confirmed: false
     red_reason: "This test pins the em-review entry's version at its pre-task snapshot (0.5.7), a value this task never touches, so it passed before and after the edit. The criterion (no other plugin's version moves) has no observable-false state to force red under TDD since this task's diff never writes that field; the test still serves as a regression guard against a future accidental edit."
   AC-4:

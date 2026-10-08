@@ -30,14 +30,14 @@ acceptance_tests:
     # case block was appended again (commit before the hook change was re-applied), then the
     # hook change was re-applied on the parent's version.
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py (cases labelled 29bbf9032dd762a0 round2-residuals FR5.1, FR5.2, FR5.3)
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_sit_in_the_case_table_after_the_base_entries
     red_confirmed: true
     red_reason: "After appending the three cases and before any hook change the runner reported 628/631 passed: FR5.1, FR5.2 and FR5.3 got ask [destructive-guard/scan-budget-exceeded] where allow was expected. The placement test passed at that point by construction; the commit order itself is shown by git log, not by a test."
   AC-2:
     tests:
       - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_review_inputs_get_allow_with_and_without_batch
-      - em-workflow/hooks/tests/run-destructive-guard.py (FR5.1-FR5.3)
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: "Before the hook change all six subtests (L28, L100, S40 x batch off/on) failed: AssertionError 'ask' != 'allow' without CLAUDE_BATCH and 'deny' != 'allow' with CLAUDE_BATCH=1 (scan-budget-exceeded)."
   AC-3:
@@ -67,7 +67,7 @@ acceptance_tests:
     red_reason: "Before the hook change the new test errored at its precondition (lex_shell raised LexBudgetExceeded for the 200-line input under the real work factor). The ask / deny-under-CLAUDE_BATCH / never-allow behaviour of the budget condition itself pre-existed and is covered by the existing test_budget_exceeded_is_an_ask_never_an_allow; no red state occurred for that part."
   AC-7:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract
       - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged

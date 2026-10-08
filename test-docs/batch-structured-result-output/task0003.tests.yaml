@@ -126,8 +126,8 @@ acceptance_tests:
     tests:
       - tests.test_batch_stop_contract_skill_wiring.TestReasonNoneShapeMatcherCanFail.test_matcher_rejects_forged_reason_none_shape
       - tests.test_batch_stop_contract_skill_wiring.TestReasonNoneShapeMatcherCanFail.test_forged_excerpt_is_well_formed_and_found
-      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsTwelve.test_reason_codes_tuple_has_twelve_members
-      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsTwelve.test_reason_codes_tuple_includes_context_budget_reached
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_has_fourteen_members
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_includes_context_budget_reached
       - tests.test_develop_once_option.TestSc5LiteralMatcherCanFail.test_matcher_rejects_each_forged_dimension
       - tests.test_develop_once_option.TestSc5LiteralMatcherCanFail.test_matcher_passes_ordinary_prose_including_the_word_none
       - tests.test_batch_stop_contract_skill_wiring.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib

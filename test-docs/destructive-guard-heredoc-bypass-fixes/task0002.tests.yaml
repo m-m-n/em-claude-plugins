@@ -4,11 +4,7 @@ final_failures: []             # re-executed after the re-implementation on the 
 acceptance_tests:
   AC-1:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} の引数の x[a は保留中のヒアドキュメントの本文の開始を遅らせず ... deny (5 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} -a x[0 のようにオプションの後の引数 NAME[ も ... deny (5 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} y=1 x[a のように代入語の後の引数 NAME[ も ... deny (5 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {declare, typeset, local, export, readonly} x[a の途中の行継続は行を終わらせず ... deny (5 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b declare の引数の x[a があっても本文は次の行から始まり ... allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the 34 new entries appended and the hook unchanged (the adopted
@@ -23,11 +19,7 @@ acceptance_tests:
       marker line in every deny form and did not run it in the allow form.
   AC-2:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} の引数の x[a は保留中のヒアドキュメントの本文の開始を遅らせず ... deny (3 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} -a x[0 のようにオプションの後の引数 NAME[ も ... deny (3 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} y=1 x[a のように代入語の後の引数 NAME[ も ... deny (3 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b {eval, let, alias} x[a の途中の行継続は行を終わらせず ... deny (3 entries)"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: a7c0d90ac3e44e5b let の引数の x[a があっても本文は次の行から始まり ... allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Unchanged hook (before the change, and again on the adopted parent): all 12 deny entries for eval / let / alias failed
@@ -40,8 +32,7 @@ acceptance_tests:
       being non-executing.
   AC-3:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 E-1 eval の引数の添字つき配列名 x[a b]=( ... deny"
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error T2 E-9 declare の引数の添字つき配列名 x[0]=( ... deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing case-table
@@ -51,7 +42,7 @@ acceptance_tests:
       change and stayed green after every edit of the argument branch).
   AC-4:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: every case-table entry that existed before this task's entries (740 on the adopted parent), among them heredoc-syntax-error T2 E-15, T2 E-16, T2 E-17 (allow)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing case table
@@ -81,8 +72,7 @@ acceptance_tests:
       commands. With the change it passes with the test file unmodified.
   AC-6:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py"
-      - python3 -m unittest discover -s tests
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the new entries appended and the hook unchanged,
@@ -91,3 +81,5 @@ acceptance_tests:
       pass (775/775; Ran 8434 tests, OK (skipped=1)), the existing linearity
       tests included. No import was added: the existing TestModuleContract
       standard-library check passes and the diff adds no import statement.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests

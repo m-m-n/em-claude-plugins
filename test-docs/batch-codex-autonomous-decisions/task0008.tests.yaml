@@ -14,8 +14,8 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_surviving_aborts_enumerated_once_and_abort_both_modes
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_surviving_aborts_old_step_3_wording_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_surviving_aborts_enumerated_once_and_abort_both_modes
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_surviving_aborts_old_step_3_wording_is_gone
     red_confirmed: true
     red_reason: >-
       test_surviving_aborts_enumerated_once_and_abort_both_modes failed with
@@ -30,7 +30,7 @@ acceptance_tests:
       aborts bullet in question-resolution.md.
   AC-2:
     tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_ac2_no_passage_states_batch_direction_2_question_aborts
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac2_no_passage_states_batch_direction_2_question_aborts
     red_confirmed: false
     red_reason: >-
       This is a pure retention/regression guard: direction 1's
@@ -46,10 +46,10 @@ acceptance_tests:
       stay true across the whole edit by the unchanged pin counts.
   AC-3:
     tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_batch_direction_2_continuation_stated_at_exactly_one_site
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_fallback_step_3_cites_step_2_for_direction_2_routing
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_fallback_step_3_old_uncited_wording_is_gone
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_step_2_old_direction_2_wording_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_batch_direction_2_continuation_stated_at_exactly_one_site
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_fallback_step_3_cites_step_2_for_direction_2_routing
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_fallback_step_3_old_uncited_wording_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_2_old_direction_2_wording_is_gone
     red_confirmed: true
     red_reason: >-
       test_batch_direction_2_continuation_stated_at_exactly_one_site failed
@@ -63,12 +63,12 @@ acceptance_tests:
       resolution sequence step 2 and Unlisted-gate fallback step 3.
   AC-4:
     tests:
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_distinguishes_aborted_set_from_routed_set
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_interactive_arm_still_never_reaches_here
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_old_ownership_narration_is_gone
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_direction_2_subset_cites_step_2_not_restated
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_old_direction_2_restatement_is_gone
-      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_no_claim_of_unreachability_contradicts_single_site
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_distinguishes_aborted_set_from_routed_set
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_interactive_arm_still_never_reaches_here
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_old_ownership_narration_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_direction_2_subset_cites_step_2_not_restated
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_old_direction_2_restatement_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_no_claim_of_unreachability_contradicts_single_site
     red_confirmed: true
     red_reason: >-
       The first five tests failed pre-edit: the citation-form assertions
@@ -88,9 +88,9 @@ acceptance_tests:
       as a permanent regression check for this specific AC-4 clause.
   AC-5:
     tests:
-      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_source_mapping_covers_all_three_paths
-      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_vocabulary_stays_closed_no_new_value_minted
-      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_old_two_path_source_sentence_is_gone
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_source_mapping_covers_all_three_paths
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_vocabulary_stays_closed_no_new_value_minted
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_old_two_path_source_sentence_is_gone
     red_confirmed: true
     red_reason: >-
       test_source_mapping_covers_all_three_paths and
@@ -106,8 +106,8 @@ acceptance_tests:
       minted, satisfying D6.
   AC-6:
     tests:
-      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_escalation_value_named_by_route_never_asserts_codex_consulted
-      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_resolution_note_contents_named
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_escalation_value_named_by_route_never_asserts_codex_consulted
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_resolution_note_contents_named
     red_confirmed: true
     red_reason: >-
       test_escalation_value_named_by_route_never_asserts_codex_consulted
@@ -121,8 +121,8 @@ acceptance_tests:
       retention rather than to claim a fresh red->green cycle for it.
   AC-7:
     tests:
-      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralSourceDefinitionStatesWhichWritersItGoverns::test_general_definition_scoped_to_the_other_three_writers
-      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralSourceDefinitionStatesWhichWritersItGoverns::test_old_unscoped_general_definition_is_gone
+      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralSourceDefinitionStatesWhichWritersItGoverns.test_general_definition_scoped_to_the_other_three_writers
+      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralSourceDefinitionStatesWhichWritersItGoverns.test_old_unscoped_general_definition_is_gone
     red_confirmed: true
     red_reason: >-
       test_general_definition_scoped_to_the_other_three_writers failed with
@@ -134,9 +134,9 @@ acceptance_tests:
       before scoping the general definition in phase-state.md.
   AC-8:
     tests:
-      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments::test_writer_entry_maps_escalation_decision_to_batch_codex_consultation
-      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments::test_step_6_cites_phase_state_instead_of_hardcoding_a_source_value
-      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments::test_old_hardcoded_escalation_source_wording_is_gone
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments.test_writer_entry_maps_escalation_decision_to_batch_codex_consultation
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments.test_step_6_cites_phase_state_instead_of_hardcoding_a_source_value
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments.test_old_hardcoded_escalation_source_wording_is_gone
     red_confirmed: true
     red_reason: >-
       test_writer_entry_maps_escalation_decision_to_batch_codex_consultation

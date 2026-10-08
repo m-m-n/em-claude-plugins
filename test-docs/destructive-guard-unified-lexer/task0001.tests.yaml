@@ -4,7 +4,7 @@ final_failures: []             # re-executed after the implementation: python3 -
 acceptance_tests:
   AC-1:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (the 30 appended cases)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_command_position_forms_are_denied
       - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_expansion_position_forms_are_denied
       - tests.test_destructive_guard_lexer_agreement.TestFixedVerdicts.test_process_substitution_forms
@@ -21,7 +21,7 @@ acceptance_tests:
       failing labels.
   AC-2:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (all 605 entries)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
     red_confirmed: false
     red_reason: >-

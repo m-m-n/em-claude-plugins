@@ -5,10 +5,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "変数展開した宛先の cat ヒアドキュメント: 別文に .sh 末尾コマンドがあっても allow"
-      - "同じチャンクに python3 呼び出しがあっても cat 宛てヒアドキュメントは allow"
-      - "1 行に複数のヒアドキュメント演算子があっても、両方 cat 宛てなら allow"
-      - "宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       All 23 listed cases (TS-1 to TS-13, TS-15 to TS-17, TS-21 to TS-27)
@@ -23,14 +20,7 @@ acceptance_tests:
       rule already produced the correct verdict for those shapes).
   AC-2:
     tests:
-      - "複数行ヒアドキュメント本文に git reset --hard の記述があっても宛先が cat なら allow"
-      - "変数展開した宛先の cat ヒアドキュメント: 別文に .sh 末尾コマンドがあっても allow"
-      - "同じチャンクに python3 呼び出しがあっても cat 宛てヒアドキュメントは allow"
-      - "bash 宛てヒアドキュメント(裸)は deny"
-      - "sudo 経由の bash 宛てヒアドキュメントは deny"
-      - "絶対パスの /bin/sh 宛てヒアドキュメントは deny"
-      - "バージョン付きスペル python3.12 宛てヒアドキュメントは deny"
-      - "bash ヒアドキュメントは実行"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       TS-2 and TS-3 (the allow side, host command word "cat") were
@@ -44,10 +34,7 @@ acceptance_tests:
       own.
   AC-3:
     tests:
-      - "パイプ先が bash のヒアドキュメントは deny"
-      - "bash -c への置換内ヒアドキュメントは deny"
-      - "外側の文のパイプ先が bash なら置換内ヒアドキュメントも deny"
-      - "外側の文にパイプ先の sink が無ければ置換内ヒアドキュメントは allow(TS-23 の対照)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       All four (TS-6, TS-13, TS-23, TS-24) already passed against the
@@ -63,9 +50,7 @@ acceptance_tests:
       not a case that regresses under the old rule.
   AC-4:
     tests:
-      - "1 行に複数のヒアドキュメント演算子があっても、両方 cat 宛てなら allow"
-      - "1 行に複数のヒアドキュメント演算子: 2 つ目が bash 宛てなら deny"
-      - "ヒアドキュメントの後に続く行は通常のコマンドとして deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       TS-4 was observed to fail against the unmodified guard (see AC-1's
@@ -76,13 +61,7 @@ acceptance_tests:
       here as regression pins for the rest of this criterion's text.
   AC-5:
     tests:
-      - "ヒアドキュメント除去後のチャンクがパース失敗するなら deny(フォールバック)"
-      - "複合コマンドの閉じ({ ... } <<EOF)に付いたヒアドキュメントは deny(宛先不明の保守的フォールバック)"
-      - "timeout 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
-      - "exec 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
-      - "外側の文に実行プレフィックスがあれば置換内ヒアドキュメントも deny(宛先不明)"
-      - "プロセス置換 tee >(bash) を伴うヒアドキュメントは deny(宛先不明)"
-      - "宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       TS-25 was observed to fail against the unmodified guard (see AC-1's
@@ -96,9 +75,7 @@ acceptance_tests:
       rest of this criterion's text.
   AC-6:
     tests:
-      - "git reset --hard の文字列を echo するだけなら allow"
-      - "コミットメッセージ内の git reset --hard 言及は allow"
-      - "test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
@@ -111,8 +88,8 @@ acceptance_tests:
       wording, not new red-to-green evidence.
   AC-7:
     tests:
-      - "test_em_workflow_version.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest"
-      - "test_plugin_version_parity.TestMarketplaceEntryVersion (equivalent check, older task-pinned baseline)"
+      - tests.test_em_workflow_version.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion
     red_confirmed: false
     red_reason: >-
       Searched tests/ for existing coverage before concluding: both
@@ -131,8 +108,8 @@ acceptance_tests:
       task's own commit.
   AC-8:
     tests:
-      - "test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library"
-      - "test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls"
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
     red_confirmed: false
     red_reason: >-
       Searched tests/ for existing coverage before concluding: these two

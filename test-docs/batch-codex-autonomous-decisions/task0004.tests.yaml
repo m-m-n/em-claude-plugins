@@ -4,9 +4,9 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale::test_constraint_sentence_is_verbatim
-      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale::test_rationale_routes_into_the_minimum_side_effect_branch
-      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale::test_resolution_time_rule_citation_retained
+      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale.test_constraint_sentence_is_verbatim
+      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale.test_rationale_routes_into_the_minimum_side_effect_branch
+      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale.test_resolution_time_rule_citation_retained
     red_confirmed: true
     red_reason: >-
       test_rationale_routes_into_the_minimum_side_effect_branch failed before
@@ -20,7 +20,7 @@ acceptance_tests:
       exercises the rewording.
   AC-2:
     tests:
-      - tests.test_validate_worker_output.TestQuestionCategoryForcesBlockingUnanswered::test_rejection_message_states_the_surviving_rationale
+      - tests.test_validate_worker_output.TestQuestionCategoryForcesBlockingUnanswered.test_rejection_message_states_the_surviving_rationale
     red_confirmed: true
     red_reason: >-
       AssertionError: 'cannot choose the non-blocking handling' not found in
@@ -30,7 +30,7 @@ acceptance_tests:
       editing validate-worker-output.py's rejection message.
   AC-3:
     tests:
-      - tests.test_validate_worker_output.TestIrreversibleAssumptionFixtureAccepted::test_fixture_is_accepted_directly
+      - tests.test_validate_worker_output.TestIrreversibleAssumptionFixtureAccepted.test_fixture_is_accepted_directly
     red_confirmed: false
     red_reason: >-
       The fixture file itself is the new artifact this AC requires; the
@@ -44,8 +44,8 @@ acceptance_tests:
       present, per the frozen validator (D5).
   AC-4:
     tests:
-      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven::test_every_fixture_matches_its_declared_exit_code
-      - tests.test_validate_worker_output.TestFixtureCoverageValidAndInvalidPerBranch::test_every_group_has_a_valid_and_an_invalid_case
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_validate_worker_output.TestFixtureCoverageValidAndInvalidPerBranch.test_every_group_has_a_valid_and_an_invalid_case
     red_confirmed: false
     red_reason: >-
       Both tests are pre-existing, generic, data-driven checks
@@ -64,7 +64,7 @@ acceptance_tests:
       packet's own question.
   AC-5:
     tests:
-      - tests.test_validate_worker_output.TestQuestionCategoryForcesBlockingUnanswered::test_all_three_fail_closed_categories_are_rejected_directly
+      - tests.test_validate_worker_output.TestQuestionCategoryForcesBlockingUnanswered.test_all_three_fail_closed_categories_are_rejected_directly
     red_confirmed: false
     red_reason: >-
       Pre-existing test, unmodified by this task, asserting the frozen
@@ -85,7 +85,7 @@ acceptance_tests:
       code diff touching no gate-registry-derivation logic.
   AC-7:
     tests:
-      - tests.test_question_resolution_doc.TestQuestionPacketSchemaCategoryBlockingConstraint::test_no_feature_docs_task_identifier_cited
+      - tests.test_question_resolution_doc.TestQuestionPacketSchemaCategoryBlockingConstraint.test_no_feature_docs_task_identifier_cited
     red_confirmed: false
     red_reason: >-
       Pre-existing test (owned by a different task's file,
