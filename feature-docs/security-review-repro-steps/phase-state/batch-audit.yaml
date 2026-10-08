@@ -61,3 +61,16 @@ records:
     cap, 10-file budget) and does not require longest-only, but keeping all reproductions
     can exceed the bound, so docs, AC and tests must change together with a total-size/verification-count
     limit and unverifiable handling; B would leave a real finding wrongly declined'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-08T11:10:00+09:00'
+  source: orchestrator-rule
+  answer_mode: select
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: declined
+  resolution_note: 'task_id: task0006; path: tests/test_tier_record_schema_v2.py (REVIEW_PHASE_SHA256
+    pin refreshed); declined: missing evidence part 2 (no AC-n / requirement id named)
+    and part 3 (no named test that cannot pass stated as evidence of a dropped criterion);
+    surfaced as an ordinary deviation'
