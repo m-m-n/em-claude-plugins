@@ -105,9 +105,12 @@ workflow:
   status: completed
   completed_at_commit: 45d08827f91c6f263b970291b45ec1b5e1862744
 - id: verify
-  status: in_progress
-  result: null
-  failed_items: []
+  status: failed
+  result: fail
+  failed_items:
+  - id: SC5
+    note: 'review ended with residual_critical_high == 1 (deferred high finding 8375ef92ce5f2f2a, TM-2: unverifiable alone must not decline a finding); test suite, TS17 and plugin invariants pass'
+    category: unknown
 - id: retrospect
   status: pending
 tasks:
@@ -506,8 +509,9 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      SC5: 1
   infra_resume:
     rounds: 0
     cap: 2
