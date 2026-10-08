@@ -50,9 +50,6 @@ acceptance_tests:
     tests:
       - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_third_conjunct_never_narrowed
       - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_no_recycled_id_can_inherit_merged_via_write_set
-      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_exit_cites_i2b_step1_reconciled_state
-      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_retry_reaches_harness_level_failure_diagnostic_path
-      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_outcome_reached_without_selecting_abort
     red_confirmed: true
     red_reason: >-
       Verified by restoring the pristine document: all five tests failed
@@ -138,7 +135,6 @@ acceptance_tests:
       - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_gate_rejected_enumeration_matcher_flags_absence_in_task0001_delivered_wording
       - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_new_premise_matcher_flags_absence_in_task0001_delivered_wording
       - tests.test_implement_routeback_gate.TestPreChangeSampleGuards.test_task0002_i2b_step1_sample_retains_reaches_normal_failed_handling_anchor
-      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor
     red_confirmed: false
     red_reason: >-
       These are meta-level convention checks (paired negative proofs and

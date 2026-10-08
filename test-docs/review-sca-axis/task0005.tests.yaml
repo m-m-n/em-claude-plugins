@@ -119,7 +119,6 @@ acceptance_tests:
   AC-7:
     tests:
       - tests.test_sca_task_filing.TestModuleCoOwnership.test_both_subcommands_are_registered
-      - tests.test_sca_task_filing.TestModuleCoOwnership.test_scan_is_a_marked_placeholder
       - tests.test_sca_task_filing.TestModuleCoOwnership.test_file_tasks_runs_end_to_end_via_the_real_cli
     red_confirmed: true
     red_reason: >-

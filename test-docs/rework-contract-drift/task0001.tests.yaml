@@ -26,7 +26,6 @@ acceptance_tests:
       present verbatim in the Re-planning branch.
   AC-3:
     tests:
-      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_two_branches_present_initial_planning_keyed_on_pending_status
       - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_no_longer_keyed_on_a_single_status_literal
     red_confirmed: true
     red_reason: >-

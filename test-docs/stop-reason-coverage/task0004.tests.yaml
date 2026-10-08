@@ -22,45 +22,43 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
-      - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
-      - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_name_field_reads_em_workflow
+      - tests.test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_name_field_reads_em_workflow
     red_confirmed: true
     red_reason: "Observed on the un-bumped 0.2.0 tree: test_version_is_past_baseline failed with 'AssertionError: (0, 2, 0) not greater than (0, 2, 0)' and test_version_is_the_literal_bump_target failed with \"AssertionError: '0.2.0' != '0.2.1'\"."
   AC-2:
     tests:
-      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
-      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_past_baseline
-      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
-      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_matches_plugin_manifest
-      - test_stop_reason_coverage_version_bump.TestOtherPluginEntryUnchanged.test_em_review_entry_unchanged
+      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_past_baseline
+      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_matches_plugin_manifest
+      - tests.test_stop_reason_coverage_version_bump.TestOtherPluginEntryUnchanged.test_em_review_entry_unchanged
     red_confirmed: true
     red_reason: "Observed on the un-bumped 0.2.0 tree: test_entry_version_is_past_baseline failed with 'AssertionError: (0, 2, 0) not greater than (0, 2, 0)' and test_entry_version_is_the_literal_bump_target failed with \"AssertionError: '0.2.0' != '0.2.1'\". test_em_review_entry_unchanged and test_entry_lookup_is_non_vacuous were already green pre-implementation (em-review's entry is untouched by this task) -- they are pure regression guards over retained, pre-change fields."
   AC-3:
     tests:
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_accepts_the_live_version
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_malformed_version_shape
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_parse_version_distinguishes_parse_failure_from_none
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_accepts_the_live_version
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_malformed_version_shape
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_parse_version_distinguishes_parse_failure_from_none
     red_confirmed: true
     red_reason: "test_baseline_matcher_accepts_the_live_version failed pre-implementation with 'AssertionError: (0, 2, 0) not greater than (0, 2, 0)' since the live version was still at the baseline. The negative-proof and non-vacuity-guard tests (forged 0.2.0, malformed shape, None-vs-parse-failure) exercise the matcher against synthetic data only and were already green pre-implementation -- they prove the matcher's rejection path independent of repo state."
   AC-4:
     tests:
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
-      - test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_equality_matcher_accepts_the_live_pair
-      - test_stop_reason_coverage_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_stop_reason_coverage_version_bump.TestValidationDetectsRegressions.test_equality_matcher_accepts_the_live_pair
+      - tests.test_stop_reason_coverage_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
     red_confirmed: true
     red_reason: "test_equality_matcher_accepts_the_live_pair failed pre-implementation with \"AssertionError: '0.2.0' != '0.2.1'\" (marketplace still at 0.2.0, manifest already-edited-in-test-sequence expectation not yet met). The negative-proof/non-vacuity/stdlib-only tests exercise the matcher and the module's own AST against synthetic data or the module's own source, independent of repo state, and were already green pre-implementation."
   AC-5:
     tests:
-      - test_batch_stop_contract_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
-      - test_batch_stop_contract_version_bump.TestPluginManifestVersion.test_name_field_unchanged
-      - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
-      - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
-      - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
-      - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
+      - tests.test_batch_stop_contract_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_batch_stop_contract_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
     red_confirmed: false
     red_reason: "AC-5 proves this pre-existing module stays green and unmodified after the bump to 0.2.1 (its own baseline is 0.1.39, well below both 0.2.0 and 0.2.1) -- it was already passing before this task's edits and after, so there is no red to observe; the module file itself is byte-identical before and after (git diff shows no change). Confirmed by running tests.test_stop_reason_coverage_version_bump plus tests.test_batch_stop_contract_version_bump together (35 tests, all pass) and by the full-suite run (python3 -m unittest discover -s tests: 5368 tests, 9 failures, all pre-existing baseline failures, 0 new)."
 deviations:

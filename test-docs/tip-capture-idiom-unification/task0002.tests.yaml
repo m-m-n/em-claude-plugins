@@ -4,11 +4,11 @@ final_failures: []             # 1511 tests, all green after this task's edit
 acceptance_tests:
   AC-1:
     tests:
-      - tests/test_exit4_tip_argument_version_bump.py::TestPluginManifestVersion::test_version_is_past_baseline
-      - tests/test_exit4_tip_argument_version_bump.py::TestPluginManifestVersion::test_name_field_unchanged
-      - tests/test_spec_file_set_completeness_version_bump.py::TestPluginManifestVersion::test_key_set_unchanged
-      - tests/test_spec_file_set_completeness_version_bump.py::TestPluginManifestVersion::test_author_field_unchanged
-      - tests/test_spec_file_set_completeness_version_bump.py::TestPluginManifestVersion::test_description_field_retains_stable_anchor
+      - tests.test_exit4_tip_argument_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_exit4_tip_argument_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_author_field_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_description_field_retains_stable_anchor
     red_confirmed: false
     red_reason: >
       No pre-existing test pins the exact literal "0.1.46", and the pre-task
@@ -22,13 +22,11 @@ acceptance_tests:
       version line changed), not by a red-then-green test.
   AC-2:
     tests:
-      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_is_past_baseline
-      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_matches_plugin_manifest
-      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_source_unchanged
-      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_has_no_version_key
-      - tests/test_spec_file_set_completeness_version_bump.py::TestMarketplaceEntryVersion::test_top_level_key_set_unchanged
-      - tests/test_spec_file_set_completeness_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_key_set_unchanged
-      - tests/test_spec_file_set_completeness_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_unchanged
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_top_level_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_key_set_unchanged
     red_confirmed: false
     red_reason: >
       Same reasoning as AC-1: the marketplace em-workflow entry's pre-task

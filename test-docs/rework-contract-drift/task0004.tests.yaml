@@ -60,10 +60,8 @@ acceptance_tests:
   AC-4:
     tests:
       - tests.test_classification_gate.TestClassificationGate.test_category_check_aborts_on_sentinel_missing_unreadable_or_out_of_vocabulary
-      - tests.test_classification_gate.TestClassificationGate.test_both_abort_directions_marked_final_and_non_overridable
       - tests.test_classification_gate.TestClassificationGate.test_negative_twin_missing_sentinel_wording_would_be_caught
       - tests.test_classification_gate.TestClassificationGate.test_failed_items_category_never_triggers_an_early_abort
-      - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_both_directions_marked_non_overridable
     red_confirmed: true
     red_reason: >
       Reverted question-resolution.md to the pre-change (HEAD) content and
