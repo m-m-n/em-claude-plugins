@@ -1,26 +1,67 @@
 schema_version: 1
 feature: queue-stop-guard-nonascii-blank-state
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 65714d9faa27c228ca5cabb3d1ebed1fd7905b3b
 last_input_digest: sha256:50ed634f454bb7736791dfecc82e17b6b3ce8db1a224395fe013aab561dbaefd
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-08T19:48:51+09:00'
+    questions:
+    - question_id: testing.existing-block-scalar-column-zero-test
+      status: answered
+    - question_id: technical-requirement.prior-feature-docs
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
-    answered_at: "2026-10-08T19:43:30+09:00"
+    answered_at: '2026-10-08T19:43:30+09:00'
     source: batch_policy
     answer_mode: select
-    selected_option_ids: [derive_from_task_description]
+    selected_option_ids:
+    - derive_from_task_description
     freeform: null
-    normalized_answer: "queue-stop-guard-nonascii-blank-state"
+    normalized_answer: queue-stop-guard-nonascii-blank-state
+  testing.existing-block-scalar-column-zero-test:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-08T19:48:51+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - rewrite_to_new_behavior
+    freeform: null
+    normalized_answer: 既存テストを同じフィクスチャのまま新しい挙動（0 桁目の U+3000 行でブロックスカラーが終わらず、      - 'x と      y' が本文として走査に出る）に書き換える
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); Codex consulted (1 turn, codex harness), suggestion mapped; not chosen: delete_and_cover_in_new_tests; key points: rewriting the same fixture to assert both lines are returned directly verifies the block scalar state is kept; Opus escalation: not run'
+  technical-requirement.prior-feature-docs:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-08T19:48:51+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - leave_history_new_spec_supersedes
+    freeform: null
+    normalized_answer: 前の feature の文書は変えず、今回の SPEC に前の FR2 のブロックスカラー／プレーン継続部分を変更し、値の開始位置での FR2 は維持すると明記する
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); Codex consulted (1 turn, codex harness), suggestion mapped; not chosen: amend_prior_spec; key points: the prior round1 review deferred this finding as conforming to old FR2/A2; keep prior docs as historical spec/verification record and state the supersession in the new SPEC; Opus escalation: not run'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-08T19:48:51+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design ステップは skip（UI なし）
+    resolution_note: 'gate: create-spec.design-step; policy option decide_autonomously = accept the analyst recommendation (skip); not chosen: run'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:50ed634f454bb7736791dfecc82e17b6b3ce8db1a224395fe013aab561dbaefd
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:50ed634f454bb7736791dfecc82e17b6b3ce8db1a224395fe013aab561dbaefd
+  output_digest: sha256:8320415c6724cc3721e270deff4ae6896e6582ac22aaba127178e5b50608a4d1
 artifacts: []
 patches: []
 progress_fingerprint: null
