@@ -1,0 +1,95 @@
+task_id: task0003
+baseline_failures: []
+# Re-executed after implementation: `python3 -m unittest discover -s tests`
+# ran 9083 tests (9045 inherited + 38 new), OK, skipped=1.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reproduction_evaluation_contract.TestAC1OutputObject.test_shipped_contract_has_no_output_object_problems
+      - tests.test_reproduction_evaluation_contract.TestAC1OutputObject.test_forged_contract_without_not_reproduced_reason_fails
+      - tests.test_reproduction_evaluation_contract.TestAC1OutputObject.test_forged_contract_with_not_reproduced_before_existing_reasons_fails
+      - tests.test_reproduction_evaluation_contract.TestAC1OutputObject.test_forged_contract_without_reproduction_finding_field_fails
+      - tests.test_reproduction_evaluation_contract.TestAC1OutputObject.test_forged_contract_with_reproduction_in_wrong_position_fails
+    red_confirmed: true
+    red_reason: >-
+      test_shipped_contract_has_no_output_object_problems failed before the
+      edit: finding fields are the existing ten without `reproduction`;
+      dismissed_sites reasons are only the four existing ones.
+  AC-2:
+    tests:
+      - tests.test_reproduction_evaluation_contract.TestAC2ReproductionVerificationSection.test_section_heading_is_exactly_one_level_two_heading
+      - tests.test_reproduction_evaluation_contract.TestAC2ReproductionVerificationSection.test_shipped_contract_has_no_verification_problems
+      - tests.test_reproduction_evaluation_contract.TestAC2ReproductionVerificationSection.test_missing_section_is_a_problem
+      - tests.test_reproduction_evaluation_contract.TestAC2ReproductionVerificationSection.test_forged_not_reproduced_that_stays_in_findings_fails
+      - tests.test_reproduction_evaluation_contract.TestAC2ReproductionVerificationSection.test_forged_not_reproduced_on_failure_to_confirm_fails
+      - tests.test_reproduction_evaluation_contract.TestAC2ReproductionVerificationSection.test_forged_reproduced_that_is_dismissed_fails
+    red_confirmed: true
+    red_reason: >-
+      test_shipped_contract_has_no_verification_problems failed before the
+      edit: "no single `## Reproduction Verification` heading".
+  AC-3:
+    tests:
+      - tests.test_reproduction_evaluation_contract.TestAC3NoStepsAndUnverifiable.test_shipped_contract_has_no_judgment_problems
+      - tests.test_reproduction_evaluation_contract.TestAC3NoStepsAndUnverifiable.test_forged_no_steps_dismissal_fails
+      - tests.test_reproduction_evaluation_contract.TestAC3NoStepsAndUnverifiable.test_forged_unverifiable_carried_at_high_without_own_reading_fails
+      - tests.test_reproduction_evaluation_contract.TestAC3NoStepsAndUnverifiable.test_forged_unverifiable_dismissed_on_that_ground_fails
+      - tests.test_reproduction_evaluation_contract.TestAC3NoStepsAndUnverifiable.test_forged_without_read_budget_exhaustion_fails
+    red_confirmed: true
+    red_reason: >-
+      test_shipped_contract_has_no_judgment_problems failed before the edit:
+      "no Reproduction Verification section".
+  AC-4:
+    tests:
+      - tests.test_reproduction_evaluation_contract.TestAC4UntrustedReproductionAndSharedBudget.test_shipped_contract_has_no_safety_problems
+      - tests.test_reproduction_evaluation_contract.TestAC4UntrustedReproductionAndSharedBudget.test_forged_contract_that_executes_reproduction_fails
+      - tests.test_reproduction_evaluation_contract.TestAC4UntrustedReproductionAndSharedBudget.test_forged_contract_without_network_and_package_rule_fails
+      - tests.test_reproduction_evaluation_contract.TestAC4UntrustedReproductionAndSharedBudget.test_forged_contract_with_raised_budget_fails
+    red_confirmed: true
+    red_reason: >-
+      test_shipped_contract_has_no_safety_problems failed before the edit:
+      "reproduction is not declared untrusted reviewer output", "Read-Only
+      Constraint lacks 'Reproduction verification'", "Read-Only Constraint
+      lacks 'same fixed'", no budget rule, no method rule.
+  AC-5:
+    tests:
+      - tests.test_reproduction_evaluation_contract.TestAC5CarriedNotReproducedEntry.test_shipped_input_block_describes_the_entry
+      - tests.test_reproduction_evaluation_contract.TestAC5CarriedNotReproducedEntry.test_shipped_section_dismisses_same_site_without_reverifying
+      - tests.test_reproduction_evaluation_contract.TestAC5CarriedNotReproducedEntry.test_forged_input_block_without_entry_shape_fails
+      - tests.test_reproduction_evaluation_contract.TestAC5CarriedNotReproducedEntry.test_forged_input_block_without_backward_compat_note_fails
+      - tests.test_reproduction_evaluation_contract.TestAC5CarriedNotReproducedEntry.test_forged_section_that_verifies_the_carried_site_again_fails
+      - tests.test_reproduction_evaluation_contract.TestAC5CarriedNotReproducedEntry.test_forged_section_matching_non_security_findings_fails
+    red_confirmed: true
+    red_reason: >-
+      test_shipped_input_block_describes_the_entry failed before the edit:
+      "round_context bullet lacks 'not-reproduced entries'" and the entry
+      keys; test_shipped_section_dismisses_same_site_without_reverifying
+      failed because the section did not exist.
+  AC-6:
+    tests:
+      - tests.test_reproduction_evaluation_contract.TestAC6EvaluatorAgent.test_shipped_agent_has_no_problems
+      - tests.test_reproduction_evaluation_contract.TestAC6EvaluatorAgent.test_forged_agent_without_not_reproduced_reason_fails
+      - tests.test_reproduction_evaluation_contract.TestAC6EvaluatorAgent.test_forged_agent_without_citation_fails
+      - tests.test_reproduction_evaluation_contract.TestAC6EvaluatorAgent.test_forged_agent_without_no_execution_statement_fails
+      - tests.test_reproduction_evaluation_contract.TestAC6EvaluatorAgent.test_forged_agent_restating_round_summary_fails
+      - tests.test_reproduction_evaluation_contract.TestAC6EvaluatorAgent.test_forged_agent_restating_source_run_ids_fails
+      - tests.test_reproduction_evaluation_contract.TestAC6EvaluatorAgent.test_agent_keeps_deferring_the_field_lists_to_the_contract
+    red_confirmed: true
+    red_reason: >-
+      test_shipped_agent_has_no_problems failed before the edit: "Step 2
+      does not list `not reproduced` after the four reasons", the contract's
+      section is not cited, no verification duty, no no-execution statement.
+  AC-7:
+    tests:
+      - tests.test_reproduction_evaluation_contract.TestAC7OwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_review_evaluation_contract
+      - tests.test_review_phase_llm_led
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_review_evaluation_contract and tests.test_review_phase_llm_led
+      (which read the changed contract and evaluator agent files) detect
+      weakening of the pinned wording; no red state occurred for this change.
+      The stdlib-import test passed on first run (the module was written with
+      standard-library imports only), and the full-suite criterion was already
+      green at baseline.
