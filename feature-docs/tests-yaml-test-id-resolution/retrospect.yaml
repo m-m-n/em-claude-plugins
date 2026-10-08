@@ -1,0 +1,30 @@
+feature: tests-yaml-test-id-resolution
+collected_at: "2026-10-09T03:20:00+09:00"
+session_ids: [01a11cbc-1439-7484-a4d8-3cadf9b246d2]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "コード調査込みの最終読みで規模 2（複数モジュールにまたがる新ロジック）の確信度 0.84 となり full を採用"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.98, confidence: 0.47}
+        observed_at: "2026-10-09T00:17:16+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 2.03, confidence: 0.84}
+        observed_at: "2026-10-09T00:25:16+09:00"
+    pre_survey_estimate:
+      files_expected: 135
+      changed_lines_approx: 2300
+      change_containment: multiple_modules
+      body_change_kind: new_logic
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1: architecture#0 と spec#0 が review_data_too_large でスキップされた（変更 231 記録の大きな diff）。skip_reason が retryable 表に無く、batch-audit に記録したうえで次のチェーンへ 1 段進めた。retryable 表への追加を検討する余地がある"
+  - "review round 1 の medium/low 7 件は auto-fix 対象外で unresolved のまま。triage_filing は executed: false で起票されていない"
+  - "b879abae03b58587: 既存 unittest への置き換えで外した説明を red_reason に追記しない解釈は計画（SC-3）が意図して採ったもの。62 記録・761 行に及ぶため、計画段階で記録の情報損失を確認する余地がある"
