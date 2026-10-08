@@ -1,0 +1,59 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 9045 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and the sha256 pin refresh: Ran 9113 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reproduction_review_phase_workflow.TestAC1CapNormalizeAndDedupe.test_reproduction_capped_at_4096_bytes_with_same_marker
+      - tests.test_reproduction_review_phase_workflow.TestAC1CapNormalizeAndDedupe.test_empty_or_whitespace_only_becomes_null
+      - tests.test_reproduction_review_phase_workflow.TestAC1CapNormalizeAndDedupe.test_non_security_originating_perspective_gets_null
+      - tests.test_reproduction_review_phase_workflow.TestAC1CapNormalizeAndDedupe.test_originating_perspective_is_never_an_aggregation_category
+      - tests.test_reproduction_review_phase_workflow.TestAC1CapNormalizeAndDedupe.test_dedupe_merge_keeps_longest_non_null_reproduction
+      - tests.test_reproduction_review_phase_workflow.TestAC1CapNormalizeAndDedupe.test_existing_cap_sentence_is_kept_in_step_4
+    red_confirmed: true
+    red_reason: "Phase R3b step 4 had no reproduction text: AssertionError 'longest non-null `reproduction`' not found in the dedupe paragraph; AssertionError 'empty or whitespace-only' / 'originating perspective' / 'never a category assigned later during aggregation' not found in the text after the existing cap sentence"
+  AC-2:
+    tests:
+      - tests.test_reproduction_review_phase_workflow.TestAC2VerificationParagraph
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found, because the '**Reproduction verification on orchestrator paths**' paragraph did not exist in Phase R3b"
+  AC-3:
+    tests:
+      - tests.test_reproduction_review_phase_workflow.TestAC3VerifierConstraints
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found, because the verification paragraph carrying the verifier constraints did not exist"
+  AC-4:
+    tests:
+      - tests.test_reproduction_review_phase_workflow.TestAC4PhaseR4Exclusion.test_candidate_gate_excludes_findings_declined_by_verification
+      - tests.test_reproduction_review_phase_workflow.TestAC4PhaseR4Exclusion.test_residual_count_excludes_them_too
+      - tests.test_reproduction_review_phase_workflow.TestAC4PhaseR4Exclusion.test_loop_termination_runs_verification_before_the_decision
+      - tests.test_reproduction_review_phase_workflow.TestAC4PhaseR4Exclusion.test_editor_finding_json_excludes_reproduction
+      - tests.test_reproduction_review_phase_workflow.TestAC4PhaseR4Exclusion.test_editor_dispatch_does_not_name_reproduction_as_a_handed_field
+    red_confirmed: true
+    red_reason: "Phase R4 did not mention reproduction verification or `reproduction`: AssertionError, the regexes 'excludes a finding `declined` by reproduction verification' and 'residual critical/high count excludes (it|them) too' found no match; the review-editor hand-off passage had no 'excludes `reproduction`'"
+  AC-5:
+    tests:
+      - tests.test_reproduction_review_phase_workflow.TestAC5RecordAndCarryOver.test_r5_finding_entry_carries_reproduction
+      - tests.test_reproduction_review_phase_workflow.TestAC5RecordAndCarryOver.test_r5_reproduction_is_the_normalized_value_null_without_steps
+      - tests.test_reproduction_review_phase_workflow.TestAC5RecordAndCarryOver.test_r5_dismissed_sites_may_carry_not_reproduced
+      - tests.test_reproduction_review_phase_workflow.TestAC5RecordAndCarryOver.test_step8_builds_entries_from_not_reproduced_dismissed_sites
+      - tests.test_reproduction_review_phase_workflow.TestAC5RecordAndCarryOver.test_step8_only_while_the_sites_file_is_unchanged_since_head_commit
+      - tests.test_reproduction_review_phase_workflow.TestAC5RecordAndCarryOver.test_step8_legacy_records_produce_the_same_round_context
+      - tests.test_reproduction_review_phase_workflow.TestAC5RecordAndCarryOver.test_suppression_drops_security_finding_same_site_with_such_entry
+    red_confirmed: true
+    red_reason: "Phase R0 step 8, R3b suppression and R5 had no reproduction text: AssertionError, no regex match for 'one not-reproduced entry per persisted `dismissed_sites` entry', 'only while that site's `file` is unchanged since the recording round's `scope.head_commit`', 'also drops? a `security` finding', or a '    reproduction: ' line in the R5 findings example"
+  AC-6:
+    tests:
+      - tests.test_reproduction_review_phase_workflow.TestAC6PinnedTextAndSiblingSuites
+      - tests.test_review_phase_llm_led
+      - tests.test_threat_model_review_phase
+      - tests.test_sca_axis_review_phase_r0_r3
+      - tests.test_review_gate_abort_review_phase
+      - tests.test_muse_consent_no_new_questions
+    red_confirmed: false
+    red_reason: "A preservation criterion: the user-question count of 9, the absence of gate_id: and batch-policies.yaml, the single evaluator dispatch literal and the five existing modules all held before any edit, so those checks passed in the baseline and no red state occurred for them. Only test_new_paragraph_states_no_new_question_and_no_new_gate and test_new_paragraph_adds_no_batch_branch were observed failing (ValueError: substring not found, paragraph absent); they cover the new paragraph, not the preserved counts. The existing five modules detect any regression of these pins; their review-phase.md sha256 pin in tests/test_tier_record_schema_v2.py was refreshed in place."
+  AC-7:
+    tests:
+      - tests.test_reproduction_review_phase_workflow.TestAC7StandardLibraryOnly
+    red_confirmed: false
+    red_reason: "The module is itself the deliverable, so no state existed in which the stdlib-only check could fail before the module was written; the check was green on first run. Its self-check shows a forged third-party import is detected. python3 -m unittest discover -s tests passes (9113 tests, OK)."
