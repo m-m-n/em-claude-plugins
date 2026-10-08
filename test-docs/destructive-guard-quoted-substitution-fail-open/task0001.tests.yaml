@@ -4,14 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "引用符(rm-recursive): 対象全体を二重引用符で囲んだ $(pwd) 直後に親参照付きパスが続く形は、裸形と同じ deny — 引用符の有無は判定を変えない"
-      - "引用符(rm-recursive): 同じ並び(置換直後に親参照付きパスが続く形)を単一引用符で囲んでも裸形と同じ deny — クォート種別で判定は変わらない"
-      - "引用符(rm-recursive): バッククォート置換を二重引用符で囲み直後に親参照付きパスが続く形も裸形と同じ deny — 両スペル対称性のバッククォート側"
-      - "引用符(rm-recursive): 二重引用符で囲み着地先を `dist` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
-      - "引用符(rm-recursive): 二重引用符で囲み着地先を `node_modules` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
-      - "引用符(rm-recursive): 二重引用符で囲み着地先を `.cache` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
-      - "引用符(rm-recursive): 二重引用符の内側で置換の前に実テキストが空白なしで密着し、直後に親参照付きパスが続く形も deny — 裸形の隣接方向バリエーション(前方密着)"
-      - "引用符(rm-recursive): 二重引用符の内側で置換の後ろに実テキストが空白なしで密着する形(置換が対象の末尾に隣接する裸形の引用符付き双子)も同じ理由で deny — 隣接方向バリエーション(後方密着)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       このタスクの「テスト」は destructive-guard-cases.json への行追加そのもので、
@@ -24,22 +17,17 @@ acceptance_tests:
       ok であることを確認済み。
   AC-2:
     tests:
-      - "引用符(rm-recursive): 対象全体を二重引用符で囲んだ $(pwd) 直後に親参照付きパスが続く形は、裸形と同じ deny — 引用符の有無は判定を変えない"
-      - "引用符(rm-recursive): 同じ並び(置換直後に親参照付きパスが続く形)を単一引用符で囲んでも裸形と同じ deny — クォート種別で判定は変わらない"
-      - "引用符(rm-recursive): バッククォート置換を二重引用符で囲み直後に親参照付きパスが続く形も裸形と同じ deny — 両スペル対称性のバッククォート側"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "AC-1 と同じ characterization test。二重引用符/単一引用符/バッククォート+二重引用符の3種を1件ずつ含むことを目視でも確認した。"
   AC-3:
     tests:
-      - "引用符(rm-recursive): 二重引用符で囲み着地先を `dist` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
-      - "引用符(rm-recursive): 二重引用符で囲み着地先を `node_modules` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
-      - "引用符(rm-recursive): 二重引用符で囲み着地先を `.cache` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "AC-1 と同じ characterization test。dist/node_modules/.cache の3バリエーションを1件ずつ含む。"
   AC-4:
     tests:
-      - "引用符(rm-recursive): 二重引用符の内側で置換の前に実テキストが空白なしで密着し、直後に親参照付きパスが続く形も deny — 裸形の隣接方向バリエーション(前方密着)"
-      - "引用符(rm-recursive): 二重引用符の内側で置換の後ろに実テキストが空白なしで密着する形(置換が対象の末尾に隣接する裸形の引用符付き双子)も同じ理由で deny — 隣接方向バリエーション(後方密着)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "AC-1 と同じ characterization test。置換の前密着(prefix$(pwd)/../tmp/scratch)と後密着(tmp/scratch$(pwd))の両方を含む。"
   AC-5:

@@ -1,0 +1,44 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 9428 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests re-run on the finished range1 cleanup: Ran 9428 tests, OK (skipped=1)
+# Data-only task: it edits the tests values of the range1 records (SC-4) and
+# writes id-mapping-range1.md. No test is added, renamed or deleted, so every
+# criterion is verified by a scratch check that lives outside the repository
+# (SC-1 including the at-least-one-test condition, SC-2, and a base-to-HEAD
+# diff inspection against 8d5075a1) and none has an executable red.
+# Existing-test search, by repository-relative path (test-docs/, *.tests.yaml,
+# id-mapping) and by basename (taskNNNN.tests.yaml) over tests/: the only hits
+# are tests/test_exit4_ac2_test_id_drift.py (reads
+# test-docs/exit4-tip-argument/task0002.tests.yaml, outside range1 and left
+# unchanged), tests/test_codex_wrapper_fallback_removal_integrated_checks.py
+# (names test-docs/codex-wrapper-fallback-removal/task0002.tests.yaml only as a
+# string inside forged path lists and never opens it) and
+# tests/test_check_plugin_invariants.py (writes a synthetic task0099 record
+# under a temporary root). None reads a range1 tests value. The record check
+# module of task0001 (tests/test_tests_yaml_id_resolution.py) is built in
+# parallel and is absent from this worktree.
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists: the record check module of task0001 is absent from this worktree and no existing test reads the range1 tests values (search recorded above). Verified by the scratch check outside the repository (SC-1 syntax gate, structural resolution and loader confirmation, with at least one test in the loader result). At the base 1761 of the 3731 range1 tests elements failed it; after the cleanup the check reports 0 failures over 168 range1 records and 3035 elements."
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists, same search result as AC-1. The scratch check reports 0 failures, so no runner script path, free text, abbreviation or wildcard remains in any range1 tests list. Inspection of the base-to-HEAD diff shows 70 non-unittest elements removed with their text appended per SC-5 (in 45 ACs, every one of which already had a red_reason), and non-unittest elements that an existing unittest verifies replaced by that test (736 occurrences, basis runner-replaced). 38 ACs that lost every element are tests: [] (192 empty ACs in total, 154 at the base)."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists, same search result as AC-1. A scratch script read id-mapping-range1.md back and compared it with the base-to-HEAD multiset difference per File and AC: 1761 rows against 1761 removed occurrences, File, AC and Old ID equal as multisets. Every basis is an SC-3 category (normalized 522, abbreviation 130, renamed 218, runner-replaced 736, non-unittest-removed 70, no-counterpart 85; no wildcard element exists in range1), every renamed row cites a commit id that git cat-file resolves (36 distinct commits), and every New ID passes the scratch SC-1 check."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists, same search result as AC-1. A scratch script parsed the 112 changed range1 records at the base and now with a YAML parser and the SC-2 reader: the AC key order, every top-level key and every field other than tests and red_reason are equal, red_confirmed, baseline_failures and final_failures are unchanged, no red_reason key was added, and in all 45 changed red_reason values the new parsed value starts with the old parsed value followed by the SC-5 sentence. The lines outside the tests values and the red_reason scalars are identical."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists, same search result as AC-1. The scratch SC-2 reader reads all 168 range1 records (1139 ACs) without any extraction error, before and after the change."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists, same search result as AC-1. git diff --name-only against the base lists only range1 records under test-docs plus this task's two files in test-docs/tests-yaml-test-id-resolution/; no record of range2 or range3 and nothing under tests/ changed. The full suite (python3 -m unittest discover -s tests) was recorded before any edit (0 failures, 9428 tests) and re-run after the change with no failure absent from that baseline."

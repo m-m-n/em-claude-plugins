@@ -98,7 +98,7 @@ acceptance_tests:
       - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_terminal_state_is_stopped_not_completed
       - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_executed_step_is_verify
       - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_detail_names_step_c_completion
-      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_one_line_per_run_emitted_right_after_step_c_report
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_one_result_per_run_emitted_right_after_step_c_report
       - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_existing_section_content_is_retained
     red_confirmed: true
     red_reason: >-

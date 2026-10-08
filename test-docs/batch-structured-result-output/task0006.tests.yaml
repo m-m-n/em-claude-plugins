@@ -16,7 +16,7 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
     red_confirmed: false
     red_reason: >
       Both registries already read 0.1.82 before this edit, so equality
@@ -26,11 +26,11 @@ acceptance_tests:
       same two values.
   AC-2:
     tests:
-      - test_batch_structured_result_output_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
-      - test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
-      - test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
-      - test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_version_tuple_orders_two_digit_patch_correctly
-      - test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+      - tests.test_batch_structured_result_output_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
+      - tests.test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_version_tuple_orders_two_digit_patch_correctly
+      - tests.test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
     red_confirmed: true
     red_reason: >
       Before either manifest was edited, running
@@ -46,8 +46,8 @@ acceptance_tests:
       a red/green transition.
   AC-3:
     tests:
-      - test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
+      - tests.test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
     red_confirmed: false
     red_reason: >
       `_marketplace_entry` looks the entry up by its `name` field from the
@@ -58,8 +58,8 @@ acceptance_tests:
       test_entry_lookup_fails_on_a_missing_entry_name passing.
   AC-4:
     tests:
-      - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - tests.test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
     red_confirmed: false
     red_reason: >
       This task never touches the em-review plugin or its marketplace
@@ -70,10 +70,10 @@ acceptance_tests:
       the matcher rejects each identity field, and the version, when forged.
   AC-5:
     tests:
-      - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_plugin_manifest_nonversion_content_unchanged
-      - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_digest_check_rejects_a_mutated_nonversion_field
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_digest_check_ignores_only_the_version_field
+      - tests.test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_plugin_manifest_nonversion_content_unchanged
+      - tests.test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_digest_check_rejects_a_mutated_nonversion_field
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_digest_check_ignores_only_the_version_field
     red_confirmed: false
     red_reason: >
       The digest strips the `version` field by design, so it is
@@ -87,11 +87,11 @@ acceptance_tests:
       assertion ran).
   AC-6:
     tests:
-      - test_batch_structured_result_output_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
-      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_for_malformed_version_shape
+      - tests.test_batch_structured_result_output_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
+      - tests.test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_for_malformed_version_shape
     red_confirmed: false
     red_reason: >
       Discovery under `python3 -m unittest discover -s tests` and the

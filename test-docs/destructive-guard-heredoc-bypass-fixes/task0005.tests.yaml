@@ -59,7 +59,7 @@ acceptance_tests:
       - "tests.test_destructive_guard_extglob_units.TestVerdicts.test_ts5_with_a_differing_prefix_asks"
       - "tests.test_destructive_guard_extglob_units.TestVerdicts.test_t2_ac_4_7_allows"
       - "tests.test_destructive_guard_extglob_units.TestVerdicts.test_the_three_named_inputs_are_case_table_entries"
-      - "run-destructive-guard.py: every case-table entry and the unattended-downgrade case (775/775)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >
       A dedicated new module is out of scope, but the existing run-destructive-guard.py
@@ -84,8 +84,7 @@ acceptance_tests:
       attribute of a map; no loop and no pass over the input was added.
   AC-6:
     tests:
-      - "python3 em-workflow/hooks/tests/run-destructive-guard.py (775/775 passed)"
-      - "python3 -m unittest discover -s tests (8452 tests OK, skipped=1)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - "tests.test_destructive_guard_extglob_units.TestModuleContract.test_hook_and_test_import_only_the_standard_library"
       - "tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_hook_and_test_import_only_the_standard_library"
     red_confirmed: false
@@ -96,3 +95,5 @@ acceptance_tests:
       green before and after the change, so no red state occurred for this change.
       tests/test_destructive_guard_lexer_agreement.py is unmodified (git diff is empty) and
       no import was added to the hook.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests (8452 tests OK, skipped=1)

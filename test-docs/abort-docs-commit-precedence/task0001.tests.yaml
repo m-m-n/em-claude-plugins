@@ -22,7 +22,7 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_abort_terminal_commit_precedence.TestCollisionBindingStated.test_collision_binding_stated
+      - tests.test_abort_terminal_commit_precedence.TestCollisionBindingStated.test_collision_binding_stated
     red_confirmed: true
     red_reason: >-
       Against the pre-change document (batch-terminal-line.md's paragraph
@@ -33,7 +33,7 @@ acceptance_tests:
       against the frozen verbatim sample.
   AC-2:
     tests:
-      - test_abort_terminal_commit_precedence.TestTerminalStopAndRetryCarveoutStated.test_terminal_stop_and_retry_carveout_stated
+      - tests.test_abort_terminal_commit_precedence.TestTerminalStopAndRetryCarveoutStated.test_terminal_stop_and_retry_carveout_stated
     red_confirmed: true
     red_reason: >-
       Against the pre-change document: assertion failed: "'ends the run'
@@ -41,7 +41,7 @@ acceptance_tests:
       TestNegativeProofs.test_terminal_stop_carveout_matcher_rejects_pre_change_paragraph.
   AC-3:
     tests:
-      - test_abort_terminal_commit_precedence.TestWrittenButUncommittedDistinctionStated.test_written_but_uncommitted_distinction_stated
+      - tests.test_abort_terminal_commit_precedence.TestWrittenButUncommittedDistinctionStated.test_written_but_uncommitted_distinction_stated
     red_confirmed: true
     red_reason: >-
       Against the pre-change document: assertion failed: "'exists in the
@@ -50,7 +50,7 @@ acceptance_tests:
       TestNegativeProofs.test_written_but_uncommitted_matcher_rejects_pre_change_paragraph.
   AC-4:
     tests:
-      - test_abort_terminal_commit_precedence.TestScopeConfinedStated.test_scope_confined_stated
+      - tests.test_abort_terminal_commit_precedence.TestScopeConfinedStated.test_scope_confined_stated
     red_confirmed: true
     red_reason: >-
       Against the pre-change document: assertion failed: "'confined to
@@ -63,7 +63,7 @@ acceptance_tests:
       a dedicated red/green cycle.
   AC-5:
     tests:
-      - test_abort_terminal_commit_precedence.TestNfr2AnchorsPreserved.test_nfr2_anchors_preserved
+      - tests.test_abort_terminal_commit_precedence.TestNfr2AnchorsPreserved.test_nfr2_anchors_preserved
     red_confirmed: false
     red_reason: >-
       Pure regression guard: every NFR2 anchor phrase and the no-blank-line
@@ -76,13 +76,13 @@ acceptance_tests:
       criterion to go red against.
   AC-6:
     tests:
-      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_collision_binding_matcher_rejects_pre_change_paragraph
-      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_terminal_stop_carveout_matcher_rejects_pre_change_paragraph
-      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_written_but_uncommitted_matcher_rejects_pre_change_paragraph
-      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_scope_confined_matcher_rejects_pre_change_paragraph
-      - test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_carries_an_nfr2_anchor
-      - test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_carries_the_three_phase_specific_stop_points
-      - test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_does_not_yet_state_the_collision_binding
+      - tests.test_abort_terminal_commit_precedence.TestNegativeProofs.test_collision_binding_matcher_rejects_pre_change_paragraph
+      - tests.test_abort_terminal_commit_precedence.TestNegativeProofs.test_terminal_stop_carveout_matcher_rejects_pre_change_paragraph
+      - tests.test_abort_terminal_commit_precedence.TestNegativeProofs.test_written_but_uncommitted_matcher_rejects_pre_change_paragraph
+      - tests.test_abort_terminal_commit_precedence.TestNegativeProofs.test_scope_confined_matcher_rejects_pre_change_paragraph
+      - tests.test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_carries_an_nfr2_anchor
+      - tests.test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_carries_the_three_phase_specific_stop_points
+      - tests.test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_does_not_yet_state_the_collision_binding
     red_confirmed: true
     red_reason: >-
       This AC's own verifiable outcome IS the negative-proof suite passing
@@ -97,12 +97,12 @@ acceptance_tests:
       empty or unrelated string.
   AC-7:
     tests:
-      - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
-      - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
-      - test_plugin_version_parity (existing, unmodified -- past-baseline + registry-agreement, run as part of the full suite)
-      - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
-      - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
-      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+      - tests.test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_well_formed_and_at_least_0_2_2
+      - tests.test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_well_formed_at_least_0_2_2_and_agrees_with_manifest
+      - tests.test_plugin_version_parity
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+      - tests.test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_well_formed_and_at_least_0_2_1
+      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_well_formed_and_at_least_0_2_1
     red_confirmed: true
     red_reason: >-
       Before this task's manifest edit, both files read 0.2.1: the two new

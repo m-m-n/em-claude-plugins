@@ -82,11 +82,9 @@ acceptance_tests:
       stay green unmodified", which the full-suite pass demonstrates.
   AC-6:
     tests:
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_seven_level_2_headings_in_order
-      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_no_document_wording_states_a_terminal_state_count
-      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_nine_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
       - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
-      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_in_the_contract_document
     red_confirmed: false
     red_reason: >-
       Non-regression guard: these pre-existing tests are unaffected by this

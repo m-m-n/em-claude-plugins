@@ -4,7 +4,7 @@ final_failures: []             # re-executed after the implementation (a differe
 acceptance_tests:
   AC-1:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error AC-1.1, AC-1.2"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the cases appended and the hook unchanged (the HEAD copy of
@@ -15,7 +15,7 @@ acceptance_tests:
       swallowed as its body.
   AC-2:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error AC-2.1 to AC-2.8"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Same unchanged-hook run: all eight AC-2 cases (x+=(, x=(a b, declare -a,
@@ -23,7 +23,7 @@ acceptance_tests:
       got=allow.
   AC-2b:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error AC-2b.1, AC-2b.2, AC-2b.3, AC-2b.4"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Same unchanged-hook run: AC-2b.1 (open double quote) and AC-2b.4 (trailing
@@ -33,7 +33,7 @@ acceptance_tests:
       keeps them deny. The criterion as a whole (all four deny) failed.
   AC-3:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error AC-3"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Same unchanged-hook run: `cat <<'A'; x=( <<B ...` FAILed with got=allow
@@ -41,7 +41,7 @@ acceptance_tests:
       its body).
   AC-4:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error AC-4"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       The allow case already passed with the unchanged hook (the real heredoc on
@@ -50,7 +50,7 @@ acceptance_tests:
       into command lines. No red state occurred for this criterion.
   AC-5:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error AC-5.1, AC-5.2, AC-5.3, AC-5.4, AC-5.5"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       All five cases (four allow, one deny) already passed with the unchanged
@@ -60,9 +60,8 @@ acceptance_tests:
       occurred for this criterion.
   AC-6:
     tests:
-      - "em-workflow/hooks/tests/run-destructive-guard.py (all 669 entries)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_existing_cases_stay_in_place_and_new_ones_come_after
-      - "python3 -m unittest discover -s tests (all 8414 tests)"
     red_confirmed: true
     red_reason: >-
       The case runner, one of the two commands of the criterion, was observed
@@ -71,11 +70,13 @@ acceptance_tests:
       the new table (verified by comparing the parsed JSON: the first 627
       entries are equal; deny 346 -> 378, ask 117 -> 118, allow 160 -> 168) and
       both commands pass after the change.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests (all 8414 tests)
   AC-7:
     tests:
-      - tests.test_destructive_guard_lexer_agreement (all 78 tests, including TestStageAgreement over every table command)
+      - tests.test_destructive_guard_lexer_agreement
       - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners.test_budget_exceeded_is_an_ask_never_an_allow
-      - "em-workflow/hooks/tests/run-destructive-guard.py: heredoc-syntax-error E-9 (stress: 60 lines of 40 pending operators + a direct-position <<), E-10 (scan-budget ask)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       No red state was observed for this criterion. The existing agreement

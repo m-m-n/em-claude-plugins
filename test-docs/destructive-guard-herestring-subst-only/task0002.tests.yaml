@@ -37,12 +37,13 @@ acceptance_tests:
       このテストが subprocess.TimeoutExpired: ... run-destructive-guard.py ... timed out after
       120 seconds で落ちるのを観測した。
   AC-5:
-    tests:
-      - "python3 -m unittest discover -s tests"
+    tests: []
     red_confirmed: true
     red_reason: >
       継承した状態の書き出しに対する実行で exit 1（errors=2）。うち 1 件が AC-4 の
       TimeoutExpired。もう 1 件は書き出しに .git が無いための副産物で、赤の根拠には数えない。
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests
   AC-6:
     tests: []
     red_confirmed: false

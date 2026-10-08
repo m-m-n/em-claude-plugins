@@ -7,10 +7,10 @@ acceptance_tests:
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_heading_is_present
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_is_placed_immediately_after_stop_report_section
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_names_the_contract_document
-      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_terminal_line_is_last_line_of_final_message
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_result_is_whole_final_message
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_normal_completion
       - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_the_terminating_stops
-      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_step_c_report_item_points_at_terminal_line
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_step_c_report_item_points_at_structured_result
     red_confirmed: true
     red_reason: >-
       Before the SKILL.md edit, setUpClass raised
@@ -24,7 +24,7 @@ acceptance_tests:
       pointer line, all seven pass.
   AC-2:
     tests:
-      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_wait_turn_emits_no_terminal_line
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_wait_turn_emits_no_result
     red_confirmed: true
     red_reason: >-
       Same setUpClass ValueError as AC-1 (the subsection did not exist yet),

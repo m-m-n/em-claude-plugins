@@ -3,7 +3,7 @@ baseline_failures: []          # both project.components suites were fully green
 final_failures: []             # unchanged: 77/77 (run-destructive-guard.py), 2830/2830 (unittest discover -s tests), both re-run twice with identical output
 acceptance_tests:
   AC-1:
-    tests: ["destructive-guard-cases.json: 変数解決: スクラッチ領域への rm -rf"]
+    tests: []
     red_confirmed: true
     red_reason: >-
       Pre-implementation run of the (already-added) new case against
@@ -11,8 +11,10 @@ acceptance_tests:
       returned ask/rm-unresolvable ("再帰削除の対象 `$X` が変数/グロブで、
       影響範囲を静的に確定できない") instead of the expected allow — `$X`
       was never substituted, so it read as an unresolvable dynamic target.
+
+      Removed from tests (not a unittest ID): destructive-guard-cases.json: 変数解決: スクラッチ領域への rm -rf
   AC-2:
-    tests: ["destructive-guard-cases.json: 変数解決: スクラッチ外への rm -rf"]
+    tests: []
     red_confirmed: true
     red_reason: >-
       Same pre-implementation run: got ask/rm-unresolvable instead of the
@@ -20,10 +22,10 @@ acceptance_tests:
       confirms rule id rm-recursive and a reason built from the resolved
       path: "`rm -r` の対象 `/home/sakura/y` はスクラッチ領域の外。`gio
       trash -- /home/sakura/y` に書き換える…" — not the unexpanded `$X`.
+
+      Removed from tests (not a unittest ID): destructive-guard-cases.json: 変数解決: スクラッチ外への rm -rf
   AC-3:
-    tests:
-      - "destructive-guard-cases.json: 変数解決: ホーム省略形へのrm -rf"
-      - "destructive-guard-cases.json: 変数解決: ルートへのrm -rf"
+    tests: []
     red_confirmed: true
     red_reason: >-
       Pre-implementation both returned ask/rm-unresolvable (target text
@@ -31,10 +33,10 @@ acceptance_tests:
       rule id rm-root for both: `X=~; rm -rf $X` -> "削除対象が `~` —
       ホーム/ルート全体に届く。", `X=/; rm -rf $X` -> "削除対象が `/` —
       ホーム/ルート全体に届く。".
+
+      Removed from tests (not a unittest ID): destructive-guard-cases.json: 変数解決: ホーム省略形へのrm -rf; destructive-guard-cases.json: 変数解決: ルートへのrm -rf
   AC-4:
-    tests:
-      - "destructive-guard-cases.json: 変数解決: 設定ファイルへの書き込み"
-      - "destructive-guard-cases.json: 変数解決: transcript への書き込み"
+    tests: []
     red_confirmed: true
     red_reason: >-
       Pre-implementation both returned allow ("破壊的なパターンに一致しな
@@ -42,12 +44,11 @@ acceptance_tests:
       SELF_CONFIG/TRANSCRIPT. Direct invocation post-implementation
       confirms rule id self-modification for the settings.json case and
       transcript-write for the .jsonl case.
+
+      Removed from tests (not a unittest ID): destructive-guard-cases.json: 変数解決: 設定ファイルへの書き込み; destructive-guard-cases.json: 変数解決: transcript への書き込み
   AC-5:
     tests:
-      - "destructive-guard-cases.json: 変数解決: コマンド接頭辞代入は未解決のまま"
-      - "destructive-guard-cases.json: 変数解決: サブシェル境界で未解決"
-      - "destructive-guard-cases.json: 変数解決: shell -c 境界で未解決"
-      - "destructive-guard-cases.json: 変数解決: 二重代入は未解決のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       The verdict (ask/rm-unresolvable) and reason text for the
@@ -68,8 +69,7 @@ acceptance_tests:
       the verdict itself (ask) was already true before.
   AC-6:
     tests:
-      - "destructive-guard-cases.json: 変数解決: 展開後もグロブが残る"
-      - "destructive-guard-cases.json: 変数解決: 展開後もコマンド置換が残る"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Both sub-cases already returned ask/rm-unresolvable pre-implementation

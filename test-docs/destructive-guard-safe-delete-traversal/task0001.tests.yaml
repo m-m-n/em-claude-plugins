@@ -4,10 +4,7 @@ final_failures: []             # 164/164 passed after implementation
 acceptance_tests:
   AC-1:
     tests:
-      - "スクラッチ外(rm-recursive): `/tmp/../home/sakura/valuable` は正規化後 `/home/sakura/valuable` になりスクラッチルートの外に出るため deny — 親参照でスクラッチ領域から脱出する経路"
-      - "スクラッチ外(rm-recursive): 正規化後は `src` になり safe ルート名と一致しないため deny — 親参照混じりの経路は正規化後の実体で判定される"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `target` と完全一致しない無関係な `targets` は safe 例外の対象外（コンポーネント単位一致）"
-      - "本物(rm-recursive): 親参照を伴わない対照 `/home/sakura/valuable` も同じ理由IDで deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       The 2 existing entries (build/../src, targets) were flipped from
@@ -20,16 +17,7 @@ acceptance_tests:
       coverage rather than a red case.
   AC-2:
     tests:
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `build` と完全一致しない `build-debug` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `dist` と完全一致しない `dist-ssr` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `target` と完全一致しない `target-old` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `coverage` と完全一致しない `coverage.old` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `build` と完全一致しない `build-artifacts` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `dist` と完全一致しない `dist-newstyle` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `coverage` と完全一致しない `coverage-old` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `node_modules` と完全一致しない `node_modules_bak` は safe 例外の対象外（コンポーネント単位一致）"
-      - "スクラッチ外(rm-recursive): 絶対パス `/build` はビルド成果物クラスの対象外（相対パスのみ）で deny"
-      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `foo` で `build` と一致しないためネストした `foo/build` は safe 例外の対象外"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       The 8 build-artifact-typo entries were flipped from allow to deny
@@ -40,14 +28,7 @@ acceptance_tests:
       failures are the observed red for this criterion's core claim.
   AC-3:
     tests:
-      - "スクラッチ外(rm-recursive): 正規化後 `/tmp` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `/tmp` と同じ deny"
-      - "スクラッチ外(rm-recursive): 正規化後 `tmp` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `tmp` と同じ deny"
-      - "スクラッチ外(rm-recursive): 正規化後 `.cache` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `.cache` と同じ deny"
-      - "スクラッチ外(rm-recursive): 正規化後 `/var/tmp` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `/var/tmp` と同じ deny"
-      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `/tmp` は deny — 正規化で末尾スラッシュが畳まれるため `/tmp/` と同じ扱いになった"
-      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `tmp` は deny — 正規化で末尾スラッシュが畳まれるため `tmp/` と同じ扱いになった"
-      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `.cache` は deny — 正規化で末尾スラッシュが畳まれるため `.cache/` と同じ扱いになった"
-      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `/var/tmp` は deny — 正規化で末尾スラッシュが畳まれるため `/var/tmp/` と同じ扱いになった"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       The 4 trailing-slash entries flipped from allow to deny and failed
@@ -56,13 +37,7 @@ acceptance_tests:
       (unaffected, relabeled only to drop the stale asymmetry wording).
   AC-4:
     tests:
-      - "本物: rm 安全先 + リダイレクト (rm -rf /tmp/x > /dev/null)"
-      - "本物: rm 安全先 + 2>&1 (node_modules)"
-      - "本物: rm 安全先のみ (/tmp/x)"
-      - "本物: スクラッチ領域配下のグロブ削除は allow (dist/*)"
-      - "本物: 先頭の `./` は正規化で畳まれ `build` と完全一致するため allow"
-      - "既知の穴(未修正): 裸のコマンド置換 `$(mktemp -d)` は対象ゼロで早期returnし allow"
-      - "既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       This criterion pins the UNCHANGED allow side. None of these entries'
@@ -72,14 +47,11 @@ acceptance_tests:
       purpose is to prove the fix does not regress this side, so a red
       state was never expected here; verified instead by the full-suite
       re-run showing them unchanged at ok both before and after.
+
+      Removed from tests (not a unittest ID): 既知の穴(未修正): 裸のコマンド置換 `$(mktemp -d)` は対象ゼロで早期returnし allow; 既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow
   AC-5:
     tests:
-      - "動的目標(rm-unresolvable): スクラッチルート配下でも `$X` を含む `tmp/$X` は safe 例外に達する前に ask"
-      - "動的目標(rm-unresolvable): 親参照混じりでも $DIR が残るため ask のまま(参照形)"
-      - "動的目標(rm-unresolvable): 親参照混じりでもグロブが残るため ask のまま(グロブ形)"
-      - "動的目標(rm-unresolvable): 親参照混じりでも $DIR が残るため ask のまま(チルダ形)"
-      - "スクラッチ外(rm-recursive): コマンド置換の後にパスが続く形は deny のまま"
-      - "動的目標(rm-unresolvable): スクラッチルート直下のドット始まりグロブ `tmp/.*` は `..` にも一致し得るため safe 例外の対象外"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       `tmp/$X` and `tmp/.*` are new entries that failed against the

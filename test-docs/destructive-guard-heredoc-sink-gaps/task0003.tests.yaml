@@ -6,50 +6,34 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.1: 単一引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.2: 二重引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.3: 複数行の二重引用符が閉じた後のコメント内 <<EOF は演算子ではなく、続く rm -rf 行は deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.4: 単一引用符内の <<EOF は演算子ではなく、続く git reset --hard 行は実コマンドとして deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: "Run against the pre-change guard before any guard edit (cases appended first): each of the four AC-5 forms FAILed with expected deny, got allow ([destructive-guard] 破壊的なパターンに一致しない。)"
   AC-2:
     tests:
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-6: 複数行の二重引用符の中の偽の <<EOF は演算子ではなく、引用の続きの行は引用のまま allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "The AC-6 form already returned allow with the pre-change guard, so no red state occurred for this case. It is the over-correction guard: the criterion is that the quoted lines stay allow after the change, which holds because the quote state carries across lines."
   AC-3:
     tests:
-      - "run-destructive-guard.py case: bash -c への置換内ヒアドキュメントは deny"
-      - "run-destructive-guard.py case: 外側の文のパイプ先が bash なら置換内ヒアドキュメントも deny"
-      - "run-destructive-guard.py case: 外側の文にパイプ先の sink が無ければ置換内ヒアドキュメントは allow(TS-23 の対照)"
-      - "run-destructive-guard.py case: 2 つ目の演算子はコメント内にあるため、A の区切り後の reset 行は実コマンドとして deny"
-      - "run-destructive-guard.py case: 制御文字 U+0003/U+0004 を挟んでも bash 宛てヒアドキュメントは deny"
-      - "run-destructive-guard.py case: 制御文字を挟んでも bash -c 経由の置換内ヒアドキュメントは deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "A dedicated new module is out of scope, but the existing run-destructive-guard.py cases (case-file lines 428, 434, 435, 455, 456, 457) detect real operators inside command substitutions staying heredocs and a second operator inside a comment capturing nothing; no red state occurred for this change (they PASS before and after)."
   AC-4:
     tests:
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4a: 単一引用符の区切り語 <<'EOF' は引用開始ではなく、終端行の後の rm -rf は deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4a: 二重引用符の区切り語 <<\"EOF\" は引用開始ではなく、終端行の後の rm -rf は deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4b: コメント内の対にならない ' は引用開始ではなく、次行の rm -rf は deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4c: 本物のヒアドキュメント本文内の対にならない ' は引用開始ではなく、終端行の後の rm -rf は deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc task0003 AC-4c: 本物のヒアドキュメント本文内の対にならない \" は引用開始ではなく、終端行の後の rm -rf は deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "As the task plan anticipates, all five AC-4 cases (single-quoted and double-quoted delimiter, comment with an unpaired single quote, heredoc body with an unpaired single quote and with an unpaired double quote) already PASSed against the pre-change guard, which never read delimiter quotes, comments or bodies as quote starts. They guard the new cross-line tracking against doing so; no red state occurred."
   AC-5:
     tests:
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.1: 単一引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.2: 二重引用符内の <<EOF は演算子ではなく、続く rm -rf 行は実コマンドとして deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.3: 複数行の二重引用符が閉じた後のコメント内 <<EOF は演算子ではなく、続く rm -rf 行は deny"
-      - "run-destructive-guard.py case: 18b99bd71e74c8dc AC-5.4: 単一引用符内の <<EOF は演算子ではなく、続く git reset --hard 行は実コマンドとして deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: "The AC-1 cases were appended to the case file before any guard edit; running run-destructive-guard.py against the unmodified guard showed AC-5.1-5.4 FAIL (468/474 passed, 6 FAIL). The result of every added case is listed under added_cases."
   AC-6:
     tests:
-      - "python3 em-workflow/hooks/tests/run-destructive-guard.py (all 455 pre-task cases plus the runner's own unattended-demotion check)"
-      - "python3 -m unittest discover -s tests"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
-    red_reason: "Regression criterion, not a behavior change: the pre-task array is an exact prefix of the new array (verified against git HEAD, 455 entries unchanged) and every pre-task case plus both commands PASS before and after; no red state occurred."
+    red_reason: "Regression criterion, not a behavior change: the pre-task array is an exact prefix of the new array (verified against git HEAD, 455 entries unchanged) and every pre-task case plus both commands PASS before and after; no red state occurred. Removed from tests (not a unittest ID): python3 -m unittest discover -s tests"
 added_cases:
   # Every case appended to destructive-guard-cases.json by this task, in file order.
   # pre_change = result against the unmodified guard (run before the guard edit,

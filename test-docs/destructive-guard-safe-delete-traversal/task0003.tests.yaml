@@ -4,10 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "評価境界(rm-recursive): $(pwd) の直後に親参照付きパスが続く残存テキストは safe 例外に達する前に deny"
-      - "評価境界(rm-recursive): printf 置換の直後に親参照付きパスが続く形も同じ理由で deny"
-      - "評価境界(rm-recursive): バッククォート置換の直後に親参照付きパスが続く形も同じ理由で deny"
-      - "評価境界(rm-recursive): 置換が対象の右側(末尾)に隣接する形でも safe ルート名一致に届かず deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Ran these 4 entries against the pre-fix destructive-guard.py (git HEAD
@@ -21,13 +18,7 @@ acceptance_tests:
       side of the substitution, not just the AC-1-example side.
   AC-2:
     tests:
-      - "rm 安全先のみ"
-      - "rm 安全先 + リダイレクト"
-      - "rm 安全先 + 2>&1"
-      - "本物: スクラッチ領域配下のグロブ削除は allow"
-      - "本物: 先頭の `./` は正規化で畳まれ `build` と完全一致するため allow"
-      - "既知の穴(未修正): 裸のコマンド置換 `$(mktemp -d)` は対象ゼロで早期returnし allow"
-      - "既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       AC-2 is the regression half, not new behavior — these pre-existing
@@ -38,15 +29,11 @@ acceptance_tests:
       the fix (178/178 passed: the same 164 entries plus 14 new ones added by
       this task, 0 removed, 0 changed). No entry in this list, or any other
       pre-existing deny/ask entry, changed its expectation.
+
+      Removed from tests (not a unittest ID): 既知の穴(未修正): 裸のコマンド置換 `$(mktemp -d)` は対象ゼロで早期returnし allow; 既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow
   AC-3:
     tests:
-      - "評価境界(rm-unresolvable): 位置パラメータ代入の後で $@ を使った目標は正規化前に ask"
-      - "評価境界(rm-unresolvable): 裸の $1 を使った目標も正規化前に ask"
-      - "評価境界(rm-unresolvable): ~+ は normalizer が展開しない形のため ask"
-      - "評価境界(rm-unresolvable): ~- も同様に ask"
-      - "評価境界(rm-unresolvable): ~someone も normalizer が展開しない形のため ask"
-      - "評価境界の対照(rm-root): 裸の ~ は従来どおり rm-root で deny — AC-3 の誤検出でないことの確認"
-      - "評価境界の対照(rm-recursive): ~/ 始まりは従来どおり展開されスクラッチ外で deny — AC-3 の誤検出でないことの確認"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Ran the first 5 entries against the pre-fix guard: all 5 got "allow"
@@ -70,10 +57,7 @@ acceptance_tests:
       the AC's positive half (the 5 ask cases) is genuinely red-confirmed.
   AC-4:
     tests:
-      - "決定優先度(D6): tmp/$X の ask より後の /home/sakura/valuable の deny が勝つ"
-      - "決定優先度(D6): 対象の順序を入れ替えても同じ deny が勝つ"
-      - "決定優先度(D6): 先頭セグメントが ask 形でも後続セグメントの rm の deny が勝つ"
-      - "動的目標(rm-unresolvable): スクラッチルート配下でも `$X` を含む `tmp/$X` は safe 例外に達する前に ask"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Ran the first and third entries against the pre-fix guard: both got
@@ -100,8 +84,7 @@ acceptance_tests:
       178/178 passing, including the trailing batch-demotion assertion.
   AC-6:
     tests:
-      - "本物: rm 再帰"
-      - "rm 安全先のみ"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_reason: >-
       Build/determinism outcome, not a single test. Verified: (1) no decision
       path in the diff calls os.path.realpath/os.stat/subprocess or any other

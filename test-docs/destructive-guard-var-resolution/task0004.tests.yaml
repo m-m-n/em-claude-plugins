@@ -4,11 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "本物: find の括弧グループ化でも delete 検知"
-      - "本物: 引用符付き括弧の force push も検知"
-      - "変数解決: 裸のコマンド置換を削除対象にしても allow"
-      - "変数解決: コマンド置換の後にパスが続く削除は deny のまま"
-      - "変数解決: 代入後のクォート済み括弧はスコープを開かない"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       pre-task0004 code: find/git-push cases gave allow (paren scope
@@ -20,21 +16,10 @@ acceptance_tests:
       (git show HEAD of this branch before any task0004 edit): 5/5 red.
       Rule identifiers confirmed by direct invocation: find-delete,
       git-force-push (both match base_commit 1fdb27f exactly).
+
+      Removed from tests (not a unittest ID): 変数解決: 裸のコマンド置換を削除対象にしても allow; 変数解決: 代入後のクォート済み括弧はスコープを開かない
   AC-2:
-    tests:
-      - "変数解決: スクラッチルート自身(/tmp/)の削除は allow"
-      - "変数解決: スクラッチルート自身(tmp/)の削除は allow"
-      - "変数解決: スクラッチルート自身(.cache/)の削除は allow"
-      - "変数解決: スクラッチルート自身(/var/tmp/)の削除は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(build-debug)は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(dist-ssr)は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(target-old)は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(coverage.old)は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(build-artifacts)は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(dist-newstyle)は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(coverage-old)は allow"
-      - "変数解決: スクラッチ名で始まるビルド出力(node_modules_bak)は allow"
-      - "変数解決: 解決済み値のディレクトリ形もスクラッチ領域として許可"
+    tests: []
     red_confirmed: true
     red_reason: >-
       pre-task0004 code applied the round-1 component-boundary containment
@@ -44,11 +29,11 @@ acceptance_tests:
       r2-bare-name-boundary); the resolved-directory-form case also denied
       because normpath drops the trailing slash before the boundary test.
       13/13 red against tmp/pre-task0004-destructive-guard.py.
+
+      Removed from tests (not a unittest ID): 変数解決: スクラッチルート自身(/tmp/)の削除は allow; 変数解決: スクラッチルート自身(tmp/)の削除は allow; 変数解決: スクラッチルート自身(.cache/)の削除は allow; 変数解決: スクラッチルート自身(/var/tmp/)の削除は allow; 変数解決: スクラッチ名で始まるビルド出力(build-debug)は allow; 変数解決: スクラッチ名で始まるビルド出力(dist-ssr)は allow; 変数解決: スクラッチ名で始まるビルド出力(target-old)は allow; 変数解決: スクラッチ名で始まるビルド出力(coverage.old)は allow; 変数解決: スクラッチ名で始まるビルド出力(build-artifacts)は allow; 変数解決: スクラッチ名で始まるビルド出力(dist-newstyle)は allow; 変数解決: スクラッチ名で始まるビルド出力(coverage-old)は allow; 変数解決: スクラッチ名で始まるビルド出力(node_modules_bak)は allow; 変数解決: 解決済み値のディレクトリ形もスクラッチ領域として許可
   AC-3:
     tests:
-      - "変数解決: 未展開参照+親参照での脱出はaskのまま(参照形)"
-      - "変数解決: 未展開参照+親参照での脱出はaskのまま(グロブ形)"
-      - "変数解決: 未展開参照+親参照での脱出はaskのまま(チルダ形)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       pre-task0004 code ran normalize_candidate() (lexical .. collapse)
@@ -59,20 +44,7 @@ acceptance_tests:
       direct invocation on the reference spelling: rm-unresolvable.
   AC-4:
     tests:
-      - "変数解決: if/thenに融合した再代入はrm-rootに戻る(;)"
-      - "変数解決: if/thenに融合した再代入はrm-rootに戻る(改行)"
-      - "変数解決: 連鎖値による再代入は未解決のまま(;)"
-      - "変数解決: 連鎖値による再代入は未解決のまま(改行)"
-      - "変数解決: 自己参照の再代入は未解決のまま(;)"
-      - "変数解決: 自己参照の再代入は未解決のまま(改行)"
-      - "変数解決: unsetによる無効化は未解決のまま(;)"
-      - "変数解決: unsetによる無効化は未解決のまま(改行)"
-      - "変数解決: forループの変数束縛は未解決のまま(;)"
-      - "変数解決: forループの変数束縛は未解決のまま(改行)"
-      - "変数解決: getoptsの名前引数は未解決のまま(;)"
-      - "変数解決: getoptsの名前引数は未解決のまま(改行)"
-      - "変数解決: whileのread束縛は未解決のまま(;)"
-      - "変数解決: whileのread束縛は未解決のまま(改行)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       pre-task0004 invalidated_names() only inspected toks[0], and
@@ -89,9 +61,7 @@ acceptance_tests:
       no resolution feature at all, so it never applies the stale value
       either).
   false_positive_companions:
-    tests:
-      - "変数解決: readが無関係な名前を扱っても対象は解決される"
-      - "変数解決: 代入の後の条件文があっても解決される"
+    tests: []
     red_confirmed: false
     red_reason: >-
       Not a fix — a regression guard for item E's widened invalidation.
@@ -102,9 +72,10 @@ acceptance_tests:
       target or a conditional command after an already-applied assignment
       never touches it. Kept in the case list so a future narrowing of item
       E cannot silently reintroduce the false positive.
+
+      Removed from tests (not a unittest ID): 変数解決: readが無関係な名前を扱っても対象は解決される; 変数解決: 代入の後の条件文があっても解決される
   AC-5:
-    tests:
-      - "変数解決: コマンド置換経由の削除の理由にセンチネルが出ない(検証用allow)"
+    tests: []
     red_confirmed: true
     red_reason: >-
       pre-task0004 code's reason string for `rm -rf $(cat list)` quoted the
@@ -116,9 +87,11 @@ acceptance_tests:
       after the fix: reason quotes `/subdir` only, no
       "DYNAMIC-SUBSTITUTION" substring present, matching base_commit
       1fdb27f's own reason for the same string exactly.
+
+      Removed from tests (not a unittest ID): 変数解決: コマンド置換経由の削除の理由にセンチネルが出ない(検証用allow)
   AC-6:
     tests:
-      - "変数解決: 上限を超える解決値は未解決のまま(fail-closed)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       pre-task0004 code had no length ceiling: a 5000-char resolved value
@@ -149,9 +122,7 @@ acceptance_tests:
         PreToolUse timeout.
   AC-7:
     tests:
-      - "変数解決: 解決対象外チェックは解決済みテキストを消費しない"
-      - "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(;)"
-      - "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(改行)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       All 3 were already correct on tmp/pre-task0004-destructive-guard.py
@@ -164,8 +135,7 @@ acceptance_tests:
       — with no observable verdict difference for these shapes; these
       entries are regression guards for that refactor, not fixes.
   AC-8:
-    tests:
-      - "変数解決: 報告された誤爆はallowのまま"
+    tests: []
     red_confirmed: false
     red_reason: >-
       Already allow on tmp/pre-task0004-destructive-guard.py (0/1 red) —
@@ -178,6 +148,8 @@ acceptance_tests:
       (151/151, run twice with identical output) and
       `python3 -m unittest discover -s tests` (2830/2830), not by an
       individual test name.
+
+      Removed from tests (not a unittest ID): 変数解決: 報告された誤爆はallowのまま
 orchestrator_spot_check_parity:
   description: >-
     The round-2 orchestrator_spot_check table, re-run against base_commit

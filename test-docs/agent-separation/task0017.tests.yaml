@@ -4,9 +4,9 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_minus_relocated
-      - tests.test_batch_policies.TestBatchPoliciesYaml.test_relocated_gates_absent_from_policy_file
-      - tests.test_batch_policies.TestBatchModeMdMigration.test_relocated_gates_not_also_left_in_policy_file
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_minus_non_packet
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_non_packet_gates_absent_from_policy_file
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_non_packet_gates_not_also_left_in_policy_file
       - tests.test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
     red_confirmed: true
     red_reason: >-
@@ -55,7 +55,7 @@ acceptance_tests:
       never mentioned "batch-policies.yaml" — both assertions failed.
   AC-6:
     tests:
-      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_relocated_gates_referenced_only_outside_the_policy_file
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_non_packet_gates_referenced_only_outside_the_policy_file
       - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_packet_gates_named_within_owned_files_have_policy_entries
       - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_known_external_only_entries_are_still_declared_in_policy
       - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_intentional_exception_excluded_from_both_directions

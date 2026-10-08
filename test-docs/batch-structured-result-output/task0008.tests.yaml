@@ -18,8 +18,8 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_batch_stop_contract.TestResponsibilityBoundary.test_confidentiality_rule_states_beyond_paths
-      - test_batch_stop_contract.TestConfidentialityBeyondPathsMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_confidentiality_rule_states_beyond_paths
+      - tests.test_batch_stop_contract.TestConfidentialityBeyondPathsMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document (git HEAD's
@@ -32,8 +32,8 @@ acceptance_tests:
       to four fields but never restored the "beyond paths" qualifier.
   AC-2:
     tests:
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_in_full_loading_rule_and_redaction_exception_stated
-      - test_batch_stop_contract.TestInFullLoadingRuleMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_in_full_loading_rule_and_redaction_exception_stated
+      - tests.test_batch_stop_contract.TestInFullLoadingRuleMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -44,9 +44,9 @@ acceptance_tests:
       this task.
   AC-3:
     tests:
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_delimiter_and_byte_verbatim_disclosure
-      - test_batch_stop_contract.TestDetailDelimiterMatcherNegativeProof
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_normalization_before_escaping
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_delimiter_and_byte_verbatim_disclosure
+      - tests.test_batch_stop_contract.TestDetailDelimiterMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_normalization_before_escaping
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -61,8 +61,8 @@ acceptance_tests:
       carried forward as a regression guard, not re-confirmed red.
   AC-4:
     tests:
-      - test_batch_stop_contract.TestConsumerConstraints.test_size_collision_outcome_stated
-      - test_batch_stop_contract.TestSizeCollisionOutcomeMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_size_collision_outcome_stated
+      - tests.test_batch_stop_contract.TestSizeCollisionOutcomeMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -74,8 +74,8 @@ acceptance_tests:
       verbatim.
   AC-5:
     tests:
-      - test_batch_stop_contract.TestStopReasonCodes
-      - test_batch_stop_contract.TestStopPointCoverage
+      - tests.test_batch_stop_contract.TestStopReasonCodes
+      - tests.test_batch_stop_contract.TestStopPointCoverage
     red_confirmed: false
     red_reason: >-
       AC-5 is a "still holds unchanged" criterion: task0008 does not alter
@@ -90,9 +90,9 @@ acceptance_tests:
       re-confirmed red.
   AC-6:
     tests:
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_feature_bullet_states_slug_pattern_literal
-      - test_batch_stop_contract.TestFeatureBulletSlugPatternMatcherNegativeProof
-      - test_structured_result_derivation.TestSlugPatternBoundToContract
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_feature_bullet_states_slug_pattern_literal
+      - tests.test_batch_stop_contract.TestFeatureBulletSlugPatternMatcherNegativeProof
+      - tests.test_structured_result_derivation.TestSlugPatternBoundToContract
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -107,8 +107,8 @@ acceptance_tests:
       returned None, so `assertIsNotNone` raised.
   AC-7:
     tests:
-      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_per_state_rule
-      - test_batch_stop_contract.TestResumeConditionsPresenceRuleMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_per_state_rule
+      - tests.test_batch_stop_contract.TestResumeConditionsPresenceRuleMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -119,9 +119,9 @@ acceptance_tests:
       is this exact old bullet text, verbatim.
   AC-8:
     tests:
-      - test_batch_stop_contract.TestConsumerConstraints.test_own_hardening_rules_stated
-      - test_batch_stop_contract.TestConsumerConstraints.test_five_carried_over_constraints_still_present_and_still_five
-      - test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_own_hardening_rules_stated
+      - tests.test_batch_stop_contract.TestConsumerConstraints.test_five_carried_over_constraints_still_present_and_still_five
+      - tests.test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof
     red_confirmed: true
     red_reason: >-
       Verified retroactively against the pre-change document:
@@ -139,7 +139,7 @@ acceptance_tests:
       alone, independent of before/after document state.
   AC-9:
     tests:
-      - test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical
+      - tests.test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical
     red_confirmed: false
     red_reason: >-
       Pure regression guard over deliberately UNCHANGED text -- exempt from
