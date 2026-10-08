@@ -1,11 +1,11 @@
 schema_version: 1
 feature: queue-stop-guard-nonascii-blank-state
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 65714d9faa27c228ca5cabb3d1ebed1fd7905b3b
-last_input_digest: sha256:50ed634f454bb7736791dfecc82e17b6b3ce8db1a224395fe013aab561dbaefd
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:9ba4064736844b16e8e296ed1be3f065fe4a9be4d5efd6391f9ee9ded5a28390
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -62,6 +62,14 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:50ed634f454bb7736791dfecc82e17b6b3ce8db1a224395fe013aab561dbaefd
   output_digest: sha256:8320415c6724cc3721e270deff4ae6896e6582ac22aaba127178e5b50608a4d1
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:5b89e348436b7a3d208aabfd5a3bb3563f2cf724a4c0c0d48dcf14c9feb9cd7d
+  output_digest: sha256:5e6d12b33e2685706c4da230b1c4c38f88b9159666b05a17f4258f647616fdab
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:9ba4064736844b16e8e296ed1be3f065fe4a9be4d5efd6391f9ee9ded5a28390
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
