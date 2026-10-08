@@ -123,7 +123,12 @@ workflow:
   status: completed
   completed_at_commit: fd1791966de59406ecb2524326a84983b03c1a93
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded_scenarios: []
+  summary: 'full suite python3 -m unittest discover -s tests exit 0 (9943 tests, 1 skipped); TS-2 reproduction 8421 IDs, 0 unresolved; TS-3 231 changed records, 3647 removed occurrences = 3647 mapping rows, no non-tests field changes, NFR3 record unchanged; TS-10 stdlib-only imports, drift test unchanged; TS-11 manifests unchanged; manual checks sampled (renamed / no-counterpart rows match git history; implementer.md additions name no language or framework)'
+  completed_at_commit: 301b30370d871ef8fba21577e040554eae1afa56
 - id: retrospect
   status: pending
 tasks:
