@@ -1,0 +1,246 @@
+round: 3
+executed_at: '2026-10-08T12:36:16+09:00'
+scope:
+  review_mode: diff
+  base_commit: e12196c99959ae62b8f590fb7a4de7ea986879d1
+  head_commit: 7ed5626aa3c1f5ff830a76daf96c69b2bf8b5661
+  changed_files:
+  - em-review/README.md
+  - em-review/agents/codex-reviewer.md
+  - em-review/references/review-output-schema.json
+  - em-review/references/review-phase.md
+  - em-review/references/review-protocol.md
+  - em-review/skills/review-security/SKILL.md
+  - em-workflow/agents/codex-reviewer.md
+  - em-workflow/agents/review-evaluator.md
+  - em-workflow/references/review-evaluation-contract.md
+  - em-workflow/references/review-output-schema.json
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/review-protocol.md
+  - em-workflow/scripts/scan-dependencies.py
+  - em-workflow/skills/review-security/SKILL.md
+  - test-docs/security-review-repro-steps/task0001.tests.yaml
+  - test-docs/security-review-repro-steps/task0002.tests.yaml
+  - test-docs/security-review-repro-steps/task0003.tests.yaml
+  - test-docs/security-review-repro-steps/task0004.tests.yaml
+  - test-docs/security-review-repro-steps/task0005.tests.yaml
+  - test-docs/security-review-repro-steps/task0006.tests.yaml
+  - test-docs/security-review-repro-steps/task0007.tests.yaml
+  - tests/test_reproduction_dedupe_alternates.py
+  - tests/test_reproduction_evaluation_contract.py
+  - tests/test_reproduction_output_contract.py
+  - tests/test_reproduction_review_phase_em_review.py
+  - tests/test_reproduction_review_phase_workflow.py
+  - tests/test_reproduction_reviewer_instructions.py
+  - tests/test_reproduction_unverified_not_declined.py
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_sca_axis_schema_enums.py
+  - tests/test_tier_record_schema_v2.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - performance
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 910c896129038039
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 551
+  title: not reproduced の引き継ぎが same_site だけで一致し、同じ位置にある別の security 指摘まで抑制する
+  description: R0 step 8 が dismissed_sites から作る not-reproduced エントリは stable_id が null で、title を持たない。R3b の抑制（547–555 行）は same_site だけで照合する。same_site は同一ファイルで行差 5 以内、または両方の line が null で成立する。そのため 42 行目の誤検出を not reproduced とした記録が、ファイルが変わらない間は、後のラウンドで 46 行目に見つかった別の security 指摘まで検証前に落とす。line が null の記録は、同じファイルで line が null の security 指摘をすべて落とす。評価契約の Reproduction Verification step 6（Carried decisions）も同じ照合で already resolved として棄却する。SPEC FR13 が再提起しないとしているのは『同じ指摘』で、同じサイトにある別の指摘ではない。round 1 decbe80ad43ddb0c と round 2 2327e5bacd20dad2（どちらも medium・unresolved）の再提起。TM-5 がサイト単位の照合を対策として明記しているので、high から medium に下げた。
+  suggestion: dismissed_sites の not reproduced エントリに元の指摘の title（または記録時に計算した stable_id）を残し、引き継ぎはその stable_id で照合する。line が null のエントリで同じファイルの別の指摘を抑制しない。近い行の別の指摘と line が null の別の指摘が抑制されないことを確かめるテストを足す。
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: 363e39c89e45cc3d
+  severity: medium
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 551
+  title: 'TM-5: 修正ループ後にも却下記録の有効性を確認する'
+  description: not-reproduced エントリのファイル変更判定は、R0 step 8 で round_context を作るときの 1 回しか行われない。R3b の抑制文（547–555 行）には、stable_id 経路にある『unless its file changed since ... head_commit』に当たる条件が無い。一方で今回の変更（895 行付近）により、R4 のループ内再レビューの出力も R3b の round-context 抑制を通るようになった。その結果、R4 がそのファイルを修正した後の再レビューで同じサイトに security 指摘が出ても、修正前に作ったエントリで検証前に落ちる。TM-5 の『変更後は再検証する』という対策が R4 の経路で守られない。round 2 363e39c89e45cc3d（medium・unresolved）の再提起。
+  suggestion: not-reproduced エントリで抑制するたびに、記録ラウンドの head_commit から現在の内容までにそのファイルが変わっていないかを確かめる。変わっていれば抑制せず検証に回す。R4 で同じファイルを修正した後の再レビューを確かめるテストを足す。
+  sources:
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: 475a3bbdbc85031f
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 114
+  title: not reproduced の引き継ぎが指摘先ファイルの変更でしか失効せず、呼出元が変わっても再検証されない
+  description: R0 step 8 の not-reproduced エントリは、指摘先の file が記録ラウンドの head_commit から変わっていない間だけ作られる。到達経路上の別ファイル（呼出元の入力検証など）が変わっても失効しない。不成立の判断は到達経路で決まる。差し戻しで呼出元の検証だけが削られると、到達できるようになった指摘が、評価担当（契約 step 6）と R3b の両方で検証前に落ちる。SPEC FR13 は『関連コードが変わった場合は再検証する』としており、ファイル単位の判定はそれより狭い。オーケストレーター経路で declined にした指摘（stable_id 経由）と em-review の引き継ぎ（559–566 行）にも同じ問題がある。round 1 475a3bbdbc85031f（medium・unresolved）の再提起。TM-5 がファイル単位の判定を対策として明記しているので、high から medium に下げた。
+  suggestion: 不成立と判断したときに検証で読んだファイルの一覧を記録し、そのどれかが変わったら引き継ぎを失効させる。呼出元だけが変わる場合のテストを足す。
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: 8e13bc16cfcb9ed6
+  severity: medium
+  category: comprehensive
+  file: em-review/references/review-phase.md
+  line: 559
+  title: 未コミットの内容に基づく棄却を HEAD の内容にも適用してしまう
+  description: em-review は作業ツリーをレビューする。しかし not reproduced による declined の引き継ぎ（559–566 行）は、記録した scope.head_commit との比較だけで失効を決める。未コミットの入力検証を読んで not reproduced と判断した後にその変更を取り消すと、ファイルは記録した HEAD と同じ内容に戻る。すると同じ stable_id の指摘は『変更なし』とみなされ、検証前に抑制される。security#0 も同じ経路を medium で報告している（563–565 行）。発生には未コミットの防御だけを戻す操作が要る。また既存の declined 抑制と同じ判定を流用した箇所なので、high から medium に下げた。
+  suggestion: 棄却したときに読んだファイル内容のハッシュを記録し、次回はその内容と比べて失効を決める。HEAD と検証した内容が違う記録は、HEAD との一致だけで再利用しない。未コミットの防御を取り消す場合のテストを足す。
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: b6af060659c344ca
+  severity: medium
+  category: security
+  file: em-review/references/review-phase.md
+  line: 559
+  title: 'TM-5: 再現不能の却下記録を security の指摘だけに適用する'
+  description: TM-5 の対策は、引き継いだ不成立判断が『同じサイトの security 指摘だけ』に一致することを求めている。em-review は not reproduced を通常の declined として記録する。round_context は元の観点も却下理由も持たず、R3 の抑制は category を含まない stable_id で全観点に効く。security の誤った再現手順を理由にした却下が、次回同じ title・行位置で報告された別観点の指摘まで検証前に落とす。em-workflow のオーケストレーター経路で declined にした指摘（findings 経由の引き継ぎ）も同じ。round 1 1104fd3d193e7b6a と round 2 e528fd443647e992（medium・unresolved）の再提起。
+  suggestion: 再現検証で declined にした指摘の理由と元の観点を round_context に引き継ぎ、その判断による抑制を security 由来の指摘だけに適用する。
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: e42e7e03f790d5af
+  severity: medium
+  category: comprehensive
+  file: em-review/references/review-phase.md
+  line: 322
+  title: 再現失敗によって他の観点の指摘まで棄却してしまう
+  description: R3 step 7 は changed_files 外の指摘を comprehensive に付け替える。その後 category の中で same_site の指摘を統合するため、security 由来の指摘と他観点（performance・comprehensive など）の指摘が 1 件にまとまることがある。検証対象は『寄与した run のどれかが security』で選ばれる（322–325 行）。保持した手順がすべて不成立なら統合後の指摘全体が declined になり、他観点の有効な指摘まで auto-fix 候補と residual から外れる。起きるのは、diff モードの changed_files 外で、複数観点が同じサイトを指摘し、手順が不成立の場合に限られる。そのため high から medium に下げた。
+  suggestion: 再現検証の結果は security 由来の分にだけ適用し、他観点の分は declined にしない（統合前に判定するか、他観点の分を別に残す）。changed_files 外で複数観点が同じサイトを指摘する場合のテストを足す。
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: 34d981f79d56c290
+  severity: medium
+  category: comprehensive
+  file: em-review/references/review-phase.md
+  line: 344
+  title: 手順がない指摘を統合すると個別の判断を飛ばしてしまう
+  description: 統合では null でない reproduction だけを保持する。同じサイトで、reproduction が null の security 指摘と、不成立の手順を持つ security 指摘が統合される場合を考える。保持した値がすべて否定されると、統合後の指摘全体が not reproduced で declined になる。null 側には FR6 が求める『対応するかの判断』が行われない。em-workflow のオーケストレーター経路（629 行）も同じ規則。
+  suggestion: 手順のない security 指摘が統合元に含まれるときは not reproduced で一括棄却せず、手順のない指摘として判断に回す。両プラグインで、null と不成立の手順が混在する場合のテストを足す。
+  sources:
+  - codex:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: ba8773d0e72b6e47
+  severity: medium
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 111
+  title: evaluator が付けた `not reproduced` の reason が、検証されないまま後のラウンドの抑制条件になる
+  description: R0 step 8 は、永続化された dismissed_sites のうち reason が not reproduced のものをすべて round_context の抑制エントリにする。一方、R5 の永続化ゲート（1062–1072 行）が確かめるのは file の検査と長さの上限だけ。run_id が security の run か、その run が同じサイトを報告していたかは確かめない。信頼できない evaluator 出力の reason 1 つで、ファイルが変わるまで後続ラウンドの security 指摘が検証前に落ちる。round 1 ba8773d0e72b6e47（medium・unresolved）がそのまま残っている。今回のレビュアーは再報告しておらず、評価担当が自分で確認した。
+  suggestion: not reproduced の dismissed_sites エントリは、run_id が今回 security として dispatch された run で、その run がそのサイトを報告していたときだけ永続化する。それ以外は dismissed_sites_dropped に記録する。
+  sources:
+  - claude:evaluator
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+- stable_id: 6a8814593a649013
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 612
+  title: reproduction の統合・検証規則が契約と両 review-phase.md に分散し、すでに内容が食い違っている
+  description: 'em-workflow のオーケストレーター経路（601 行以降）は、評価契約の Reproduction Verification を適用して『ここでは再掲しない』と書いている（612 行）。それなのに直後で、統合済み指摘の判定規則を独自に定義している（629 行: 保持する値は最長 1 件と alternates 最大 2 件、overflow なら unverifiable）。契約の step 7 は『統合元すべての reproduction を検証し、どれも成立しないと確認できたときだけ not reproduced』としており、件数の上限も overflow も無い。em-review は同じ規則を 3 か所目として全文再掲している。どちらが優先するかが文書から決まらず、片方だけを直す変更でさらに食い違う。round 2 ebd6cf3491699f53（medium・unresolved）がそのまま残っている。architecture の run は review_data_too_large で skip されたため、評価担当が自分で確認した。'
+  suggestion: 統合済み指摘の判定規則（保持する値の選び方と overflow の扱い）を契約の Reproduction Verification に一本化し、em-workflow の review-phase.md からは参照だけにする。em-review については、自プラグインの規則として持つ箇所と em-workflow に揃える箇所を明記する。
+  sources:
+  - claude:evaluator
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); left for follow-up'
+evaluation:
+  round_summary: 'round 3。critical/high は評価後に残らない。comprehensive#0 の high 4 件はすべて medium に下げた。うち 3 件（em-workflow 551・114、em-review 559 の同系統）は、round 1–2 で medium・unresolved と判定済みの内容の再提起。TM-5 がサイト単位・ファイル単位の照合を対策として明記している。残る 1 件（em-review 322）は起きる条件が狭い。security#0 の『検証不能な重大指摘を完了判定から除外しない』（em-workflow 640、em-review 354）は採らなかった。SPEC AC3・FR6・A3 が、根拠を確認できない unverifiable を residual・差し戻しの対象外と明示しているため。攻撃者が手順を長くして unverifiable を誘う懸念は、SPEC 側の設計判断として残る。security#0 の em-review 563 は、comprehensive の em-review 559 と同じ問題として扱った。round 2 で deferred だった high 8375ef92ce5f2f2a（TM-2）は、task0007 で『unverified は declined にしない』に直っていることを確認した（em-workflow 638–645、em-review 354–360）。round 1 の unresolved high 92f22492f7a3576f / ba603aab85961eac（最長の 1 件だけを検証する問題）は、task0006 の alternates が両 review-phase.md と契約 step 7 に入っていることを確認した。今回は再報告されていないが、記録上は unresolved のまま。入力について: 今回のレビュアー出力には reproduction キーが無い（配布済みプラグインのスキーマで動いたため）。そのため security 指摘はすべて『手順なし』として既存の判断で扱った。evaluation_contract_path は main チェックアウトの契約（Reproduction Verification
+    節なし）を指しており、それに従った。architecture#0 と performance#0 は review_data_too_large で skip された。R2b の表ではこの理由は再試行対象外で、Claude fallback が出ていないのに unreviewed_perspectives は空になっている。レビュアーの完了 run が実際には無いので、開示が実態より少ない（オーケストレーター側で確認してほしい）。注入の試みは見つからなかった。読み取り予算は 10/10 を使い切った。観点ごとの確認状況: security = findings。comprehensive = findings。spec = findings（tests/ と test-docs/ は not verified — read budget exhausted）。architecture = findings（レビュアー run は skip。評価担当の独自確認）。performance = corroborated（レビュアー run は skip で、評価担当の確認だけによる）。'
+  recommended_action: complete
+  action_rationale: 評価後に critical/high は 0 件。残る medium 9 件は、not reproduced の引き継ぎ抑制の精度（照合の粒度・失効条件・観点の限定）と規則の重複に関するもの。多くは round 1–2 から medium のまま続く既知の論点で、追加のラウンドや差し戻しより後続の改善で扱うのが妥当。ただし architecture / performance はレビュアー run が skip されており、その観点の確認は評価担当の読み取りだけによる。
+dismissed_sites:
+- file: em-workflow/references/review-phase.md
+  line: 551
+  run_id: comprehensive#0
+  reason: demoted
+- file: em-workflow/references/review-phase.md
+  line: 114
+  run_id: comprehensive#0
+  reason: demoted
+- file: em-review/references/review-phase.md
+  line: 559
+  run_id: comprehensive#0
+  reason: demoted
+- file: em-review/references/review-phase.md
+  line: 322
+  run_id: comprehensive#0
+  reason: demoted
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+  note: no critical/high candidates after evaluation
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-security-review-repro-steps-20261008T033515Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+notes:
+- architecture#0 / performance#0 skipped with review_data_too_large (not in the R2b retryable table) — kept the skip per R2b (Codex consulted, option A); those perspectives rest on the evaluator's own inspection only
