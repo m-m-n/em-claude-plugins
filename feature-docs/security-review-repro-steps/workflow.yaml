@@ -229,7 +229,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/security-review-repro-steps/task0005
     notes: null
 review:
