@@ -470,8 +470,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0001 of review-gate-abort-recovery (FR1, FR3-FR5): Phase
 # R5 gained the gate-abort and legacy-recovery blocks and the scope
 # statement on the `status: failed` reservation.
+# Refreshed by task0004 of security-review-repro-steps (FR7, FR9, FR13):
+# Phases R0 step 8, R3b, R4 and R5 gained the `reproduction` cap, the
+# orchestrator-path verification and the not-reproduced carry-over.
 REVIEW_PHASE_SHA256 = (
-    "bcbbe2c145853fb8981ffaa0265a4c9d47ca72b132f3b9b7859f035d7aa508c8"
+    "fab6ed76a1b14e7f4b3c02c736a5fb2163291dd730fbe00e08da32737d909f35"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
