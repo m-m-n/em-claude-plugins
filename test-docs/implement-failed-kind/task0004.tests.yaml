@@ -6,11 +6,11 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_states_the_same_write_also_sets_failed_kind
-      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_names_the_decision_value
-      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_cites_the_schema_document
-      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_keeps_existing_full_detail_pointer
-      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_does_not_name_the_infra_value
+      - tests.test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_states_the_same_write_also_sets_failed_kind
+      - tests.test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_names_the_decision_value
+      - tests.test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_cites_the_schema_document
+      - tests.test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_keeps_existing_full_detail_pointer
+      - tests.test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_does_not_name_the_infra_value
     red_confirmed: true
     red_reason: >-
       Before the edit the row read "...the implement step's status is
@@ -23,11 +23,11 @@ acceptance_tests:
       "'references/workflow-schema.md' not found in ...".
   AC-2:
     tests:
-      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_names_the_bounded_counted_exception
-      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_cites_develop_skill_for_branch_and_cap
-      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_unconditional_phrasing_is_gone
-      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_non_vacuity_gone_matcher_fires_on_original_bullet
-      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_still_names_stuck_steps_yaml_errors_and_post_cap_failures
+      - tests.test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_names_the_bounded_counted_exception
+      - tests.test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_cites_develop_skill_for_branch_and_cap
+      - tests.test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_unconditional_phrasing_is_gone
+      - tests.test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_non_vacuity_gone_matcher_fires_on_original_bullet
+      - tests.test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_still_names_stuck_steps_yaml_errors_and_post_cap_failures
     red_confirmed: true
     red_reason: >-
       Before the edit the bullet read "Failure stops are UNCHANGED: ... it
@@ -43,10 +43,10 @@ acceptance_tests:
       file), which is expected for a non-vacuity guard.
   AC-3:
     tests:
-      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_restricts_implement_failed_to_decision
-      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_cites_schema_for_missing_value_case_without_restating
-      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_code_and_state_columns_unchanged
-      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_does_not_name_the_infra_value
+      - tests.test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_restricts_implement_failed_to_decision
+      - tests.test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_cites_schema_for_missing_value_case_without_restating
+      - tests.test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_code_and_state_columns_unchanged
+      - tests.test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_does_not_name_the_infra_value
     red_confirmed: true
     red_reason: >-
       Before the edit the Meaning cell read "A workflow step reported
@@ -57,10 +57,10 @@ acceptance_tests:
       with "'missing-value case' not found in ...".
   AC-4:
     tests:
-      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_phase_specific_row_restriction
-      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_failed_kind_restriction_for_implement
-      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_both_restrictions_are_one_coherent_statement
-      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_three_phase_specific_stop_points_unchanged
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_phase_specific_row_restriction
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_failed_kind_restriction_for_implement
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_both_restrictions_are_one_coherent_statement
+      - tests.test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_three_phase_specific_stop_points_unchanged
     red_confirmed: true
     red_reason: >-
       Before the edit the paragraph's last sentence ended at "...states
@@ -71,11 +71,11 @@ acceptance_tests:
       "ValueError: substring not found" looking up the failed_kind marker.
   AC-5:
     tests:
-      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_eleven_codes_same_names_and_states_in_order
-      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_added_code_is_detected
-      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_removed_code_is_detected
-      - test_failed_kind_batch_docs.TestCoverageTableMappingUnchanged.test_stop_condition_3_maps_to_step_needs_intervention_via_develop_skill
-      - test_failed_kind_batch_docs.TestCoverageTableMappingUnchanged.test_negative_proof_changed_mapping_is_detected
+      - tests.test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_twelve_codes_same_names_and_states_in_order
+      - tests.test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_added_code_is_detected
+      - tests.test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_removed_code_is_detected
+      - tests.test_failed_kind_batch_docs.TestCoverageTableMappingUnchanged.test_stop_condition_3_maps_to_step_needs_intervention_via_develop_skill
+      - tests.test_failed_kind_batch_docs.TestCoverageTableMappingUnchanged.test_negative_proof_changed_mapping_is_detected
     red_confirmed: false
     red_reason: >-
       This is a regression backbone: it must hold both before and after
@@ -90,18 +90,18 @@ acceptance_tests:
       matchers are not vacuous.
   AC-6:
     tests:
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_never_names_both_values_together
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_never_names_both_values_together
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_has_no_gloss_phrases
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_has_no_gloss_phrases
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_does_not_restate_missing_value_rule
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_does_not_restate_missing_value_rule
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_cites_the_owning_document
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_cites_the_owning_document
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_both_values_together_is_detected
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_gloss_phrase_is_detected
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_missing_value_restatement_is_detected
-      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_tolerates_single_value_mentions
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_never_names_both_values_together
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_never_names_both_values_together
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_has_no_gloss_phrases
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_has_no_gloss_phrases
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_does_not_restate_missing_value_rule
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_does_not_restate_missing_value_rule
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_cites_the_owning_document
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_cites_the_owning_document
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_both_values_together_is_detected
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_gloss_phrase_is_detected
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_missing_value_restatement_is_detected
+      - tests.test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_tolerates_single_value_mentions
     red_confirmed: false
     red_reason: >-
       A no-restatement guard is a property of the final text, not a
@@ -119,7 +119,7 @@ acceptance_tests:
       designed.
   AC-7:
     tests:
-      - test_failed_kind_batch_docs.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_failed_kind_batch_docs.TestOwnModuleStdlibOnly.test_only_standard_library_imports
     red_confirmed: false
     red_reason: >-
       Verified by running "python3 -m unittest discover -s tests" for the

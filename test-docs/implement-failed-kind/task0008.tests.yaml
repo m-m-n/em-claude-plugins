@@ -5,7 +5,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_identity_and_shape
+      - tests.test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_identity_and_shape
     red_confirmed: true
     red_reason: >-
       4a baseline run of the untouched module: AssertionError comparing the
@@ -16,8 +16,8 @@ acceptance_tests:
       './em-review'}". This is the sole failure TS-5 reports.
   AC-2:
     tests:
-      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_accepts_a_forged_higher_version
-      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_accepts_the_synthetic_baseline_entry
+      - tests.test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_accepts_a_forged_higher_version
+      - tests.test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_accepts_the_synthetic_baseline_entry
     red_confirmed: true
     red_reason: >-
       Neither `_assert_em_review_entry_matches` nor `EXPECTED_EM_REVIEW_NAME`
@@ -28,9 +28,9 @@ acceptance_tests:
       at class-body evaluation time -- watched directly, not inferred.
   AC-3:
     tests:
-      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_an_altered_identity_field
-      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_a_missing_or_non_dotted_numeric_version
-      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_an_unexpected_extra_key
+      - tests.test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_an_altered_identity_field
+      - tests.test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_a_missing_or_non_dotted_numeric_version
+      - tests.test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_an_unexpected_extra_key
     red_confirmed: true
     red_reason: >-
       Same class as AC-2 (`TestEmReviewMatcherDetectionPower`); the same
@@ -39,8 +39,8 @@ acceptance_tests:
       of these matcher/literal names existed.
   AC-4:
     tests:
-      - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_identity_and_shape
-      - test_llm_led_review_user_docs.TestEmReviewEntryLookupIsNonVacuous.test_lookup_raises_when_no_em_review_entry_present
+      - tests.test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_identity_and_shape
+      - tests.test_llm_led_review_user_docs.TestEmReviewEntryLookupIsNonVacuous.test_lookup_raises_when_no_em_review_entry_present
     red_confirmed: false
     red_reason: >-
       The guard-still-runs-unskipped half is covered by AC-1's confirmed red
@@ -55,9 +55,9 @@ acceptance_tests:
       without asserting an invariant this task's diff does not touch.
   AC-5:
     tests:
-      - test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_no_longer_claims_byte_identical_equality
-      - test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_states_identity_fields_and_key_set_are_pinned
-      - test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_states_version_is_excepted_and_why
+      - tests.test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_no_longer_claims_byte_identical_equality
+      - tests.test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_states_identity_fields_and_key_set_are_pinned
+      - tests.test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_states_version_is_excepted_and_why
     red_confirmed: true
     red_reason: >-
       Verified against the pre-task module text: it contained the phrase

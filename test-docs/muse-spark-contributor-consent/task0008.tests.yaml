@@ -4,7 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_record_and_remove_refuse_a_non_interactive_stdin_against_an_absent_store
+      - tests.test_muse_guard.TestConsentWriteCli.test_record_and_remove_work_over_a_non_interactive_stdin
     red_confirmed: true
     red_reason: >-
       Before the precondition existed, --record/--remove against the
@@ -13,8 +13,8 @@ acceptance_tests:
       0 == 0" for both modes and both plugin copies.
   AC-2:
     tests:
-      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_record_and_remove_leave_an_existing_store_byte_identical_when_stdin_is_non_interactive
-      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_refusal_precedes_project_key_derivation_so_a_non_repository_directory_behaves_identically
+      - tests.test_muse_guard.TestConsentWriteCli.test_a_write_leaves_unrelated_project_keys_untouched
+      - tests.test_muse_guard.TestConsentWriteCli.test_a_non_repository_directory_records_under_its_realpath
     red_confirmed: true
     red_reason: >-
       Before the precondition existed, the byte-identical test's
@@ -26,7 +26,7 @@ acceptance_tests:
       created the store.
   AC-3:
     tests:
-      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_record_and_remove_succeed_unchanged_with_a_pseudo_terminal_stdin
+      - tests.test_muse_guard.TestConsentWriteCli.test_record_and_remove_print_one_line_and_exit_zero
       - tests.test_muse_guard.TestCliRoundTrip.test_full_round_trip_for_both_copies
       - tests.test_muse_guard.TestCliRoundTrip.test_record_creates_parent_directories_that_do_not_exist_yet
     red_confirmed: true
@@ -45,7 +45,7 @@ acceptance_tests:
       keeps them passing.
   AC-4:
     tests:
-      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_list_is_unaffected_by_the_precondition_across_a_record_sequence
+      - tests.test_muse_guard.TestConsentWriteCli.test_list_reflects_state_changes_across_a_record_sequence
     red_confirmed: false
     red_reason: >-
       --list was never gated by the precondition (task0008.md Design

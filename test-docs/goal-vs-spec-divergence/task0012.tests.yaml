@@ -30,10 +30,10 @@ acceptance_tests:
   AC-4:
     tests:
       - tests.test_classification_gate.TestClassificationGate.test_origin_verification_positioned_between_applicability_and_classifier
-      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_requires_stable_id_and_round_record
-      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_reads_category_from_record_not_worker_set
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_requires_naming_its_origins
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_reads_category_from_bound_set_not_worker_set
       - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_security_license_or_irreversible
-      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_unmatched_origin
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_not_bound_set_member
     red_confirmed: true
     red_reason: "ValueError: '**Origin verification.**' substring not found anywhere in the pre-edit Classification gate section; the gate had no origin-verification step at all"
   AC-5:
@@ -41,7 +41,7 @@ acceptance_tests:
       - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_batch_mode_cites_classification_gate_not_unlisted_fallback
       - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_interactive_mode_stated_unchanged
       - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_superseded_fail_closed_abort_claim_is_absent
-      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_origin_naming_obligation
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_names_origins_via_origin_id_field
     red_confirmed: true
     red_reason: "positive halves failed (pre-edit rework-planner-contract.md still said 'falls to the unlisted-gate fallback ... aborts rather than proceeding' and had no origin-naming-obligation sentence); absence-half test (test_superseded_fail_closed_abort_claim_is_absent) failed against the pre-edit doc because the superseded sentence was still present there"
   AC-6:

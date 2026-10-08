@@ -4,9 +4,9 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests/test_spec_change_replan_authorization.py::TestPhaseStateDefinesBothFlagsInOnePlace
-      - tests/test_spec_change_replan_authorization.py::TestPhaseStateDefinesBothFlagsInOnePlaceNegativeProof
-      - tests/test_phase_state_doc.py::TestSpecChangeFlagPairSchemaBlock
+      - tests.test_spec_change_replan_authorization.TestPhaseStateDefinesBothFlagsInOnePlace
+      - tests.test_spec_change_replan_authorization.TestPhaseStateDefinesBothFlagsInOnePlaceNegativeProof
+      - tests.test_phase_state_doc.TestSpecChangeFlagPairSchemaBlock
     red_confirmed: false
     red_reason: >
       phase-state.md's row/schema-block edit and these pin tests were
@@ -18,11 +18,11 @@ acceptance_tests:
 
   AC-2:
     tests:
-      - "tests/test_workflow_patch_doc.py::TestReplanningPathWidenedForSpecChangeReentry::test_pending_reentry_case_states_recognizable_signal"
-      - "tests/test_workflow_patch_doc.py::TestReplanningPathWidenedForSpecChangeReentry::test_new_case_matcher_fails_on_needs_update_only_wording"
-      - "tests/test_workflow_patch_doc.py::TestReplanningReentrySignalStrengthenedRound2::test_unspent_authorization_definition_stated"
-      - "tests/test_workflow_patch_doc.py::TestReplanningReentrySignalStrengthenedRound2::test_negative_proof_pre_change_wording_lacks_all_of_the_above"
-      - tests/test_spec_change_replan_authorization.py::TestWorkflowPatchReadsReplanAuthorizationNotConsumed
+      - tests.test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_pending_reentry_case_states_recognizable_signal
+      - tests.test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_new_case_matcher_fails_on_needs_update_only_wording
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_unspent_authorization_definition_stated
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_negative_proof_pre_change_wording_lacks_all_of_the_above
+      - tests.test_spec_change_replan_authorization.TestWorkflowPatchReadsReplanAuthorizationNotConsumed
     red_confirmed: false
     red_reason: >
       workflow-patch.md's wording change and its pin-test updates were made
@@ -33,12 +33,12 @@ acceptance_tests:
 
   AC-3:
     tests:
-      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_missing_consumed_field_does_not_block_reentry"
-      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_consumed_true_no_longer_blocks_reentry"
-      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_replan_authorized_missing_is_not_a_reentry"
-      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_replan_authorized_false_is_not_a_reentry"
-      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_replan_authorized_non_boolean_is_not_a_reentry"
-      - tests/test_spec_change_replan_authorization.py::TestValidatorReadsReplanAuthorizedNotConsumed
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_missing_consumed_field_does_not_block_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_consumed_true_no_longer_blocks_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_replan_authorized_missing_is_not_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_replan_authorized_false_is_not_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_replan_authorized_non_boolean_is_not_a_reentry
+      - tests.test_spec_change_replan_authorization.TestValidatorReadsReplanAuthorizedNotConsumed
     red_confirmed: false
     red_reason: >
       the validator's helper was edited before these unit tests, so they
@@ -54,9 +54,9 @@ acceptance_tests:
 
   AC-4:
     tests:
-      - "tests/test_spec_change_replan_authorization.py::TestReentryOrdering::test_replace_all_accepted_after_create_spec_dispatch_consumed_the_record"
-      - "tests/test_spec_change_replan_authorization.py::TestReentryOrdering::test_same_sequence_without_the_consumed_mark_is_also_accepted"
-      - "em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-after-create-spec-dispatch (fixture, exercised via TestFixtureCorpusDataDriven)"
+      - tests.test_spec_change_replan_authorization.TestReentryOrdering.test_replace_all_accepted_after_create_spec_dispatch_consumed_the_record
+      - tests.test_spec_change_replan_authorization.TestReentryOrdering.test_same_sequence_without_the_consumed_mark_is_also_accepted
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
     red_confirmed: false
     red_reason: >
       the ordering test was written and first run only after
@@ -68,7 +68,7 @@ acceptance_tests:
 
   AC-5:
     tests:
-      - tests/test_spec_change_replan_authorization.py::TestSkillDevelopStatesTwoConsumptionPointsSeparately
+      - tests.test_spec_change_replan_authorization.TestSkillDevelopStatesTwoConsumptionPointsSeparately
     red_confirmed: false
     red_reason: >
       SKILL.md's addition and this pin test were written together; never
@@ -76,12 +76,12 @@ acceptance_tests:
 
   AC-6:
     tests:
-      - "tests/test_validate_worker_output.py::TestFixtureCorpusDataDriven::test_every_fixture_matches_its_declared_exit_code"
-      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_corrected_replanning_merged_tasks_fixture_passes"
-      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_drops_existing_registered_task_id_rejected"
-      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_missing_base_commit_preserve_on_replanning_path_rejected"
-      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_missing_base_commit_preserve_rejected_for_exactly_one_reason"
-      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_spent_replan_authorization_record_is_rejected"
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_drops_existing_registered_task_id_rejected
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_on_replanning_path_rejected
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_missing_base_commit_preserve_rejected_for_exactly_one_reason
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_spent_replan_authorization_record_is_rejected
     red_confirmed: true
     red_reason: >
       genuinely observed: after updating workflow_replace_all_spec_change_
@@ -98,10 +98,9 @@ acceptance_tests:
 
   AC-7:
     tests:
-      - "python3 -m unittest discover -s tests (full suite)"
-      - "tests/test_gate_option_vocabulary.py::TestFrozenMachineReadSurface::test_workflow_patch_md_byte_identical"
-      - "tests/test_gate_option_vocabulary.py::TestFrozenMachineReadSurface::test_validate_worker_output_py_byte_identical"
-      - "tests/test_gate_option_vocabulary.py::TestFrozenMachineReadSurface::test_test_validate_worker_output_py_byte_identical"
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
     red_confirmed: true
     red_reason: >
       genuinely observed: the full-suite run after all doc/validator/test
@@ -110,3 +109,5 @@ acceptance_tests:
       test_validate_worker_output.py. Updated the three SHA256 constants
       (with dated refresh comments explaining what changed) and the full
       suite (2022 tests) went green.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests (full suite)
