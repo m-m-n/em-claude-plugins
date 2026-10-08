@@ -476,8 +476,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0006 of security-review-repro-steps (FR6-FR9, FR12, FR13):
 # Phases R3b, R4 and R5 gained the merged reproduction set
 # (`reproduction_alternates`, `reproduction_overflow`).
+# Refreshed by task0007 of security-review-repro-steps (FR6, FR12, FR13):
+# Phases R3b, R4 and R5 gained the `unresolved` / `unverified` record of an
+# unverifiable finding whose basis is not confirmed (never `declined`).
 REVIEW_PHASE_SHA256 = (
-    "8258950fcc9fa162ecfe75e94bd18565d050ec05650369faea2d9e94d9134ce6"
+    "0d9650a0e99b28beedc702f870c6cd15e7326f92be303f26002c1bda4cef9a2d"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
