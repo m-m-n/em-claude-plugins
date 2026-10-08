@@ -1,9 +1,9 @@
 schema_version: 1
 feature: tests-yaml-test-id-resolution
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: b883246bba99b752958bffe008c8d26afc249ed1
+base_revision: 0ba11ff35aa7874f7dfadcd4bbf74b1785626a0a
 last_input_digest: sha256:5b1e5d5e80587eaeb909a6b8771563821aedf22e9e8d1d80ca15294ce769a7ea
 active_request_id: null
 packets: {}
