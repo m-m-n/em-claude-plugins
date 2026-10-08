@@ -1,11 +1,11 @@
 schema_version: 1
 feature: security-review-repro-steps
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: dc79aa2af1ffdd636f0088d48f8115bb5fd95fbf
 last_input_digest: sha256:5344df597a86a79ab22745b36714776da5b30c0d0deaa3283103f6c1dc5e948c
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,12 +14,40 @@ worker_runs:
   input_digest: sha256:4f6b47711c81951a4d65ad8400f181f3e5c142dbbf3d9772975f957c3aacccfb
   output_digest: null
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:5344df597a86a79ab22745b36714776da5b30c0d0deaa3283103f6c1dc5e948c
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:4498e6163f5492bd6612f46ff33b0a5221b8756f4d6d585588dfa960bc766517
+artifacts:
+- path: feature-docs/security-review-repro-steps/IMPLEMENTATION.md
+  sha256: sha256:18847de415ea6a32d52c3a134bb4c8e3ec1055e83877ef77039a531ac441dd50
+  produced_by: create-plan-run-0001
+- path: feature-docs/security-review-repro-steps/VERIFICATION.md
+  sha256: sha256:ab9d0a967ea401afb2d19564ea52d71d5767e789909e5ff3d7fceeb00a39fa01
+  produced_by: create-plan-run-0001
+- path: feature-docs/security-review-repro-steps/THREAT-MODEL.md
+  sha256: sha256:965978f8870a6ded745db908201503d6f2978a79709a99808cb72497dd7e5741
+  produced_by: create-plan-run-0001
+- path: feature-docs/security-review-repro-steps/tasks/task0001.md
+  sha256: sha256:a0f643070e42a81abd55cca4d56e1f4aacdee0bb0af5eed5590bb78635c364b5
+  produced_by: create-plan-run-0002
+- path: feature-docs/security-review-repro-steps/tasks/task0002.md
+  sha256: sha256:d1e0bab53baa702c21e66e24d24c293f64c16b940e9e6e9b475640145fe9dc63
+  produced_by: create-plan-run-0002
+- path: feature-docs/security-review-repro-steps/tasks/task0003.md
+  sha256: sha256:5efe4963a7b00610c6774c7fdd307bbdbf0598ae02b73ed76448879da5057116
+  produced_by: create-plan-run-0002
+- path: feature-docs/security-review-repro-steps/tasks/task0004.md
+  sha256: sha256:8984fca1274bff6917a46f19829bdd9c60f6a4371cf7feeed6581245a9626d1e
+  produced_by: create-plan-run-0001
+- path: feature-docs/security-review-repro-steps/tasks/task0005.md
+  sha256: sha256:2e146b49b59e4cfa422245ed040bf8e964d7299ac27ea0f02fafd8ab296f2f77
+  produced_by: create-plan-run-0002
+patches:
+- patch_id: security-review-repro-steps-p0001
+  status: applied
+  base_input_digest: sha256:5344df597a86a79ab22745b36714776da5b30c0d0deaa3283103f6c1dc5e948c
+  base_workflow_blob: fded826263e603184ef418e0d8ba1fe805d3b977
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'run-0001 validation: envelope write_policy used absolute paths (orchestrator error); task plan Files bullets carried multiple backtick tokens'
+last_error: null
