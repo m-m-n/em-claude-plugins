@@ -74,11 +74,11 @@ MODES = ("readonly", "readwrite")
 
 WORKFLOW_USAGE = (
     'Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] '
-    '[--output-schema F] [--litellm MODEL] "prompt"'
+    '[--output-schema F] [-m MODEL] [--litellm MODEL] "prompt"'
 )
 REVIEW_USAGE = (
     'Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] '
-    '[--output-schema F] "prompt"'
+    '[--output-schema F] [-m MODEL] "prompt"'
 )
 
 # Launch paths: (label, plugin scripts dir, wrapper-specific args placed

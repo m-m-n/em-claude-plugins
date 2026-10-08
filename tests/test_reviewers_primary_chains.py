@@ -11,8 +11,9 @@ Claude + cross-model parallel comparison.
   with unchanged `claude_skill` / `requires_spec` values, and no longer
   contains the key `cross_validation`.
 - AC-2: every perspective has a non-empty `primary_chain`; each entry is
-  either a codex entry with no `model`, or a litellm entry whose `model` is
-  one of the litellm model names the header documents.
+  either a codex entry (with no `model`, except security's, which names a
+  Codex model slug), or a litellm entry whose `model` is one of the litellm
+  model names the header documents.
 - AC-3: every perspective's chain is exactly the two-entry chain pinned
   below, in that order.
 - AC-4: the `reviewers.yaml` header keeps the responsibility-split statement
@@ -72,7 +73,7 @@ EXPECTED_REQUIRES_SPEC = {
 # which one leads. No Vertex model is assigned any more.
 EXPECTED_CHAINS = {
     "security": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6-astra"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "performance": [
@@ -245,14 +246,18 @@ class TestReviewersYamlPerspectiveStructure(unittest.TestCase):
                 self.assertTrue(p["chain"], f"{name} has an empty primary_chain")
 
     def test_chain_entries_well_formed(self):
-        # AC-2: each entry is a codex entry with no model, or a litellm
-        # entry whose model is one of the documented litellm model names.
+        # AC-2: each entry is a codex entry with no model (security's names
+        # a Codex model slug), or a litellm entry whose model is one of the
+        # documented litellm model names.
         for name, p in self.by_name.items():
             for entry in p["chain"]:
                 with self.subTest(perspective=name, entry=entry):
                     self.assertIn(entry.get("harness"), ("codex", "litellm"))
                     if entry["harness"] == "codex":
-                        self.assertNotIn("model", entry)
+                        if name == "security":
+                            self.assertTrue(entry.get("model"))
+                        else:
+                            self.assertNotIn("model", entry)
                     else:
                         self.assertIn("model", entry)
                         self.assertIn(entry["model"], LITELLM_MODEL_NAMES)

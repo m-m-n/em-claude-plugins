@@ -181,7 +181,10 @@ Read references/reviewers.yaml. For each selected perspective (skip
   cross-model dispatch for this perspective in this phase (R2b never adds one
   either — it only advances an already-dispatched chain). Otherwise ALSO
   launch ONE reviewer, with the same input block:
-  - `{harness: codex}` → `Task(subagent_type="em-review:codex-reviewer")`
+  - `{harness: codex}` → `Task(subagent_type="em-review:codex-reviewer")`; when
+    the entry names `model: M`, add `model: M` to the input block, passed
+    through verbatim. No allow-list check: Codex itself rejects an
+    unsupported model, and the reviewer then skips with `harness_unavailable`.
   - `{harness: litellm, model: M}` →
     `Task(subagent_type="vertex-review:vertex-reviewer")` with `model: M`
     added to the input block (a separately-installed plugin; the block is
@@ -435,7 +438,7 @@ perspective_runs:
   - {perspective: security, source: litellm, model: muse-spark, status: completed}
   - {perspective: performance, source: litellm, model: muse-spark, status: skipped, skip_reason: "budget_exhausted"}
   - {perspective: performance, source: codex, status: completed}
-  # `model` は litellm ハーネスのときだけ付ける。R2b の chain walk は
+  # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。R2b の chain walk は
   # 1 観点につき複数行になる — 最後の行がその観点のクロスモデル結果。
 findings:                    # post-dedupe, post-sanitize; FULL detail
   - stable_id: {id}

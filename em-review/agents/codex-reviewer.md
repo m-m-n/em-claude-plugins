@@ -118,6 +118,11 @@ If `mktemp` allocation fails, return the standard skip object —
 "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" --output-schema "$SCHEMA" "$PROMPT"
 ```
 
+When the orchestrator supplies `model`, add `-m "<model>"` right before
+`"$PROMPT"`, with the value passed verbatim. Without `model`, add no `-m`:
+Codex then runs its recommended default model. Never choose a model
+yourself.
+
 The Bash call contains only the `PROMPT` assignment (plus a `SCHEMA=`
 assignment if you keep the variable rather than the literal path) and this
 wrapper line. Nothing else goes before, between or after them — no `cd`,
@@ -175,6 +180,18 @@ this Bash tool call with a timeout of 600000 milliseconds.
   (Codex's exact rate-limit wording is not contractually fixed); a genuine
   rate limit whose wording fails to match falls through to the non-JSON
   handling below.
+- Only when the parse fails, `model` was supplied, and the wrapper exited
+  non-zero other than 124 (124 is a timeout): check for an unsupported-model
+  signal. Look only at lines that begin with `ERROR: ` (Codex's own error
+  lines); such a line is a signal when it contains, case-insensitively,
+  `model is not supported` or `unsupported model`, or `does not exist`
+  together with the supplied model name. Any other line is ignored: Codex
+  also echoes command output, so text from the reviewed code must not
+  decide this. A reviewed file that holds such a line can still forge the
+  signal when Codex prints it and then fails; the cost is only that the
+  chain walks to its next entry. Matched → return
+  `{"findings": [], "summary": "skipped: codex model unsupported", "skipped": true, "skip_reason": "harness_unavailable", "source": "codex"}`.
+  Never retry with another model or without `-m`.
 - Force `"source": "codex"` and `"category": "<perspective>"` on every
   finding if Codex drifted.
 - Non-JSON output, no rate-limit signal matched →

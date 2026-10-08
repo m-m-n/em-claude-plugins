@@ -168,7 +168,10 @@ take the FIRST entry whose harness is available (`codex_available` for
 `codex`, `litellm_available` for `litellm`). Dispatch exactly ONE primary
 reviewer for this perspective:
 
-- `{harness: codex}` → `Task(subagent_type="em-workflow:codex-reviewer")`
+- `{harness: codex}` → `Task(subagent_type="em-workflow:codex-reviewer")`; when
+  the entry names `model: M`, add `model: M` to the input block, passed
+  through verbatim. No allow-list check: Codex itself rejects an unsupported
+  model, and the reviewer then skips with `harness_unavailable`.
 - `{harness: litellm, model: M}` → before dispatching, validate `M` against
   the vertex-review plugin's litellm-harness skill's allow-list of known
   litellm models. If `M` is not on that allow-list, treat this chain entry
@@ -439,7 +442,7 @@ R3b's evaluator-failure degradation).
 - `lessons` — optional, same resolution rule as Phase R2.
 - `perspectives_dispatched` — one entry per perspective run this round,
   carrying `run_id`, `perspective`, `role`, `status`, `skip_reason`, and
-  `model` for litellm runs.
+  `model` for litellm runs and for codex runs given a `model`.
 - `reviewer_outputs` — one entry per run, carrying `run_id` plus that run's
   verbatim reviewer output.
 - `unreviewed_perspectives` — the same list Phase R5 records at the
@@ -871,7 +874,7 @@ perspective_runs:
   - {run_id: "security#1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed}
   - {run_id: "performance#fallback", perspective: performance, role: fallback, source: claude, status: completed}
   - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
-  # `model` は litellm ハーネスのときだけ付ける。`run_id` は round 内で一意:
+  # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。`run_id` は round 内で一意:
   # chain walk のエントリは `{perspective}#{chain_index}`、chain-exhaustion /
   # malformed-result / harness-failure の Claude fallback は
   # `{perspective}#fallback`、Phase R4 の in-loop 再レビューは

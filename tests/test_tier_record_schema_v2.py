@@ -471,7 +471,7 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # R5 gained the gate-abort and legacy-recovery blocks and the scope
 # statement on the `status: failed` reservation.
 REVIEW_PHASE_SHA256 = (
-    "d15a347b95ffa9e80cbe8df0ba71ab33ad597d526e08de0598e01f5d82b84821"
+    "bcbbe2c145853fb8981ffaa0265a4c9d47ca72b132f3b9b7859f035d7aa508c8"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

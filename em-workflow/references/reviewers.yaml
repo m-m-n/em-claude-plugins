@@ -4,7 +4,8 @@
 # that perspective's primary (main) review, and injects the perspective as a
 # skill:
 #   - codex   → em-workflow:codex-reviewer (Codex CLI via the wrapper script;
-#               the model is Codex's own recommended default)
+#               the model is Codex's own recommended default unless the
+#               entry names a `model`)
 #   - litellm → vertex-review:vertex-reviewer (`codex exec -p litellm -m
 #               <model>`; an independently-installed plugin that fronts
 #               Vertex AI MaaS and Meta Muse behind one LiteLLM proxy)
@@ -16,6 +17,9 @@
 # vertex-review plugin's `litellm-harness` skill; of those, this registry
 # assigns exactly one:
 #   muse-spark
+# A codex entry's `model` is a Codex model slug as listed by
+# `codex debug models`; the reviewer passes it as `-m <model>`. A codex entry
+# without `model` runs Codex's recommended default.
 #
 # The review phase reads this file to drive fan-out: for each SELECTED
 # perspective (per review-rules.yaml + discretion), it dispatches exactly ONE
@@ -53,7 +57,7 @@ perspectives:
     claude_skill: review-security
     requires_spec: false
     primary_chain:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6-astra}
       - {harness: litellm, model: muse-spark}
   - perspective: performance
     claude_skill: review-performance

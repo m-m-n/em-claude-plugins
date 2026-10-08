@@ -129,7 +129,7 @@ PROTOCOL_BULLETS_START = (
 )
 PROTOCOL_BULLETS_END = "For a selected perspective, the review phase dispatches"
 PROTOCOL_BULLETS_SHA256 = (
-    "102ddfba4736854ad0d2eb04bac8a8a7e1dad22d3566dca6e6da82da4eaffbf3"
+    "04da761377577d88152832536ffe944c519d8a328abe9740decfac02d26b1249"
 )
 
 # Phrases that would frame a harness reviewer as a second opinion / a
@@ -276,7 +276,7 @@ FROZEN_SECTIONS = [
         "Inputs",
         "## Inputs (all reviewers)",
         "## Step 0 Fail-Closed Resolution",
-        "755c810a9c912856912931baa045274b97b3fd6d264f63538d4e4e7b5b09d53e",
+        "74e95ad79cd689fbfc3eabb9407625b2bddf793195dd0e1a7683ea3cb6d4c6c8",
     ),
     (
         "Investigation Budget",
@@ -644,7 +644,7 @@ CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "47c190bc71b2f5b6ed87a9bd4d166a81e982faa021473906cdd799ea55cef7a0"
+    "fc3079e6715ab2005eaa8b611c3344677c304457ffb45ee47c1af8b25a60d494"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"

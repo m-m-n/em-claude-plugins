@@ -15,7 +15,7 @@ an input:
 - `em-workflow:codex-reviewer` (GPT/Codex) — loads the same perspective skill,
   builds an XML-block prompt per its preloaded `codex-prompting` skill, and
   delegates to Codex CLI via the wrapper script. The model is Codex's own
-  recommended default; this harness takes no `model` input.
+  recommended default unless the registry entry names a `model`.
 - `vertex-review:vertex-reviewer` (LiteLLM harness, optional) — a separately
   installed plugin that reads this SAME protocol file (it ships no
   `references/` of its own, to avoid drifting from this SSOT) and follows it
@@ -50,10 +50,14 @@ The dispatching orchestrator (the `/em-workflow:develop` review phase or
 - `perspective` — one of the registry perspectives (references/reviewers.yaml)
 - `perspective_skill` — the skill to load via the Skill tool (fail-closed: if
   the Skill tool cannot load it, return the skip object below)
-- `model` — litellm-harness reviewer ONLY, and always present for it: the
-  model name to pass to `codex exec -p litellm -m <model>`, verbatim. Absent
-  or unknown to the harness → skip with `harness_unavailable`; never
-  substitute a default. Other reviewers do not receive this field.
+- `model` — harness reviewers only; the Claude reviewer never receives it.
+  - litellm-harness reviewer: always present. The model name to pass to
+    `codex exec -p litellm -m <model>`, verbatim. Absent or unknown to the
+    harness → skip with `harness_unavailable`; never substitute a default.
+  - codex reviewer: present only when the registry entry names a `model`.
+    Passed to the wrapper as `-m <model>`, verbatim. Absent → no `-m`, and
+    Codex runs its recommended default. Unsupported by Codex → skip with
+    `harness_unavailable`; never retry with another model or without `-m`.
 - `review_mode` — `"diff"` or `"whole-codebase"`
 - `protocol_path`, `schema_path` — resolved SSOT paths
 - `changed_files` — path list (validated by the orchestrator)
@@ -229,7 +233,8 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **Spec perspective** with no readable SPEC.md:
   `{"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "skip_reason": "no_spec", "source": "<source>"}`
 - **A harness reviewer (codex / litellm)** when its harness cannot be reached at all
-  (codex: wrapper script or CLI missing; litellm: proxy down, `-p litellm`
+  (codex: wrapper script or CLI missing, or the supplied `model`
+  unsupported; litellm: proxy down, `-p litellm`
   profile broken, `model` absent or unknown):
   `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "harness_unavailable", "source": "codex"}`
 - **A harness reviewer (codex / litellm)** when the upstream reports a rate limit
