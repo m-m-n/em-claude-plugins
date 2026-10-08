@@ -1,0 +1,63 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_reproduction_review_phase_em_review.TestAc1Step6AndDedupe.test_reproduction_is_capped_with_same_marker
+      - test_reproduction_review_phase_em_review.TestAc1Step6AndDedupe.test_empty_or_whitespace_only_becomes_null
+      - test_reproduction_review_phase_em_review.TestAc1Step6AndDedupe.test_non_security_run_gets_null
+      - test_reproduction_review_phase_em_review.TestAc1Step6AndDedupe.test_decision_is_made_before_step7_relabel
+      - test_reproduction_review_phase_em_review.TestAc1Step6AndDedupe.test_dedupe_keeps_longest_non_null_reproduction
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- step 6 carried no reproduction cap, null rule or step-7 ordering sentence, and the dedupe merge had no reproduction rule"
+  AC-2:
+    tests:
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_placed_after_round_context_suppression
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_targets_selected_by_originating_perspective
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_three_outcomes_defined
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_not_reproduced_is_declined_with_prefix
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_unverifiable_is_declined_unless_basis_confirmed
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_truncated_or_oversized_is_unverifiable
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_no_steps_goes_to_orchestrator_judgment
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_declined_findings_leave_fix_candidates_and_residual
+      - test_reproduction_review_phase_em_review.TestAc2Phase4Reaggregation.test_reaggregation_applies_step6_suppression_and_verification
+      - test_reproduction_review_phase_em_review.TestAc2Phase4Reaggregation.test_candidate_gate_excludes_declined_findings
+    red_confirmed: true
+    red_reason: "ValueError: substring not found ('**Reproduction verification**' paragraph absent from Phase R3) and AssertionError: False is not true for the Phase R4 re-aggregation and candidate-gate sentences"
+  AC-3:
+    tests:
+      - test_reproduction_review_phase_em_review.TestAc3PrMode.test_r0_pr_step5_mentions_verification_delta
+      - test_reproduction_review_phase_em_review.TestAc3PrMode.test_r3_paragraph_states_pr_mode_limits
+      - test_reproduction_review_phase_em_review.TestAc3PrMode.test_pr_mode_limits_do_not_name_the_working_tree_as_a_source
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (R0-PR step 5 had no verification delta) and ValueError: substring not found (no verification paragraph in Phase R3)"
+  AC-4:
+    tests:
+      - test_reproduction_review_phase_em_review.TestAc4VerifierConstraints.test_untrusted_and_nothing_executed
+      - test_reproduction_review_phase_em_review.TestAc4VerifierConstraints.test_code_reading_and_readonly_commands_only
+    red_confirmed: true
+    red_reason: "ValueError: substring not found (no verification paragraph, hence no verifier-constraints statement, in Phase R3)"
+  AC-5:
+    tests:
+      - test_reproduction_review_phase_em_review.TestAc5RecordsDispatchAndCarryOver.test_r5_finding_entries_carry_reproduction
+      - test_reproduction_review_phase_em_review.TestAc5RecordsDispatchAndCarryOver.test_review_editor_finding_json_excludes_reproduction
+      - test_reproduction_review_phase_em_review.TestAc5RecordsDispatchAndCarryOver.test_carry_over_paragraph_is_in_phase_r5
+      - test_reproduction_review_phase_em_review.TestAc5RecordsDispatchAndCarryOver.test_carry_over_goes_through_existing_round_context
+      - test_reproduction_review_phase_em_review.TestAc5RecordsDispatchAndCarryOver.test_older_records_are_read_unchanged
+      - test_reproduction_review_phase_em_review.TestAc5RecordsDispatchAndCarryOver.test_verification_paragraph_runs_after_suppression_so_no_reverify
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (R5 finding entry had no reproduction key; R4 dispatch had no exclusion sentence) and ValueError: substring not found (no carry-over paragraph in Phase R5)"
+  AC-6:
+    tests:
+      - test_reproduction_review_phase_em_review.TestAc6Readme.test_section_states_unreproduced_security_finding_is_not_a_target
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (the Auto-fix（R4） section named no exclusion for a security finding that could not be reproduced)"
+  AC-7:
+    tests:
+      - test_reproduction_review_phase_em_review.TestAc7PinnedTextAndImports.test_question_tool_name_count_stays_four
+      - test_reproduction_review_phase_em_review.TestAc7PinnedTextAndImports.test_no_gate_identifier_is_added
+      - test_reproduction_review_phase_em_review.TestAc7PinnedTextAndImports.test_module_imports_are_standard_library_only
+      - test_muse_consent_no_new_questions
+    red_confirmed: false
+    red_reason: "No new module is needed for the pinned question-tool count, but the existing test_muse_consent_no_new_questions detects an added occurrence of the question-tool name in em-review/references/review-phase.md; no red state occurred for this change. The new count, gate-identifier and stdlib-import checks are invariants that held before the implementation, so they passed from the start."

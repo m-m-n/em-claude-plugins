@@ -81,7 +81,7 @@ R2b はスキップ理由が retryable なときだけチェーンを進める�
 
 ## Auto-fix（R4）
 
-対象 = `severity ∈ {critical, high}` かつ `category != spec` かつ suggestion 非空。候補は機械的に 3 分類される:
+対象 = `severity ∈ {critical, high}` かつ `category != spec` かつ suggestion 非空。再現手順の検証で再現できなかった security の finding（declined）は対象外。候補は機械的に 3 分類される:
 
 - **auto-applicable**: 矛盾のない unified-diff 提案 → **承認プロンプトなしで**適用
 - **conflict**: 同一サイトに非互換の提案 → グループごとに AskUserQuestion
