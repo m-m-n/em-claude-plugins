@@ -4,46 +4,46 @@ final_failures: []             # re-executed after implementation and pin refres
 acceptance_tests:
   AC-1:
     tests:
-      - TestScenarioIdExtractionAcceptsBothForms.test_ac1_hyphenless_ids_are_extracted
-      - TestScenarioIdExtractionAcceptsBothForms.test_ac1_multi_digit_hyphenless_id_is_not_truncated
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms.test_ac1_hyphenless_ids_are_extracted
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms.test_ac1_multi_digit_hyphenless_id_is_not_truncated
     red_confirmed: true
     red_reason: "AssertionError against the hyphenated-only pattern: extraction returned an empty set; items in the expected set but not returned: 'TS1', 'TS2', 'TS13' (and 'TS13' alone for the multi-digit case)"
   AC-2:
     tests:
-      - TestScenarioIdExtractionAcceptsBothForms.test_ac2_mixed_forms_keep_their_literal_values
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms.test_ac2_mixed_forms_keep_their_literal_values
     red_confirmed: true
     red_reason: "AssertionError against the hyphenated-only pattern: 'TS2' missing from the extracted set (only 'TS-1' returned)"
   AC-3:
     tests:
-      - TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac3_new_hyphenless_scenario_is_accepted
+      - tests.test_validate_worker_output.TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac3_new_hyphenless_scenario_is_accepted
     red_confirmed: true
     red_reason: "AssertionError against the hyphenated-only pattern: errors == [{'code': 'rework-index', 'message': \"task0007: new_scenarios 'TS13' is not a new VERIFICATION.md scenario\"}]"
   AC-4:
     tests:
-      - TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac4_preexisting_hyphenless_scenario_is_rejected
-      - TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac4_hyphenless_id_is_new_when_baseline_holds_only_the_hyphenated_form
-      - TestReworkIndexNoveltyWithBothScenarioIdForms.test_preexisting_hyphenated_scenario_is_still_rejected
-      - TestScenarioIdExtractionAcceptsBothForms.test_same_number_in_both_forms_stays_two_distinct_ids
+      - tests.test_validate_worker_output.TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac4_preexisting_hyphenless_scenario_is_rejected
+      - tests.test_validate_worker_output.TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac4_hyphenless_id_is_new_when_baseline_holds_only_the_hyphenated_form
+      - tests.test_validate_worker_output.TestReworkIndexNoveltyWithBothScenarioIdForms.test_preexisting_hyphenated_scenario_is_still_rejected
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms.test_same_number_in_both_forms_stays_two_distinct_ids
     red_confirmed: true
     red_reason: "test_ac4_hyphenless_id_is_new_when_baseline_holds_only_the_hyphenated_form failed against the hyphenated-only pattern ('TS13' is not a new VERIFICATION.md scenario error present) and test_same_number_in_both_forms_stays_two_distinct_ids failed ('TS13' missing). test_ac4_preexisting_hyphenless_scenario_is_rejected and test_preexisting_hyphenated_scenario_is_still_rejected passed before the implementation (they guard against over-acceptance); they were observed to fail under a temporary mutation that made the baseline read return an empty set, and the mutation was discarded."
   AC-5:
     tests:
-      - TestScenarioIdExtractionAcceptsBothForms.test_ac1_hyphenless_ids_are_extracted
-      - TestScenarioIdExtractionAcceptsBothForms.test_ac1_multi_digit_hyphenless_id_is_not_truncated
-      - TestScenarioIdExtractionAcceptsBothForms.test_ac2_mixed_forms_keep_their_literal_values
-      - TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac3_new_hyphenless_scenario_is_accepted
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms.test_ac1_hyphenless_ids_are_extracted
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms.test_ac1_multi_digit_hyphenless_id_is_not_truncated
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms.test_ac2_mixed_forms_keep_their_literal_values
+      - tests.test_validate_worker_output.TestReworkIndexNoveltyWithBothScenarioIdForms.test_ac3_new_hyphenless_scenario_is_accepted
     red_confirmed: true
     red_reason: "The AC-1, AC-2 and AC-3 tests were written first and run against the unchanged hyphenated-only pattern: 6 failures in the 9 new tests, including all four tests listed here"
   AC-6:
     tests:
-      - TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
     red_confirmed: false
     red_reason: "A dedicated new module is out of scope (the plan states no test asserts the docstring wording), but the existing TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical detects any byte change of em-workflow/scripts/validate-worker-output.py; no red state occurred for this change. The failure I saw came from the pattern and docstring edits made together, so it does not isolate the docstring wording. Verified by inspection (VERIFICATION.md TS-11): the docstring names TS-<n> and TS<n>, states IDs are literal strings, and does not contain the citation 'SKILL.md 131-139'."
   AC-7:
     tests:
-      - TestReworkIndexNewScenariosRequireTestsAppend
-      - TestReworkIndexRequiresBaselineForNewScenarios
-      - TestFixtureCorpusDataDriven
-      - TestFixtureCoverageValidAndInvalidPerBranch
+      - tests.test_validate_worker_output.TestReworkIndexNewScenariosRequireTestsAppend
+      - tests.test_validate_worker_output.TestReworkIndexRequiresBaselineForNewScenarios
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven
+      - tests.test_validate_worker_output.TestFixtureCoverageValidAndInvalidPerBranch
     red_confirmed: false
     red_reason: "The behavior pre-existed: these existing classes and the discover run already exit 0 at baseline and still pass without modification, so no red state occurred for this criterion. The new tests import only unittest, re, tempfile and pathlib from the standard library. Side effect recorded: tests/test_gate_option_vocabulary.py TestFrozenMachineReadSurface pins the sha256 of the changed validator and test module; its two pins were refreshed per the file's refresh-don't-remove convention."

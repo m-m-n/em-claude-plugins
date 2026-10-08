@@ -4,8 +4,8 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_recycled_task_id_consistency.TestI2aScopeStatementIsSelfConsistent.test_two_parties_phrase_present
-      - test_recycled_task_id_consistency.TestI2aScopeStatementIsSelfConsistent.test_contradictory_only_with_exception_construction_absent
+      - tests.test_recycled_task_id_consistency.TestI2aScopeStatementIsSelfConsistent.test_two_parties_phrase_present
+      - tests.test_recycled_task_id_consistency.TestI2aScopeStatementIsSelfConsistent.test_contradictory_only_with_exception_construction_absent
     red_confirmed: true
     red_reason: >-
       Verified by temporarily swapping em-workflow/references/implement-phase.md
@@ -19,8 +19,8 @@ acceptance_tests:
       document afterward and re-ran the full suite green.
   AC-2:
     tests:
-      - test_recycled_task_id_consistency.TestStopHookBulletCitesClassificationTable.test_stop_hook_bullet_cites_classification_table
-      - test_recycled_task_id_consistency.TestStopHookBulletCitesClassificationTable.test_stop_hook_bullet_matches_i2a_classification
+      - tests.test_recycled_task_id_consistency.TestStopHookBulletCitesClassificationTable.test_stop_hook_bullet_cites_classification_table
+      - tests.test_recycled_task_id_consistency.TestStopHookBulletCitesClassificationTable.test_stop_hook_bullet_matches_i2a_classification
     red_confirmed: true
     red_reason: >-
       Same pre-edit-document swap as AC-1: both tests FAIL with
@@ -30,9 +30,9 @@ acceptance_tests:
       task adds.
   AC-3:
     tests:
-      - test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_unlaunched_solely_from_absence_phrase_present
-      - test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_narrower_than_orchestrator_rule_stated
-      - test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_reason_states_fail_open_nets_not_authorities
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_unlaunched_solely_from_absence_phrase_present
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_narrower_than_orchestrator_rule_stated
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_reason_states_missed_first_launch_detection
     red_confirmed: true
     red_reason: >-
       Same pre-edit-document swap: all three FAIL with AssertionError -- the
@@ -42,12 +42,12 @@ acceptance_tests:
       the pre-task wording at all.
   AC-4:
     tests:
-      - test_hook_classification_pin.TestParseClassificationTable.test_parses_the_real_document_without_error
-      - test_hook_classification_pin.TestParseClassificationTable.test_exactly_four_rows
-      - test_hook_classification_pin.TestParseClassificationTable.test_row_hook_names_match_the_four_queue_hooks_no_more_no_fewer
-      - test_hook_classification_pin.TestParseClassificationTable.test_every_row_path_is_repo_relative_and_resolves
-      - test_hook_classification_pin.TestParseClassificationTable.test_every_classification_is_from_the_fixed_vocabulary
-      - test_hook_classification_pin.TestParseClassificationTable.test_anchor_is_unique_in_the_document
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_parses_the_real_document_without_error
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_exactly_four_rows
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_row_hook_names_match_the_four_queue_hooks_no_more_no_fewer
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_every_row_path_is_repo_relative_and_resolves
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_every_classification_is_from_the_fixed_vocabulary
+      - tests.test_hook_classification_pin.TestParseClassificationTable.test_anchor_is_unique_in_the_document
     red_confirmed: true
     red_reason: >-
       Verified by the same pre-edit-document swap: setUpClass raises
@@ -56,10 +56,10 @@ acceptance_tests:
       -- every test in the class errors because the table did not exist yet.
   AC-5:
     tests:
-      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_is_non_empty
-      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_placed_correctly_in_i2a
-      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_is_non_empty
-      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_placed_correctly_in_i2a
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_is_non_empty
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_placed_correctly_in_i2a
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_is_non_empty
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_placed_correctly_in_i2a
     red_confirmed: true
     red_reason: >-
       Verified by the same pre-edit-document swap: setUpClass ERRORs with
@@ -69,13 +69,13 @@ acceptance_tests:
       test in the class errors, proving it is not vacuously true.
   AC-6:
     tests:
-      - test_hook_classification_pin.TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row
-      - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_inverted_classification_produces_a_disagreement
-      - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_row_with_unresolvable_path_fails
-      - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_agreeing_table_produces_no_disagreements
-      - test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
-      - test_hook_classification_pin.TestObserveHookSource.test_bare_workflow_yaml_mention_without_status_accessor_is_false
-      - test_hook_classification_pin.TestObserveHookSource.test_removing_the_status_carveout_flips_observation_to_false
+      - tests.test_hook_classification_pin.TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row
+      - tests.test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_inverted_classification_produces_a_disagreement
+      - tests.test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_row_with_unresolvable_path_fails
+      - tests.test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_agreeing_table_produces_no_disagreements
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bare_workflow_yaml_mention_without_status_accessor_is_false
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_removing_the_status_carveout_flips_observation_to_false
     red_confirmed: true
     red_reason: >-
       Verified by the same pre-edit-document swap: test_agreeing_table_produces_no_disagreements

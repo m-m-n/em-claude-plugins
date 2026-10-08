@@ -43,7 +43,7 @@ acceptance_tests:
       replaced by "質問を出さない" and every other line byte-identical.
   AC-2:
     tests:
-      - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+      - tests.test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
     red_confirmed: true
     red_reason: >-
       Before the edit: AssertionError: Lists differ:
@@ -55,7 +55,7 @@ acceptance_tests:
       BASELINE_COUNTS, was not modified.
   AC-3:
     tests:
-      - test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_askuserquestion_and_three_way_wording_present
+      - tests.test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_askuserquestion_and_three_way_wording_present
     red_confirmed: false
     red_reason: >-
       Non-regression criterion: this test was already green before the
@@ -64,7 +64,7 @@ acceptance_tests:
       by running the test both before and after the edit.
   AC-4:
     tests:
-      - test_plugin_version_parity (module; floor/agreement checks, does not pin the literal current version per NFR2)
+      - tests.test_plugin_version_parity
     red_confirmed: false
     red_reason: >-
       test_plugin_version_parity.py uses a historical floor (0.1.50) and

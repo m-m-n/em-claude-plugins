@@ -23,7 +23,7 @@ final_failures:
   - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
 acceptance_tests:
   AC-1:
-    tests: [test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_consults_twice_and_records_both_bases]
+    tests: [tests.test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_consults_twice_and_records_both_bases]
     red_confirmed: true
     red_reason: >-
       Ran before any edit (4a baseline): AssertionError: False is not true.
@@ -31,7 +31,7 @@ acceptance_tests:
       みを基準に）", splitting the required contiguous phrase
       "1 回目はタスク記述のみを基準に" with the identifier and parenthesis.
   AC-2:
-    tests: [test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_unresolved_conditions_give_removes_nothing_tier]
+    tests: [tests.test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_unresolved_conditions_give_removes_nothing_tier]
     red_confirmed: true
     red_reason: >-
       Ran before any edit (4a baseline): AssertionError: False is not true.
@@ -41,12 +41,12 @@ acceptance_tests:
       "フォールバック表が解決しないその他の条件".
   AC-3:
     tests:
-      - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_no_threshold_value_restated
-      - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_no_external_skill_sentence_reproduced_text_overlap
-      - test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_never_names_raw_codex_subcommand_as_invocation_route
-      - test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_names_readonly_codex_wrapper
-      - test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_names_judgement_skill_with_json_switches
-      - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_named_external_skills_by_path_structurally
+      - tests.test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_no_threshold_value_restated
+      - tests.test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_no_external_skill_sentence_reproduced_text_overlap
+      - tests.test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_never_names_raw_codex_subcommand_as_invocation_route
+      - tests.test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_names_readonly_codex_wrapper
+      - tests.test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_names_judgement_skill_with_json_switches
+      - tests.test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_named_external_skills_by_path_structurally
     red_confirmed: false
     red_reason: >-
       Per the task plan's Test Notes, AC-3 is a regression-detection

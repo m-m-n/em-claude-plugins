@@ -4,29 +4,29 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_passage_sits_after_the_existing_paragraph_inside_r2
-      - test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_passage_uses_the_term_partial_coverage
-      - test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact1_several_project_directories_scanned_as_separate_projects
-      - test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact2_unfinished_project_makes_the_row_skipped
-      - test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact2_skip_reason_carries_combined_reasons_each_once
-      - test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact3_completed_projects_findings_still_enter_r3a_unchanged
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_passage_sits_after_the_existing_paragraph_inside_r2
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_passage_uses_the_term_partial_coverage
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact1_several_project_directories_scanned_as_separate_projects
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact2_unfinished_project_makes_the_row_skipped
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact2_skip_reason_carries_combined_reasons_each_once
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC1AppendedPassageStatesMultiProjectCoverage.test_ac1_fact3_completed_projects_findings_still_enter_r3a_unchanged
     red_confirmed: true
     red_reason: "before review-phase.md was edited: ValueError substring not found (no text between the existing paragraph and the Contributor-tier heading) for the position test; AssertionError 'partial coverage' / 'did not complete' / 'several project directories' / 'combined machine-stable reasons' / 'findings of the projects that did complete' not found in ' ' for the content tests"
   AC-2:
     tests:
-      - test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_existing_paragraph_present_byte_for_byte_inside_r2
-      - test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_existing_paragraph_occurs_exactly_once
-      - test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_existing_paragraph_start_is_a_paragraph_start
-      - test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_phrases_pinned_by_scan_execution_tests_still_present
-      - test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_contributor_tier_section_still_follows_inside_r2
-      - test_sca_scan_execution.TestReviewPhasePartialCoverageStatement
-      - test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep
-      - test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk
-      - test_sca_axis_review_phase_r0_r3.TestAC5Axis2RunIdentityAndDownstreamPath
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_existing_paragraph_present_byte_for_byte_inside_r2
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_existing_paragraph_occurs_exactly_once
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_existing_paragraph_start_is_a_paragraph_start
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_phrases_pinned_by_scan_execution_tests_still_present
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC2ExistingTextPreserved.test_ac2_contributor_tier_section_still_follows_inside_r2
+      - tests.test_sca_scan_execution.TestReviewPhasePartialCoverageStatement
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC5Axis2RunIdentityAndDownstreamPath
     red_confirmed: false
     red_reason: "preservation criterion: the paragraph and the pinned phrases pre-existed this change and a pure append does not remove them, so no red state occurred; the new module's exact-paragraph tests and the existing test_sca_scan_execution / test_sca_axis_review_phase_r0_r3 classes detect any reword or re-wrap of them"
   AC-3:
     tests:
-      - test_sca_review_phase_multi_project_coverage.TestAC3OwnModuleStdlibOnly.test_ac3_only_standard_library_imports
+      - tests.test_sca_review_phase_multi_project_coverage.TestAC3OwnModuleStdlibOnly.test_ac3_only_standard_library_imports
     red_confirmed: false
     red_reason: "the new module imported only the standard library from the moment it existed, so the import check never failed; the exit-0 outcome of `python3 -m unittest discover -s tests` and `python3 em-workflow/scripts/check-plugin-invariants.py .` was verified by running both commands (both exit 0 after the pin refresh in tests/test_tier_record_schema_v2.py)"

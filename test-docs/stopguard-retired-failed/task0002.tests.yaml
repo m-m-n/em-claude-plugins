@@ -47,7 +47,7 @@ acceptance_tests:
       any task with a raw `failed` journal event alone suppresses the block;
       the classification matches section I.2.a's.
   AC-4:
-    tests: [tests/test_recycled_task_id_consistency.py]
+    tests: [tests.test_recycled_task_id_consistency]
     red_confirmed: false
     red_reason: >-
       Pre-existing module outside this task's declared change set (not
@@ -76,7 +76,7 @@ acceptance_tests:
       durable past-baseline invariant would apply, and none was found
       pinning this exact feature's target version).
   AC-6:
-    tests: [full suite via python3 -m unittest discover -s tests]
+    tests: []
     red_confirmed: false
     red_reason: >-
       No genuine red state exists for this criterion: before any edit, by
@@ -91,6 +91,8 @@ acceptance_tests:
       em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json)
       and none created, and `python3 -m unittest discover -s tests` from the
       repository root passed 1294/1294 after the edit.
+
+      Removed from tests (not a unittest ID): full suite via python3 -m unittest discover -s tests
 notes: >-
   This is a documentation/registry-only task (infra-impl). Per
   IMPLEMENTATION.md D5, no new test module may be added and the only test

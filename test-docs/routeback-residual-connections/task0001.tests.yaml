@@ -23,10 +23,10 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_direction_below_phrase_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_third_conjunct_referent_present_in_i2c
-      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_no_gate_or_conjunct_reference_followed_by_above_in_i2a
-      - test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_absence_matcher_flags_the_pre_change_widened_gate_sample
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_direction_below_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_third_conjunct_referent_present_in_i2c
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_no_gate_or_conjunct_reference_followed_by_above_in_i2a
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aGateDirectionIsPinnedBelow.test_absence_matcher_flags_the_pre_change_widened_gate_sample
     red_confirmed: true
     red_reason: >-
       FR1 is a pin (D3): the three positive assertions are green on the base
@@ -40,11 +40,11 @@ acceptance_tests:
       the regex against both texts before writing any implementation.
   AC-2:
     tests:
-      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_reclassify_phrase_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_outcome_phrase_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_never_consult_phrase_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_chain_terminates_phrase_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_causal_span_still_has_single_because_and_so
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_reclassify_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_outcome_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_never_consult_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_chain_terminates_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2aChainTerminationSentence.test_causal_span_still_has_single_because_and_so
     red_confirmed: true
     red_reason: >-
       Run against the pre-edit em-workflow/references/implement-phase.md
@@ -57,12 +57,12 @@ acceptance_tests:
       constants are absent from the pre-edit slice).
   AC-3:
     tests:
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_second_reset_member_present_and_follows_first
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_diverge_sentence_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_step_i2b_step3_owner_citation_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_citation_and_replace_all_share_one_sentence
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_diverge_sentence_precedes_commit
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_first_tasks_status_has_pending_within_60_chars
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_second_reset_member_present_and_follows_first
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_diverge_sentence_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_step_i2b_step3_owner_citation_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_citation_and_replace_all_share_one_sentence
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_diverge_sentence_precedes_commit
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResetTargetIsUnionOfBothMembers.test_first_tasks_status_has_pending_within_60_chars
     red_confirmed: true
     red_reason: >-
       Run against the pre-edit document: test_second_reset_member_present_and_follows_first
@@ -78,18 +78,18 @@ acceptance_tests:
       site).
   AC-4:
     tests:
-      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_source_qualified_not_merged_phrase_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_bare_confirmed_not_merged_absent
-      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_gate_reason_phrase_present
-      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_gate_reason_sits_inside_cleanup_sentence_slice
-      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_retained_cleanup_literals_survive
-      - test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_git_branch_d_still_occurs_exactly_once
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_sentence_present_between_leftover_and_end_of_phase
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_names_merge_task_sh_update_ref
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_states_warning_and_stop_without_report_windows
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_states_known_and_unclosed
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_contains_neither_append_nor_rework
-      - test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_contains_no_literal_git_branch_dash_d
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_source_qualified_not_merged_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_bare_confirmed_not_merged_absent
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_gate_reason_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_gate_reason_sits_inside_cleanup_sentence_slice
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_retained_cleanup_literals_survive
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cCleanupIsSourceQualified.test_git_branch_d_still_occurs_exactly_once
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_sentence_present_between_leftover_and_end_of_phase
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_names_merge_task_sh_update_ref
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_states_warning_and_stop_without_report_windows
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_states_known_and_unclosed
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_contains_neither_append_nor_rework
+      - tests.test_routeback_reset_scope_consistency.TestTask0001I2cResidualSentence.test_residual_contains_no_literal_git_branch_dash_d
     red_confirmed: true
     red_reason: >-
       Run against the pre-edit document: test_bare_confirmed_not_merged_absent,
@@ -110,12 +110,12 @@ acceptance_tests:
       absences, unaffected by this site's own new wording).
   AC-5:
     tests:
-      - test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_termination_matchers_flag_absence_in_pre_change_wording
-      - test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_reset_union_matchers_flag_absence_in_pre_change_wording
-      - test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_cleanup_matchers_flag_the_pre_change_wording
-      - test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_termination_sample_retains_carve_out_scoped_anchor
-      - test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_write_set_sample_retains_create_plan_anchor
-      - test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_cleanup_sample_retains_just_reset_anchor
+      - tests.test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_termination_matchers_flag_absence_in_pre_change_wording
+      - tests.test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_reset_union_matchers_flag_absence_in_pre_change_wording
+      - tests.test_routeback_reset_scope_consistency.TestTask0001ValidationDetectsRegressions.test_cleanup_matchers_flag_the_pre_change_wording
+      - tests.test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_termination_sample_retains_carve_out_scoped_anchor
+      - tests.test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_write_set_sample_retains_create_plan_anchor
+      - tests.test_routeback_reset_scope_consistency.TestTask0001PreChangeSampleGuards.test_cleanup_sample_retains_just_reset_anchor
     red_confirmed: false
     red_reason: >-
       This criterion asserts structural properties of the test module itself
@@ -136,11 +136,11 @@ acceptance_tests:
       combined) pass together.
   AC-6:
     tests:
-      - test_routeback_residual_connections_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
-      - test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
-      - test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
-      - test_routeback_residual_connections_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
-      - test_routeback_residual_connections_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_routeback_residual_connections_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_routeback_residual_connections_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_routeback_residual_connections_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_routeback_residual_connections_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
     red_confirmed: true
     red_reason: >-
       Run with both manifests temporarily reverted to 0.2.0 (git show

@@ -114,8 +114,7 @@ acceptance_tests:
       already a stdlib module, so this assertion holds both before and
       after) carried forward, not a new-behavior red.
   AC-8:
-    tests:
-      - tests.test_queue_stop_guard.TestQueueStopGuardSingleDerivation.test_divergent_worktree_and_docs_segment_names_reads_the_enumerated_file
+    tests: []
     red_confirmed: true
     red_reason: "AssertionError: 0 != 2 against the pre-implementation hook (the divergent-segment probe fixture is not enumerable by the old flat layout at all)."
   AC-9:

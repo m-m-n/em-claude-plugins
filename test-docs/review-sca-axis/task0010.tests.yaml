@@ -13,7 +13,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args (ecosystem='pip')"
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args
     red_confirmed: true
     red_reason: >-
       Baseline: AssertionError: Lists differ:
@@ -25,15 +25,11 @@ acceptance_tests:
       pip entry only, per the task plan's Test Notes).
   AC-2:
     tests:
-      - "test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args (ecosystem='pip')"
-      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_requirements_file_is_itself_the_audited_target
-      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_at_project_root_audits_the_current_directory
-      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_in_a_subdirectory_audits_that_directory
-      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_changed_lockfile_audits_its_own_directory_not_pyproject_via_r
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='requirements.txt')"
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='pyproject.toml')"
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='poetry.lock')"
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='Pipfile.lock')"
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_requirements_file_is_itself_the_audited_target
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_at_project_root_audits_the_current_directory
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_in_a_subdirectory_audits_that_directory
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact
     red_confirmed: true
     red_reason: >-
       All nine tests observed red in the mandatory 4a baseline run before any
@@ -49,8 +45,8 @@ acceptance_tests:
       implementation) confirms no file under tests/ was modified by this task.
   AC-4:
     tests:
-      - tests/test_plugin_version_parity.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_matches_plugin_manifest
-      - tests/test_plugin_version_parity.py::TestPluginManifestVersion::test_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_plugin_version_parity.TestPluginManifestVersion.test_version_is_past_baseline
     red_confirmed: false
     red_reason: >-
       These existing pins only assert (a) the two files agree and (b) the
@@ -78,10 +74,7 @@ acceptance_tests:
       PASS with exit 0.
   AC-6:
     tests:
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='requirements.txt')"
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='pyproject.toml')"
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='poetry.lock')"
-      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='Pipfile.lock')"
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact
     red_confirmed: true
     red_reason: >-
       Baseline: AssertionError: '--no-deps' unexpectedly found in

@@ -29,7 +29,7 @@ acceptance_tests:
       - tests.test_threat_model_review_security.TestExistingSkillContentSurvives.test_existing_what_to_flag_bullets_survive
       - tests.test_threat_model_review_security.TestExistingSkillContentSurvives.test_existing_what_not_to_flag_sentences_survive
       - tests.test_threat_model_review_security.TestExistingSkillContentSurvives.test_category_requirement_survives
-      - tests.test_sca_axis_skill_and_version (pre-existing module, run unmodified as part of the full suite)
+      - tests.test_sca_axis_skill_and_version
     red_confirmed: false
     red_reason: "This criterion asserts non-regression of pinned content the edit was never going to touch (existing headings/bullets/sentences/category line). Nothing in the implementation removes or alters that content, so there is no red state to observe -- these checks were green immediately upon this test module's creation (before the SKILL.md edit) and stayed green after it. Verified positively: (a) these four tests pass against the current SKILL.md, and (b) the full suite -- including the pre-existing tests/test_sca_axis_skill_and_version.py, run unmodified -- passes (see final_failures)."
   AC-6:
@@ -44,8 +44,8 @@ acceptance_tests:
     tests:
       - tests.test_threat_model_review_security.TestOwnModuleStdlibOnly.test_only_standard_library_imports
       - tests.test_threat_model_stride_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
-      - tests.test_threat_model_review_security.TestMatchersDetectRegressions (9 negative-proof tests)
-      - tests.test_threat_model_stride_version_bump.TestValidationDetectsRegressions (11 negative-proof tests)
+      - tests.test_threat_model_review_security.TestMatchersDetectRegressions
+      - tests.test_threat_model_stride_version_bump.TestValidationDetectsRegressions
     red_confirmed: false
     red_reason: "This criterion describes properties of the two new test modules themselves (stdlib-only imports, a negative proof per matcher, and the full suite passing). The stdlib-only self-checks and the negative-proof tests assert properties of the test code as written -- they were satisfied from the moment each module was created (no prior broken version of these modules existed to observe failing), so there is no independent red state for this criterion beyond the ones already recorded for AC-1 through AC-4 and AC-6, which are entries of these same two modules and were genuinely observed red before implementation. 'discover -s tests passes' was verified positively by actually running the full suite after implementation (exit 0, see final_failures), not as a red-to-green transition of this specific criterion."
 notes: |

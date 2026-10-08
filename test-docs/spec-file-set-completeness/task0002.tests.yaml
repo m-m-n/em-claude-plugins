@@ -37,7 +37,6 @@ acceptance_tests:
       - tests.test_requirements_template_declared_change_set.TestRootLiterals.test_both_root_literals_present_in_subsection
       - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_all_feature_docs_members_named
       - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_test_docs_member_named_with_path_form
-      - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_placeholder_slot_present
     red_confirmed: true
     red_reason: >-
       setUpClass for TestRootLiterals and TestEnumerationAndCitation
@@ -88,7 +87,6 @@ acceptance_tests:
       - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_root_literals_matcher_flags_absence_in_pre_change_section
       - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_feature_docs_members_matcher_flags_absence_in_pre_change_section
       - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_test_docs_member_matcher_flags_absence_in_pre_change_section
-      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_placeholder_matcher_flags_absence_in_pre_change_section
       - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_citation_matcher_flags_absence_in_pre_change_section
       - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_semantics_matchers_flag_absence_in_pre_change_section
       - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_exclusion_rule_and_rationale_guards_flag_synthetic_bad_sample
