@@ -179,7 +179,7 @@ tasks:
     - FR3
     - FR4
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-test-id-resolution/task0003
   task0004:
     title: Record ID cleanup, range3 (q-z)
