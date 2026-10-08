@@ -4,7 +4,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_threat_model_planner_contract.TestPlannerContractAC1.test_ac1_documented
+      - tests.test_threat_model_planner_contract.TestPlannerContractAC1.test_ac1_documented
     red_confirmed: true
     red_reason: >-
       Before the edit, planner-contract.md had no `threat_model_template`
@@ -13,9 +13,9 @@ acceptance_tests:
       AssertionError: 'threat_model_template' not found in <document text>.
   AC-2:
     tests:
-      - test_threat_model_planner_contract.TestPlannerContractAC2.test_ac2_subsection_documented
-      - test_threat_model_planner_contract.TestPlannerContractAC2.test_subsection_sits_inside_the_planning_inputs_section_span
-      - test_threat_model_planner_contract.TestPlannerContractAC2.test_subsection_heading_is_a_level_3_heading
+      - tests.test_threat_model_planner_contract.TestPlannerContractAC2.test_ac2_subsection_documented
+      - tests.test_threat_model_planner_contract.TestPlannerContractAC2.test_subsection_sits_inside_the_planning_inputs_section_span
+      - tests.test_threat_model_planner_contract.TestPlannerContractAC2.test_subsection_heading_is_a_level_3_heading
     red_confirmed: true
     red_reason: >-
       Before the edit, the "### Minimal-tier `TASK.md` append" subsection
@@ -24,7 +24,7 @@ acceptance_tests:
       `TASK.md` append").
   AC-3:
     tests:
-      - test_threat_model_planner_contract.TestCreatePlanPhaseAC3.test_ac3_dispatch_and_completion_documented
+      - tests.test_threat_model_planner_contract.TestCreatePlanPhaseAC3.test_ac3_dispatch_and_completion_documented
     red_confirmed: true
     red_reason: >-
       Before the edit, create-plan-phase.md's sections 1/4/7 named only
@@ -32,7 +32,7 @@ acceptance_tests:
       AssertionError: 'THREAT-MODEL.md' not found in section 1's text.
   AC-4:
     tests:
-      - test_threat_model_planner_contract.TestCreatePlanPhaseAC4.test_ac4_scope_check_delta_and_human_review_documented
+      - tests.test_threat_model_planner_contract.TestCreatePlanPhaseAC4.test_ac4_scope_check_delta_and_human_review_documented
     red_confirmed: true
     red_reason: >-
       Before the edit, the scope-check delta bullet and the TM-n
@@ -41,8 +41,8 @@ acceptance_tests:
       in the (then-absent) delta bullet's span.
   AC-5:
     tests:
-      - test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_pointer_documented
-      - test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_six_actions_unchanged
+      - tests.test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_pointer_documented
+      - tests.test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_six_actions_unchanged
     red_confirmed: true
     red_reason: >-
       The pointer half went red->green: before the edit, the `extend_only`
@@ -57,9 +57,9 @@ acceptance_tests:
       pre-implementation red state exists for that half specifically.
   AC-6:
     tests:
-      - test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_planner_contract_gate_id_set_unchanged
-      - test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_create_plan_phase_gate_id_set_unchanged
-      - test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_spec_writer_contract_gate_id_set_unchanged
+      - tests.test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_planner_contract_gate_id_set_unchanged
+      - tests.test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_create_plan_phase_gate_id_set_unchanged
+      - tests.test_threat_model_planner_contract.TestAC6NoNewGateIdIntroduced.test_spec_writer_contract_gate_id_set_unchanged
       - tests.test_worker_contracts_planning
       - tests.test_phase_protocols
       - tests.test_tier_phase_preconditions
@@ -80,8 +80,8 @@ acceptance_tests:
       would catch a real violation if one were introduced.
   AC-7:
     tests:
-      - test_threat_model_planner_contract.TestModuleImportsStandardLibraryOnly.test_only_stdlib_top_level_imports
-      - test_threat_model_planner_contract.TestManifestVersionOnlyChange
+      - tests.test_threat_model_planner_contract.TestModuleImportsStandardLibraryOnly.test_only_stdlib_top_level_imports
+      - tests.test_threat_model_planner_contract.TestManifestVersionOnlyChange
     red_confirmed: false
     red_reason: >-
       This module was authored importing only the standard library from

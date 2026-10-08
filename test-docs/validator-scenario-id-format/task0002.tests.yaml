@@ -27,7 +27,6 @@ acceptance_tests:
     red_confirmed: false
     red_reason: "Change-set property, no executable check that can fail first. No existing test covers it (same search as AC-1). Checked by git diff --stat: one file changed (em-workflow/skills/plan-writing/SKILL.md), 12 insertions, 0 deletions."
   AC-7:
-    tests:
-      - "python3 -m unittest discover -s tests"
+    tests: []
     red_confirmed: false
-    red_reason: "The full suite was already green at baseline (8828 tests OK, skipped=1), so the check could not be made to fail before the change; it is a regression guard. The existing tests that read plan-writing/SKILL.md (tests/test_threat_model_template.py, tests/test_failed_items_category.py, tests/test_plan_version_plan_writing.py) detect structural or vocabulary regressions in this file; no red state occurred for this change. Re-run after the edit: 8828 tests OK."
+    red_reason: "The full suite was already green at baseline (8828 tests OK, skipped=1), so the check could not be made to fail before the change; it is a regression guard. The existing tests that read plan-writing/SKILL.md (tests/test_threat_model_template.py, tests/test_failed_items_category.py, tests/test_plan_version_plan_writing.py) detect structural or vocabulary regressions in this file; no red state occurred for this change. Re-run after the edit: 8828 tests OK. Removed from tests (not a unittest ID): python3 -m unittest discover -s tests"

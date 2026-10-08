@@ -4,10 +4,10 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_resolution_returns_the_absolute_entry_joined_with_the_name
-      - test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_the_result_is_absolute_and_not_under_any_relative_entry
-      - test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_the_entry_is_joined_as_written_with_no_normalization
-      - test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_the_first_absolute_entry_in_original_order_wins
+      - tests.test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_resolution_returns_the_absolute_entry_joined_with_the_name
+      - tests.test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_the_result_is_absolute_and_not_under_any_relative_entry
+      - tests.test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_the_entry_is_joined_as_written_with_no_normalization
+      - tests.test_sca_absolute_executable_resolution.TestAC1AbsoluteEntryWins.test_ac1_the_first_absolute_entry_in_original_order_wins
     red_confirmed: true
     red_reason: >-
       Before resolve_executable changed (shutil.which), all four failed:
@@ -15,9 +15,9 @@ acceptance_tests:
       tools/npm" (the relative entry won).
   AC-2:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC2DefaultSearchPath.test_ac2_with_path_unset_the_substituted_default_search_path_is_searched
-      - test_sca_absolute_executable_resolution.TestAC2DefaultSearchPath.test_ac2_a_default_search_path_with_only_relative_entries_finds_nothing
-      - test_sca_absolute_executable_resolution.TestAC2DefaultSearchPath.test_ac2_an_empty_path_counts_as_present_and_yields_no_entries
+      - tests.test_sca_absolute_executable_resolution.TestAC2DefaultSearchPath.test_ac2_with_path_unset_the_substituted_default_search_path_is_searched
+      - tests.test_sca_absolute_executable_resolution.TestAC2DefaultSearchPath.test_ac2_a_default_search_path_with_only_relative_entries_finds_nothing
+      - tests.test_sca_absolute_executable_resolution.TestAC2DefaultSearchPath.test_ac2_an_empty_path_counts_as_present_and_yields_no_entries
     red_confirmed: true
     red_reason: >-
       test_ac2_with_path_unset_the_substituted_default_search_path_is_searched
@@ -26,8 +26,8 @@ acceptance_tests:
       os.defpath). The other two tests in this entry passed before the change.
   AC-3:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC3OnlyRelativeEntries.test_ac3_resolution_returns_none
-      - test_sca_absolute_executable_resolution.TestAC3OnlyRelativeEntries.test_ac3_planning_reports_the_existing_tool_not_found_reason_once
+      - tests.test_sca_absolute_executable_resolution.TestAC3OnlyRelativeEntries.test_ac3_resolution_returns_none
+      - tests.test_sca_absolute_executable_resolution.TestAC3OnlyRelativeEntries.test_ac3_planning_reports_the_existing_tool_not_found_reason_once
     red_confirmed: true
     red_reason: >-
       Before the change: "AssertionError: 'tools/npm' is not None" and
@@ -35,8 +35,8 @@ acceptance_tests:
       of ([], ['npm_tool_not_found']).
   AC-4:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC4ExecutableTest.test_ac4_a_directory_and_a_non_executable_file_are_passed_over
-      - test_sca_absolute_executable_resolution.TestAC4ExecutableTest.test_ac4_an_absent_name_in_every_absolute_entry_returns_none
+      - tests.test_sca_absolute_executable_resolution.TestAC4ExecutableTest.test_ac4_a_directory_and_a_non_executable_file_are_passed_over
+      - tests.test_sca_absolute_executable_resolution.TestAC4ExecutableTest.test_ac4_an_absent_name_in_every_absolute_entry_returns_none
     red_confirmed: false
     red_reason: >-
       The behavior pre-existed: the previous resolution (shutil.which) applied
@@ -47,8 +47,8 @@ acceptance_tests:
       existing test covers this criterion.
   AC-5:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC5AttackScenario.test_ac5_npm_is_launched_by_the_stubs_absolute_path_and_no_planted_file_runs
-      - test_sca_absolute_executable_resolution.TestAC5AttackScenario.test_ac5_go_in_the_attacked_directory_never_runs_the_planted_file
+      - tests.test_sca_absolute_executable_resolution.TestAC5AttackScenario.test_ac5_npm_is_launched_by_the_stubs_absolute_path_and_no_planted_file_runs
+      - tests.test_sca_absolute_executable_resolution.TestAC5AttackScenario.test_ac5_go_in_the_attacked_directory_never_runs_the_planted_file
     red_confirmed: true
     red_reason: >-
       Before the change the npm test failed with "AssertionError: 0 != 1 :
@@ -58,11 +58,11 @@ acceptance_tests:
       was launched and left its marker.
   AC-6:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_nested_go_project_is_launched_by_the_absolute_path
-      - test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_root_go_project_is_launched_by_the_absolute_path
-      - test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_pip_requirements_file_is_launched_by_the_absolute_path
-      - test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_an_npm_project_is_launched_by_the_absolute_path_from_its_isolation_directory
-      - test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_cargo_project_is_launched_by_the_absolute_path_from_its_isolation_directory
+      - tests.test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_nested_go_project_is_launched_by_the_absolute_path
+      - tests.test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_root_go_project_is_launched_by_the_absolute_path
+      - tests.test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_pip_requirements_file_is_launched_by_the_absolute_path
+      - tests.test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_an_npm_project_is_launched_by_the_absolute_path_from_its_isolation_directory
+      - tests.test_sca_absolute_executable_resolution.TestAC6LaunchPathIsTheResolvedAbsolutePath.test_ac6_a_cargo_project_is_launched_by_the_absolute_path_from_its_isolation_directory
     red_confirmed: true
     red_reason: >-
       Before the change all five failed with "AssertionError: 0 != 1 :
@@ -71,10 +71,10 @@ acceptance_tests:
       not the file launched.
   AC-7:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_each_states_that_only_absolute_entries_are_searched
-      - test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_each_names_the_default_search_path_for_an_unset_path
-      - test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_each_names_the_existing_tool_not_found_reason
-      - test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_none_describes_resolution_as_a_plain_path_lookup
+      - tests.test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_each_states_that_only_absolute_entries_are_searched
+      - tests.test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_each_names_the_default_search_path_for_an_unset_path
+      - tests.test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_each_names_the_existing_tool_not_found_reason
+      - tests.test_sca_absolute_executable_resolution.TestAC7ExplanationsStateTheAbsoluteOnlyRule.test_ac7_none_describes_resolution_as_a_plain_path_lookup
     red_confirmed: true
     red_reason: >-
       Run against the pre-change text of scan-dependencies.py (restored from
@@ -85,10 +85,10 @@ acceptance_tests:
       is reviewed by inspection.
   AC-8:
     tests:
-      - test_sca_absolute_executable_resolution.TestAC8StandardLibraryOnly.test_ac8_the_script_adds_no_import_beyond_the_standard_library
-      - test_sca_absolute_executable_resolution.TestAC8StandardLibraryOnly.test_ac8_this_module_imports_only_the_standard_library
-      - test_sca_scan_invocation (ALLOWED_EXECUTABLES checks)
-      - test_sca_scan_unchanged_surfaces (ECOSYSTEM_ENV_PINS, pass-through keys)
+      - tests.test_sca_absolute_executable_resolution.TestAC8StandardLibraryOnly.test_ac8_the_script_adds_no_import_beyond_the_standard_library
+      - tests.test_sca_absolute_executable_resolution.TestAC8StandardLibraryOnly.test_ac8_this_module_imports_only_the_standard_library
+      - tests.test_sca_scan_invocation
+      - tests.test_sca_scan_unchanged_surfaces
     red_confirmed: false
     red_reason: >-
       The outcome is the full-suite run (python3 -m unittest discover -s tests,

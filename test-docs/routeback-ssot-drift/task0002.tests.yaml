@@ -3,7 +3,7 @@ baseline_failures: []
 final_failures: []
 acceptance_tests:
   AC-1:
-    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_definition_present]
+    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_definition_present]
     red_confirmed: true
     red_reason: "Temporarily corrupted the PARTIAL_ARTIFACT_DEFINITION constant
       ('A partial-artifact state' -> 'A ZZZ-nonexistent state') in an in-memory
@@ -11,7 +11,7 @@ acceptance_tests:
       ZZZ-nonexistent state ... already gone.\" not found in '<normalized I.2.b
       section>'. Reverted before writing the delivered file."
   AC-2:
-    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_residual_treatment_present]
+    tests: [tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_residual_treatment_present]
     red_confirmed: true
     red_reason: "Temporarily corrupted PARTIAL_ARTIFACT_RESIDUAL_TREATMENT
       ('Since there is no candidate' -> 'Since there is ZZZ-nonexistent
@@ -35,8 +35,6 @@ acceptance_tests:
       before writing the delivered file."
   AC-5:
     tests:
-      - tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_definition_non_vacuity
-      - tests.test_routeback_ssot_drift_i2b_retention.TestPartialArtifactRetention.test_residual_treatment_non_vacuity
       - tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_definition_non_vacuity
       - tests.test_routeback_ssot_drift_i2b_retention.TestThirdCaseRetention.test_residual_treatment_non_vacuity
       - tests.test_routeback_ssot_drift_i2b_retention.TestI2bSectionSlicing.test_missing_start_heading_raises_naming_it

@@ -32,8 +32,8 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_well_formed_and_at_least_0_2_2
-      - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_well_formed_at_least_0_2_2_and_agrees_with_manifest
+      - tests.test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_well_formed_and_at_least_0_2_2
+      - tests.test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_well_formed_at_least_0_2_2_and_agrees_with_manifest
     red_confirmed: true
     red_reason: >-
       Captured in the 4a baseline run (repo at 0.2.3): the pre-change
@@ -44,11 +44,11 @@ acceptance_tests:
       matchers here, which pass against the same live files at 0.2.3.
   AC-2:
     tests:
-      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_accepts_a_forged_higher_version_in_both_registries
-      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_accepts_a_two_digit_patch_component_via_numeric_comparison
-      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_a_version_below_the_floor_in_both_registries
-      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_a_malformed_value_in_either_registry
-      - test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_disagreeing_registries
+      - tests.test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_accepts_a_forged_higher_version_in_both_registries
+      - tests.test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_accepts_a_two_digit_patch_component_via_numeric_comparison
+      - tests.test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_a_version_below_the_floor_in_both_registries
+      - tests.test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_a_malformed_value_in_either_registry
+      - tests.test_abort_terminal_commit_precedence.TestFr6VersionMatcherNegativeProofs.test_rejects_disagreeing_registries
     red_confirmed: true
     red_reason: >-
       Two rounds of deliberate weakening, both reverted after observing
@@ -62,8 +62,8 @@ acceptance_tests:
       Implementation restored after each round; full module re-run green.
   AC-3:
     tests:
-      - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_well_formed_and_at_least_0_2_1
-      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_well_formed_and_at_least_0_2_1
+      - tests.test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_well_formed_and_at_least_0_2_1
+      - tests.test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_well_formed_and_at_least_0_2_1
     red_confirmed: true
     red_reason: >-
       Captured in the 4a baseline run (repo at 0.2.3): the pre-change
@@ -74,9 +74,9 @@ acceptance_tests:
       matcher here, which passes against the same live files at 0.2.3.
   AC-4:
     tests:
-      - test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_accepts_a_forged_higher_version
-      - test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_rejects_a_version_below_the_floor
-      - test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_rejects_a_malformed_value
+      - tests.test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_accepts_a_forged_higher_version
+      - tests.test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_rejects_a_version_below_the_floor
+      - tests.test_stop_reason_coverage_version_bump.TestFr7VersionMatcherNegativeProofs.test_rejects_a_malformed_value
     red_confirmed: true
     red_reason: >-
       Two rounds of deliberate weakening, both reverted after observing

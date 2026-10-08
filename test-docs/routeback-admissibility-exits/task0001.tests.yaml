@@ -91,7 +91,6 @@ acceptance_tests:
   AC-5:
     tests:
       - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_new_premise_matcher_flags_absence_in_pre_change_wording
-      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor
       - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_third_conjunct_matchers_flag_absence_in_pre_change_wording
       - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_i2c_recovery_citation_matcher_flags_absence_in_pre_change_wording
       - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_i2b_step1_existence_check_matchers_flag_absence_in_pre_change_wording

@@ -43,9 +43,9 @@ acceptance_tests:
       at all.
   AC-4:
     tests:
-      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_states_implement_stays_failed
-      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_cites_stop_condition_3_and_abort_phase
-      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_names_no_partial_write
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_rejected_path_writes_implement_failed
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_rejected_path_cites_stop_condition_3_and_abort_phase
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_rejected_path_names_no_partial_write
       - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_no_rework_or_append_anywhere_in_i2c
     red_confirmed: true
     red_reason: >-
@@ -73,9 +73,6 @@ acceptance_tests:
       sentence survives) and stayed green.
   AC-6:
     tests:
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_names_all_four_hooks
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_states_status_never_consulted
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_governs_only_orchestrator_interpretation
       - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_no_never_reads_workflow_yaml_claim_anywhere
     red_confirmed: true
     red_reason: >-

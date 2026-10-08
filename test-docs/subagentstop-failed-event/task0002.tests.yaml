@@ -53,37 +53,37 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_both_agent_type_values_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_block_source_phrase_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_agent_index_fallback_phrase_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_items_appear_in_fixed_order
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_both_agent_type_values_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_block_source_phrase_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_agent_index_fallback_phrase_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletIdentificationOrder.test_items_appear_in_fixed_order
     red_confirmed: true
     red_reason: "AssertionError: '`em-workflow:implementer`' not found in bullet text (and ValueError from .index() in the order test) before the passage was extended"
   AC-2:
     tests:
-      - test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_exclusive_lock_statement_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_failed_only_when_neither_terminal_statement_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_at_most_one_failed_line_statement_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_exclusive_lock_statement_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_failed_only_when_neither_terminal_statement_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletAtomicCompareAndAppend.test_at_most_one_failed_line_statement_present
     red_confirmed: true
     red_reason: "AssertionError: 'Replay and append happen inside one exclusive-lock critical section on the journal' not found in bullet text before the passage was extended"
   AC-3:
     tests:
-      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_diagnostics_log_path_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_all_nine_outcome_codes_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_missing_line_meaning_statement_present
-      - test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_not_a_journal_no_writer_statement_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_diagnostics_log_path_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_all_nine_outcome_codes_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_missing_line_meaning_statement_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestBulletDiagnosticsLog.test_not_a_journal_no_writer_statement_present
     red_confirmed: true
     red_reason: "AssertionError: '`.claude/worktrees/em-workflow/subagent-stop-diagnostics.jsonl`' not found in bullet text (and each of the nine `subTest` outcome-code checks failed) before the passage was extended"
   AC-4:
     tests:
-      - test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_observable_missing_diagnostics_line_statement_present
-      - test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_pinned_neither_event_phrase_present
-      - test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_pinned_extended_branch_phrase_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_observable_missing_diagnostics_line_statement_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_pinned_neither_event_phrase_present
+      - tests.test_subagentstop_failure_net_doc_contract.TestCaveatCoversMissingSubagentStopEvent.test_pinned_extended_branch_phrase_present
     red_confirmed: true
     red_reason: "AssertionError: 'Such a stop is also observable as a missing diagnostics line' not found in caveat text before the new sentence was added (the two pinned phrases were already present pre-existing, so only this sub-check was red)"
   AC-5:
     tests:
-      - test_subagentstop_failure_net_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+      - tests.test_subagentstop_failure_net_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
     red_confirmed: false
     red_reason: "This AC asserts a property of the test module itself (asserts AC-1..AC-4 against the real file, each matcher has a negative proof, stdlib-only imports); it has no independent 'before' state to observe red against -- satisfied by the module's own construction (32 tests total: 15 positive matchers + 1 order test + 15 negative-proof tests + 1 stdlib-import test) and verified by inspection rather than a red/green cycle of its own."
   AC-6:

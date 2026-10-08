@@ -24,8 +24,8 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_tier_decision_step_a.TestAC1PlacementAndInvocations
-      - test_tier_decision_step_a.TestAC1MatchersCanFail
+      - tests.test_tier_decision_step_a.TestAC1PlacementAndInvocations
+      - tests.test_tier_decision_step_a.TestAC1MatchersCanFail
     red_confirmed: true
     red_reason: >-
       Before the implementation existed, the whole test module failed to
@@ -39,20 +39,20 @@ acceptance_tests:
       that reason before the implementation.
   AC-2:
     tests:
-      - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds
-      - test_tier_decision_step_a.TestAC2MatchersCanFail
+      - tests.test_tier_decision_step_a.TestAC2AvailabilityAndThresholds
+      - tests.test_tier_decision_step_a.TestAC2MatchersCanFail
     red_confirmed: true
     red_reason: "Same module-import-level red as AC-1 (see AC-1's red_reason) -- the availability/threshold assertions read TIER_SECTION, which did not exist before the implementation."
   AC-3:
     tests:
-      - test_tier_decision_step_a.TestAC3Persistence
-      - test_tier_decision_step_a.TestAC3MatchersCanFail
+      - tests.test_tier_decision_step_a.TestAC3Persistence
+      - tests.test_tier_decision_step_a.TestAC3MatchersCanFail
     red_confirmed: true
     red_reason: "Same module-import-level red as AC-1. Additionally, `TIER_PERSISTENCE_SECTION` depends on `## tier decision persistence` in references/phase-state.md, which also did not exist before the implementation."
   AC-4:
     tests:
-      - test_tier_decision_step_a.TestAC4NoWorkStop
-      - test_tier_decision_step_a.TestAC4MatchersCanFail
+      - tests.test_tier_decision_step_a.TestAC4NoWorkStop
+      - tests.test_tier_decision_step_a.TestAC4MatchersCanFail
     red_confirmed: true
     red_reason: >-
       Same module-import-level red as AC-1. This AC's implementation went
@@ -75,21 +75,21 @@ acceptance_tests:
       baseline failures.
   AC-5:
     tests:
-      - test_tier_decision_step_a.TestAC5RetrospectSignals
-      - test_tier_decision_step_a.TestAC5MatchersCanFail
+      - tests.test_tier_decision_step_a.TestAC5RetrospectSignals
+      - tests.test_tier_decision_step_a.TestAC5MatchersCanFail
     red_confirmed: true
     red_reason: "Same module-import-level red as AC-1 (RETROSPECT_START/STEP_C_START slicing still succeeds pre-change since those headings pre-exist, but the module fails to import before any of its tests can run, per AC-1's red_reason); the retrospect-section content assertions (tier_decision key, fields, out-of-scope prose) target text this task added."
   AC-6:
     tests:
-      - test_tier_decision_step_a.TestAC6StandaloneParityAndNoGate
-      - test_tier_decision_step_a.TestAC6MatchersCanFail
+      - tests.test_tier_decision_step_a.TestAC6StandaloneParityAndNoGate
+      - tests.test_tier_decision_step_a.TestAC6MatchersCanFail
     red_confirmed: true
     red_reason: "Same module-import-level red as AC-1 -- the standalone-parity and no-gate assertions read TIER_SECTION, which did not exist before the implementation."
   AC-7:
     tests:
-      - test_tier_decision_step_a.TestOwnModuleStdlibOnly
-      - test_tier_decision_step_a.TestRegionOwnershipRegression
-      - test_tier_decision_step_a.TestRegionOwnershipMatchersCanFail
+      - tests.test_tier_decision_step_a.TestOwnModuleStdlibOnly
+      - tests.test_tier_decision_step_a.TestRegionOwnershipRegression
+      - tests.test_tier_decision_step_a.TestRegionOwnershipMatchersCanFail
     red_confirmed: true
     red_reason: >-
       The module-discovery / stdlib-only outcome is a build-time property
