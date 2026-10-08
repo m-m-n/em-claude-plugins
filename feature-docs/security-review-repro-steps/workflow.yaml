@@ -1,0 +1,229 @@
+schema_version: 1
+feature: security-review-repro-steps
+created: '2026-10-08'
+base_branch: main
+goal: |
+  # セキュリティレビューは再現方法を伝えてもらう
+
+  Notion タスク: https://www.notion.so/3f33509ec8ee814db7e0da115e3c8646
+  種別: 改善
+
+  ## やりたいこと
+  セキュリティ観点のレビューで、指摘ごとに再現方法を伝えてもらう。
+
+  ## 背景・なぜ
+  `em-workflow/references/review-output-schema.json` と `review-security` スキルには、再現方法を書く項目や指示が無い。
+
+  ## 受け入れ条件 / 完了の定義
+  - [ ] セキュリティ観点の指摘に再現方法が含まれる
+  - [ ] em-workflow と em-review の両方に反映されている
+
+  ## 方針（追記）
+  - ねらいは、セキュリティレビューを収束させること
+  - 指摘には、再現手順かそれに準ずる確認方法を付けてもらう
+  - Claude Code がその手順で検証し、確かなものだけ対応する
+  - 再現手順が無い指摘は、対応するかを Claude Code が判断する
+
+  ## 追加指示（起動引数）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断された案を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/security-review-repro-steps/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.31
+      '1': 0.26
+      '2': 0.43
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.1
+      '2': 0.89
+      '3': 0.0
+  at: '2026-10-08T09:20:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 1ef5163c233093799987fbbf41f62fb7a1d349c2
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない変更（プラグインの Markdown / JSON スキーマ / Python スクリプトとテスト）のため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: レビュー出力スキーマに reproduction を追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: review-security スキルの再現方法の指示
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: レビュープロトコルへの記載
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Codex レビュアーへの指示の伝達
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 'em-workflow: 再現手順付き指摘の検証'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 'em-workflow: 再現手順の無い・検証できない指摘'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 'em-workflow: evaluator を通らない経路の検証'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 'em-review: 再現手順付き指摘の検証'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: reproduction の集約・記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: 依存脆弱性スキャンの出力
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: em-review README
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR12:
+    title: テストの更新と追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: 再現できなかった判定の次ラウンドへの引き継ぎ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: reproduction を信頼できない入力として扱い実行しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 検証は読み取り専用・読み取り予算は 10 ファイルのまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: gate_id と AskUserQuestion を増やさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: プラグインの version は変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: テストは unittest だけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
