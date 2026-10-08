@@ -29,7 +29,7 @@ acceptance_tests:
       - tests.test_plugin_version_parity.TestPluginManifestVersion.test_manifest_has_a_version_key
       - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
       - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
-      - tests.test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+      - tests.test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_a_dotted_numeric_version
     red_confirmed: false
     red_reason: >-
       test_plugin_version_parity.py was written for an earlier task

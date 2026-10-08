@@ -119,7 +119,7 @@ acceptance_tests:
       non-vacuity test is a self-contained fixture check.
   AC-7:
     tests:
-      - tests.test_reviewers_primary_chains (whole module, AC-1..AC-6 above)
+      - tests.test_reviewers_primary_chains
     red_confirmed: false
     red_reason: >-
       The module itself (asserting AC-1..AC-6) is fully red-confirmed per

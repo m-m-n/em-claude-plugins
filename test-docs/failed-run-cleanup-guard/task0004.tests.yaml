@@ -24,15 +24,7 @@ acceptance_tests:
       record touched.
   AC-2:
     tests:
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 nested in subshell]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 nested in brace group]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 nested in function defined and invoked in the same command]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 nested in subshell]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 nested in brace group]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 nested in function defined and invoked in the same command]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S3 nested in subshell]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S3 nested in brace group]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S3 nested in function defined and invoked in the same command]"
+      - tests.test_guard_deferral_parity.TestSupersetInvariantHoldsAcrossTheCorpus.test_superset_invariant
     red_confirmed: true
     red_reason: >-
       The module was run directly (`python3 -m unittest
@@ -52,11 +44,8 @@ acceptance_tests:
       that already-correct behavior.
   AC-3:
     tests:
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 unresolvable: bracket-form glob]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 unresolvable: command substitution (whole operand)]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 unresolvable: bracket-form glob]"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 unresolvable: command substitution (whole operand)]"
-      - "destructive-guard-cases.json::S1 解決不能(角カッコ形式のグロブ): 判定対象は allow を留保し無出力"
+      - tests.test_guard_deferral_parity.TestSupersetInvariantHoldsAcrossTheCorpus.test_superset_invariant
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Same stashed-unfixed run as AC-2. The 4 subTests above failed
@@ -73,9 +62,9 @@ acceptance_tests:
       AC-3's full marker enumeration, not listed as red-confirmed here.
   AC-4:
     tests:
-      - "tests/test_guard_deferral_parity.py::TestFixtureProducesRealDecisions::test_plain_form_of_each_shape_yields_a_decision_from_the_new_guard"
-      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant"
-      - "destructive-guard-cases.json::複合(integration 形状): 先頭が S1(integration 形状)でも後続の rm 再帰は deny のまま — 留保は末尾の allow だけを止める"
+      - tests.test_guard_deferral_parity.TestFixtureProducesRealDecisions.test_plain_form_of_each_shape_yields_a_decision_from_the_new_guard
+      - tests.test_guard_deferral_parity.TestSupersetInvariantHoldsAcrossTheCorpus.test_superset_invariant
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       test_superset_invariant as a whole reported 13/22 subTests failing
@@ -89,7 +78,7 @@ acceptance_tests:
       checks still run" rather than a red-confirmed row.
   AC-5:
     tests:
-      - "tests/test_guard_deferral_parity.py::TestNarrownessConverseHoldsAcrossTheCorpus::test_narrowness_converse"
+      - tests.test_guard_deferral_parity.TestNarrownessConverseHoldsAcrossTheCorpus.test_narrowness_converse
     red_confirmed: false
     red_reason: >-
       Narrowness was never broken by the previous round or by this task's
@@ -115,7 +104,7 @@ acceptance_tests:
       plan requires) — no row is deleted.
   AC-7:
     tests:
-      - "tests/test_guard_deferral_parity.py (module presence + location under repository-root tests/, not em-workflow/hooks/tests/)"
+      - tests.test_guard_deferral_parity
     red_confirmed: true
     red_reason: >-
       Before this task the module did not exist at all, so `python3 -m

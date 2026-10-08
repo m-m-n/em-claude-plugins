@@ -10,10 +10,10 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_needs_update_case_still_present
-      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_pending_reentry_case_states_recognizable_signal
-      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_states_transition_produces_pending_not_needs_update
-      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_new_case_matcher_fails_on_needs_update_only_wording
+      - tests.test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_needs_update_case_still_present
+      - tests.test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_pending_reentry_case_states_recognizable_signal
+      - tests.test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_states_transition_produces_pending_not_needs_update
+      - tests.test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_new_case_matcher_fails_on_needs_update_only_wording
     red_confirmed: true
     red_reason: >-
       Confirmed by direct script check against `git show HEAD:` copy of
@@ -25,9 +25,9 @@ acceptance_tests:
       pre-edit (only the unwidened `needs_update`-only case existed).
   AC-2:
     tests:
-      - test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_unchanged_statement_present
-      - test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_referenced_halves_still_present
-      - test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_unchanged_statement_matcher_fails_on_pre_change_wording
+      - tests.test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_unchanged_statement_present
+      - tests.test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_referenced_halves_still_present
+      - tests.test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_unchanged_statement_matcher_fails_on_pre_change_wording
     red_confirmed: true
     red_reason: >-
       Confirmed against the pre-edit doc: the explicit "Neither this
@@ -52,9 +52,9 @@ acceptance_tests:
       workflow-patch.md's widened Re-planning path now names.
   AC-4:
     tests:
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_allocates_above_highest_registered_id
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_retired_id_never_reissued
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_allocation_matcher_fails_on_reissuing_wording
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_allocates_above_highest_registered_id
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_retired_id_never_reissued
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_allocation_matcher_fails_on_reissuing_wording
     red_confirmed: true
     red_reason: >-
       Confirmed against the pre-edit doc: the "### Re-planning task-id
@@ -63,13 +63,13 @@ acceptance_tests:
       captured pre-edit text).
   AC-5:
     tests:
-      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_cites_allocation_rule
-      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_old_renumbering_premise_absent_from_i2a
-      - test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_allocation_rule_citation_matcher_flags_the_pre_change_wording
-      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_phrase_present
-      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_placed_after_unreachability_terminal
-      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_old_renumbering_premise_absent
-      - test_routeback_reset_scope_consistency.TestValidationDetectsRegressions.test_old_renumbering_premise_matcher_flags_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_cites_allocation_rule
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_old_renumbering_premise_absent_from_i2a
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_allocation_rule_citation_matcher_flags_the_pre_change_wording
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_placed_after_unreachability_terminal
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_old_renumbering_premise_absent
+      - tests.test_routeback_reset_scope_consistency.TestValidationDetectsRegressions.test_old_renumbering_premise_matcher_flags_pre_change_wording
     red_confirmed: true
     red_reason: >-
       Observed directly: ran
@@ -89,10 +89,10 @@ acceptance_tests:
       RECURSION_INVARIANT_PHRASE absent).
   AC-6:
     tests:
-      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_no_longer_reads_none
-      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_requires_base_commit_on_replanning_path
-      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_initial_planning_case_stated
-      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_matcher_fails_on_none_wording
+      - tests.test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_no_longer_reads_none
+      - tests.test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_requires_base_commit_on_replanning_path
+      - tests.test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_initial_planning_case_stated
+      - tests.test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_matcher_fails_on_none_wording
     red_confirmed: true
     red_reason: >-
       Confirmed against the pre-edit doc: the `replace_planning` row of
@@ -104,11 +104,11 @@ acceptance_tests:
       nothing.
   AC-7:
     tests:
-      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_carve_out_still_scoped_to_failed_only
-      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_retained_in_flight_sentence_survives
-      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_retained_in_flight_sentence_survives
-      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_is_non_empty
-      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_is_non_empty
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_carve_out_still_scoped_to_failed_only
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_retained_in_flight_sentence_survives
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_retained_in_flight_sentence_survives
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_is_non_empty
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_is_non_empty
     red_confirmed: false
     red_reason: >-
       Retention criterion: these guards were already green before this

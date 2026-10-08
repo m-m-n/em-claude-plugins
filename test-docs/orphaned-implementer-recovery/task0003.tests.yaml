@@ -79,7 +79,7 @@ acceptance_tests:
       - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_explicit_pair_takes_precedence_over_marker
       - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_requires_both_id_and_start_together
       - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_scan_picks_newest_matching_transcript
-      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_match_with_unusable_first_entry_fails_resolution
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_match_with_unusable_first_entry_still_resolves_via_later_line
       - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_no_form_provided_is_unresolved
       - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_with_no_matching_transcript_is_unresolved
       - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_with_unparsable_start_is_unresolved

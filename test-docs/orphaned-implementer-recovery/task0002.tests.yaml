@@ -26,9 +26,9 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_appends_exactly_one_failed_line_with_reason_orphaned
-      - test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_stdout_outcome_is_appended
-      - test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_field_shape_matches_existing_failed_writers
+      - tests.test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_appends_exactly_one_failed_line_with_reason_orphaned
+      - tests.test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_stdout_outcome_is_appended
+      - tests.test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_field_shape_matches_existing_failed_writers
     red_confirmed: true
     red_reason: >-
       Watched against a deliberately-wrong stub (always writes, never checks
@@ -39,9 +39,9 @@ acceptance_tests:
       decide_and_append logic existed.
   AC-2:
     tests:
-      - test_journal_append_failed.TestAC2TerminalIsNoop.test_second_invocation_after_failed_is_noop
-      - test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_merged_is_noop
-      - test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_failed_is_noop
+      - tests.test_journal_append_failed.TestAC2TerminalIsNoop.test_second_invocation_after_failed_is_noop
+      - tests.test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_merged_is_noop
+      - tests.test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_failed_is_noop
     red_confirmed: true
     red_reason: >-
       Against the same deliberately-wrong stub: it always reports
@@ -50,8 +50,8 @@ acceptance_tests:
       reason.
   AC-3:
     tests:
-      - test_journal_append_failed.TestAC3ReasonValidation.test_unknown_reason_rejected_without_write
-      - test_journal_append_failed.TestAC3ReasonValidation.test_empty_reason_rejected_without_write
+      - tests.test_journal_append_failed.TestAC3ReasonValidation.test_unknown_reason_rejected_without_write
+      - tests.test_journal_append_failed.TestAC3ReasonValidation.test_empty_reason_rejected_without_write
     red_confirmed: true
     red_reason: >-
       With the script missing entirely, python's own "can't open file"
@@ -61,9 +61,9 @@ acceptance_tests:
       returncode 0 and a written line, instead of the required rejection.
   AC-4:
     tests:
-      - test_journal_append_failed.TestAC4JournalAccessPreconditions.test_symlinked_journal_path_refused_without_writing
-      - test_journal_append_failed.TestAC4JournalAccessPreconditions.test_absent_journal_file_is_error_and_not_created
-      - test_journal_append_failed.TestAC4JournalAccessPreconditions.test_absent_parent_directory_is_error_and_not_created
+      - tests.test_journal_append_failed.TestAC4JournalAccessPreconditions.test_symlinked_journal_path_refused_without_writing
+      - tests.test_journal_append_failed.TestAC4JournalAccessPreconditions.test_absent_journal_file_is_error_and_not_created
+      - tests.test_journal_append_failed.TestAC4JournalAccessPreconditions.test_absent_parent_directory_is_error_and_not_created
     red_confirmed: true
     red_reason: >-
       test_symlinked_journal_path_refused_without_writing and
@@ -80,7 +80,7 @@ acceptance_tests:
       bug it exists to catch.
   AC-5:
     tests:
-      - test_journal_append_failed.TestAC5Contention.test_concurrent_invocations_append_at_most_one_failed_line
+      - tests.test_journal_append_failed.TestAC5Contention.test_concurrent_invocations_append_at_most_one_failed_line
     red_confirmed: true
     red_reason: >-
       Against the deliberately-wrong stub (unconditional write, no lock/
@@ -90,9 +90,9 @@ acceptance_tests:
       for flakiness in the contention path; all green.
   AC-6:
     tests:
-      - test_journal_append_failed.TestAC6OutcomeReporting.test_appended_outcome_is_single_json_line_on_stdout
-      - test_journal_append_failed.TestAC6OutcomeReporting.test_usage_error_missing_required_arg_is_nonzero_no_stdout
-      - test_journal_append_failed.TestAC6OutcomeReporting.test_internal_error_reports_diagnostics_on_stderr_only
+      - tests.test_journal_append_failed.TestAC6OutcomeReporting.test_appended_outcome_is_single_json_line_on_stdout
+      - tests.test_journal_append_failed.TestAC6OutcomeReporting.test_usage_error_missing_required_arg_is_nonzero_no_stdout
+      - tests.test_journal_append_failed.TestAC6OutcomeReporting.test_internal_error_reports_diagnostics_on_stderr_only
     red_confirmed: true
     red_reason: >-
       test_appended_outcome_is_single_json_line_on_stdout passed against
@@ -110,7 +110,7 @@ acceptance_tests:
       duplicated.
   AC-7:
     tests:
-      - test_journal_append_failed.TestAC7LaunchGuardConvergence.test_launch_after_orphaned_failed_is_permitted_and_appends_launched
+      - tests.test_journal_append_failed.TestAC7LaunchGuardConvergence.test_launch_after_orphaned_failed_is_permitted_and_appends_launched
     red_confirmed: true
     red_reason: >-
       Against the deliberately-wrong stub (unconditional write, so the

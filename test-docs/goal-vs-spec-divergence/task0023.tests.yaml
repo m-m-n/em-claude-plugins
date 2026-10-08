@@ -4,10 +4,10 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_replace_all_must_carry_every_registered_id_via_carried_task_ids
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_carried_task_ids_and_entries_disjoint
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_redeclare_matcher_fails_on_pre_change_wording
-      - test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_disjointness_stated
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_replace_all_must_carry_every_registered_id_via_carried_task_ids
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_carried_task_ids_and_entries_disjoint
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_redeclare_matcher_fails_on_pre_change_wording
+      - tests.test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_disjointness_stated
     red_confirmed: true
     red_reason: >-
       Stashed only em-workflow/references/workflow-patch.md back to its
@@ -22,12 +22,12 @@ acceptance_tests:
       a key of `tasks_patch.entries`" absent). Popped the stash to restore.
   AC-2:
     tests:
-      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_carried_record_copied_verbatim_naming_the_fields
-      - test_workflow_patch_doc.TestApplicationRules.test_rule_twelve_applies_to_entries_only
-      - test_workflow_patch_doc.TestPreserveSectionCarriedIdRemark.test_carried_ids_need_no_preserve_entry
-      - test_workflow_patch_doc.TestPreserveSectionCarriedIdRemark.test_listing_them_anyway_still_holds
-      - test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_doc_names_exactly_the_fields_apply_patch_copies
-      - test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_rule_twelve_narrowed_to_entries
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_carried_record_copied_verbatim_naming_the_fields
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_twelve_applies_to_entries_only
+      - tests.test_workflow_patch_doc.TestPreserveSectionCarriedIdRemark.test_carried_ids_need_no_preserve_entry
+      - tests.test_workflow_patch_doc.TestPreserveSectionCarriedIdRemark.test_listing_them_anyway_still_holds
+      - tests.test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_doc_names_exactly_the_fields_apply_patch_copies
+      - tests.test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_rule_twelve_narrowed_to_entries
     red_confirmed: true
     red_reason: >-
       Same stash-and-rerun as AC-1 (workflow-patch.md reverted to
@@ -45,11 +45,11 @@ acceptance_tests:
       <fields>" sentence did not exist). Popped the stash to restore.
   AC-3:
     tests:
-      - test_validate_worker_output.TestReplanningCarryOverEnforcement.test_entry_for_registered_id_rejected
-      - test_validate_worker_output.TestReplanningCarryOverEnforcement.test_entry_for_registered_id_rejected_for_exactly_one_reason
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_drops_existing_registered_task_id_rejected
-      - test_replanning_carry_over.TestCarriedTaskIdsNamingAnUnregisteredIdRejected.test_unregistered_carried_id_rejected_alone
-      - test_replanning_carry_over.TestCarriedTaskIdsNamingAnUnregisteredIdRejected.test_fully_correct_carried_task_ids_reports_no_carry_over_error
+      - tests.test_validate_worker_output.TestReplanningCarryOverEnforcement.test_entry_for_registered_id_rejected
+      - tests.test_validate_worker_output.TestReplanningCarryOverEnforcement.test_entry_for_registered_id_rejected_for_exactly_one_reason
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_drops_existing_registered_task_id_rejected
+      - tests.test_replanning_carry_over.TestCarriedTaskIdsNamingAnUnregisteredIdRejected.test_unregistered_carried_id_rejected_alone
+      - tests.test_replanning_carry_over.TestCarriedTaskIdsNamingAnUnregisteredIdRejected.test_fully_correct_carried_task_ids_reports_no_carry_over_error
     red_confirmed: true
     red_reason: >-
       Two independent reds, both against em-workflow/scripts/validate-
@@ -82,10 +82,10 @@ acceptance_tests:
       change, per tdd-testing: only the fixture's shape moved).
   AC-4:
     tests:
-      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_carried_record_equals_pre_apply_record_field_by_field
-      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_files_survive_including_a_path_only_an_implement_deviation_admitted
-      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_status_and_branch_of_a_merged_carried_task_are_unchanged
-      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_carried_record_is_a_deep_copy_not_a_shared_reference
+      - tests.test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_carried_record_equals_pre_apply_record_field_by_field
+      - tests.test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_files_survive_including_a_path_only_an_implement_deviation_admitted
+      - tests.test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_status_and_branch_of_a_merged_carried_task_are_unchanged
+      - tests.test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_carried_record_is_a_deep_copy_not_a_shared_reference
     red_confirmed: true
     red_reason: >-
       Stashed em-workflow/scripts/validate-worker-output.py back to its
@@ -107,10 +107,10 @@ acceptance_tests:
       pre-change code.)
   AC-5:
     tests:
-      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_states_the_no_drop_reason
-      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_cites_workflow_patch_by_path
-      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_existing_retention_pins_still_hold
-      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_does_not_restate_workflow_patchs_own_rule_text
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_states_the_no_drop_reason
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_cites_workflow_patch_by_path
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_existing_retention_pins_still_hold
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_does_not_restate_workflow_patchs_own_rule_text
     red_confirmed: true
     red_reason: >-
       Stashed em-workflow/references/phases/create-plan-phase.md back to
@@ -126,13 +126,13 @@ acceptance_tests:
       still passing after the edit. Popped the stash to restore.
   AC-6:
     tests:
-      - test_replanning_carry_over.TestFixtureCarryOverShape.test_valid_merged_tasks_fixture_carries_every_registered_id
-      - test_replanning_carry_over.TestFixtureCarryOverShape.test_valid_merged_tasks_fixture_task0009_files_include_a_deviation_admitted_path
-      - test_replanning_carry_over.TestFixtureCarryOverShape.test_drops_existing_task_fixture_carried_task_ids_omits_a_registered_id
-      - test_replanning_carry_over.TestFixtureCarryOverShape.test_entry_for_registered_id_fixture_entries_names_a_registered_id
-      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
-      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_replanning_reentry_with_merged_task_passes
-      - test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_replanning_carry_over.TestFixtureCarryOverShape.test_valid_merged_tasks_fixture_carries_every_registered_id
+      - tests.test_replanning_carry_over.TestFixtureCarryOverShape.test_valid_merged_tasks_fixture_task0009_files_include_a_deviation_admitted_path
+      - tests.test_replanning_carry_over.TestFixtureCarryOverShape.test_drops_existing_task_fixture_carried_task_ids_omits_a_registered_id
+      - tests.test_replanning_carry_over.TestFixtureCarryOverShape.test_entry_for_registered_id_fixture_entries_names_a_registered_id
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_replanning_reentry_with_merged_task_passes
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
     red_confirmed: true
     red_reason: >-
       Stashed the two edited fixture input.json files (valid-replace-all-
@@ -159,10 +159,10 @@ acceptance_tests:
       task0017's (see task0017.tests.yaml AC-4/AC-7).
   AC-7:
     tests:
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
     red_confirmed: true
     red_reason: >-
       Before refreshing the three SHA256 constants, ran the full suite

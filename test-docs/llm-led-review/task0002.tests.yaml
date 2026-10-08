@@ -29,7 +29,7 @@ acceptance_tests:
       - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exactly_three_retryable_skip_reasons_unchanged
       - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_two_fallback_cap_unchanged
       - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_one_message_per_hop_rule_kept
-      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exhausted_chain_keeps_skip_not_a_claude_rerun
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exhausted_chain_triggers_one_claude_fallback_dispatch
       - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_evaluator_dispatch_happens_only_after_walk_completes
       - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_harness_level_failure_carveout_kept
     red_confirmed: true
