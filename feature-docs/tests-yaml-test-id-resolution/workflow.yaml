@@ -130,7 +130,7 @@ workflow:
   summary: 'full suite python3 -m unittest discover -s tests exit 0 (9943 tests, 1 skipped); TS-2 reproduction 8421 IDs, 0 unresolved; TS-3 231 changed records, 3647 removed occurrences = 3647 mapping rows, no non-tests field changes, NFR3 record unchanged; TS-10 stdlib-only imports, drift test unchanged; TS-11 manifests unchanged; manual checks sampled (renamed / no-counterpart rows match git history; implementer.md additions name no language or framework)'
   completed_at_commit: 301b30370d871ef8fba21577e040554eae1afa56
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Record check test module
