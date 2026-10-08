@@ -2,35 +2,70 @@ schema_version: 1
 feature: tests-yaml-test-id-resolution
 created: '2026-10-09'
 base_branch: main
-goal: |
-  # test-docs/**/*.tests.yaml の acceptance test ID 約 769 件が unittest で解決できない
+goal: '# test-docs/**/*.tests.yaml の acceptance test ID 約 769 件が unittest で解決できない
+
 
   Notion: https://www.notion.so/3f03509ec8ee818699cee63983ad9368
 
+
   ## 現象 (必須)
-  `test-docs/**/*.tests.yaml` の `acceptance_tests.*.tests` に列挙された acceptance test ID のうち、約 769 件（約 115 ファイル）が `unittest.TestLoader().loadTestsFromName()` で解決できない（ImportError / AttributeError、または `loader.errors` に記録される）。
-  - 調べた ID は約 6,734 件（空白を含む自由記述の要素は除外）。`tests/` を `sys.path` に入れ、`tests.` 接頭辞の無い古い形式の ID も解決を試みたうえでの件数。
+
+  `test-docs/**/*.tests.yaml` の `acceptance_tests.*.tests` に列挙された acceptance test
+  ID のうち、約 769 件（約 115 ファイル）が `unittest.TestLoader().loadTestsFromName()` で解決できない（ImportError
+  / AttributeError、または `loader.errors` に記録される）。
+
+  - 調べた ID は約 6,734 件（空白を含む自由記述の要素は除外）。`tests/` を `sys.path` に入れ、`tests.` 接頭辞の無い古い形式の
+  ID も解決を試みたうえでの件数。
+
   - 件数の多いファイル: `test-docs/failed-run-cleanup-guard/task0001.tests.yaml`（41）、`test-docs/llm-led-review/task0001.tests.yaml`（39）、`test-docs/abort-phase-terminal/task0001.tests.yaml`（38）、`test-docs/destructive-guard-command-name-substitution/task0002.tests.yaml`（35）、`test-docs/agent-separation/task0016.tests.yaml`（34）
+
   ## 再現手順 (必須)
+
   1. リポジトリルートで `test-docs/**/*.tests.yaml` を全部読み、各 AC の `tests` の ID を取り出す
-  2. `tests/` を `sys.path` に入れ、各 ID を `unittest.TestLoader().loadTestsFromName()` で解決する
+
+  2. `tests/` を `sys.path` に入れ、各 ID を `unittest.TestLoader().loadTestsFromName()`
+  で解決する
+
   3. 例外になる、`loader.errors` に記録される、またはテスト数が 0 になる ID を数える
+
   ## 期待する挙動 (必須)
-  `{T}.tests.yaml` は verify / rework / retrospect が AC からテストを解決する SSOT なので、列挙された ID はすべて実在し、unittest で解決できること。テストのリネームや削除で記録と実装がずれたら検出できること。
+
+  `{T}.tests.yaml` は verify / rework / retrospect が AC からテストを解決する SSOT なので、列挙された ID
+  はすべて実在し、unittest で解決できること。テストのリネームや削除で記録と実装がずれたら検出できること。
+
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
   ## 該当箇所 (任意)
+
   - `test-docs/**/*.tests.yaml`（約 115 ファイル）
-  - 記録を書く側: `em-workflow/references/implement-phase.md` の `{T}.tests.yaml` の規則、implementer エージェント
+
+  - 記録を書く側: `em-workflow/references/implement-phase.md` の `{T}.tests.yaml` の規則、implementer
+  エージェント
+
   ## 実害・発生条件 (任意)
-  AC のカバレッジ主張が検証できない記録が多数残っている。原因は、テストのリネーム・削除・統合のあとに記録が更新されていないこと、ID の書式（`tests.` 接頭辞の有無など）が揃っていないことと見られる（未確認）。
-  出典: em-workflow feature `exit4-ac2-test-id-drift`（Notion タスク https://www.notion.so/3d53509ec8ee81bb8615d901df21168c ）の create-spec で見つけた。その feature は `test-docs/exit4-tip-argument/task0002.tests.yaml` の 1 件だけを直し、再発検出テストの対象もそのファイルに限定したため、残りはスコープ外とした。
+
+  AC のカバレッジ主張が検証できない記録が多数残っている。原因は、テストのリネーム・削除・統合のあとに記録が更新されていないこと、ID の書式（`tests.`
+  接頭辞の有無など）が揃っていないことと見られる（未確認）。
+
+  出典: em-workflow feature `exit4-ac2-test-id-drift`（Notion タスク https://www.notion.so/3d53509ec8ee81bb8615d901df21168c
+  ）の create-spec で見つけた。その feature は `test-docs/exit4-tip-argument/task0002.tests.yaml`
+  の 1 件だけを直し、再発検出テストの対象もそのファイルに限定したため、残りはスコープ外とした。
+
 
   ## 追加指示（起動引数）
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration
+  ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+
   - 不明点は Codex に相談し、比較的良いと判断された案を採用する
+
   - その議論内容を Notion に記録する
+
+  '
 parent_branch: em-workflow/tests-yaml-test-id-resolution/integration
 tier: full
 tier_decision:
@@ -87,7 +122,95 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Record check test module
+    plan: tasks/task0001.md
+    files:
+    - tests/test_tests_yaml_id_resolution.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+  task0002:
+    title: Record ID cleanup, range1 (0-9, a-d)
+    plan: tasks/task0002.md
+    files:
+    - test-docs/**/*.tests.yaml
+    - test-docs/tests-yaml-test-id-resolution/id-mapping-range1.md
+    skills: []
+    domains:
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    status: pending
+  task0003:
+    title: Record ID cleanup, range2 (e-p)
+    plan: tasks/task0003.md
+    files:
+    - test-docs/**/*.tests.yaml
+    - test-docs/tests-yaml-test-id-resolution/id-mapping-range2.md
+    skills: []
+    domains:
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - NFR3
+    status: pending
+  task0004:
+    title: Record ID cleanup, range3 (q-z)
+    plan: tasks/task0004.md
+    files:
+    - test-docs/**/*.tests.yaml
+    - test-docs/tests-yaml-test-id-resolution/id-mapping-range3.md
+    skills: []
+    domains:
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    status: pending
+  task0005:
+    title: Record-writing rules in implementer.md and test/README.md
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/agents/implementer.md
+    - test/README.md
+    - tests/test_tests_yaml_id_rules_docs.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR7
+    - FR10
+    - FR11
+    - FR12
+    - FR13
+    - NFR4
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -99,120 +222,177 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
   FR2:
     title: unittest 以外の記載の扱い
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
   FR3:
     title: 古い ID の対応付けと削除
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
   FR4:
     title: 対象フィールド
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-3
+    - TS-6
   FR5:
     title: 全件検査モジュールの新設
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-4
   FR6:
     title: 解決の判定基準
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-4
+    - TS-5
   FR7:
     title: 記録の読み取り範囲
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0005
+    tests:
+    - TS-6
+    - TS-9
   FR8:
     title: 空リストと読み取り失敗の区別
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   FR9:
     title: 新しいずれの見え方
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   FR10:
     title: implementer.md の書き込み規則
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-9
   FR11:
     title: 記録を書いた後の確認
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-9
   FR12:
     title: 他機能の記録を壊したときの扱い
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-9
   FR13:
     title: このリポジトリの ID 形式の記載
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-9
   NFR1:
     title: 標準ライブラリのみ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR2:
     title: 通常のテスト実行に含める
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR3:
     title: 既存テストの維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-3
+    - TS-10
   NFR4:
     title: バージョン
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-11
 batch:
   review_rework_count: 0
   verify_rework:
