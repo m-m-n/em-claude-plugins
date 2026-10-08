@@ -1,0 +1,49 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 9417 tests, OK (skipped=1), run before any edit
+final_failures: []             # re-executed after implementation: 9428 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineKeepsTheStateHook.test_the_hook_blocks_and_launches_task0001_and_task0002
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 2 for all six fixtures (hook subprocess exited 0 and printed no BLOCK before the tracker change)"
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineKeepsTheStateReaders.test_the_reported_forms_read_the_record_and_task0002
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineKeepsTheStateReaders.test_the_state_is_judged_as_if_the_blank_lines_were_absent
+    red_confirmed: true
+    red_reason: "AssertionError: Lists differ: ['task0001'] != ['task0001', 'task0002'] for all six fixtures (records also empty); the as-if-absent comparison failed for the same fixtures"
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineKeepsTheStateReaders.test_the_edge_cases_read_the_record_and_task0002
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineKeepsTheStateReaders.test_the_state_is_judged_as_if_the_blank_lines_were_absent
+    red_confirmed: true
+    red_reason: "all 15 edge-case subTests failed before the tracker change (task ids ['task0001'] instead of ['task0001', 'task0002']): U+000B, U+000C, column 2, item content, headers > / |- / item - |, plain value on the next line, consecutive blank lines"
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineStateReadersNeverRaise.test_every_reported_fixture_and_edge_case
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineStateReadersNeverRaise.test_values_left_unclosed_to_the_end_of_the_file
+    red_confirmed: false
+    red_reason: "fail-open property that already held on the base revision (the readers never raised); the new tests pass before and after, so no red state occurred"
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestBlockScalarEndsAtANonAsciiBlankLineByIndentation.test_the_block_scalar_does_not_end_at_the_column_zero_non_ascii_line
+    red_confirmed: true
+    red_reason: "assertIn of the `      y'` line failed: the base scan yielded body line and `- 'x` only (the block scalar ended at the column-0 U+3000 line and `- 'x` opened a quoted value)"
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestTrackerClassDocstring.test_the_removed_phrase_is_absent
+      - tests.test_queue_stop_guard_routeback_record.TestTrackerClassDocstring.test_the_class_docstring_mentions_the_non_ascii_blank_line_rule
+    red_confirmed: true
+    red_reason: "the class docstring still contained 'or by its indentation inside a block scalar' and held no 'neither continues nor ends' / 'non-ASCII blank line' wording"
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestColumnZeroNonAsciiBlankLine
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiBlankLineDoesNotOpen
+      - tests.test_queue_stop_guard_routeback_record.TestOtherNonAsciiWhitespaceIsNotBlank
+      - tests.test_queue_stop_guard_routeback_record.TestBlockScalarKeepsANonAsciiBlankLine
+      - tests.test_queue_stop_guard_routeback_record.TestBlockScalarEndsAtANonAsciiBlankLineByIndentation.test_a_deeper_non_ascii_line_stays_a_body_line
+      - tests.test_queue_stop_guard_routeback_record.TestNonAsciiWhitespaceWithTextStillEndsTheState
+      - tests.test_queue_stop_guard_routeback_record.TestHookImportsStdlibOnly
+    red_confirmed: false
+    red_reason: "regression criterion over unchanged behavior: the existing tests (and the new FR3 pin TestNonAsciiWhitespaceWithTextStillEndsTheState) passed on the base revision and must keep passing; no red state occurred. The full-suite results are recorded in baseline_failures / final_failures"
