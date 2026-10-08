@@ -13,7 +13,7 @@ Covers task0005 Acceptance Criteria
   round-context suppression that selects targets by originating perspective
   `security` (not the post-aggregation category), states the rules, and maps
   outcomes (`not reproduced` -> declined / reason beginning `not
-  reproduced`; unconfirmed `unverifiable` -> declined / reason beginning
+  reproduced`; unconfirmed `unverifiable` -> unresolved / reason beginning
   `unverified`; truncated values are `unverifiable`; no steps ->
   orchestrator judgment). Phase R4's re-aggregation applies the same
   verification and its candidate gate excludes declined findings.
@@ -289,7 +289,8 @@ def verification_maps_unverifiable(par):
         [
             "`unverifiable` → never declined on that ground alone",
             "only when the orchestrator confirms the finding's basis by its own reading",
-            "`resolution: declined` with `resolution_reason` beginning `unverified`",
+            "otherwise `resolution: unresolved` with `resolution_reason` "
+            "beginning `unverified`",
         ],
     )
 
@@ -561,7 +562,7 @@ class TestAc2VerificationParagraph(unittest.TestCase):
     def test_not_reproduced_is_declined_with_prefix(self):
         self.assertTrue(verification_maps_not_reproduced(Doc.verification()))
 
-    def test_unverifiable_is_declined_unless_basis_confirmed(self):
+    def test_unverifiable_is_unresolved_unless_basis_confirmed(self):
         self.assertTrue(verification_maps_unverifiable(Doc.verification()))
 
     def test_truncated_or_oversized_is_unverifiable(self):
