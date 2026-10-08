@@ -23,7 +23,7 @@ acceptance_tests:
       pre-edit spec_change row, which named only one writer per field.
   AC-3:
     tests:
-      - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_no_longer_appears_in_the_id_uniqueness_exemption
+      - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_never_shares_the_spec_change_wholesale_exemption
       - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_row_states_append_semantics_not_wholesale_replacement
       - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_schema_example_is_a_yaml_list
     red_confirmed: true
@@ -54,9 +54,9 @@ acceptance_tests:
     tests:
       - tests.test_spec_change_replan_authorization.TestOriginPairAcceptsReviewAndVerify.test_review_origin_is_a_reentry
       - tests.test_spec_change_replan_authorization.TestOriginPairAcceptsReviewAndVerify.test_verify_origin_is_a_reentry_on_the_same_terms
-      - tests.test_spec_change_replan_authorization.TestOriginPairAcceptsReviewAndVerify.test_finding_stable_id_alone_no_longer_satisfies_the_mandatory_set
+      - tests.test_spec_change_replan_authorization.TestOriginPairAcceptsReviewAndVerify.test_retired_field_alone_no_longer_satisfies_the_mandatory_set
       - tests.test_phase_state_doc.TestSpecChangeOriginPairSchemaBlock.test_origin_kind_and_origin_id_present_in_order
-      - tests.test_phase_state_doc.TestSpecChangeOriginPairSchemaBlock.test_finding_stable_id_is_gone_from_the_schema_example
+      - tests.test_phase_state_doc.TestSpecChangeOriginPairSchemaBlock.test_retired_origin_field_name_is_gone_from_the_schema_example
     red_confirmed: true
     red_reason: >-
       Against the pre-rename SPEC_CHANGE_MANDATORY_FIELDS
@@ -72,7 +72,7 @@ acceptance_tests:
       - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
       - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
       - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_spent_replan_authorization_record_is_rejected
-      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_absent_authorization_is_not_a_reentry
+      - tests.test_spec_change_replan_authorization.TestValidatorReadsReplanAuthorizedNotConsumed.test_absent_authorization_is_not_a_reentry
       - tests.test_spec_change_replan_authorization.TestValidatorReadsReplanAuthorizedNotConsumed.test_consumed_true_with_unspent_authorization_is_a_reentry
     red_confirmed: true
     red_reason: >-

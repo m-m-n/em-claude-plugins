@@ -43,7 +43,7 @@ acceptance_tests:
       - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_category_unchanged
       - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
       - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_description_retains_stable_anchor
-      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_a_dotted_numeric_version
     red_confirmed: false
     red_reason: "These are retention/guard matchers over fields this task never touches (name, author, description anchors, key sets, em-review entry). Before any edit, current state already equals the expected retained values exactly (nothing had changed yet), so every one of these tests passed from the moment it was written -- there was no real violation to observe going red, per the exemption precedent in tests/test_spec_file_set_completeness_version_bump.py's 'Retention matchers (no negative proof needed)' convention. The matchers' ability to actually detect a violation is not separately exercised by a synthetic forged sample either, since a plain assertEqual/assertIn against a captured field cannot be meaningfully forged without asserting a tautology; the meaningful proof is that these tests reference the exact real fields (not a mock), so any accidental edit by this task's own diff would have flipped them to fail (verified after the implementation edit: still green, i.e. this task in fact touched only 'version')."
   AC-4:

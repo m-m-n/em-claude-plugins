@@ -10,14 +10,14 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_change_set_derivation.TestSectionExists.test_heading_present
-      - test_change_set_derivation.TestSectionExists.test_heading_occurs_exactly_once
-      - test_change_set_derivation.TestSectionExists.test_heading_follows_completion_section
-      - test_change_set_derivation.TestInputsStated.test_derived_not_authored_stated
-      - test_change_set_derivation.TestInputsStated.test_tasks_files_literal_cited
-      - test_change_set_derivation.TestInputsStated.test_default_entries_phrase_present
-      - test_change_set_derivation.TestInputsStated.test_cites_both_templates_for_default_entries
-      - test_change_set_derivation.TestInputsStated.test_does_not_enumerate_the_default_entries_itself
+      - tests.test_change_set_derivation.TestSectionExists.test_heading_present
+      - tests.test_change_set_derivation.TestSectionExists.test_heading_occurs_exactly_once
+      - tests.test_change_set_derivation.TestSectionExists.test_heading_follows_completion_section
+      - tests.test_change_set_derivation.TestInputsStated.test_derived_not_authored_stated
+      - tests.test_change_set_derivation.TestInputsStated.test_tasks_files_literal_cited
+      - tests.test_change_set_derivation.TestInputsStated.test_default_entries_phrase_present
+      - tests.test_change_set_derivation.TestInputsStated.test_cites_both_templates_for_default_entries
+      - tests.test_change_set_derivation.TestInputsStated.test_does_not_enumerate_the_default_entries_itself
     red_confirmed: true
     red_reason: >-
       Before create-plan-phase.md had section 12, TestSectionExists'
@@ -28,7 +28,7 @@ acceptance_tests:
       heading did not exist yet).
   AC-2:
     tests:
-      - test_change_set_derivation.TestGuardStatusStated.test_guard_not_goal_phrase_present
+      - tests.test_change_set_derivation.TestGuardStatusStated.test_guard_not_goal_phrase_present
     red_confirmed: true
     red_reason: >-
       Failed with "ValueError: substring not found" (_derivation_section
@@ -36,20 +36,20 @@ acceptance_tests:
       added.
   AC-3:
     tests:
-      - test_change_set_derivation.TestSemanticsAndTimingStated.test_semantics_cited_not_restated
-      - test_change_set_derivation.TestSemanticsAndTimingStated.test_re_derivation_timing_stated
+      - tests.test_change_set_derivation.TestSemanticsAndTimingStated.test_semantics_cited_not_restated
+      - tests.test_change_set_derivation.TestSemanticsAndTimingStated.test_re_derivation_timing_stated
     red_confirmed: true
     red_reason: >-
       setUpClass raised "ValueError: substring not found" before the
       section existed; both tests errored for that reason.
   AC-4:
     tests:
-      - test_spec_template_declared_change_set.TestDerivationStatementPresent.test_derivation_statement_present
-      - test_spec_template_declared_change_set.TestDerivationStatementPresent.test_create_plan_phase_cited
-      - test_spec_template_declared_change_set.TestDerivationStatementPresent.test_author_enumeration_placeholder_removed
-      - test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_derivation_statement_present
-      - test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_create_plan_phase_cited
-      - test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_author_enumeration_placeholder_removed
+      - tests.test_spec_template_declared_change_set.TestDerivationStatementPresent.test_derivation_statement_present
+      - tests.test_spec_template_declared_change_set.TestDerivationStatementPresent.test_create_plan_phase_cited
+      - tests.test_spec_template_declared_change_set.TestDerivationStatementPresent.test_author_enumeration_placeholder_removed
+      - tests.test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_derivation_statement_present
+      - tests.test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_create_plan_phase_cited
+      - tests.test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_author_enumeration_placeholder_removed
     red_confirmed: true
     red_reason: >-
       Before editing spec-document.md, test_derivation_statement_present
@@ -63,11 +63,11 @@ acceptance_tests:
       REMOVED_PLACEHOLDER_PATTERN).
   AC-5:
     tests:
-      - test_spec_template_declared_change_set.TestRootLiteralsPresent.test_feature_docs_root_literal_present
-      - test_spec_template_declared_change_set.TestRootLiteralsPresent.test_test_docs_root_literal_present
-      - test_spec_template_declared_change_set.TestEnumerationAndCitation.test_every_feature_docs_member_named
-      - test_spec_template_declared_change_set.TestSemanticsStated.test_superset_containment_stated
-      - test_spec_template_declared_change_set.TestSemanticsStated.test_zero_implement_task_instance_stated
+      - tests.test_spec_template_declared_change_set.TestRootLiteralsPresent.test_feature_docs_root_literal_present
+      - tests.test_spec_template_declared_change_set.TestRootLiteralsPresent.test_test_docs_root_literal_present
+      - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_every_feature_docs_member_named
+      - tests.test_spec_template_declared_change_set.TestSemanticsStated.test_superset_containment_stated
+      - tests.test_spec_template_declared_change_set.TestSemanticsStated.test_zero_implement_task_instance_stated
     red_confirmed: false
     red_reason: >-
       Retention criterion (AC-5 requires these to still pass, not to change
@@ -78,8 +78,8 @@ acceptance_tests:
       them to go red against.
   AC-6:
     tests:
-      - test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_root_globs_never_co_occur
-      - test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_no_exclusion_wording_at_all
+      - tests.test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_root_globs_never_co_occur
+      - tests.test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_no_exclusion_wording_at_all
     red_confirmed: true
     red_reason: >-
       Both errored with "ValueError: substring not found" (setUpClass could
@@ -87,8 +87,8 @@ acceptance_tests:
       added.
   AC-7:
     tests:
-      - test_declared_change_set_invariants.TestNoVerifySideExclusionRule.test_no_offender_found
-      - test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_carrier_set_is_subset_of_the_two_templates
+      - tests.test_declared_change_set_invariants.TestNoVerifySideExclusionRule.test_no_offender_found
+      - tests.test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_carrier_set_is_subset_of_the_two_templates
     red_confirmed: false
     red_reason: >-
       Non-regression guard, not new behavior: this task never edits

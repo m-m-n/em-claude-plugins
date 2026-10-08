@@ -27,9 +27,9 @@ final_failures: []             # after re-implementation: 3108 passed, 0 failed
 acceptance_tests:
   AC-1:
     tests:
-      - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_no_coverage_gate_or_whole_evaluation_discard_survives
-      - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_exactly_two_structural_triggers_stated
-      - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_successful_task_with_lifted_sites_recorded_completed_degraded
+      - tests.test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_no_coverage_gate_or_whole_evaluation_discard_survives
+      - tests.test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_exactly_two_structural_triggers_stated
+      - tests.test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_successful_task_with_lifted_sites_recorded_completed_degraded
     red_confirmed: true
     red_reason: >-
       Confirmed by running these tests against the pre-edit (git HEAD)
@@ -43,10 +43,10 @@ acceptance_tests:
       degraded marker).
   AC-2:
     tests:
-      - test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_listed_among_root_fields
-      - test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_entry_shape_defined
-      - test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_reason_vocabulary_stated
-      - test_review_phase_llm_led.TestTask0006EvaluatorAgentDismissedSitesAndInspectionDuty.test_states_dismissed_sites_accountability_obligation
+      - tests.test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_listed_among_root_fields
+      - tests.test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_entry_shape_defined
+      - tests.test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_reason_vocabulary_stated
+      - tests.test_review_phase_llm_led.TestTask0006EvaluatorAgentDismissedSitesAndInspectionDuty.test_states_dismissed_sites_accountability_obligation
     red_confirmed: true
     red_reason: >-
       Confirmed against pre-edit review-evaluation-contract.md and
@@ -58,12 +58,12 @@ acceptance_tests:
       from agents/review-evaluator.md).
   AC-3:
     tests:
-      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_heading_present
-      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_checked_by_same_site_against_findings_and_dismissed_sites
-      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_lifted_site_carries_the_pinned_values
-      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_all_dismissed_case_lifts_nothing_and_keeps_the_evaluation
-      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_no_file_line_bucket_site_reduction_survives
-      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_same_site_named_as_the_floor_predicate
+      - tests.test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_heading_present
+      - tests.test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_checked_by_same_site_against_findings_and_dismissed_sites
+      - tests.test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_lifted_site_carries_the_pinned_values
+      - tests.test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_all_dismissed_case_lifts_nothing_and_keeps_the_evaluation
+      - tests.test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_no_file_line_bucket_site_reduction_survives
+      - tests.test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_same_site_named_as_the_floor_predicate
     red_confirmed: true
     red_reason: >-
       Confirmed against pre-edit review-phase.md: test_floor_heading_present
@@ -77,14 +77,14 @@ acceptance_tests:
       existed in the old gate's all-or-nothing wording.
   AC-4:
     tests:
-      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_independent_inspection_duty_section_present
-      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_duty_covers_every_dispatched_perspective
-      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_empty_reviewer_result_is_not_sufficient_evidence
-      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_per_perspective_coverage_statement_required_in_output
-      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_no_second_reviewer_dispatched_fr3_untouched
-      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_read_budget_stays_a_fixed_number_and_is_not_raised
-      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_nfr5_no_write_constraint_unchanged
-      - test_review_phase_llm_led.TestTask0006EvaluatorAgentDismissedSitesAndInspectionDuty.test_states_independent_inspection_duty
+      - tests.test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_independent_inspection_duty_section_present
+      - tests.test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_duty_covers_every_dispatched_perspective
+      - tests.test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_empty_reviewer_result_is_not_sufficient_evidence
+      - tests.test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_per_perspective_coverage_statement_required_in_output
+      - tests.test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_no_second_reviewer_dispatched_fr3_untouched
+      - tests.test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_read_budget_stays_a_fixed_number_and_is_not_raised
+      - tests.test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_nfr5_no_write_constraint_unchanged
+      - tests.test_review_phase_llm_led.TestTask0006EvaluatorAgentDismissedSitesAndInspectionDuty.test_states_independent_inspection_duty
     red_confirmed: true
     red_reason: >-
       Confirmed against pre-edit review-evaluation-contract.md and
@@ -104,12 +104,12 @@ acceptance_tests:
       content, per this task's own AC-4 wording ("NFR5 ... is unchanged").
   AC-5:
     tests:
-      - test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences
-      - test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_sources_is_the_finding_field_name
-      - test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_orchestrator_overwrites_with_its_own_run_identities
-      - test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences_in_review_phase
-      - test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences_in_evaluator_agent
-      - test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_sources_field_and_orchestrator_overwrite_stated_in_review_phase
+      - tests.test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences
+      - tests.test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_sources_is_the_finding_field_name
+      - tests.test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_orchestrator_overwrites_with_its_own_run_identities
+      - tests.test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences_in_review_phase
+      - tests.test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences_in_evaluator_agent
+      - tests.test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_sources_field_and_orchestrator_overwrite_stated_in_review_phase
     red_confirmed: true
     red_reason: >-
       Confirmed against pre-edit documents for the contract and
@@ -130,11 +130,11 @@ acceptance_tests:
       no-old-name invariant is verified true throughout.
   AC-6:
     tests:
-      - test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_category_rule_is_equality_with_source_run_dispatched_perspective
-      - test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_no_valid_run_case_still_requires_a_dispatched_category
-      - test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_old_set_membership_wording_is_gone
-      - test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_category_gate_is_equality_with_source_run_dispatched_perspective
-      - test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_no_valid_run_case_still_requires_dispatched_category
+      - tests.test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_category_rule_is_equality_with_source_run_dispatched_perspective
+      - tests.test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_no_valid_run_case_still_requires_a_dispatched_category
+      - tests.test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_old_set_membership_wording_is_gone
+      - tests.test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_category_gate_is_equality_with_source_run_dispatched_perspective
+      - tests.test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_no_valid_run_case_still_requires_dispatched_category
     red_confirmed: true
     red_reason: >-
       Confirmed against pre-edit documents: the two

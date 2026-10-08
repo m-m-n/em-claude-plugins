@@ -36,9 +36,9 @@ acceptance_tests:
     tests:
       - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_direction_1_named_origin_outside_bound_set_aborts
       - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_direction_2_bound_set_member_carrying_category_aborts_regardless
-      - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_both_directions_marked_non_overridable
+      - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_direction_1_alone_marked_non_overridable
       - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_not_bound_set_member
-      - tests.test_classification_gate.TestClassificationGate.test_both_abort_directions_marked_final_and_non_overridable
+      - tests.test_classification_gate.TestClassificationGate.test_direction_1_alone_marked_final_and_non_overridable
     red_confirmed: true
     red_reason: >-
       Against the pre-task0028 document, direction 2 (a bound-set member
@@ -66,8 +66,8 @@ acceptance_tests:
       - tests.test_spec_change_origin_binding.TestAC5WorkerDeclarationIsTraceabilityOnly.test_states_origins_declared_for_traceability_only
       - tests.test_spec_change_origin_binding.TestAC5WorkerDeclarationIsTraceabilityOnly.test_states_check_target_is_orchestrators_bound_set
       - tests.test_spec_change_origin_binding.TestAC5WorkerDeclarationIsTraceabilityOnly.test_restates_no_abort_arm_and_no_verification_step
-      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_names_origins_via_finding_stable_id_field
-      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_packet_names_origins_via_finding_stable_id_field
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_names_origins_via_origin_id_field
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesOriginIdNotRecordPath.test_packet_names_origins_via_origin_id_field
     red_confirmed: true
     red_reason: >-
       Against the pre-task0028 document, rework-planner-contract.md said
@@ -88,7 +88,7 @@ acceptance_tests:
   AC-7:
     tests:
       - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_step_4_names_origin_pair
-      - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_step_4_no_longer_names_finding_stable_id
+      - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_step_4_no_longer_names_the_retired_field
       - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_still_five_numbered_steps_in_spec_change_transition
     red_confirmed: true
     red_reason: >-
