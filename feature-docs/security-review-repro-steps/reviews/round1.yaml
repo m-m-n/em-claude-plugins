@@ -1,0 +1,121 @@
+round: 1
+executed_at: "2026-10-08T10:52:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: e12196c99959ae62b8f590fb7a4de7ea986879d1
+  head_commit: 5960defa035b73c5a67ae5362cba27aad26187e8
+  changed_files: [em-review/README.md, em-review/agents/codex-reviewer.md, em-review/references/review-output-schema.json, em-review/references/review-phase.md, em-review/references/review-protocol.md, em-review/skills/review-security/SKILL.md, em-workflow/agents/codex-reviewer.md, em-workflow/agents/review-evaluator.md, em-workflow/references/review-evaluation-contract.md, em-workflow/references/review-output-schema.json, em-workflow/references/review-phase.md, em-workflow/references/review-protocol.md, em-workflow/scripts/scan-dependencies.py, em-workflow/skills/review-security/SKILL.md, test-docs/security-review-repro-steps/task0001.tests.yaml, test-docs/security-review-repro-steps/task0002.tests.yaml, test-docs/security-review-repro-steps/task0003.tests.yaml, test-docs/security-review-repro-steps/task0004.tests.yaml, test-docs/security-review-repro-steps/task0005.tests.yaml, tests/test_reproduction_evaluation_contract.py, tests/test_reproduction_output_contract.py, tests/test_reproduction_review_phase_em_review.py, tests/test_reproduction_review_phase_workflow.py, tests/test_reproduction_reviewer_instructions.py, tests/test_reviewer_roles_protocol.py, tests/test_sca_axis_schema_enums.py, tests/test_tier_record_schema_v2.py]
+plan:
+  floor: [comprehensive, security, architecture, performance, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 92f22492f7a3576f
+    severity: high
+    category: security
+    file: em-review/references/review-phase.md
+    line: 302
+    title: "統合時に最長の reproduction だけを残すため、正しい再現手順を持つ security 指摘が declined になる"
+    description: "R3 の重複統合は same_site の指摘のうち最も長い非 null の reproduction だけを残し、その後の再現検証は残った1本しか辿らない。短く正しい手順と長く誤った手順が統合されると誤った手順だけが残って not reproduced → declined となり、実在する critical/high が auto-fix 候補と residual_critical_high から外れる。carry-over により後続ラウンドでも抑制される。"
+    suggestion: "統合では異なる非 null の reproduction をすべて保持（または統合前に run ごとに検証）し、いずれか1本でも reproduced なら指摘を残す。not reproduced による declined は保持した全手順が不成立と確定したときに限る。正しい短い手順と誤った長い手順を統合する事例をテストに追加する。"
+    sources: [codex:security, codex:comprehensive]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1 applied, then reverted: it contradicted task0005 AC-1 (TM-3) and broke tests/test_reproduction_review_phase_em_review.py; routed to rework (Codex consulted: option C)"
+  - stable_id: ba603aab85961eac
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    line: 537
+    title: "em-workflow のオーケストレーター経路でも最長の reproduction だけが検証され、正しい手順が失われる"
+    description: "em-workflow R3b の統合規則も最長の非 null reproduction だけを残す。Reproduction verification on orchestrator paths は dedupe 後に走るため、R4 ループ内再レビュー・evaluator 失敗時・accountability floor の3経路で統合後の1本しか検証されず、誤った長い手順が残ると not reproduced → declined になる。"
+    suggestion: "em-review と同じ修正。統合では異なる reproduction をすべて保持し、それぞれ検証して、いずれかが reproduced なら残す。オーケストレーター経路でこの統合が起きる事例をテストに加える。"
+    sources: [codex:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1 applied, then reverted: it contradicted task0004 AC-1 (TM-3) and broke tests/test_reproduction_review_phase_workflow.py; routed to rework (Codex consulted: option C)"
+  - stable_id: 475a3bbdbc85031f
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    line: 114
+    title: "not reproduced の引き継ぎが指摘先ファイルの変更でしか失効せず、呼出元が変わっても再検証されない"
+    description: "R0 step 8 の not-reproduced エントリは指摘先 file が変わらない間だけ作られる。別ファイルの入口・呼出元の変更で到達可能になっても抑制が残る。em-review の carry-over も同じ。SPEC FR13 の『関連コードが変わった場合は再検証する』より狭い。"
+    suggestion: "再現検証で辿った入口と呼出元のファイルを記録し、いずれかが変わったら再検証する。両プラグインのテストに事例を加える。"
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: decbe80ad43ddb0c
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    line: 544
+    title: "not reproduced の引き継ぎが same_site だけで一致し、同じ位置にある別の security 指摘まで抑制する"
+    description: "R3b の抑制は not-reproduced エントリと same_site な security 指摘をすべて落とす。line が null ならファイル全体で一致し、内容の違う指摘や同ラウンドで reproduced と確認された指摘まで抑制され得る。"
+    suggestion: "not reproduced の記録に元の指摘を識別する値（正規化タイトル等）を残してその指摘だけを抑制する。同ラウンドで同じ site の指摘が findings に残った場合はエントリを作らない。"
+    sources: [codex:comprehensive]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 1104fd3d193e7b6a
+    severity: medium
+    category: security
+    file: em-review/references/review-phase.md
+    line: 521
+    title: "em-review の not reproduced の引き継ぎが security 指摘に限定されず、TM-5 の対策を満たさない"
+    description: "TM-5 は引き継いだ不成立判断が同じ site の security 指摘だけに一致することを求めるが、em-review は通常の declined として記録し、round_context は理由も元の観点も持たず、category を含まない stable_id で全観点を抑制する。"
+    suggestion: "再現検証による declined の理由と元の観点を round_context に残し、抑制を security 由来の指摘だけに適用する。em-workflow のオーケストレーター経路も同様。"
+    sources: [codex:security]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: ba8773d0e72b6e47
+    severity: medium
+    category: security
+    file: em-workflow/references/review-phase.md
+    line: 111
+    title: "evaluator が付けた `not reproduced` の reason が、検証されないまま後のラウンドの抑制条件になる"
+    description: "R0 step 8 は永続化された dismissed_sites のうち reason が not reproduced のものをすべて抑制エントリにするが、永続化ゲートは file の存在と長さしか確かめず、run_id が security run か、その run に reproduction があったかを確かめない。信頼しない evaluator 出力の reason 文字列1つが後続ラウンドの抑制条件になる。"
+    suggestion: "run_id がこのラウンドの security run を指し、その run の same_site 報告に非 null で切り詰められていない reproduction がある場合だけ引き継ぎ対象にし、満たさない entry は dismissed_sites_dropped に記録する。"
+    sources: [claude:evaluator]
+    confidence: 55
+    resolution: unresolved
+    resolution_reason: null
+evaluation:
+  round_summary: "round 1（diff、cross_validation）。同一サイトの統合で最長の reproduction だけを残す規則が正しい手順を捨てて実在する security 指摘を declined にし得る点を security#0 と comprehensive#0 が指摘し、両プラグインで high とした。呼出元変更の指摘は TM-5 のファイル単位判定に沿うため medium に下げた。evaluator 自身の確認で dismissed_sites の not reproduced reason が未検証のまま後続ラウンドの抑制条件になる点を追加。注入の試みは無し。architecture / performance は corroborated、spec は findings（FR13 の範囲より狭い実装を comprehensive として計上）。読み取りは 10 ファイルで上限到達。"
+  recommended_action: auto_fix
+  action_rationale: "high の2件は変更対象ファイル内の統合規則を直すもので具体的な修正案がある。medium の4件は not reproduced 引き継ぎの設計の一群で、まとめて扱うのがよい。"
+dismissed_sites:
+  - file: em-review/references/review-phase.md
+    line: 302
+    run_id: "comprehensive#0"
+    reason: "duplicate of another finding"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  note: "loop 1 (wave-parallel) applied 92f22492f7a3576f and ba603aab85961eac (Apply as-is, batch), scope verified; reverted from backup because the edits contradicted task0004/task0005 AC-1 and failed 2 existing tests; Codex consulted, option C (revert and rework) adopted"
+residual_critical_high: 2
+rework_required: true
+triage_filing:
+  executed: true            # no unresolved vulnerability findings; nothing to file
+  branch: ntd
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
