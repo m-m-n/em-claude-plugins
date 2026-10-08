@@ -1,0 +1,21 @@
+schema_version: 1
+feature: security-review-repro-steps
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: dc79aa2af1ffdd636f0088d48f8115bb5fd95fbf
+last_input_digest: sha256:4f6b47711c81951a4d65ad8400f181f3e5c142dbbf3d9772975f957c3aacccfb
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:4f6b47711c81951a4d65ad8400f181f3e5c142dbbf3d9772975f957c3aacccfb
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
