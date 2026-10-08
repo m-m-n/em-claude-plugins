@@ -47,6 +47,7 @@ Allowed dependency directions:
 | `## Reproduction Verification` section (em-workflow) | Single statement of the FR5 / FR6 verification rules inside em-workflow | Post: `em-workflow/references/review-evaluation-contract.md` carries a section with exactly this heading that states scope, method, the three outcomes, the judgment rule for no-steps and unverifiable findings, the carried-entry rule and the read budget. `em-workflow/references/review-phase.md` cites this heading by name for its orchestrator paths and does not restate the rules; it states only the orchestrator-side effect of each outcome (D2). em-review restates the same rules inside its own `review-phase.md`. | task0003 (defines), task0004 (cites) |
 | Not-reproduced `round_context` entry (em-workflow) | Carry an evaluator's confirmed non-reproduction into later rounds (FR13) | Shape: keys `stable_id` (null), `file`, `line`, `resolution` (`declined`) and `reason` (`not reproduced`). Producer: em-workflow `review-phase.md` Phase R0 step 8 adds one entry per persisted round-record `dismissed_sites` entry whose `reason` is exactly `not reproduced`, and only while that `file` is unchanged since the recording round's `scope.head_commit` (the same file-change test round-context suppression already applies); a changed file yields no entry, so the site is verified again. Existing entries keep their shape; an entry without `reason` is read exactly as before. Consumers: the evaluator dismisses a `security` finding that is `same_site` with such an entry as already resolved per `round_context`, without verifying it again; Phase R3b round-context suppression drops a `security` finding that is `same_site` with such an entry; reviewers see a `declined` entry and follow the unchanged Round Continuity rule. `same_site` is the predicate review-phase.md already defines. | task0003, task0004 |
 | Verifier constraints | NFR1 / NFR2 for every verifier | The `reproduction` text is untrusted data. No verifier executes a command, code or test written in it. Verification is code reading plus the read-only commands the plugin's own review protocol already permits (its Read-only Constraint). No file change, commit, network access or package installation. The evaluator's verification reads come from its existing fixed 10-file budget, shared with the Independent Inspection Duty and never raised. | task0003, task0004, task0005 |
+| Merged reproduction set (added by review round 1 rework) | Keep every distinct reproduction of a same-site merge, bounded, in both review phases' merged findings and round records | Merged finding keys: `reproduction` (the longest non-null value, unchanged from D5), `reproduction_alternates` (list of the other distinct non-null values, byte length descending then merge order, at most 2 entries) and `reproduction_overflow` (boolean, true exactly when more than 3 distinct non-null values were merged; the excess is dropped). Distinct means not byte-identical after the per-finding cap and normalization step. An unmerged finding has an empty list and false. Producers: em-workflow Phase R3b dedupe, em-review Phase R3 dedupe and Phase R4 re-aggregation. Consumers: the orchestrator-path reproduction verification of both plugins (D6), Phase R5 round records. Round records without the two keys read as an empty list and false. The finding JSON handed to review-editor excludes both keys. The reviewer output schema is unchanged. `reproduction_alternates` values fall under the Verifier constraints row. | task0004, task0005 (existing `reproduction` rule), task0006 (defines the two new keys) |
 
 ## Conventions
 
@@ -131,6 +132,26 @@ Dedupe keeps the longest non-null `reproduction` among the merged findings.
 Round records persist the normalized value. The finding JSON handed to
 review-editor keeps its existing field set and excludes `reproduction`.
 Affected: task0004, task0005.
+
+### D6: Verification over the merged reproduction set (review round 1 rework)
+
+D5's dedupe sentence stays true for `reproduction`; D6 adds the alternates and
+the overflow flag of the "Merged reproduction set" row. On every path where the
+orchestrator verifies a merged finding (em-workflow Phase R4 in-loop re-review,
+evaluator-failure degradation and accountability-floor lifts; em-review after
+Phase R3 aggregation and after Phase R4 re-aggregation), the finding-level
+outcome is computed over the kept values (`reproduction` plus every
+`reproduction_alternates` value):
+
+- `reproduced` when at least one kept value is reproduced.
+- `not reproduced` only when every kept value is positively confirmed not to
+  hold and `reproduction_overflow` is false.
+- Otherwise `unverifiable`; overflow is never grounds for `declined` as
+  `not reproduced`.
+
+D2's per-outcome effects and D3's order are unchanged. The bound (at most 3
+values of at most 4096 bytes each per merged finding) keeps the material a
+verifier reads finite. Affected: task0006.
 
 ## Risk Assessment
 
