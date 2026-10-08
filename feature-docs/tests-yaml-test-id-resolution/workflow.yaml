@@ -216,7 +216,7 @@ tasks:
     - FR12
     - FR13
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-test-id-resolution/task0005
 review:
   status: pending
