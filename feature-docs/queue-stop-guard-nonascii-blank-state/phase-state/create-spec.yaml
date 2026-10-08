@@ -1,11 +1,11 @@
 schema_version: 1
 feature: queue-stop-guard-nonascii-blank-state
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 65714d9faa27c228ca5cabb3d1ebed1fd7905b3b
 last_input_digest: sha256:9ba4064736844b16e8e296ed1be3f065fe4a9be4d5efd6391f9ee9ded5a28390
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
