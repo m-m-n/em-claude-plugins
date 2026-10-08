@@ -52,6 +52,8 @@ EXPECTED_CATEGORY_ENUM = [
     "vulnerability",
 ]
 EXPECTED_ROOT_REQUIRED = ["findings", "summary", "skipped", "skip_reason", "source"]
+# Refreshed by feature-docs/security-review-repro-steps/tasks/task0001.md:
+# the finding `required` list gained `reproduction` after `suggestion`.
 EXPECTED_FINDING_REQUIRED = [
     "file",
     "line",
@@ -61,6 +63,7 @@ EXPECTED_FINDING_REQUIRED = [
     "title",
     "description",
     "suggestion",
+    "reproduction",
 ]
 EXPECTED_SEVERITY_ENUM = ["critical", "high", "medium"]
 
