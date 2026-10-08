@@ -296,8 +296,8 @@ tasks:
     - FR13
     - NFR3
     - NFR5
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/security-review-repro-steps/task0007
     notes: null
     provenance:
       source: verify
