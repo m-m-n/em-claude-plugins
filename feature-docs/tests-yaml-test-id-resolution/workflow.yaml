@@ -196,7 +196,7 @@ tasks:
     - FR2
     - FR3
     - FR4
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-test-id-resolution/task0004
   task0005:
     title: Record-writing rules in implementer.md and test/README.md
