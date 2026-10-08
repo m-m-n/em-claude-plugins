@@ -1,0 +1,29 @@
+feature: queue-stop-guard-nonascii-blank-state
+collected_at: "2026-10-08T20:40:00+09:00"
+session_ids: [01a11b48-84cb-7429-998e-168c1c06b26f]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "タスク記述とコード調査の両読みで規模 1（ルール追加 + テスト追加の単一モジュール修正）の確信度が高く、reduced を採用"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.03, confidence: 0.97}
+        observed_at: "2026-10-08T19:42:49+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.09, confidence: 0.91}
+        observed_at: "2026-10-08T19:42:49+09:00"
+    pre_survey_estimate:
+      files_expected: 6
+      changed_lines_approx: 70
+      change_containment: single_module
+      body_change_kind: new_logic
+follow_up_drafts: []
+lessons_candidates:
+  - "task0001 AC-3: 計画の 6 桁目 `- 'x` フィクスチャは兄弟項目として正当に引用値を開くため条件を満たせず、実装者が 8 桁目に読み替えた。計画段階でフィクスチャの字下げが意図した状態に入るかを確かめる余地がある"
+  - "TestNonAsciiWhitespaceWithTextStillEndsTheState は THREAT-MODEL が範囲外とした残りの穴（全角空白 + 文字の行の後の - 'x で記録が隠れ exit 0）を期待値として固定している（評価者注記、medium 未満）"
