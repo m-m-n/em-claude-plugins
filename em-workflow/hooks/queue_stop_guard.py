@@ -213,7 +213,8 @@ class _MultilineValueTracker:
     scalar. An item indicator, a key, a quote or a bracket on it opens
     nothing. The first line at or shallower than that column ends the state
     and is read with the normal rules; blank and comment lines neither
-    continue nor end it.
+    continue nor end it, and a non-ASCII blank line (see below) neither
+    continues nor ends it either, whatever its indentation.
 
     Inside a flow collection a quote opens an inner string only at the start
     of a flow entry or after a real mapping indicator. A `:` is such an
@@ -227,9 +228,14 @@ class _MultilineValueTracker:
 
     A blank line is a line made only of spaces (U+0020) and tabs (U+0009), the
     empty line included. A line made only of any other whitespace character
-    (U+3000, U+00A0, U+000B, U+000C) is not blank: it is read by the normal
-    rules, as a plain scalar at a value start, or by its indentation inside a
-    block scalar."""
+    (U+3000, U+00A0, U+000B, U+000C) is not blank, but a non-ASCII blank line:
+    at a value start it is read by the normal rules, as a plain scalar. In the
+    block-scalar state and in the plain-continuation state a non-ASCII blank
+    line neither continues nor ends the state, whatever its indentation (column
+    0, the parent's indentation or deeper): the next line that is not one is
+    judged against the unchanged state, as if the line were absent. A line of
+    such whitespace followed by a non-whitespace character is not a non-ASCII
+    blank line and is judged by its indentation."""
 
     def __init__(self):
         self._mode = None  # None, "dq", "sq" or "flow": the open value kind
@@ -249,8 +255,8 @@ class _MultilineValueTracker:
             self._scan(text, 0)
             return True
         if self._block_parent is not None:
-            if self._is_blank(text):
-                return False
+            if self._is_blank(text) or self._is_non_ascii_blank(text):
+                return False  # neither continues nor ends the block scalar
             if len(text) - len(text.lstrip(" \t")) > self._block_parent:
                 return False  # a block scalar body line: never an opening
             self._block_parent = None
@@ -264,12 +270,25 @@ class _MultilineValueTracker:
         included. Any other whitespace character makes the line non-blank."""
         return text.lstrip(" \t") == ""
 
+    @staticmethod
+    def _is_non_ascii_blank(text):
+        """A non-ASCII blank line (its line terminator already removed): empty
+        once all Unicode whitespace is stripped, which is the blank-line check
+        of the readers outside the tracker, yet not made only of U+0020 spaces
+        and U+0009 tabs (that is `_is_blank`; the empty line is one of those).
+        The block-scalar state and the plain-continuation state both use this
+        one classification: such a line neither continues nor ends either
+        state, whatever its indentation."""
+        return text.strip() == "" and text.lstrip(" \t") != ""
+
     def _read_line(self, text):
         stripped = text.lstrip(" \t")
         if self._is_blank(text) or stripped.startswith("#"):
             return  # blank and comment lines never open and never decide
         pos = len(text) - len(stripped)
         if self._plain_parent is not None:
+            if self._is_non_ascii_blank(text):
+                return  # neither continues nor ends the continuation state
             if pos > self._plain_parent:
                 return  # a plain-scalar continuation line: never a value start
             self._plain_parent = None  # at or above the parent: the scalar ended
