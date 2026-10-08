@@ -1,7 +1,7 @@
 schema_version: 1
 feature: security-review-repro-steps
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: dc79aa2af1ffdd636f0088d48f8115bb5fd95fbf
 last_input_digest: sha256:5344df597a86a79ab22745b36714776da5b30c0d0deaa3283103f6c1dc5e948c
