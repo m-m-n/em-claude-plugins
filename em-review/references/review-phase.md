@@ -339,7 +339,7 @@ new user question and no new gate identifier.
   a target. `not reproduced` → `resolution: declined`, `resolution_reason`
   beginning `not reproduced`. `unverifiable` → never declined on that ground
   alone: it stays a target only when the orchestrator confirms the finding's
-  basis by its own reading, otherwise `resolution: declined` with
+  basis by its own reading, otherwise `resolution: unresolved` with
   `resolution_reason` beginning `unverified`.
 - For a merged finding, every kept value (`reproduction` and each
   `reproduction_alternates` value) is verified, and the finding-level outcome is
@@ -351,6 +351,13 @@ new user question and no new gate identifier.
   `not reproduced`. The effects of each outcome are unchanged and apply to the
   finding-level outcome. For example, a short value that holds, merged with a
   longer value that does not, leaves the finding `reproduced` and a target.
+- An `unverifiable` finding whose basis the orchestrator does not confirm by
+  its own reading is never `declined`: it is recorded with
+  `resolution: unresolved` and a `resolution_reason` beginning `unverified`.
+  Such a finding is neither an auto-fix candidate nor counted in the residual
+  critical/high count, so it is never sent back for a fix on that ground;
+  round-context suppression does not drop it, because it is not `declined`,
+  and the next round verifies it again.
 - A finding declined here is neither an auto-fix candidate (Phase R4) nor
   counted in `residual_critical_high`; it stays a recorded finding with
   `resolution: declined` and its `resolution_reason` (Phase R5).
@@ -382,7 +389,9 @@ Candidate gate per loop: `severity ∈ {critical, high}` AND `category != spec`
 AND `stable_id ∉ aborted_stable_ids` AND non-empty suggestion AND
 `file ∈ changed_files`. The candidate gate also excludes a finding declined by
 reproduction verification (Phase R3): it is neither a candidate nor counted in
-the residual critical/high count.
+the residual critical/high count. A finding left `unresolved` as `unverified`
+by that verification is likewise neither a candidate nor counted in the
+residual critical/high count.
 
 Classification (mechanical only — never fuzzy semantic judgment):
 
@@ -488,8 +497,10 @@ note), re-aggregate, then: zero residual critical/high non-spec → `clean`;
 The re-aggregation applies Phase R3 step 6's `reproduction` normalization,
 round-context suppression and reproduction verification before the `clean` /
 `loop-cap` / `no-progress` decision; a finding declined by reproduction
-verification is not counted as residual. The re-aggregation also applies Phase
-R3's dedupe merge of `reproduction` values, so a merged finding carries
+verification is not counted as residual. A finding left `unresolved` as
+`unverified` by that verification is likewise not counted as residual in the
+`clean` / `loop-cap` / `no-progress` decision. The re-aggregation also applies
+Phase R3's dedupe merge of `reproduction` values, so a merged finding carries
 `reproduction_alternates` and `reproduction_overflow`, and the reproduction
 verification runs over its kept values.
 
@@ -542,7 +553,7 @@ auto_fix:
   loops_run: 2
   applied_total: 3
   termination: clean
-residual_critical_high: 0    # excludes findings declined by reproduction verification
+residual_critical_high: 0    # excludes findings declined by reproduction verification; a finding left unverified is never counted
 ```
 
 **Carry-over of not-reproduced declines**: a finding declined as
@@ -551,7 +562,8 @@ existing `round_context` build (Phase R0 step 9) and round-context
 suppression (Phase R3) carry it into later runs unchanged. Reproduction
 verification runs after suppression, so it is verified again only after its
 file changes since the recorded `head_commit`; records written before this
-feature (no `reproduction`) are read as before.
+feature (no `reproduction`) are read as before. A finding left `unresolved` as
+`unverified` is not carried as a decline, so the next run verifies it again.
 
 The finding entries also carry `reproduction_alternates` (the other distinct
 non-null values of the merge, an empty list when there are none) and
