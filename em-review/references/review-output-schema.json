@@ -8,7 +8,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["file", "line", "line_end", "severity", "category", "title", "description", "suggestion"],
+        "required": ["file", "line", "line_end", "severity", "category", "title", "description", "suggestion", "reproduction"],
         "additionalProperties": false,
         "properties": {
           "file":        { "type": "string" },
@@ -18,7 +18,8 @@
           "category":    { "enum": ["security", "performance", "architecture", "spec", "comprehensive"] },
           "title":       { "type": "string" },
           "description": { "type": "string" },
-          "suggestion":  { "type": "string" }
+          "suggestion":  { "type": "string" },
+          "reproduction": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
         }
       }
     },
