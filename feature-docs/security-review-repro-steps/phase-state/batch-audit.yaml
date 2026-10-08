@@ -1,0 +1,31 @@
+schema_version: 1
+feature: security-review-repro-steps
+records:
+- question_id: create-spec.feature-identity
+  packet_id: null
+  answered_at: '2026-10-08T09:20:00+09:00'
+  source: batch-decision-table
+  answer_mode: select
+  selected_option_ids:
+  - derive_from_task_description
+  freeform: null
+  normalized_answer: security-review-repro-steps
+  resolution_note: 'gate: create-spec.feature-identity; derived from Notion task title
+    ''セキュリティレビューは再現方法を伝えてもらう''; codex_consulted: false'
+- question_id: create-spec.requirement-clarification
+  packet_id: null
+  answered_at: '2026-10-08T09:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: Q1 required reproduction string|null; Q2 evaluator + orchestrator
+    for bypass paths / em-review orchestrator; Q3 unverifiable -> judgment, no fix
+    until confirmed; Q4 not reproduced / declined only when disproved; Q5 code reading
+    + already-allowed read-only commands, never execute reproduction text
+  resolution_note: 'gate: create-spec.requirement-clarification (orchestrator-raised,
+    analyst returned completed with reversible assumptions A1-A7); options per question:
+    see feature-docs phase-state create-spec.yaml answers; codex_consulted: true;
+    opus_escalation: false; key points: unverified is not disproved; accountability
+    floor requires dismissed_sites reason; round_context carry-over to converge; recorded
+    to Notion task comment'

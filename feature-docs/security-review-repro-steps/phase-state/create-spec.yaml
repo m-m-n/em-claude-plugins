@@ -4,14 +4,58 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 7e02522816dc9b680edcd200ba955ee8040f1816
-last_input_digest: sha256:30d46550dd10a932cb471cd1763276b26b1e0a81912f03f493dc8d67d0e367b0
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:25c0530d2d3be348900331a7b1dcf38af75570a06638781ada800b458d9ddf95
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  create-spec.requirement-clarification.codex-1:
+    packet_id: null
+    answered_at: '2026-10-08T09:40:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "{\n  \"answers\": [\n    {\n      \"q\": \"Q1\",\n      \"choice\"\
+      : \"両方のスキーマに必須の reproduction（string|null）を追加する\",\n      \"reason\": \"em-workflow/references/review-output-schema.json\
+      \ と em-review/references/review-output-schema.json は全項目必須・追加項目禁止なので、専用項目なら手順の有無を明確に判別できる。非セキュリティは\
+      \ null とし、em-workflow/scripts/scan-dependencies.py の _build_finding にも None\
+      \ を追加する\"\n    },\n    {\n      \"q\": \"Q2\",\n      \"choice\": \"提案の分担を採用し、評価者を通らない全経路を統括役が検証する\"\
+      ,\n      \"reason\": \"em-workflow/references/review-phase.md は R3a を１ラウンド１回に限定し、R4再レビューを\
+      \ R3b へ直行させるため妥当だ。評価失敗時と指摘の自動復元時も統括役が検証する。em-review/references/review-phase.md\
+      \ では R3集約後とR4再集約後に行う。em-workflow/references/review-evaluation-contract.md の10ファイル枠は独立調査と共有する\"\
+      \n    },\n    {\n      \"q\": \"Q3\",\n      \"choice\": \"自動棄却せず Claude Code\
+      \ の判断へ送るが、確認できるまで対応を保留する\",\n      \"reason\": \"em-workflow/references/review-evaluation-contract.md\
+      \ は読取上限による未検証を認め、em-review/references/review-protocol.md はPR差分だけの調査を許す。未検証は反証ではない。再現情報がある指摘は、判断経路でも確認できるまで修正や差し戻しの対象にしない\"\
+      \n    },\n    {\n      \"q\": \"Q4\",\n      \"choice\": \"検証で不成立を確認した場合に限り、em-workflow\
+      \ は not reproduced、em-review は declined にする\",\n      \"reason\": \"em-workflow/references/review-phase.md\
+      \ の自動復元を避けるには dismissed_sites が必要だ。em-workflow/references/review-evaluation-contract.md\
+      \ と em-workflow/agents/review-evaluator.md の理由語彙を更新する。em-review/references/review-phase.md\
+      \ の declined は理由を記録し、その回の修正候補と残存件数からも除外する\"\n    },\n    {\n      \"q\": \"\
+      Q5\",\n      \"choice\": \"コード読解で検証し、規約で許された読み取り専用コマンドだけを使う\",\n      \"reason\"\
+      : \"em-workflow/agents/review-evaluator.md は Bash を読取専用に限定し、em-review/references/review-protocol.md\
+      \ は git show によるPR文脈取得を許す。再現文字列はデータとして扱い、記載されたコマンド、対象コード、試験は実行しない。過去に承認されたことだけを根拠に実行を許さない\"\
+      \n    }\n  ],\n  \"other_risks\": [\n    \"両プラグインの references/review-output-schema.json\
+      \ は項目の存在と型を制約するが、有効な確認方法までは保証しない。両 skills/review-security/SKILL.md と references/review-protocol.md\
+      \ に具体的な再現・確認方法の記載規則が必要で、空白文字列は手順なしとして扱う必要がある\",\n    \"em-workflow/references/review-evaluation-contract.md\
+      \ の出力項目、両 references/review-phase.md の結合規則とR5記録例には reproduction がない。評価・結合・再集約・保存で手順と検証結果が失われないようにし、長さ制限で手順が欠けた場合は未検証として扱う必要がある\"\
+      ,\n    \"em-workflow/references/review-phase.md のR0は findings からだけ round_context\
+      \ を作るため、dismissed_sites の not reproduced 記録だけでは次回の再提起を防げない。判定を再レビューと次ラウンドへ引き継ぎ、関連コードが変われば再検証する必要がある\"\
+      ,\n    \"em-review/references/review-phase.md のR3は変更対象外の指摘を comprehensive に変更する。集約後の\
+      \ category だけで検証対象を選ぶと、セキュリティ観点の指摘が検証を通らないため、統括役が把握する元の担当観点で対象を判定する必要がある\",\n\
+      \    \"tests/test_reviewer_roles_protocol.py と tests/test_sca_axis_schema_enums.py\
+      \ は finding の required 配列を固定値と比較している。項目追加に合わせて期待値を更新し、未検証の対応禁止、反証済み指摘の復元防止、再レビュー経路の検証を確認する必要がある\"\
+      \n  ]\n}"
+    normalized_answer: A1-A3/A5 adopted with Codex refinements (blank=null, truncated=unverified,
+      evaluator-bypass paths verified by orchestrator, original-perspective targeting
+      in em-review, not-reproduced carried into round_context as FR13); A8 added (vertex-review
+      unchanged)
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:30d46550dd10a932cb471cd1763276b26b1e0a81912f03f493dc8d67d0e367b0
+  output_digest: sha256:b0aab69509dd0e2f0daefc3ca472630f3365d18710ce625413f28182b5b41d5b
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:25c0530d2d3be348900331a7b1dcf38af75570a06638781ada800b458d9ddf95
   output_digest: null
 artifacts: []
 patches: []
