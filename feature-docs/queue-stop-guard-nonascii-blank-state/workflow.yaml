@@ -88,7 +88,8 @@ workflow:
   failed_items: []
   completed_at_commit: 5dc23521d9e22868ff4db30e718bbc3872ce8499
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: d9ec6a1140bdbb8f02d92f6b6131ce200dec115d
 tasks:
   task0001:
     title: 'queue_stop_guard: keep block-scalar and plain-continuation state across non-ASCII blank lines'
