@@ -10,8 +10,8 @@ records:
   - derive_from_task_description
   freeform: null
   normalized_answer: security-review-repro-steps
-  resolution_note: 'gate: create-spec.feature-identity; derived from Notion task title
-    ''セキュリティレビューは再現方法を伝えてもらう''; codex_consulted: false'
+  resolution_note: 'gate: create-spec.feature-identity; derived from Notion task title ''セキュリティレビューは再現方法を伝えてもらう'';
+    codex_consulted: false'
 - question_id: create-spec.requirement-clarification
   packet_id: null
   answered_at: '2026-10-08T09:40:00+09:00'
@@ -19,16 +19,15 @@ records:
   answer_mode: freeform
   selected_option_ids: []
   freeform: null
-  normalized_answer: Q1 required reproduction string|null; Q2 evaluator + orchestrator
-    for bypass paths / em-review orchestrator; Q3 unverifiable -> judgment, no fix
-    until confirmed; Q4 not reproduced / declined only when disproved; Q5 code reading
-    + already-allowed read-only commands, never execute reproduction text
-  resolution_note: 'gate: create-spec.requirement-clarification (orchestrator-raised,
-    analyst returned completed with reversible assumptions A1-A7); options per question:
-    see feature-docs phase-state create-spec.yaml answers; codex_consulted: true;
-    opus_escalation: false; key points: unverified is not disproved; accountability
-    floor requires dismissed_sites reason; round_context carry-over to converge; recorded
-    to Notion task comment'
+  normalized_answer: Q1 required reproduction string|null; Q2 evaluator + orchestrator for bypass
+    paths / em-review orchestrator; Q3 unverifiable -> judgment, no fix until confirmed; Q4
+    not reproduced / declined only when disproved; Q5 code reading + already-allowed read-only
+    commands, never execute reproduction text
+  resolution_note: 'gate: create-spec.requirement-clarification (orchestrator-raised, analyst
+    returned completed with reversible assumptions A1-A7); options per question: see feature-docs
+    phase-state create-spec.yaml answers; codex_consulted: true; opus_escalation: false; key
+    points: unverified is not disproved; accountability floor requires dismissed_sites reason;
+    round_context carry-over to converge; recorded to Notion task comment'
 - question_id: implement.deviation-auto-addition
   packet_id: null
   answered_at: '2026-10-08T10:19:00+09:00'
@@ -39,11 +38,10 @@ records:
   freeform: null
   normalized_answer: declined
   resolution_note: 'task_id: task0004; path: tests/test_tier_record_schema_v2.py (whole-file
-    sha256 pin REVIEW_PHASE_SHA256 refreshed in place); declined because the evidence
-    part naming an existing AC-n of the task plan or a registered requirement id was
-    missing (the report cited IMPLEMENTATION.md Conventions instead); path shape check
-    and control-path check passed; surfaces as an ordinary deviation for the containment
-    check'
+    sha256 pin REVIEW_PHASE_SHA256 refreshed in place); declined because the evidence part naming
+    an existing AC-n of the task plan or a registered requirement id was missing (the report
+    cited IMPLEMENTATION.md Conventions instead); path shape check and control-path check passed;
+    surfaces as an ordinary deviation for the containment check'
 - question_id: review.auto-fix-test-conflict
   packet_id: null
   answered_at: '2026-10-08T10:50:00+09:00'
@@ -52,15 +50,14 @@ records:
   selected_option_ids:
   - C_revert_and_rework
   freeform: null
-  normalized_answer: revert auto-fix of 92f22492f7a3576f / ba603aab85961eac and route
-    to rework
-  resolution_note: 'gate: unlisted (review R4 auto-fix vs existing AC/tests conflict);
-    options: A keep auto-fix and update the 2 tests in review / B revert and decline
-    / C revert and rework via implement; chosen: C; not chosen: A, B; codex_consulted:
-    true; opus_escalation: false; key points: TM-3 protects context/read budget (4096-byte
-    cap, 10-file budget) and does not require longest-only, but keeping all reproductions
-    can exceed the bound, so docs, AC and tests must change together with a total-size/verification-count
-    limit and unverifiable handling; B would leave a real finding wrongly declined'
+  normalized_answer: revert auto-fix of 92f22492f7a3576f / ba603aab85961eac and route to rework
+  resolution_note: 'gate: unlisted (review R4 auto-fix vs existing AC/tests conflict); options:
+    A keep auto-fix and update the 2 tests in review / B revert and decline / C revert and rework
+    via implement; chosen: C; not chosen: A, B; codex_consulted: true; opus_escalation: false;
+    key points: TM-3 protects context/read budget (4096-byte cap, 10-file budget) and does not
+    require longest-only, but keeping all reproductions can exceed the bound, so docs, AC and
+    tests must change together with a total-size/verification-count limit and unverifiable handling;
+    B would leave a real finding wrongly declined'
 - question_id: implement.deviation-auto-addition
   packet_id: null
   answered_at: '2026-10-08T11:10:00+09:00'
@@ -71,9 +68,9 @@ records:
   freeform: null
   normalized_answer: declined
   resolution_note: 'task_id: task0006; path: tests/test_tier_record_schema_v2.py (REVIEW_PHASE_SHA256
-    pin refreshed); declined: missing evidence part 2 (no AC-n / requirement id named)
-    and part 3 (no named test that cannot pass stated as evidence of a dropped criterion);
-    surfaced as an ordinary deviation'
+    pin refreshed); declined: missing evidence part 2 (no AC-n / requirement id named) and part
+    3 (no named test that cannot pass stated as evidence of a dropped criterion); surfaced as
+    an ordinary deviation'
 - question_id: review.auto-fix-test-regression
   packet_id: null
   answered_at: '2026-10-08T11:38:43+09:00'
@@ -83,13 +80,13 @@ records:
   - revert_and_defer
   freeform: null
   normalized_answer: reverted loop 2 auto-fix of 8375ef92ce5f2f2a and deferred it
-  resolution_note: 'gate: unlisted (review round 2 auto-fix loop 2 edit passed scope
-    verification but failed 2 existing tests); options: A revert and defer / B keep and
-    commit with failing tests / C keep and fix tests outside review-editor; choice: A;
-    codex_consulted: true; opus_escalation: false; key points: the edit contradicts SPEC
-    FR6 and task0004 AC-2, so updating tests alone does not resolve it; B carries a known
-    failure into verify; C leaves the single-file editor scope; the TM-2 concern stays
-    as a deferred finding for a follow-up task and must not be treated as not reproduced'
+  resolution_note: 'gate: unlisted (review round 2 auto-fix loop 2 edit passed scope verification
+    but failed 2 existing tests); options: A revert and defer / B keep and commit with failing
+    tests / C keep and fix tests outside review-editor; choice: A; codex_consulted: true; opus_escalation:
+    false; key points: the edit contradicts SPEC FR6 and task0004 AC-2, so updating tests alone
+    does not resolve it; B carries a known failure into verify; C leaves the single-file editor
+    scope; the TM-2 concern stays as a deferred finding for a follow-up task and must not be
+    treated as not reproduced'
 - question_id: review.residual-critical-high
   packet_id: null
   answered_at: '2026-10-08T11:38:43+09:00'
@@ -100,8 +97,7 @@ records:
   freeform: null
   normalized_answer: deferred 8375ef92ce5f2f2a (batch mode rework cap reached)
   resolution_note: 'gate: review.residual-critical-high (non-packet); batch.review_rework_count
-    already 1; residual high marked deferred and review step completed; codex_consulted:
-    false'
+    already 1; residual high marked deferred and review step completed; codex_consulted: false'
 - question_id: review.spec-skip-review-data-too-large
   packet_id: null
   answered_at: '2026-10-08T11:38:43+09:00'
@@ -111,6 +107,22 @@ records:
   - keep_skip
   freeform: null
   normalized_answer: spec#0 skip kept (review_data_too_large is non-retryable per review-protocol)
-  resolution_note: 'round 2 spec#0 skipped with review_data_too_large; protocol marks it
-    non-retryable so no chain walk; spec#loop1 later completed with no findings; codex_consulted:
-    false'
+  resolution_note: 'round 2 spec#0 skipped with review_data_too_large; protocol marks it non-retryable
+    so no chain walk; spec#loop1 later completed with no findings; codex_consulted: false'
+- question_id: rework.sc5.spec-change
+  packet_id: rework-q0001
+  answered_at: '2026-10-08T11:53:08+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - keep-spec-partial
+  freeform: null
+  normalized_answer: 'SPEC は変えず FR6 の範囲内で直す: 根拠を確認できない unverifiable は declined にせず round_context
+    の抑制にも乗せない（次ラウンドで再検証）。修正・差し戻し・残件数の対象外は FR6 のまま。task0004 AC-2 と D2 の対応付けを rework タスクで改める'
+  resolution_note: 'gate: rework.spec-change (verify origin SC5); classification gate direction
+    2 tripped (bound-set category unknown) -> batch relaxed route, batched Codex consultation
+    (codex entry, 1 turn); Codex verdict: neither goal_not_met nor spec_gap (goal says converge
+    and act only on confirmed findings; current FR6/FR7/FR8/task0004 AC-2 satisfy it; change-spec
+    would keep unconfirmed highs blocking convergence); better option keep-spec-partial; orchestrator
+    agrees and maps to keep-spec-partial; opus_escalation: false; options not chosen: change-spec,
+    keep-spec'
