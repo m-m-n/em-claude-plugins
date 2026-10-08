@@ -345,8 +345,8 @@ class TestAC2VerificationParagraph(unittest.TestCase):
         )
         self.assertRegex(
             self.par,
-            r"otherwise[^.]*`declined`[^.]*`resolution_reason` beginning "
-            r"`unverified`",
+            r"otherwise[^.]*`resolution: unresolved`[^.]*`resolution_reason` "
+            r"beginning `unverified`",
         )
 
     def test_truncated_values_are_unverifiable(self):

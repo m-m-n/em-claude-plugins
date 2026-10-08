@@ -1,0 +1,100 @@
+task_id: task0007
+baseline_failures: []
+final_failures: []   # re-executed after implementation: python3 -m unittest discover -s tests, Ran 9417 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_reproduction_unverified_not_declined.TestAc1WorkflowMapping.test_unconfirmed_basis_maps_to_unresolved_with_unverified_reason
+      - test_reproduction_unverified_not_declined.TestAc1WorkflowMapping.test_truncation_and_4096_byte_rule_is_kept
+      - test_reproduction_unverified_not_declined.TestAc1WorkflowMapping.test_no_sentence_of_the_document_maps_unverifiable_to_declined
+      - test_reproduction_unverified_not_declined.TestAc1WorkflowMapping.test_every_unverifi_declined_pair_says_never_and_includes_the_overflow_rule
+      - test_reproduction_review_phase_workflow.TestAC2VerificationParagraph.test_unverifiable_stays_a_target_only_when_basis_confirmed
+      - test_reproduction_review_phase_workflow.TestAC2VerificationParagraph.test_truncated_values_are_unverifiable
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (the old Phase R3b bullet read 'otherwise it is `declined`, with a `resolution_reason` beginning `unverified`', so the unresolved mapping check failed), AssertionError: [offender sentence] != [] for the whole-document decline-mapping scan, and the updated pin test_unverifiable_stays_a_target_only_when_basis_confirmed failed on the unresolved regex; the truncation-rule test was already green (that part of the criterion pre-existed and is only preserved)"
+  AC-2:
+    tests:
+      - test_reproduction_unverified_not_declined.TestAc2EmReviewMapping.test_unconfirmed_basis_maps_to_unresolved_with_unverified_reason
+      - test_reproduction_unverified_not_declined.TestAc2EmReviewMapping.test_old_decline_phrase_occurs_nowhere_in_the_document
+      - test_reproduction_unverified_not_declined.TestAc2EmReviewMapping.test_no_sentence_of_the_document_maps_unverifiable_to_declined
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_unverifiable_is_unresolved_unless_basis_confirmed
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (the old Phase R3 mapping ended 'otherwise `resolution: declined` with `resolution_reason` beginning `unverified`', which the old-phrase-absent check and the unresolved-mapping check rejected; the whole-document scan flagged the otherwise branch even though the sentence also contained 'never')"
+  AC-3:
+    tests:
+      - test_reproduction_unverified_not_declined.TestAc3SharedSentences.test_workflow_carries_the_shared_sentences
+      - test_reproduction_unverified_not_declined.TestAc3SharedSentences.test_em_review_carries_the_shared_sentences
+      - test_reproduction_unverified_not_declined.TestAc3SharedSentences.test_the_two_documents_carry_the_same_pair
+      - test_reproduction_unverified_not_declined.TestAc3SharedSentences.test_workflow_places_them_after_suppression_and_the_merged_rule
+      - test_reproduction_unverified_not_declined.TestAc3SharedSentences.test_em_review_places_them_after_suppression_and_the_merged_rule
+      - test_reproduction_unverified_not_declined.TestAc3SharedSentences.test_the_shared_sentences_keep_it_out_of_fix_and_residual
+      - test_reproduction_unverified_not_declined.TestAc3SharedSentences.test_the_shared_sentences_occur_once_per_document
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true / 0 != 1 -- neither document carried the shared sentences (extract_shared returned None before any document edit)"
+  AC-4:
+    tests:
+      - test_reproduction_unverified_not_declined.TestAc4PhaseR4.test_workflow_gate_excludes_unverified_findings
+      - test_reproduction_unverified_not_declined.TestAc4PhaseR4.test_workflow_gate_keeps_its_existing_conjuncts
+      - test_reproduction_unverified_not_declined.TestAc4PhaseR4.test_em_review_gate_excludes_unverified_findings
+      - test_reproduction_unverified_not_declined.TestAc4PhaseR4.test_em_review_gate_keeps_its_existing_sentence
+      - test_reproduction_unverified_not_declined.TestAc4PhaseR4.test_em_review_reaggregation_excludes_unverified_findings
+      - test_reproduction_review_phase_workflow.TestAC4PhaseR4Exclusion.test_candidate_gate_excludes_findings_declined_by_verification
+      - test_reproduction_review_phase_workflow.TestAC4PhaseR4Exclusion.test_residual_count_excludes_them_too
+      - test_reproduction_review_phase_em_review.TestAc2Phase4Reaggregation.test_candidate_gate_excludes_declined_findings
+      - test_reproduction_review_phase_em_review.TestAc2Phase4Reaggregation.test_reaggregation_applies_step6_suppression_and_verification
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- the Phase R4 candidate gate of both documents and em-review's re-aggregation sentence named no `unresolved` / `unverified` exclusion (the three new-module checks failed before any document edit; the pre-existing declined-exclusion tests listed here were green and stay green, they pin the unchanged exclusions)"
+  AC-5:
+    tests:
+      - test_reproduction_unverified_not_declined.TestAc5PhaseR5AndSuppression.test_workflow_r5_records_unverified_findings_as_unresolved
+      - test_reproduction_unverified_not_declined.TestAc5PhaseR5AndSuppression.test_workflow_r5_keeps_the_declined_record_sentence
+      - test_reproduction_unverified_not_declined.TestAc5PhaseR5AndSuppression.test_em_review_r5_comment_names_unverified_findings
+      - test_reproduction_unverified_not_declined.TestAc5PhaseR5AndSuppression.test_em_review_carry_over_states_it_is_not_a_decline
+      - test_reproduction_unverified_not_declined.TestAc5PhaseR5AndSuppression.test_em_review_carry_over_keeps_its_existing_statements
+      - test_reproduction_unverified_not_declined.TestAc5PhaseR5AndSuppression.test_workflow_suppression_still_drops_only_declined_entries
+      - test_reproduction_unverified_not_declined.TestAc5PhaseR5AndSuppression.test_em_review_suppression_still_drops_only_declined_entries
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- em-workflow Phase R5 had no sentence recording an unverifiable finding as unresolved outside residual_critical_high / rework-planner input / the batch deferral; em-review's residual_critical_high comment and carry-over paragraph did not name `unverified` (three tests observed failing before any document edit). The two suppression tests and the keeps-existing tests were already green: that part of the criterion (suppression drops only `declined` entries) pre-existed and is only preserved"
+  AC-6:
+    tests:
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_workflow_not_reproduced_is_declined_with_prefix
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_em_review_not_reproduced_is_declined_with_prefix
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_workflow_no_steps_judgment_is_unchanged
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_em_review_no_steps_judgment_is_unchanged
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_workflow_merged_finding_rule_is_byte_identical
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_em_review_merged_finding_rule_is_byte_identical
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_workflow_reproduced_stays_a_target
+      - test_reproduction_unverified_not_declined.TestAc6UnchangedOutcomes.test_em_review_reproduced_stays_a_target
+      - test_reproduction_dedupe_alternates.TestAc3VerificationOverKeptValues.test_whole_ac3_check_passes_on_both_documents
+    red_confirmed: false
+    red_reason: "The criterion is a preservation guarantee: the not-reproduced mapping, the no-steps judgment and the merged-finding rule already read this way before this task, so every check was green before any edit and no executable red exists. The new-module checks pin the former text as constants, and the existing test_reproduction_dedupe_alternates module (searched by path em-workflow/references/review-phase.md, em-review/references/review-phase.md and by basename review-phase.md) already detects a changed merged-finding rule; no red state occurred for this change."
+  AC-7:
+    tests:
+      - test_reproduction_review_phase_workflow.TestAC2VerificationParagraph.test_unverifiable_stays_a_target_only_when_basis_confirmed
+      - test_reproduction_review_phase_em_review.TestAc2VerificationParagraph.test_unverifiable_is_unresolved_unless_basis_confirmed
+      - test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+      - test_reproduction_review_phase_workflow.TestAC6PinnedTextAndSiblingSuites.test_user_question_tool_name_count_is_unchanged
+      - test_reproduction_review_phase_workflow.TestAC6PinnedTextAndSiblingSuites.test_no_gate_id_line_is_added
+      - test_reproduction_review_phase_workflow.TestAC6PinnedTextAndSiblingSuites.test_no_batch_policies_mention_is_added
+      - test_reproduction_review_phase_workflow.TestAC6PinnedTextAndSiblingSuites.test_evaluator_dispatch_literal_occurs_exactly_once
+      - test_reproduction_review_phase_workflow.TestAC6PinnedTextAndSiblingSuites.test_each_sibling_suite_passes_unchanged
+      - test_reproduction_review_phase_em_review.TestAc7PinnedTextAndImports
+      - test_reproduction_dedupe_alternates
+      - test_reproduction_unverified_not_declined.TestAc7PinnedText.test_workflow_user_question_tool_count_is_unchanged
+      - test_reproduction_unverified_not_declined.TestAc7PinnedText.test_em_review_user_question_tool_count_is_unchanged
+      - test_reproduction_unverified_not_declined.TestAc7PinnedText.test_no_gate_id_line_or_batch_policies_mention_is_added
+      - test_reproduction_unverified_not_declined.TestAc7PinnedText.test_workflow_evaluator_dispatch_literal_occurs_exactly_once
+    red_confirmed: true
+    red_reason: "Two updated pins were watched failing before any document edit: test_unverifiable_stays_a_target_only_when_basis_confirmed (AssertionError: Regex didn't match, the unresolved mapping did not exist yet) and test_unverifiable_is_unresolved_unless_basis_confirmed (AssertionError: False is not true). The REVIEW_PHASE_SHA256 pin (test_review_phase_md_unchanged) was observed failing after the em-workflow edit and before the constant was refreshed (a mechanical consequence, not a pre-implementation red). The pinned-count, dedupe-alternates and sibling-suite tests were green before and after and are unchanged."
+  AC-8:
+    tests:
+      - test_reproduction_unverified_not_declined.TestAc8SelfChecks.test_forged_workflow_bullet_declining_unverifiable_fails
+      - test_reproduction_unverified_not_declined.TestAc8SelfChecks.test_forged_em_review_mapping_declining_unverifiable_fails
+      - test_reproduction_unverified_not_declined.TestAc8SelfChecks.test_forged_never_declined_with_a_declined_otherwise_branch_fails
+      - test_reproduction_unverified_not_declined.TestAc8SelfChecks.test_forged_pair_that_differs_between_documents_fails
+      - test_reproduction_unverified_not_declined.TestAc8SelfChecks.test_forged_shared_sentences_keeping_it_a_fix_candidate_fail
+      - test_reproduction_unverified_not_declined.TestAc8SelfChecks.test_forged_workflow_gate_that_keeps_it_a_candidate_fails
+      - test_reproduction_unverified_not_declined.TestAc8SelfChecks.test_forged_workflow_r5_counting_it_residual_fails
+      - test_reproduction_unverified_not_declined.TestAc8StandardLibraryOnly.test_imports_are_standard_library_modules
+    red_confirmed: false
+    red_reason: "The criterion is about the new test module itself (standard-library imports, forged-input self-checks) plus the full-suite run. The self-checks exercise the module's own matchers on literal forged strings and pass as soon as the matchers exist; there is no implementation whose absence can make them fail, so no executable red was observed for this criterion."
