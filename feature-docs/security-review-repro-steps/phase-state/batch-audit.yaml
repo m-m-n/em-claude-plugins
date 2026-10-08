@@ -142,3 +142,13 @@ records:
     and current; manual check: TS23 absent at HEAD baseline, present in the Test Scenarios table
     now; review step also returned to pending by the patch (re-review after task0007); codex_consulted:
     false'
+- question_id: review.r2b-skip-reason-review_data_too_large
+  packet_id: null
+  answered_at: '2026-10-08T12:36:29+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - keep-skip
+  freeform: null
+  normalized_answer: 'review round 3: architecture#0 / performance#0 (litellm muse-spark-contributor) returned skip_reason review_data_too_large; kept the skip per R2b (not in the retryable table); no chain hop, no Claude fallback'
+  resolution_note: 'unlisted-gate fallback; options: A keep skip / B advance chain to codex / C Claude fallback; Codex consulted (readonly, 1 turn): A — R2b explicitly treats reasons outside the table as non-retryable, and the rationale mismatch does not license B or C in unattended runs; orchestrator adopted A; architecture/performance rest on the evaluator''s own inspection; opus_escalation: false'
