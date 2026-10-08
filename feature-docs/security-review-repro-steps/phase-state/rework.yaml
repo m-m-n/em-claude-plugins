@@ -1,10 +1,10 @@
 schema_version: 1
 feature: security-review-repro-steps
 phase: rework
-status: dispatching
+status: completed
 generation: 1
 base_revision: 275144668d852e0c6f845af2214ff24f9a9ff2f9
-last_input_digest: sha256:fe3f331a02b2bb587b7af60d67eab0bb1f8361d0b9d6be99c687e955fdc7945b
+last_input_digest: sha256:9ef9aada82d9beba814e7ed12b8a5879d09c5a1fbc46fa944d01faefe567746f
 active_request_id: null
 packets:
   rework-q0001:
@@ -30,8 +30,25 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:fe3f331a02b2bb587b7af60d67eab0bb1f8361d0b9d6be99c687e955fdc7945b
   output_digest: null
-artifacts: []
-patches: []
+- request_id: rework-verify-r1b-bc8ec982
+  status: completed
+  input_digest: sha256:9ef9aada82d9beba814e7ed12b8a5879d09c5a1fbc46fa944d01faefe567746f
+  output_digest: sha256:aa727da889b5fe0c8e24adc9f82c01630102594476e84ec72aa55ebb6da00c4d
+artifacts:
+- path: feature-docs/security-review-repro-steps/tasks/task0007.md
+  sha256: sha256:3bffe8ca8deee6a3f3cfb8aa0ed4ee7c6149112a4011cdde5a429474ac4a7aca
+  produced_by: rework-verify-r1b-bc8ec982
+- path: feature-docs/security-review-repro-steps/IMPLEMENTATION.md
+  sha256: sha256:4d6c7fb7350cc20056a7f36d8ba11d439c8493ceb5c924507243ed5cf2df6e34
+  produced_by: rework-verify-r1b-bc8ec982
+- path: feature-docs/security-review-repro-steps/VERIFICATION.md
+  sha256: sha256:ebf5a7a7f32885c61fc4bd30c9a9908bc4df556db030bbcb0c71bc7285704a1f
+  produced_by: rework-verify-r1b-bc8ec982
+patches:
+- patch_id: rework-verify-sc5-p0001
+  status: applied
+  base_input_digest: sha256:9ef9aada82d9beba814e7ed12b8a5879d09c5a1fbc46fa944d01faefe567746f
+  base_workflow_blob: bc8ec98236d2018bddf9fe0d647d34cc25ae962d
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}

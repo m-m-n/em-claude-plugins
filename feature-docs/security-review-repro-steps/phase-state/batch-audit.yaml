@@ -126,3 +126,19 @@ records:
     would keep unconfirmed highs blocking convergence); better option keep-spec-partial; orchestrator
     agrees and maps to keep-spec-partial; opus_escalation: false; options not chosen: change-spec,
     keep-spec'
+- question_id: rework.validation-notes
+  packet_id: null
+  answered_at: '2026-10-08T11:59:20+09:00'
+  source: orchestrator-rule
+  answer_mode: select
+  selected_option_ids:
+  - accept
+  freeform: null
+  normalized_answer: rework-planner result rework-verify-r1b accepted after validation
+  resolution_note: 'validator: (1) task0007.md Files bullet had two backtick-quoted tokens;
+    orchestrator removed backticks around REVIEW_PHASE_SHA256 (format only); (2) rework-index
+    "TS23 is not a new VERIFICATION.md scenario" is a validator false negative: extract_verification_scenario_ids
+    stops at the inline `## reproduction` text in TS3 and returns only TS1-TS3 for both baseline
+    and current; manual check: TS23 absent at HEAD baseline, present in the Test Scenarios table
+    now; review step also returned to pending by the patch (re-review after task0007); codex_consulted:
+    false'
