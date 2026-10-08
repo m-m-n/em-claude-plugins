@@ -6,6 +6,8 @@
 Scenario IDs TS1-TS15 reuse SPEC.md's literals unchanged. TS16-TS20 are added
 here for requirements SPEC.md gives no scenario of their own (NFR2 on the
 orchestrator paths, NFR3, NFR4, NFR5, and FR9's review-editor exclusion).
+TS21-TS22 are added by the review round 1 rework (task0006) for the merged
+reproduction set.
 
 ## Build Verification
 - Command: none. `project.components.main.build_command` is empty: the change
@@ -42,6 +44,8 @@ orchestrator paths, NFR3, NFR4, NFR5, and FR9's review-editor exclusion).
 | TS18 | New test modules | Every `tests/test_reproduction_*.py` imports only standard-library modules | Unit |
 | TS19 | review-editor input | Both review phases state the finding JSON handed to review-editor excludes `reproduction` | Unit |
 | TS20 | Orchestrator-path verification constraints | Both review phases state verification is code reading plus the protocol's read-only commands only, with no file change, commit, network access or package installation | Unit |
+| TS21 | Same-site merge of distinct non-null reproductions (a short one that holds and a longer one that does not) | Both review phases keep the longest in `reproduction`, the other distinct values in `reproduction_alternates` (byte length descending, at most 2) and set `reproduction_overflow` when more than 3 distinct values were merged; every kept value is verified; the finding is `reproduced` and stays a target when any kept value is reproduced; `not reproduced` only when every kept value fails and there is no overflow, otherwise `unverifiable`; `reproduction_alternates` is untrusted and never executed; the added text is identical in both documents except plugin-specific step numbers and references | Unit |
+| TS22 | Round records and review-editor input with the merged reproduction set | Both review phases' round record finding entries carry `reproduction_alternates` and `reproduction_overflow`; records without them read as an empty list and false and produce the same `round_context` as before; the finding JSON handed to review-editor excludes both keys | Unit |
 
 ## Code Quality Verification
 - Format: none configured (`format_command` is empty).
@@ -84,6 +88,15 @@ orchestrator paths, NFR3, NFR4, NFR5, and FR9's review-editor exclusion).
 | NFR4 | (no implementing task; a constraint met by not editing plugin manifests) | TS17 |
 | NFR5 | task0001, task0002, task0003, task0004, task0005 | TS18 |
 
+Review round 1 rework (task0006) adds:
+
+| Requirement | Tasks | Verification |
+|-------------|-------|--------------|
+| FR6, NFR1, NFR2, NFR3, NFR5, FR12 | task0006 | Existing scenarios as listed above |
+| FR7, FR8 | task0006 | TS21 |
+| FR9 | task0006 | TS21, TS22 |
+| FR13 | task0006 | TS22 |
+
 ## E2E Testing
 None. SPEC.md detects no E2E framework and no E2E run command.
 
@@ -116,11 +129,16 @@ None. SPEC.md detects no E2E framework and no E2E run command.
 - TM-5: a not-reproduced decision is carried only while the site's file is
   unchanged since the recording round's head_commit, and matches only security
   findings at the same site — checked by TS7, TS8 and TS15.
+- TM-2 / TM-3 (review round 1 rework): a merged finding keeps at most 3
+  distinct reproductions of at most 4096 bytes each; a decline as
+  `not reproduced` needs every kept value to fail with no overflow, and overflow
+  yields `unverifiable`, never a decline on that ground — checked by TS21.
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Test scenarios (TS1-TS20) | 20 | 19 | 0 | 1 |
+| Rework test scenarios (TS21-TS22) | 2 | 2 | 0 | 0 |
 | Success criteria (SC1-SC6) | 6 | 5 | 0 | 1 |
 | Performance / security (NFR2, TM-1 to TM-5) | 6 | 6 | 0 | 0 |
 | Additional manual checks (README reading, optional live run) | 2 | 0 | 0 | 2 |
