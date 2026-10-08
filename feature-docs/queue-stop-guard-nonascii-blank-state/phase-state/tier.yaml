@@ -1,0 +1,64 @@
+schema_version: 2
+feature: queue-stop-guard-nonascii-blank-state
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-10-08T19:42:49+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.09
+    confidence: 0.91
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.91
+      '2': 0.09
+      '3': 0.0
+  observed_at: '2026-10-08T19:42:49+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/queue_stop_guard.py
+  - tests/test_queue_stop_guard_routeback_record.py
+  - feature-docs/routeback-record-quoted-open-residual/SPEC.md
+  - feature-docs/routeback-record-quoted-open-residual/THREAT-MODEL.md
+  - feature-docs/routeback-record-quoted-open-residual/VERIFICATION.md
+  - test-docs/routeback-record-quoted-open-residual/task0001.tests.yaml
+  changed_lines_approx: 70
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: ファイル変更なしで再現を確認した。3形×U+3000/U+00A0の6入力すべてで、現行コードはrecords={}、task_ids=['task0001']、hook_main()=0だった。同じ入力を基準fa21b80eで実行するとrecords={'task0001':'1'}、task_ids=['task0001','task0002']、hook_main()=2だった。検証では実際の読み取り関数とhook_mainを実行し、ファイル入力、候補探索、状態ファイルの入出力をメモリ上で置き換え、書き込みを禁止した。原因はfeedの251–256行と_read_lineの269–275行で、非ASCII空白行が状態を終了させ、後続の単一引用符が開くことにある。外側の読み取り処理は451行と494行のline.strip()で同じ行を読み飛ばす。関連する既存テスト8件は入出力をメモリ化してすべて通過したが、2679行のTestBlockScalarEndsAtANonAsciiBlankLineByIndentationは問題の挙動を固定している。推奨する修正は、既存のブロックスカラー・プレーン継続状態で空白文字だけの行が状態を終了させない条件を加え、pendingでのFR2を維持すること。6入力について記録、後続タスク、戻り値を検証し、逆の挙動を固定する既存テストとFR2、関連文書を更新する必要がある。テスト名を変更する場合はtask0001.tests.yamlの参照も更新する。数値はこの修正方針に基づく概算で、新規関数数は実装側を数えている。呼び出し元・依存数は変更候補2メソッドに直接関係する既存関数_multiline_value_body_flags、_is_blank、_scan、_find_key_colon、_openの5件を数えている
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 6
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-08T19:42:49+09:00'
