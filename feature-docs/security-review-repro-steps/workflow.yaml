@@ -40,8 +40,8 @@ goal: '# セキュリティレビューは再現方法を伝えてもらう
 
   ## 追加指示（起動引数）
 
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch
-  へ自動マージしない）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration
+  ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
 
   - 不明点は Codex に相談し、比較的良いと判断された案を採用する
 
@@ -98,18 +98,20 @@ workflow:
   status: completed
   completed_at_commit: a5403ae0238e98c7fe7d6564994cbdcafbf3b044
 - id: implement
-  status: completed
+  status: pending
   base_commit: e12196c99959ae62b8f590fb7a4de7ea986879d1
   completed_at_commit: c36faf7cfa723310f56afb04b545fbad2765eaab
 - id: review
-  status: completed
+  status: pending
   completed_at_commit: 45d08827f91c6f263b970291b45ec1b5e1862744
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: SC5
-    note: 'review ended with residual_critical_high == 1 (deferred high finding 8375ef92ce5f2f2a, TM-2: unverifiable alone must not decline a finding); test suite, TS17 and plugin invariants pass'
+    note: 'review ended with residual_critical_high == 1 (deferred high finding 8375ef92ce5f2f2a,
+      TM-2: unverifiable alone must not decline a finding); test suite, TS17 and plugin
+      invariants pass'
     category: unknown
 - id: retrospect
   status: pending
@@ -140,7 +142,8 @@ tasks:
     branch: em-workflow/security-review-repro-steps/task0001
     notes: null
   task0002:
-    title: Reproduction instructions in review-security skills and codex-reviewer briefs
+    title: Reproduction instructions in review-security skills and codex-reviewer
+      briefs
     plan: tasks/task0002.md
     files:
     - em-workflow/skills/review-security/SKILL.md
@@ -186,7 +189,8 @@ tasks:
     branch: em-workflow/security-review-repro-steps/task0003
     notes: null
   task0004:
-    title: 'em-workflow review phase: reproduction cap, orchestrator-path verification and carry-over'
+    title: 'em-workflow review phase: reproduction cap, orchestrator-path verification
+      and carry-over'
     plan: tasks/task0004.md
     files:
     - em-workflow/references/review-phase.md
@@ -236,7 +240,8 @@ tasks:
     branch: em-workflow/security-review-repro-steps/task0005
     notes: null
   task0006:
-    title: Keep and verify every distinct reproduction on same-site merge (both review phases)
+    title: Keep and verify every distinct reproduction on same-site merge (both review
+      phases)
     plan: tasks/task0006.md
     files:
     - em-workflow/references/review-phase.md
@@ -267,6 +272,38 @@ tasks:
       - 92f22492f7a3576f
       - ba603aab85961eac
       review_round: 1
+  task0007:
+    title: Unverifiable security findings stay open instead of declined (both review
+      phases)
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-review/references/review-phase.md
+    - tests/test_reproduction_review_phase_workflow.py
+    - tests/test_reproduction_review_phase_em_review.py
+    - tests/test_tier_record_schema_v2.py
+    - tests/test_reproduction_unverified_not_declined.py
+    skills: []
+    domains:
+    - input-handling
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR6
+    - FR7
+    - FR8
+    - FR12
+    - FR13
+    - NFR3
+    - NFR5
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - SC5
+      review_round: null
 review:
   status: completed
   plan:
@@ -345,10 +382,12 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
     tests:
     - TS6
     - TS12
     - TS14
+    - TS23
   FR7:
     title: 'em-workflow: evaluator を通らない経路の検証'
     status: ok
@@ -357,9 +396,11 @@ requirements:
     tasks:
     - task0004
     - task0006
+    - task0007
     tests:
     - TS7
     - TS21
+    - TS23
   FR8:
     title: 'em-review: 再現手順付き指摘の検証'
     status: ok
@@ -368,10 +409,12 @@ requirements:
     tasks:
     - task0005
     - task0006
+    - task0007
     tests:
     - TS8
     - TS12
     - TS21
+    - TS23
   FR9:
     title: reproduction の集約・記録
     status: ok
@@ -422,6 +465,7 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
     tests:
     - TS1
     - TS2
@@ -442,11 +486,13 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
     tests:
     - TS7
     - TS8
     - TS15
     - TS22
+    - TS23
   NFR1:
     title: reproduction を信頼できない入力として扱い実行しない
     status: ok
@@ -482,6 +528,7 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
     tests:
     - TS16
   NFR4:
@@ -504,6 +551,7 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
     tests:
     - TS18
 batch:
