@@ -1,0 +1,83 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestSkillReproductionSection.test_ac1_section_follows_category_as_last_section
+      - tests.test_reproduction_reviewer_instructions.TestSkillReproductionSection.test_ac1_section_instructs_steps_input_path_and_observable_result
+      - tests.test_reproduction_reviewer_instructions.TestSkillMatchersRejectForgedInput.test_section_placed_before_category_fails_ac1
+    red_confirmed: true
+    red_reason: >-
+      Before the skills carried the section, both ac1 tests failed for each
+      plugin with "AC-1 <plugin>: expected exactly one line `## reproduction`,
+      found 0". The forged-order test is a negative proof (a section placed
+      before `## category` is rejected) and was green from the start.
+  AC-2:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestSkillReproductionSection.test_ac2_section_states_null_only_when_neither_can_be_given
+      - tests.test_reproduction_reviewer_instructions.TestSkillMatchersRejectForgedInput.test_section_that_allows_null_freely_fails_ac2
+    red_confirmed: true
+    red_reason: >-
+      Before the skills carried the section, test_ac2 failed for each plugin
+      with "AC-2 <plugin>: expected exactly one line `## reproduction`,
+      found 0".
+  AC-3:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestSkillReproductionSection.test_ac3_text_before_section_is_byte_identical_to_pre_change
+      - tests.test_reproduction_reviewer_instructions.TestSkillReproductionSection.test_ac3_section_text_is_identical_between_plugins
+      - tests.test_reproduction_reviewer_instructions.TestSkillMatchersRejectForgedInput.test_edited_text_before_section_fails_ac3
+      - tests.test_reproduction_reviewer_instructions.TestSkillMatchersRejectForgedInput.test_diverging_section_text_fails_ac3
+      - tests.test_threat_model_review_security
+    red_confirmed: true
+    red_reason: >-
+      Before the skills carried the section, the two ac3 tests of the new
+      module failed with "expected exactly one line `## reproduction`, found
+      0". The existing tests.test_threat_model_review_security module (not
+      edited) detects the pinned headings and sentences of the same skill;
+      no red state occurred for it.
+  AC-4:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac4_step2_includes_reproduction_section_in_brief
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac4_task_bullet_states_instructions_are_part_of_prompt
+      - tests.test_reproduction_reviewer_instructions.TestAgentMatchersRejectForgedInput.test_step2_reproduction_words_only_in_step4_fail_ac4
+      - tests.test_reproduction_reviewer_instructions.TestAgentMatchersRejectForgedInput.test_task_bullet_words_only_in_grounding_bullet_fail_ac4
+    red_confirmed: true
+    red_reason: >-
+      Before the agents were edited, test_ac4_step2 failed for each plugin
+      with "missing phrase(s) ['`## reproduction` section', 'only the
+      security skill does', 'part of the brief']" and test_ac4_task_bullet
+      failed with "missing phrase(s) ['reproduction instructions', 'part of
+      this `<task>` block']".
+  AC-5:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_unchanged_ranges_are_byte_identical
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_every_pre_change_step2_sentence_survives_in_order
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_pre_change_task_bullet_text_is_preserved
+      - tests.test_reproduction_reviewer_instructions.TestAgentMatchersRejectForgedInput.test_edited_step3_fails_ac5
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_steps_including_scratchpad_discipline_section_verbatim
+      - tests.test_codex_reviewer_temp_file_isolation
+      - tests.test_codex_reviewer_interactive_guidance
+      - tests.test_threat_model_reviewer_inputs
+    red_confirmed: true
+    red_reason: >-
+      After the agents were edited and before the digest was replaced, the
+      existing test_steps_including_scratchpad_discipline_section_verbatim
+      failed with "section byte content changed (expected sha256
+      fc3079e6..., got 29479e3a...)". The new module's preservation checks
+      (unchanged ranges, pre-change sentences) assert non-change, so they
+      were green before the edit by nature; their matchers are shown able to
+      fail by the forged-input tests in the same module. The other three
+      existing codex-reviewer modules were not edited and stayed green.
+  AC-6:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      The check inspects the imports of the module that contains it, and the
+      module has imported only the standard library since its first run, so
+      the check was never observed failing; the full-suite outcome
+      (python3 -m unittest discover -s tests) has no failing form that this
+      task introduced. The search found other modules with the same
+      self-check (for example tests.test_threat_model_review_security.
+      TestOwnModuleStdlibOnly), none that scans this module.

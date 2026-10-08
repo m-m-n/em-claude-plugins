@@ -38,7 +38,9 @@ Unavailable →
 
 Load `perspective_skill` with the Skill tool (fail-closed skip on failure,
 same as Step 0). Extract from it the perspective brief: the "What to flag" /
-"What NOT to flag" content. That brief becomes the `<task>` block below.
+"What NOT to flag" content. When the skill has a `## reproduction` section
+(only the security skill does), that section is part of the brief too. That
+brief becomes the `<task>` block below.
 
 ## Step 3: Resolve the schema path
 
@@ -59,6 +61,9 @@ Assemble `$PROMPT` with the four blocks from the `codex-prompting` skill:
   (+ `git show {pr_head_sha}:<path>` for surrounding context — local object
   reads only, never the working tree, never the network); the 3-file
   investigation budget.
+  When the perspective brief includes the skill's reproduction
+  instructions (Step 2), those instructions are part of this `<task>`
+  block.
 - `<structured_output_contract>` — output MUST match the JSON schema passed
   via `--output-schema`; every finding `"category": "<perspective>"`,
   `"source": "codex"`; empty findings object when nothing found.
