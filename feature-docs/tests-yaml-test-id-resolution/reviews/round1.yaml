@@ -1,0 +1,443 @@
+round: 1
+executed_at: '2026-10-09T02:54:12+09:00'
+scope:
+  review_mode: diff
+  base_commit: 28f96bd4c3d73c001cc418580fcd0d4327d667e8
+  head_commit: fd1791966de59406ecb2524326a84983b03c1a93
+  changed_files:
+  - em-workflow/agents/implementer.md
+  - test-docs/abort-docs-commit-precedence/task0001.tests.yaml
+  - test-docs/abort-docs-commit-precedence/task0002.tests.yaml
+  - test-docs/abort-phase-terminal/task0001.tests.yaml
+  - test-docs/abort-phase-terminal/task0002.tests.yaml
+  - test-docs/agent-separation/task0002.tests.yaml
+  - test-docs/agent-separation/task0005.tests.yaml
+  - test-docs/agent-separation/task0013.tests.yaml
+  - test-docs/agent-separation/task0016.tests.yaml
+  - test-docs/agent-separation/task0017.tests.yaml
+  - test-docs/agent-separation/task0018.tests.yaml
+  - test-docs/agent-separation/task0023.tests.yaml
+  - test-docs/assumptions-reversible-criteria/task0003.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0001.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0002.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0003.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0004.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0005.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0006.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0007.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0008.tests.yaml
+  - test-docs/batch-policy-option-id-consistency/task0003.tests.yaml
+  - test-docs/batch-quiet-output/task0001.tests.yaml
+  - test-docs/batch-quiet-output/task0002.tests.yaml
+  - test-docs/batch-quiet-output/task0003.tests.yaml
+  - test-docs/batch-quiet-output/task0004.tests.yaml
+  - test-docs/batch-quiet-output/task0005.tests.yaml
+  - test-docs/batch-quiet-output/task0006.tests.yaml
+  - test-docs/batch-stop-contract/task0001.tests.yaml
+  - test-docs/batch-stop-contract/task0002.tests.yaml
+  - test-docs/batch-stop-contract/task0003.tests.yaml
+  - test-docs/batch-stop-contract/task0004.tests.yaml
+  - test-docs/batch-stop-contract/task0005.tests.yaml
+  - test-docs/batch-structured-result-output/task0001.tests.yaml
+  - test-docs/batch-structured-result-output/task0003.tests.yaml
+  - test-docs/batch-structured-result-output/task0004.tests.yaml
+  - test-docs/batch-structured-result-output/task0006.tests.yaml
+  - test-docs/batch-structured-result-output/task0007.tests.yaml
+  - test-docs/batch-structured-result-output/task0008.tests.yaml
+  - test-docs/batch-structured-result-output/task0009.tests.yaml
+  - test-docs/batch-verify-rework-lineage-cap/task0001.tests.yaml
+  - test-docs/batch-verify-rework-lineage-cap/task0002.tests.yaml
+  - test-docs/batch-verify-rework-lineage-cap/task0005.tests.yaml
+  - test-docs/classification-table-escaped-pipe/task0001.tests.yaml
+  - test-docs/codex-guard-parser-fixes/task0002.tests.yaml
+  - test-docs/codex-interactive-guard-hook/task0002.tests.yaml
+  - test-docs/codex-repo-hook-trust/task0001.tests.yaml
+  - test-docs/codex-repo-hook-trust/task0002.tests.yaml
+  - test-docs/codex-wrapper-fallback-removal/task0003.tests.yaml
+  - test-docs/codex-wrapper-fallback-removal/task0004.tests.yaml
+  - test-docs/create-plan-status-conflict/task0001.tests.yaml
+  - test-docs/create-plan-status-conflict/task0004.tests.yaml
+  - test-docs/create-plan-status-conflict/task0005.tests.yaml
+  - test-docs/destructive-guard-command-name-substitution/task0001.tests.yaml
+  - test-docs/destructive-guard-command-name-substitution/task0002.tests.yaml
+  - test-docs/destructive-guard-command-substitution/task0001.tests.yaml
+  - test-docs/destructive-guard-command-substitution/task0002.tests.yaml
+  - test-docs/destructive-guard-command-substitution/task0003.tests.yaml
+  - test-docs/destructive-guard-grouping-spec-drift/task0001.tests.yaml
+  - test-docs/destructive-guard-grouping-spec-drift/task0002.tests.yaml
+  - test-docs/destructive-guard-grouping-spec-drift/task0003.tests.yaml
+  - test-docs/destructive-guard-grouping-spec-drift/task0004.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0003.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0004.tests.yaml
+  - test-docs/destructive-guard-heredoc-bypass-fixes/task0005.tests.yaml
+  - test-docs/destructive-guard-heredoc-reset-hard/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-reset-hard/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-reset-hard/task0003.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0002.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0003.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0004.tests.yaml
+  - test-docs/destructive-guard-heredoc-sink-gaps/task0005.tests.yaml
+  - test-docs/destructive-guard-heredoc-syntax-error/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-syntax-error/task0002.tests.yaml
+  - test-docs/destructive-guard-herestring-subst-only/task0001.tests.yaml
+  - test-docs/destructive-guard-herestring-subst-only/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0001.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0004.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0005.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0006.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0007.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0008.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-deferred/task0009.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0001.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0002.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0003.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0004.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0005.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0006.tests.yaml
+  - test-docs/destructive-guard-lexer-round2-residuals/task0007.tests.yaml
+  - test-docs/destructive-guard-quoted-substitution-fail-open/task0001.tests.yaml
+  - test-docs/destructive-guard-quoted-substitution/task0001.tests.yaml
+  - test-docs/destructive-guard-rm-holes/task0001.tests.yaml
+  - test-docs/destructive-guard-rm-reason-positions/task0002.tests.yaml
+  - test-docs/destructive-guard-safe-delete-traversal/task0001.tests.yaml
+  - test-docs/destructive-guard-safe-delete-traversal/task0003.tests.yaml
+  - test-docs/destructive-guard-unified-lexer/task0001.tests.yaml
+  - test-docs/destructive-guard-unified-lexer/task0002.tests.yaml
+  - test-docs/destructive-guard-var-resolution/task0001.tests.yaml
+  - test-docs/destructive-guard-var-resolution/task0002.tests.yaml
+  - test-docs/destructive-guard-var-resolution/task0003.tests.yaml
+  - test-docs/destructive-guard-var-resolution/task0004.tests.yaml
+  - test-docs/destructive-guard-write-target-scoping/task0001.tests.yaml
+  - test-docs/destructive-guard-write-target-scoping/task0003.tests.yaml
+  - test-docs/develop-once-option/task0002.tests.yaml
+  - test-docs/develop-once-option/task0003.tests.yaml
+  - test-docs/develop-once-option/task0004.tests.yaml
+  - test-docs/develop-once-option/task0007.tests.yaml
+  - test-docs/failed-run-cleanup-guard/task0001.tests.yaml
+  - test-docs/failed-run-cleanup-guard/task0002.tests.yaml
+  - test-docs/failed-run-cleanup-guard/task0003.tests.yaml
+  - test-docs/failed-run-cleanup-guard/task0004.tests.yaml
+  - test-docs/first-entry-timestamp-scan/task0001.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0002.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0004.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0005.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0006.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0008.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0009.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0011.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0012.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0013.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0017.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0019.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0021.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0022.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0023.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0027.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0028.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0029.tests.yaml
+  - test-docs/heredoc-stdin-guard/task0001.tests.yaml
+  - test-docs/implement-failed-kind/task0001.tests.yaml
+  - test-docs/implement-failed-kind/task0002.tests.yaml
+  - test-docs/implement-failed-kind/task0003.tests.yaml
+  - test-docs/implement-failed-kind/task0004.tests.yaml
+  - test-docs/implement-failed-kind/task0005.tests.yaml
+  - test-docs/implement-failed-kind/task0008.tests.yaml
+  - test-docs/implement-guard-compatible-git-ops/task0002.tests.yaml
+  - test-docs/implement-routeback-gate/task0001.tests.yaml
+  - test-docs/llm-led-review/task0001.tests.yaml
+  - test-docs/llm-led-review/task0002.tests.yaml
+  - test-docs/llm-led-review/task0003.tests.yaml
+  - test-docs/llm-led-review/task0005.tests.yaml
+  - test-docs/llm-led-review/task0006.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0003.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0008.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0009.tests.yaml
+  - test-docs/orphan-recovery-plugin-root-path/task0002.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0002.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0003.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0004.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0005.tests.yaml
+  - test-docs/prelaunch-inprogress-routeback/task0002.tests.yaml
+  - test-docs/recycled-task-id-carveout/task0001.tests.yaml
+  - test-docs/recycled-task-id-carveout/task0003.tests.yaml
+  - test-docs/recycled-task-id-carveout/task0004.tests.yaml
+  - test-docs/recycled-task-id-consistency/task0001.tests.yaml
+  - test-docs/recycled-task-id-consistency/task0003.tests.yaml
+  - test-docs/recycled-task-id-contract/task0001.tests.yaml
+  - test-docs/recycled-task-id-contract/task0003.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0001.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0002.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0003.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0004.tests.yaml
+  - test-docs/repo-suite-pinned-test-drift/task0005.tests.yaml
+  - test-docs/resume-conditions-newline-rejection/task0001.tests.yaml
+  - test-docs/resume-conditions-newline-rejection/task0002.tests.yaml
+  - test-docs/review-gate-abort-recovery/task0001.tests.yaml
+  - test-docs/review-gate-abort-recovery/task0002.tests.yaml
+  - test-docs/review-sca-axis/task0005.tests.yaml
+  - test-docs/review-sca-axis/task0008.tests.yaml
+  - test-docs/review-sca-axis/task0010.tests.yaml
+  - test-docs/rework-contract-drift/task0001.tests.yaml
+  - test-docs/rework-contract-drift/task0002.tests.yaml
+  - test-docs/rework-contract-drift/task0004.tests.yaml
+  - test-docs/rework-contract-drift/task0006.tests.yaml
+  - test-docs/routeback-admissibility-exits/task0001.tests.yaml
+  - test-docs/routeback-admissibility-exits/task0002.tests.yaml
+  - test-docs/routeback-admissibility-exits/task0003.tests.yaml
+  - test-docs/routeback-record-direct-key/task0001.tests.yaml
+  - test-docs/routeback-record-quoted-open-residual/task0001.tests.yaml
+  - test-docs/routeback-reset-scope-consistency/task0002.tests.yaml
+  - test-docs/routeback-residual-connections/task0001.tests.yaml
+  - test-docs/routeback-residual-connections/task0002.tests.yaml
+  - test-docs/routeback-ssot-drift/task0001.tests.yaml
+  - test-docs/routeback-ssot-drift/task0002.tests.yaml
+  - test-docs/sca-absolute-executable-path/task0001.tests.yaml
+  - test-docs/sca-directness-resolution/task0002.tests.yaml
+  - test-docs/sca-file-tasks-robustness/task0004.tests.yaml
+  - test-docs/sca-per-project-scan-binding/task0001.tests.yaml
+  - test-docs/sca-per-project-scan-binding/task0003.tests.yaml
+  - test-docs/sca-scanner-project-config-isolation/task0001.tests.yaml
+  - test-docs/security-review-repro-steps/task0005.tests.yaml
+  - test-docs/security-review-repro-steps/task0006.tests.yaml
+  - test-docs/security-review-repro-steps/task0007.tests.yaml
+  - test-docs/spec-file-set-completeness/task0001.tests.yaml
+  - test-docs/spec-file-set-completeness/task0002.tests.yaml
+  - test-docs/spec-file-set-completeness/task0003.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0002.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0003.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0004.tests.yaml
+  - test-docs/stop-reason-coverage/task0003.tests.yaml
+  - test-docs/stop-reason-coverage/task0004.tests.yaml
+  - test-docs/stopguard-retired-failed/task0001.tests.yaml
+  - test-docs/stopguard-retired-failed/task0002.tests.yaml
+  - test-docs/stopguard-worktree-paths/task0001.tests.yaml
+  - test-docs/subagentstop-failed-event/task0001.tests.yaml
+  - test-docs/subagentstop-failed-event/task0002.tests.yaml
+  - test-docs/task-tier-reduction/task0001.tests.yaml
+  - test-docs/task-tier-reduction/task0002.tests.yaml
+  - test-docs/task-tier-reduction/task0003.tests.yaml
+  - test-docs/task-tier-reduction/task0004.tests.yaml
+  - test-docs/task-tier-reduction/task0005.tests.yaml
+  - test-docs/task-tier-reduction/task0006.tests.yaml
+  - test-docs/task-tier-reduction/task0007.tests.yaml
+  - test-docs/task-tier-reduction/task0008.tests.yaml
+  - test-docs/task-tier-reduction/task0009.tests.yaml
+  - test-docs/task-tier-reduction/task0011.tests.yaml
+  - test-docs/task-tier-reduction/task0012.tests.yaml
+  - test-docs/task-tier-reduction/task0013.tests.yaml
+  - test-docs/task-tier-reduction/task0014.tests.yaml
+  - test-docs/tests-yaml-test-id-resolution/id-mapping-range1.md
+  - test-docs/tests-yaml-test-id-resolution/id-mapping-range2.md
+  - test-docs/tests-yaml-test-id-resolution/id-mapping-range3.md
+  - test-docs/tests-yaml-test-id-resolution/task0001.tests.yaml
+  - test-docs/tests-yaml-test-id-resolution/task0002.tests.yaml
+  - test-docs/tests-yaml-test-id-resolution/task0003.tests.yaml
+  - test-docs/tests-yaml-test-id-resolution/task0004.tests.yaml
+  - test-docs/tests-yaml-test-id-resolution/task0005.tests.yaml
+  - test-docs/threat-model-stride/task0003.tests.yaml
+  - test-docs/threat-model-stride/task0006.tests.yaml
+  - test-docs/tip-capture-idiom-unification/task0001.tests.yaml
+  - test-docs/tip-capture-idiom-unification/task0002.tests.yaml
+  - test-docs/validator-scenario-id-format/task0001.tests.yaml
+  - test-docs/validator-scenario-id-format/task0002.tests.yaml
+  - test/README.md
+  - tests/test_tests_yaml_id_resolution.py
+  - tests/test_tests_yaml_id_rules_docs.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 7fc3218d8701bcd5
+  severity: medium
+  category: spec
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 565
+  title: 単独の `tests` が `tests.` 始まりの ID として検査を通る
+  description: 'canonical_id_failure は先頭セグメントが tests かどうかしか確認しないため、セグメントが 1 個だけの `tests` も通してしまう。tests/ には __init__.py が無く名前空間パッケージとして扱われるので、構造判定はモジュールとして成功する。さらに loadTestsFromName(''tests'') は 0 件のスイートを返し、失敗にならない。その結果、何も選ばない `tests: [tests]` の記録が全件検査を通る。SPEC の FR1・FR6 は ID が `tests.` で始まることを求めている。test/README.md も「IDs start with `tests.`」と書いている一方、同じ README の Syntax gate は「one or more dot-separated segments」としており、記述が食い違っている。'
+  suggestion: セグメント数を 2 以上に限る（len(parts) < 2 を不正とする）。README の Syntax gate を two or more segments に揃え、単独の tests を拒否するフィクスチャテストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: severity below auto-fix floor (critical/high only); handed to a follow-up task
+- stable_id: 82aa58149e9c9219
+  severity: medium
+  category: spec
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 408
+  title: 抽出エラーがある AC では、読めた ID も解決判定されない
+  description: parse_tests は、要素が 1 つでも未対応の表記だと clean=False になり None を返す。parse_acceptance は、誤りが 1 件でもある AC を bad に入れて acs から外す。check_record が解決判定するのは acs の ID だけなので、同じ AC にある正しく読めるスカラー ID は判定されない。存在しない ID が混ざっていても、失敗メッセージには出てこない。記録は抽出エラーで失敗するので見逃しにはならない。ただ、抽出エラーを直した後の実行で初めて解決エラーが出る 2 段階の修正になり、FR5 の「抽出エラーと解決エラーは途中で止めず全件集め」から外れる。check_record の docstring はこの動きを明記しているので意図した設計だが、SPEC の本文とは合わない。
+  suggestion: 抽出できたスカラー ID を AC の誤りとは別に持っておき、抽出エラーのある AC でも読めた ID は解決判定して、両方の誤りを並べる。AC キーの重複のように ID がどの AC に属するか決まらない場合は、今どおり除外してよい。マッピング要素と存在しない ID を混ぜたフィクスチャテストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: severity below auto-fix floor (critical/high only); handed to a follow-up task
+- stable_id: c29f59fbd73c0d7b
+  severity: medium
+  category: comprehensive
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 92
+  title: 読み取れない配下ディレクトリの記録が黙って検査から抜ける
+  description: enumerate_records の os.walk に onerror が指定されていない。そのため、配下ディレクトリを一覧できないとき（PermissionError など）のエラーが黙って捨てられ、その下の記録は列挙も検査もされない。ほかに記録が 1 件でもあればゼロ件ガードも通る。FR8 は読み取りに失敗した記録を空扱いにしないことを求めているが、ディレクトリ単位の読み取り失敗はこの保証から漏れている。通常のチェックアウトで起きる条件ではない。
+  suggestion: onerror で走査エラーを集め、対象パス付きの失敗として報告する（ゼロ件ガードと同じクラスで落とすなど）。onerror を模擬したテストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: severity below auto-fix floor (critical/high only); handed to a follow-up task
+- stable_id: e8a04df8de3b1661
+  severity: low
+  category: comprehensive
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 700
+  title: load_tests がスイート以外を返すと TypeError で記録の検査が止まる
+  description: _loader_failure は loadTestsFromName の戻り値を _walk_suite で反復するが、この反復は try の外にある。対象モジュールの load_tests フックが None などスイート以外を返すと、resolve_id から TypeError が送出される。すると check_record が止まり、同じ記録の後続の ID が判定されない。記録のテストはエラーとして失敗するので、ずれの見逃しにはならない。この条件は load_tests フックを持つモジュールに限られる。
+  suggestion: 戻り値が unittest.TestSuite であることを確認する。反復中の例外も、ID ごとの解決エラーとして返す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: severity below auto-fix floor (critical/high only); handed to a follow-up task
+- stable_id: 484ac3a4ed2c480a
+  severity: low
+  category: architecture
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 694
+  title: ローダー確認でテストクラスの生成（独自の __init__）が走り、非実行の保証の記述と合わない
+  description: loadTestsFromName はメソッド ID なら対象クラスを生成し、クラス ID でもテスト名ごとにインスタンスを作る。そのため、TestCase 派生クラスに独自の __init__ があると、記録検査の最中に実行される。構造判定は __init__ もメソッド ID として受け入れる。test/README.md の「The record check never calls anything it resolved」とモジュールの docstring は、ローダー確認の段階まで含めると成り立たない。ただし FR6 はローダー確認を必須にしているので、クラスの生成自体は避けられない。テストメソッドの本体は実行されないので、AC-6 の保証は保たれている。
+  suggestion: README と docstring の非実行の保証を「テストメソッドの本体は実行しない。ローダー確認では、通常の収集と同じくテストクラスの生成と load_tests フックが動く」という範囲に書き直す。あわせて、ダンダー名（__init__ など）はメソッド ID として拒否する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: severity below auto-fix floor (critical/high only); handed to a follow-up task
+- stable_id: 83535f8e4fc7b04d
+  severity: low
+  category: spec
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 694
+  title: モジュール ID のローダー確認で load_tests フックが呼ばれる
+  description: loadTestsFromName にモジュール ID を渡すと、そのモジュールの load_tests フックが呼ばれる。フックが受け取ったスイートを自分で実行すると、記録検査の最中にテスト本体が走る。ただし、モジュール ID を loadTestsFromName で確認することは FR6 自身が求めている。検査器自身はテストを実行しない。
+  suggestion: README と docstring に、モジュールの import と load_tests フックは通常の収集と同じく実行されることを書き、保証の範囲を揃える。architecture の同じ箇所の指摘と同じ修正で済む。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: severity below auto-fix floor (critical/high only); handed to a follow-up task
+- stable_id: b879abae03b58587
+  severity: medium
+  category: spec
+  file: test-docs/destructive-guard-grouping-spec-drift/task0004.tests.yaml
+  line: 33
+  title: 既存の unittest に置き換えて外した説明が red_reason に追記されていない（62 記録）
+  description: FR2 は「外した説明は既存の red_reason の末尾へ追記」と定めている。しかし、既存の unittest に置き換えた要素（対応記録の根拠が runner-replaced のもの）は red_reason に追記されていない。id-mapping-range1〜3.md によれば、runner-replaced は合計 761 行・62 記録あり、どれにも追記されていない。IMPLEMENTATION.md の SC-3 の分類は、追記を non-unittest-removed に限るという解釈を計画として採っている。外した文言自体は id-mapping 文書に残っている。SPEC の本文と計画の解釈が食い違っている。
+  suggestion: 人の判断が要る。SPEC の文言どおりにするなら、runner-replaced で外した説明を 62 記録の該当 AC の red_reason 末尾へ追記する。計画の解釈を採るなら、SPEC の FR2 を「置き換えずに外した説明だけを追記する」に改める。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: severity below auto-fix floor (critical/high only); handed to a follow-up task
+evaluation:
+  round_summary: 'Round 1、cross_validation=true（高強度）。dispatch した 7 run のうち architecture#0 と spec#0 は review_data_too_large でスキップされ、architecture#1 と spec#1 がその分を担当した。critical/high の報告は 0 件なので、dismissed_sites は空になる。reviewer の medium 指摘 7 件は、すべてコードを読んで裏付けた。そのうち comprehensive#0 の load_tests が None を返す件、architecture#1 の __init__ の件、spec#1 の load_tests フックの件の 3 件は、条件が狭いか FR6 の loadTestsFromName 要件上避けられない範囲なので low に下げた。spec#1 の red_reason 追記漏れは、対応記録から 62 記録・761 行に及ぶことを確かめ、計画（IMPLEMENTATION.md の SC-3）が意図して採った解釈であることも突き止めた。reviewer の出力に注入の試みは見当たらない。security の指摘は 0 件なので、再現手順の検証の対象は無い。performance#0 には 236 件の yaml 記録の変更と id-mapping 文書が送られていない（データだけで、性能面で問題になる部分は無い）。読み取り予算は 10/10 を使った。残り 235 件の yaml 記録は個別に読んでいない。観点ごとのカバレッジ: comprehensive=corroborated、security=corroborated（findings 空）、performance=corroborated（findings 空、yaml データは範囲外）、architecture=corroborated、spec=corroborated。'
+  recommended_action: auto_fix
+  action_rationale: critical/high は無い。コード側の medium 3 件（単独の tests の拒否、抽出エラーのある AC の部分 ID の解決、os.walk の onerror）と low 3 件は、tests/test_tests_yaml_id_resolution.py と README の記述の範囲で直せる。spec の red_reason 追記漏れは 62 記録をまとめて書き換えるか、SPEC の FR2 を直すかの選択になる。SPEC と計画の解釈の食い違いなので、自動修正に含めず人に判断を回すことを勧める。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

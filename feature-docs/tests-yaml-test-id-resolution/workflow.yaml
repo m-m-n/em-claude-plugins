@@ -120,7 +120,8 @@ workflow:
   base_commit: 28f96bd4c3d73c001cc418580fcd0d4327d667e8
   completed_at_commit: bfceecdad4a978c5f7fb2a2d183114566d524650
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: fd1791966de59406ecb2524326a84983b03c1a93
 - id: verify
   status: pending
 - id: retrospect
@@ -220,7 +221,7 @@ tasks:
     status: merged
     branch: em-workflow/tests-yaml-test-id-resolution/task0005
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -230,7 +231,13 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
   residual_critical_high: 0
   needs_rework: false
 requirements:

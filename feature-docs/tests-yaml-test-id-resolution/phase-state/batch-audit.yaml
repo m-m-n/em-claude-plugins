@@ -1,0 +1,13 @@
+schema_version: 1
+feature: tests-yaml-test-id-resolution
+records:
+- question_id: review.chain-walk-nonretryable-skip
+  packet_id: null
+  answered_at: '2026-10-09T02:54:12+09:00'
+  source: batch-codex-consultation
+  answer_mode: single
+  selected_option_ids:
+  - B
+  freeform: null
+  normalized_answer: advance architecture/spec one hop to the codex chain entry
+  resolution_note: 'gate: review R2b handling of skip_reason review_data_too_large (not in the retryable table); options: A keep skip (3 perspectives unreviewed) / B advance one hop to the next chain entry (codex fetches its own diff, so the identical-failure premise does not hold) / C Claude fallback; choice: B; codex_consulted: true; opus_escalation: false; key points: input-size limits depend on the fetch method of the harness, so codex does not fail identically; the exception and reason are recorded here'
