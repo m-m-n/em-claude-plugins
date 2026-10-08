@@ -67,10 +67,13 @@ worker_runs:
   input_digest: sha256:5b89e348436b7a3d208aabfd5a3bb3563f2cf724a4c0c0d48dcf14c9feb9cd7d
   output_digest: sha256:5e6d12b33e2685706c4da230b1c4c38f88b9159666b05a17f4258f647616fdab
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:9ba4064736844b16e8e296ed1be3f065fe4a9be4d5efd6391f9ee9ded5a28390
-  output_digest: null
-artifacts: []
+  output_digest: sha256:284569f4f86bac481913f4af8f5ab67fe8e7e652a245c8adf9b1731d4ff6b774
+artifacts:
+- path: feature-docs/queue-stop-guard-nonascii-blank-state/SPEC.md
+  sha256: sha256:284569f4f86bac481913f4af8f5ab67fe8e7e652a245c8adf9b1731d4ff6b774
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
