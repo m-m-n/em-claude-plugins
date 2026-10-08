@@ -38,9 +38,26 @@ records:
   - decline
   freeform: null
   normalized_answer: declined
-  resolution_note: 'task_id: task0004; path: tests/test_tier_record_schema_v2.py
-    (whole-file sha256 pin REVIEW_PHASE_SHA256 refreshed in place); declined because
-    the evidence part naming an existing AC-n of the task plan or a registered requirement
-    id was missing (the report cited IMPLEMENTATION.md Conventions instead); path shape
-    check and control-path check passed; surfaces as an ordinary deviation for the
-    containment check'
+  resolution_note: 'task_id: task0004; path: tests/test_tier_record_schema_v2.py (whole-file
+    sha256 pin REVIEW_PHASE_SHA256 refreshed in place); declined because the evidence
+    part naming an existing AC-n of the task plan or a registered requirement id was
+    missing (the report cited IMPLEMENTATION.md Conventions instead); path shape check
+    and control-path check passed; surfaces as an ordinary deviation for the containment
+    check'
+- question_id: review.auto-fix-test-conflict
+  packet_id: null
+  answered_at: '2026-10-08T10:50:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - C_revert_and_rework
+  freeform: null
+  normalized_answer: revert auto-fix of 92f22492f7a3576f / ba603aab85961eac and route
+    to rework
+  resolution_note: 'gate: unlisted (review R4 auto-fix vs existing AC/tests conflict);
+    options: A keep auto-fix and update the 2 tests in review / B revert and decline
+    / C revert and rework via implement; chosen: C; not chosen: A, B; codex_consulted:
+    true; opus_escalation: false; key points: TM-3 protects context/read budget (4096-byte
+    cap, 10-file budget) and does not require longest-only, but keeping all reproductions
+    can exceed the bound, so docs, AC and tests must change together with a total-size/verification-count
+    limit and unverifiable handling; B would leave a real finding wrongly declined'
