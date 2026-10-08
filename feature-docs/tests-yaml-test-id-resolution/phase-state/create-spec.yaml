@@ -1,0 +1,29 @@
+schema_version: 1
+feature: tests-yaml-test-id-resolution
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: e56253fccdf8fce03467681923bd3d36e3fa8402
+last_input_digest: sha256:81f1f63ceeda1dd52e4492670c79c8940800082673cddff0f86116691c257881
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/tdd-testing/SKILL.md
+    - em-workflow/references/templates/spec-document.md
+    - em-workflow/references/templates/requirements-document.md
+    - tests/test_exit4_ac2_test_id_drift.py
+    - test-docs/exit4-tip-argument/task0002.tests.yaml
+    - test-docs/failed-run-cleanup-guard/task0001.tests.yaml
+    - test-docs/llm-led-review/task0001.tests.yaml
+    - em-workflow/hooks/tests/run-destructive-guard.py
