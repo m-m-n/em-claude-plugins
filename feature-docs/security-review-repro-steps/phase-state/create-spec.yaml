@@ -1,11 +1,11 @@
 schema_version: 1
 feature: security-review-repro-steps
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 7e02522816dc9b680edcd200ba955ee8040f1816
 last_input_digest: sha256:25c0530d2d3be348900331a7b1dcf38af75570a06638781ada800b458d9ddf95
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.requirement-clarification.codex-1:
@@ -54,10 +54,16 @@ worker_runs:
   input_digest: sha256:30d46550dd10a932cb471cd1763276b26b1e0a81912f03f493dc8d67d0e367b0
   output_digest: sha256:b0aab69509dd0e2f0daefc3ca472630f3365d18710ce625413f28182b5b41d5b
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:25c0530d2d3be348900331a7b1dcf38af75570a06638781ada800b458d9ddf95
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/security-review-repro-steps/REQUIREMENTS.md
+  sha256: sha256:ce723795d488f0c7d57566de3a2d9843e13a2c31648128d64895d21b755b6466
+  produced_by: create-spec-run-0002
+- path: feature-docs/security-review-repro-steps/SPEC.md
+  sha256: sha256:c7e5b4bf444a0cc74d98c9a136cada622507e36d02eaab9af392ff3904a516de
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
