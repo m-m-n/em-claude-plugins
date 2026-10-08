@@ -4,7 +4,6 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_orchestrator_only_scope_phrase_absent_everywhere
       - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_no_never_reads_workflow_yaml_claim_anywhere
     red_confirmed: true
     red_reason: >
@@ -18,9 +17,7 @@ acceptance_tests:
       an unmodified retention guard (pre-existing, already passing;
       "never read(s) workflow.yaml" was never introduced by this task).
   AC-2:
-    tests:
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_stop_guard_named_as_explicit_exception_in_anchored_slice
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_three_journal_only_hooks_named_in_anchored_never_consult_slice
+    tests: []
     red_confirmed: true
     red_reason: >
       test_stop_guard_named_as_explicit_exception_in_anchored_slice raised
@@ -38,10 +35,7 @@ acceptance_tests:
       pre-existing wording needs no negative proof). See notes /
       unconfirmed_reds.
   AC-3:
-    tests:
-      - tests.test_recycled_task_id_consistency.TestUnlaunchedDefinitionDivergenceDocumented.test_divergence_names_missing_journal_event_case
-      - tests.test_recycled_task_id_consistency.TestUnlaunchedDefinitionDivergenceDocumented.test_divergence_names_merged_status_consequence
-      - tests.test_recycled_task_id_consistency.TestUnlaunchedDefinitionDivergenceDocumented.test_divergence_marked_deliberate
+    tests: []
     red_confirmed: true
     red_reason: >
       All three failed against the pre-edit document with AssertionError:
@@ -50,7 +44,6 @@ acceptance_tests:
       task's edit.
   AC-4:
     tests:
-      - tests.test_recycled_task_id_consistency.TestSupportingCastStopHookBulletScopedToCarveout.test_bullet_limits_equivalence_to_carveout_and_cites_i2a
       - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleStaysSingleSource.test_i2b_step1_citation_present
     red_confirmed: true
     red_reason: >
@@ -61,9 +54,7 @@ acceptance_tests:
       guard proving the I.2.b step 1 citation literal was never touched
       (already passing before and after; this task does not edit I.2.b).
   AC-5:
-    tests:
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_three_journal_only_hooks_named_in_anchored_never_consult_slice
-      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_stop_guard_named_as_explicit_exception_in_anchored_slice
+    tests: []
     red_confirmed: true
     red_reason: >
       Same evidence as AC-2 (the class's two separated claims). The

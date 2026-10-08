@@ -1,0 +1,28 @@
+task_id: task0004
+baseline_failures: []          # python3 -m unittest discover -s tests: 9428 tests, OK (skipped=1), run before any edit
+final_failures: []             # python3 -m unittest discover -s tests: 9428 tests, OK (skipped=1), re-executed after the cleanup
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: "No committed test belongs to this data-only task; the check is a scratch script outside the repository that implements SC-1 (syntax gate, structural resolution, loader confirmation, at least one test in the loader result). Before the cleanup it reported 1203 of the 3265 range3 elements failing (for example 'first segment is not tests'); after the cleanup it reports 0 failures over the 3145 remaining elements. No existing test reads the range3 records: a search of tests/ for each changed record by repository-relative path and by basename found only tests/test_exit4_ac2_test_id_drift.py and tests/test_codex_wrapper_fallback_removal_integrated_checks.py, which name range2 records."
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: "Checked by the same scratch SC-1 check plus inspection of the base-to-HEAD diff. Before the cleanup the scratch check rejected the runner commands and annotated descriptions among the 1203 failing elements (syntax gate); after it, no range3 tests element is a runner path, free text, an abbreviation or a wildcard. The 4 removed suite-command elements were appended to their red_reason values and the 11 non-unittest elements that an existing unittest verifies were replaced by that unittest, as listed in id-mapping-range3.md."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists: before the cleanup there is no diff and no mapping file, so a count comparison cannot fail. Checked after the change by a scratch script that parses every range3 record at the base revision and at HEAD, takes the per-AC multiset of removed elements (1203) and compares it with the rows of id-mapping-range3.md (1203): counts, File, AC and Old ID match one to one, every Basis is an SC-3 category and every renamed row cites a commit id that exists."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists: before the cleanup the base-to-HEAD diff is empty, so the property that only tests elements and SC-5 appends change holds vacuously. Checked after the change by a scratch script that loads each range3 record at the base revision and at HEAD and confirms that every top-level key, every AC key and order, every field other than tests and red_reason, red_confirmed, baseline_failures and final_failures are equal, and that every changed red_reason starts with its base value followed by the SC-5 sentence; no red_reason key was added."
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: "Checked by the scratch SC-2 reader outside the repository. Against the base revision it reported extraction errors in test-docs/stale-launched-retry-recovery/task0002.tests.yaml (multi-line plain scalar tests items in AC-5 and AC-7); after the cleanup it reports none over all 144 range3 records."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists: before any edit nothing outside range3 differs from the base and the suite equals its baseline. Checked after the change by listing the changed paths (only range3 records, id-mapping-range3.md and this record; nothing under tests/) and by running python3 -m unittest discover -s tests, whose failures are a subset of the baseline (see final_failures)."

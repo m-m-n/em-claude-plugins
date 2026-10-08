@@ -7,8 +7,8 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
-      - test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_inheritance_invariant_conclusion_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_inheritance_invariant_conclusion_matcher_flags_absence_in_pre_change_wording
     red_confirmed: true
     red_reason: >-
       Baseline run: AssertionError: 'no retired task id can leave a
@@ -22,9 +22,9 @@ acceptance_tests:
       alongside it.
   AC-2:
     tests:
-      - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
-      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor
-      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
     red_confirmed: true
     red_reason: >-
       The baseline failures ARE this criterion's violation: this module
@@ -44,8 +44,8 @@ acceptance_tests:
       green simultaneously.
   AC-3:
     tests:
-      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor
-      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
     red_confirmed: true
     red_reason: >-
       Baseline run for both: AssertionError: 'no retired task id can

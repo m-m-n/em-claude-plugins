@@ -132,14 +132,11 @@ acceptance_tests:
       regression-guard half of AC-4, not a novel red.
   AC-5:
     tests:
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_two_invocations
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_the_basis_each_invocation_corresponds_to
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_what_is_compared_between_the_two_readings
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_disagreement_resolves_to_full
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_attributes_the_resolution_to_the_evaluators_input_contract
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_old_mixed_into_availability_fallback_phrasing_is_gone
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_non_vacuity_old_phrase_would_be_found_in_a_forged_pre_change_copy
-      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_negative_proof_synthetic_procedure_missing_attribution_is_detected
+      - tests.test_tier_decision_record.TestStagedProcedureAttributesToEvaluatorContract.test_states_two_jev_invocations_with_distinct_bases
+      - tests.test_tier_decision_record.TestStagedProcedureAttributesToEvaluatorContract.test_attributes_remaining_decision_logic_to_the_evaluators_input_contract
+      - tests.test_tier_decision_record.TestStagedProcedureAttributesToEvaluatorContract.test_old_mixed_into_availability_fallback_phrasing_is_gone
+      - tests.test_tier_decision_record.TestStagedProcedureAttributesToEvaluatorContract.test_non_vacuity_old_phrase_would_be_found_in_a_forged_pre_change_copy
+      - tests.test_tier_decision_record.TestStagedProcedureAttributesToEvaluatorContract.test_negative_proof_synthetic_procedure_missing_attribution_is_detected
     red_confirmed: true
     red_reason: >-
       Confirmed against git HEAD's pre-change text: SKILL.md step 6 (the

@@ -24,10 +24,10 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_no_work_required_stop.TestReasonCodeTableRow.test_new_row_present_with_stopped_state
-      - test_no_work_required_stop.TestReasonCodeTableRow.test_exactly_one_new_row_and_pre_existing_rows_unchanged
-      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_twelve_codes_same_names_and_states_in_order
-      - test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_twelve_fixed_codes
+      - tests.test_no_work_required_stop.TestReasonCodeTableRow.test_new_row_present_with_stopped_state
+      - tests.test_no_work_required_stop.TestReasonCodeTableRow.test_exactly_one_new_row_and_pre_existing_rows_unchanged
+      - tests.test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_twelve_codes_same_names_and_states_in_order
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
     red_confirmed: true
     red_reason: >-
       Watched against the base-commit contract text (git show HEAD:...
@@ -39,10 +39,10 @@ acceptance_tests:
       AssertionError (REASON_CODES had 12 members, extracted table had 11).
   AC-2:
     tests:
-      - test_no_work_required_stop.TestSetSizeProseConsistent.test_new_word_form_size_prose_present
-      - test_no_work_required_stop.TestSetSizeProseConsistent.test_old_word_form_size_prose_is_gone
-      - test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
-      - test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_documented_as_thirteenth_never_emitted
+      - tests.test_no_work_required_stop.TestSetSizeProseConsistent.test_new_word_form_size_prose_present
+      - tests.test_no_work_required_stop.TestSetSizeProseConsistent.test_old_word_form_size_prose_is_gone
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_documented_as_fourteenth_never_emitted
     red_confirmed: true
     red_reason: >-
       Watched against the base-commit contract text:
@@ -57,11 +57,11 @@ acceptance_tests:
       "twelfth").
   AC-3:
     tests:
-      - test_no_work_required_stop.TestCoverageTableRow.test_new_coverage_row_present_and_exact
-      - test_no_work_required_stop.TestCoverageTableRow.test_exactly_one_new_coverage_row_and_pre_existing_rows_unchanged
-      - test_no_work_required_stop.TestPrecedenceParagraphUnchanged.test_colliding_stop_points_unchanged
-      - test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
-      - test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+      - tests.test_no_work_required_stop.TestCoverageTableRow.test_new_coverage_row_present_and_exact
+      - tests.test_no_work_required_stop.TestCoverageTableRow.test_exactly_one_new_coverage_row_and_pre_existing_rows_unchanged
+      - tests.test_no_work_required_stop.TestPrecedenceParagraphUnchanged.test_colliding_stop_points_unchanged
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
     red_confirmed: true
     red_reason: >-
       Watched against the base-commit contract text:
@@ -78,10 +78,10 @@ acceptance_tests:
       after; carried here for completeness, not as red-confirming evidence.
   AC-4:
     tests:
-      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_new_code_is_a_member_of_the_ssot_reason_domain
-      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_non_empty_resume_conditions_is_accepted
-      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_empty_resume_conditions_is_rejected
-      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_whitespace_only_resume_conditions_is_rejected
+      - tests.test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_new_code_is_a_member_of_the_ssot_reason_domain
+      - tests.test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_non_empty_resume_conditions_is_accepted
+      - tests.test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_empty_resume_conditions_is_rejected
+      - tests.test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_whitespace_only_resume_conditions_is_rejected
     red_confirmed: true
     red_reason: >-
       Watched against the base-commit contract text:
@@ -98,8 +98,8 @@ acceptance_tests:
       evidence, not as red-confirming ones individually.
   AC-5:
     tests:
-      - test_no_work_required_stop.TestResponsibilityBoundaryByteIdentical.test_section_byte_identical_to_pre_change_text
-      - test_no_work_required_stop.TestResponsibilityBoundaryByteIdentical.test_negative_proof_a_modified_copy_is_detected
+      - tests.test_no_work_required_stop.TestResponsibilityBoundaryByteIdentical.test_section_byte_identical_to_pre_change_text
+      - tests.test_no_work_required_stop.TestResponsibilityBoundaryByteIdentical.test_negative_proof_a_modified_copy_is_detected
     red_confirmed: false
     red_reason: >-
       The criterion is that this section is NEVER edited, so the positive
@@ -113,13 +113,13 @@ acceptance_tests:
       constant.
   AC-6:
     tests:
-      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_twelve_codes_same_names_and_states_in_order
-      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_added_code_is_detected
-      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_removed_code_is_detected
-      - test_batch_quiet_output_discipline.TestExceptions.test_stop_point_coverage_table_has_twelve_keys
-      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_stop_point_table_row_count_unchanged
-      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsThirteen.test_reason_codes_tuple_has_thirteen_members
-      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsThirteen.test_reason_codes_tuple_includes_no_work_required
+      - tests.test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_twelve_codes_same_names_and_states_in_order
+      - tests.test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_added_code_is_detected
+      - tests.test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_removed_code_is_detected
+      - tests.test_batch_quiet_output_discipline.TestExceptions.test_stop_point_coverage_table_has_twelve_keys
+      - tests.test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_stop_point_table_row_count_unchanged
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_has_fourteen_members
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_includes_no_work_required
     red_confirmed: true
     red_reason: >-
       Watched against the edited contract text with these three files
@@ -140,11 +140,11 @@ acceptance_tests:
       fail both checks.
   AC-7:
     tests:
-      - test_structured_result_conformance (whole module, regression, unedited)
-      - test_structured_result_consumer_constraints (whole module, regression, unedited)
-      - test_no_work_required_stop.TestSingleSourceDiscipline.test_code_literal_absent_from_batch_mode_doc
-      - test_no_work_required_stop.TestSingleSourceDiscipline.test_code_literal_absent_from_develop_skill
-      - test_no_work_required_stop.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_structured_result_conformance
+      - tests.test_structured_result_consumer_constraints
+      - tests.test_no_work_required_stop.TestSingleSourceDiscipline.test_code_literal_absent_from_batch_mode_doc
+      - tests.test_no_work_required_stop.TestSingleSourceDiscipline.test_code_literal_absent_from_develop_skill
+      - tests.test_no_work_required_stop.TestOwnModuleStdlibOnly.test_only_standard_library_imports
     red_confirmed: false
     red_reason: >-
       test_structured_result_conformance.py and
