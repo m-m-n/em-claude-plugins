@@ -4,8 +4,8 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - test_prelaunch_inprogress_pending_launched.TestNeverArisesClaimRemoved.test_i2a_has_no_can_never_arise_phrase
-      - test_prelaunch_inprogress_pending_launched.TestNeverArisesClaimRemoved.test_i2a_has_no_never_arise_claim_in_any_inflection
+      - tests.test_prelaunch_inprogress_pending_launched.TestNeverArisesClaimRemoved.test_i2a_has_no_can_never_arise_phrase
+      - tests.test_prelaunch_inprogress_pending_launched.TestNeverArisesClaimRemoved.test_i2a_has_no_never_arise_claim_in_any_inflection
     red_confirmed: true
     red_reason: >-
       Run against the pre-change document before the edit, both failed:
@@ -16,13 +16,13 @@ acceptance_tests:
       asserts both matchers find the claim in the verbatim pre-change sample.
   AC-2:
     tests:
-      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_sits_between_in_flight_sentence_and_next_sentence
-      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_launch_window
-      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_commit_not_reached_cases
-      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_cites_in_flight_rule
-      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_carve_out_does_not_apply
-      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_contains_launch_state_commit_term
-      - test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_ends_before_next_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_sits_between_in_flight_sentence_and_next_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_launch_window
+      - tests.test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_commit_not_reached_cases
+      - tests.test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_cites_in_flight_rule
+      - tests.test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_states_carve_out_does_not_apply
+      - tests.test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_contains_launch_state_commit_term
+      - tests.test_prelaunch_inprogress_pending_launched.TestReplacementText.test_replacement_ends_before_next_sentence
     red_confirmed: true
     red_reason: >-
       Run against the pre-change document before the edit, the placement
@@ -33,14 +33,14 @@ acceptance_tests:
       to it.' not found after the opening anchor".
   AC-3:
     tests:
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_carve_out_scoped_sentence_is_byte_identical
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_in_flight_sentence_is_byte_identical
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_through_scoped_span_is_byte_identical
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_select_linewrap_literal_is_byte_identical
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_items_keep_their_original_relative_order
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_span_has_exactly_one_because_and_one_so
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_stays_independent_of_ancestor_check
-      - test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_recursion_invariant_follows_replacement_text
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_carve_out_scoped_sentence_is_byte_identical
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_in_flight_sentence_is_byte_identical
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_through_scoped_span_is_byte_identical
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_select_linewrap_literal_is_byte_identical
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_items_keep_their_original_relative_order
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_span_has_exactly_one_because_and_one_so
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_premise_stays_independent_of_ancestor_check
+      - tests.test_prelaunch_inprogress_pending_launched.TestByteIdenticalItems.test_recursion_invariant_follows_replacement_text
     red_confirmed: false
     red_reason: >-
       The criterion is mostly retention: the listed items must stay
@@ -54,8 +54,8 @@ acceptance_tests:
       lines 273-280).
   AC-4:
     tests:
-      - test_routeback_reset_scope_consistency.TestCrossReferencesDescribeGateCorrectly.test_i2a_unreachability_sentence_present_and_terminates_correctly
-      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_placed_after_unreachability_terminal
+      - tests.test_routeback_reset_scope_consistency.TestCrossReferencesDescribeGateCorrectly.test_i2a_unreachability_sentence_present_and_terminates_correctly
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_placed_after_unreachability_terminal
     red_confirmed: true
     red_reason: >-
       After retargeting both tests to UNREACHABILITY_TERMINAL_PHRASE and
@@ -63,9 +63,9 @@ acceptance_tests:
       not found" (the new terminal phrase was absent from the old text).
   AC-5:
     tests:
-      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_present
-      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_cites_allocation_rule
-      - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_unreachability_slice_anchors_survive
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_present
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_cites_allocation_rule
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_unreachability_slice_anchors_survive
     red_confirmed: true
     red_reason: >-
       After retargeting the three tests to this module's own
@@ -76,19 +76,19 @@ acceptance_tests:
       <I.2.a section>".
   AC-6:
     tests:
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_never_arise_matchers_flag_the_pre_change_sentence
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_placement_matcher_fails_on_pre_change_sentence
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_launch_window_matcher_flags_absence_in_pre_change_sentence
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_commit_not_reached_matcher_flags_absence_in_pre_change_sentence
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_in_flight_citation_matcher_flags_absence_in_pre_change_sentence
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_launch_state_commit_term_matcher_flags_absence_in_pre_change_sentence
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_replacement_slice_cannot_be_taken_on_pre_change_sentence
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_in_flight_sentence_is_in_sample_and_live_document
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_opening_anchor_is_in_sample_and_live_document
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_next_sentence_anchor_is_in_sample_and_live_document
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_sample_carries_the_old_claim_the_live_document_dropped
-      - test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_sample_is_ordered_like_the_live_document
-      - test_prelaunch_inprogress_pending_launched.TestModuleUsesOnlyStandardLibrary.test_imports_are_standard_library_only
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_never_arise_matchers_flag_the_pre_change_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_placement_matcher_fails_on_pre_change_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_launch_window_matcher_flags_absence_in_pre_change_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_commit_not_reached_matcher_flags_absence_in_pre_change_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_in_flight_citation_matcher_flags_absence_in_pre_change_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_launch_state_commit_term_matcher_flags_absence_in_pre_change_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleDetection.test_replacement_slice_cannot_be_taken_on_pre_change_sentence
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_in_flight_sentence_is_in_sample_and_live_document
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_opening_anchor_is_in_sample_and_live_document
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_next_sentence_anchor_is_in_sample_and_live_document
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_sample_carries_the_old_claim_the_live_document_dropped
+      - tests.test_prelaunch_inprogress_pending_launched.TestPreChangeSampleGuards.test_sample_is_ordered_like_the_live_document
+      - tests.test_prelaunch_inprogress_pending_launched.TestModuleUsesOnlyStandardLibrary.test_imports_are_standard_library_only
     red_confirmed: true
     red_reason: >-
       The module's new-wording matchers (the AC-1 and AC-2 tests above) were
@@ -101,8 +101,8 @@ acceptance_tests:
       arise.'"). The stdlib-only test is structural and passed at birth.
   AC-7:
     tests:
-      - test_implement_routeback_gate
-      - test_exit4_tip_argument_consistency
+      - tests.test_implement_routeback_gate
+      - tests.test_exit4_tip_argument_consistency
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing

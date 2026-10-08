@@ -26,7 +26,7 @@ acceptance_tests:
       by AC-1 and AC-3 above, which did confirm red.
   AC-3:
     tests:
-      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac3_context_line_states_requirement_not_impossibility
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac3_store_is_reached_only_through_the_cli
     red_confirmed: true
     red_reason: >-
       Ran against the pre-task0009 SKILL.md content (both plugins):

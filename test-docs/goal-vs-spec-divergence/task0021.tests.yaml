@@ -17,8 +17,8 @@ acceptance_tests:
       0 errors.
   AC-2:
     tests:
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_existence_check_fails_for_a_rule_that_does_not_exist
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_existence_check_fails_for_a_rule_that_does_not_exist
     red_confirmed: true
     red_reason: >-
       test_every_repository_rule_exists failed in the baseline with
@@ -29,8 +29,8 @@ acceptance_tests:
       name 'does-not-exist.md' is reported missing.
   AC-3:
     tests:
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_existence_check_fails_against_an_empty_rules_directory
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_repository_rule_list_is_not_empty
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_existence_check_fails_against_an_empty_rules_directory
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_repository_rule_list_is_not_empty
     red_confirmed: true
     red_reason: >-
       test_existence_check_fails_against_an_empty_rules_directory failed
@@ -43,10 +43,10 @@ acceptance_tests:
       the empty-directory case demonstrates.
   AC-4:
     tests:
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_is_non_empty
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_non_empty_check_fails_for_an_empty_file
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_names_what_it_governs
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_heading_check_fails_for_a_file_without_a_level_1_heading
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_is_non_empty
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_non_empty_check_fails_for_an_empty_file
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_names_what_it_governs
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_heading_check_fails_for_a_file_without_a_level_1_heading
     red_confirmed: true
     red_reason: >-
       All four failed with NameError (`_empty_rule_files` /
@@ -59,7 +59,7 @@ acceptance_tests:
       shrink, and no other class in the module lost a case.
   AC-5:
     tests:
-      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_core_prefixed_rules_are_present
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_core_prefixed_rules_are_present
     red_confirmed: true
     red_reason: >-
       Failed with "NameError: name '_missing_rule_files' is not defined"
