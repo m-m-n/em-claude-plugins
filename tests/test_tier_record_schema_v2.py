@@ -473,8 +473,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0004 of security-review-repro-steps (FR7, FR9, FR13):
 # Phases R0 step 8, R3b, R4 and R5 gained the `reproduction` cap, the
 # orchestrator-path verification and the not-reproduced carry-over.
+# Refreshed by task0006 of security-review-repro-steps (FR6-FR9, FR12, FR13):
+# Phases R3b, R4 and R5 gained the merged reproduction set
+# (`reproduction_alternates`, `reproduction_overflow`).
 REVIEW_PHASE_SHA256 = (
-    "fab6ed76a1b14e7f4b3c02c736a5fb2163291dd730fbe00e08da32737d909f35"
+    "8258950fcc9fa162ecfe75e94bd18565d050ec05650369faea2d9e94d9134ce6"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
