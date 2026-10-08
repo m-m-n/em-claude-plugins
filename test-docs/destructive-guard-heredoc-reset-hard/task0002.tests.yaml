@@ -36,30 +36,7 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - "TS-28a: グループ({ ... })の閉じがパイプ先 bash ならヒアドキュメントも deny"
-      - "TS-28b: グループ(( ... ))の閉じがパイプ先 bash ならヒアドキュメントも deny"
-      - "TS-29a: グループが前の文で開いていてもパイプ先 bash なら deny"
-      - "TS-29b: グループが前の行だけで開いていてもパイプ先 bash なら deny"
-      - "TS-30: グループの閉じがファイル書き込みなら allow(TS-28 の対照)"
-      - "TS-31: case のパターン語 cat はコマンド語にならず、bash 宛てヒアドキュメントは deny"
-      - "TS-32: case の前の枝の引数に esac があっても現在の枝は閉じず、bash 宛ては deny"
-      - "TS-33: case のクォートされた 'esac' パターンは case を閉じず、bash 宛ては deny"
-      - "TS-34: case の枝で cat 宛てにヒアドキュメントを書くなら allow(TS-31 の対照)"
-      - "TS-35: 置換内の ; はホスト文を分割せず、パイプ先 bash は deny"
-      - "TS-36a: パイプ演算子の後に空白が続いても、空行を越えた bash 宛ては deny"
-      - "TS-36b: パイプ演算子の後にタブが続いても、空行を越えた bash 宛ては deny"
-      - "TS-37: パイプ演算子の後の空行を越えた宛先がクォート分割の b\"a\"s\"h\" でも deny"
-      - "TS-38a: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の( )グループの宛先不明より優先され deny"
-      - "TS-38b: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の{ }グループの宛先不明より優先され deny"
-      - "TS-39: コメント行の $( は置換を開かず、次行の b\"a\"s\"h\" 宛てヒアドキュメントは deny"
-      - "TS-40: 2 つ目の演算子はコメント内にあるため、A の区切り後の reset 行は実コマンドとして deny"
-      - "TS-41a: 制御文字 U+0003/U+0004 を挟んでも bash 宛てヒアドキュメントは deny"
-      - "TS-41b: 制御文字を挟んでも bash -c 経由の置換内ヒアドキュメントは deny"
-      - "TS-42a: クォートなし区切りの本文内、$( ... ) に隠れた reset は deny"
-      - "TS-42b: 同上、前置文が無い場合も deny"
-      - "TS-43: 本文内の case パターンの閉じ ) を挟んだ置換内 reset も deny"
-      - "TS-44: 本文内の入れ子になった置換それぞれの reset を deny"
-      - "TS-45: クォート区切りの本文は置換されないので $(git reset --hard HEAD) の文字列は allow(TS-42 の対照)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Every TS-28..TS-45 case listed above is present in
@@ -80,10 +57,7 @@ acceptance_tests:
 
   AC-2:
     tests:
-      - "TS-31: case のパターン語 cat はコマンド語にならず、bash 宛てヒアドキュメントは deny"
-      - "TS-32: case の前の枝の引数に esac があっても現在の枝は閉じず、bash 宛ては deny"
-      - "TS-33: case のクォートされた 'esac' パターンは case を閉じず、bash 宛ては deny"
-      - "TS-34: case の枝で cat 宛てにヒアドキュメントを書くなら allow(TS-31 の対照)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Against this task's base guard, TS-32, TS-33 and TS-34 failed (got
@@ -101,18 +75,7 @@ acceptance_tests:
 
   AC-3:
     tests:
-      - "TS-28a: グループ({ ... })の閉じがパイプ先 bash ならヒアドキュメントも deny"
-      - "TS-28b: グループ(( ... ))の閉じがパイプ先 bash ならヒアドキュメントも deny"
-      - "TS-29a: グループが前の文で開いていてもパイプ先 bash なら deny"
-      - "TS-29b: グループが前の行だけで開いていてもパイプ先 bash なら deny"
-      - "TS-30: グループの閉じがファイル書き込みなら allow(TS-28 の対照)"
-      - "TS-35: 置換内の ; はホスト文を分割せず、パイプ先 bash は deny"
-      - "TS-36a: パイプ演算子の後に空白が続いても、空行を越えた bash 宛ては deny"
-      - "TS-36b: パイプ演算子の後にタブが続いても、空行を越えた bash 宛ては deny"
-      - "TS-37: パイプ演算子の後の空行を越えた宛先がクォート分割の b\"a\"s\"h\" でも deny"
-      - "TS-6: パイプ先が bash のヒアドキュメントは deny"
-      - "TS-23: 外側の文のパイプ先が bash なら置換内ヒアドキュメントも deny"
-      - "TS-24: 外側の文にパイプ先の sink が無ければ置換内ヒアドキュメントは allow(TS-23 の対照)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Against this task's base guard, TS-29a, TS-29b, TS-30 and TS-37
@@ -135,14 +98,7 @@ acceptance_tests:
 
   AC-4:
     tests:
-      - "TS-38a: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の( )グループの宛先不明より優先され deny"
-      - "TS-38b: 既知の外側 sink(b\"a\"s\"h\" -c)が内側の{ }グループの宛先不明より優先され deny"
-      - "TS-13: bash -c への置換内ヒアドキュメントは deny"
-      - "TS-21: timeout 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
-      - "TS-22: exec 経由の bash 宛てヒアドキュメントは deny(実行プレフィックスは宛先不明)"
-      - "TS-26: 外側の文に実行プレフィックスがあれば置換内ヒアドキュメントも deny(宛先不明)"
-      - "TS-27: プロセス置換 tee >(bash) を伴うヒアドキュメントは deny(宛先不明)"
-      - "TS-25: 宛先不明なヒアドキュメントのフォールバックは同じ行の data ヒアドキュメントに波及しない"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Against this task's base guard, both TS-38 cases failed (got
@@ -152,13 +108,7 @@ acceptance_tests:
 
   AC-5:
     tests:
-      - "TS-39: コメント行の $( は置換を開かず、次行の b\"a\"s\"h\" 宛てヒアドキュメントは deny"
-      - "TS-40: 2 つ目の演算子はコメント内にあるため、A の区切り後の reset 行は実コマンドとして deny"
-      - "TS-41a: 制御文字 U+0003/U+0004 を挟んでも bash 宛てヒアドキュメントは deny"
-      - "TS-41b: 制御文字を挟んでも bash -c 経由の置換内ヒアドキュメントは deny"
-      - "TS-4: 1 行に複数のヒアドキュメント演算子があっても、両方 cat 宛てなら allow"
-      - "TS-9: 1 行に複数のヒアドキュメント演算子: 2 つ目が bash 宛てなら deny"
-      - "TS-10: ヒアドキュメントの後に続く行は通常のコマンドとして deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Against this task's base guard, all four of TS-39/40/41a/41b failed
@@ -185,11 +135,7 @@ acceptance_tests:
 
   AC-6:
     tests:
-      - "TS-42a: クォートなし区切りの本文内、$( ... ) に隠れた reset は deny"
-      - "TS-42b: 同上、前置文が無い場合も deny"
-      - "TS-43: 本文内の case パターンの閉じ ) を挟んだ置換内 reset も deny"
-      - "TS-44: 本文内の入れ子になった置換それぞれの reset を deny"
-      - "TS-45: クォート区切りの本文は置換されないので $(git reset --hard HEAD) の文字列は allow(TS-42 の対照)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       Against this task's base guard, TS-42a, TS-42b, TS-43 and TS-44 all
@@ -237,8 +183,7 @@ acceptance_tests:
 
   AC-8:
     tests:
-      - "full suite: python3 em-workflow/hooks/tests/run-destructive-guard.py (448 cases + the batch-demotion check)"
-      - "full suite: python3 -m unittest discover -s tests (6449 tests)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >
       The run-destructive-guard.py suite was observed failing at session
@@ -271,6 +216,8 @@ acceptance_tests:
       and the module's own `import` lines (bisect, json, os, re, shlex,
       shutil, sys -- all standard library); no executable check exists for
       these, so no red was or could be observed for them specifically.
+
+      Removed from tests (not a unittest ID): full suite: python3 -m unittest discover -s tests (6449 tests)
 
 notes: >
   This worktree held an uncommitted, near-complete implementation of this

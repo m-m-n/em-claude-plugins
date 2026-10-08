@@ -42,9 +42,11 @@ acceptance_tests:
       either, so no failing state could occur. Verified by inspection and by the ad-hoc pattern scan (key-shaped tokens,
       Bearer, a value assigned to LITELLM_API_KEY, and the value of the variable in this environment).
   AC-6:
-    tests: [python3 -m unittest discover -s tests]
+    tests: []
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing suite (tests/test_codex_repo_hook_trust.py and the
       rest of tests/) detects regressions in what the repository ships; no red state occurred for this change, the suite
       was green before and after (7380 tests OK both times).
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests

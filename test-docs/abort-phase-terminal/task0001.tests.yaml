@@ -4,15 +4,15 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_abort_bullet_opens_with_exact_literal
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_worktree_refresh
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_tip_capture
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_implement_failed_write
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_commit_docs_sh_with_captured_tip
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_order_refresh_before_tip_before_write_before_commit
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_old_manual_handling_phrase_absent
-      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_heading_still_byte_identical
-      - tests/test_implement_routeback_gate.py::TestValidationDetectsRegressions::test_old_abort_manual_handling_phrase_matcher_flags_pre_change_wording
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_abort_bullet_opens_with_exact_literal
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_states_worktree_refresh
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_states_tip_capture
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_states_implement_failed_write
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_states_commit_docs_sh_with_captured_tip
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_order_refresh_before_tip_before_write_before_commit
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_old_manual_handling_phrase_absent
+      - tests.test_implement_routeback_gate.TestAbortPhaseOptionHasSC1Terminal.test_heading_still_byte_identical
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_old_abort_manual_handling_phrase_matcher_flags_pre_change_wording
     red_confirmed: true
     red_reason: >-
       Before the implement-phase.md edit, the old abort bullet
@@ -26,16 +26,16 @@ acceptance_tests:
       formed. 6 tests red for the right reason before the edit landed.
   AC-2:
     tests:
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_names_non_packet_gates_table_and_gate_id
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_states_refresh
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_states_implement_failed_write_via_commit_docs_sh
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_states_report_and_stop
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_old_stays_failed_report_and_stop_phrase_absent
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_paragraph_still_final_content_before_supporting_cast
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_retains_auto_retry_once_per_task_rule
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_retains_route_back_never_automatic
-      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_retains_retry_consumed_state_note
-      - tests/test_recycled_task_id_consistency.py::TestValidationDetectsRegressions::test_old_batch_mode_stays_failed_phrase_matcher_flags_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_names_non_packet_gates_table_and_gate_id
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_states_refresh
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_states_implement_failed_write_via_commit_docs_sh
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_states_report_and_stop
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_old_stays_failed_report_and_stop_phrase_absent
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_paragraph_still_final_content_before_supporting_cast
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_retains_auto_retry_once_per_task_rule
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_retains_route_back_never_automatic
+      - tests.test_recycled_task_id_consistency.TestBatchModeParagraphRestatesSC1Terminal.test_retains_retry_consumed_state_note
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_old_batch_mode_stays_failed_phrase_matcher_flags_pre_change_wording
     red_confirmed: true
     red_reason: >-
       Before the batch-mode-paragraph edit, three assertions failed for the
@@ -50,11 +50,11 @@ acceptance_tests:
       substring) -- those are RETENTION checks, not new-behavior checks.
   AC-3:
     tests:
-      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_abort_bullet_states_exclusions_and_only_side_effect
-      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_batch_mode_paragraph_states_exclusions_and_only_side_effect
-      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_abort_bullet_names_stop_condition_3_with_step_b_formulation
-      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_batch_mode_paragraph_names_stop_condition_3_with_step_b_formulation
-      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_rejected_path_side_effect_sentences_untouched
+      - tests.test_implement_routeback_gate.TestBothAbortDescriptionsShareTheSameTerminal.test_abort_bullet_states_exclusions_and_only_side_effect
+      - tests.test_implement_routeback_gate.TestBothAbortDescriptionsShareTheSameTerminal.test_batch_mode_paragraph_states_exclusions_and_only_side_effect
+      - tests.test_implement_routeback_gate.TestBothAbortDescriptionsShareTheSameTerminal.test_abort_bullet_names_stop_condition_3_with_step_b_formulation
+      - tests.test_implement_routeback_gate.TestBothAbortDescriptionsShareTheSameTerminal.test_batch_mode_paragraph_names_stop_condition_3_with_step_b_formulation
+      - tests.test_implement_routeback_gate.TestBothAbortDescriptionsShareTheSameTerminal.test_rejected_path_side_effect_sentences_untouched
     red_confirmed: true
     red_reason: >-
       Before both edits, all four new-behavior assertions failed:
@@ -67,8 +67,8 @@ acceptance_tests:
       phrase exactly, then it passed.
   AC-4:
     tests:
-      - tests/test_implement_routeback_gate.py::TestRejectedPathHasSingleGeneralizedTerminal::test_control_returns_via_stop_condition_3
-      - tests/test_recycled_task_id_consistency.py::TestNonTerminalEventMakesRouteBackInapplicable::test_rejected_path_cites_stop_condition_3_and_abort_phase
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_control_returns_via_stop_condition_3
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_rejected_path_cites_stop_condition_3_and_abort_phase
     red_confirmed: false
     red_reason: >-
       Retention criterion: the rejected path's own sentence containing
@@ -80,11 +80,11 @@ acceptance_tests:
       pass in the final full-suite run.
   AC-5:
     tests:
-      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_names_abort_phase_terminal_status_commit
-      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_three_prior_entries_still_named
-      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_carve_out_still_single_route_back_commit
-      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_abort_call_site_never_described_as_carved_out
-      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_closed_enumeration_claim_still_absent
+      - tests.test_implement_routeback_gate.TestExit4EnumerationNamesAbortPhaseCommit.test_names_abort_phase_terminal_status_commit
+      - tests.test_implement_routeback_gate.TestExit4EnumerationNamesAbortPhaseCommit.test_three_prior_entries_still_named
+      - tests.test_implement_routeback_gate.TestExit4EnumerationNamesAbortPhaseCommit.test_carve_out_still_single_route_back_commit
+      - tests.test_implement_routeback_gate.TestExit4EnumerationNamesAbortPhaseCommit.test_abort_call_site_never_described_as_carved_out
+      - tests.test_implement_routeback_gate.TestExit4EnumerationNamesAbortPhaseCommit.test_closed_enumeration_claim_still_absent
     red_confirmed: true
     red_reason: >-
       Before the Branch & Worktree Model bullet edit,
@@ -97,9 +97,9 @@ acceptance_tests:
       absent).
   AC-6:
     tests:
-      - tests/test_implement_routeback_gate.py::TestContainmentAndInvariants::test_batch_mode_paragraph_is_byte_identical
-      - tests/test_recycled_task_id_consistency.py::TestI2cHeadingAndBatchModeParagraphByteIdentical::test_batch_mode_paragraph_is_byte_identical_tail
-      - tests/test_routeback_reset_scope_consistency.py::TestRegressionGuards::test_batch_mode_paragraph_is_byte_identical_tail
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_batch_mode_paragraph_is_byte_identical
+      - tests.test_recycled_task_id_consistency.TestI2cHeadingAndBatchModeParagraphByteIdentical.test_batch_mode_paragraph_is_byte_identical_tail
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_batch_mode_paragraph_is_byte_identical_tail
     red_confirmed: true
     red_reason: >-
       After editing implement-phase.md's batch-mode paragraph but before
@@ -116,10 +116,10 @@ acceptance_tests:
       restored the literal and re-ran to confirm green again.
   AC-7:
     tests:
-      - tests/test_recycled_task_id_consistency.py::TestNonTerminalEventMakesRouteBackInapplicable::test_no_rework_or_append_anywhere_in_i2c
-      - tests/test_routeback_reset_scope_consistency.py::TestRegressionGuards::test_no_rework_or_append_in_i2c
-      - tests/test_routeback_reset_scope_consistency.py::TestRegressionGuards::test_no_bare_git_commit_or_add_lines
-      - tests/test_implement_routeback_gate.py::TestContainmentAndInvariants::test_no_bare_git_commit_or_add_lines
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_no_rework_or_append_anywhere_in_i2c
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_no_rework_or_append_in_i2c
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_no_bare_git_commit_or_add_lines
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_no_bare_git_commit_or_add_lines
     red_confirmed: false
     red_reason: >-
       Preventive constraint, not new behavior: neither the pre-change nor

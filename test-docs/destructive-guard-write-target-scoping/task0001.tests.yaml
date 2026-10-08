@@ -15,11 +15,7 @@ acceptance_tests:
       expectation.
   AC-2:
     tests:
-      - "skills 再帰 grep + stderr 破棄"
-      - "skills ls + stderr 破棄 + pager"
-      - "settings リダイレクトコピー"
-      - "transcript 読み取り + stderr 破棄"
-      - "transcript グロブ検索 + stderr 破棄"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With only the five FR1 cases appended and the judgment not yet
@@ -57,8 +53,7 @@ acceptance_tests:
       flagged here as a plan-text discrepancy, not treated as a defect.
   AC-5:
     tests:
-      - "transcript 読み取り + stderr 破棄"
-      - "transcript グロブ検索 + stderr 破棄"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Both were among the AC-2 red observations: "got=deny
@@ -67,13 +62,7 @@ acceptance_tests:
       and not deny.
   AC-6:
     tests:
-      - "本物: 設定書き込み"
-      - "本物: 設定を sed -i"
-      - "本物: 設定を rm"
-      - "本物: skills ディレクトリ再帰削除"
-      - "本物: 設定への追記"
-      - "本物: transcript 書き込み"
-      - "無人実行では ask が deny に降格"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       These are regression guards, not newly-red criteria: all seven

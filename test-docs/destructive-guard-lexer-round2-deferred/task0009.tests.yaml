@@ -77,10 +77,9 @@ acceptance_tests:
       occurred for this change.
   AC-6:
     tests:
-      - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
       - tests.test_destructive_guard_lexer_agreement.TestModuleContract
       - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
-      - python3 -m unittest discover -s tests
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing runner over
@@ -88,3 +87,5 @@ acceptance_tests:
       changed verdict, a moved or edited case and a stage disagreement; no red
       state occurred for this change (no case was added, removed or edited,
       and the runner stayed at 846/846).
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests

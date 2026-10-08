@@ -16,8 +16,7 @@ final_failures:                # Identical set after implementation (re-run twic
 acceptance_tests:
   AC-1:
     tests:
-      - "destructive-guard-cases.json: コマンド語静的不明(rm-recursive, TS-1): $(which rm) 形のコマンド名置換でも rm 破壊形状を残りトークンに照合する（チケット再現）"
-      - "destructive-guard-cases.json: コマンド語静的不明(rm-recursive, TS-2): バッククォート形でも同じ（両スペル対称性）"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Added both case-table entries first and ran run-destructive-guard.py
@@ -29,8 +28,7 @@ acceptance_tests:
       analyzer change both report got=deny with rule rm-recursive.
   AC-2:
     tests:
-      - "destructive-guard-cases.json: コマンド語静的不明(git-reset-hard, TS-3): $(which git) 形のコマンド名置換でも git のサブコマンド形状(reset --hard)に残りトークンを照合する"
-      - "destructive-guard-cases.json: コマンド語静的不明(git-clean, TS-4): $(which git) 形のコマンド名置換でも git のサブコマンド形状(clean -fd)に残りトークンを照合する"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Same pre-implementation run as AC-1: both FAILed with got=allow
@@ -40,14 +38,7 @@ acceptance_tests:
       got=deny with rule git-reset-hard / git-clean respectively.
   AC-3:
     tests:
-      - "destructive-guard-cases.json: 対象外(判定なし): コマンド位置の置換を読み飛ばした先が無害なら allow — 動的に決まるコマンド名そのものの検査は従来どおり対象外"
-      - "destructive-guard-cases.json: 対象外(判定なし): env の後のコマンド位置置換でも同じ"
-      - "destructive-guard-cases.json: 対象外(判定なし): git サブコマンド位置の置換でも同じ"
-      - "destructive-guard-cases.json: コマンド語静的不明の誤爆防止(TS-5): 残りが既存の破壊形状に一致しないため allow のまま"
-      - "destructive-guard-cases.json: コマンド語静的不明の誤爆防止(TS-6): 次トークンがフラグ先頭でも rm 形状（再帰+強制+オペランド）に一致しない残りは allow"
-      - "destructive-guard-cases.json: コマンド語静的不明の誤爆防止(TS-7): 再帰フラグのみで強制フラグが無いため rm 経路の下限に届かない"
-      - "destructive-guard-cases.json: コマンド語静的不明 + セーフルート例外(build artifact)の継承(TS-8)"
-      - "destructive-guard-cases.json: コマンド語静的不明 + セーフルート例外(scratch root)の継承(TS-9)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       All eight already reported got=allow against the pre-implementation
@@ -70,11 +61,7 @@ acceptance_tests:
       verdict), not to flip them from red.
   AC-4:
     tests:
-      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-10): -c の引数がクォート付き置換なら空展開でも語が消えないため次の語へ繰り上げない — 第2引数は実シェルでは $0 であり、allow が実シェル意味論と一致する"
-      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): eval のペイロードがクォート付き置換でも空展開で消えず allow のまま"
-      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): eval のペイロード（direnv 形）でも同じ"
-      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): eval のペイロード（mise 形）でも同じ"
-      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): -c のペイロードがクォート付き置換のみで後続引数が無い形も allow のまま"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       The first entry is the FR6 case-table flip (deny -> allow). Ran
@@ -98,10 +85,7 @@ acceptance_tests:
       rewritten label rather than being deleted" clause is actually about.
   AC-5:
     tests:
-      - "bash -c $(printf %s) 'rm -rf /home/sakura/valuable' (destructive-guard-cases.json line 203, pre-existing)"
-      - "bash -c `printf %s` 'rm -rf /home/sakura/valuable' (line 204, pre-existing)"
-      - "sh -c $(true) 'git reset --hard HEAD' (line 205, pre-existing)"
-      - "bash <<<$(true) 'rm -rf /home/sakura/valuable' (line 227, pre-existing)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       All four are pre-existing deny entries (unquoted promotion), untouched
@@ -114,7 +98,7 @@ acceptance_tests:
       red->green test.
   AC-6:
     tests:
-      - "destructive-guard-cases.json: 対象外宣言(out-of-scope, TS-12): 置換の展開結果（=置換本文の出力）そのものがスクリプト本文になる形は、評価を要するためこのフックの静的解析の対象外"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       Verdict-only: the pre-existing entry's expected verdict (allow) never

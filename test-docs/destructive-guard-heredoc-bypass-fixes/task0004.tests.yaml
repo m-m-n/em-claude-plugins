@@ -8,28 +8,7 @@ final_failures: []             # re-executed after the re-implementation on the 
 acceptance_tests:
   AC-1:
     tests:
-      - "run-destructive-guard.py::267e8e9657658f40 区切り語 $(x) は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を本文として隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 区切り語 バッククォートの span は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を本文として隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 区切り語 $[1] は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を本文として隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 区切り語 ${x} は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を本文として隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 区切り語 $'x' は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を本文として隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 区切り語 'a'$'b' は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を本文として隠すので ask"
-      - "run-destructive-guard.py::1f64cb294e6ffe41 区切り語 $(x) は読めず、本文の閉じない引用符が区切り語の行の後に bash が実行する git reset --hard を飲み込むので ask"
-      - "run-destructive-guard.py::1f64cb294e6ffe41 区切り語 バッククォートの span は読めず、本文の閉じない引用符が区切り語の行の後に bash が実行する git reset --hard を飲み込むので ask"
-      - "run-destructive-guard.py::1f64cb294e6ffe41 区切り語 $[1] は読めず、本文の閉じない引用符が区切り語の行の後に bash が実行する git reset --hard を飲み込むので ask"
-      - "run-destructive-guard.py::1f64cb294e6ffe41 区切り語 ${x} は読めず、本文の閉じない引用符が区切り語の行の後に bash が実行する git reset --hard を飲み込むので ask"
-      - "run-destructive-guard.py::1f64cb294e6ffe41 区切り語 $'x' は読めず、本文の閉じない引用符が区切り語の行の後に bash が実行する git reset --hard を飲み込むので ask"
-      - "run-destructive-guard.py::1f64cb294e6ffe41 区切り語 'a'$'b' は読めず、本文の閉じない引用符が区切り語の行の後に bash が実行する git reset --hard を飲み込むので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 bash -c の単引用符の引数の中の区切り語 $(x) は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 bash -c の単引用符の引数の中の区切り語 バッククォートの span は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 eval の単引用符の引数の中の区切り語 $(x) は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 eval の単引用符の引数の中の区切り語 バッククォートの span は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を隠すので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 閉じない引用符の区切り語（引用符の中で改行）は読めず、引用符を閉じる行の後に bash が実行する git reset --hard があるので ask"
-      - "run-destructive-guard.py::267e8e9657658f40 行継続を含む区切り語 EO{BS-NL}F は読めず、本文の後続の <<WORD が区切り語の行の後に bash が実行する git reset --hard を隠すので ask"
-      - "run-destructive-guard.py::1f64cb294e6ffe41 行継続を含む区切り語 EO{BS-NL}F は読めず、本文の閉じない引用符が区切り語の行の後に bash が実行する git reset --hard を飲み込むので ask"
-      - "run-destructive-guard.py::643305535d3c874d 行継続を含む区切り語の本文にある cat <<DOC_END を演算子として登録し、EOF の後の git reset --hard HEAD を本文として除かず ask"
-      - "run-destructive-guard.py::d9c0ee86072979fe 区切り語 $(x) の本文にある <<'END' は本文の外の演算子ではなく、END の前の git reset --hard HEAD を本文として除かず ask"
-      - "run-destructive-guard.py::d9c0ee86072979fe 区切り語 $(x) の本文にある <<-END も同じく、本文の外の git reset --hard HEAD を除かず ask"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the AC-1 entries appended and the hook unchanged,
@@ -52,7 +31,7 @@ acceptance_tests:
       hook already denied and is now asked.
   AC-2:
     tests:
-      - "run-destructive-guard.py::d9c0ee86072979fe 区切り語 $(x) のヒアドキュメントは、本文も区切り語の行も無害でも区切り語を読めないので ask（規則 unreadable-heredoc-delimiter）"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       With the entry appended and the hook unchanged, run-destructive-guard.py
@@ -63,23 +42,7 @@ acceptance_tests:
       identifier was read from the hook's JSON output by hand.
   AC-3:
     tests:
-      - "run-destructive-guard.py::0944ad655775e494 declare x[a{CR}b\"\"]=( の <<EOF は構文エラーの行を捨てる行で、次の行の git reset --hard は bash が実行するので deny"
-      - "run-destructive-guard.py::0944ad655775e494 eval x[a{CR}b\"\"]=( の <<EOF は構文エラーの行を捨てる行で、次の行の git reset --hard は bash が実行するので deny"
-      - "run-destructive-guard.py::0944ad655775e494 local x[a{CR}b\"\"]=( の <<EOF は構文エラーの行を捨てる行で、次の行の git reset --hard は bash が実行するので deny"
-      - "run-destructive-guard.py::0944ad655775e494 export x[a{CR}b\"\"]=( の <<EOF は構文エラーの行を捨てる行で、次の行の git reset --hard は bash が実行するので deny"
-      - "run-destructive-guard.py::00317f587babce32 区切り語 E'OF' は EOF と読むので、EOF の行で本文が終わり、その後に bash が実行する git reset --hard は deny"
-      - "run-destructive-guard.py::060471bb12fad78a 区切り語が行継続で分かれた EO{BS-NL}F は読めず、同じ行の ; の後に bash が実行する git reset --hard があるので ask"
-      - "run-destructive-guard.py::ce92362f1c719d5e 区切り語が行継続で分かれた EO{BS-NL}F は読めず、語が終わる行の && の後に bash が実行する git reset --hard があるので ask"
-      - "run-destructive-guard.py::85c9b1b2e50716c9 区切り語 $[1] は読めず、同じ行の ; の後に bash が実行する git reset --hard があるので ask"
-      - "run-destructive-guard.py::85c9b1b2e50716c9 区切り語のバッククォートの span は読めず、同じ行の ; の後に bash が実行する git reset --hard があるので ask"
-      - "run-destructive-guard.py::70414092c8d22d69 引用されていない本文の行継続で分かれた終端語 E{BS-NL}OF は終端行で、その後に bash が実行する git reset --hard は deny"
-      - "run-destructive-guard.py::70414092c8d22d69 引用された本文の行継続は結合されず、EO{BS-NL}F は終端行ではないので、本文の中の git reset --hard は bash が実行せず allow"
-      - "run-destructive-guard.py::489834107bc1fbee 区切り語 E-OF は \\w 以外を含めて読み、その終端行の後に bash が実行する git reset --hard は deny"
-      - "run-destructive-guard.py::489834107bc1fbee 区切り語 E$x は $ を字面どおり読み、その終端行の後に bash が実行する git reset --hard は deny"
-      - "run-destructive-guard.py::489c54bb59e8dc38 先頭に空白のある ` EOF` の行は終端行ではないので、その後の git reset --hard は本文で bash が実行せず allow"
-      - "run-destructive-guard.py::489c54bb59e8dc38 末尾に空白のある `EOF ` の行は終端行ではないので、その後の git reset --hard は本文で bash が実行せず allow"
-      - "run-destructive-guard.py::469c44c126d09a8a 行継続で終わる行の次の EOF は終端行ではないので、その後の git reset --hard は本文で bash が実行せず allow"
-      - "run-destructive-guard.py::469c44c126d09a8a 本文の先頭の行が行継続だけでも、続く EOF は終端行で、その後に bash が実行する git reset --hard は deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Four of the 17 entries were observed failing against the HEAD copy of
@@ -102,7 +65,7 @@ acceptance_tests:
       no handling for a text whose lexing raises.
   AC-4:
     tests:
-      - "run-destructive-guard.py::every pre-existing case-table entry (774 entries; deny 463 / ask 124 / allow 183 unchanged, in order)"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing case-table runner
@@ -114,10 +77,10 @@ acceptance_tests:
       did not decrease (they are now 472 and 151 with the 40 new entries).
   AC-5:
     tests:
-      - test_destructive_guard_lexer_agreement.TestStageAgreement
-      - test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
-      - test_destructive_guard_lexer_agreement.TestUnclosedOpeners
-      - test_destructive_guard_lexer_agreement.TestReworkLinearity
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreementUnderExtglobOn
+      - tests.test_destructive_guard_lexer_agreement.TestUnclosedOpeners
+      - tests.test_destructive_guard_lexer_agreement.TestReworkLinearity
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing TestStageAgreement
@@ -136,8 +99,7 @@ acceptance_tests:
       suppression made is gone.
   AC-6:
     tests:
-      - run-destructive-guard.py (whole run, unattended downgrade cases at its end included)
-      - python3 -m unittest discover -s tests
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the two commands are the
@@ -147,3 +109,5 @@ acceptance_tests:
       the updated parent (task0005's module included); the only red states are the
       new case-table entries of AC-1 to AC-3. `git diff` of destructive-guard.py
       adds no import line.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests

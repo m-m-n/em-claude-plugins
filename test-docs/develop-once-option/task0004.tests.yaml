@@ -24,7 +24,6 @@ acceptance_tests:
       - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
       - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
       - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
-      - tests.test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
     red_confirmed: true
     red_reason: >-
       The module did not exist before this task; running it against the

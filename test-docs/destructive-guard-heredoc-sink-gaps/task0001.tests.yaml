@@ -3,8 +3,7 @@ baseline_failures: []          # refreshed after the parent-side adoption of the
 final_failures: []             # re-executed on the final tree after re-implementing the cases on the updated parent: python3 -m unittest discover -s tests -> Ran 6497 tests, OK; python3 em-workflow/hooks/tests/run-destructive-guard.py -> 480/480 passed (479 array elements + 1 hard-coded unattended-demotion case)
 acceptance_tests:
   AC-1:
-    tests:
-      - "run-destructive-guard.py <pre-change copy of destructive-guard.py>: case 26ab9a3d83649eff AC-4 (timeout reporting)"
+    tests: []
     red_confirmed: true
     red_reason: >-
       Observed against the pre-task runner (git 27388290) loaded with the new
@@ -21,6 +20,8 @@ acceptance_tests:
       After the parent-side adoption the same run against the parent's guard
       (the guard before this task's change, task0003 included) again printed
       the same timeout FAIL and "479/480 passed", exit 1.
+
+      Removed from tests (not a unittest ID): run-destructive-guard.py <pre-change copy of destructive-guard.py>: case 26ab9a3d83649eff AC-4 (timeout reporting)
   AC-2:
     tests:
       - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
@@ -37,7 +38,7 @@ acceptance_tests:
       again produced byte-identical output and both exited 1.
   AC-3:
     tests:
-      - "destructive-guard-cases.json: 26ab9a3d83649eff AC-4: 単一引用符内に $( を 30000 個並べた約 60KB の入力でも 10 秒以内に deny を返す"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Run through the changed runner against the pre-change guard (no guard
@@ -74,9 +75,7 @@ acceptance_tests:
       of medians 2.30, ratio of minimums 2.34 (< 3, PASS).
   AC-5:
     tests:
-      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.1: 単一引用符内の閉じないバッククォート('`' 形)の後ろにある置換内の rm は deny"
-      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.2: 単一引用符内の閉じないバッククォート(don`t 形)の後ろにある置換内の rm は deny"
-      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.3: 単一引用符内の閉じない $( の後ろにある文の rm は deny"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: >-
       The three forms are regression guards for the FR4 rewrite and the
@@ -87,8 +86,7 @@ acceptance_tests:
       and fails AC-5.3 only (459/460).
   AC-6:
     tests:
-      - "destructive-guard-cases.json: 26ab9a3d83649eff AC-4: 単一引用符内に $( を 30000 個並べた約 60KB の入力でも 10 秒以内に deny を返す"
-      - "destructive-guard-cases.json: 46923ffe262f20b1 task0001 AC-5.1 / AC-5.2 / AC-5.3"
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: >-
       Order of work: runner time limit and the four cases were committed
@@ -102,8 +100,6 @@ acceptance_tests:
       guard (the guard before this task's change): the same four results.
   AC-7:
     tests:
-      - "python3 em-workflow/hooks/tests/run-destructive-guard.py"
-      - "python3 -m unittest discover -s tests"
       - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes"
       - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
     red_confirmed: false
@@ -125,3 +121,5 @@ acceptance_tests:
       against the parent's guard after the adoption (5,380,840 exhaustive
       strings of length <= 7, plus the same random set): identical.
       Both commands pass on the final tree.
+
+      Removed from tests (not a unittest ID): python3 -m unittest discover -s tests

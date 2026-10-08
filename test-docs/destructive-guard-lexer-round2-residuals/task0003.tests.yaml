@@ -5,49 +5,47 @@ final_failures: []             # re-executed after the re-implementation commit 
 acceptance_tests:
   AC-1:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py (case table runner; labels 9381769d7116fab2 round2-residuals FR4.1 / FR4.2 / FR4.3)
-      - TestHeredocDelimiterWords.test_new_cases_are_in_the_case_table_after_the_earlier_entries
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_new_cases_are_in_the_case_table_after_the_earlier_entries
     red_confirmed: true
     red_reason: "After the case-table commit 6901335b and before any hook commit, the runner reported 628/631 with FAIL on the three new cases: got=allow, expected deny (the old reading closed the body at the decoy END / E line and skipped the rm -rf line). The placement test reads the table by command text and label."
   AC-2:
     tests:
-      - TestHeredocDelimiterWords.test_whole_word_delimiters_close_at_their_own_line
-      - TestHeredocDelimiterWords.test_whole_word_delimiter_forms_are_denied_with_and_without_batch
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_whole_word_delimiters_close_at_their_own_line
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_whole_word_delimiter_forms_are_denied_with_and_without_batch
     red_confirmed: true
     red_reason: "Against the unchanged hook: AssertionError '<<END' != '<<END-X' (operator text), 'END' != 'END-X' (delimiter) and 'allow' != 'deny' for both batch off and on."
   AC-3:
     tests:
-      - TestHeredocDelimiterWords.test_variant_delimiter_words
-      - TestHeredocDelimiterWords.test_variant_delimiter_forms_are_denied
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_variant_delimiter_words
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_variant_delimiter_forms_are_denied
     red_confirmed: true
     red_reason: "Against the unchanged hook nine of the ten variants failed ('<<E' != '<<E\"X\"', '<<E' != '<<E$X', 0 != 1 operators for <<\\EOF, <<'E-X', <<'', ...). The word-only <<-EOF variant with a tab-indented close line was green before the change (its behavior pre-existed); the <<-END-X variant of the same shape went red."
   AC-4:
     tests:
-      - TestHeredocDelimiterWords.test_unreadable_delimiter_words_take_no_body
-      - TestHeredocDelimiterWords.test_a_quote_not_closed_on_the_operators_line_takes_no_body
-      - TestHeredocDelimiterWords.test_a_later_readable_operator_is_read_after_an_unreadable_one
-      - TestHeredocDelimiterWords.test_a_delimiter_holding_a_blank_finds_no_close_line
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_unreadable_delimiter_words_take_no_body
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_a_quote_not_closed_on_the_operators_line_takes_no_body
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_a_later_operator_is_no_operator_after_an_unreadable_one
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_a_delimiter_holding_a_blank_finds_its_close_line
     red_confirmed: true
     red_reason: "Against the unchanged hook six unreadable forms failed (word holding $( , a backtick, ${, $((, $[, or a backslash-newline: AssertionError 12 is not None, an operator took a body, and the verdict was allow). The no-word forms (cat <<, cat <<-, cat << ;) and the unclosed-quote forms were green before the change: their expected map was recorded from the base before editing the hook and the test pins that it is unchanged."
   AC-5:
     tests:
-      - TestHeredocDelimiterWords.test_close_line_is_the_delimiter_with_optional_blanks_only
-      - TestHeredocDelimiterWords.test_close_line_index_accepts_non_word_values
-      - TestHeredocDelimiterWords.test_word_delimiters_keep_their_reading
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_word_delimiters_keep_their_reading
     red_confirmed: true
     red_reason: "Against the unchanged hook: delimiter 'END' != 'END-X' / 'E' != 'E.X' for the close-line test and KeyError 'END-X' for the line index. test_word_delimiters_keep_their_reading (word-only delimiters unchanged) was green before and after, as intended."
   AC-6:
     tests:
-      - TestHeredocDelimiterWords.test_lexing_work_is_linear_for_non_word_delimiters
-      - TestHeredocDelimiterWords.test_lexing_work_is_linear_for_unreadable_words
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_lexing_work_is_linear_for_non_word_delimiters
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_lexing_work_is_linear_for_unreadable_words
     red_confirmed: true
     red_reason: "The non-word test also asserts that every one of the 400 operators finds its close line (body_start is not None); against the unchanged hook that assertion failed, so the work bound is measured on the real close-line path. The unreadable-word linearity test was green before the change."
   AC-7:
     tests:
-      - TestHeredocDelimiterWords.test_new_cases_are_in_the_case_table_after_the_earlier_entries
-      - TestModuleContract
-      - TestStageAgreement
-      - TestDelimiterWordStageAgreement
-      - em-workflow/hooks/tests/run-destructive-guard.py
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_new_cases_are_in_the_case_table_after_the_earlier_entries
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract
+      - tests.test_destructive_guard_lexer_agreement.TestStageAgreement
+      - tests.test_destructive_guard_lexer_agreement.TestDelimiterWordStageAgreement
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: false
     red_reason: "A dedicated new module is out of scope, but the existing TestModuleContract, TestStageAgreement and run-destructive-guard.py detect a removed, edited or reordered case-table entry and a stage disagreement; no red state occurred for this change. One note: after the hook edit the existing TestStageAgreement.test_d_tok_provenance_matches_the_contract failed once on the E\\X case because its Analysis.quote_ranges helper assumed a quoted delimiter word is the delimiter value plus two quote characters; the helper now takes the whole word range (tests/test_destructive_guard_lexer_agreement.py), the assertion itself is unchanged."

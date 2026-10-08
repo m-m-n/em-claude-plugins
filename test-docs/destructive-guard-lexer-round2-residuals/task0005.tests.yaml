@@ -4,43 +4,43 @@ final_failures: []             # re-executed after the re-implementation on the 
 acceptance_tests:
   AC-1:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py (case table runner; labels 1baa909f9b288847 round2-residuals FR4.1 / FR4.2 and 19edf404b5cbeb2b round2-residuals FR4.3 / FR4.4 / FR4.5)
-      - TestHeredocFallbackAndCloseLines.test_new_cases_are_in_the_case_table_after_the_earlier_entries
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_new_cases_are_in_the_case_table_after_the_earlier_entries
     red_confirmed: true
     red_reason: "After the case-table commit 9f679cac and before any hook commit the runner reported 679/683 with FAIL on the four deny cases (FR4.1-FR4.4): got=allow [destructive-guard] 破壊的なパターンに一致しない。 After parent-side adoption the block was re-appended in its own commit (0167e7f4) before the hook change was re-applied: the runner reported 680/684 with the same four FAIL lines. The allow case FR4.5 (E' X') was green before the hook change: it already got allow. The placement test reads the table by command text and label and was green from the start because the case commit precedes it."
   AC-2:
     tests:
-      - TestHeredocFallbackAndCloseLines.test_unreadable_word_is_a_tail_source_and_denied
-      - TestHeredocFallbackAndCloseLines.test_the_destructive_line_is_inside_a_substitution_region_of_the_tail
-      - TestHeredocFallbackAndCloseLines.test_quote_characters_of_the_tail_are_listed_and_hidden_from_shlex
-      - TestHeredocFallbackAndCloseLines.test_a_tail_source_in_a_resumed_span_is_taken_back_with_the_pass_state
-      - TestHeredocFallbackAndCloseLines.test_tail_start_is_the_earliest_of_the_unreadable_word_and_the_settle_channel
-      - TestHeredocFallbackAndCloseLines.test_no_operator_is_opened_after_an_unreadable_word
-      - TestHeredocFallbackAndCloseLines.test_an_earlier_operator_keeps_its_body
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_unreadable_word_is_a_tail_source_and_denied
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_the_destructive_line_is_inside_a_substitution_region_of_the_tail
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_quote_characters_of_the_tail_are_listed_and_hidden_from_shlex
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_a_tail_source_in_a_resumed_span_is_taken_back_with_the_pass_state
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_tail_start_is_the_earliest_of_the_unreadable_word_and_the_settle_channel
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_no_operator_is_opened_after_an_unreadable_word
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_an_earlier_operator_keeps_its_body
     red_confirmed: true
     red_reason: "Against the unchanged hook test_unreadable_word_is_a_tail_source_and_denied failed for both 1baa909f9b288847 commands (AssertionError: a comment / single-quote region starts at or after the <<, then 'allow' != 'deny'); test_the_destructive_line_is_inside_a_substitution_region_of_the_tail found only a comment region where the command-substitution region was expected; test_tail_start_is_the_earliest... failed 17 != 4; test_quote_characters_of_the_tail... failed [] != [11, 47]; test_no_operator_is_opened... and test_an_earlier_operator_keeps_its_body failed on the operator list / tail_start. test_a_tail_source_in_a_resumed_span_is_taken_back_with_the_pass_state errored against the unchanged hook only because it drives the pass through the seven-value result (ValueError: not enough values to unpack); with the new hook but the tail_source left out of the resume's restore, it failed on the real assertion (the map differs from the whole-text restart reading), so it detects a missing snapshot field."
   AC-3:
     tests:
-      - TestHeredocFallbackAndCloseLines.test_empty_and_unclosed_quote_words_take_the_same_tail_reading
-      - TestHeredocDelimiterWords.test_a_quote_not_closed_on_the_operators_line_takes_no_body
-      - TestHeredocDelimiterWords.test_a_later_operator_is_no_operator_after_an_unreadable_one
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_empty_and_unclosed_quote_words_take_the_same_tail_reading
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_a_quote_not_closed_on_the_operators_line_takes_no_body
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_a_later_operator_is_no_operator_after_an_unreadable_one
     red_confirmed: true
     red_reason: "Against the unchanged hook test_empty_and_unclosed_quote_words_take_the_same_tail_reading failed for all ten forms (the empty-word forms cat <<, cat <<-, cat << ; and the unclosed-quote forms: tail_start 'unexpectedly None', expected the offset of the <<); the rewritten open-quote test failed on the region list ([('single-quote', 6, 41)] != [], a quote region ran past the line) for its three forms. The later-operator test was rewritten from 'a later readable operator is registered' to 'no operator is registered'; it is the plan's 'no further here-document operator is opened' applied to the former expectation (see notes)."
   AC-4:
     tests:
-      - TestHeredocFallbackAndCloseLines.test_close_line_forms_keep_the_blank_indented_line_in_the_body
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_close_line_forms_keep_the_blank_indented_line_in_the_body
     red_confirmed: true
     red_reason: "Against the unchanged hook both 19edf404b5cbeb2b commands failed on the body extent (AssertionError: 12 != 57, the body ended at the blank-indented line, not at the last line); the case-table runner gave allow for both, expected deny."
   AC-5:
     tests:
-      - TestHeredocDelimiterWords.test_close_line_under_double_less_is_the_exact_delimiter
-      - TestHeredocDelimiterWords.test_close_line_under_dash_removes_leading_tabs_only
-      - TestHeredocDelimiterWords.test_a_tab_indented_close_line_does_not_close_a_plain_operator
-      - TestHeredocDelimiterWords.test_a_delimiter_holding_a_blank_finds_its_close_line
-      - TestHeredocDelimiterWords.test_close_line_index_looks_up_values_holding_blanks
-      - TestHeredocFallbackAndCloseLines.test_a_quoted_delimiter_holding_a_blank_registers_one_operator
-      - TestHeredocFallbackAndCloseLines.test_close_line_decides_which_statement_follows
-      - em-workflow/hooks/tests/run-destructive-guard.py (label 19edf404b5cbeb2b round2-residuals FR4.5, allow)
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_close_line_under_double_less_is_the_exact_delimiter
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_close_line_under_dash_removes_leading_tabs_only
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_a_tab_indented_close_line_does_not_close_a_plain_operator
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_a_delimiter_holding_a_blank_finds_its_close_line
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocDelimiterWords.test_close_line_index_looks_up_values_holding_blanks
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_a_quoted_delimiter_holding_a_blank_registers_one_operator
+      - tests.test_destructive_guard_lexer_agreement.TestHeredocFallbackAndCloseLines.test_close_line_decides_which_statement_follows
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
     red_confirmed: true
     red_reason: "Against the unchanged hook the old blank allowance made a space or tab indented / trailing-blank line close the body (assertion on the body text and on the close line for <<, and for <<-), the quoted blank-holding delimiter E' X' took no body (body_start None, expected 'hello\\n'), and close_lines() did not exist (AttributeError). The allow case FR4.5 itself was already allow before the change (only the lexer-level assertions on the operator went red); the case-table runner gives allow both before and after."
   AC-6:
@@ -49,8 +49,7 @@ acceptance_tests:
     red_reason: "No executable check in the repository can be made to fail for this criterion: it asks for a manual confirmation of the five case commands on bash 5.3 (rm replaced by echo), and no existing test (searched tests/ and em-workflow/hooks/tests/ by the paths and basenames destructive-guard.py, destructive-guard-cases.json and destructive_guard) runs bash. Done by hand on GNU bash 5.3.9 with echo in place of rm: cat <<E${x} (body line expands the command substitution, the line after E${x} runs); cat <<E`x` (the ' line is body and the line after E`x` runs); cat <<END-X and cat <<END (the blank-indented line stays in the body, the body closes at the last line); cat <<E' X' (body 'hello', closes at E X). All five confirmed."
   AC-7:
     tests:
-      - em-workflow/hooks/tests/run-destructive-guard.py
-      - tests.test_destructive_guard_lexer_agreement (TestStageAgreement, TestModuleContract, TestFallbackStageAgreement, TestDelimiterWordStageAgreement, TestReworkLinearity, TestNonAdjacentCloseRereading)
-      - python3 -m unittest discover -s tests
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_lexer_agreement
     red_confirmed: false
-    red_reason: "A dedicated new module is out of scope, but the existing run-destructive-guard.py, TestModuleContract and TestStageAgreement detect a removed, edited or reordered case-table entry and a stage disagreement; no red state occurred for this change. After the hook edit the existing TestStageAgreement.test_e_tokens_keeps_values_clean_and_matches_shlex_without_regions failed on the unreadable-delimiter forms that hold quotes (<<$'E', <<\"E`x`\"): tokens() now keeps their literal quote characters while shlex.split() removes them, so the test skips a segment whose lexical map lists a literal quote character in UNOPENED (assertion itself unchanged for every other segment)."
+    red_reason: "A dedicated new module is out of scope, but the existing run-destructive-guard.py, TestModuleContract and TestStageAgreement detect a removed, edited or reordered case-table entry and a stage disagreement; no red state occurred for this change. After the hook edit the existing TestStageAgreement.test_e_tokens_keeps_values_clean_and_matches_shlex_without_regions failed on the unreadable-delimiter forms that hold quotes (<<$'E', <<\"E`x`\"): tokens() now keeps their literal quote characters while shlex.split() removes them, so the test skips a segment whose lexical map lists a literal quote character in UNOPENED (assertion itself unchanged for every other segment). Removed from tests (not a unittest ID): python3 -m unittest discover -s tests"

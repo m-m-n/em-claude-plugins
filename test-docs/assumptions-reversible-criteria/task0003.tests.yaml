@@ -25,7 +25,7 @@ acceptance_tests:
     red_reason: "AssertionError: 64 not greater than 64 : patch component did not increase: '0.1.64' vs baseline '0.1.64'"
   AC-4:
     tests:
-      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_not_below_baseline
     red_confirmed: false
     red_reason: >-
       em-review's version was never touched by this task, so this assertion
@@ -38,9 +38,9 @@ acceptance_tests:
       - tests.test_assumptions_reversible_criteria_version_bump.TestVersionsAgreeMatcherNegativeProof.test_rejects_disagreeing_versions
       - tests.test_assumptions_reversible_criteria_version_bump.TestVersionsAgreeMatcherNegativeProof.test_accepts_agreeing_versions
       - tests.test_assumptions_reversible_criteria_version_bump.TestPatchBumpMatcherNegativeProof
-      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewUnchangedMatcherNegativeProof.test_rejects_drifted_version
-      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewUnchangedMatcherNegativeProof.test_rejects_wrong_name
-      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewUnchangedMatcherNegativeProof.test_accepts_unchanged_entry
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewNotBelowBaselineMatcherNegativeProof.test_rejects_drifted_version
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewNotBelowBaselineMatcherNegativeProof.test_rejects_wrong_name
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewNotBelowBaselineMatcherNegativeProof.test_accepts_version_at_baseline
     red_confirmed: true
     red_reason: >-
       Each of the three matcher helpers' negative-proof cases was written

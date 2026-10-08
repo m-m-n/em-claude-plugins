@@ -53,8 +53,8 @@ acceptance_tests:
       subsection.
   AC-5:
     tests:
-      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_count_matches_design_input
-      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_sixteen
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_doc_rule_count_is_design_input_count_plus_two
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_eighteen
       - tests.test_workflow_patch_doc.TestApplicationRules.test_single_write_application_rule_present
       - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_r2_commit_sequence_present
     red_confirmed: true

@@ -28,12 +28,12 @@ final_failures:
 acceptance_tests:
   AC-1:
     tests:
-      - test_verify_rework_lineage_cap.TestSkillLineageCountingDefinition.test_lineage_counting_rule_is_stated
-      - test_verify_rework_lineage_cap.TestSkillLineageCountingDefinition.test_lineage_counter_key_is_the_new_history_field
-      - test_verify_rework_lineage_cap.TestSkillLineageCountingDefinition.test_old_thin_counter_key_is_gone
-      - test_verify_rework_lineage_cap.TestBatchModeVerifyFailedRowSummary.test_row_summarizes_both_caps_without_a_numeral
-      - test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_matcher_rejects_old_wording
-      - test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_matcher_accepts_forged_new_wording
+      - tests.test_verify_rework_lineage_cap.TestSkillLineageCountingDefinition.test_lineage_counting_rule_is_stated
+      - tests.test_verify_rework_lineage_cap.TestSkillLineageCountingDefinition.test_lineage_counter_key_is_the_new_history_field
+      - tests.test_verify_rework_lineage_cap.TestSkillLineageCountingDefinition.test_old_thin_counter_key_is_gone
+      - tests.test_verify_rework_lineage_cap.TestBatchModeVerifyFailedRowSummary.test_row_summarizes_both_caps_without_a_numeral
+      - tests.test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_matcher_rejects_old_wording
+      - tests.test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_matcher_accepts_forged_new_wording
     red_confirmed: true
     red_reason: >-
       Before the SKILL.md edit: test_lineage_counting_rule_is_stated and
@@ -47,12 +47,12 @@ acceptance_tests:
       unexpectedly found" against the still-unedited SKILL.md.
   AC-2:
     tests:
-      - test_verify_rework_lineage_cap.TestSkillHardCapDefinition.test_hard_cap_rule_is_stated
-      - test_verify_rework_lineage_cap.TestSkillHardCapDefinition.test_hard_cap_counter_key_is_the_new_history_field
-      - test_verify_rework_lineage_cap.TestBatchModeVerifyFailedRowSummary.test_row_summarizes_both_caps_without_a_numeral
-      - test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_skill_states_both_numerals
-      - test_verify_rework_lineage_cap.TestHardCapMatcherCanFail.test_matcher_rejects_old_wording
-      - test_verify_rework_lineage_cap.TestHardCapMatcherCanFail.test_matcher_accepts_forged_new_wording
+      - tests.test_verify_rework_lineage_cap.TestSkillHardCapDefinition.test_hard_cap_rule_is_stated
+      - tests.test_verify_rework_lineage_cap.TestSkillHardCapDefinition.test_hard_cap_counter_key_is_the_new_history_field
+      - tests.test_verify_rework_lineage_cap.TestBatchModeVerifyFailedRowSummary.test_row_summarizes_both_caps_without_a_numeral
+      - tests.test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_skill_states_both_numerals
+      - tests.test_verify_rework_lineage_cap.TestHardCapMatcherCanFail.test_matcher_rejects_old_wording
+      - tests.test_verify_rework_lineage_cap.TestHardCapMatcherCanFail.test_matcher_accepts_forged_new_wording
     red_confirmed: true
     red_reason: >-
       test_hard_cap_rule_is_stated failed with "AssertionError: False is
@@ -64,14 +64,14 @@ acceptance_tests:
       "値 3" existed in SKILL.md yet.
   AC-3:
     tests:
-      - test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_cap_reached_continues_to_retrospect
-      - test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_old_stop_and_report_wording_is_gone_from_whole_file
-      - test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_deferred_negation_sentence_is_present
-      - test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_no_deferred_assignment_for_verify_leftovers
-      - test_verify_rework_lineage_cap.TestCapReachedOutcomeMatcherCanFail.test_matcher_rejects_old_wording
-      - test_verify_rework_lineage_cap.TestCapReachedOutcomeMatcherCanFail.test_matcher_accepts_forged_new_wording
-      - test_verify_rework_lineage_cap.TestDeferredAssignmentMatcherCanFail.test_matcher_rejects_section_that_assigns_deferred
-      - test_verify_rework_lineage_cap.TestDeferredAssignmentMatcherCanFail.test_matcher_accepts_section_that_only_negates
+      - tests.test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_cap_reached_continues_to_retrospect
+      - tests.test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_old_stop_and_report_wording_is_gone_from_whole_file
+      - tests.test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_deferred_negation_sentence_is_present
+      - tests.test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_no_deferred_assignment_for_verify_leftovers
+      - tests.test_verify_rework_lineage_cap.TestCapReachedOutcomeMatcherCanFail.test_matcher_rejects_old_wording
+      - tests.test_verify_rework_lineage_cap.TestCapReachedOutcomeMatcherCanFail.test_matcher_accepts_forged_new_wording
+      - tests.test_verify_rework_lineage_cap.TestDeferredAssignmentMatcherCanFail.test_matcher_rejects_section_that_assigns_deferred
+      - tests.test_verify_rework_lineage_cap.TestDeferredAssignmentMatcherCanFail.test_matcher_accepts_section_that_only_negates
     red_confirmed: true
     red_reason: >-
       test_cap_reached_continues_to_retrospect failed with
@@ -89,14 +89,14 @@ acceptance_tests:
       TestDeferredAssignmentMatcherCanFail's negative proof.
   AC-4:
     tests:
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_new_structure_is_present
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_retired_key_is_gone_from_the_structure
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_retired_key_fallback_is_documented
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_batch_activation_independence_is_retained
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_structure_matcher_rejects_old_block
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_structure_matcher_accepts_new_block
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_retired_key_matcher_rejects_old_block
-      - test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_retired_key_matcher_accepts_new_block
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_new_structure_is_present
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_retired_key_is_gone_from_the_structure
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_retired_key_fallback_is_documented
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockStructure.test_batch_activation_independence_is_retained
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_structure_matcher_rejects_old_block
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_structure_matcher_accepts_new_block
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_retired_key_matcher_rejects_old_block
+      - tests.test_verify_rework_lineage_cap.TestBatchYamlBlockMatcherCanFail.test_retired_key_matcher_accepts_new_block
     red_confirmed: true
     red_reason: >-
       First run of the module against the still-unedited workflow-
@@ -118,13 +118,13 @@ acceptance_tests:
       by this task's restructure.
   AC-5:
     tests:
-      - test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_skill_states_both_numerals
-      - test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_batch_mode_has_no_verify_cap_numeral
-      - test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_workflow_schema_has_no_verify_cap_numeral
-      - test_verify_rework_lineage_cap.TestCapNumeralNeighborhoodMatcherCanFail.test_matcher_rejects_numeral_near_keyword
-      - test_verify_rework_lineage_cap.TestCapNumeralNeighborhoodMatcherCanFail.test_matcher_accepts_text_with_no_numeral_near_keyword
-      - test_verify_rework_lineage_cap.TestCapNumeralNeighborhoodMatcherCanFail.test_matcher_ignores_zero_valued_initial_counters
-      - test_verify_rework_lineage_cap.TestRowSummaryMatcherCanFail.test_matcher_rejects_new_row_wording_that_leaks_a_numeral
+      - tests.test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_skill_states_both_numerals
+      - tests.test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_batch_mode_has_no_verify_cap_numeral
+      - tests.test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_workflow_schema_has_no_verify_cap_numeral
+      - tests.test_verify_rework_lineage_cap.TestCapNumeralNeighborhoodMatcherCanFail.test_matcher_rejects_numeral_near_keyword
+      - tests.test_verify_rework_lineage_cap.TestCapNumeralNeighborhoodMatcherCanFail.test_matcher_accepts_text_with_no_numeral_near_keyword
+      - tests.test_verify_rework_lineage_cap.TestCapNumeralNeighborhoodMatcherCanFail.test_matcher_ignores_zero_valued_initial_counters
+      - tests.test_verify_rework_lineage_cap.TestRowSummaryMatcherCanFail.test_matcher_rejects_new_row_wording_that_leaks_a_numeral
     red_confirmed: true
     red_reason: >-
       test_skill_states_both_numerals failed because SKILL.md had neither
@@ -140,8 +140,8 @@ acceptance_tests:
       never a 1 or 3) -- retained, not newly introduced.
   AC-6:
     tests:
-      - test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_batch_counter_cap_is_retained
-      - test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_verify_rework_cap_wording_unaltered
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_batch_counter_cap_is_retained
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_verify_rework_cap_wording_unaltered
     red_confirmed: true
     red_reason: >-
       Both were rewritten to assert the new wording (系譜 cap / hard cap /
@@ -154,12 +154,12 @@ acceptance_tests:
       every other test in their owning modules (123 tests, 0 failures).
   AC-7:
     tests:
-      - test_verify_rework_lineage_cap.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
-      - test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_old_wording_is_genuinely_the_old_shape
-      - test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_matcher_rejects_old_wording
-      - test_verify_rework_lineage_cap.TestHardCapMatcherCanFail.test_matcher_rejects_old_wording
-      - test_verify_rework_lineage_cap.TestCapReachedOutcomeMatcherCanFail.test_matcher_rejects_old_wording
-      - test_verify_rework_lineage_cap.TestRowSummaryMatcherCanFail.test_matcher_rejects_old_row
+      - tests.test_verify_rework_lineage_cap.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_old_wording_is_genuinely_the_old_shape
+      - tests.test_verify_rework_lineage_cap.TestLineageCountingMatcherCanFail.test_matcher_rejects_old_wording
+      - tests.test_verify_rework_lineage_cap.TestHardCapMatcherCanFail.test_matcher_rejects_old_wording
+      - tests.test_verify_rework_lineage_cap.TestCapReachedOutcomeMatcherCanFail.test_matcher_rejects_old_wording
+      - tests.test_verify_rework_lineage_cap.TestRowSummaryMatcherCanFail.test_matcher_rejects_old_row
     red_confirmed: false
     red_reason: >-
       These assert properties of the test module itself (stdlib-only

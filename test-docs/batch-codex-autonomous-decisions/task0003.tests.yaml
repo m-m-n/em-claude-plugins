@@ -4,8 +4,8 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_no_longer_states_unchanged_strength_for_other_arms
-      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_two_mode_split_naming_all_three_arms
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_no_longer_states_unchanged_strength_for_other_arms
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_states_two_mode_split_naming_all_three_arms
     red_confirmed: true
     red_reason: >-
       Both tests failed against the pre-edit header: the negative-proof test
@@ -17,9 +17,9 @@ acceptance_tests:
       em-workflow/references/batch-policies.yaml.
   AC-2:
     tests:
-      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_two_mode_split_naming_all_three_arms
-      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_does_not_restate_gate_internals
-      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_classification_gate_routing
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_states_two_mode_split_naming_all_three_arms
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_does_not_restate_gate_internals
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_states_classification_gate_routing
     red_confirmed: false
     red_reason: >-
       AC-2 is a preservation criterion: the header already cited
@@ -37,7 +37,7 @@ acceptance_tests:
       not to AC-2's own preservation claim.
   AC-3:
     tests:
-      - tests/test_batch_policies.py::TestGatePoliciesKeySetUnchangedByTask0003::test_key_set_is_byte_for_byte_the_same_as_before
+      - tests.test_batch_policies.TestGatePoliciesKeySetUnchangedByTask0003.test_key_set_is_byte_for_byte_the_same_as_before
     red_confirmed: false
     red_reason: >-
       This task's edit touches only the header comment, never the
@@ -47,9 +47,9 @@ acceptance_tests:
       criterion with an observable state change to drive red first.
   AC-4:
     tests:
-      - tests/test_batch_stop_contract.py::TestStopReasonCodes::test_extracted_set_equals_the_eleven_fixed_codes
-      - tests/test_batch_stop_contract.py::TestStopPointCoverage::test_pairing_matches_expected_key_code_mapping
-      - tests/test_batch_stop_contract.py::TestStopPointCoverage::test_source_paths_resolve_to_existing_files
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_thirteen_fixed_codes
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_source_paths_resolve_to_existing_files
     red_confirmed: false
     red_reason: >-
       Per the task plan's Test Notes: "The set assertions in
@@ -62,11 +62,11 @@ acceptance_tests:
       stayed green throughout and were never expected to go red.
   AC-5:
     tests:
-      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_coverage_wording_stated
-      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_old_flat_wording_is_gone
-      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_meaning_cell_found
-      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWordingMatcherNegativeProof::test_forged_reenumeration_is_otherwise_well_formed
-      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWordingMatcherNegativeProof::test_forged_reenumeration_is_rejected
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWording.test_coverage_wording_stated
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWording.test_old_flat_wording_is_gone
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWording.test_meaning_cell_found
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWordingMatcherNegativeProof.test_forged_reenumeration_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWordingMatcherNegativeProof.test_forged_reenumeration_is_rejected
     red_confirmed: true
     red_reason: >-
       test_coverage_wording_stated and test_old_flat_wording_is_gone both
@@ -86,13 +86,10 @@ acceptance_tests:
       entry's primary criterion -- the wording itself -- did go red first).
   AC-6:
     tests:
-      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_no_longer_states_unchanged_strength_for_other_arms
-      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_two_mode_split_naming_all_three_arms
-      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_coverage_wording_stated
-      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_old_flat_wording_is_gone
-      - tests/test_batch_stop_contract.py::TestContractDocumentStructure::test_fixed_four_field_order
-      - tests/test_batch_stop_contract.py::TestContractDocumentStructure::test_states_same_prefix_and_fields_for_both_terminal_states
-      - tests/test_batch_stop_contract.py::TestPrefixUniqueness::test_prefix_occurs_only_in_the_contract_document
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_no_longer_states_unchanged_strength_for_other_arms
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_states_two_mode_split_naming_all_three_arms
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWording.test_coverage_wording_stated
+      - tests.test_batch_stop_contract.TestGateFailClosedCoverageWording.test_old_flat_wording_is_gone
     red_confirmed: false
     red_reason: >-
       AC-6 combines (a) every pin this rewrite touches being replaced at
