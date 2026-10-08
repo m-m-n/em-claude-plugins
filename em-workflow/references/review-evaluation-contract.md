@@ -103,8 +103,11 @@ Each entry of `findings` carries: `stable_id`, `severity`, `category`,
 `reproduction` is carried from the reviewer finding the evaluator
 transcribes (null for a finding from a non-security perspective, and for a
 reviewer finding that carried no steps); a finding the evaluator originates
-carries its own `reproduction` value or null. What the evaluator does with
-the value is in Reproduction Verification below.
+carries its own `reproduction` value or null. When the evaluator merges
+reviewer findings at the same site (`same_site`) into one entry, the
+reproductions of every merged source finding are all kept for verification,
+not only one. What the evaluator does with the value is in Reproduction
+Verification below.
 
 Each entry of `dismissed_sites` carries: `file`, `line` (the site, same
 shape as a finding's own `file`/`line`), `run_id` (the reviewer run that
@@ -254,7 +257,15 @@ section by its heading for the orchestrator paths that bypass the evaluator.
    predicate defined in `references/review-phase.md`) with a `round_context`
    entry whose `reason` is `not reproduced` is dismissed as already resolved
    per `round_context`, without being verified again.
-7. **Budget.** Verification reads come from the Read-Only Constraint's fixed
+7. **Multiple reproductions.** A `security` finding the evaluator merges from
+   several `same_site` reviewer findings is verified against the
+   `reproduction` of every merged source finding (or each run's own
+   verification result), not just one. If any one of them is `reproduced`,
+   the finding is carried into `findings`. It is recorded as `not reproduced`
+   only when reading positively confirms that none of the stated steps hold.
+   A step set that could not be traced is `unverifiable`, never a ground for
+   `not reproduced`.
+8. **Budget.** Verification reads come from the Read-Only Constraint's fixed
    10-file budget, which they share with the Independent Inspection Duty
    above. The budget is not raised: when it runs out before a trace
    finishes, the outcome is `unverifiable`, never more reads.
