@@ -29,3 +29,18 @@ records:
     opus_escalation: false; key points: unverified is not disproved; accountability
     floor requires dismissed_sites reason; round_context carry-over to converge; recorded
     to Notion task comment'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-08T10:19:00+09:00'
+  source: orchestrator-rule
+  answer_mode: select
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: declined
+  resolution_note: 'task_id: task0004; path: tests/test_tier_record_schema_v2.py
+    (whole-file sha256 pin REVIEW_PHASE_SHA256 refreshed in place); declined because
+    the evidence part naming an existing AC-n of the task plan or a registered requirement
+    id was missing (the report cited IMPLEMENTATION.md Conventions instead); path shape
+    check and control-path check passed; surfaces as an ordinary deviation for the
+    containment check'
