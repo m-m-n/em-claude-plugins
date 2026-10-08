@@ -131,7 +131,7 @@ tasks:
     - FR10
     - FR12
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/security-review-repro-steps/task0001
     notes: null
   task0002:
