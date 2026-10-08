@@ -1,11 +1,11 @@
 schema_version: 1
 feature: tests-yaml-test-id-resolution
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: e56253fccdf8fce03467681923bd3d36e3fa8402
 last_input_digest: sha256:b7fc83fa018f426a582c5c8f01592255d70497a54bafe58b30b37f543a5c73c5
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -137,7 +137,17 @@ worker_runs:
   status: completed
   input_digest: sha256:b7fc83fa018f426a582c5c8f01592255d70497a54bafe58b30b37f543a5c73c5
   output_digest: sha256:61e456c17399f2393df3a976bc2c6d10ae0c3be20d8d79f0ee242d2ce11ca387
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:b7fc83fa018f426a582c5c8f01592255d70497a54bafe58b30b37f543a5c73c5
+  output_digest: null
+artifacts:
+- path: feature-docs/tests-yaml-test-id-resolution/REQUIREMENTS.md
+  sha256: sha256:8162dff7f08b4dbf5d1ed1dfef4a575a2c2fe7d6daa8bf27dfda021757f428fd
+  produced_by: create-spec-run-0003
+- path: feature-docs/tests-yaml-test-id-resolution/SPEC.md
+  sha256: sha256:79221ee29a0361d43e9de11f320d793604c4acf13c304204eb43c30f2b12c87f
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
