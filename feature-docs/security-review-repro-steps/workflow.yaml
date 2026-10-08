@@ -110,7 +110,8 @@ workflow:
   failed_items: []
   completed_at_commit: 0d30f1e2d019469eb79c0da940172565a0f7cffe
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: fb7644f182fa87eea141f6ee069e3ea148da89a2
 tasks:
   task0001:
     title: reproduction in the review output schemas, protocols and SCA scanner

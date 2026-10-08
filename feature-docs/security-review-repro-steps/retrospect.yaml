@@ -1,0 +1,57 @@
+feature: security-review-repro-steps
+collected_at: "2026-10-08T12:46:00+09:00"
+session_ids: [01a11999-d853-77d5-b147-982a9073bb9c]
+signals:
+  review_critical_high:
+    - stable_id: 92f22492f7a3576f
+      category: security
+      file: em-review/references/review-phase.md
+      title: 統合時に最長の reproduction だけを残すため、正しい再現手順を持つ security 指摘が declined になる
+      resolution: unresolved (round 1; auto-fix reverted, routed to rework task0005/task0006)
+    - stable_id: ba603aab85961eac
+      category: comprehensive
+      file: em-workflow/references/review-phase.md
+      title: em-workflow のオーケストレーター経路でも最長の reproduction だけが検証され、正しい手順が失われる
+      resolution: unresolved (round 1; auto-fix reverted, routed to rework task0004/task0006)
+    - stable_id: ee0630d8d4a5123f
+      category: comprehensive
+      file: em-workflow/references/review-evaluation-contract.md
+      title: 評価担当の経路には同一サイト統合時に複数の reproduction を検証する規則が無く、正しい手順を持つ security 指摘が not reproduced で棄却され得る
+      resolution: fixed
+    - stable_id: 8375ef92ce5f2f2a
+      category: security
+      file: em-workflow/references/review-phase.md
+      title: "TM-2: 検証不能だけで指摘を却下しない"
+      resolution: "deferred (batch mode: rework cap reached; later addressed by verify rework task0007 for SC5)"
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0004
+      files: [tests/test_tier_record_schema_v2.py]
+    - task: task0006
+      files: [tests/test_tier_record_schema_v2.py]
+  verification_failures: []   # 最終 verify は pass。途中ラウンド（rework 前）の failed_items は SC5（category: unknown）1 件
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読みで bucket 2（新ロジック・複数モジュール・外部契約の変更）が 0.89 と支配的"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.12, confidence: 0.11}
+        observed_at: "2026-10-08T09:11:30+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.88, confidence: 0.88}
+        observed_at: "2026-10-08T09:19:40+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 200
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      change_containment: multiple_modules
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "tests/test_tier_record_schema_v2.py の REVIEW_PHASE_SHA256（review-phase.md の全文ハッシュ固定）が、review-phase.md を触るタスクのたびに files 予測外の更新を強いた（task0004 / task0006）"
+  - "review auto-fix が既存の AC・テストと矛盾して revert → rework になる事例が 2 ラウンド続いた。仕様（最長 reproduction のみ保持）自体の穴は create-spec 段階で検出できた可能性"
+  - "litellm muse-spark-contributor が architecture / performance で review_data_too_large を返し、両観点が評価者の自己確認のみに依存した"
