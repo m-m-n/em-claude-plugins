@@ -1,0 +1,49 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_a_subdirectory_that_cannot_be_listed_is_recorded_and_the_readable_record_is_kept
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_a_scan_error_path_is_repository_relative_and_posix_for_a_deeply_nested_directory
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_a_listing_failure_of_the_test_docs_root_other_than_a_missing_root_is_recorded
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_a_subdirectory_that_disappears_during_the_scan_is_recorded
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_every_unlistable_directory_is_recorded_in_path_order
+    red_confirmed: true
+    red_reason: "NameError: name 'scan_records' is not defined (the scan entry point that returns the readable records and the scan errors did not exist)"
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestScanErrorReporting.test_a_non_empty_error_list_fails_naming_every_path_and_reason
+      - tests.test_tests_yaml_id_resolution.TestScanErrorReporting.test_an_empty_error_list_passes
+      - tests.test_tests_yaml_id_resolution.TestScanErrorReporting.test_the_scan_error_class_is_a_test_case_with_exactly_one_test
+    red_confirmed: true
+    red_reason: "NameError: name 'make_scan_error_test_class' is not defined (the scan-error test factory did not exist)"
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestScanErrorReporting.test_scan_errors_found_while_generating_the_record_class_reach_the_scan_error_class
+      - tests.test_tests_yaml_id_resolution.TestScanErrorReporting.test_a_scan_error_does_not_stop_the_import_of_the_module_or_its_generation
+    red_confirmed: true
+    red_reason: "AttributeError: type object 'TestRecords' has no attribute 'scan_errors'; AttributeError: module 'fx_checker_with_scan_error' has no attribute 'TestScanErrors' (no scan-error class was generated at module level)"
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_a_root_without_test_docs_records_no_scan_error_and_no_record
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_a_tree_that_lists_cleanly_records_no_scan_error
+      - tests.test_tests_yaml_id_resolution.TestScanErrorReporting.test_a_root_without_test_docs_fails_only_the_zero_record_guard
+      - tests.test_tests_yaml_id_resolution.TestZeroRecordGuardBehavior.test_guard_fails_for_a_root_without_test_docs
+    red_confirmed: true
+    red_reason: "NameError: name 'scan_records' is not defined; AttributeError: type object 'TestRecords' has no attribute 'scan_errors'. The existing TestZeroRecordGuardBehavior test already detects the guard failure and was green at base."
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_enumerate_records_keeps_its_plain_list_return_when_a_directory_cannot_be_listed
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_lists_nested_records_sorted_with_repository_relative_posix_paths
+      - tests.test_tests_yaml_id_resolution.TestRecordEnumeration.test_a_root_without_test_docs_has_no_records
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: enumerate_records already returned a plain sorted list of path strings at base, so the new shape test and the existing enumeration tests were green before any implementation; no red state occurred (this is a refactor with no observable change)."
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestScanErrorReporting.test_the_real_repository_scan_error_test_passes
+      - tests.test_tests_yaml_id_resolution.TestNormalRunCollection.test_discovery_of_the_tests_directory_collects_the_scan_error_test_with_no_registration
+      - tests.test_tests_yaml_id_resolution.TestNormalRunCollection.test_discovery_of_the_tests_directory_collects_the_record_tests_and_the_guard
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+    red_confirmed: true
+    red_reason: "NameError: name 'TestScanErrors' is not defined; AssertionError: 0 != 1 (discovery found no TestScanErrors test). The stdlib-only part pre-existed and is detected by the existing TestModuleSelfInspection test, which was green at base."

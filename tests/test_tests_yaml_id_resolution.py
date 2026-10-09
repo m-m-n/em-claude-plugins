@@ -83,17 +83,47 @@ _RECOVERABLE = (Exception, SystemExit)
 # --- record enumeration (FR5, FR8) ---------------------------------------------
 
 
-def enumerate_records(root):
-    """Sorted repository-relative POSIX paths of every file below
-    `<root>/test-docs/` whose name ends in `.tests.yaml`, at any depth.
-    Enumeration only: no record is read."""
+# `records`: sorted repository-relative POSIX paths of the records found.
+# `errors`: [(repository-relative POSIX path of a directory under `test-docs/`
+# that could not be listed, short reason), ...] sorted by path.
+Scan = namedtuple("Scan", ["records", "errors"])
+
+
+def scan_records(root):
+    """One walk of `<root>/test-docs/`: the records found and the directories
+    that could not be listed. A directory whose listing fails is a scan error
+    and the walk goes on with the rest, so nothing raises. A `test-docs/`
+    that does not exist is not a scan error: it leaves no record, which the
+    zero-record guard reports. Enumeration only: no record is read."""
     root = Path(root)
+    top = root / "test-docs"
     found = []
-    for directory, _dirnames, filenames in os.walk(root / "test-docs"):
+    errors = []
+
+    def on_error(exc):
+        named = exc.filename is not None
+        where = Path(os.fsdecode(exc.filename)) if named else top
+        if named and where == top and isinstance(exc, FileNotFoundError):
+            return
+        try:
+            rel = where.relative_to(root).as_posix()
+        except ValueError:
+            rel = where.as_posix()
+        errors.append((rel, f"{type(exc).__name__}: {exc.strerror or exc}"))
+
+    for directory, _dirnames, filenames in os.walk(top, onerror=on_error):
         for name in filenames:
             if name.endswith(RECORD_SUFFIX):
                 found.append(Path(directory, name).relative_to(root).as_posix())
-    return sorted(found)
+    return Scan(sorted(found), sorted(errors))
+
+
+def enumerate_records(root):
+    """Sorted repository-relative POSIX paths of every file below
+    `<root>/test-docs/` whose name ends in `.tests.yaml`, at any depth.
+    Enumeration only: no record is read. Directories that could not be listed
+    are left out silently here; `scan_records` reports them."""
+    return scan_records(root).records
 
 
 # --- extractor: SC-2, the supported record notation (FR4, FR7, FR8) -------------
@@ -788,9 +818,16 @@ def _record_test(root, rel):
 
 def make_record_test_class(root, class_name="TestRecords"):
     """A test case class with one test per record of `root`. Building it
-    enumerates records only; extraction and resolution run when a test runs."""
-    records = enumerate_records(root)
-    namespace = {"__module__": __name__, "__doc__": f"One test per test-docs/**/*.tests.yaml record under {root}."}
+    enumerates records only; extraction and resolution run when a test runs.
+    The scan that finds the records also finds the directories that could not
+    be listed; they never stop the building and are kept on the class as
+    `scan_errors`, to be handed to `make_scan_error_test_class`."""
+    records, scan_errors = scan_records(root)
+    namespace = {
+        "__module__": __name__,
+        "__doc__": f"One test per test-docs/**/*.tests.yaml record under {root}.",
+        "scan_errors": tuple(scan_errors),
+    }
     for rel, name in zip(records, record_test_names(records)):
         method = _record_test(root, rel)
         method.__name__ = name
@@ -813,6 +850,33 @@ def make_zero_record_guard_class(root, class_name="TestZeroRecordGuard"):
     )
 
 
+def format_scan_failure(errors):
+    return f"{len(errors)} scan error(s): directories under test-docs/ that could not be listed\n" + "\n".join(
+        f"  {rel}: {reason}" for rel, reason in errors
+    )
+
+
+def make_scan_error_test_class(scan_errors, class_name="TestScanErrors"):
+    """FR3: a test case class with one test that fails when `scan_errors` (the
+    `(repository-relative path, reason)` pairs of `scan_records`) is not empty,
+    listing every path and reason in its message, and passes when it is."""
+    errors = tuple(scan_errors)
+
+    def test_every_test_docs_directory_could_be_listed(self):
+        if errors:
+            self.fail(format_scan_failure(errors))
+
+    return type(
+        class_name,
+        (unittest.TestCase,),
+        {
+            "__module__": __name__,
+            "scan_errors": errors,
+            "test_every_test_docs_directory_could_be_listed": test_every_test_docs_directory_could_be_listed,
+        },
+    )
+
+
 def imported_top_level_modules(source):
     """The top-level module name of every import in `source`, in source order;
     a relative import is reported with its leading dots."""
@@ -828,8 +892,11 @@ def imported_top_level_modules(source):
 
 # The real repository's tests, found by the normal run with no registration.
 # Building them enumerates records only (a record may name this module, which
-# is then imported a second time under its `tests.` name).
+# is then imported a second time under its `tests.` name). The one scan that
+# builds the per-record tests also yields the directories that could not be
+# listed; `TestScanErrors` fails for them without stopping the import.
 TestRecordResolution = make_record_test_class(REPO_ROOT, "TestRecordResolution")
+TestScanErrors = make_scan_error_test_class(TestRecordResolution.scan_errors, "TestScanErrors")
 TestZeroRecordGuard = make_zero_record_guard_class(REPO_ROOT, "TestZeroRecordGuard")
 
 
@@ -1362,6 +1429,32 @@ class TestZeroRecordGuardBehavior(unittest.TestCase):
         self.assertIn(".tests.yaml", text)
 
 
+LOCKED_DIR_REL = "test-docs/locked-feature"
+LOCKED_RECORD_REL = LOCKED_DIR_REL + "/task0009.tests.yaml"
+
+
+def permission_error(path):
+    """The error a directory listing raises when the directory is not readable."""
+    return PermissionError(13, "Permission denied", str(path))
+
+
+@contextlib.contextmanager
+def listing_fails(failures):
+    """`os.scandir` (the directory-listing primitive of `os.walk`) raises
+    `failures[str(path)]` for exactly those directories and lists every other
+    one for real. Only the block is affected."""
+    real_scandir = os.scandir
+
+    def scandir(path="."):
+        error = failures.get(os.fspath(path))
+        if error is not None:
+            raise error
+        return real_scandir(path)
+
+    with mock.patch.object(os, "scandir", scandir):
+        yield
+
+
 class TestRecordEnumeration(unittest.TestCase):
     """Enumeration of `test-docs/**/*.tests.yaml` (FR5)."""
 
@@ -1401,6 +1494,188 @@ class TestRecordEnumeration(unittest.TestCase):
         os.chdir(elsewhere.name)
         self.assertEqual(enumerate_records(REPO_ROOT), before)
         self.assertTrue(before)
+
+    # -- scan errors (FR3): directories under test-docs/ that cannot be listed --
+
+    def test_a_subdirectory_that_cannot_be_listed_is_recorded_and_the_readable_record_is_kept(self):
+        """AC-1 (FR3, TS-3)."""
+        root = make_root(self, records={RECORD_REL: "x: 1\n", LOCKED_RECORD_REL: "x: 1\n"})
+        locked = root / LOCKED_DIR_REL
+        with listing_fails({str(locked): permission_error(locked)}):
+            scan = scan_records(root)
+        self.assertEqual(scan.records, [RECORD_REL])
+        self.assertEqual(len(scan.errors), 1, scan.errors)
+        ((rel, reason),) = scan.errors
+        self.assertEqual(rel, LOCKED_DIR_REL)
+        self.assertIn("PermissionError", reason)
+        self.assertIn("Permission denied", reason)
+
+    def test_a_scan_error_path_is_repository_relative_and_posix_for_a_deeply_nested_directory(self):
+        """AC-1 (FR3)."""
+        deep_rel = "test-docs/a/b/c"
+        root = make_root(self, records={RECORD_REL: "x: 1\n", deep_rel + "/task0002.tests.yaml": "x: 1\n"})
+        deep = root / deep_rel
+        with listing_fails({str(deep): permission_error(deep)}):
+            scan = scan_records(root)
+        self.assertEqual([rel for rel, _reason in scan.errors], [deep_rel])
+        self.assertEqual(scan.records, [RECORD_REL])
+
+    def test_a_listing_failure_of_the_test_docs_root_other_than_a_missing_root_is_recorded(self):
+        """AC-1 (FR3): only a root that does not exist is left to the zero-record guard."""
+        root = make_root(self, records={RECORD_REL: "x: 1\n"})
+        top = root / "test-docs"
+        with listing_fails({str(top): permission_error(top)}):
+            scan = scan_records(root)
+        self.assertEqual(scan.records, [])
+        self.assertEqual([rel for rel, _reason in scan.errors], ["test-docs"])
+        self.assertIn("PermissionError", scan.errors[0][1])
+
+    def test_a_subdirectory_that_disappears_during_the_scan_is_recorded(self):
+        """AC-1 (FR3): a missing subdirectory is a scan error; only a missing root is not."""
+        root = make_root(self, records={RECORD_REL: "x: 1\n", LOCKED_RECORD_REL: "x: 1\n"})
+        gone = root / LOCKED_DIR_REL
+        error = FileNotFoundError(2, "No such file or directory", str(gone))
+        with listing_fails({str(gone): error}):
+            scan = scan_records(root)
+        self.assertEqual([rel for rel, _reason in scan.errors], [LOCKED_DIR_REL])
+        self.assertIn("FileNotFoundError", scan.errors[0][1])
+        self.assertEqual(scan.records, [RECORD_REL])
+
+    def test_every_unlistable_directory_is_recorded_in_path_order(self):
+        """AC-1 (FR3)."""
+        root = make_root(
+            self,
+            records={
+                RECORD_REL: "x: 1\n",
+                "test-docs/z-locked/a.tests.yaml": "x: 1\n",
+                "test-docs/a-locked/a.tests.yaml": "x: 1\n",
+            },
+        )
+        failures = {
+            str(root / "test-docs" / name): permission_error(root / "test-docs" / name)
+            for name in ("z-locked", "a-locked")
+        }
+        with listing_fails(failures):
+            scan = scan_records(root)
+        self.assertEqual([rel for rel, _reason in scan.errors], ["test-docs/a-locked", "test-docs/z-locked"])
+        self.assertEqual(scan.records, [RECORD_REL])
+
+    def test_a_root_without_test_docs_records_no_scan_error_and_no_record(self):
+        """AC-4 (FR3): the missing root stays with the zero-record guard."""
+        scan = scan_records(make_root(self))
+        self.assertEqual((scan.records, scan.errors), ([], []))
+
+    def test_a_tree_that_lists_cleanly_records_no_scan_error(self):
+        """AC-4 (FR3)."""
+        root = make_root(self, records={RECORD_REL: "x: 1\n", LOCKED_RECORD_REL: "x: 1\n"})
+        scan = scan_records(root)
+        self.assertEqual(scan.errors, [])
+        self.assertEqual(scan.records, enumerate_records(root))
+
+    def test_enumerate_records_keeps_its_plain_list_return_when_a_directory_cannot_be_listed(self):
+        """AC-5 (SPEC A3, NFR3): the return shape is a list of path strings, errors or not."""
+        root = make_root(self, records={RECORD_REL: "x: 1\n", LOCKED_RECORD_REL: "x: 1\n"})
+        locked = root / LOCKED_DIR_REL
+        with listing_fails({str(locked): permission_error(locked)}):
+            found = enumerate_records(root)
+        self.assertIs(type(found), list)
+        self.assertEqual(found, [RECORD_REL])
+        self.assertTrue(all(type(rel) is str for rel in found))
+        self.assertEqual(enumerate_records(root), sorted([RECORD_REL, LOCKED_RECORD_REL]))
+
+
+class TestScanErrorReporting(unittest.TestCase):
+    """FR3: a directory that cannot be listed is the failure of a test the
+    normal run collects, with the module import and the readable records
+    unaffected."""
+
+    ERRORS = [
+        ("test-docs/a/locked", "PermissionError: Permission denied"),
+        ("test-docs/b", "FileNotFoundError: No such file or directory"),
+    ]
+
+    def test_a_non_empty_error_list_fails_naming_every_path_and_reason(self):
+        """AC-2 (FR3, SPEC AC-3)."""
+        result = run_generated(make_scan_error_test_class(self.ERRORS))
+        self.assertEqual(result.testsRun, 1)
+        texts = failure_texts(result)
+        self.assertEqual(len(texts), 1, texts)
+        (text,) = texts.values()
+        for rel, reason in self.ERRORS:
+            with self.subTest(rel):
+                self.assertTrue(
+                    any(rel in line and reason in line for line in text.splitlines()),
+                    f"no line with both {rel!r} and {reason!r} in {text!r}",
+                )
+
+    def test_an_empty_error_list_passes(self):
+        """AC-2 (FR3, SPEC AC-3)."""
+        result = run_generated(make_scan_error_test_class([]))
+        self.assertEqual((result.testsRun, len(result.failures), len(result.errors)), (1, 0, 0))
+
+    def test_the_scan_error_class_is_a_test_case_with_exactly_one_test(self):
+        """AC-2 (FR3, NFR2): a plain TestCase subclass with exactly one test, named as asked."""
+        test_class = make_scan_error_test_class(self.ERRORS, "TestFixtureScanErrors")
+        self.assertTrue(issubclass(test_class, unittest.TestCase))
+        self.assertEqual(test_class.__name__, "TestFixtureScanErrors")
+        self.assertEqual(test_class.__module__, __name__)
+        self.assertEqual(len(unittest.TestLoader().getTestCaseNames(test_class)), 1)
+
+    def test_scan_errors_found_while_generating_the_record_class_reach_the_scan_error_class(self):
+        """AC-3 (FR3): the single scan yields the readable records and the errors."""
+        root = make_root(
+            self,
+            records={RECORD_REL: simple_record({"AC-1": []}), LOCKED_RECORD_REL: simple_record({"AC-1": []})},
+        )
+        locked = root / LOCKED_DIR_REL
+        with listing_fails({str(locked): permission_error(locked)}):
+            record_class = make_record_test_class(root)
+        scan_class = make_scan_error_test_class(record_class.scan_errors)
+        self.assertEqual(
+            unittest.TestLoader().getTestCaseNames(record_class), record_test_names([RECORD_REL])
+        )
+        self.assertEqual([rel for rel, _reason in record_class.scan_errors], [LOCKED_DIR_REL])
+        self.assertEqual(failure_texts(run_generated(record_class)), {})
+        (text,) = failure_texts(run_generated(scan_class)).values()
+        self.assertIn(LOCKED_DIR_REL, text)
+        self.assertIn("PermissionError", text)
+
+    def test_a_root_without_test_docs_fails_only_the_zero_record_guard(self):
+        """AC-4 (FR3): no scan error, so the scan-error test passes; the guard fails as at base."""
+        root = make_root(self)
+        record_class = make_record_test_class(root)
+        self.assertEqual(tuple(record_class.scan_errors), ())
+        scan_result = run_generated(make_scan_error_test_class(record_class.scan_errors))
+        self.assertTrue(scan_result.wasSuccessful())
+        self.assertEqual(len(failure_texts(run_generated(make_zero_record_guard_class(root)))), 1)
+
+    def test_a_scan_error_does_not_stop_the_import_of_the_module_or_its_generation(self):
+        """AC-3 (FR3): the module-level generation runs against the real repository
+        with one real directory made unlistable; a fresh copy of this module is
+        executed so the module-level statements themselves are what run."""
+        real_records = enumerate_records(REPO_ROOT)
+        blocked_rel = Path(real_records[0]).parent.as_posix()
+        blocked = REPO_ROOT / blocked_rel
+        spec = importlib.util.spec_from_file_location("fx_checker_with_scan_error", Path(__file__).resolve())
+        module = importlib.util.module_from_spec(spec)
+        with listing_fails({str(blocked): permission_error(blocked)}):
+            spec.loader.exec_module(module)
+        readable = [rel for rel in real_records if not Path(rel).is_relative_to(blocked_rel)]
+        self.assertEqual(
+            sorted(unittest.TestLoader().getTestCaseNames(module.TestRecordResolution)),
+            sorted(record_test_names(readable)),
+        )
+        self.assertEqual([rel for rel, _reason in module.TestScanErrors.scan_errors], [blocked_rel])
+        self.assertTrue(issubclass(module.TestScanErrors, unittest.TestCase))
+        (text,) = failure_texts(run_generated(module.TestScanErrors)).values()
+        self.assertIn(blocked_rel, text)
+        self.assertIn("PermissionError", text)
+
+    def test_the_real_repository_scan_error_test_passes(self):
+        """AC-6 (FR3, NFR3): the real tree lists cleanly, so the module-level scan-error test passes."""
+        self.assertEqual(list(TestScanErrors.scan_errors), scan_records(REPO_ROOT).errors)
+        result = run_generated(TestScanErrors)
+        self.assertEqual((result.testsRun, result.wasSuccessful()), (1, True))
 
 
 # --- AC-4: the record check message, the syntax gate ---------------------------
@@ -1965,6 +2240,27 @@ class TestNormalRunCollection(unittest.TestCase):
         self.assertEqual(len(record_ids), len(enumerate_records(REPO_ROOT)))
         self.assertTrue(record_ids)
         self.assertEqual(len(guard_ids), 1)
+
+    def test_discovery_of_the_tests_directory_collects_the_scan_error_test_with_no_registration(self):
+        """AC-6 (FR3, NFR2): the module-level scan-error class is found by discovery."""
+        tests_dir = Path(__file__).resolve().parent
+        saved_path = list(sys.path)
+        try:
+            suite = unittest.TestLoader().discover(str(tests_dir), pattern=Path(__file__).name)
+        finally:
+            sys.path[:] = saved_path
+        ids = []
+
+        def walk(item):
+            if isinstance(item, unittest.TestSuite):
+                for child in item:
+                    walk(child)
+            else:
+                ids.append(item.id())
+
+        walk(suite)
+        self.assertFalse([i for i in ids if "_FailedTest" in i], ids[:5])
+        self.assertEqual(len([i for i in ids if ".TestScanErrors." in i]), 1)
 
     def test_module_import_performs_enumeration_only(self):
         source = Path(__file__).read_text(encoding="utf-8")
