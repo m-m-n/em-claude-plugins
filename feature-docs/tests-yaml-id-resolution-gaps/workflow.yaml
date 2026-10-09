@@ -169,7 +169,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-id-resolution-gaps/task0002
   task0003:
     title: Resolve readable IDs in ACs that have extraction errors
