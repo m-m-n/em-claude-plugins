@@ -1,0 +1,37 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestSyntaxGate.test_the_bare_tests_id_fails_the_gate_with_a_canonical_id_reason
+    red_confirmed: true
+    red_reason: "AssertionError: unexpectedly None (canonical_id_failure('tests') returned None at base)"
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestSyntaxGate.test_canonical_ids_pass_the_gate
+    red_confirmed: false
+    red_reason: "Regression guard: the module, class and method forms were accepted at base and must stay accepted, so the test passed before the segment-count rule existed; no red state occurred for this criterion."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestSyntaxGate.test_check_record_reports_a_bare_tests_id_and_leaves_the_search_path_and_module_cache_unchanged
+      - tests.test_tests_yaml_id_resolution.TestSyntaxGate.test_the_bare_tests_id_is_rejected_before_the_search_path_is_touched
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 : [] (check_record returned no error line for the bare tests); and AssertionError: 2 != 0 (the module search path was written twice while the bare tests was imported)"
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestSyntaxGate.test_canonical_ids_pass_the_gate
+      - tests.test_tests_yaml_id_resolution.TestResolutionWithoutExecution.test_module_class_and_method_ids_of_a_marker_test_module_pass_without_running_anything
+      - tests.test_tests_yaml_id_resolution.TestSearchPathAndModuleCache.test_root_is_at_the_front_of_the_search_path_only_for_the_duration_of_the_call
+    red_confirmed: false
+    red_reason: "The criterion is satisfied by correcting the three existing tests so they no longer treat the bare tests as passing; the corrected tests pass against the base gate as well as the new one, so no red state occurred. The rejection of the bare tests is asserted in the same class by the AC-1 test, which was red."
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestSyntaxGate.test_the_gate_docstring_states_the_two_or_more_segment_requirement
+    red_confirmed: true
+    red_reason: "AssertionError: 'two or more' not found in the base docstring of canonical_id_failure"
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+    red_confirmed: false
+    red_reason: "The verifiable outcome is the full run of python3 -m unittest discover -s tests (green after the change) plus the existing self-inspection test, which already passed at base and checks the standard-library-only import list; no red state occurred for this change."
