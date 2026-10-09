@@ -1,0 +1,31 @@
+feature: tests-yaml-id-resolution-gaps
+collected_at: "2026-10-09T10:35:00+09:00"
+session_ids: [01a11e2c-12fb-7427-b2a2-31968951baca.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みでバケット 2（新しいロジック・外部契約の変更）が 0.61 で最有力となり full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.64, confidence: 0.64, probabilities: {'0': 0.0, '1': 0.36, '2': 0.64, '3': 0.0}}
+        observed_at: "2026-10-09T08:59:27+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.61, confidence: 0.61, probabilities: {'0': 0.0, '1': 0.39, '2': 0.61, '3': 0.0}}
+        observed_at: "2026-10-09T08:59:27+09:00"
+    pre_survey_estimate:
+      files_expected: [tests/test_tests_yaml_id_resolution.py, test/README.md]
+      changed_lines_approx: 220
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      change_containment: single_module
+      changes_external_contract: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium 2 件（parse_tests のタブ行の扱い: 94f2ccd5e6f0db92 / 49d22a1031b45fcb）が unresolved のまま残った。critical/high のみを自動修正するゲートのため"
