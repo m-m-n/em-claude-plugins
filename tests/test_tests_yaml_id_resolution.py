@@ -10,16 +10,39 @@ extraction and resolution error listed (FR5, FR9). Each error line carries the
 file, the AC (or the record-level marker `(record)`), the ID when one applies,
 and a short English reason.
 
-Resolution (SC-1): the ID must be dot-separated Python identifiers whose first
-segment is exactly `tests` (no import happens for anything else); the longest
-leading part that names a module is imported and the remaining segments are
-looked up as attributes straight from the class and module dictionaries, so
-nothing resolved is called; the result must be a module, a unittest test case
-class (not the base class itself), or a function defined on such a class or an
-ancestor other than the base class and its own ancestors; and the standard
-loader's load-by-name must then raise nothing, record no error and return no
-failed-test placeholder in the suite (which is walked, never run). The module
-search path is restored to its exact prior value after every check.
+Resolution (SC-1) judges an ID in three stages and never raises for an ID:
+every failure is that ID's reason, and the later IDs of the record are still
+judged.
+
+- Syntax gate: the ID must have two or more dot-separated segments, each a
+  Python identifier, and the first segment must be exactly `tests`; any other
+  ID is rejected before any import happens.
+- Structural resolution: the longest leading part that names a module is
+  imported and the remaining segments are looked up as attributes straight from
+  the class and module dictionaries; the result must be a module, a unittest
+  test case class (not the base class itself), or a function defined on such a
+  class or an ancestor other than the base class and its own ancestors. A
+  method ID whose last segment is a dunder name (for example `__init__`) is
+  rejected as `not a test method`, even when the test case class defines that
+  name itself, and this happens before the loader sees the ID.
+- Loader confirmation: the standard loader's load-by-name must raise nothing,
+  record no error, return a unittest.TestSuite and return no failed-test
+  placeholder in it. A non-suite result (the None or the plain list that a
+  `load_tests` hook may return, for example) fails the ID, and so does an
+  exception raised while walking the returned suite, which is walked and never
+  run.
+
+Test method bodies are never executed. Loader confirmation, like ordinary test
+collection, instantiates the test classes (including any custom `__init__`) and
+runs `load_tests` hooks.
+
+The module search path is restored to its exact prior value after every check.
+Readable IDs of an AC that also has extraction errors (a repeated `tests` key
+or AC key, for example) are still resolved and reported under that AC key; an
+element that is itself an extraction error is not an ID and is not resolved. A
+`test-docs/` scan error (a directory that cannot be listed) is reported as a
+test failure naming the repository-relative path and the reason, while a
+missing `test-docs/` is still the zero-record guard's failure.
 
 This module imports the standard library only (NFR1) and no other test module.
 Importing it performs record enumeration only: records may name this module
@@ -599,8 +622,11 @@ def extract_record(path):
 
 # --- resolver: SC-1, canonical test ID and resolution criterion (FR6) -----------
 #
-# Nothing resolved is called and no test is run. Attribute lookups read class
-# and module dictionaries directly, so no descriptor or `__getattr__` runs.
+# Test method bodies are never executed. Loader confirmation, like ordinary test
+# collection, instantiates the test classes (including any custom `__init__`) and
+# runs `load_tests` hooks. Structural resolution reads class and module
+# dictionaries directly, so no descriptor or `__getattr__` runs, and it rejects a
+# dunder method ID before the loader can instantiate its class.
 
 _MISSING = object()
 
@@ -672,11 +698,17 @@ def _is_test_case_class(obj):
     return isinstance(obj, type) and issubclass(obj, unittest.TestCase) and obj is not unittest.TestCase
 
 
+def _is_dunder(name):
+    return name.startswith("__") and name.endswith("__")
+
+
 def _structural_failure(test_id):
     """SC-1 step 2: import the longest leading part that names a module, look
     up the remaining segments as attributes, and require a module, a test
     case class, or a function defined on a test case class (or one of its
-    ancestors) other than the unittest base class and its own ancestors."""
+    ancestors) other than the unittest base class and its own ancestors. A
+    method ID whose last segment is a dunder name is rejected here, whoever
+    defines it, so the loader never instantiates the class for it."""
     parts = test_id.split(".")
     try:
         module = importlib.import_module(parts[0])
@@ -720,6 +752,8 @@ def _structural_failure(test_id):
         return f"not a test case class: {where} is a {type(obj).__name__}, not a test case class"
     if not _is_test_case_class(parent):
         return f"not a test case class: {where.rsplit('.', 1)[0]} is not derived from unittest.TestCase"
+    if _is_dunder(parts[-1]):
+        return f"not a test method: {where} has a dunder name, which is never a test method"
     if defining in unittest.TestCase.__mro__:
         return f"not a test method: {where} is available only through the unittest base class"
     if not isinstance(obj, types.FunctionType):
@@ -737,8 +771,11 @@ def _walk_suite(suite):
 
 def _loader_failure(test_id):
     """SC-1 step 3: the standard loader's load-by-name on a fresh loader. A
-    failure is an exception, an entry in the loader's error list, or a failed
-    test placeholder in the returned suite, walked without running it."""
+    failure is an exception, an entry in the loader's error list, a result
+    that is not a unittest.TestSuite (such as the None or the plain list a
+    `load_tests` hook may return), an exception raised while walking the
+    result, or a failed test placeholder in the result, walked without running
+    it. Never raises for an ID: each failure is that ID's reason."""
     loader = unittest.TestLoader()
     try:
         suite = loader.loadTestsFromName(test_id)
@@ -747,9 +784,14 @@ def _loader_failure(test_id):
     if loader.errors:
         lines = [line for line in loader.errors[0].strip().splitlines() if line.strip()]
         return "loader error recorded: " + (_one_line(lines[-1]) if lines else "(empty)")
-    for case in _walk_suite(suite):
-        if type(case).__name__ == "_FailedTest":
-            return f"loader returned a failed test: {case.id()}"
+    if not isinstance(suite, unittest.TestSuite):
+        return f"loader returned a non-suite: {type(suite).__name__}, not a unittest.TestSuite"
+    try:
+        for case in _walk_suite(suite):
+            if type(case).__name__ == "_FailedTest":
+                return f"loader returned a failed test: {case.id()}"
+    except _RECOVERABLE as exc:
+        return f"walking the loader result raised {type(exc).__name__}: {_one_line(exc)}"
     return None
 
 
@@ -2164,6 +2206,391 @@ class TestResolutionWithoutExecution(unittest.TestCase):
         suite = unittest.TestSuite([unittest.TestSuite()])
         with mock.patch.object(unittest.TestLoader, "loadTestsFromName", return_value=suite):
             self.assertIsNone(loader_failure(self.root, "tests.fx_marker.TestA.test_one"))
+
+
+# --- gaps feature: dunder method IDs (FR5), loader confirmation (FR4), docs (FR6) --
+
+
+class TestDunderMethodIds(unittest.TestCase):
+    """FR5 (SPEC AC-5, TS-5): a method ID whose last segment is a dunder name
+    is rejected as `not a test method` by Structural resolution, before the
+    loader can instantiate the class."""
+
+    OWN_INIT_SOURCE = '''
+import unittest
+
+MARKER = @MARKER@
+
+
+class TestOwnInit(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        open(MARKER, "w").close()
+        super().__init__(*args, **kwargs)
+
+    def test_one(self):
+        pass
+'''
+
+    NAMES_SOURCE = '''
+import unittest
+
+
+class TestNames(unittest.TestCase):
+    def __repr__(self):
+        return "TestNames"
+
+    def __custom__(self):
+        pass
+
+    def ends_with_dunder__(self):
+        pass
+
+    def test_one(self):
+        pass
+
+
+TestNames.__starts_with_dunder = TestNames.test_one
+'''
+
+    OWN_INIT_ID = "tests.fx_own_init.TestOwnInit.__init__"
+
+    DUNDER_IDS = (
+        "tests.fx_dunder_names.TestNames.__custom__",
+        "tests.fx_dunder_names.TestNames.__repr__",
+        "tests.fx_dunder_names.TestNames.__call__",
+        "tests.fx_dunder_names.TestNames.__eq__",
+        "tests.fx_dunder_names.TestNames.__module__",
+        "tests.fx_dunder_names.TestNames.__doc__",
+    )
+
+    STILL_RESOLVING = (
+        "tests.fx_dunder_names",
+        "tests.fx_dunder_names.TestNames",
+        "tests.fx_dunder_names.TestNames.test_one",
+        "tests.fx_dunder_names.TestNames.ends_with_dunder__",
+        "tests.fx_dunder_names.TestNames.__starts_with_dunder",
+    )
+
+    def setUp(self):
+        marker = Path(tempfile.mkdtemp(prefix="marker-")).resolve() / "marker"
+        self.addCleanup(shutil.rmtree, marker.parent, ignore_errors=True)
+        self.marker = marker
+        token = repr(str(marker))
+        self.root = make_root(
+            self,
+            modules={
+                "fx_own_init": self.OWN_INIT_SOURCE.replace("@MARKER@", token),
+                "fx_dunder_names": self.NAMES_SOURCE,
+            },
+        )
+
+    def test_a_dunder_init_defined_by_the_test_case_itself_is_rejected_and_never_instantiated(self):
+        """AC-1 (FR5, SPEC AC-5)."""
+        reason = resolve_id(self.root, self.OWN_INIT_ID)
+        self.assertIsNotNone(reason)
+        self.assertTrue(reason.startswith("not a test method"), reason)
+        self.assertFalse(self.marker.exists(), "the class must not be instantiated for a dunder method ID")
+
+    def test_the_fixture_class_creates_the_marker_when_the_loader_instantiates_it(self):
+        """AC-1 control: the marker is observable, so its absence above means something."""
+        self.assertIsNone(resolve_id(self.root, "tests.fx_own_init.TestOwnInit"))
+        self.assertTrue(self.marker.exists())
+
+    def test_every_other_dunder_method_id_is_rejected_as_not_a_test_method(self):
+        """AC-2 (FR5)."""
+        for test_id in self.DUNDER_IDS:
+            with self.subTest(test_id):
+                reason = resolve_id(self.root, test_id)
+                self.assertIsNotNone(reason)
+                self.assertTrue(reason.startswith("not a test method"), reason)
+
+    def test_module_class_and_non_dunder_method_ids_still_resolve(self):
+        """AC-2 (FR5): only a dunder last segment of a method ID is affected."""
+        for test_id in self.STILL_RESOLVING:
+            with self.subTest(test_id):
+                self.assertIsNone(resolve_id(self.root, test_id))
+
+    def test_the_structural_step_alone_rejects_a_dunder_method_id(self):
+        """AC-1, AC-2 (FR5): the rejection happens before Loader confirmation."""
+        with _resolution_scope(self.root):
+            for test_id in (self.OWN_INIT_ID,) + self.DUNDER_IDS:
+                with self.subTest(test_id):
+                    reason = _structural_failure(test_id)
+                    self.assertIsNotNone(reason)
+                    self.assertTrue(reason.startswith("not a test method"), reason)
+
+    def test_the_loader_is_never_consulted_for_a_dunder_method_id(self):
+        """AC-1 (FR5): the loader step is not reached."""
+        with mock.patch(f"{__name__}._loader_failure", return_value=None) as loader:
+            for test_id in (self.OWN_INIT_ID,) + self.DUNDER_IDS:
+                with self.subTest(test_id):
+                    self.assertIsNotNone(resolve_id(self.root, test_id))
+        loader.assert_not_called()
+
+
+class TestLoaderConfirmation(unittest.TestCase):
+    """FR4 (SPEC AC-4, TS-4): a loader result that is not a suite, and an
+    exception raised while walking the result, are that ID's resolution error;
+    judging continues with the later IDs of the record."""
+
+    NONE_SOURCE = '''
+import unittest
+
+
+class TestA(unittest.TestCase):
+    def test_one(self):
+        pass
+
+
+def load_tests(loader, tests, pattern):
+    return None
+'''
+
+    LIST_SOURCE = '''
+import unittest
+
+
+class TestA(unittest.TestCase):
+    def test_one(self):
+        pass
+
+
+def load_tests(loader, tests, pattern):
+    return [TestA("test_one")]
+'''
+
+    WALK_RAISES_SOURCE = '''
+import unittest
+
+
+class ExplodingSuite(unittest.TestSuite):
+    def __iter__(self):
+        raise RuntimeError("walk-boom")
+
+
+def load_tests(loader, tests, pattern):
+    return ExplodingSuite()
+'''
+
+    WALK_RAISES_NESTED_SOURCE = '''
+import unittest
+
+
+class ExplodingSuite(unittest.TestSuite):
+    def __iter__(self):
+        raise ValueError("nested-walk-boom")
+
+
+def load_tests(loader, tests, pattern):
+    return unittest.TestSuite([unittest.TestSuite([ExplodingSuite()])])
+'''
+
+    OK_SOURCE = '''
+import unittest
+
+
+class TestA(unittest.TestCase):
+    def test_one(self):
+        pass
+'''
+
+    NON_SUITE = {
+        "tests.fx_lt_none": "NoneType",
+        "tests.fx_lt_list": "list",
+    }
+    WALK_RAISES = {
+        "tests.fx_walk_raises": ("RuntimeError", "walk-boom"),
+        "tests.fx_walk_raises_nested": ("ValueError", "nested-walk-boom"),
+    }
+    LATER_ID = "tests.nope.A.b"
+
+    def setUp(self):
+        self.root = make_root(
+            self,
+            modules={
+                "fx_lt_none": self.NONE_SOURCE,
+                "fx_lt_list": self.LIST_SOURCE,
+                "fx_walk_raises": self.WALK_RAISES_SOURCE,
+                "fx_walk_raises_nested": self.WALK_RAISES_NESTED_SOURCE,
+                "fx_lt_ok": self.OK_SOURCE,
+            },
+        )
+
+    @staticmethod
+    def _tests_cache():
+        return {n: id(m) for n, m in sys.modules.items() if n == "tests" or n.startswith("tests.")}
+
+    def test_a_loader_result_that_is_not_a_suite_is_a_resolution_error_naming_its_type(self):
+        """AC-3 (FR4): `load_tests` returning None, and returning a plain list."""
+        for test_id, type_name in self.NON_SUITE.items():
+            with self.subTest(test_id):
+                reason = resolve_id(self.root, test_id)
+                self.assertIsNotNone(reason)
+                self.assertIn("non-suite", reason)
+                self.assertIn(type_name, reason)
+
+    def test_check_record_reports_a_non_suite_loader_result_for_that_id(self):
+        """AC-3 (FR4): the same errors in check_record's result."""
+        _write(self.root / RECORD_REL, simple_record({"AC-1": list(self.NON_SUITE)}))
+        lines = check_record(self.root, RECORD_REL)
+        self.assertEqual(len(lines), len(self.NON_SUITE), lines)
+        for line, (test_id, type_name) in zip(lines, self.NON_SUITE.items()):
+            self.assertIn(f": AC-1: {test_id}: ", line)
+            self.assertIn("non-suite", line)
+            self.assertIn(type_name, line)
+
+    def test_an_exception_while_walking_the_loader_result_is_a_resolution_error_naming_its_type(self):
+        """AC-4 (FR4): the exception type and message, at the top level and in a nested suite."""
+        for test_id, (type_name, message) in self.WALK_RAISES.items():
+            with self.subTest(test_id):
+                reason = resolve_id(self.root, test_id)
+                self.assertIsNotNone(reason)
+                self.assertIn(type_name, reason)
+                self.assertIn(message, reason)
+
+    def test_check_record_reports_a_walk_exception_for_that_id_and_raises_nothing(self):
+        """AC-4 (FR4)."""
+        _write(self.root / RECORD_REL, simple_record({"AC-1": list(self.WALK_RAISES)}))
+        lines = check_record(self.root, RECORD_REL)
+        self.assertEqual(len(lines), len(self.WALK_RAISES), lines)
+        for line, (test_id, (type_name, _message)) in zip(lines, self.WALK_RAISES.items()):
+            self.assertIn(f": AC-1: {test_id}: ", line)
+            self.assertIn(type_name, line)
+
+    def test_a_substituted_loader_whose_suite_raises_when_iterated_is_a_resolution_error(self):
+        """AC-4 (FR4, TS-4): a test double for the loader instead of a fixture module."""
+
+        class ExplodingSuite(unittest.TestSuite):
+            def __iter__(self):
+                raise RuntimeError("double-boom")
+
+        with mock.patch.object(unittest.TestLoader, "loadTestsFromName", return_value=ExplodingSuite()):
+            reason = resolve_id(self.root, "tests.fx_lt_ok.TestA.test_one")
+        self.assertIsNotNone(reason)
+        self.assertIn("RuntimeError", reason)
+        self.assertIn("double-boom", reason)
+
+    def test_a_substituted_loader_returning_a_non_suite_is_a_resolution_error(self):
+        """AC-3 (FR4): a loader double returning something other than a suite."""
+        for result in (None, [], (), 3):
+            with self.subTest(type(result).__name__):
+                with mock.patch.object(unittest.TestLoader, "loadTestsFromName", return_value=result):
+                    reason = resolve_id(self.root, "tests.fx_lt_ok.TestA.test_one")
+                self.assertIsNotNone(reason)
+                self.assertIn("non-suite", reason)
+                self.assertIn(type(result).__name__, reason)
+
+    def test_a_real_suite_is_still_a_valid_loader_result(self):
+        """AC-3, AC-4 (FR4): the new checks do not reject a real suite."""
+        for test_id in ("tests.fx_lt_ok", "tests.fx_lt_ok.TestA", "tests.fx_lt_ok.TestA.test_one"):
+            with self.subTest(test_id):
+                self.assertIsNone(resolve_id(self.root, test_id))
+
+    def test_the_later_id_of_the_record_is_still_judged_and_search_path_and_cache_are_restored(self):
+        """AC-5 (FR4, SPEC AC-4)."""
+        for failing in list(self.NON_SUITE) + list(self.WALK_RAISES):
+            with self.subTest(failing):
+                _write(self.root / RECORD_REL, simple_record({"AC-1": [failing, self.LATER_ID]}))
+                path_before = list(sys.path)
+                cache_before = self._tests_cache()
+                lines = check_record(self.root, RECORD_REL)
+                self.assertEqual(len(lines), 2, lines)
+                self.assertIn(f": AC-1: {failing}: ", lines[0])
+                self.assertIn(f": AC-1: {self.LATER_ID}: ", lines[1])
+                self.assertIn("attribute not found", lines[1])
+                self.assertEqual(list(sys.path), path_before)
+                self.assertEqual(self._tests_cache(), cache_before)
+                for name, module in list(sys.modules.items()):
+                    file = getattr(module, "__file__", None)
+                    self.assertFalse(file and str(file).startswith(str(self.root)), f"{name} left from the fixture")
+
+    def test_search_path_and_cache_are_restored_by_resolve_id_on_the_new_failure_paths(self):
+        """AC-5 (FR4): resolve_id alone, for every new failure path."""
+        for test_id in list(self.NON_SUITE) + list(self.WALK_RAISES):
+            with self.subTest(test_id):
+                path_before = list(sys.path)
+                cache_before = self._tests_cache()
+                self.assertIsNotNone(resolve_id(self.root, test_id))
+                self.assertEqual(list(sys.path), path_before)
+                self.assertEqual(self._tests_cache(), cache_before)
+
+
+class TestModuleDocumentation(unittest.TestCase):
+    """FR6 (AC-6 of task0002): the module docstring and the resolver-section
+    comment state the non-execution guarantee range and the FR1-FR5
+    behaviours, and neither claims that resolved objects are never called or
+    instantiated."""
+
+    GUARANTEE = (
+        "Test method bodies are never executed. Loader confirmation, like ordinary "
+        "test collection, instantiates the test classes (including any custom "
+        "`__init__`) and runs `load_tests` hooks."
+    )
+    BEHAVIOURS = (
+        "two or more dot-separated segments",
+        "dunder",
+        "not a test method",
+        "non-suite",
+        "exception raised while walking",
+        "still resolved",
+        "scan error",
+    )
+    OLD_CLAIMS = (
+        "nothing resolved is called",
+        "nothing is called",
+        "never called",
+        "never be called",
+        "never instantiated",
+        "not called or instantiated",
+    )
+
+    @staticmethod
+    def _normalised(text):
+        return " ".join(text.split())
+
+    @classmethod
+    def _docstring(cls):
+        return cls._normalised(sys.modules[__name__].__doc__ or "")
+
+    @classmethod
+    def _resolver_comment(cls):
+        lines = Path(__file__).read_text(encoding="utf-8").splitlines()
+        start = next(i for i, line in enumerate(lines) if line.startswith("# --- resolver:"))
+        block = []
+        for line in lines[start:]:
+            if not line.startswith("#"):
+                break
+            block.append(line.lstrip("#"))
+        return cls._normalised(" ".join(block))
+
+    def texts(self):
+        return {"module docstring": self._docstring(), "resolver-section comment": self._resolver_comment()}
+
+    def test_the_resolver_section_comment_was_found(self):
+        self.assertIn("resolver", self._resolver_comment())
+
+    def test_both_state_the_same_non_execution_guarantee_range(self):
+        for where, text in self.texts().items():
+            with self.subTest(where):
+                self.assertIn(self.GUARANTEE, text)
+
+    def test_neither_claims_that_resolved_objects_are_never_called_or_instantiated(self):
+        for where, text in self.texts().items():
+            lowered = text.lower()
+            for claim in self.OLD_CLAIMS:
+                with self.subTest(where=where, claim=claim):
+                    self.assertNotIn(claim, lowered)
+            with self.subTest(where=where, claim="never/nothing ... called/instantiated in one sentence"):
+                self.assertIsNone(
+                    re.search(r"\b(nothing|never|none)\b[^.]*\b(called|instantiated|calls|instantiates)\b", lowered),
+                    text,
+                )
+
+    def test_the_module_docstring_describes_the_stages_of_fr1_to_fr5(self):
+        doc = self._docstring().lower()
+        for phrase in self.BEHAVIOURS:
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
 
 
 # --- AC-6: search path and module cache (TM-3) --------------------------------
