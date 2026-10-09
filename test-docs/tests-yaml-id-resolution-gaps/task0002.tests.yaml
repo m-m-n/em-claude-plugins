@@ -1,0 +1,48 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestDunderMethodIds.test_a_dunder_init_defined_by_the_test_case_itself_is_rejected_and_never_instantiated
+      - tests.test_tests_yaml_id_resolution.TestDunderMethodIds.test_the_structural_step_alone_rejects_a_dunder_method_id
+      - tests.test_tests_yaml_id_resolution.TestDunderMethodIds.test_the_loader_is_never_consulted_for_a_dunder_method_id
+    red_confirmed: true
+    red_reason: "resolve_id on tests.fx_own_init.TestOwnInit.__init__ returned None at base (AssertionError: unexpectedly None), so the loader was consulted; _structural_failure returned None for it as well."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestDunderMethodIds.test_every_other_dunder_method_id_is_rejected_as_not_a_test_method
+    red_confirmed: true
+    red_reason: "At base the subtests for the test case's own __custom__ and __repr__ failed (resolve_id returned None). The guard TestDunderMethodIds.test_module_class_and_non_dunder_method_ids_still_resolve was green before and after the change by design and is not listed here."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_a_loader_result_that_is_not_a_suite_is_a_resolution_error_naming_its_type
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_check_record_reports_a_non_suite_loader_result_for_that_id
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_a_substituted_loader_returning_a_non_suite_is_a_resolution_error
+    red_confirmed: true
+    red_reason: "At base a load_tests hook returning None raised TypeError out of resolve_id (the walk iterated None), and a hook returning a plain list resolved with no error (AssertionError: unexpectedly None)."
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_an_exception_while_walking_the_loader_result_is_a_resolution_error_naming_its_type
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_check_record_reports_a_walk_exception_for_that_id_and_raises_nothing
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_a_substituted_loader_whose_suite_raises_when_iterated_is_a_resolution_error
+    red_confirmed: true
+    red_reason: "At base the RuntimeError and ValueError raised while iterating the returned suite propagated out of resolve_id and check_record (test ERROR with the exception traceback)."
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_the_later_id_of_the_record_is_still_judged_and_search_path_and_cache_are_restored
+      - tests.test_tests_yaml_id_resolution.TestLoaderConfirmation.test_search_path_and_cache_are_restored_by_resolve_id_on_the_new_failure_paths
+    red_confirmed: true
+    red_reason: "At base the walk exceptions escaped check_record so the later ID tests.nope.A.b was never judged (ERROR), and for the list result check_record returned 1 line instead of 2 (AssertionError: 1 != 2)."
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleDocumentation.test_both_state_the_same_non_execution_guarantee_range
+      - tests.test_tests_yaml_id_resolution.TestModuleDocumentation.test_neither_claims_that_resolved_objects_are_never_called_or_instantiated
+      - tests.test_tests_yaml_id_resolution.TestModuleDocumentation.test_the_module_docstring_describes_the_stages_of_fr1_to_fr5
+    red_confirmed: true
+    red_reason: "At base neither the module docstring nor the resolver-section comment contained the non-execution guarantee statement, both still said nothing resolved is called, and the docstring lacked the FR1-FR5 phrases (assertIn failures)."
+  AC-7:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules detects a non-standard-library import in the checker module; no red state occurred for this change. That the whole suite passes has no single test ID; it is the result of python3 -m unittest discover -s tests."
