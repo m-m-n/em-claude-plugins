@@ -1,0 +1,43 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_readable_ids_in_an_ac_with_an_extraction_error_still_get_resolution_errors
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_extraction_error_and_resolution_error_are_listed_together_in_one_record_failure
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_extraction_yields_readable_ids_and_extraction_errors_as_separate_results
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 : [... AC-1: unsupported notation at line 6: mapping where a scalar is expected] (no resolution error for tests.nope.A.b was returned); KeyError: 'AC-1' in the extraction test (an AC with an error was absent from acs); '2 error(s) in this record' not found (the record failure listed 1 error)."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_readable_ids_under_a_duplicated_tests_key_are_resolved_under_the_ac
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_readable_ids_under_a_duplicated_ac_key_are_resolved_under_that_ac_key
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 : [... AC-1: duplicate AC key] and the same for the duplicated tests key (the duplicate-key extraction error was returned, the readable probe IDs were not resolved)."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_an_element_that_is_an_extraction_error_is_never_resolved_in_a_block_list
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_an_element_that_is_an_extraction_error_is_never_resolved_in_a_flow_list
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_a_fragment_of_a_multi_line_value_is_not_kept_when_a_readable_id_precedes_it
+    red_confirmed: true
+    red_reason: "Every subTest failed on the original implementation with AssertionError: 0 != 1 on the readable control ID next to the error element (control IDs were not resolved because the AC had an extraction error). The negative half (probe IDs of the error element are not resolved) was additionally checked by mutation: removing the first-line-fragment removal fails the multi-line cases, and making a failed flow list yield partial IDs fails all six flow cases."
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_readable_ids_in_an_ac_with_an_extraction_error_still_get_resolution_errors
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 (the inverted expectation, run on the original implementation). The old name test_an_ac_with_an_extraction_error_gets_no_resolution_errors no longer exists in the module; the record naming it fails the record check (see AC-5)."
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestRecordResolution.test_record__test_docs_tests_yaml_test_id_resolution_task0001_tests_yaml
+    red_confirmed: true
+    red_reason: "After the rename and before the record edit, the generated per-record test failed: AC-2 ... TestExtractionErrors.test_an_ac_with_an_extraction_error_gets_no_resolution_errors: attribute not found."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation criterion (docstrings of extract_text and check_record, the Extraction section comment). Searched the tests directory by relative path and by basename test_tests_yaml_id_resolution: the only other hit, tests/test_tests_yaml_id_rules_docs.py, quotes the file name in README wording checks and does not read these docstrings, so no executable check can fail; checked by reading at review."
+  AC-7:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+    red_confirmed: false
+    red_reason: "The existing TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules detects a non-standard-library import in the checker module, and the discovery run (python3 -m unittest discover -s tests) is the suite-level check; both were green before the change and no red state occurred for this criterion."
