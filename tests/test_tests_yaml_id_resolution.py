@@ -73,8 +73,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RECORD_SUFFIX = ".tests.yaml"
 RECORD_MARKER = "(record)"
 
-# `acs`: {AC key: [ID, ...]} for every AC extracted without error, in file
-# order. `errors`: [(AC key or RECORD_MARKER, reason), ...].
+# `acs`: {AC key: [ID, ...]}, the readable IDs of every AC in file order,
+# whether or not that AC also has extraction errors. `errors`: [(AC key or
+# RECORD_MARKER, reason), ...]. The two are disjoint per AC: an element that
+# produced an extraction error contributes no ID.
 Extraction = namedtuple("Extraction", ["acs", "errors"])
 
 _RECOVERABLE = (Exception, SystemExit)
@@ -131,6 +133,11 @@ def enumerate_records(root):
 # The record is read as UTF-8 text, line by line, and never imported. Only
 # `acceptance_tests.*.tests` is read; every other value is opaque text bounded
 # by indentation, so a `tests:` or dash line inside it is never an ID.
+#
+# Per AC the extraction yields two disjoint results: the readable IDs (scalars
+# complete on one line) and the extraction errors (one per offending element).
+# An AC with extraction errors keeps its readable IDs, so they are still
+# resolved; an element that is itself an error is never an ID.
 
 
 class _Unsupported(Exception):
@@ -399,7 +406,6 @@ class _RecordParser:
         lines = self.lines
         ac_indent = None
         ids_by_ac = {}
-        bad = set()
         seen = set()
         k = start
         while k < end:
@@ -429,18 +435,15 @@ class _RecordParser:
                 _is_ignorable(lines[body_end]) or _indent_of(lines[body_end])[0] > ac_indent
             ):
                 body_end += 1
-            errors_before = len(self.errors)
             ids = self.parse_ac(ac_key, k, rest, body_end)
             if ac_key in seen:
                 self.add_error(ac_key, "duplicate AC key")
-                bad.add(ac_key)
             seen.add(ac_key)
-            if ids is None or len(self.errors) > errors_before:
-                bad.add(ac_key)
-            else:
-                ids_by_ac[ac_key] = ids
+            # A duplicated AC key keeps the readable IDs of every occurrence
+            # under the one key's name.
+            ids_by_ac.setdefault(ac_key, []).extend(ids)
             k = body_end
-        return {ac: ids for ac, ids in ids_by_ac.items() if ac not in bad}
+        return ids_by_ac
 
     # -- field level --
 
@@ -450,7 +453,7 @@ class _RecordParser:
             self.unsupported(ac_key, key_index, "inline value after the AC key")
         field_indent = None
         tests_count = 0
-        tests_ids = None
+        tests_ids = []
         f = key_index + 1
         while f < body_end:
             line = lines[f]
@@ -481,48 +484,53 @@ class _RecordParser:
             if tests_count > 1:
                 self.add_error(ac_key, "duplicate tests key")
             ids, f = self.parse_tests(ac_key, f, field_rest, field_indent, body_end)
-            if tests_count == 1:
-                tests_ids = ids
+            # A duplicated tests key keeps the readable IDs of every occurrence.
+            tests_ids.extend(ids)
         if tests_count == 0:
             self.add_error(ac_key, "missing tests key")
         return tests_ids
 
     def parse_tests(self, ac_key, key_index, rest, key_indent, limit):
-        """The value of a `tests` key: (IDs or None on an error, next index)."""
+        """The value of a `tests` key: (the readable IDs, next index). Every
+        element that is an extraction error is reported and contributes no ID;
+        the readable IDs of the other elements are returned either way."""
         lines = self.lines
         value = rest.lstrip(" \t")
         if value.startswith("["):
             try:
                 return _read_flow_sequence(value), key_index + 1
             except _Unsupported as exc:
+                # A flow list that failed to parse yields no ID at all.
                 self.unsupported(ac_key, key_index, str(exc))
-                return None, key_index + 1
+                return [], key_index + 1
         if not _comment_or_empty(rest):
             self.unsupported(ac_key, key_index, "tests value is neither a block list nor a one-line flow list")
-            return None, self.skip_deeper(key_index + 1, key_indent, limit)
+            return [], self.skip_deeper(key_index + 1, key_indent, limit)
         f = key_index + 1
         while f < limit and _is_ignorable(lines[f]):
             f += 1
         neither = "tests key has neither a value nor items"
         if f >= limit:
             self.unsupported(ac_key, key_index, neither)
-            return None, key_index + 1
+            return [], key_index + 1
         first_indent, first = _indent_of(lines[f])
         if first.startswith("\t"):
             self.unsupported(ac_key, f, "tab in indentation")
-            return None, f + 1
+            return [], f + 1
         if not _is_dash(first):
             if first_indent > key_indent:
                 self.unsupported(ac_key, f, "tests value is not a block sequence of scalars")
-                return None, self.skip_deeper(f + 1, key_indent, limit)
+                return [], self.skip_deeper(f + 1, key_indent, limit)
             self.unsupported(ac_key, key_index, neither)
-            return None, key_index + 1
+            return [], key_index + 1
         if first_indent < key_indent:
             self.unsupported(ac_key, key_index, neither)
-            return None, key_index + 1
+            return [], key_index + 1
         item_indent = first_indent
         ids = []
-        clean = True
+        # True while the most recent element is a one-line scalar kept in `ids`,
+        # so a deeper line that follows it can take it back.
+        last_is_id = False
         while f < limit:
             line = lines[f]
             if _is_ignorable(line):
@@ -531,34 +539,43 @@ class _RecordParser:
             indent, stripped = _indent_of(line)
             if stripped.startswith("\t"):
                 self.unsupported(ac_key, f, "tab in indentation")
-                clean = False
                 f += 1
                 continue
             if indent < item_indent:
                 break
             if indent > item_indent:
                 self.unsupported(ac_key, f, "tests item continues or nests on a deeper line (multi-line or nested value)")
-                clean = False
+                if last_is_id:
+                    # The element before it is a multi-line value, not an ID:
+                    # its first-line fragment is taken back out.
+                    ids.pop()
+                    last_is_id = False
                 f = self.skip_deeper(f + 1, item_indent, limit)
                 continue
             if not _is_dash(stripped):
                 break
             content = stripped[1:].lstrip(" \t")
+            last_is_id = False
             try:
                 if content == "" or content.startswith("#"):
                     raise _Unsupported("empty tests item")
                 ids.append(_read_item_scalar(content))
+                last_is_id = True
             except _Unsupported as exc:
                 self.unsupported(ac_key, f, str(exc))
-                clean = False
             f += 1
-        return (ids if clean else None), f
+        return ids, f
 
 
 def extract_text(text):
     """Extract `acceptance_tests.*.tests` from the text of one record (SC-2).
     Never raises for a malformed record: every problem is an entry in
-    `errors`, and an AC with an error is left out of `acs`."""
+    `errors`. The IDs read as a one-line scalar are in `acs` for every AC,
+    whether or not that AC also has errors (a duplicated tests key and a
+    duplicated AC key included, under the AC key's name). An element that is
+    itself an extraction error contributes no ID: a mapping, a nested or an
+    empty element, a multi-line value (its first-line fragment included), an
+    unclosed quote, and a flow list that failed to parse (no ID at all)."""
     parser = _RecordParser(text)
     acs = parser.parse()
     return Extraction(acs, parser.errors)
@@ -770,8 +787,11 @@ def format_failure(rel, lines):
 
 def check_record(root, rel):
     """The full list of error lines for one record: every extraction error,
-    plus a resolution error for every invalid ID of every AC that was
-    extracted without error. Nothing stops at the first error."""
+    plus a resolution error for every invalid readable ID of every AC, whether
+    or not that AC also has extraction errors (IDs under a duplicated tests key
+    or a duplicated AC key are reported under the AC key's name). An element
+    that is itself an extraction error is never resolved. Nothing stops at the
+    first error: resolve_id never raises, so the loop needs no handling."""
     extraction = extract_record(Path(root) / rel)
     lines = [format_error(rel, ac, None, reason) for ac, reason in extraction.errors]
     outcomes = {}
@@ -1240,7 +1260,10 @@ def _ac_record(body):
 
 class TestExtractionErrors(unittest.TestCase):
     """AC-2 (FR7, TS-6): each unsupported form fails with a message naming the
-    record file, the AC (or the record-level marker) and the matching reason."""
+    record file, the AC (or the record-level marker) and the matching reason.
+    Readable IDs in an AC that also has extraction errors are still resolved
+    and reported together with them; an element that is itself an extraction
+    error is never resolved (FR2)."""
 
     def check(self, text):
         root = make_root(self, records={RECORD_REL: text})
@@ -1344,10 +1367,179 @@ class TestExtractionErrors(unittest.TestCase):
         self.assert_error(lines, "AC-2", "missing tests key")
         self.assert_error(lines, "AC-3", "duplicate tests key")
 
-    def test_an_ac_with_an_extraction_error_gets_no_resolution_errors(self):
+    def resolution_lines(self, lines, ac, test_id):
+        """The resolution error lines (file, AC, ID, reason) for `test_id` under `ac`."""
+        prefix = f"{RECORD_REL}: {ac}: {test_id}: "
+        return [line for line in lines if line.startswith(prefix)]
+
+    def test_readable_ids_in_an_ac_with_an_extraction_error_still_get_resolution_errors(self):
         text = _ac_record("  AC-1:\n    tests:\n      - tests.nope.A.b\n      - name: x\n")
         _, lines = self.check(text)
-        self.assertFalse(any("tests.nope.A.b" in line for line in lines), lines)
+        self.assert_error(lines, "AC-1", "mapping where a scalar is expected")
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.A.b")), 1, lines)
+        self.assertEqual(len(lines), 2, lines)
+
+    def test_extraction_error_and_resolution_error_are_listed_together_in_one_record_failure(self):
+        root = make_root(
+            self,
+            records={RECORD_REL: _ac_record("  AC-1:\n    tests:\n      - tests.nope.A.b\n      - name: x\n")},
+        )
+        texts = failure_texts(run_generated(make_record_test_class(root)))
+        self.assertEqual(len(texts), 1, texts)
+        (text,) = texts.values()
+        self.assertIn("2 error(s) in this record", text)
+        self.assertIn("mapping where a scalar is expected", text)
+        self.assertIn(f"{RECORD_REL}: AC-1: tests.nope.A.b: ", text)
+
+    def test_extraction_yields_readable_ids_and_extraction_errors_as_separate_results(self):
+        text = _ac_record(
+            "  AC-1:\n    tests:\n      - tests.read.A.b\n      - name: x\n      - tests.read.A.c\n"
+            "  AC-2:\n    red_confirmed: true\n"
+        )
+        extraction = extract_text(text)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.read.A.b", "tests.read.A.c"])
+        self.assertEqual(extraction.acs.get("AC-2", []), [])
+        self.assertEqual(
+            sorted(ac for ac, _reason in extraction.errors), ["AC-1", "AC-2"], extraction.errors
+        )
+
+    def test_readable_ids_under_a_duplicated_tests_key_are_resolved_under_the_ac(self):
+        body = "  AC-1:\n    tests: [tests.nope.first]\n    tests:\n      - tests.nope.second\n"
+        _, lines = self.check(_ac_record(body))
+        self.assert_error(lines, "AC-1", "duplicate tests key")
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.first")), 1, lines)
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.second")), 1, lines)
+        self.assertEqual(len(lines), 3, lines)
+
+    def test_readable_ids_under_a_duplicated_ac_key_are_resolved_under_that_ac_key(self):
+        body = (
+            "  AC-1:\n    tests: [tests.nope.first]\n"
+            "  AC-2:\n    tests: []\n"
+            "  AC-1:\n    tests:\n      - tests.nope.second\n"
+        )
+        _, lines = self.check(_ac_record(body))
+        self.assert_error(lines, "AC-1", "duplicate AC key")
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.first")), 1, lines)
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.second")), 1, lines)
+        self.assertFalse(any(": AC-2: " in line for line in lines), lines)
+        self.assertEqual(len(lines), 3, lines)
+
+    # An element that is itself an extraction error contributes no ID. Each case
+    # embeds probes of two or more segments in the error element: resolving any
+    # of them would add a resolution error naming it.
+    BLOCK_ERROR_ELEMENTS = {
+        "mapping": (
+            "      - tests.nope.mapped: tests.nope.mappedvalue\n",
+            "mapping where a scalar is expected",
+            ["tests.nope.mapped", "tests.nope.mappedvalue"],
+        ),
+        "nested": (
+            "      - - tests.nope.nested\n",
+            "nested sequence or mapping",
+            ["tests.nope.nested"],
+        ),
+        "empty element": (
+            "      - # tests.nope.emptycomment\n",
+            "empty tests item",
+            ["tests.nope.emptycomment"],
+        ),
+        "empty element followed by a deeper line": (
+            "      -\n          tests.nope.afterempty\n",
+            "empty tests item",
+            ["tests.nope.afterempty"],
+        ),
+        "multi-line value continuing onto a deeper line": (
+            "      - tests.nope.firstline\n        tests.nope.secondline\n",
+            "continues or nests on a deeper line",
+            ["tests.nope.firstline", "tests.nope.secondline"],
+        ),
+        "quoted multi-line value continuing onto a deeper line": (
+            "      - 'tests.nope.quotedfirst'\n        tests.nope.quotedsecond\n",
+            "continues or nests on a deeper line",
+            ["tests.nope.quotedfirst", "tests.nope.quotedsecond"],
+        ),
+        "unclosed single quote": (
+            "      - 'tests.nope.single\n        tail'\n",
+            "quoted scalar is not closed",
+            ["tests.nope.single"],
+        ),
+        "unclosed double quote": (
+            "      - \"tests.nope.double\n        tail\"\n",
+            "quoted scalar is not closed",
+            ["tests.nope.double"],
+        ),
+    }
+
+    FLOW_ERROR_LISTS = {
+        "flow list not closed on its line": (
+            "    tests: [tests.nope.fa, tests.nope.fb\n",
+            "not closed on its line",
+            ["tests.nope.fa", "tests.nope.fb"],
+        ),
+        "flow list spanning lines": (
+            "    tests: [tests.nope.fc,\n      tests.nope.fd]\n",
+            "unsupported notation",
+            ["tests.nope.fc", "tests.nope.fd"],
+        ),
+        "flow list with a nested list": (
+            "    tests: [tests.nope.fe, [tests.nope.ff]]\n",
+            "nested flow collection",
+            ["tests.nope.fe", "tests.nope.ff"],
+        ),
+        "flow list with an empty element": (
+            "    tests: [tests.nope.fg, ]\n",
+            "empty scalar",
+            ["tests.nope.fg"],
+        ),
+        "flow list with a mapping element": (
+            "    tests: [tests.nope.fh, tests.nope.fi: x]\n",
+            "mapping where a scalar is expected",
+            ["tests.nope.fh", "tests.nope.fi"],
+        ),
+        "flow list with an unclosed quote": (
+            "    tests: [tests.nope.fj, 'tests.nope.fk]\n",
+            "quoted scalar is not closed",
+            ["tests.nope.fj", "tests.nope.fk"],
+        ),
+    }
+
+    def test_an_element_that_is_an_extraction_error_is_never_resolved_in_a_block_list(self):
+        before, after = "tests.nope.control_before", "tests.nope.control_after"
+        for label, (element, reason, probes) in self.BLOCK_ERROR_ELEMENTS.items():
+            with self.subTest(label):
+                body = f"  AC-1:\n    tests:\n      - {before}\n{element}      - {after}\n"
+                _, lines = self.check(_ac_record(body))
+                self.assert_error(lines, "AC-1", reason)
+                # The readable neighbours of the error element are still resolved.
+                self.assertEqual(len(self.resolution_lines(lines, "AC-1", before)), 1, lines)
+                self.assertEqual(len(self.resolution_lines(lines, "AC-1", after)), 1, lines)
+                for probe in probes:
+                    self.assertFalse(any(probe in line for line in lines), f"{probe} was resolved: {lines}")
+
+    def test_an_element_that_is_an_extraction_error_is_never_resolved_in_a_flow_list(self):
+        # The readable control sits under the first tests key of the AC; the
+        # failing flow list is a second tests key (a duplicate-key error as well).
+        control = "tests.nope.control_flow"
+        for label, (tests_line, reason, probes) in self.FLOW_ERROR_LISTS.items():
+            with self.subTest(label):
+                body = f"  AC-1:\n    tests:\n      - {control}\n{tests_line}"
+                _, lines = self.check(_ac_record(body))
+                self.assert_error(lines, "AC-1", reason)
+                self.assert_error(lines, "AC-1", "duplicate tests key")
+                self.assertEqual(len(self.resolution_lines(lines, "AC-1", control)), 1, lines)
+                for probe in probes:
+                    self.assertFalse(any(probe in line for line in lines), f"{probe} was resolved: {lines}")
+
+    def test_a_fragment_of_a_multi_line_value_is_not_kept_when_a_readable_id_precedes_it(self):
+        body = (
+            "  AC-1:\n    tests:\n      - tests.nope.kept\n      - tests.nope.fragment\n"
+            "        continued text\n      - tests.nope.also_kept\n"
+        )
+        _, lines = self.check(_ac_record(body))
+        self.assert_error(lines, "AC-1", "continues or nests on a deeper line")
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.kept")), 1, lines)
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.also_kept")), 1, lines)
+        self.assertFalse(any("tests.nope.fragment" in line for line in lines), lines)
 
 
 # --- AC-3: empty lists, unreadable records, the zero-record guard -------------

@@ -265,7 +265,7 @@ acceptance_tests:
       - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_missing_acceptance_tests_is_reported_with_the_record_level_marker
       - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_each_error_makes_the_per_record_test_fail_naming_the_file_and_the_ac
       - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_all_extraction_errors_are_collected_not_only_the_first
-      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_an_ac_with_an_extraction_error_gets_no_resolution_errors
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_readable_ids_in_an_ac_with_an_extraction_error_still_get_resolution_errors
     red_confirmed: true
     red_reason: "NameError: name 'check_record' is not defined (TestExtractionErrors tests errored before the record check existed); test_each_error_makes_the_per_record_test_fail_naming_the_file_and_the_ac errored with NameError: name 'make_record_test_class' is not defined."
   AC-3:
