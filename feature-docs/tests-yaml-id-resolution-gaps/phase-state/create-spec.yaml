@@ -1,7 +1,7 @@
 schema_version: 1
 feature: tests-yaml-id-resolution-gaps
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 83465d7de0ad5bcaed3be8a089b63587cc989bbb
 last_input_digest: sha256:6be7a9d1658dee38cc99dad5ef98df44d3e4364839c9fa6b6571a1d33b7af5d4
@@ -49,7 +49,17 @@ worker_runs:
   status: completed
   input_digest: sha256:6be7a9d1658dee38cc99dad5ef98df44d3e4364839c9fa6b6571a1d33b7af5d4
   output_digest: sha256:4ad2c735ec715b7f35ed190b73dafb0692f3e89ef1fc43df33fb58b3e9e1fc56
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:de54950ddee49fdc77f4edca246fa059b09929fd9733e6b5b914bd765875c800
+  output_digest: null
+artifacts:
+- path: feature-docs/tests-yaml-id-resolution-gaps/REQUIREMENTS.md
+  sha256: sha256:4a8b76173a7fdeece0b3ee938a6762bd4b129659aaea5207f90bd681d18d09fa
+  produced_by: create-spec-run-0002
+- path: feature-docs/tests-yaml-id-resolution-gaps/SPEC.md
+  sha256: sha256:723add90bf1773cff8f3f7b7676f08df27f7462d8ffb4857a5d197191ebb015c
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
