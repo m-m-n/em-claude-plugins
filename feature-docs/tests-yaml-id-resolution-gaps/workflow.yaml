@@ -120,7 +120,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 37888837262d1ab30a13b0e5b119435a198f6226
 - id: implement
   status: pending
 - id: review
