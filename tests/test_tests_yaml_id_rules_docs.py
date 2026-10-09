@@ -38,6 +38,30 @@ One test per rule, so a missing rule surfaces under its own test name:
   collects it, and each rule's check fails when that rule's text is removed
   (and only that rule's check).
 
+Added by task0005 of tests-yaml-id-resolution-gaps
+(feature-docs/tests-yaml-id-resolution-gaps/tasks/task0005.md), which realigns
+the README's Syntax gate and non-execution guarantee with the record check's
+behavior:
+
+- AC-1 (FR6, FR7): `TestReadmeGateAndGuaranteeWording` -- the Syntax gate says
+  "two or more dot-separated segments", and the superseded "one or more
+  dot-separated segments" wording is gone from the README.
+- AC-2 (FR6, FR7): `TestReadmeGateAndGuaranteeWording` -- the README states
+  both halves of the canonical non-execution guarantee (test method bodies
+  are never executed; Loader confirmation instantiates the test classes,
+  including a custom `__init__`, and runs `load_tests` hooks), and no
+  statement that resolved objects are never called or instantiated remains.
+- AC-3 (FR6): `TestReadmeGateAndGuaranteeWording` -- Structural resolution
+  names a dunder last segment of a method ID as rejected with
+  `not a test method`; Loader confirmation names a non-suite result and an
+  exception during the suite walk as failure conditions.
+- AC-4 (FR7, TS-6): `TestGateAndGuaranteeChecksDetectRemovedText` -- each
+  check is a predicate over README text; it passes on the real README and
+  fails on an in-memory copy from which its own wording was removed, and
+  only that predicate fails.
+- AC-6 (NFR1, NFR2): `TestOwnModule` (standard library only, collected by
+  the normal run).
+
 The implementer.md assertions are limited to the Step 4c section, from its
 heading to the next step heading; the README assertions are limited to the
 subsection that holds the rule.
@@ -152,6 +176,100 @@ RULE5_PHRASES = (
 )
 
 
+# --- Gate and guarantee wording (tests-yaml-id-resolution-gaps) -------------
+#
+# Each check below is a predicate over README text (a string in, a bool out),
+# so the same predicate runs on the real README and on an in-memory copy with
+# its wording removed.
+
+TWO_OR_MORE_SEGMENTS = "two or more dot-separated segments"
+SUPERSEDED_SEGMENTS = "one or more dot-separated segments"
+
+# The two halves of the canonical non-execution guarantee (IMPLEMENTATION.md
+# D1), used verbatim in the README.
+BODIES_NEVER_EXECUTED = "Test method bodies are never executed."
+LOADER_INSTANTIATES_AND_RUNS_HOOKS = (
+    "Loader confirmation, like ordinary test collection, instantiates the "
+    "test classes (including any custom `__init__`) and runs `load_tests` "
+    "hooks."
+)
+
+DUNDER_REJECTION_PHRASES = (
+    "last segment is a dunder name",
+    "(for example `__init__`) is rejected as `not a test method`",
+    "even when the test class defines it",
+)
+LOADER_FAILURE_PHRASES = (
+    "returns something that is not a suite",
+    "an exception is raised while walking the returned suite",
+)
+
+# A claim that resolved objects are never called or instantiated. The
+# Structural resolution step's "without calling anything" is not such a claim:
+# it describes one step, not the whole check.
+NEVER_CALLED_CLAIM_RE = re.compile(
+    r"\bnever\s+(?:calls?|called|calling|instantiates?|instantiated|instantiating)\b"
+    r"|\b(?:is|are|be)\s+not\s+(?:called|instantiated)\b",
+    re.IGNORECASE,
+)
+
+
+def _states_all(text, phrases):
+    return not _missing(text, phrases)
+
+
+def states_two_or_more_segments(text):
+    return _states_all(text, (TWO_OR_MORE_SEGMENTS,))
+
+
+def states_bodies_never_executed(text):
+    return _states_all(text, (BODIES_NEVER_EXECUTED,))
+
+
+def states_loader_instantiates_and_runs_hooks(text):
+    return _states_all(text, (LOADER_INSTANTIATES_AND_RUNS_HOOKS,))
+
+
+def states_dunder_rejection(text):
+    return _states_all(text, DUNDER_REJECTION_PHRASES)
+
+
+def states_loader_non_suite_and_walk_exception(text):
+    return _states_all(text, LOADER_FAILURE_PHRASES)
+
+
+def makes_no_superseded_claim(text):
+    """True when `text` carries neither the "one or more" segment wording nor
+    a statement that resolved objects are never called or instantiated."""
+    normalized = _normalize_ws(text)
+    return SUPERSEDED_SEGMENTS not in normalized and not NEVER_CALLED_CLAIM_RE.search(
+        normalized
+    )
+
+
+# Check table: name -> (predicate, the wording the predicate requires, each
+# piece of which the removal checks cut out in turn).
+GATE_AND_GUARANTEE_CHECKS = {
+    "two-or-more-segments": (
+        states_two_or_more_segments,
+        (TWO_OR_MORE_SEGMENTS,),
+    ),
+    "bodies-never-executed": (
+        states_bodies_never_executed,
+        (BODIES_NEVER_EXECUTED,),
+    ),
+    "loader-instantiates-and-runs-hooks": (
+        states_loader_instantiates_and_runs_hooks,
+        (LOADER_INSTANTIATES_AND_RUNS_HOOKS,),
+    ),
+    "dunder-rejection": (states_dunder_rejection, DUNDER_REJECTION_PHRASES),
+    "loader-non-suite-and-walk-exception": (
+        states_loader_non_suite_and_walk_exception,
+        LOADER_FAILURE_PHRASES,
+    ),
+}
+
+
 # --- Document access ---------------------------------------------------
 
 
@@ -218,6 +336,18 @@ def _without_block_containing(section_text, phrase):
     return "\n\n".join(kept)
 
 
+def _remove_phrase(text, phrase):
+    """`text` with every occurrence of `phrase` cut out, whatever line wrap
+    sits between the phrase's words. Raises AssertionError when the phrase is
+    absent, so a removal case cannot pass vacuously on text that never had the
+    phrase."""
+    pattern = r"\s+".join(re.escape(word) for word in phrase.split())
+    reduced, count = re.subn(pattern, "", text)
+    if count == 0:
+        raise AssertionError(f"{phrase!r} is not in the text")
+    return reduced
+
+
 class Documents:
     """Reads each document once and slices out each rule's section."""
 
@@ -228,6 +358,10 @@ class Documents:
         if path not in cls._cache:
             cls._cache[path] = _read(path)
         return cls._cache[path]
+
+    @classmethod
+    def readme(cls):
+        return cls._text(README_PATH)
 
     @classmethod
     def step_4c(cls):
@@ -380,6 +514,130 @@ class TestRuleChecksDetectRemovedText(unittest.TestCase):
         id_format = Documents.readme_id_format()
         reduced = _without_block_containing(id_format, RULE4_PHRASES[0])
         self.assertNotEqual(_missing(reduced, RULE4_PHRASES), [])
+
+
+class TestReadmeGateAndGuaranteeWording(unittest.TestCase):
+    """AC-1 to AC-3 of task0005: the Syntax gate, Structural resolution,
+    Loader confirmation and non-execution guarantee wording in the README's
+    Test ID format subsection."""
+
+    def assert_check_passes(self, name):
+        predicate, _wording = GATE_AND_GUARANTEE_CHECKS[name]
+        self.assertTrue(
+            predicate(Documents.readme_id_format()),
+            f"test/README.md Test ID format section fails the {name} check",
+        )
+
+    def test_ac1_syntax_gate_says_two_or_more_dot_separated_segments(self):
+        self.assert_check_passes("two-or-more-segments")
+
+    def test_ac1_one_or_more_segments_wording_no_longer_appears(self):
+        self.assertNotIn(SUPERSEDED_SEGMENTS, _normalize_ws(Documents.readme()))
+
+    def test_ac2_guarantee_states_that_test_method_bodies_are_never_executed(self):
+        self.assert_check_passes("bodies-never-executed")
+
+    def test_ac2_guarantee_states_that_loader_confirmation_instantiates_and_runs_hooks(
+        self,
+    ):
+        self.assert_check_passes("loader-instantiates-and-runs-hooks")
+
+    def test_ac2_no_statement_that_resolved_objects_are_never_called_or_instantiated(
+        self,
+    ):
+        self.assertTrue(makes_no_superseded_claim(Documents.readme()))
+
+    def test_ac3_structural_resolution_rejects_a_dunder_last_segment(self):
+        self.assert_check_passes("dunder-rejection")
+
+    def test_ac3_loader_confirmation_names_non_suite_result_and_walk_exception(self):
+        self.assert_check_passes("loader-non-suite-and-walk-exception")
+
+
+class TestGateAndGuaranteeChecksDetectRemovedText(unittest.TestCase):
+    """AC-4 of task0005: each check is a predicate over README text; it fails
+    on an in-memory copy with its wording removed, and only it fails. The real
+    README is never edited."""
+
+    def test_each_check_fails_when_a_piece_of_its_wording_is_removed(self):
+        section = Documents.readme_id_format()
+        for name, (predicate, wording) in GATE_AND_GUARANTEE_CHECKS.items():
+            self.assertTrue(predicate(section), name)
+            for piece in wording:
+                with self.subTest(check=name, removed=piece):
+                    self.assertFalse(predicate(_remove_phrase(section, piece)))
+
+    def test_removing_one_checks_wording_leaves_the_other_checks_passing(self):
+        section = Documents.readme_id_format()
+        for name, (_predicate, wording) in GATE_AND_GUARANTEE_CHECKS.items():
+            for piece in wording:
+                reduced = _remove_phrase(section, piece)
+                for other, (other_predicate, _other_wording) in (
+                    GATE_AND_GUARANTEE_CHECKS.items()
+                ):
+                    if other == name:
+                        continue
+                    with self.subTest(removed=piece, other=other):
+                        self.assertTrue(other_predicate(reduced))
+
+    def test_removing_a_whole_guarantee_half_fails_its_check_only(self):
+        section = Documents.readme_id_format()
+        for removed, failing, passing in (
+            (
+                BODIES_NEVER_EXECUTED,
+                states_bodies_never_executed,
+                states_loader_instantiates_and_runs_hooks,
+            ),
+            (
+                LOADER_INSTANTIATES_AND_RUNS_HOOKS,
+                states_loader_instantiates_and_runs_hooks,
+                states_bodies_never_executed,
+            ),
+        ):
+            with self.subTest(removed=removed):
+                reduced = _remove_phrase(section, removed)
+                self.assertFalse(failing(reduced))
+                self.assertTrue(passing(reduced))
+
+    def test_removing_the_segment_wording_from_the_gate_fails_the_check(self):
+        reduced = _remove_phrase(Documents.readme_id_format(), TWO_OR_MORE_SEGMENTS)
+        self.assertFalse(states_two_or_more_segments(reduced))
+
+    def test_removal_helper_refuses_text_that_lacks_the_phrase(self):
+        with self.assertRaises(AssertionError):
+            _remove_phrase("nothing to cut here", TWO_OR_MORE_SEGMENTS)
+
+    def test_removal_helper_cuts_a_phrase_across_a_line_wrap(self):
+        wrapped = "ids of two or more\ndot-separated segments are fine"
+        self.assertFalse(
+            states_two_or_more_segments(_remove_phrase(wrapped, TWO_OR_MORE_SEGMENTS))
+        )
+        self.assertTrue(states_two_or_more_segments(wrapped))
+
+    def test_superseded_claim_check_catches_the_old_wording(self):
+        old_lines = (
+            "the ID consists of one or more dot-separated segments, each a "
+            "valid Python identifier",
+            "The record check never calls anything it resolved and never runs "
+            "a returned test.",
+            "Resolved classes are never instantiated.",
+            "Resolved objects are never called or instantiated.",
+            "The resolved class is not instantiated.",
+        )
+        for line in old_lines:
+            with self.subTest(line=line):
+                self.assertFalse(makes_no_superseded_claim(line))
+
+    def test_superseded_claim_check_accepts_the_new_wording(self):
+        new_lines = (
+            TWO_OR_MORE_SEGMENTS,
+            BODIES_NEVER_EXECUTED + " " + LOADER_INSTANTIATES_AND_RUNS_HOOKS,
+            "the remaining segments are looked up as attributes without "
+            "calling anything.",
+        )
+        for line in new_lines:
+            with self.subTest(line=line):
+                self.assertTrue(makes_no_superseded_claim(line))
 
 
 class TestOwnModule(unittest.TestCase):

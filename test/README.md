@@ -75,7 +75,7 @@ the repository root and `tests/` are both on the module search path. The steps
 below run in order, and the first failing step ends the evaluation of that
 ID.
 
-1. Syntax gate: the ID consists of one or more dot-separated segments, each a
+1. Syntax gate: the ID consists of two or more dot-separated segments, each a
    valid Python identifier, and the first segment is exactly `tests`. File
    paths, `path::Class::method` forms, wildcards, abbreviations and free text
    fail here, before any import.
@@ -88,16 +88,23 @@ ID.
    ancestors that is neither `unittest.TestCase` nor an ancestor of it. A
    missing module or attribute, a class not derived from `unittest.TestCase`,
    a module-level function or any other callable, and a method available only
-   through `unittest.TestCase` fail.
+   through `unittest.TestCase` fail. A method ID whose last segment is a dunder
+   name (for example `__init__`) is rejected as `not a test method`, even when
+   the test class defines it.
 3. Loader confirmation: the ID is passed to `loadTestsFromName` of a fresh
    `unittest.TestLoader`. It fails when the call raises, when the loader's
-   `errors` list gains an entry, or when the returned suite, walked
-   recursively without being run, contains a failed-test placeholder.
+   `errors` list gains an entry, when the loader returns something that is not
+   a suite, when an exception is raised while walking the returned suite, or
+   when the returned suite, walked recursively without being run, contains a
+   failed-test placeholder.
 
-The record check never calls anything it resolved and never runs a returned
-test. It puts the repository root at the front of the module search path for
-the duration of each check and restores the exact prior value afterwards, also
-when a step raises.
+Test method bodies are never executed. Loader confirmation, like ordinary test
+collection, instantiates the test classes (including any custom `__init__`)
+and runs `load_tests` hooks.
+
+The record check puts the repository root at the front of the module search
+path for the duration of each check and restores the exact prior value
+afterwards, also when a step raises.
 
 ### Record notation read by the record check
 
