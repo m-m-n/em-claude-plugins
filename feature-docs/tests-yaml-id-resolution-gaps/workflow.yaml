@@ -127,7 +127,8 @@ workflow:
   base_commit: 7d5e015b54071123d8be091ec8cf0388248e12fe
   completed_at_commit: 32f50ac75fa2e8cd1ecf7cf92a86e19992dde55a
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 9c1e943a8167e83293e313c2973d9869d6d31943
 - id: verify
   status: pending
 - id: retrospect
@@ -230,7 +231,16 @@ tasks:
     status: merged
     branch: em-workflow/tests-yaml-id-resolution-gaps/task0005
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
