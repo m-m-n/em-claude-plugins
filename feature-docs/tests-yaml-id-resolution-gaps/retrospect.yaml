@@ -1,5 +1,5 @@
 feature: tests-yaml-id-resolution-gaps
-collected_at: "2026-10-09T10:35:00+09:00"
+collected_at: "2026-10-09T10:00:00+09:00"
 session_ids: [01a11e2c-12fb-7427-b2a2-31968951baca.jsonl]
 signals:
   review_critical_high: []
