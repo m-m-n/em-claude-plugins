@@ -190,7 +190,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-id-resolution-gaps/task0003
   task0004:
     title: Report test-docs scan errors as a test failure
