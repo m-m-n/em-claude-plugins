@@ -1,0 +1,30 @@
+schema_version: 1
+feature: tests-yaml-id-resolution-gaps
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 83465d7de0ad5bcaed3be8a089b63587cc989bbb
+last_input_digest: sha256:6be7a9d1658dee38cc99dad5ef98df44d3e4364839c9fa6b6571a1d33b7af5d4
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:6be7a9d1658dee38cc99dad5ef98df44d3e4364839c9fa6b6571a1d33b7af5d4
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - tests/test_tests_yaml_id_resolution.py
+    - tests/test_tests_yaml_id_rules_docs.py
+    - test/README.md
+    - test-docs/tests-yaml-test-id-resolution/task0001.tests.yaml
+    - test-docs/tests-yaml-test-id-resolution/task0002.tests.yaml
+    - feature-docs/tests-yaml-test-id-resolution/SPEC.md
+    - feature-docs/tests-yaml-test-id-resolution/reviews/round1.yaml
