@@ -150,8 +150,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/tests-yaml-id-resolution-gaps/task0001
   task0002:
     title: Reject dunder method IDs and confirm the loader returns a suite
     plan: tasks/task0002.md
@@ -169,8 +169,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/tests-yaml-id-resolution-gaps/task0002
   task0003:
     title: Resolve readable IDs in ACs that have extraction errors
     plan: tasks/task0003.md
@@ -190,8 +190,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/tests-yaml-id-resolution-gaps/task0003
   task0004:
     title: Report test-docs scan errors as a test failure
     plan: tasks/task0004.md
@@ -208,8 +208,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/tests-yaml-id-resolution-gaps/task0004
   task0005:
     title: Realign README gates and guarantee, and pin them in the doc-contract test
     plan: tasks/task0005.md
@@ -226,8 +226,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/tests-yaml-id-resolution-gaps/task0005
 review:
   status: pending
 requirements:
