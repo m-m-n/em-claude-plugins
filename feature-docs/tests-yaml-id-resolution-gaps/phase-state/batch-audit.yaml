@@ -1,0 +1,31 @@
+schema_version: 1
+feature: tests-yaml-id-resolution-gaps
+records:
+- question_id: create-spec.fr2-duplicate-scope
+  packet_id: null
+  answered_at: '2026-10-09T09:07:35+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - include_duplicates
+  freeform: null
+  normalized_answer: include_duplicates — 重複 tests キー・重複 AC キーの両方で読めた ID を解決判定し、AC
+    キー名で報告する
+  resolution_note: 'gate: create-spec.fr2-duplicate-scope (orchestrator-raised from
+    analyst assumption A2); options: include_duplicates / exclude_duplicate_ac_key;
+    choice: include_duplicates; codex_consulted: true (codex entry, 1 turn, converged);
+    opus_escalation: false; key points: 両方を対象にする方が、抽出エラーがあっても読み取れたIDを検査するというFR2に一貫している。現状は重複ACの本体も解析してから、そのAC全体を除外している（tests/test_tests_yaml_id_resolution.py:403-413）。重複testsも各値を解析するが、最初の値だけを保持している（tests/test_tests_yaml_id_resolution.py:450-455）。各出現の読み取れたIDを同名ACに集約し、重複エラーも残せば、既存のAC名付き表示と記録ごとの一括失敗を維持できる（tests/test_tests_yaml_id_resolution.py:729-750、test/README.md:61-63）。重複ACだけを除外すると、読み取れたIDが検査されない例外が残る'
+- question_id: create-spec.fr3-scan-error-shape
+  packet_id: null
+  answered_at: '2026-10-09T09:07:35+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - dedicated_scan_error_class
+  freeform: null
+  normalized_answer: dedicated_scan_error_class — 走査エラーは別経路で集め、専用の生成 TestCase クラスの
+    1 テストで相対パスと理由を並べて失敗させる。enumerate_records の戻り値は変えない。記録生成に使った走査のエラーを渡し、収集テストに専用クラスの確認を加える
+  resolution_note: 'gate: create-spec.fr3-scan-error-shape (orchestrator-raised from
+    analyst assumption A3); options: dedicated_scan_error_class / fold_into_zero_record_guard
+    / change_return_shape; choice: dedicated_scan_error_class; codex_consulted: true
+    (codex entry, 1 turn, converged); opus_escalation: false; key points: 専用クラスに分ける方が、既存の戻り値とゼロ件検査の意味を保てる。enumerate_recordsは整列したパス一覧を返し、os.walkにonerrorを渡していない（tests/test_tests_yaml_id_resolution.py:86-96）。既存のガードは記録がゼロ件の場合だけ失敗する（tests/test_tests_yaml_id_resolution.py:802-807）。収集テストは記録用クラスとガード用クラスの件数を個別に確認しており、全体の件数は固定していないため、別クラスの追加と両立する（tests/test_tests_yaml_id_resolution.py:1963-1967）。走査エラーを別経路で収集し、モジュール直下に生成した専用クラスの1テストで相対パスと理由をまとめて失敗させれば、記録が見つかった場合も通常実行で報告できる。既存クラスも同じ生成方式で公開されている（tests/test_tests_yaml_id_resolution.py:832-833）'
