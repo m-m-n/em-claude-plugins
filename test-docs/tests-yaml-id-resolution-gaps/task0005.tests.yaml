@@ -1,0 +1,42 @@
+task_id: task0005
+baseline_failures: []          # python3 -m unittest discover -s tests: 9943 tests, OK (skipped=1), run before any edit
+final_failures: []             # re-executed after implementation and after writing this record: 9959 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeGateAndGuaranteeWording.test_ac1_syntax_gate_says_two_or_more_dot_separated_segments
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeGateAndGuaranteeWording.test_ac1_one_or_more_segments_wording_no_longer_appears
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true : test/README.md Test ID format section fails the two-or-more-segments check; and AssertionError: 'one or more dot-separated segments' unexpectedly found in the README text. Both observed before the README was edited."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeGateAndGuaranteeWording.test_ac2_guarantee_states_that_test_method_bodies_are_never_executed
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeGateAndGuaranteeWording.test_ac2_guarantee_states_that_loader_confirmation_instantiates_and_runs_hooks
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeGateAndGuaranteeWording.test_ac2_no_statement_that_resolved_objects_are_never_called_or_instantiated
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true : test/README.md Test ID format section fails the bodies-never-executed check (and the loader-instantiates-and-runs-hooks check); the no-superseded-claim test failed with AssertionError: False is not true because the README still said the record check never calls anything it resolved. All observed before the README was edited."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeGateAndGuaranteeWording.test_ac3_structural_resolution_rejects_a_dunder_last_segment
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeGateAndGuaranteeWording.test_ac3_loader_confirmation_names_non_suite_result_and_walk_exception
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true : test/README.md Test ID format section fails the dunder-rejection check, and fails the loader-non-suite-and-walk-exception check. Both observed before the README was edited. The plan leaves AC-3 to review reading; these two checks pin the wording this task wrote."
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestGateAndGuaranteeChecksDetectRemovedText.test_each_check_fails_when_a_piece_of_its_wording_is_removed
+      - tests.test_tests_yaml_id_rules_docs.TestGateAndGuaranteeChecksDetectRemovedText.test_removing_one_checks_wording_leaves_the_other_checks_passing
+      - tests.test_tests_yaml_id_rules_docs.TestGateAndGuaranteeChecksDetectRemovedText.test_removing_a_whole_guarantee_half_fails_its_check_only
+      - tests.test_tests_yaml_id_rules_docs.TestGateAndGuaranteeChecksDetectRemovedText.test_removing_the_segment_wording_from_the_gate_fails_the_check
+    red_confirmed: true
+    red_reason: "These four failed before the README was edited, because the real README lacked the wording the in-memory removal starts from (AssertionError on the pass-on-real-README precondition, or on the removal helper finding no phrase to cut). The helper-level tests of the same class (removal helper refusal, removal across a line wrap, superseded-claim detection and acceptance on synthetic strings) passed on their first run, since they do not read the README, and are not listed."
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestReadmeRules.test_rule5_record_notation_is_stated
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_tests_yaml_id_rules_docs.TestReadmeRules.test_rule5_record_notation_is_stated detects removal of the required Record notation phrases; no red state occurred for this change. It does not detect every other edit, so the criterion itself is verified by the diff against the parent branch: all hunks of test/README.md lie inside the Test ID format subsection (Syntax gate, Structural resolution, Loader confirmation and the guarantee paragraph); the Test Docs Records introduction and the Record notation subsection are untouched. The search of tests/ by the path test/README.md and by the basename README.md found only test_reference_sweep (reads the no-external-dependency phrases of the real README, not the Test Docs Records section) and this module as readers of the real README; the test_commit_docs hit is a synthetic fixture file and does not count."
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_rules_docs.TestOwnModule.test_only_standard_library_modules_are_imported
+      - tests.test_tests_yaml_id_rules_docs.TestOwnModule.test_no_module_that_imports_or_runs_a_document_is_imported
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestOwnModule checks detect a non-standard-library import or a document runner import in the doc-contract test; no red state occurred for this change, since no import was added. The suite criterion is the project test command python3 -m unittest discover -s tests, which ended OK (9959 tests, skipped=1) after the change."
