@@ -559,11 +559,14 @@ _MISSING = object()
 
 
 def canonical_id_failure(test_id):
-    """SC-1 step 1, the syntax gate: dot-separated identifiers whose first
-    segment is exactly `tests`. Returns a reason, or None when the ID passes."""
+    """SC-1 step 1, the syntax gate: two or more dot-separated segments, each
+    a Python identifier, the first exactly `tests`. The bare `tests` (one
+    segment) fails. Returns a reason, or None when the ID passes."""
     parts = test_id.split(".")
     if parts[0] != "tests":
         return "not a canonical ID: the first dot-separated segment must be 'tests'"
+    if len(parts) < 2:
+        return "not a canonical ID: it needs two or more dot-separated segments"
     for part in parts:
         if not part.isidentifier():
             return f"not a canonical ID: segment {part!r} is not a Python identifier"
@@ -1410,9 +1413,43 @@ class TestSyntaxGate(unittest.TestCase):
     """SC-1 step 1: the canonical ID form."""
 
     def test_canonical_ids_pass_the_gate(self):
-        for test_id in ("tests", "tests.test_x", "tests.test_x.TestY", "tests.test_x.TestY.test_z", "tests._a1.B_2"):
+        for test_id in ("tests.test_x", "tests.test_x.TestY", "tests.test_x.TestY.test_z", "tests._a1.B_2"):
             with self.subTest(test_id):
                 self.assertIsNone(canonical_id_failure(test_id))
+
+    def test_the_bare_tests_id_fails_the_gate_with_a_canonical_id_reason(self):
+        """AC-1 (FR1): fewer than two dot-separated segments."""
+        reason = canonical_id_failure("tests")
+        self.assertIsNotNone(reason)
+        self.assertTrue(reason.startswith("not a canonical ID"), reason)
+
+    def test_check_record_reports_a_bare_tests_id_and_leaves_the_search_path_and_module_cache_unchanged(self):
+        """AC-3 (FR1, SPEC AC-1): the bare `tests` is an error line naming it,
+        and nothing is imported for it."""
+        root = make_root(self, records={RECORD_REL: simple_record({"AC-1": ["tests"]})})
+        path_before = list(sys.path)
+        modules_before = dict(sys.modules)
+        lines = check_record(root, RECORD_REL)
+        self.assertEqual(len(lines), 1, lines)
+        self.assertTrue(lines[0].startswith(f"{RECORD_REL}: AC-1: tests: not a canonical ID"), lines[0])
+        self.assertEqual(list(sys.path), path_before)
+        changed = sorted(n for n in set(modules_before) | set(sys.modules) if modules_before.get(n) is not sys.modules.get(n))
+        self.assertEqual(changed, [])
+
+    def test_the_bare_tests_id_is_rejected_before_the_search_path_is_touched(self):
+        """AC-3 (FR1): the rejection is the Syntax gate's, so the module
+        search path is never written, not merely restored."""
+        root = make_root(self, records={RECORD_REL: simple_record({"AC-1": ["tests"]})})
+        _RecordingList.mutations = 0
+        with mock.patch.object(sys, "path", new=_RecordingList(sys.path)):
+            check_record(root, RECORD_REL)
+        self.assertEqual(_RecordingList.mutations, 0)
+
+    def test_the_gate_docstring_states_the_two_or_more_segment_requirement(self):
+        """AC-5 (FR6): the accepted form is documented on the gate itself."""
+        doc = canonical_id_failure.__doc__ or ""
+        self.assertIn("two or more", doc)
+        self.assertIn("segments", doc)
 
     def test_everything_else_fails_the_gate_with_a_reason(self):
         for test_id in (
@@ -1554,7 +1591,6 @@ class TestResolutionWithoutExecution(unittest.TestCase):
         "tests.fx_marker.TestB.test_from_mixin",
         "tests.fx_marker.TestC.test_from_mixin",
         "tests.fx_marker.TestChild.test_inherited",
-        "tests",
     )
     FAILING = {
         "tests.fx_marker.make_marker": "not a test case class",
@@ -1714,12 +1750,15 @@ class TestSearchPathAndModuleCache(unittest.TestCase):
             seen.append(sys.path[0])
             return None
 
-        for root in (self.root, REPO_ROOT):
+        for root, test_id in (
+            (self.root, "tests.fx_marker"),
+            (REPO_ROOT, "tests.test_tests_yaml_id_resolution"),
+        ):
             with self.subTest(root=str(root)):
                 seen.clear()
                 before = list(sys.path)
                 with mock.patch(f"{__name__}._loader_failure", side_effect=capture):
-                    resolve_id(root, "tests")
+                    self.assertIsNone(resolve_id(root, test_id))
                 self.assertEqual(seen, [str(root)])
                 self.assertEqual(list(sys.path), before)
 
