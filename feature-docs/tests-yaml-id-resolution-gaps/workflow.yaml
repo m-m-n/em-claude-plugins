@@ -208,7 +208,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-id-resolution-gaps/task0004
   task0005:
     title: Realign README gates and guarantee, and pin them in the doc-contract test
