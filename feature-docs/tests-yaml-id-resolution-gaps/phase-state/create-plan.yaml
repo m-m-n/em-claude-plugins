@@ -1,0 +1,21 @@
+schema_version: 1
+feature: tests-yaml-id-resolution-gaps
+phase: create-plan
+status: worker_running
+generation: 1
+base_revision: e73331ccbf570f4378d8e805d9987af8df64c015
+last_input_digest: sha256:74769b8ac39f33a8badf1d5325a8daa89cc2c39ae3a272c827939ac0de24b1d3
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: running
+  input_digest: sha256:74769b8ac39f33a8badf1d5325a8daa89cc2c39ae3a272c827939ac0de24b1d3
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
