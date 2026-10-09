@@ -1,20 +1,48 @@
 schema_version: 1
 feature: tests-yaml-id-resolution-gaps
 phase: create-plan
-status: dispatching
+status: completed
 generation: 1
 base_revision: e73331ccbf570f4378d8e805d9987af8df64c015
 last_input_digest: sha256:74769b8ac39f33a8badf1d5325a8daa89cc2c39ae3a272c827939ac0de24b1d3
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:74769b8ac39f33a8badf1d5325a8daa89cc2c39ae3a272c827939ac0de24b1d3
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:432b8f2c769184e0dfb5d17668603c1e1c62ddbd47e7b80f0b1f4511e32e2e90
+artifacts:
+- path: feature-docs/tests-yaml-id-resolution-gaps/IMPLEMENTATION.md
+  sha256: sha256:1b91af367719f4364a263eb2b4b58b1e5e9d935f603314ffd5a2e256d5299954
+  produced_by: create-plan-run-0001
+- path: feature-docs/tests-yaml-id-resolution-gaps/VERIFICATION.md
+  sha256: sha256:7e587638d216de2d60d8c0d1a437152389b316908a329a86210ac7121e338a23
+  produced_by: create-plan-run-0001
+- path: feature-docs/tests-yaml-id-resolution-gaps/THREAT-MODEL.md
+  sha256: sha256:3ba5aa3128177f4dd7b021b65236519ab7a3c51f4d37308f113bbcca3cf2094e
+  produced_by: create-plan-run-0001
+- path: feature-docs/tests-yaml-id-resolution-gaps/tasks/task0001.md
+  sha256: sha256:b3123770b8dbd544449c6dd1b57143ddbbbbe521f6e920ac7a7c96a97e5a41e3
+  produced_by: create-plan-run-0001
+- path: feature-docs/tests-yaml-id-resolution-gaps/tasks/task0002.md
+  sha256: sha256:51aa6853f1dc40188c1902556c1203b3ea41400ca8d93b501076841a19e1b72e
+  produced_by: create-plan-run-0001
+- path: feature-docs/tests-yaml-id-resolution-gaps/tasks/task0003.md
+  sha256: sha256:2e8a9ba28e66bccf19b47eeac1986d71d0b6d7d50292dcc05b56034bfe1b8c9b
+  produced_by: create-plan-run-0001
+- path: feature-docs/tests-yaml-id-resolution-gaps/tasks/task0004.md
+  sha256: sha256:fd45c8bd6afe44d84e6794ffc9e016d619f6ec475d576cb35cbb30344c574a6a
+  produced_by: create-plan-run-0001
+- path: feature-docs/tests-yaml-id-resolution-gaps/tasks/task0005.md
+  sha256: sha256:7ccf9fe19097a962b566c0c04f22e1144045c268252dea045db7250f2918f4b8
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:74769b8ac39f33a8badf1d5325a8daa89cc2c39ae3a272c827939ac0de24b1d3
+  base_workflow_blob: b3b89f34302dddd20fba8af2fc1e84796116ce80
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
