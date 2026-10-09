@@ -150,7 +150,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/tests-yaml-id-resolution-gaps/task0001
   task0002:
     title: Reject dunder method IDs and confirm the loader returns a suite
