@@ -1,0 +1,243 @@
+schema_version: 1
+feature: tests-yaml-id-resolution-gaps
+created: '2026-10-09'
+base_branch: main
+goal: '# tests_yaml_id_resolution の記録検査に残る穴 6 件（単独 tests の通過・抽出エラー時の解決判定漏れ・走査エラーの無視ほか）
+
+
+  ## 現象 (必須)
+
+  feature `tests-yaml-test-id-resolution` で追加した記録検査 `tests/test_tests_yaml_id_resolution.py` に、レビュー round 1 で medium 3 件・low 3 件の穴が見つかった（critical/high ではないため自動修正の対象外で残した）。
+
+  - 単独の `tests` が `tests.` 始まりの ID として検査を通る（`tests/test_tests_yaml_id_resolution.py:565`）。`loadTestsFromName(''tests'')` は 0 件のスイートを返すので、何も選ばない `tests: [tests]` の記録が通る。README の Syntax gate も「one or more dot-separated segments」で、「IDs start with `tests.`」と食い違う（medium）
+
+  - 抽出エラーが 1 件でもある AC は全体が解決判定から外れ、同じ AC の読めた ID の解決エラーが報告されない（`:408`）。SPEC FR5 の「抽出エラーと解決エラーは途中で止めず全件集め」から外れる（medium）
+
+  - `enumerate_records` の `os.walk` に `onerror` が無く、読み取れない配下ディレクトリの記録が黙って検査から抜ける（`:92`）（medium）
+
+  - `load_tests` フックがスイート以外を返すと `_walk_suite` が try の外で TypeError を送出し、同じ記録の後続 ID が判定されない（`:700`）（low）
+
+  - ローダー確認で TestCase 派生クラスの独自 `__init__` が走る。構造判定は `...Cls.__init__` もメソッド ID として受け入れる。README と docstring の「解決したものを呼ばない」の記述と合わない（`:694`）（low）
+
+  - モジュール ID のローダー確認で `load_tests` フックが呼ばれる。FR6 がローダー確認を求めているので避けられないが、保証の記述範囲を揃える必要がある（`:694`）（low）
+
+  ## 再現手順 (必須)
+
+  1. メモリ上の空の tests パッケージで `acceptance_tests: {AC-1: {tests: [tests]}}` を `check_record` に渡すとエラー一覧が空になる
+
+  2. `tests: [tests.nope.A.b, {name: x}]` を渡すと、マッピング要素の抽出エラーだけが返り、`tests.nope.A.b` は報告されない
+
+  3. `os.scandir` を模擬して配下ディレクトリで PermissionError を起こすと、`enumerate_records` は読めた分だけ返し、ゼロ件ガードも通る
+
+  ## 期待する挙動 (必須)
+
+  - `tests` 単独を含め、2 セグメント未満の ID を不正として拒否する
+
+  - 抽出エラーのある AC でも、読めたスカラー ID は解決判定し、両方のエラーを並べる
+
+  - 走査エラーは対象パス付きの検査失敗として報告する
+
+  - ローダーの戻り値がスイートであることを確認し、反復中の例外も ID ごとの解決エラーとして返す
+
+  - ダンダー名をメソッド ID として拒否し、README と docstring の非実行の保証を「テストメソッドの本体は実行しない。ローダー確認では通常の収集と同じくクラス生成と load_tests フックが動く」範囲に書き直す
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `tests/test_tests_yaml_id_resolution.py`（92, 408, 565, 694, 700 行付近）
+
+  - `test/README.md`（Syntax gate と非実行の保証の記述）
+
+  - レビュー記録: `feature-docs/tests-yaml-test-id-resolution/reviews/round1.yaml`（integration ブランチ `em-workflow/tests-yaml-test-id-resolution/integration`）
+
+  ## 実害・発生条件 (任意)
+
+  通常のチェックアウトと現在の記録では起きない。誤った記録の書き方や特殊なテストモジュールがあると、ずれの見逃しや検査の途中停止につながる。
+
+
+  Notion: https://www.notion.so/3f33509ec8ee81fabf64d99c2c8572a5
+
+
+  ## 追加指示（起動引数）
+
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、比較的良いと判断された案を採用する
+
+  - その議論内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/tests-yaml-id-resolution-gaps/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.36
+      '2': 0.64
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.39
+      '2': 0.61
+      '3': 0.0
+  at: '2026-10-09T08:59:27+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: e90ec947436575efecc41d83c8fa476fc4d73e2f
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない変更（テストモジュール、テスト、README の記述）のため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: 2 セグメント未満の ID を構文検査で拒否する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: 抽出エラーのある AC でも読めた ID を解決判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR3:
+    title: 走査エラーを対象パス付きの検査失敗として報告する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR4:
+    title: ローダーの戻り値を確認し、反復中の例外も ID ごとのエラーにする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR5:
+    title: ダンダー名をメソッド ID として拒否する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR6:
+    title: 非実行の保証の記述を書き直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR7:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+  FR8:
+    title: 古い動作を固定している既存テストと記録の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR1:
+    title: 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR2:
+    title: 通常の実行に含める
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR3:
+    title: 既存の検査を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR4:
+    title: バージョン
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
