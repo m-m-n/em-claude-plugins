@@ -1,0 +1,83 @@
+round: 1
+executed_at: "2026-10-09T09:53:16+09:00"
+scope:
+  review_mode: diff
+  base_commit: 7d5e015b54071123d8be091ec8cf0388248e12fe
+  head_commit: 9c1e943a8167e83293e313c2973d9869d6d31943
+  changed_files:
+  - test-docs/tests-yaml-id-resolution-gaps/task0001.tests.yaml
+  - test-docs/tests-yaml-id-resolution-gaps/task0002.tests.yaml
+  - test-docs/tests-yaml-id-resolution-gaps/task0003.tests.yaml
+  - test-docs/tests-yaml-id-resolution-gaps/task0004.tests.yaml
+  - test-docs/tests-yaml-id-resolution-gaps/task0005.tests.yaml
+  - test-docs/tests-yaml-test-id-resolution/task0001.tests.yaml
+  - test/README.md
+  - tests/test_tests_yaml_id_resolution.py
+  - tests/test_tests_yaml_id_rules_docs.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 94f2ccd5e6f0db92
+  severity: medium
+  category: comprehensive
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 539
+  title: "tests の先頭項目にタブがあると、後続の読める ID が 1 件も解決判定されない"
+  description: "parse_tests は、tests キー直後の最初の非空行がスペースの後にタブを含むと「tab in indentation」を報告し、すぐに [] を返す（539〜542 行）。呼び出し元の parse_ac は、次のダッシュ項目（インデント 6）をフィールドのインデント不一致として skip_deeper で読み飛ばす。このため、後続にある 1 行で完結した読める ID（例: tests.nope.good）は抽出されず、解決判定もされない。2 項目目以降のタブ行は報告したうえで読み続ける（563 行）ので、先頭項目だけ扱いが食い違っている。FR2 の「AC に抽出エラーがあっても、1 行で完結したスカラーとして読めた ID はすべて解決判定する」に反する。記録自体は抽出エラーで失敗するので見逃しにはならないが、抽出エラーと解決エラーを 1 回の失敗メッセージに並べるという FR2 の目的は、この経路では果たせない。"
+  suggestion: "先頭行のタブを報告した後もリストの解析を続ける。たとえばタブ行を飛ばし、最初のタブなしダッシュ行から item_indent を決める。`tests:` / `      \\t- tests.nope.bad` / `      - tests.nope.good` の形の回帰テストを TestExtractionErrors に追加する。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: "severity medium: outside the auto-fix candidate gate (critical/high only); not counted in residual_critical_high"
+- stable_id: 49d22a1031b45fcb
+  severity: medium
+  category: comprehensive
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 563
+  title: "スペースの後にタブが続く深い継続行では、複数行の値の 1 行目の断片が取り除かれない"
+  description: "ブロック項目のループでは、タブの判定（563〜566 行）が深い行の判定（569 行）より先にある。このため、8 スペースで深く字下げした後にタブが続く継続行は「tab in indentation」として報告されるだけで、直前の項目から断片を取り戻す処理（last_is_id のときの ids.pop()）が走らない。その結果、断片 tests.nope.fragment が ids に残って解決判定される。SPEC FR2 と Edge Cases にある「深い行に続く複数行の値の断片は解決判定しない」に反する。記録は抽出エラーで失敗する。"
+  suggestion: "タブの判定より前に indent > item_indent を判定する。または、タブ行の分岐でも indent > item_indent かつ last_is_id のときに ids.pop() する。スペースとタブで始まる継続行の回帰テストを追加する。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: "severity medium: outside the auto-fix candidate gate (critical/high only); not counted in residual_critical_high"
+evaluation:
+  round_summary: "round 1（diff、cross_validation=true）。5 観点すべて completed、未レビューの観点なし。critical / high の指摘なし。comprehensive#0 の medium 3 件はコードを読んで再現を確認。539 行・563 行の 2 件は FR2 に反するため medium のまま採用。525 行の件は SC-2 の行単位の読み方では FR2 の重複 tests キー規則と整合するため low に下げた（R3b step 2 により記録対象外）。指示の注入の試みなし。security / performance / architecture は corroborated。spec は FR2 のタブを含む 2 経路を除き確認済みで、該当指摘は comprehensive 側の 2 件として記録。"
+  recommended_action: auto_fix
+  action_rationale: "critical / high はない。残る medium 2 件はどちらも _RecordParser.parse_tests 内のタブ行の扱いの順序の問題で、修正範囲は 1 関数に収まる。low の 1 件は任意。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-tests-yaml-id-resolution-gaps-20261009T005308Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
