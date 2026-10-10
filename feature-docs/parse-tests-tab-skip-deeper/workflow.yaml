@@ -87,7 +87,8 @@ workflow:
   summary: python3 -m unittest discover -s tests exit 0 (10054 tests, skipped=1); TS-1..TS-6 pass via TestTabLinesInTestsBlock and the ticket reproduction; TS-7 docstring/comments inspected and consistent; TS-8 no raw tab, standard-library imports only; existing test methods unchanged (diff adds only)
   excluded_requirements: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 48c8ef8ccdc5fab9ab2a494102f7211d4efa18b1
 tasks:
   task0001:
     title: Skip only the continuation lines of a leading tab line in parse_tests
