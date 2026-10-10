@@ -128,7 +128,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/parse-tests-tab-handling/task0002
     provenance:
       source: verify
