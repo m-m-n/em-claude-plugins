@@ -1,0 +1,154 @@
+schema_version: 1
+feature: parse-tests-tab-skip-key-bound
+created: '2026-10-11'
+base_branch: main
+goal: |
+  # tests_yaml_id_resolution の parse_tests で、tests キーより浅いタブ行の続き行を読み飛ばすと後続の兄弟フィールドまで消える
+
+  Notion: https://www.notion.so/3f53509ec8ee81238bd9ff8c6df15dd2
+
+  ## 現象 (必須)
+  記録検査 `tests/test_tests_yaml_id_resolution.py` の `_RecordParser.parse_tests` で、最初の項目より前の走査にある続き行の読み飛ばしが `skip_deeper(f + 1, tab_indent, limit)` になっていて、タブ行の深さだけを境界にしている。タブ行が `tests` キーより浅い場合（キー 4 空白・タブ行 3 空白）、続き行（6 空白）の後にある、キーと同じ深さの行（2 つ目の `tests` キーや 4 空白のダッシュ項目）まで報告なしで読み飛ばす。
+  feature `parse-tests-tab-skip-deeper` の review round 1（comprehensive 観点、medium、stable_id `de3d176ac910fc8f`、未解決）で見つかった指摘。
+  ## 再現手順 (必須)
+  1. `extract_text` に次の 6 行を渡す: `acceptance_tests:` / `  AC-1:` / `    tests:` / 3 空白 + タブ + `- tests.nope.bad` / 6 空白 + `continued` / `    tests: [tests.nope.second]`
+  2. 変更前（`parse-tests-tab-skip-deeper` 以前）は `tests.nope.second` が抽出され `duplicate tests key` も報告されたが、変更後はエラーがタブ（4 行目）と deeper（5 行目）の 2 件だけになり、2 つ目の tests キーとその ID が消える
+  ## 期待する挙動 (必須)
+  - 読み飛ばしの境界を `max(tab_indent, key_indent)` にし、キーと同じ深さの行は読み飛ばさずに残す
+  - docstring とコメントの「the lines deeper than that tab line are passed over」を、タブ行と `tests` キーの両方より深い行を読み飛ばす意味に直す
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`TestTabLinesInTestsBlock` に、キーより浅いタブ行・続き行・キーと同じ深さの 2 つ目の `tests` キーとダッシュ項目を組み合わせたケース）
+  ## 該当箇所 (任意)
+  `tests/test_tests_yaml_id_resolution.py:644`（`_RecordParser.parse_tests` の最初の項目より前の走査）
+  ## 実害・発生条件 (任意)
+  タブを含む誤った記録を書き、かつタブ行が `tests` キーより浅いときだけ起きる。記録検査はタブのエラーで失敗するのですり抜けは無いが、後続の ID の抽出・解決エラーが報告から抜ける。SPEC FR1 の文言（直前のタブ行より深い後続行を読み飛ばす）がこの場合を想定していなかった抜けでもある。
+parent_branch: em-workflow/parse-tests-tab-skip-key-bound/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  at: '2026-10-10T23:57:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no file is declared by more than one task)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: ab3a1e3238a9eb0da7cf46419d417db93af6d184
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たないテストコードの不具合修正で、設計の工程の対象になる画面や見た目が無い（tier reduced でも design step は削減対象）
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: []
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 続き行の読み飛ばしの範囲を max(tab_indent, key_indent) で区切る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: タブ行が tests キーと同じ深さかそれより深いときの挙動は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: docstring とコメントの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 再発を検出するテストの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 既存のテストは変更せずに通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: テストは標準ライブラリの unittest だけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストコードのタブ文字はエスケープシーケンスで書く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 変更するファイルは tests/test_tests_yaml_id_resolution.py だけ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
