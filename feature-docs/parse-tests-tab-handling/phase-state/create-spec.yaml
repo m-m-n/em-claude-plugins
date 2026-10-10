@@ -1,11 +1,11 @@
 schema_version: 1
 feature: parse-tests-tab-handling
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 8b0a35514f6e907d41bbb6b42e54ca163a3067a0
 last_input_digest: sha256:c71bb6cc0d6d3ea1e85c8cd03c8676f241a4ffcc71b349c4781609f8c7f0f20d
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -70,10 +70,13 @@ worker_runs:
   input_digest: sha256:c71bb6cc0d6d3ea1e85c8cd03c8676f241a4ffcc71b349c4781609f8c7f0f20d
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: null
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/parse-tests-tab-handling/SPEC.md
+  sha256: sha256:1c2b2fe295ce42920809163fed471d0fb8ac1952df9d651c9f7b3e09237bc48f
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
