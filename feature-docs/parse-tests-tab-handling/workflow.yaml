@@ -112,6 +112,13 @@ tasks:
     branch: em-workflow/parse-tests-tab-handling/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
