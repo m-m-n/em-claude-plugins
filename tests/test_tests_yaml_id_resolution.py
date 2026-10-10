@@ -579,9 +579,18 @@ class _RecordParser:
         A tab line (a line whose first character after its leading spaces is a
         tab) is unsupported notation and is reported once as `tab in
         indentation`; an element written on it is never an ID. Tab lines before
-        the first item are passed over, and the item indentation is fixed by
-        the first line without a tab. If the block holds nothing but tab lines,
-        only their tab errors are reported. Inside the item loop only a tab
+        the first item are passed over. Before the first item, a line without
+        a tab that does not start with a dash, comes directly after a tab line
+        (only blank and comment lines between) and is deeper than that tab
+        line (and deeper than the `tests` key) is reported once as a deeper
+        line; the lines deeper than that tab line are passed over, with no ID
+        read from them and a tab line among them not reported, and the scan
+        for the first item then resumes at the first line not passed over,
+        under the same rules. Any other such non-dash line deeper than the
+        `tests` key keeps the not-a-sequence handling. The item indentation is
+        fixed by the first dash line the scan reaches. If the block holds
+        nothing but tab lines and the lines passed over after them, only their
+        errors are reported. Inside the item loop only a tab
         line deeper than the items, directly after a readable ID, takes that ID
         back (the first-line fragment of a multi-line value), and it is not
         also reported as a deeper line; a tab line at the items' depth or
@@ -602,23 +611,47 @@ class _RecordParser:
             return [], self.skip_deeper(key_index + 1, key_indent, limit)
         # Pre-item scan: blank lines, comments and tab lines before the first
         # line that can open the list. Each tab line is reported once here.
+        # A line without a tab and without a dash that comes directly after a
+        # tab line (only blank and comment lines between) and is deeper than
+        # both that tab line and the `tests` key continues the tab line's
+        # element: it is reported once as a deeper line, the lines deeper than
+        # that tab line are passed over, and the scan resumes at the first
+        # line not passed over, under the same rules. Any other such non-dash
+        # line deeper than the `tests` key keeps the not-a-sequence handling
+        # below. `tab_indent` is the depth of the tab line that directly
+        # precedes the scan position, None when no tab line does.
         f = key_index + 1
         tab_seen = False
+        tab_indent = None
         while f < limit:
             if _is_ignorable(lines[f]):
                 f += 1
                 continue
-            if not _indent_of(lines[f])[1].startswith("\t"):
-                break
-            self.unsupported(ac_key, f, "tab in indentation")
-            tab_seen = True
-            f += 1
+            scan_indent, scan_rest = _indent_of(lines[f])
+            if scan_rest.startswith("\t"):
+                self.unsupported(ac_key, f, "tab in indentation")
+                tab_seen = True
+                tab_indent = scan_indent
+                f += 1
+                continue
+            if (
+                tab_indent is not None
+                and not _is_dash(scan_rest)
+                and scan_indent > key_indent
+                and scan_indent > tab_indent
+            ):
+                self.unsupported(ac_key, f, "tests item continues or nests on a deeper line (multi-line or nested value)")
+                f = self.skip_deeper(f + 1, tab_indent, limit)
+                tab_indent = None
+                continue
+            break
         neither = "tests key has neither a value nor items"
 
         def no_items(resume):
-            # The tab lines passed above are already consumed and reported, so
-            # `neither` is not added for them; the field loop resumes at
-            # `resume`, the first line that is not a tab line (or the block end).
+            # The tab lines and continuation lines passed above are already
+            # consumed and reported, so `neither` is not added for them; the
+            # field loop resumes at `resume`, the first line that is not passed
+            # over (or the block end).
             if tab_seen:
                 return [], resume
             self.unsupported(ac_key, key_index, neither)
@@ -1934,6 +1967,156 @@ class TestTabLinesInTestsBlock(unittest.TestCase):
                 for test_id in ids:
                     self.assertEqual(len([l for l in body if f"{RECORD_REL}: AC-1: {test_id}: " in l]), 1, message)
                 self.assertEqual(len(body), 1 + len(tab_lines) + len(ids), message)
+
+    # -- parse-tests-tab-skip-deeper task0001 (AC-1 to AC-5): before the first
+    # item, the lines that continue a tab line are passed over and the readable
+    # IDs written after them are kept --
+
+    NOT_A_SEQUENCE = "tests value is not a block sequence of scalars"
+
+    # R1, the ticket's reproduction record (AC-1, AC-2): a tab line as the first
+    # item, its continuation on a deeper line without a tab, then a readable ID.
+    LEADING_CONTINUATION = _tab_record(*HEAD, TAB_ITEM, "        continued", "      - tests.nope.after")
+    # R2 (AC-3): R1 with line 4 written without a tab and without a dash.
+    PLAIN_FIRST_LINE = _tab_record(
+        *HEAD, "      tests.nope.plain", "        continued", "      - tests.nope.after"
+    )
+    # R3 (AC-4): R1 with the line after the tab line as deep as the tab line.
+    SAME_DEPTH_AS_TAB_LINE = _tab_record(
+        *HEAD, TAB_ITEM, "      tests.nope.plain", "      - tests.nope.after"
+    )
+
+    def assert_ids_and_errors(self, text, ids, errors):
+        """AC-1 yields exactly `ids` and exactly `errors`, given as (line
+        number, reason) pairs; both compared as complete lists."""
+        extraction = extract_text(text)
+        self.assertEqual(extraction.acs["AC-1"], ids)
+        expected = sorted(("AC-1", f"unsupported notation at line {n}: {reason}") for n, reason in errors)
+        self.assertEqual(sorted(extraction.errors), expected, extraction.errors)
+
+    def test_the_continuation_of_a_leading_tab_line_does_not_hide_the_id_written_after_it(self):
+        self.assert_ids_and_errors(
+            self.LEADING_CONTINUATION, ["tests.nope.after"], [(4, self.TAB), (5, self.DEEPER)]
+        )
+
+    def test_the_record_check_lists_both_extraction_errors_and_the_resolution_error_of_the_id_after_the_continuation(self):
+        _, lines = self.check(self.LEADING_CONTINUATION)
+        self.assertEqual(len(lines), 3, lines)
+        for reason in (f"unsupported notation at line 4: {self.TAB}", f"unsupported notation at line 5: {self.DEEPER}"):
+            self.assertEqual(lines.count(format_error(RECORD_REL, "AC-1", None, reason)), 1, lines)
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.after")), 1, lines)
+        self.assertFalse(any("tests.nope.bad" in line for line in lines), lines)
+
+    def test_a_first_line_without_a_tab_and_without_a_dash_keeps_the_not_a_sequence_handling(self):
+        self.assert_ids_and_errors(self.PLAIN_FIRST_LINE, [], [(4, self.NOT_A_SEQUENCE)])
+
+    def test_a_line_as_deep_as_the_tab_line_is_no_continuation_and_keeps_the_not_a_sequence_handling(self):
+        self.assert_ids_and_errors(self.SAME_DEPTH_AS_TAB_LINE, [], [(4, self.TAB), (5, self.NOT_A_SEQUENCE)])
+
+    # -- edge cases of the continuation range (AC-5) --
+
+    def test_several_continuation_lines_of_a_leading_tab_line_are_all_passed_over(self):
+        text = _tab_record(
+            *self.HEAD,
+            self.TAB_ITEM,
+            "        continued",
+            "        more",
+            "          deeper",
+            "      - tests.nope.after",
+        )
+        self.assert_ids_and_errors(text, ["tests.nope.after"], [(4, self.TAB), (5, self.DEEPER)])
+
+    def test_a_deeper_tab_line_inside_the_continuation_range_is_passed_over_without_a_report(self):
+        text = _tab_record(
+            *self.HEAD,
+            self.TAB_ITEM,
+            "        continued",
+            "        \tmore",
+            "      - tests.nope.after",
+        )
+        self.assert_ids_and_errors(text, ["tests.nope.after"], [(4, self.TAB), (5, self.DEEPER)])
+
+    def test_nothing_readable_after_the_continuation_reports_no_neither_error(self):
+        cases = {
+            "another field follows": _tab_record(
+                *self.HEAD, self.TAB_ITEM, "        continued", "    red_confirmed: true"
+            ),
+            "the record ends": _tab_record(*self.HEAD, self.TAB_ITEM, "        continued"),
+            "the record ends without a final newline": _tab_record(
+                *self.HEAD, self.TAB_ITEM, "        continued", final_newline=False
+            ),
+        }
+        for label, text in cases.items():
+            with self.subTest(label):
+                self.assert_ids_and_errors(text, [], [(4, self.TAB), (5, self.DEEPER)])
+
+    def test_another_tab_line_after_the_continuation_is_reported_and_the_scan_goes_on(self):
+        text = _tab_record(
+            *self.HEAD,
+            self.TAB_ITEM,
+            "        continued",
+            self.TAB_ITEM_TWO,
+            "      - tests.nope.after",
+        )
+        self.assert_ids_and_errors(
+            text, ["tests.nope.after"], [(4, self.TAB), (5, self.DEEPER), (6, self.TAB)]
+        )
+
+    def test_the_continuation_depth_is_compared_with_the_most_recent_tab_line(self):
+        text = _tab_record(
+            *self.HEAD,
+            "        \t- tests.nope.bad",
+            self.TAB_ITEM_TWO,
+            "       continued",
+            "      - tests.nope.after",
+        )
+        self.assert_ids_and_errors(
+            text, ["tests.nope.after"], [(4, self.TAB), (5, self.TAB), (6, self.DEEPER)]
+        )
+
+    def test_blank_and_comment_lines_between_the_tab_line_and_the_continuation_are_passed(self):
+        text = _tab_record(
+            *self.HEAD,
+            self.TAB_ITEM,
+            "      # note",
+            "",
+            "        continued",
+            "      - tests.nope.after",
+        )
+        self.assert_ids_and_errors(text, ["tests.nope.after"], [(4, self.TAB), (7, self.DEEPER)])
+
+    # -- further cases of the same rules --
+
+    def test_a_second_continuation_after_a_resumed_tab_line_is_reported_and_passed_over_too(self):
+        text = _tab_record(
+            *self.HEAD,
+            self.TAB_ITEM,
+            "        continued",
+            self.TAB_ITEM_TWO,
+            "        more",
+            "      - tests.nope.after",
+        )
+        self.assert_ids_and_errors(
+            text,
+            ["tests.nope.after"],
+            [(4, self.TAB), (5, self.DEEPER), (6, self.TAB), (7, self.DEEPER)],
+        )
+
+    def test_a_non_dash_line_not_deeper_than_the_tab_line_after_the_continuation_keeps_the_not_a_sequence_handling(self):
+        text = _tab_record(
+            *self.HEAD,
+            self.TAB_ITEM,
+            "        continued",
+            "      tests.nope.plain",
+            "      - tests.nope.after",
+        )
+        self.assert_ids_and_errors(
+            text, [], [(4, self.TAB), (5, self.DEEPER), (6, self.NOT_A_SEQUENCE)]
+        )
+
+    def test_a_line_deeper_than_a_shallow_tab_line_but_not_than_the_tests_key_is_no_continuation(self):
+        text = _tab_record(*self.HEAD, "   \t- tests.nope.bad", "    red_confirmed: true")
+        self.assert_ids_and_errors(text, [], [(4, self.TAB)])
 
 
 # --- AC-3: empty lists, unreadable records, the zero-record guard -------------
