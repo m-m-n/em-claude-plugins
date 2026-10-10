@@ -1,0 +1,47 @@
+task_id: task0001
+baseline_failures: []          # discover -s tests before any change: 10010 tests, OK
+final_failures: []             # re-run after implementation and this record: discover -s tests, 10025 tests, OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_tab_line_as_the_first_item_does_not_stop_the_ids_after_it_from_being_read
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_record_check_resolves_the_id_after_a_first_item_tab_line_and_reports_the_tab
+    red_confirmed: true
+    red_reason: "Both failed against the unchanged parser with the ticket reproduction step 1 input. Extraction: AssertionError: Lists differ: [] != ['tests.nope.good']. Record check: AssertionError: 0 != 1, the only error lines being the tab in indentation at line 4 and inconsistent indentation of fields at line 5, with no resolution error for tests.nope.good."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_block_of_tab_lines_only_reports_one_tab_error_per_line_and_nothing_else
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_field_loop_resumes_at_the_first_line_without_a_tab
+    red_confirmed: false
+    red_reason: "Regression pin: for these inputs the old parser already reported exactly one tab in indentation per tab line and never reported neither a value nor items (it returned right after the first tab line and left the remaining tab lines to the field loop), so both tests passed before the change; no red state occurred. They guard the restructured pre-item scan, which must keep that result."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_deeper_tab_line_drops_the_held_id_and_is_reported_only_as_a_tab
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_record_check_never_resolves_the_fragment_before_a_deeper_tab_line
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_consecutive_deeper_tab_lines_drop_the_held_id_once_and_are_each_reported
+    red_confirmed: true
+    red_reason: "All failed against the unchanged parser with the ticket reproduction step 2 input. Extraction: AssertionError: Lists differ: ['tests.nope.fragment', 'tests.nope.control'] != ['tests.nope.control']. Record check: AssertionError: True is not false, an error line naming tests.nope.fragment (attribute not found) was reported."
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_same_depth_tab_line_is_not_a_continuation_and_keeps_the_ids_around_it
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_tab_line_less_deep_than_the_items_is_only_reported
+    red_confirmed: false
+    red_reason: "Regression pin: the old item loop already reported a same-depth tab line only as a tab and kept the ID before it, so the tests passed before the change; no red state occurred. They guard the revised tab branch of the item loop, which must keep that result."
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_unsupported_notations_inside_an_ac_name_the_file_the_ac_and_the_notation
+      - tests.test_tests_yaml_id_resolution.TestExtractionErrors.test_a_tests_key_with_neither_value_nor_items_is_unsupported_notation
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing self-inspection test detects a non-standard-library import in the changed file, and the two existing extraction-error tests keep the existing tab in indentation case and the neither a value nor items cases unchanged; no red state occurred for this change. The run commands (python3 -m unittest discover -s tests, and python3 -m unittest tests.test_tests_yaml_id_resolution with the tests directory on the module search path) end green."
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_per_record_test_fails_once_listing_every_tab_error_and_one_resolution_error_per_id
+    red_confirmed: true
+    red_reason: "Two of the nine record shapes failed against the unchanged parser. First item is a tab line: the single failure message listed a tab in indentation error and an inconsistent indentation of fields error and no resolution error for tests.nope.good (AssertionError: 0 != 1). Deeper tab line after an ID: the message listed 3 errors, including a resolution error for tests.nope.fragment (AssertionError: 2 error(s) in this record not found)."
+  AC-7:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_tab_line_as_the_first_item_does_not_stop_the_ids_after_it_from_being_read
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_deeper_tab_line_drops_the_held_id_and_is_reported_only_as_a_tab
+    red_confirmed: true
+    red_reason: "The AC-1 and AC-3 tests use the ticket reproduction inputs verbatim and both were run and failed against the parser as it was before this task (Lists differ: [] != ['tests.nope.good'], and Lists differ: ['tests.nope.fragment', 'tests.nope.control'] != ['tests.nope.control'])."

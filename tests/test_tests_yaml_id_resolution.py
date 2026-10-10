@@ -516,7 +516,18 @@ class _RecordParser:
     def parse_tests(self, ac_key, key_index, rest, key_indent, limit):
         """The value of a `tests` key: (the readable IDs, next index). Every
         element that is an extraction error is reported and contributes no ID;
-        the readable IDs of the other elements are returned either way."""
+        the readable IDs of the other elements are returned either way.
+
+        A tab line (a line whose first character after its leading spaces is a
+        tab) is unsupported notation and is reported once as `tab in
+        indentation`; an element written on it is never an ID. Tab lines before
+        the first item are passed over, and the item indentation is fixed by
+        the first line without a tab. If the block holds nothing but tab lines,
+        only their tab errors are reported. Inside the item loop a tab line
+        deeper than the items takes back the ID held before it (the first-line
+        fragment of a multi-line value) and is not also reported as a deeper
+        line; a tab line at the items' depth is not a continuation line and
+        leaves the preceding ID in place."""
         lines = self.lines
         value = rest.lstrip(" \t")
         if value.startswith("["):
@@ -529,26 +540,40 @@ class _RecordParser:
         if not _comment_or_empty(rest):
             self.unsupported(ac_key, key_index, "tests value is neither a block list nor a one-line flow list")
             return [], self.skip_deeper(key_index + 1, key_indent, limit)
+        # Pre-item scan: blank lines, comments and tab lines before the first
+        # line that can open the list. Each tab line is reported once here.
         f = key_index + 1
-        while f < limit and _is_ignorable(lines[f]):
+        tab_seen = False
+        while f < limit:
+            if _is_ignorable(lines[f]):
+                f += 1
+                continue
+            if not _indent_of(lines[f])[1].startswith("\t"):
+                break
+            self.unsupported(ac_key, f, "tab in indentation")
+            tab_seen = True
             f += 1
         neither = "tests key has neither a value nor items"
-        if f >= limit:
+
+        def no_items(resume):
+            # The tab lines passed above are already consumed and reported, so
+            # `neither` is not added for them; the field loop resumes at
+            # `resume`, the first line that is not a tab line (or the block end).
+            if tab_seen:
+                return [], resume
             self.unsupported(ac_key, key_index, neither)
             return [], key_index + 1
+
+        if f >= limit:
+            return no_items(limit)
         first_indent, first = _indent_of(lines[f])
-        if first.startswith("\t"):
-            self.unsupported(ac_key, f, "tab in indentation")
-            return [], f + 1
         if not _is_dash(first):
             if first_indent > key_indent:
                 self.unsupported(ac_key, f, "tests value is not a block sequence of scalars")
                 return [], self.skip_deeper(f + 1, key_indent, limit)
-            self.unsupported(ac_key, key_index, neither)
-            return [], key_index + 1
+            return no_items(f)
         if first_indent < key_indent:
-            self.unsupported(ac_key, key_index, neither)
-            return [], key_index + 1
+            return no_items(f)
         item_indent = first_indent
         ids = []
         # True while the most recent element is a one-line scalar kept in `ids`,
@@ -561,7 +586,14 @@ class _RecordParser:
                 continue
             indent, stripped = _indent_of(line)
             if stripped.startswith("\t"):
+                # Only the tab is reported, whatever the depth. Deeper than the
+                # items, the line would continue the element before it, so the
+                # ID held from that element is taken back; at the items' depth
+                # or shallower it is no continuation and the held state stays.
                 self.unsupported(ac_key, f, "tab in indentation")
+                if indent > item_indent and last_is_id:
+                    ids.pop()
+                    last_is_id = False
                 f += 1
                 continue
             if indent < item_indent:
@@ -1582,6 +1614,204 @@ class TestExtractionErrors(unittest.TestCase):
         self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.kept")), 1, lines)
         self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.also_kept")), 1, lines)
         self.assertFalse(any("tests.nope.fragment" in line for line in lines), lines)
+
+
+# --- tab lines in a tests block (parse-tests-tab-handling, task0001) ----------
+
+
+def _tab_record(*lines, final_newline=True):
+    """The text of a record made of `lines`. A tab inside a line is written as
+    an escape sequence in the string literal, never as a raw tab character."""
+    return "\n".join(lines) + ("\n" if final_newline else "")
+
+
+class TestTabLinesInTestsBlock(unittest.TestCase):
+    """parse-tests-tab-handling task0001 (FR1 to FR4, TM-1): a tests block
+    that holds tab lines (lines with a tab in their indentation) still yields
+    one failure message listing the `tab in indentation` errors together with
+    the resolution error of every readable ID. An element written on a tab line
+    is never an ID, and the tab notation itself stays unsupported (A1)."""
+
+    check = TestExtractionErrors.check
+    resolution_lines = TestExtractionErrors.resolution_lines
+
+    TAB = "tab in indentation"
+    HEAD = ("acceptance_tests:", "  AC-1:", "    tests:")
+    TAB_ITEM = "      \t- tests.nope.bad"
+    TAB_ITEM_TWO = "      \t- tests.nope.worse"
+
+    # The ticket's reproduction step 1 (AC-1).
+    FIRST_ITEM_TAB = _tab_record(*HEAD, TAB_ITEM, "      - tests.nope.good")
+    # The ticket's reproduction step 2 (AC-3).
+    DEEPER_TAB = _tab_record(
+        *HEAD, "      - tests.nope.fragment", "        \tcontinued", "      - tests.nope.control"
+    )
+    # A tab line at the item's own depth (AC-4).
+    SAME_DEPTH_TAB = _tab_record(
+        *HEAD, "      - tests.nope.kept", "      \tx", "      - tests.nope.after"
+    )
+    # label: (record text, line numbers of the tab lines); no ID is readable (AC-2).
+    TAB_ONLY = {
+        "one tab line, then another field": (_tab_record(*HEAD, TAB_ITEM, "    red_confirmed: true"), [4]),
+        "one tab line, then the end of the file": (_tab_record(*HEAD, TAB_ITEM), [4]),
+        "one tab line, then the end of the file without a final newline": (
+            _tab_record(*HEAD, TAB_ITEM, final_newline=False),
+            [4],
+        ),
+        "two tab lines, then another field": (
+            _tab_record(*HEAD, TAB_ITEM, TAB_ITEM_TWO, "    red_confirmed: true"),
+            [4, 5],
+        ),
+        "two tab lines, then the end of the file": (_tab_record(*HEAD, TAB_ITEM, TAB_ITEM_TWO), [4, 5]),
+        "two tab lines, then the end of the file without a final newline": (
+            _tab_record(*HEAD, TAB_ITEM, TAB_ITEM_TWO, final_newline=False),
+            [4, 5],
+        ),
+    }
+    # label: (record text, readable IDs of AC-1 in file order, line numbers of the tab lines)
+    RECORDS = {
+        "first item is a tab line": (FIRST_ITEM_TAB, ["tests.nope.good"], [4]),
+        "deeper tab line after an ID": (DEEPER_TAB, ["tests.nope.control"], [5]),
+        "same-depth tab line between IDs": (SAME_DEPTH_TAB, ["tests.nope.kept", "tests.nope.after"], [5]),
+        **{label: (text, [], tabs) for label, (text, tabs) in TAB_ONLY.items()},
+    }
+
+    def tab_errors(self, line_numbers):
+        """The extraction errors expected for tab lines at `line_numbers` of AC-1."""
+        return sorted(("AC-1", f"unsupported notation at line {n}: {self.TAB}") for n in line_numbers)
+
+    def assert_extraction(self, text, ids, tab_lines):
+        extraction = extract_text(text)
+        self.assertEqual(extraction.acs["AC-1"], ids)
+        self.assertEqual(sorted(extraction.errors), self.tab_errors(tab_lines), extraction.errors)
+
+    # -- AC-1 (FR1): a tab line as the first item --
+
+    def test_a_tab_line_as_the_first_item_does_not_stop_the_ids_after_it_from_being_read(self):
+        extraction = extract_text(self.FIRST_ITEM_TAB)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.nope.good"])
+        reasons = [reason for ac, reason in extraction.errors if ac == "AC-1"]
+        self.assertTrue(any(self.TAB in reason for reason in reasons), reasons)
+        self.assertFalse(any("inconsistent indentation of fields" in reason for reason in reasons), reasons)
+
+    def test_the_record_check_resolves_the_id_after_a_first_item_tab_line_and_reports_the_tab(self):
+        _, lines = self.check(self.FIRST_ITEM_TAB)
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.good")), 1, lines)
+        self.assertEqual(len(lines), 2, lines)
+        self.assertEqual(len([line for line in lines if self.TAB in line]), 1, lines)
+        self.assertFalse(any("tests.nope.bad" in line for line in lines), lines)
+
+    def test_comments_and_blank_lines_around_the_leading_tab_lines_are_passed(self):
+        text = _tab_record(
+            *self.HEAD, "      # a comment", "", self.TAB_ITEM, "      # another comment", "      - tests.nope.good"
+        )
+        self.assert_extraction(text, ["tests.nope.good"], [6])
+
+    def test_the_item_indentation_is_fixed_by_the_first_line_without_a_tab(self):
+        text = _tab_record(*self.HEAD, self.TAB_ITEM, "    - tests.nope.first", "    - tests.nope.second")
+        self.assert_extraction(text, ["tests.nope.first", "tests.nope.second"], [4])
+
+    # -- AC-2 (FR2, TM-1): a block that holds tab lines only --
+
+    def test_a_block_of_tab_lines_only_reports_one_tab_error_per_line_and_nothing_else(self):
+        for label, (text, tab_lines) in self.TAB_ONLY.items():
+            with self.subTest(label):
+                self.assert_extraction(text, [], tab_lines)
+                reasons = [reason for _ac, reason in extract_text(text).errors]
+                self.assertFalse(any("neither a value nor items" in reason for reason in reasons), reasons)
+
+    def test_the_field_loop_resumes_at_the_first_line_without_a_tab(self):
+        text = _tab_record(*self.HEAD, self.TAB_ITEM, "    tests: [tests.nope.second]")
+        extraction = extract_text(text)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.nope.second"])
+        self.assertEqual(
+            sorted(extraction.errors),
+            sorted([("AC-1", f"unsupported notation at line 4: {self.TAB}"), ("AC-1", "duplicate tests key")]),
+        )
+
+    # -- AC-3 (FR3): a tab line deeper than the item --
+
+    def test_a_deeper_tab_line_drops_the_held_id_and_is_reported_only_as_a_tab(self):
+        extraction = extract_text(self.DEEPER_TAB)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.nope.control"])
+        reasons = [reason for ac, reason in extraction.errors if ac == "AC-1"]
+        self.assertEqual(reasons, [f"unsupported notation at line 5: {self.TAB}"])
+        self.assertFalse(any("continues or nests on a deeper line" in reason for reason in reasons), reasons)
+
+    def test_the_record_check_never_resolves_the_fragment_before_a_deeper_tab_line(self):
+        _, lines = self.check(self.DEEPER_TAB)
+        self.assertFalse(any("tests.nope.fragment" in line for line in lines), lines)
+        self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.control")), 1, lines)
+        self.assertEqual(len(lines), 2, lines)
+
+    def test_consecutive_deeper_tab_lines_drop_the_held_id_once_and_are_each_reported(self):
+        text = _tab_record(
+            *self.HEAD,
+            "      - tests.nope.fragment",
+            "        \tcontinued",
+            "        \tmore",
+            "      - tests.nope.control",
+        )
+        self.assert_extraction(text, ["tests.nope.control"], [5, 6])
+
+    def test_a_deeper_tab_line_after_an_element_that_is_not_an_id_takes_nothing_back(self):
+        text = _tab_record(
+            *self.HEAD,
+            "      - tests.nope.kept",
+            "      - name: x",
+            "        \tcontinued",
+            "      - tests.nope.control",
+        )
+        extraction = extract_text(text)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.nope.kept", "tests.nope.control"])
+
+    def test_lines_without_a_tab_after_a_deeper_tab_line_keep_their_existing_handling(self):
+        text = _tab_record(
+            *self.HEAD,
+            "      - tests.nope.fragment",
+            "        \tcontinued",
+            "        more text",
+            "      - tests.nope.control",
+        )
+        extraction = extract_text(text)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.nope.control"])
+        reasons = sorted(reason for _ac, reason in extraction.errors)
+        self.assertEqual(len(reasons), 2, reasons)
+        self.assertTrue(any(f"line 5: {self.TAB}" in reason for reason in reasons), reasons)
+        self.assertTrue(any("line 6" in reason and "continues or nests" in reason for reason in reasons), reasons)
+
+    # -- AC-4 (FR4): a tab line at the item's depth --
+
+    def test_a_same_depth_tab_line_is_not_a_continuation_and_keeps_the_ids_around_it(self):
+        self.assert_extraction(self.SAME_DEPTH_TAB, ["tests.nope.kept", "tests.nope.after"], [5])
+
+    def test_a_tab_line_less_deep_than_the_items_is_only_reported(self):
+        text = _tab_record(*self.HEAD, "      - tests.nope.one", "    \tx", "      - tests.nope.two")
+        self.assert_extraction(text, ["tests.nope.one", "tests.nope.two"], [5])
+
+    # -- AC-6 (TM-1): one failure message per record --
+
+    def test_the_per_record_test_fails_once_listing_every_tab_error_and_one_resolution_error_per_id(self):
+        for label, (text, ids, tab_lines) in self.RECORDS.items():
+            with self.subTest(label):
+                root = make_root(self, records={RECORD_REL: text})
+                texts = failure_texts(run_generated(make_record_test_class(root)))
+                self.assertEqual(len(texts), 1, texts)
+                (message,) = texts.values()
+                self.assertIn(f"{len(tab_lines) + len(ids)} error(s) in this record", message)
+                every = message.splitlines()
+                # The report proper: its head line and the error lines after it.
+                body = every[next(i for i, l in enumerate(every) if "error(s) in this record" in l) :]
+                for number in tab_lines:
+                    self.assertEqual(
+                        len([l for l in body if f"{RECORD_REL}: AC-1: unsupported notation at line {number}: {self.TAB}" in l]),
+                        1,
+                        message,
+                    )
+                self.assertEqual(len([l for l in body if self.TAB in l]), len(tab_lines), message)
+                for test_id in ids:
+                    self.assertEqual(len([l for l in body if f"{RECORD_REL}: AC-1: {test_id}: " in l]), 1, message)
+                self.assertEqual(len(body), 1 + len(tab_lines) + len(ids), message)
 
 
 # --- AC-3: empty lists, unreadable records, the zero-record guard -------------
