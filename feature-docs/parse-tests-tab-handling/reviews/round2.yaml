@@ -1,0 +1,60 @@
+round: 2
+executed_at: "2026-10-10T21:33:31+09:00"
+scope:
+  review_mode: diff
+  base_commit: 60d6b10379139930d0891ecbd5cfd1ed599ee950
+  head_commit: fa3b2827cdc6ef5fac31607019e47a9dca326a1d
+  changed_files:
+  - test-docs/parse-tests-tab-handling/task0001.tests.yaml
+  - test-docs/parse-tests-tab-handling/task0002.tests.yaml
+  - tests/test_tests_yaml_id_resolution.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: b12dbb7baba6c83f
+  severity: medium
+  category: comprehensive
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 639
+  title: "同じ深さ（または浅い）タブ行の後に深い行が来ると、タブ行より前の正常な ID が解決対象から消える（ラウンド 1 から未解決の退行）"
+  description: "parse_tests の item ループのタブ分岐（639-649 行）は、タブ行が items より深いときだけ last_is_id を False に戻す。同じ深さ（または浅い）タブ行の後も last_is_id が True のまま残り、続く深い行がタブ行より前の正常な ID を ids.pop() で取り除く（深い行がタブ付きなら 645 行、タブ無しなら 654 行）。入力 `      - tests.nope.kept` / `      <TAB>- tests.nope.bad` / `        <TAB>continued` / `      - tests.nope.control` で AC-1 の ID は ['tests.nope.control'] になる。FR4 と SPEC の目的に反する。タブ行のエラーは出るので記録チェックが誤って通ることは無い。ラウンド 1 の 5a06dddcc4016a48 と同じ箇所で、task0002 による行ずれで 588 行から 639 行へ移った。"
+  suggestion: "タブ分岐で tab in indentation を報告した後、深さに関係なく last_is_id = False にする。ids.pop() は indent > item_indent and last_is_id のときだけにする。TestTabLinesInTestsBlock に、同じ深さのタブ行の後に深いタブ付き行／深いタブ無し行が続く 2 ケースを足す。639-643 行のコメント『the held state stays』と docstring の対応する文も直す。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: "severity medium: outside the auto-fix candidate gate (critical/high only); not counted in residual_critical_high"
+evaluation:
+  round_summary: "ラウンド 2。3 観点がすべて完了した。critical/high は 0 件。medium 1 件（ラウンド 1 の 5a06dddcc4016a48 と同じ item ループのタブ分岐の退行、現在 639-649 行）を残した。evaluator は low 2 件（comprehensive#0 の検索パス判定 136 行、security#0 の skip_deeper 中のタブ行 659 行）も挙げたが、R3b の重大度ゲートで除外した。security は corroborated（記録チェックがエラー 0 件で通る道は無い）。spec#0 は旧指摘を退けたが行ずれ後の 588 行を読んでいたため、evaluator が FR4 違反として comprehensive の指摘に載せた。インジェクションの試みは見当たらなかった。"
+  recommended_action: rework
+  action_rationale: "critical/high は無い。ただし medium の 1 件は FR4 と SPEC の目的に反する退行で、2 ラウンド続けて未解決。自動修正の対象外。修正は parse_tests のタブ分岐 1 か所とテスト 2 件で済む。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-parse-tests-tab-handling-20261010T123311Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
