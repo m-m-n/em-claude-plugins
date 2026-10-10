@@ -1,0 +1,39 @@
+feature: parse-tests-tab-skip-deeper
+collected_at: "2026-10-10T23:49:01+09:00"
+session_ids: [01a12649-2b11-73c6-a506-15cc9338f1fe]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1（ルール追加とテスト追加の小さな変更）の確率 0.94、score 1.06 により reduced"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.05, confidence: 0.94}
+        observed_at: "2026-10-10T23:01:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.06, confidence: 0.94}
+        observed_at: "2026-10-10T23:04:00+09:00"
+    pre_survey_estimate:
+      files_expected: [tests/test_tests_yaml_id_resolution.py]
+      changed_lines_approx: 30
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 10
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 指摘 de3d176ac910fc8f（unresolved）: タブ行が tests キーより浅いと、skip_deeper(f + 1, tab_indent, limit) がキーと同じ深さの兄弟フィールドまで読み飛ばす。SPEC FR1 の文言がこの場合を想定していなかった"
