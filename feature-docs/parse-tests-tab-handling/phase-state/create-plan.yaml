@@ -1,0 +1,21 @@
+schema_version: 1
+feature: parse-tests-tab-handling
+phase: create-plan
+status: in_progress
+generation: 1
+base_revision: 0d1cc0ee6f3cd0a27a3265635e9101bd627ac45d
+last_input_digest: sha256:400a9a41c8aed6d0667b336b2a56d657603b5853d1bba2ab755ff4b5b1a26cb6
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:400a9a41c8aed6d0667b336b2a56d657603b5853d1bba2ab755ff4b5b1a26cb6
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
