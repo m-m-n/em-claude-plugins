@@ -2,63 +2,39 @@ schema_version: 1
 feature: file-tasks-temp-unlink-oserror
 created: '2026-10-11'
 base_branch: main
-goal: '# file-tasks: 一時ファイルの削除エラーが、起票に成功したパッケージを失敗として記録し残りを打ち切る
-
+goal: |
+  # file-tasks: 一時ファイルの削除エラーが、起票に成功したパッケージを失敗として記録し残りを打ち切る
 
   Notion: https://www.notion.so/3f03509ec8ee814d8e85da0738a1a600 (種別: バグ)
 
-
   ## 現象 (必須)
-
   `_run_entry_point_with_references` は参照ファイルを `finally` の中で `Path(refs_path).unlink(missing_ok=True)` で消しているが、この削除の OSError を捕まえていない。`task create` / `task update` が exit 0 で成功した後に削除が失敗すると（EACCES / EIO / EROFS 等）、OSError が戻り値を上書きし、`create_security_task` / `append_security_task_references` が `EntryPointError` に変換する。その結果 `file_tasks` は、実際には起票できたパッケージを `failed_package`（`task_create_failed` / `task_update_failed`）として記録し、`unattempted_packages` の先頭に入れ、以降のパッケージを試さずに打ち切る。receipt・R6 の報告・batch の最終結果が「起票済みのパッケージを未起票」と表示する。
-
   書き込み失敗側の `_write_references_tempfile` は削除エラーを `contextlib.suppress(OSError)` で握っているため、2 つの後始末の扱いが食い違っている。
 
-
   ## 再現手順 (必須)
-
   1. `Path.unlink` が OSError を送出するようにして、成功する entry point で `file-tasks` を複数パッケージで実行する
-
   2. 1 件目のパッケージが `failed_package` になり、2 件目以降が `unattempted_packages` に並ぶ
 
-
   ## 期待する挙動 (必須)
-
   成否は起動結果と終了ステータスだけで決める。`finally` の削除を try/except OSError で囲み、削除エラーは stderr に出すだけにする。削除エラーが、完了した結果や先に起きた起動エラーを上書きしない。
 
-
   ## 完了の定義 (必須)
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
   - [ ] `_run_entry_point_with_references` と `create_security_task` の docstring から「ファイル削除」の OSError を EntryPointError に変える記述を外す
-
   - [ ] `tests/test_sca_file_tasks_oserror.py::TestFilingHelpersConvertOsErrors.test_temp_file_removal_failure_becomes_entry_point_error` を、ヘルパが正常に戻り、エラー文が stderr にだけ出ることを確かめる形に書き換える
 
-
   ## 該当箇所 (任意)
-
   `em-workflow/scripts/scan-dependencies.py:421`（`_run_entry_point_with_references` の `finally`）
 
-
   ## 実害・発生条件 (任意)
-
   発生はまれ（このプロセスが一時ディレクトリに作ったファイルの削除に失敗したとき）。起きると、この機能が無くそうとしている「receipt と実態の食い違い」をそのまま生む。
-
   出典: em-workflow sca-file-tasks-robustness のレビュー round 1 の finding `3b0cbcee0a37b8bf`（medium、unresolved）
 
-
   ## 追加指示（起動時）
-
   - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作成する。integration ブランチはローカル・リモート双方に残す（base_branch へ自動マージしない）
-
   - 不明点は Codex に相談し、比較的よいと判断した案を採用する
-
   - その議論内容を Notion に記録する
-
-  '
 parent_branch: em-workflow/file-tasks-temp-unlink-oserror/integration
 tier: reduced
 tier_decision:
