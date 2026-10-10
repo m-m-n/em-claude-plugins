@@ -1,20 +1,33 @@
 schema_version: 1
 feature: parse-tests-tab-skip-key-bound
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 5122c7ad0f2e3eeff035efcc204efb7e65d0ee44
 last_input_digest: sha256:469325c64727272f603c0ae4ff381239792edf6e6296287b5956274733dbf871
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:469325c64727272f603c0ae4ff381239792edf6e6296287b5956274733dbf871
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:1e7b62e238927e04607ecf95b9dcafc10ce5f4cc6eb626489f814b023e3b1b7d
+artifacts:
+- path: feature-docs/parse-tests-tab-skip-key-bound/THREAT-MODEL.md
+  sha256: sha256:186c09c058bc75709a8977c7d8bb9997b48bb0731c01a803f7b103b24af36dcd
+  produced_by: create-plan-run-0001
+- path: feature-docs/parse-tests-tab-skip-key-bound/VERIFICATION.md
+  sha256: sha256:5c28f39fa61d4c54f2c8ef75a75d127f32ec8281d23d304b3d114af41282fe0c
+  produced_by: create-plan-run-0001
+- path: feature-docs/parse-tests-tab-skip-key-bound/tasks/task0001.md
+  sha256: sha256:b4075836c79f7633b5bf44e3ed71859c3381702871483f25f2d1fc1b5a231426
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:469325c64727272f603c0ae4ff381239792edf6e6296287b5956274733dbf871
+  base_workflow_blob: b85fca6dfe36bced8914ae692ee48ff5493b4794
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
