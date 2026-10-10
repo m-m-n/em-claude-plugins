@@ -583,15 +583,15 @@ class _RecordParser:
         a tab that does not start with a dash, comes directly after a tab line
         (only blank and comment lines between) and is deeper than that tab
         line (and deeper than the `tests` key) is reported once as a deeper
-        line; the lines deeper than that tab line are passed over, with no ID
-        read from them and a tab line among them not reported, and the scan
-        for the first item then resumes at the first line not passed over,
-        under the same rules. Any other such non-dash line deeper than the
-        `tests` key keeps the not-a-sequence handling. The item indentation is
-        fixed by the first dash line the scan reaches. If the block holds
-        nothing but tab lines and the lines passed over after them, only their
-        errors are reported. Inside the item loop only a tab
-        line deeper than the items, directly after a readable ID, takes that ID
+        line; the lines deeper than both that tab line and the `tests` key are
+        passed over, with no ID read from them and a tab line among them not
+        reported, and the scan for the first item then resumes at the first
+        line not passed over, under the same rules. Any other such non-dash
+        line deeper than the `tests` key keeps the not-a-sequence handling.
+        The item indentation is fixed by the first dash line the scan reaches.
+        If the block holds nothing but tab lines and the lines passed over
+        after them, only their errors are reported. Inside the item loop only a
+        tab line deeper than the items, directly after a readable ID, takes that ID
         back (the first-line fragment of a multi-line value), and it is not
         also reported as a deeper line; a tab line at the items' depth or
         shallower is no continuation and takes nothing back, so the IDs before
@@ -615,11 +615,12 @@ class _RecordParser:
         # tab line (only blank and comment lines between) and is deeper than
         # both that tab line and the `tests` key continues the tab line's
         # element: it is reported once as a deeper line, the lines deeper than
-        # that tab line are passed over, and the scan resumes at the first
-        # line not passed over, under the same rules. Any other such non-dash
-        # line deeper than the `tests` key keeps the not-a-sequence handling
-        # below. `tab_indent` is the depth of the tab line that directly
-        # precedes the scan position, None when no tab line does.
+        # both that tab line and the `tests` key are passed over, and the scan
+        # resumes at the first line not passed over, under the same rules. Any
+        # other such non-dash line deeper than the `tests` key keeps the
+        # not-a-sequence handling below. `tab_indent` is the depth of the tab
+        # line that directly precedes the scan position, None when no tab line
+        # does.
         f = key_index + 1
         tab_seen = False
         tab_indent = None
@@ -641,7 +642,7 @@ class _RecordParser:
                 and scan_indent > tab_indent
             ):
                 self.unsupported(ac_key, f, "tests item continues or nests on a deeper line (multi-line or nested value)")
-                f = self.skip_deeper(f + 1, tab_indent, limit)
+                f = self.skip_deeper(f + 1, max(tab_indent, key_indent), limit)
                 tab_indent = None
                 continue
             break
@@ -2117,6 +2118,74 @@ class TestTabLinesInTestsBlock(unittest.TestCase):
     def test_a_line_deeper_than_a_shallow_tab_line_but_not_than_the_tests_key_is_no_continuation(self):
         text = _tab_record(*self.HEAD, "   \t- tests.nope.bad", "    red_confirmed: true")
         self.assert_ids_and_errors(text, [], [(4, self.TAB)])
+
+    # -- parse-tests-tab-skip-key-bound task0001 (AC-1 to AC-3): the lines passed
+    # over after a continuation line are those deeper than both the tab line and
+    # the `tests` key; a line at the key's depth is read again --
+
+    # R1 (AC-1), the ticket's reproduction record: a tab line shallower than the
+    # `tests` key (3 spaces and a tab, the key at 4 spaces), a continuation line
+    # deeper than the key, then a second `tests` key at the key's depth.
+    SHALLOW_TAB_THEN_SECOND_KEY = _tab_record(
+        *HEAD,
+        "   \t- tests.nope.bad",
+        "      continued",
+        "    tests: [tests.nope.second]",
+    )
+    # R2 (AC-2): R1 with a dash item at the key's depth before the second key.
+    SHALLOW_TAB_THEN_ITEM_AND_SECOND_KEY = _tab_record(
+        *HEAD,
+        "   \t- tests.nope.bad",
+        "      continued",
+        "    - tests.nope.after",
+        "    tests: [tests.nope.second]",
+    )
+    # R3 (AC-3): R1 with a dash item deeper than both the tab line and the key
+    # before the second key.
+    SHALLOW_TAB_THEN_DEEPER_ITEM_AND_SECOND_KEY = _tab_record(
+        *HEAD,
+        "   \t- tests.nope.bad",
+        "      continued",
+        "     - tests.nope.skipped",
+        "    tests: [tests.nope.second]",
+    )
+
+    DUPLICATE_KEY = "duplicate tests key"
+
+    def assert_ids_and_errors_with_duplicate_key(self, text, ids, errors):
+        """AC-1 yields exactly `ids`, and exactly the line-numbered `errors`
+        (as (line number, reason) pairs) plus one `duplicate tests key` error;
+        the error list is compared as a complete list."""
+        extraction = extract_text(text)
+        self.assertEqual(extraction.acs["AC-1"], ids)
+        expected = sorted(
+            [("AC-1", f"unsupported notation at line {n}: {reason}") for n, reason in errors]
+            + [("AC-1", self.DUPLICATE_KEY)]
+        )
+        self.assertEqual(sorted(extraction.errors), expected, extraction.errors)
+
+    def test_a_second_tests_key_at_the_key_depth_after_a_continuation_line_is_read_again(self):
+        self.assert_ids_and_errors_with_duplicate_key(
+            self.SHALLOW_TAB_THEN_SECOND_KEY,
+            ["tests.nope.second"],
+            [(4, self.TAB), (5, self.DEEPER)],
+        )
+
+    def test_a_dash_item_and_a_second_tests_key_at_the_key_depth_after_a_continuation_line_are_both_read(self):
+        self.assert_ids_and_errors_with_duplicate_key(
+            self.SHALLOW_TAB_THEN_ITEM_AND_SECOND_KEY,
+            ["tests.nope.after", "tests.nope.second"],
+            [(4, self.TAB), (5, self.DEEPER)],
+        )
+
+    def test_a_line_deeper_than_both_the_tab_line_and_the_key_is_still_passed_over_after_a_continuation_line(self):
+        text = self.SHALLOW_TAB_THEN_DEEPER_ITEM_AND_SECOND_KEY
+        extraction = extract_text(text)
+        self.assertNotIn("tests.nope.skipped", extraction.acs["AC-1"])
+        self.assertFalse(any("line 6" in reason for _ac, reason in extraction.errors), extraction.errors)
+        self.assert_ids_and_errors_with_duplicate_key(
+            text, ["tests.nope.second"], [(4, self.TAB), (5, self.DEEPER)]
+        )
 
 
 # --- AC-3: empty lists, unreadable records, the zero-record guard -------------
