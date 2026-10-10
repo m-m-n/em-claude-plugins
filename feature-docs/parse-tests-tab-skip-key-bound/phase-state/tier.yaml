@@ -1,0 +1,64 @@
+schema_version: 2
+feature: parse-tests-tab-skip-key-bound
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-11T00:01:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-10-11T00:06:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_tests_yaml_id_resolution.py
+  changed_lines_approx: 30
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: tests/test_tests_yaml_id_resolution.py:644 は現在も skip_deeper(f
+    + 1, tab_indent, limit) を呼び、同:418 は指定した境界より深い行を読み飛ばす。現在の処理をメモリ内で実行すると、提示された再現入力と、末尾を4空白のダッシュ項目にした入力の両方で、AC-1のIDは空になり、エラーは4行目のタブと5行目の続き行の2件だけになる。同:586、617-618
+    の説明もタブ行だけを境界としている。同:1819-1826 の重複キーのテストには続き行がなく、同:2117-2119 の浅いタブ行のテストにも深い続き行がない。呼び出し元は同:567
+    の1か所で、parse_tests が直接参照する既存の関数・メソッド・例外型は9個ある
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 10
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-11T00:06:10+09:00'
