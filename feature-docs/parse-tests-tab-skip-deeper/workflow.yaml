@@ -80,7 +80,12 @@ workflow:
   status: completed
   completed_at_commit: 2eff00164b3b1232dee7d6597e9509b7801f21b7
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: e41fff3282a01f8e8569429458755464ec580370
+  result: pass
+  failed_items: []
+  summary: python3 -m unittest discover -s tests exit 0 (10054 tests, skipped=1); TS-1..TS-6 pass via TestTabLinesInTestsBlock and the ticket reproduction; TS-7 docstring/comments inspected and consistent; TS-8 no raw tab, standard-library imports only; existing test methods unchanged (diff adds only)
+  excluded_requirements: []
 - id: retrospect
   status: pending
 tasks:
