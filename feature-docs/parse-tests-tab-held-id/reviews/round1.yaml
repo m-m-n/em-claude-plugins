@@ -1,0 +1,44 @@
+round: 1
+executed_at: "2026-10-10T22:45:18+09:00"
+scope:
+  review_mode: diff
+  base_commit: 6479016cd89574ffd448d4c6538c04b4c7b40dee
+  head_commit: b06d1a6ca22ca1b4fc38b5bc2accec5cfd8a4cac
+  changed_files:
+  - test-docs/parse-tests-tab-held-id/task0001.tests.yaml
+  - tests/test_tests_yaml_id_resolution.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "3 観点（security / comprehensive / spec）すべて medium 以上の指摘なし。評価者が changed_files を独自に確認し、SPEC AC-1〜AC-4・FR1〜FR6・NFR1〜NFR3 との整合、タブ行が深さを問わずエラーとして報告されること（TM-1 の対策維持）を裏付けた。観点ごとの確認結果: security: corroborated / comprehensive: corroborated / spec: corroborated"
+  recommended_action: complete
+  action_rationale: "どの reviewer にも medium 以上の指摘が無く、評価者自身の確認でも全観点で reviewer の結論を裏付けた"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-parse-tests-tab-held-id-20261010T134505Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
