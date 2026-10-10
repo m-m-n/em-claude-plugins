@@ -1,0 +1,60 @@
+round: 1
+executed_at: "2026-10-10T20:59:28+09:00"
+scope:
+  review_mode: diff
+  base_commit: 60d6b10379139930d0891ecbd5cfd1ed599ee950
+  head_commit: 01990a8be0e11167a54d86873c94d75f2038404e
+  changed_files:
+  - test-docs/parse-tests-tab-handling/task0001.tests.yaml
+  - tests/test_tests_yaml_id_resolution.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: failed}
+- {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 5a06dddcc4016a48
+  severity: medium
+  category: comprehensive
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 588
+  title: "同じ深さのタブ行の後に深い行が来ると、タブ行より前の ID が解決対象から消える（今回の変更で入った退行）"
+  description: "item ループのタブ分岐（588-598 行）が last_is_id を False に戻すのは indent > item_indent のときだけ。同じ深さや浅いタブ行の後も last_is_id は True のまま残り、続く深い行がタブ行より前の ID を ids.pop() で取り除く。入力 `      - tests.nope.kept` / `      <TAB>- tests.nope.bad` / `        <TAB>continued` / `      - tests.nope.after` で結果は ['tests.nope.after'] になる（変更前は ['tests.nope.kept', 'tests.nope.after']）。深い行がタブ無しの場合も 601-607 行の分岐で同じ原因から kept が消える（変更前からある）。FR3 / FR4 に反する。タブ行のエラーは出るため記録チェックが誤って通ることは無い（TM-1 は保たれる）。"
+  suggestion: "タブ分岐で tab in indentation を報告した後、深さを問わず last_is_id = False にする。pop は indent > item_indent and last_is_id のときだけ行う。TestTabLinesInTestsBlock に 2 ケース（深い行がタブ付き / タブ無し）を足し、kept と after が残ることを確かめる。コメントの「the held state stays」も直す。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [claude:comprehensive]
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: "severity medium: outside the auto-fix candidate gate (critical/high only); not counted in residual_critical_high"
+evaluation:
+  round_summary: "ラウンド 1。comprehensive#0 は codex が JSON ではない出力を返して失敗し、comprehensive 観点は comprehensive#fallback で覆った。critical/high は 0 件。medium 1 件（item ループのタブ分岐の退行）を残した。もう 1 件（先頭のタブ行の後に深いタブ無し行が続くと後ろの ID が読み飛ばされる、変更前からある穴、tests/test_tests_yaml_id_resolution.py:570）は evaluator が low に下げ、R3b の重大度ゲートで除外した。security は corroborated（タブ行は前段・item ループともすべて報告され、エラー 0 件で記録チェックが通る道は無い）。spec は AC-1〜AC-5 との対応を確認。インジェクションの試みは見当たらなかった。"
+  recommended_action: auto_fix
+  action_rationale: "critical/high は無い。medium の 1 件は parse_tests のタブ分岐 1 か所とテスト 2 ケースの追加に閉じている。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
