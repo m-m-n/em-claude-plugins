@@ -83,6 +83,13 @@ Covers parse-tests-tab-handling task0002 Acceptance Criteria
 - AC-3, AC-4 (FR5, TS-5): the module makes its own directory importable, once
   and without touching the other entries (TestModuleDirectoryImportable).
 
+Covers parse-tests-tab-held-id task0001 Acceptance Criteria
+(feature-docs/parse-tests-tab-held-id/tasks/task0001.md):
+
+- AC-1, AC-2, AC-3 (FR1, FR2, FR3, FR4, FR6, TM-1): a deeper line that follows
+  a tab line takes back nothing, and the ID written before the tab line is
+  still resolved (TestTabLinesInTestsBlock).
+
 The generated `TestRecordResolution` (one test per real record) and
 `TestZeroRecordGuard` are the check itself; the fixture-based tests above
 build per-record tests for temporary roots with the same generators.
@@ -574,11 +581,13 @@ class _RecordParser:
         indentation`; an element written on it is never an ID. Tab lines before
         the first item are passed over, and the item indentation is fixed by
         the first line without a tab. If the block holds nothing but tab lines,
-        only their tab errors are reported. Inside the item loop a tab line
-        deeper than the items takes back the ID held before it (the first-line
-        fragment of a multi-line value) and is not also reported as a deeper
-        line; a tab line at the items' depth is not a continuation line and
-        leaves the preceding ID in place."""
+        only their tab errors are reported. Inside the item loop only a tab
+        line deeper than the items, directly after a readable ID, takes that ID
+        back (the first-line fragment of a multi-line value), and it is not
+        also reported as a deeper line; a tab line at the items' depth or
+        shallower is no continuation and takes nothing back, so the IDs before
+        and after it are kept. After any tab line no ID is held, so a deeper
+        line that follows a tab line takes back nothing."""
         lines = self.lines
         value = rest.lstrip(" \t")
         if value.startswith("["):
@@ -628,7 +637,8 @@ class _RecordParser:
         item_indent = first_indent
         ids = []
         # True while the most recent element is a one-line scalar kept in `ids`,
-        # so a deeper line that follows it can take it back.
+        # so a deeper line that follows it can take it back. A tab line counts
+        # as an element that leaves no ID held.
         last_is_id = False
         while f < limit:
             line = lines[f]
@@ -637,14 +647,16 @@ class _RecordParser:
                 continue
             indent, stripped = _indent_of(line)
             if stripped.startswith("\t"):
-                # Only the tab is reported, whatever the depth. Deeper than the
-                # items, the line would continue the element before it, so the
-                # ID held from that element is taken back; at the items' depth
-                # or shallower it is no continuation and the held state stays.
+                # For every tab line, whatever its depth: (1) only the tab is
+                # reported, once; (2) the ID held from the element before it is
+                # taken back only when the line is deeper than the items (it
+                # would continue that element) and an ID is held; (3) no ID is
+                # held afterwards, so a deeper line that follows takes back
+                # nothing.
                 self.unsupported(ac_key, f, "tab in indentation")
                 if indent > item_indent and last_is_id:
                     ids.pop()
-                    last_is_id = False
+                last_is_id = False
                 f += 1
                 continue
             if indent < item_indent:
@@ -1839,6 +1851,65 @@ class TestTabLinesInTestsBlock(unittest.TestCase):
     def test_a_tab_line_less_deep_than_the_items_is_only_reported(self):
         text = _tab_record(*self.HEAD, "      - tests.nope.one", "    \tx", "      - tests.nope.two")
         self.assert_extraction(text, ["tests.nope.one", "tests.nope.two"], [5])
+
+    # -- parse-tests-tab-held-id task0001 (AC-1 to AC-3): a deeper line that
+    # follows a tab line takes back nothing --
+
+    # The ticket's reproduction record with a deeper tab line (AC-1, AC-3): an
+    # ID, a tab line at the items' depth, a deeper tab line, then another ID.
+    HELD_ID_TAB_RECORD = _tab_record(
+        *HEAD,
+        "      - tests.nope.kept",
+        TAB_ITEM,
+        "        \tcontinued",
+        "      - tests.nope.after",
+    )
+    # The same record with a deeper line that has no tab (AC-2, AC-3).
+    HELD_ID_PLAIN_RECORD = _tab_record(
+        *HEAD,
+        "      - tests.nope.kept",
+        TAB_ITEM,
+        "        continued",
+        "      - tests.nope.after",
+    )
+    DEEPER = "tests item continues or nests on a deeper line (multi-line or nested value)"
+
+    def test_a_deeper_tab_line_after_a_tab_line_does_not_take_back_the_id_written_before_the_tab_line(self):
+        extraction = extract_text(self.HELD_ID_TAB_RECORD)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.nope.kept", "tests.nope.after"])
+        self.assertEqual(sorted(extraction.errors), self.tab_errors([5, 6]), extraction.errors)
+
+    def test_a_deeper_line_without_a_tab_after_a_tab_line_does_not_take_back_the_id_written_before_the_tab_line(self):
+        extraction = extract_text(self.HELD_ID_PLAIN_RECORD)
+        self.assertEqual(extraction.acs["AC-1"], ["tests.nope.kept", "tests.nope.after"])
+        expected = sorted(
+            [
+                ("AC-1", f"unsupported notation at line 5: {self.TAB}"),
+                ("AC-1", f"unsupported notation at line 6: {self.DEEPER}"),
+            ]
+        )
+        self.assertEqual(sorted(extraction.errors), expected, extraction.errors)
+
+    def test_the_record_check_resolves_the_ids_around_a_tab_line_and_reports_every_tab_line_when_a_deeper_line_follows(self):
+        cases = {
+            "deeper tab line": (
+                self.HELD_ID_TAB_RECORD,
+                [f"unsupported notation at line 5: {self.TAB}", f"unsupported notation at line 6: {self.TAB}"],
+            ),
+            "deeper line without a tab": (
+                self.HELD_ID_PLAIN_RECORD,
+                [f"unsupported notation at line 5: {self.TAB}", f"unsupported notation at line 6: {self.DEEPER}"],
+            ),
+        }
+        for label, (text, reasons) in cases.items():
+            with self.subTest(label):
+                _, lines = self.check(text)
+                self.assertEqual(len(lines), 4, lines)
+                self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.kept")), 1, lines)
+                self.assertEqual(len(self.resolution_lines(lines, "AC-1", "tests.nope.after")), 1, lines)
+                for reason in reasons:
+                    self.assertEqual(lines.count(format_error(RECORD_REL, "AC-1", None, reason)), 1, lines)
+                self.assertFalse(any("tests.nope.bad" in line for line in lines), lines)
 
     # -- AC-6 (TM-1): one failure message per record --
 
