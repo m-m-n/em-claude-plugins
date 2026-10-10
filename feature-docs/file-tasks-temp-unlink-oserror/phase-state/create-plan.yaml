@@ -1,0 +1,21 @@
+schema_version: 1
+feature: file-tasks-temp-unlink-oserror
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: f8916596881d3f5bf38edda099f2a6c1093895fa
+last_input_digest: sha256:7852e70ed961ad7e3ef12994cbd3c951478bd1f4b0279ced3763b2b47dbd5595
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:7852e70ed961ad7e3ef12994cbd3c951478bd1f4b0279ced3763b2b47dbd5595
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
