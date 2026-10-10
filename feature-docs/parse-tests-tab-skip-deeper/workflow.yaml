@@ -1,0 +1,143 @@
+schema_version: 1
+feature: parse-tests-tab-skip-deeper
+created: '2026-10-10'
+base_branch: main
+goal: |
+  # tests_yaml_id_resolution の parse_tests で、先頭のタブ行の直後にタブ無しの深い続き行があると skip_deeper が後ろの読める ID まで読み飛ばす
+
+  Notion: https://www.notion.so/3f53509ec8ee81299204f23bb8238a0f
+
+  ## 現象 (必須)
+  記録検査 `tests/test_tests_yaml_id_resolution.py` の `_RecordParser.parse_tests` で、tests ブロックの先頭の行がタブ行で、その直後にタブの無い深い続き行が来ると、`skip_deeper(f + 1, key_indent)` が続き行だけでなく後ろの読める ID 行まで読み飛ばし、それらが解決対象から消える。
+  feature `parse-tests-tab-held-id`（PR https://github.com/m-m-n/em-claude-plugins/pull/134 ）の SPEC Assumption A1 で範囲外とした、変更前からある欠陥。元は feature `parse-tests-tab-handling` のレビュー round 1 で low に下がり除外された指摘。
+  ## 再現手順 (必須)
+  1. `extract_text` に、`acceptance_tests:` / `  AC-1:` / `    tests:` / `      <タブ>- tests.nope.bad` / `        continued` / `      - tests.nope.after` を渡す
+  2. `AC-1` の ID が `[]` になり `tests.nope.after` が含まれない（integration ブランチ `em-workflow/parse-tests-tab-held-id/integration` の時点で確認。エラーは `tab in indentation`（4 行目）と `tests value is not a block sequence of scalars`（5 行目）の 2 件）
+  ## 期待する挙動 (必須)
+  - 先頭のタブ行の続き行だけを読み飛ばし、後ろの読める ID（`tests.nope.after`）は解決対象に残す
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  ## 該当箇所 (任意)
+  - `tests/test_tests_yaml_id_resolution.py` の `_RecordParser.parse_tests`（先頭のタブ行の分岐にある `skip_deeper(f + 1, key_indent)`）
+  ## 実害・発生条件 (任意)
+  タブを含む誤った記録を書いたときだけ起きる。タブ行のエラーは出るので記録検査が誤って通ることは無いが、抽出エラーと解決エラーを 1 回の失敗メッセージに並べる目的が、この形では果たせない。
+parent_branch: em-workflow/parse-tests-tab-skip-deeper/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.94
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  at: '2026-10-10T23:05:00+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no file is declared by more than one task)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 4152e491b493618393ae26c584f0c48ac0d4660e
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たないテストコードの不具合修正で、設計の工程の対象になる画面や見た目が無い（tier reduced でも design step は削減対象）
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 先頭のタブ行の続き行だけを読み飛ばす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: その他の場合の挙動は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: docstring とコメント
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 既存のテストは変更せずに通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 標準ライブラリの unittest だけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: タブ文字はエスケープシーケンスで書く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
