@@ -1,0 +1,47 @@
+task_id: task0001
+baseline_failures: []          # discover -s tests before any change: 10036 tests, OK (skipped=1)
+final_failures: []             # re-run after implementation and this record: discover -s tests, OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_deeper_tab_line_after_a_tab_line_does_not_take_back_the_id_written_before_the_tab_line
+    red_confirmed: true
+    red_reason: "Failed against the unchanged parser with record R1 (an ID, a tab line at the items' depth, a deeper tab line, another ID): AssertionError: Lists differ: ['tests.nope.after'] != ['tests.nope.kept', 'tests.nope.after']. After the change the IDs are [kept, after] and the extraction errors are exactly the two tab in indentation errors at lines 5 and 6."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_deeper_line_without_a_tab_after_a_tab_line_does_not_take_back_the_id_written_before_the_tab_line
+    red_confirmed: true
+    red_reason: "Failed against the unchanged parser with record R2 (R1 with the deeper line written without a tab): AssertionError: Lists differ: ['tests.nope.after'] != ['tests.nope.kept', 'tests.nope.after']. After the change the IDs are [kept, after] and the extraction errors are exactly tab in indentation at line 5 and the deeper-line error at line 6."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_record_check_resolves_the_ids_around_a_tab_line_and_reports_every_tab_line_when_a_deeper_line_follows
+    red_confirmed: true
+    red_reason: "Both subtests (deeper tab line, deeper line without a tab) failed against the unchanged parser: AssertionError: 3 != 4, the record check listing the two extraction errors and the resolution error of tests.nope.after only, with no resolution error line for tests.nope.kept."
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_deeper_tab_line_drops_the_held_id_and_is_reported_only_as_a_tab
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_consecutive_deeper_tab_lines_drop_the_held_id_once_and_are_each_reported
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_deeper_tab_line_after_an_element_that_is_not_an_id_takes_nothing_back
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_lines_without_a_tab_after_a_deeper_tab_line_keep_their_existing_handling
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_same_depth_tab_line_is_not_a_continuation_and_keeps_the_ids_around_it
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_tab_line_less_deep_than_the_items_is_only_reported
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_block_of_tab_lines_only_reports_one_tab_error_per_line_and_nothing_else
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_field_loop_resumes_at_the_first_line_without_a_tab
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_per_record_test_fails_once_listing_every_tab_error_and_one_resolution_error_per_id
+    red_confirmed: false
+    red_reason: "Regression pins: these existing tests passed before the change and still pass after it unmodified; no red state occurred for this change. They pin the behaviors that must not change (a deeper tab line directly after an ID takes it back once, consecutive deeper tab lines, a deeper tab line after a non-ID element, lines without a tab after a deeper tab line, a same-depth or shallower tab line keeping the IDs around it, tab-only blocks, the resumption of the field loop, the per-record failure message). That no existing test method, class-level record, record table or expected value is modified was checked by reviewing git diff (additions only in the test class); no executable check exists for it."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "The criterion is about the wording of a comment and a docstring. The test directory was searched by the path tests/test_tests_yaml_id_resolution.py and by the filename test_tests_yaml_id_resolution: tests/test_tests_yaml_id_rules_docs.py only names the file inside implementer-rule phrases and does not read its comments, and TestModuleDocumentation reads the module docstring only for the non-execution guarantee, so no existing test covers the tab-line wording and no executable check can be made to fail first. It was checked by reading the changed item-loop comment, the held-ID flag comment and the parse_tests docstring, and by a text search showing that the phrase 'the held state stays' no longer appears in the file."
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_no_repository_or_test_module_is_imported
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing self-inspection tests detect a non-standard-library or repository import in the changed file (the new tests add no import); no red state occurred for this change. The no-raw-tab part has no executable check: it was checked by a text search for a tab character in the file (no match), every tab in the new records being written as the escape sequence in a string literal."
+  AC-7:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestNormalRunCollection.test_discovery_of_the_tests_directory_collects_the_record_tests_and_the_guard
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing test_discovery_of_the_tests_directory_collects_the_record_tests_and_the_guard detects that the changed module is still collected by discover over tests/ with its per-record tests and zero-record guard; no red state occurred for this change. The criterion's outcome is the exit status of the whole run python3 -m unittest discover -s tests, which was green before (10036 tests, OK) and after the change."
