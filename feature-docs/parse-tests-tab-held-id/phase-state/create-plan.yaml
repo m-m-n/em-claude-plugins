@@ -1,7 +1,7 @@
 schema_version: 1
 feature: parse-tests-tab-held-id
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 6ae108071ad4b1ab36d22dab3b5d3d6e5c5e8a39
 last_input_digest: sha256:678dc3277c37a62a19683073e812a07fb23ed1338270bfe10eff770723d59268
