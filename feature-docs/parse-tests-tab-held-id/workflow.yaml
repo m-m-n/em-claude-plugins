@@ -115,6 +115,13 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
   residual_critical_high: 0
   needs_rework: false
 requirements:
