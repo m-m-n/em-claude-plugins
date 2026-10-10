@@ -6,13 +6,65 @@ generation: 1
 base_revision: 8b0a35514f6e907d41bbb6b42e54ca163a3067a0
 last_input_digest: sha256:8f63246668d399f086594eff69134e775a8f964cae568066a74b3a1ba75d628a
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-10T20:11:34+09:00'
+    questions:
+    - question_id: requirement.deep-tab-line.reason
+      status: answered
+    - question_id: requirement.equal-indent-tab-line
+      status: answered
+    - question_id: requirement.first-item-tab.only-tab-lines
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.deep-tab-line.reason:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-10T20:11:34+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - tab_reason_only
+    freeform: null
+    normalized_answer: tab_reason_only
+    resolution_note: 'codex_consulted: true; confidence: high; reasoning: tests/test_tests_yaml_id_resolution.py の563〜566行は、タブ行を「tab in indentation」と報告して次の行へ進む。深いタブ行では574〜575行と同じ断片の除外と状態更新を加え、診断と読み進め方は維持する判断が適切だよ。後続の深い行は569〜577行の既存処理に任せれば、FR2に必要な断片の除外と読み取れるIDの保持を両立できる; rejected: continuation_reasonは既存のタブ診断を失い、後続行の読み進め方も変えるため退ける。both_reasonsは同じ行に診断を重ね、今回必要な修正より報告を増やすため退ける'
+  requirement.equal-indent-tab-line:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-10T20:11:34+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - not_continuation
+    freeform: null
+    normalized_answer: not_continuation
+    resolution_note: 'codex_consulted: true; confidence: high; reasoning: tests/test_tests_yaml_id_resolution.py の174〜177行は先頭の空白だけを数え、569行は項目より空白数が多い場合だけを継続と判断する。同じ空白数の後にタブがあっても、この条件は満たさない。test/README.md の111〜113行も空白だけによる字下げを規定しているため、タブを報告し、直前のIDは保持する判断が適切だよ; rejected: treat_as_continuationは未対応のタブを深さとして解釈し、既存の空白数による判定を変える。読み取れる直前のIDまで除外してFR2の対象を減らすため退ける'
+  requirement.first-item-tab.only-tab-lines:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-10T20:11:34+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - tab_errors_only
+    freeform: null
+    normalized_answer: tab_errors_only
+    resolution_note: 'codex_consulted: true; confidence: high; reasoning: tests/test_tests_yaml_id_resolution.py の540〜542行は最初のタブ行にタブ診断だけを出し、487〜490行も後続のタブ行を同じ理由で報告する。535〜550行の値・項目なしの診断を追加せず、この既存の区別を保つ判断が適切だよ。830〜846行と876〜878行により、タブの抽出エラーだけでも一つの失敗メッセージに含まれる; rejected: also_neitherは不正な行が存在する場合に、その行の診断に加えて欠如の診断も追加する。現在のタブ処理にはない報告を増やすため退ける'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-10T20:11:34+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: skip
+    resolution_note: 'codex_consulted: true; confidence: high; reasoning: tests/test_tests_yaml_id_resolution.py の516〜519行と590行では、対象処理はIDと次の位置を返す内部の解析処理だと確認できる。test/README.md の7〜12行と16〜19行も標準のunittestによる検証を示している。画面を伴わない局所的な解析修正なので、独立した設計工程は省く判断が適切だよ; rejected: runは今回の範囲で独立した設計工程を追加する必要性がないため退ける。解析条件とエラー報告の判断、および修正後の検証は必要だよ'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:8f63246668d399f086594eff69134e775a8f964cae568066a74b3a1ba75d628a
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:8f63246668d399f086594eff69134e775a8f964cae568066a74b3a1ba75d628a
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
