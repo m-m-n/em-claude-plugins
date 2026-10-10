@@ -82,7 +82,8 @@ workflow:
   base_commit: 60d6b10379139930d0891ecbd5cfd1ed599ee950
   completed_at_commit: db16e541fd221ec7c14a156fae8a63011143ae27
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 01990a8be0e11167a54d86873c94d75f2038404e
 - id: verify
   status: pending
   result: null
@@ -111,7 +112,7 @@ tasks:
     status: merged
     branch: em-workflow/parse-tests-tab-handling/task0001
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -119,7 +120,11 @@ review:
     - spec
     discretionary: []
     cross_validation: false
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
   residual_critical_high: 0
   needs_rework: false
 requirements:
