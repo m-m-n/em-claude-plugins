@@ -1,0 +1,12 @@
+schema_version: 2
+feature: parse-tests-tab-handling
+tier: reduced
+bases:
+  - basis: description_only
+    score: {"type": "score", "score": 1.03, "confidence": 0.97, "legend": {"0": "Only a wording or rule-text change: no new logic, and no test change.", "1": "A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "New logic, a change reaching across several modules, or a change to an external contract.", "3": "A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.0, "1": 0.97, "2": 0.03, "3": 0.0}}
+    observed_at: "2026-10-10T20:03:28+09:00"
+  - basis: description_plus_code
+    score: {"type": "score", "score": 1.07, "confidence": 0.93, "legend": {"0": "Only a wording or rule-text change: no new logic, and no test change.", "1": "A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "New logic, a change reaching across several modules, or a change to an external contract.", "3": "A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.0, "1": 0.93, "2": 0.07, "3": 0.0}}
+    observed_at: "2026-10-10T20:06:06+09:00"
+pre_survey_estimate: {"files_expected": ["tests/test_tests_yaml_id_resolution.py"], "changed_lines_approx": 40, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": false, "spillover_modules": [], "work_still_required": true, "work_still_required_evidence": "指定された入力で extract_text を実行し、2 件とも再現した。再現1では acs が {\"AC-1\": []} になった。tests/test_tests_yaml_id_resolution.py:540 のタブ判定後、:542 で空のリストを返し、後続項目は :493 のフィールドのインデント不一致として処理される。再現2では acs が {\"AC-1\": [\"tests.nope.fragment\", \"tests.nope.control\"]} になった。:563 のタブ判定後、:566 で次の行へ進み、:569 の深い行の判定と :574 の断片削除に到達しない。既存のタブ入力テストは :1331 のフィールド行のみで、継続行のテストも :1494 と :1578 ではタブを含まないため、この2経路を検出するテストはない。必要な変更は、先頭のタブ行を報告しても後続項目の解析を継続することと、深いタブ付き継続行でも直前の断片を削除すること。", "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 2, "body_change_kind": "new_logic", "change_containment": "single_module", "caller_and_dependency_count": 10, "changes_external_contract": false, "changes_behavior": true}
+decided_at: "2026-10-10T20:06:30+09:00"
