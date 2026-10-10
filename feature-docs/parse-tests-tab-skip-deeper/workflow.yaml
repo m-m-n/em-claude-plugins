@@ -70,7 +70,8 @@ workflow:
   artifacts:
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: d7f6fed837292e64ecb286668cc6f7c37b8427c2
 - id: implement
   status: pending
 - id: review
