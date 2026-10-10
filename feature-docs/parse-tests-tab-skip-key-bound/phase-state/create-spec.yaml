@@ -1,0 +1,21 @@
+schema_version: 1
+feature: parse-tests-tab-skip-key-bound
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: ac52197eee3fd80230cfddbf3d0fc22b7b2be611
+last_input_digest: sha256:51f1537fc8d4c6dd932c23a59a2f039332359df3acb61d41590938d16e94835b
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:51f1537fc8d4c6dd932c23a59a2f039332359df3acb61d41590938d16e94835b
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
