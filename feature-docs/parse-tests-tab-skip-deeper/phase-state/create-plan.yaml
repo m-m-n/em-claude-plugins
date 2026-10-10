@@ -1,0 +1,21 @@
+schema_version: 1
+feature: parse-tests-tab-skip-deeper
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 97ae7c960a2c4219206bd3b8d0c96de20a7263a7
+last_input_digest: sha256:91e3f168a4d52818f5c7bb2a897fa6cc3eafeab3b0ce2f544b72ad0f0dcf6839
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:91e3f168a4d52818f5c7bb2a897fa6cc3eafeab3b0ce2f544b72ad0f0dcf6839
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
