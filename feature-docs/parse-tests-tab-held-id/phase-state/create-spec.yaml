@@ -1,11 +1,11 @@
 schema_version: 1
 feature: parse-tests-tab-held-id
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: e942fab53cb13cc8daeb6f3699928091a3ef1089
 last_input_digest: sha256:bdb619443e13a0811f985142c7f29b901ae49f7bc6029badd5a84906e1772907
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,13 @@ worker_runs:
   input_digest: sha256:bdb619443e13a0811f985142c7f29b901ae49f7bc6029badd5a84906e1772907
   output_digest: null
 - request_id: create-spec-run-0002
-  status: in_progress
+  status: completed
   input_digest: null
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/parse-tests-tab-held-id/SPEC.md
+  sha256: sha256:dee875dc00518182738af934e0b615fbc79766f4bb828213fe5f107c4999cda2
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
