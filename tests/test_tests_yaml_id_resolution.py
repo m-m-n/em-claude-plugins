@@ -48,6 +48,15 @@ This module imports the standard library only (NFR1) and no other test module.
 Importing it performs record enumeration only: records may name this module
 itself, which is then imported a second time under its `tests.` name.
 
+Importing it also makes the directory that holds this module importable: before
+any ID is resolved, that directory (an absolute path derived from this file's
+location, never from the working directory or an environment variable) is added
+to the module search path unless an entry already resolves to it, and existing
+entries are neither removed nor reordered. The test modules the records name
+import the helper modules that live directly in `tests/` by bare name, so a
+module-level run (`python3 -m unittest tests.test_tests_yaml_id_resolution`)
+resolves their IDs as `python3 -m unittest discover -s tests` does (FR5, TS-5).
+
 Covers task0001 Acceptance Criteria
 (feature-docs/tests-yaml-test-id-resolution/tasks/task0001.md):
 
@@ -68,6 +77,12 @@ Covers task0001 Acceptance Criteria
 - AC-8 (NFR1, NFR2, NFR3, TS-10): standard library only, collected by the
   normal run (TestModuleSelfInspection, TestNormalRunCollection).
 
+Covers parse-tests-tab-handling task0002 Acceptance Criteria
+(feature-docs/parse-tests-tab-handling/tasks/task0002.md):
+
+- AC-3, AC-4 (FR5, TS-5): the module makes its own directory importable, once
+  and without touching the other entries (TestModuleDirectoryImportable).
+
 The generated `TestRecordResolution` (one test per real record) and
 `TestZeroRecordGuard` are the check itself; the fixture-based tests above
 build per-record tests for temporary roots with the same generators.
@@ -81,6 +96,7 @@ import importlib.util
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -93,6 +109,7 @@ from unittest import mock
 # --- constants ---------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+MODULE_DIR = Path(__file__).resolve().parent
 RECORD_SUFFIX = ".tests.yaml"
 RECORD_MARKER = "(record)"
 
@@ -103,6 +120,40 @@ RECORD_MARKER = "(record)"
 Extraction = namedtuple("Extraction", ["acs", "errors"])
 
 _RECOVERABLE = (Exception, SystemExit)
+
+
+# --- module directory on the module search path (FR5, TS-5) --------------------
+
+
+def _names_directory(entry, canonical):
+    """True when the search path `entry` is a string that resolves to the
+    canonical directory `canonical`; the empty entry stands for the working
+    directory. The import system ignores every entry that is not a string, so
+    such an entry never counts."""
+    if not isinstance(entry, str):
+        return False
+    try:
+        resolved = os.path.realpath(entry or os.curdir)
+    except (ValueError, OSError):
+        return False
+    return os.path.normcase(resolved) == os.path.normcase(canonical)
+
+
+def ensure_importable(directory, search_path):
+    """Make `directory` importable through `search_path`: when no entry of
+    `search_path` already resolves to it, its absolute canonical path is
+    inserted at the front. Existing entries are neither removed nor reordered,
+    and only the given list is changed."""
+    canonical = os.path.realpath(directory)
+    if not any(_names_directory(entry, canonical) for entry in search_path):
+        search_path.insert(0, canonical)
+
+
+# The test modules named by the records import helper modules that live directly
+# in this directory by bare name. `discover -s tests` puts the directory on the
+# module search path; a module-level run does not, so the module does it itself
+# before any ID is resolved. The directory comes from this file's location.
+ensure_importable(MODULE_DIR, sys.path)
 
 
 # --- record enumeration (FR5, FR8) ---------------------------------------------
@@ -3161,6 +3212,168 @@ class TestNormalRunCollection(unittest.TestCase):
         self.assertIn("make_record_test_class", top_level_calls)
         for name in top_level_calls:
             self.assertNotIn(name, ("extract_record", "extract_text", "resolve_id", "check_record"))
+
+
+# --- parse-tests-tab-handling task0002: the module makes its own directory importable ---
+
+
+class TestModuleDirectoryImportable(unittest.TestCase):
+    """parse-tests-tab-handling task0002 (FR5, NFR1, NFR2, NFR3, TS-5): the
+    module makes the directory that holds it importable, so the per-record
+    tests of other features' records resolve their IDs under
+    `python3 -m unittest tests.test_tests_yaml_id_resolution` as they do under
+    `python3 -m unittest discover -s tests`. AC-3: a fresh interpreter started
+    at the repository root without `PYTHONPATH` imports a helper that lives
+    directly in `tests/` by its bare name after importing the module. AC-4:
+    an entry that already resolves to the directory is never joined by a
+    second one, and no existing entry is removed or reordered."""
+
+    HERE = Path(__file__).resolve().parent
+
+    def make_directory(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        return Path(tmp.name).resolve()
+
+    def run_child(self, code, cwd=REPO_ROOT, **env):
+        """Run `code` in a child interpreter (the running one) started in `cwd`
+        with `PYTHONPATH` removed from its environment, unless `env` sets it."""
+        environment = {name: value for name, value in os.environ.items() if name != "PYTHONPATH"}
+        environment.update(env)
+        return subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=cwd,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+
+    def helper_name(self):
+        helpers = sorted(
+            path.stem
+            for path in self.HERE.glob("*.py")
+            if path.stem.isidentifier() and not path.stem.startswith("test_")
+        )
+        self.assertTrue(helpers, "no helper module lives directly in tests/")
+        return helpers[0]
+
+    # --- AC-3 ----------------------------------------------------------------
+
+    def test_a_fresh_interpreter_at_the_repository_root_imports_a_helper_by_bare_name_after_importing_the_module(self):
+        code = f"import tests.test_tests_yaml_id_resolution\nimport {self.helper_name()}\n"
+        result = self.run_child(code)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_the_directory_comes_from_the_file_location_and_not_from_the_working_directory(self):
+        module_file = self.HERE / Path(__file__).name
+        code = (
+            "import importlib.util, sys\n"
+            f"spec = importlib.util.spec_from_file_location('record_check_copy', {str(module_file)!r})\n"
+            "module = importlib.util.module_from_spec(spec)\n"
+            "sys.modules['record_check_copy'] = module\n"
+            "spec.loader.exec_module(module)\n"
+            f"import {self.helper_name()}\n"
+        )
+        result = self.run_child(code, cwd=self.make_directory())
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    # --- AC-4 ----------------------------------------------------------------
+
+    def test_importing_the_module_with_its_directory_already_on_the_path_leaves_the_search_path_as_found(self):
+        code = (
+            "import sys\n"
+            "before = list(sys.path)\n"
+            "import tests.test_tests_yaml_id_resolution\n"
+            "after = list(sys.path)\n"
+            "assert after == before, (before, after)\n"
+        )
+        for spelling in (str(self.HERE), "tests"):
+            with self.subTest(PYTHONPATH=spelling):
+                result = self.run_child(code, PYTHONPATH=spelling)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_the_directory_is_derived_from_the_module_file_location(self):
+        self.assertEqual(MODULE_DIR, Path(__file__).resolve().parent)
+        self.assertTrue(MODULE_DIR.is_absolute())
+
+    def test_a_missing_directory_is_added_once_and_the_existing_entries_keep_their_order(self):
+        directory = self.make_directory()
+        original = ["/x/a", "", "/x/b", "/x/a"]
+        search_path = list(original)
+        ensure_importable(directory, search_path)
+        self.assertEqual(search_path.count(str(directory)), 1)
+        search_path.remove(str(directory))
+        self.assertEqual(search_path, original)
+
+    def test_adding_twice_adds_a_single_entry(self):
+        directory = self.make_directory()
+        search_path = ["/x/a"]
+        ensure_importable(directory, search_path)
+        once = list(search_path)
+        ensure_importable(directory, search_path)
+        self.assertEqual(search_path, once)
+
+    def test_an_entry_that_resolves_to_the_directory_adds_nothing_whatever_its_spelling(self):
+        directory = self.make_directory()
+        link = self.make_directory() / "link"
+        spellings = {
+            "exact": str(directory),
+            "trailing separator": str(directory) + os.sep,
+            "dot dot segment": str(directory / ".." / directory.name),
+            "relative to the working directory": os.path.relpath(directory, os.getcwd()),
+        }
+        try:
+            os.symlink(directory, link)
+        except (OSError, NotImplementedError):
+            pass
+        else:
+            spellings["symbolic link"] = str(link)
+        for label, entry in spellings.items():
+            with self.subTest(label):
+                search_path = ["/x/a", entry, "/x/b"]
+                ensure_importable(directory, search_path)
+                self.assertEqual(search_path, ["/x/a", entry, "/x/b"])
+
+    def test_the_empty_entry_stands_for_the_working_directory(self):
+        directory = self.make_directory()
+        elsewhere = self.make_directory()
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(directory)
+        inside = ["", "/x/a"]
+        ensure_importable(directory, inside)
+        self.assertEqual(inside, ["", "/x/a"])
+        os.chdir(elsewhere)
+        outside = ["", "/x/a"]
+        ensure_importable(directory, outside)
+        self.assertEqual(outside.count(str(directory)), 1)
+        outside.remove(str(directory))
+        self.assertEqual(outside, ["", "/x/a"])
+
+    def test_entries_naming_other_places_or_not_strings_do_not_count(self):
+        directory = self.make_directory()
+        entries = [
+            str(directory.parent),
+            str(directory / "child"),
+            str(directory) + "-other",
+            "/nonexistent/place",
+            None,
+            5,
+            directory,
+        ]
+        search_path = list(entries)
+        ensure_importable(directory, search_path)
+        self.assertEqual(search_path.count(str(directory)), 1)
+        search_path.remove(str(directory))
+        self.assertEqual(search_path, entries)
+
+    def test_only_the_given_list_is_changed(self):
+        directory = self.make_directory()
+        real_path = sys.path
+        before = list(sys.path)
+        ensure_importable(directory, ["/x/a"])
+        self.assertIs(sys.path, real_path)
+        self.assertEqual(list(sys.path), before)
 
 
 if __name__ == "__main__":
