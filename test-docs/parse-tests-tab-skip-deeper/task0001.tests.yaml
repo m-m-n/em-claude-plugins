@@ -1,0 +1,45 @@
+task_id: task0001
+baseline_failures: []          # discover -s tests before any change: 10040 tests, OK (skipped=1)
+final_failures: []             # re-run after implementation and this record: discover -s tests, OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_continuation_of_a_leading_tab_line_does_not_hide_the_id_written_after_it
+    red_confirmed: true
+    red_reason: "Failed against the unchanged parser with record R1 (a tab line as the first item, its continuation on a deeper line without a tab, then a readable ID): AssertionError: Lists differ: [] != ['tests.nope.after']. After the change the IDs are exactly [tests.nope.after] and the extraction errors are exactly tab in indentation at line 4 and the deeper-line error at line 5."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_record_check_lists_both_extraction_errors_and_the_resolution_error_of_the_id_after_the_continuation
+    red_confirmed: true
+    red_reason: "Failed against the unchanged parser with record R1: AssertionError: 2 != 3, the record check listing only the tab error at line 4 and the not-a-sequence error at line 5, with no resolution error line for tests.nope.after. After the change it lists exactly the tab error, the deeper error and one resolution error for tests.nope.after, and no line mentions tests.nope.bad."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_first_line_without_a_tab_and_without_a_dash_keeps_the_not_a_sequence_handling
+    red_confirmed: false
+    red_reason: "Pins unchanged behavior (record R2: R1 with line 4 written without a tab and without a dash): the test passed against the unchanged parser and still passes after the change, so no red state occurred for this change. It asserts IDs exactly [] and exactly one error, not-a-sequence at line 4."
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_line_as_deep_as_the_tab_line_is_no_continuation_and_keeps_the_not_a_sequence_handling
+    red_confirmed: false
+    red_reason: "Pins unchanged behavior (record R3: R1 with line 5 as deep as the tab line, without a tab): the test passed against the unchanged parser and still passes after the change, so no red state occurred for this change. It asserts IDs exactly [] and exactly two errors, tab at line 4 and not-a-sequence at line 5."
+  AC-5:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_several_continuation_lines_of_a_leading_tab_line_are_all_passed_over
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_deeper_tab_line_inside_the_continuation_range_is_passed_over_without_a_report
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_nothing_readable_after_the_continuation_reports_no_neither_error
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_another_tab_line_after_the_continuation_is_reported_and_the_scan_goes_on
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_continuation_depth_is_compared_with_the_most_recent_tab_line
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_blank_and_comment_lines_between_the_tab_line_and_the_continuation_are_passed
+    red_confirmed: true
+    red_reason: "Every one of the six edge-case tests (a) to (f) failed against the unchanged parser: AssertionError: Lists differ: [] != ['tests.nope.after'] for (a), (b), (d), (e) and (f); for (c) all three subtests (another field follows, the record ends, the record ends without a final newline) failed with the not-a-sequence error where the deeper-line error is expected. Three further tests in the same class cover the same rules beyond the listed cases (a second continuation after a resumed tab line, which failed red; a non-dash line not deeper than the tab line after a continuation, which failed red; a line deeper than a shallow tab line but not than the tests key, which passed before and after)."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "The criterion is about the wording of the parse_tests docstring and the pre-item-scan comments. The test directory was searched by the path tests/test_tests_yaml_id_resolution.py and by the filename test_tests_yaml_id_resolution: tests/test_tests_yaml_id_rules_docs.py only names the file inside implementer-rule phrases and does not read the parse_tests docstring or its comments, and TestModuleDocumentation reads the module docstring and the resolver-section comment only for the non-execution guarantee, so no existing test covers the wording and no executable check can be made to fail first. It was checked by reading the docstring and the comments against the decision table in the task plan."
+  AC-7:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_no_repository_or_test_module_is_imported
+      - tests.test_tests_yaml_id_resolution.TestNormalRunCollection.test_discovery_of_the_tests_directory_collects_the_record_tests_and_the_guard
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing self-inspection tests detect a non-standard-library or repository import in the changed file (the new tests add no import) and the existing test_discovery_of_the_tests_directory_collects_the_record_tests_and_the_guard detects that the module is still collected by discover over tests/; no red state occurred for this change. The outcome python3 -m unittest discover -s tests exits 0 was green before (10040 tests, OK) and after. The no-raw-tab part and the additions-only diff have no executable check: they were checked by a text search for a tab character in the file (no match, every tab in the new records being the escape sequence in a string literal) and by reading git diff (the only removed lines are the old pre-item-scan lines and docstring lines inside parse_tests)."
