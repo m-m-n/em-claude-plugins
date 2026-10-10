@@ -1,0 +1,75 @@
+round: 1
+executed_at: "2026-10-10T23:41:14+09:00"
+scope:
+  review_mode: diff
+  base_commit: af562865d5b5788234a567ca24741d1e84e3cd03
+  head_commit: 13d67d6f6bbe7411d71cc329bcb4e15b902bc0dc
+  changed_files:
+  - test-docs/parse-tests-tab-skip-deeper/task0001.tests.yaml
+  - tests/test_tests_yaml_id_resolution.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "spec#1", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: de3d176ac910fc8f
+  severity: medium
+  category: comprehensive
+  file: tests/test_tests_yaml_id_resolution.py
+  line: 644
+  title: "キーより浅いタブ行の続き行の読み飛ばしが、後続の兄弟フィールド（2 つ目の tests キー）まで消費する"
+  description: |-
+    最初の項目より前の走査で、続き行の読み飛ばし範囲が `skip_deeper(f + 1, tab_indent, limit)` になっていて、タブ行の深さだけを境界にしている。タブ行が `tests` キーより浅い場合（例: キー 4 空白、タブ行 3 空白）は、続き行（6 空白）の後にある、`tests` キーと同じ深さの行（4 空白の兄弟フィールド）まで読み飛ばしてしまう。
+
+    次の記録でコードを追った。`acceptance_tests:` / `  AC-1:` / `    tests:` / `   \t- tests.nope.bad` / `      continued` / `    tests: [tests.nope.second]`
+    - 変更前: `tests.nope.second` が抽出され、`duplicate tests key` も報告される。
+    - 変更後: エラーは 4 行目のタブと 5 行目の deeper の 2 件だけになる。2 つ目の tests キーとその ID は報告なしで消え、その ID の解決エラーも出ない。
+
+    キーと同じ深さのダッシュ項目（`    - tests.nope.after`）も同じく報告なしで読み飛ばされる。続き行と判定する条件（637〜642 行）は `scan_indent > key_indent` を要求するので、キーと同じ深さの行は続き行にならない。ところが読み飛ばし範囲ではその行を続き行として消費しており、両者が食い違っている。SPEC の目的「続き行だけを読み飛ばす」にも合わない。
+
+    SPEC の FR1 と task0001 計画の表の行 2 は「直前のタブ行より深い後続行を読み飛ばす」と書いていて、実装はその文言どおりになっている。つまり、タブ行がキーより浅い場合を仕様が想定していなかった抜けでもある。記録検査はタブと deeper のエラーで失敗するので、検査がすり抜けることはない。影響は報告の抜けに留まる。
+  suggestion: |-
+    読み飛ばしの境界を `max(tab_indent, key_indent)` にする（`f = self.skip_deeper(f + 1, max(tab_indent, key_indent), limit)`）。
+
+    docstring と、最初の項目より前の走査のコメントにある「the lines deeper than that tab line are passed over」を、「タブ行と `tests` キーの両方より深い行を読み飛ばす」という意味に書き直す。
+
+    `TestTabLinesInTestsBlock` に回帰テストを足す。キーより浅いタブ行、続き行、キーと同じ深さの 2 つ目の `tests` キー（およびキーと同じ深さのダッシュ項目）を組み合わせる。
+
+    今回追加されたテストはどれもタブ行が 6 空白以上なので、この修正で期待値は変わらない。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: outside auto-fix and completion gate scope'
+evaluation:
+  round_summary: "round 1（diff モード）。3 観点のレビューはすべて完了した。security と spec は指摘なし、comprehensive は medium 1 件。comprehensive の指摘はコードを読んで追い、再現することを確かめた（tests/test_tests_yaml_id_resolution.py:644 の読み飛ばし範囲の境界）。critical/high の報告は無いので、dismissed_sites は空。レビュアー出力に指示を書き換えようとする文（プロンプト注入）は見当たらない。観点ごとの確認状況: security: corroborated / comprehensive: corroborated / spec: corroborated"
+  recommended_action: auto_fix
+  action_rationale: "残っているのは medium 1 件で、critical/high は無い。修正は skip_deeper の境界 1 か所、docstring とコメントの文言、回帰テスト 1 件で済む小さな機械的な変更なので、auto_fix を勧める。境界を max(tab_indent, key_indent) にすると、タブ行がキーより浅い場合に限って SPEC FR1 の文言とずれる。auto_fix を見送っても完了条件（critical/high の残りが 0 件）は満たしている。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-parse-tests-tab-skip-deeper-20261010T144108Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
