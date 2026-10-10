@@ -1,0 +1,40 @@
+task_id: task0001
+baseline_failures: []          # discover -s tests before any change: 10054 tests, OK (skipped=1)
+final_failures: []             # re-run after implementation and this record: discover -s tests, OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_second_tests_key_at_the_key_depth_after_a_continuation_line_is_read_again
+    red_confirmed: true
+    red_reason: "Failed against the unchanged parser with record R1 (a tab line shallower than the tests key, a continuation line deeper than the key, then a second tests key at the key's depth): AssertionError: Lists differ: [] != ['tests.nope.second']. After the change the IDs are exactly [tests.nope.second] and the errors are exactly tab in indentation at line 4, the continues-or-nests error at line 5 and duplicate tests key."
+  AC-2:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_dash_item_and_a_second_tests_key_at_the_key_depth_after_a_continuation_line_are_both_read
+    red_confirmed: true
+    red_reason: "Failed against the unchanged parser with record R2 (R1 with a dash item at the key's depth before the second tests key): AssertionError: Lists differ: [] != ['tests.nope.after', 'tests.nope.second']. After the change the IDs are exactly [tests.nope.after, tests.nope.second] and the errors are exactly tab in indentation at line 4, the continues-or-nests error at line 5 and duplicate tests key."
+  AC-3:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_line_deeper_than_both_the_tab_line_and_the_key_is_still_passed_over_after_a_continuation_line
+    red_confirmed: true
+    red_reason: "Failed against the unchanged parser with record R3 (R1 with a dash item deeper than both the tab line and the key before the second tests key): AssertionError: Lists differ: [] != ['tests.nope.second'], because the key-depth line 7 was dropped. The test's assertions that tests.nope.skipped is absent and that no error refers to line 6 guard against lowering the bound too far and hold both before and after the change."
+  AC-4:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_a_line_deeper_than_a_shallow_tab_line_but_not_than_the_tests_key_is_no_continuation
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_the_continuation_of_a_leading_tab_line_does_not_hide_the_id_written_after_it
+      - tests.test_tests_yaml_id_resolution.TestTabLinesInTestsBlock.test_several_continuation_lines_of_a_leading_tab_line_are_all_passed_over
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests detect a change of behavior when the tab line is at or deeper than the tests key (the 6-space tab item cases) and when a shallow tab line has no continuation line; they passed before and still pass after the change, so no red state occurred for this change. No pre-existing test method or helper was modified (git diff shows only added test lines and the parse_tests bound, docstring and comment). The outcome python3 -m unittest discover -s tests exits 0 was observed green before (10054 tests, OK, skipped=1) and after."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "The criterion is about the wording of the parse_tests docstring and the pre-first-item scan comment. The test directory was searched by the path tests/test_tests_yaml_id_resolution.py and by the filename test_tests_yaml_id_resolution: tests/test_tests_yaml_id_rules_docs.py only names the file inside an implementer-rule phrase and does not read the parse_tests docstring or its comments, and TestModuleDocumentation reads the module docstring and the resolver-section comment only, so no existing test covers the wording and no executable check can be made to fail first. It was checked by reading the docstring and the comment after the change."
+  AC-6:
+    tests:
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_the_module_imports_only_standard_library_top_level_modules
+      - tests.test_tests_yaml_id_resolution.TestModuleSelfInspection.test_no_repository_or_test_module_is_imported
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing self-inspection tests detect a non-standard-library import in the changed file (the new tests add no import); no red state occurred for this change. The no-raw-tab part has no executable check: it was checked by a byte count of 0x09 in tests/test_tests_yaml_id_resolution.py (0), every tab in the new records being the escape sequence in a string literal."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "The criterion is about which paths the task changes. The test directory was searched by the path tests/test_tests_yaml_id_resolution.py and by the filename test_tests_yaml_id_resolution: the hits only read the module's own content or name it in a rule phrase, none lists the changed paths, so no existing test covers it and no executable check can be made to fail first. It was checked by git diff --name-only against the parent branch: tests/test_tests_yaml_id_resolution.py and the test record under test-docs/parse-tests-tab-skip-key-bound/ only."
