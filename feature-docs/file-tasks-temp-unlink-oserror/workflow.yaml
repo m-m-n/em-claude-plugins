@@ -90,7 +90,7 @@ workflow:
   base_commit: f0668ce3a0aac4b52ba35c1c8256a23d90dcdfe7
   completed_at_commit: 6075fa32724106cfdf1572cd5e029a9c62428d5e
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -124,8 +124,17 @@ tasks:
     status: merged
     branch: em-workflow/file-tasks-temp-unlink-oserror/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 一時参照ファイル削除の OSError を握る
