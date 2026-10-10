@@ -1,7 +1,7 @@
 schema_version: 1
 feature: file-tasks-temp-unlink-oserror
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 775533367e309ff367b78010936027bd17f152e1
 last_input_digest: sha256:bfc92caabcc3790d5a8e810bd9fb33829dc9105c838981616a9f626f1262d3b3
