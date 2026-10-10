@@ -1,0 +1,14 @@
+schema_version: 1
+feature: sca-cargo-implicit-workspace-members
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 3304a7985a72122b5ca21d0e15e0f39410d261da
+last_input_digest: sha256:2e46c13c38091094349c34edfa979f262fa309b32f7271c1c568e8e08bb0d12f
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  create-spec-run-0001:
+    worker: requirements-analyst
+    status: dispatched
