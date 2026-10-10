@@ -85,7 +85,7 @@ workflow:
   status: completed
   completed_at_commit: fa3b2827cdc6ef5fac31607019e47a9dca326a1d
 - id: verify
-  status: pending
+  status: in_progress
   result: fail
   failed_items:
   - id: TS-5
