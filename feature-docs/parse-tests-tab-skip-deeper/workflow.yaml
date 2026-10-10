@@ -99,8 +99,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/parse-tests-tab-skip-deeper/task0001
 review:
   status: pending
   rounds_completed: 0
