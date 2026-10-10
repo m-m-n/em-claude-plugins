@@ -83,7 +83,8 @@ workflow:
   artifacts:
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: a53b5b91a80679e7913b6abe867998949d3077fe
 - id: implement
   status: pending
 - id: review
@@ -94,7 +95,32 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Keep temp-file deletion errors from overriding filing results
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/scan-dependencies.py
+    - tests/test_sca_file_tasks_oserror.py
+    skills:
+    - backend-impl
+    domains:
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: em-workflow/file-tasks-temp-unlink-oserror/task0001
 review:
   status: pending
   rounds_completed: 0
@@ -104,78 +130,106 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-8
   FR2:
     title: 削除エラーは stderr にだけ出す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-4
   FR3:
     title: 完了した結果を上書きしない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR4:
     title: 先に起きたエラーを上書きしない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
   FR5:
     title: docstring の修正
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   FR6:
     title: 既存テストの書き換え
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   FR7:
     title: file_tasks レベルの再発検出テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   NFR1:
     title: 標準ライブラリのみ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   NFR2:
     title: stdout の形を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-5
   NFR3:
     title: 既存テストが通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   NFR4:
     title: version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
 batch:
   review_rework_count: 0
   verify_rework:
