@@ -85,12 +85,11 @@ workflow:
   status: completed
   completed_at_commit: fa3b2827cdc6ef5fac31607019e47a9dca326a1d
 - id: verify
-  status: in_progress
-  result: fail
-  failed_items:
-  - id: TS-5
-    category: spec
-    note: 'The module-level run `python3 -m unittest tests.test_tests_yaml_id_resolution` from the repository root exits 1 (15 failures, all TestRecordResolution per-record tests of other features failing with ModuleNotFoundError: No module named _gate_vocabulary because tests/ is not on sys.path); the same 15 failures exist at implement base_commit 60d6b103, and the run passes with PYTHONPATH=tests. The discover run passes (10025 tests OK). TS-1 to TS-4 pass; no existing test removed or changed.'
+  status: completed
+  result: pass
+  failed_items: []
+  excluded: []
+  completed_at_commit: f09a4337f8d82bdeec128cecfd39d90ebad5b4f8
 - id: retrospect
   status: pending
 tasks:
