@@ -5,13 +5,17 @@ status: in_progress
 generation: 1
 base_revision: 775533367e309ff367b78010936027bd17f152e1
 last_input_digest: sha256:bfc92caabcc3790d5a8e810bd9fb33829dc9105c838981616a9f626f1262d3b3
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:bfc92caabcc3790d5a8e810bd9fb33829dc9105c838981616a9f626f1262d3b3
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:4c5c1ceafcdc0d5a033c2d7698d3a2d7ca59c9963f8bc4c5a417ea9e7ddc0226
   output_digest: null
 artifacts: []
 patches: []
@@ -19,3 +23,6 @@ progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+analyst_result_note: requirements-analyst completed (no question packet). Orchestrator
+  normalized requirement IDs FR-n/NFR-n to FRn/NFRn to satisfy spec-writer ID pattern
+  ^(FR|NFR)[1-9][0-9]*$. Assumptions A-1..A-7 recorded (all reversible).
