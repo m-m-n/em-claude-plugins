@@ -1,0 +1,42 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestFileTasksSurvivesTempFileDeletionFailure.test_create_path_files_all_three_packages
+      - tests.test_sca_file_tasks_oserror.TestFileTasksSurvivesTempFileDeletionFailure.test_append_path_appends_to_all_three_packages
+    red_confirmed: true
+    red_reason: "AssertionError: the summary was not the all-success shape: the EIO raised by the references-file deletion after the first package's exit-0 launch turned into EntryPointError, so filed_packages / appended_packages were empty and the first package was recorded as failed_package with unattempted_packages set (create path and append path)"
+  AC-2:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestFilingHelpersConvertOsErrors.test_temp_file_removal_failure_becomes_entry_point_error
+      - tests.test_sca_file_tasks_oserror.TestDocstringAndModuleDiscipline.test_deletion_failure_docstrings_of_this_module_claim_no_conversion
+    red_confirmed: true
+    red_reason: "the rewritten test errored for both helpers: EntryPointError 'task create failed for package pkg-a: [Errno 5] simulated I/O failure' (and the update variant) was raised instead of the helper returning, because the deletion error replaced the result. The docstring-discipline test was NOT observed failing as a test (the module, class and method docstrings were rewritten in the same step as the test); its sentence check was run by hand against the pre-change module and class docstrings and flags both."
+  AC-3:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestTempFileDeletionFailureNeverOverridesTheOutcome.test_launch_error_stays_the_cause_when_the_deletion_also_fails
+    red_confirmed: true
+    red_reason: "AssertionError: PermissionError(13, 'simulated deletion failure') is not OSError(5, 'simulated launch failure') -- the EntryPointError was chained to the deletion error, not the launch error (create and append helper)"
+  AC-4:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestTempFileDeletionFailureNeverOverridesTheOutcome.test_non_zero_exit_error_is_kept_when_the_deletion_fails
+    red_confirmed: true
+    red_reason: "AssertionError: 'create refused' not found in \"task create failed for package 'pkg-a': [Errno 13] simulated deletion failure\" -- the deletion error replaced the non-zero-exit EntryPointError (create and append helper)"
+  AC-5:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestTempFileDeletionFailureNeverOverridesTheOutcome.test_already_absent_file_is_accepted_silently
+    red_confirmed: false
+    red_reason: "the behavior pre-existed: Path.unlink(missing_ok=True) already absorbs FileNotFoundError, so this test passed before any implementation and stays as a regression guard for the new try/except OSError"
+  AC-6:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestDocstringAndModuleDiscipline.test_deletion_failure_docstrings_of_the_helpers_state_stderr_only
+    red_confirmed: true
+    red_reason: "AssertionError: 'propagat' unexpectedly found in the _run_entry_point_with_references sentence 'Any OS error raised along the way -- ... removing the file -- propagates as an OSError ...'; 'EntryPointError' unexpectedly found in the create_security_task removal sentence; neither docstring had a removal sentence stating stderr and unchanged result"
+  AC-7:
+    tests:
+      - tests.test_sca_file_tasks_oserror.TestDocstringAndModuleDiscipline.test_only_standard_library_imports
+      - tests.test_sca_task_filing
+    red_confirmed: false
+    red_reason: "full-suite run (python3 -m unittest discover -s tests) plus a diff check that neither version file nor the write-failure cleanup of _write_references_tempfile changed; no executable check of these could be made to fail first. The existing tests.test_sca_task_filing module and the standard-library-only import check passed before any implementation, so no red state occurred for them."
