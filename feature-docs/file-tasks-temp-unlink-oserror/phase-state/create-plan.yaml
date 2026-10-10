@@ -1,20 +1,33 @@
 schema_version: 1
 feature: file-tasks-temp-unlink-oserror
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: f8916596881d3f5bf38edda099f2a6c1093895fa
 last_input_digest: sha256:7852e70ed961ad7e3ef12994cbd3c951478bd1f4b0279ced3763b2b47dbd5595
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:7852e70ed961ad7e3ef12994cbd3c951478bd1f4b0279ced3763b2b47dbd5595
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:875143d65cd745c910b007a6d3723dace57d6e844e26dceb87de145d0d0af361
+artifacts:
+- path: feature-docs/file-tasks-temp-unlink-oserror/THREAT-MODEL.md
+  sha256: sha256:3ceef6f5bd297cffc2aff8bdf283838996a7aedc69da4d8280e4db70ceb8d2fc
+  produced_by: create-plan-run-0001
+- path: feature-docs/file-tasks-temp-unlink-oserror/VERIFICATION.md
+  sha256: sha256:99ed4f0f4d14cbcede8bd09d1ca0d8e8b25a93e09aed652152f447b3bf9af922
+  produced_by: create-plan-run-0001
+- path: feature-docs/file-tasks-temp-unlink-oserror/tasks/task0001.md
+  sha256: sha256:2238f0b6ba22cfc2195f8b35594c173468a492e7f8b9b65cf4619e6da397cecc
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: pending
+  base_input_digest: sha256:7852e70ed961ad7e3ef12994cbd3c951478bd1f4b0279ced3763b2b47dbd5595
+  base_workflow_blob: 409588d98676130b79b10626e9e017f4b557c504
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
