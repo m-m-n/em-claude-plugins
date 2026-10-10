@@ -1,0 +1,64 @@
+schema_version: 2
+feature: file-tasks-temp-unlink-oserror
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.07
+    confidence: 0.92
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  observed_at: '2026-10-11T01:03:33+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-11T01:05:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_sca_file_tasks_oserror.py
+  changed_lines_approx: 100
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 4
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/scripts/scan-dependencies.py:423 は削除のOSErrorを捕捉していない。同ファイル:448/:470
+    でEntryPointErrorに変換し、:590/:600 で処理を打ち切る。:410/:432 のdocstringも削除エラーの伝播・変換を記載している。共通ヘルパの直接呼出元は2つ(:438/:462)、依存は書込ヘルパ・subprocess.run・build_argv・Pathの4つ(:414/:415/:416/:423)。tests/test_sca_file_tasks_oserror.py:488
+    は作成・更新両方の削除失敗で例外を期待しており、期待する挙動を検証する形への変更が必要。同ファイル:469/:536/:618/:629 に起動失敗・非正常終了・複数件成功の既存テストがあるが、削除失敗との組合せはない。
+decided_at: '2026-10-11T01:05:52+09:00'
