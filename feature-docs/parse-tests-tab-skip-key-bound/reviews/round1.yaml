@@ -1,0 +1,44 @@
+round: 1
+executed_at: "2026-10-11T00:27:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: e1004ceb1599b76e0a548cc81769150e030ebc7f
+  head_commit: 1f0ad1331a72af47c519ee10b8921ec64c0c8c24
+  changed_files:
+  - test-docs/parse-tests-tab-skip-key-bound/task0001.tests.yaml
+  - tests/test_tests_yaml_id_resolution.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "Round 1 (diff mode). All 3 runs returned no findings and no injection attempt. The evaluator read tests/test_tests_yaml_id_resolution.py:645 (skip_deeper limit changed from tab_indent to max(tab_indent, key_indent)) and traced the three new cases: lines at the tests key depth are no longer skipped, the second tests key / dash item are read, and the errors are the tab line, continues-or-nests and duplicate tests key. FR1-FR4, NFR1-NFR4 and AC-1 to AC-3 match; FR2 holds since max() equals tab_indent when tab_indent >= key_indent. No raw tab byte in the changed files; the test record's 8 IDs resolve to existing methods. Tests were not run by the evaluator. Coverage: comprehensive / security / spec corroborated."
+  recommended_action: complete
+  action_rationale: "No reviewer reported a finding and the evaluator's own reading agrees for all three perspectives."
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-parse-tests-tab-skip-key-bound-20261010T152618Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
