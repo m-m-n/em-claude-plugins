@@ -1,11 +1,16 @@
 """Tests for em-workflow/scripts/scan-dependencies.py's `file-tasks`
-robustness against OS errors (sca-file-tasks-robustness/task0002).
+robustness against OS errors (sca-file-tasks-robustness/task0002, extended by
+file-tasks-temp-unlink-oserror/task0001).
 
-An OS error raised while filing -- launching the entry point, or writing /
-removing the temporary references file -- must no longer kill `file-tasks`:
-the run ends through the existing break-and-return path, prints exactly one
-JSON summary, exits 0, and the summary names the failed package and every
-package never attempted (`unattempted_packages`).
+An OS error raised while filing -- launching the entry point, or writing the
+temporary references file -- must no longer kill `file-tasks`: the run ends
+through the existing break-and-return path, prints exactly one JSON summary,
+exits 0, and the summary names the failed package and every package never
+attempted (`unattempted_packages`).
+
+An OS error raised while deleting the temporary references file is a
+different case: it is reported on stderr only and changes no outcome. The
+filing result is decided by the entry-point launch and its exit status alone.
 
 Acceptance criteria covered (feature-docs/sca-file-tasks-robustness/tasks/
 task0002.md):
@@ -15,14 +20,25 @@ task0002.md):
 - AC-2 (TM-2): TestCliAppendPathLaunchFailure -- the same on the append path.
 - AC-3 (TM-2): TestTempFileWriteFailure (in-process, a writer test double
   raising an OS error on its 2nd call; create and append path) and
-  TestFilingHelpersConvertOsErrors (the helper-level postcondition: write,
-  launch and removal errors all leave the helper as EntryPointError).
+  TestFilingHelpersConvertOsErrors (the helper-level postcondition: write and
+  launch errors leave the helper as EntryPointError).
 - AC-4 (TM-3): TestUnattemptedPackagesWhenFirstPackageFails.
 - AC-5 (TM-3, NFR5): TestSummaryKeySetAndEmptyUnattempted.
 - AC-6 (TM-4, NFR2): TestUntrustedTextStaysOffTheSummary.
 - AC-7 (NFR3, NFR5): TestDocstringAndModuleDiscipline (the `file_tasks`
   docstring and this module's own imports); tests/test_sca_task_filing.py
   is not modified by this task and keeps passing as-is.
+
+Acceptance criteria covered (feature-docs/file-tasks-temp-unlink-oserror/
+tasks/task0001.md):
+
+- AC-1: TestFileTasksSurvivesTempFileDeletionFailure -- `file_tasks` over
+  three packages, create path and append path.
+- AC-2: TestFilingHelpersConvertOsErrors.
+  test_temp_file_removal_failure_becomes_entry_point_error (identifier kept,
+  body rewritten).
+- AC-3, AC-4, AC-5: TestTempFileDeletionFailureNeverOverridesTheOutcome.
+- AC-6: TestDocstringAndModuleDiscipline.test_deletion_failure_docstrings_*.
 
 Test Notes followed: the external task system is never contacted -- every
 filing test points the entry point at a stand-in executable defined in THIS
@@ -40,6 +56,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import stat
 import subprocess
 import sys
@@ -323,6 +340,51 @@ class _FailingWriter:
         return self._real(reference_lines)
 
 
+def _filing_helpers(entry_point):
+    """Both public filing helpers, each as a zero-argument callable."""
+    return {
+        "create": lambda: sd.create_security_task(str(entry_point), PKG_A, ["CVE-1 (high)"]),
+        "append": lambda: sd.append_security_task_references(
+            str(entry_point), "task-1", ["CVE-1 (high)"],
+        ),
+    }
+
+
+@contextlib.contextmanager
+def _captured_streams():
+    """Captures what is written to stdout and stderr. Yields (stdout,
+    stderr) as StringIO objects."""
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        yield out, err
+
+
+@contextlib.contextmanager
+def _unlink_failing_with(error):
+    """Makes the OS-level unlink (`os.unlink`, which `Path.unlink` goes
+    through) raise `error` for the duration of the block. Every temporary
+    references file the real writer creates meanwhile is removed with the
+    REAL unlink on exit, so the deletion failure leaves nothing behind.
+    Yields (created_paths, unlink_mock)."""
+    real_unlink = os.unlink
+    real_writer = sd._write_references_tempfile
+    created = []
+
+    def recording_writer(lines):
+        path = real_writer(lines)
+        created.append(path)
+        return path
+
+    try:
+        with patch.object(sd, "_write_references_tempfile", recording_writer), \
+                patch.object(os, "unlink", side_effect=error) as unlink_mock:
+            yield created, unlink_mock
+    finally:
+        for path in created:
+            with contextlib.suppress(FileNotFoundError):
+                real_unlink(path)
+
+
 # ---------------------------------------------------------------------------
 # AC-1 (TM-2): the real CLI, create path
 # ---------------------------------------------------------------------------
@@ -436,20 +498,18 @@ class TestTempFileWriteFailure(unittest.TestCase):
 
 
 class TestFilingHelpersConvertOsErrors(unittest.TestCase):
-    """The helper postcondition: every OS error raised inside a filing
-    helper -- while writing the temporary references file, while launching
-    the subprocess, while removing the temporary file -- leaves the helper
-    as EntryPointError with the OS error kept as its cause."""
+    """The helper postcondition: an OS error raised inside a filing helper
+    while writing the temporary references file or while launching the
+    subprocess leaves the helper as EntryPointError with the OS error kept as
+    its cause. An OS error raised while deleting the temporary file is not
+    part of this conversion: it is reported on stderr only and the helper
+    outcome is unchanged."""
 
-    OS_ERROR = OSError(errno.EIO, "simulated I/O failure")
+    OS_ERROR_TEXT = "simulated I/O failure"
+    OS_ERROR = OSError(errno.EIO, OS_ERROR_TEXT)
 
     def _helpers(self, entry_point):
-        return {
-            "create": lambda: sd.create_security_task(str(entry_point), PKG_A, ["CVE-1 (high)"]),
-            "append": lambda: sd.append_security_task_references(
-                str(entry_point), "task-1", ["CVE-1 (high)"],
-            ),
-        }
+        return _filing_helpers(entry_point)
 
     def _assert_entry_point_failure_with_os_cause(self, call):
         with self.assertRaises(sd.EntryPointError) as ctx:
@@ -486,27 +546,22 @@ class TestFilingHelpersConvertOsErrors(unittest.TestCase):
                     self.assertFalse(os.path.exists(written[0]))
 
     def test_temp_file_removal_failure_becomes_entry_point_error(self):
+        """AC-2: a failure to delete the temporary file is reported on
+        stderr only. Both helpers, run against a stand-in that exits 0, return
+        without raising; the error text is on stderr, once, and not on
+        stdout; the deletion is attempted once. The identifier is kept
+        unchanged so that records naming it stay resolvable."""
         with tempfile.TemporaryDirectory() as tmp:
-            standin, _control, calls = _write_standin(tmp)
-            real_unlink = os.unlink
+            standin, _control, _calls = _write_standin(tmp)
             for name, call in self._helpers(standin).items():
-                leftovers = []
-                real_writer = sd._write_references_tempfile
-
-                def recording_writer(lines, _real=real_writer, _left=leftovers):
-                    path = _real(lines)
-                    _left.append(path)
-                    return path
-
-                with self.subTest(helper=name):
-                    try:
-                        with patch.object(sd, "_write_references_tempfile", recording_writer), \
-                                patch.object(os, "unlink", side_effect=self.OS_ERROR):
-                            self._assert_entry_point_failure_with_os_cause(call)
-                    finally:
-                        for path in leftovers:
-                            with contextlib.suppress(FileNotFoundError):
-                                real_unlink(path)
+                with self.subTest(helper=name), \
+                        _unlink_failing_with(self.OS_ERROR) as (created, unlink_mock), \
+                        _captured_streams() as (out, err):
+                    call()
+                    self.assertEqual(len(created), 1)
+                    self.assertEqual(unlink_mock.call_count, 1)
+                    self.assertEqual(err.getvalue().count(self.OS_ERROR_TEXT), 1, err.getvalue())
+                    self.assertNotIn(self.OS_ERROR_TEXT, out.getvalue())
 
     def test_failure_while_writing_leaves_no_temporary_file_behind(self):
         created = []
@@ -551,6 +606,122 @@ class TestFilingHelpersConvertOsErrors(unittest.TestCase):
                     for fragment in expected[name]:
                         self.assertIn(fragment, str(ctx.exception))
                     self.assertIsNone(ctx.exception.__cause__)
+
+
+# ---------------------------------------------------------------------------
+# file-tasks-temp-unlink-oserror AC-3, AC-4, AC-5: an OS error raised while
+# deleting the temporary references file never overrides the outcome decided
+# by the launch and the exit status
+# ---------------------------------------------------------------------------
+
+class TestTempFileDeletionFailureNeverOverridesTheOutcome(unittest.TestCase):
+    LAUNCH_ERROR_TEXT = "simulated launch failure"
+    DELETION_ERROR_TEXT = "simulated deletion failure"
+    LAUNCH_ERROR = OSError(errno.EIO, LAUNCH_ERROR_TEXT)
+    DELETION_ERROR = OSError(errno.EACCES, DELETION_ERROR_TEXT)
+
+    def test_launch_error_stays_the_cause_when_the_deletion_also_fails(self):
+        """AC-3: the helper raises EntryPointError chained to the LAUNCH
+        error object, never to the deletion error; the deletion error text
+        goes to stderr only."""
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, _control, _calls = _write_standin(tmp)
+            for name, call in _filing_helpers(standin).items():
+                with self.subTest(helper=name), \
+                        _unlink_failing_with(self.DELETION_ERROR) as (_created, unlink_mock), \
+                        patch.object(sd.subprocess, "run", side_effect=self.LAUNCH_ERROR), \
+                        _captured_streams() as (out, err):
+                    with self.assertRaises(sd.EntryPointError) as ctx:
+                        call()
+                    self.assertIs(ctx.exception.__cause__, self.LAUNCH_ERROR)
+                    self.assertIn(self.LAUNCH_ERROR_TEXT, str(ctx.exception))
+                    self.assertNotIn(self.DELETION_ERROR_TEXT, str(ctx.exception))
+                    self.assertEqual(unlink_mock.call_count, 1)
+                    self.assertIn(self.DELETION_ERROR_TEXT, err.getvalue())
+                    self.assertNotIn(self.DELETION_ERROR_TEXT, out.getvalue())
+
+    def test_non_zero_exit_error_is_kept_when_the_deletion_fails(self):
+        """AC-4: the existing non-zero-exit EntryPointError is raised: its
+        message carries the entry point's stderr but not the deletion error
+        text, and it has no chained cause."""
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, control, _calls = _write_standin(tmp)
+            _set_control(control, {
+                "task create": {"exit_code": 1, "stdout": "", "stderr": "create refused"},
+                "task update": {"exit_code": 1, "stdout": "", "stderr": "update refused"},
+            })
+            expected = {"create": "create refused", "append": "update refused"}
+            for name, call in _filing_helpers(standin).items():
+                with self.subTest(helper=name), \
+                        _unlink_failing_with(self.DELETION_ERROR) as (_created, unlink_mock), \
+                        _captured_streams() as (out, err):
+                    with self.assertRaises(sd.EntryPointError) as ctx:
+                        call()
+                    self.assertIn(expected[name], str(ctx.exception))
+                    self.assertNotIn(self.DELETION_ERROR_TEXT, str(ctx.exception))
+                    self.assertIsNone(ctx.exception.__cause__)
+                    self.assertEqual(unlink_mock.call_count, 1)
+                    self.assertIn(self.DELETION_ERROR_TEXT, err.getvalue())
+                    self.assertNotIn(self.DELETION_ERROR_TEXT, out.getvalue())
+
+    def test_already_absent_file_is_accepted_silently(self):
+        """AC-5: a file that is already gone at deletion time is not an
+        error and is not reported."""
+        absent = FileNotFoundError(errno.ENOENT, "No such file or directory")
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, _control, _calls = _write_standin(tmp)
+            for name, call in _filing_helpers(standin).items():
+                with self.subTest(helper=name), \
+                        _unlink_failing_with(absent) as (_created, unlink_mock), \
+                        _captured_streams() as (out, err):
+                    call()
+                    self.assertEqual(unlink_mock.call_count, 1)
+                    self.assertEqual(err.getvalue(), "")
+                    self.assertEqual(out.getvalue(), "")
+
+
+# ---------------------------------------------------------------------------
+# file-tasks-temp-unlink-oserror AC-1: file_tasks over three packages while
+# every deletion of the temporary references file fails
+# ---------------------------------------------------------------------------
+
+class TestFileTasksSurvivesTempFileDeletionFailure(unittest.TestCase):
+    OS_ERROR_TEXT = "simulated deletion I/O failure"
+
+    def _run_file_tasks(self, tmp, findings, listing):
+        standin, control, calls = _write_standin(tmp)
+        _set_control(control, _listing_control(listing))
+        error = OSError(errno.EIO, self.OS_ERROR_TEXT)
+        with _unlink_failing_with(error) as (created, _unlink_mock), \
+                _captured_streams() as (out, err):
+            result = sd.file_tasks(Path(tmp), "file-tasks-temp-unlink-oserror", findings, str(standin))
+        return result, calls, created, out.getvalue(), err.getvalue()
+
+    def test_create_path_files_all_three_packages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result, calls, created, out, err = self._run_file_tasks(tmp, _create_path_findings(), [])
+            self.assertEqual(result, _expected_summary(filed_packages=[PKG_A, PKG_B, PKG_C]))
+            self.assertEqual(
+                [c["--title"] for c in _calls_for(calls, "create")], [PKG_A, PKG_B, PKG_C],
+            )
+            # One failed deletion per package, each reported on stderr only.
+            self.assertEqual(len(created), 3)
+            self.assertEqual(err.count(self.OS_ERROR_TEXT), 3)
+            self.assertNotIn(self.OS_ERROR_TEXT, out)
+
+    def test_append_path_appends_to_all_three_packages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result, calls, created, out, err = self._run_file_tasks(
+                tmp, _append_path_findings(), _append_path_listing(),
+            )
+            self.assertEqual(result, _expected_summary(appended_packages=[PKG_A, PKG_B, PKG_C]))
+            self.assertEqual(
+                [c["--id"] for c in _calls_for(calls, "update")],
+                [f"task-{p}" for p in (PKG_A, PKG_B, PKG_C)],
+            )
+            self.assertEqual(len(created), 3)
+            self.assertEqual(err.count(self.OS_ERROR_TEXT), 3)
+            self.assertNotIn(self.OS_ERROR_TEXT, out)
 
 
 # ---------------------------------------------------------------------------
@@ -776,6 +947,49 @@ class TestDocstringAndModuleDiscipline(unittest.TestCase):
         for key in self.ADDED_KEYS:
             with self.subTest(key=key):
                 self.assertIn(f"`{key}`", added)
+
+    @staticmethod
+    def _removal_sentences(doc):
+        """The sentences of `doc` (whitespace-normalised, split after a full
+        stop or semicolon) that speak about removing / deleting a file."""
+        text = " ".join((doc or "").split())
+        return [
+            sentence for sentence in re.split(r"(?<=[.;])\s+", text)
+            if re.search(r"remov|delet|unlink", sentence, re.IGNORECASE)
+        ]
+
+    def _assert_no_deletion_error_conversion_claim(self, doc, label):
+        for sentence in self._removal_sentences(doc):
+            with self.subTest(doc=label, sentence=sentence):
+                self.assertNotIn("EntryPointError", sentence)
+                self.assertNotIn("propagat", sentence.lower())
+
+    def test_deletion_failure_docstrings_of_the_helpers_state_stderr_only(self):
+        # AC-6: no claim that a deletion error propagates or becomes
+        # EntryPointError; a statement that it is reported on stderr only and
+        # leaves the result unchanged.
+        for name in ("_run_entry_point_with_references", "create_security_task"):
+            doc = getattr(sd, name).__doc__
+            self._assert_no_deletion_error_conversion_claim(doc, name)
+            with self.subTest(doc=name):
+                self.assertTrue(
+                    any("stderr" in s and "unchanged" in s for s in self._removal_sentences(doc)),
+                    f"{name}: no sentence says a deletion error goes to stderr and leaves the result unchanged",
+                )
+        self._assert_no_deletion_error_conversion_claim(
+            sd.append_security_task_references.__doc__, "append_security_task_references",
+        )
+
+    def test_deletion_failure_docstrings_of_this_module_claim_no_conversion(self):
+        # AC-2: the rewritten test's docstring, the class docstring and the
+        # module docstring do not say a deletion error becomes EntryPointError.
+        method = TestFilingHelpersConvertOsErrors.test_temp_file_removal_failure_becomes_entry_point_error
+        for label, doc in (
+            ("module", sys.modules[__name__].__doc__),
+            ("TestFilingHelpersConvertOsErrors", TestFilingHelpersConvertOsErrors.__doc__),
+            ("test_temp_file_removal_failure_becomes_entry_point_error", method.__doc__),
+        ):
+            self._assert_no_deletion_error_conversion_claim(doc, label)
 
     def test_only_standard_library_imports(self):
         tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))

@@ -406,9 +406,14 @@ def _run_entry_point_with_references(reference_lines, build_argv):
     """Writes `reference_lines` to a temporary references file, launches the
     entry point with the argv `build_argv(<that file's path>)` builds, removes
     the file afterwards (also when the launch failed) and returns the
-    CompletedProcess. Any OS error raised along the way -- creating or
-    writing the file, launching the process, removing the file -- propagates
-    as an OSError for the two public helpers below to convert."""
+    CompletedProcess. An OS error raised while creating or writing the file
+    or while launching the process propagates as an OSError for the two
+    public helpers below to convert. An OS error raised while removing the
+    file is reported on stderr only and leaves the result unchanged: the
+    CompletedProcess is still returned, and a launch error already in flight
+    still reaches the caller as it was. Removal is attempted once; a file
+    that cannot be removed stays, and a file that is already absent is
+    accepted silently."""
     refs_path = None
     try:
         refs_path = _write_references_tempfile(reference_lines)
@@ -420,7 +425,13 @@ def _run_entry_point_with_references(reference_lines, build_argv):
         )
     finally:
         if refs_path is not None:
-            Path(refs_path).unlink(missing_ok=True)
+            try:
+                Path(refs_path).unlink(missing_ok=True)
+            except OSError as exc:
+                print(
+                    f"file-tasks: could not remove temporary references file {refs_path}: {exc}",
+                    file=sys.stderr,
+                )
 
 
 def create_security_task(entry_point, package, reference_lines):
@@ -428,10 +439,11 @@ def create_security_task(entry_point, package, reference_lines):
     Pre: unchanged -- an entry point that is not an executable file raises
     EntryPointError. Post: the task was created, or EntryPointError was
     raised: for a non-zero exit of the launched process, and for ANY OS error
-    raised while writing the temporary references file, launching the
-    process or removing the file (the OS error is kept as the cause and its
-    text may appear in the message, which only ever reaches stderr). A raw
-    OS error never leaves this function."""
+    raised while writing the temporary references file or launching the
+    process (the OS error is kept as the cause and its text may appear in the
+    message, which only ever reaches stderr). A raw OS error never leaves
+    this function. An OS error raised while removing the temporary file is
+    reported on stderr only and leaves the result unchanged."""
     if not _entry_point_is_valid(entry_point):
         raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
     try:
