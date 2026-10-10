@@ -1,7 +1,7 @@
 schema_version: 1
 feature: parse-tests-tab-skip-deeper
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: ad39df0aa709f8fa03696af58c62ab22614bd443
 last_input_digest: sha256:9325e1dffb3a09552b44dca4216bd423f7e33383dd27a952b24abbe81848d158
