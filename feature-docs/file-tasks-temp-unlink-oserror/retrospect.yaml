@@ -1,0 +1,29 @@
+feature: file-tasks-temp-unlink-oserror
+collected_at: "2026-10-11T02:09:00+09:00"
+session_ids: [01a126c9-213f-77b1-9976-1b39a1a7776e]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1（ルール追加とテスト追加、または少数ファイルへの小変更）が 0.95、score 1.05 で reduced の閾値行に該当"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.07, confidence: 0.92}
+        observed_at: "2026-10-11T01:03:33+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.05, confidence: 0.95}
+        observed_at: "2026-10-11T01:05:40+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/scan-dependencies.py
+        - tests/test_sca_file_tasks_oserror.py
+      changed_lines_approx: 100
+      change_containment: single_module
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates: []
