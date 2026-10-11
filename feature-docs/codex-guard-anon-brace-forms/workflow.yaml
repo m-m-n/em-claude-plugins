@@ -135,7 +135,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 08f6444b0d22fd270a94c98711517ba492804387
 tasks:
   task0001:
     title: Judge zsh anonymous-function bodies, their arguments and their pipe connection
