@@ -77,6 +77,23 @@ above was renamed accordingly
 (`TestPreToolUseBashArrayHasTheEightEntryOrderedShape` ->
 `TestPreToolUseBashArrayHasTheNineEntryOrderedShape`); its assertions keep
 the same shape, just against the grown array.
+
+Extended again by cross-repo-write-guard task0001 (FR1, FR14, AC-1): the
+pinned array grew from nine entries to ten -- `cross-repo-write-guard.py` is
+inserted directly after `loop-command-guard.py` and directly before
+`destructive-guard.py`, and the same script is registered a second time under
+the PreToolUse `Write|Edit|MultiEdit` matcher, after
+`gitleaks-write-guard.sh`. Two things follow:
+
+- The duplicate-registration check is keyed by `(event, matcher, script)`
+  instead of `(event, script)` (`find_duplicate_registrations`): one script
+  under two matchers of one event is a deliberate registration, while a
+  script listed twice under one matcher is still reported.
+- The class pinning the PreToolUse(Bash) array keeps its historical
+  `...NineEntry...` / `test_exactly_nine_entries` names although it now pins
+  ten entries. Renaming would orphan the `test-docs/**/*.tests.yaml` IDs that
+  reference those names (FR14), so the names stay and the docstring carries
+  the current count (`EXPECTED_BASH_ENTRY_COUNT`).
 """
 
 import importlib.util
@@ -210,6 +227,25 @@ def iter_all_hook_commands(config):
             matcher = group.get("matcher")
             for hook in group.get("hooks", []):
                 yield event, matcher, hook
+
+
+def find_duplicate_registrations(config, plugin_root):
+    """Return the `(event, matcher, script path)` keys registered more than
+    once in a parsed hooks.json config (one entry per repeat).
+
+    The key includes the matcher: one script registered under two different
+    matchers of the same event is a deliberate registration, while a script
+    listed twice under one matcher -- in one group or in two groups carrying
+    the same matcher -- is still a duplicate."""
+    seen = set()
+    duplicates = []
+    for event, matcher, hook in iter_all_hook_commands(config):
+        script_path = extract_script_path(hook.get("command", ""), plugin_root)
+        key = (event, matcher, str(script_path))
+        if key in seen:
+            duplicates.append(key)
+        seen.add(key)
+    return duplicates
 
 
 def validate_hook_entry_shape(hook, plugin_root):
@@ -372,6 +408,12 @@ EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC = [
     },
     {
         "type": "command",
+        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/cross-repo-write-guard.py',
+        "timeout": 15,
+        "statusMessage": "リポジトリの外への書き込みでないか検証中...",
+    },
+    {
+        "type": "command",
         "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/destructive-guard.py',
         "timeout": 10,
         "statusMessage": "破壊的コマンドを検証中...",
@@ -386,15 +428,25 @@ EXPECTED_HEREDOC_GUARD_COMMAND = (
 )
 EXPECTED_HEREDOC_GUARD_TIMEOUT = 10
 
+# cross-repo-write-guard task0001 AC-1 (IMPLEMENTATION.md C1): the
+# PreToolUse(Bash) matcher holds ten entries -- the nine pinned above plus
+# the heredoc-stdin-guard.py entry that stays last.
+EXPECTED_BASH_ENTRY_COUNT = 10
+CROSS_REPO_WRITE_GUARD = "cross-repo-write-guard.py"
+
 
 class TestPreToolUseBashArrayHasTheNineEntryOrderedShape(unittest.TestCase):
     """AC-8 (FR7, NFR3, NFR4) extended by loop-command-guard task0001 (FR9,
-    FR10, AC-6): the PreToolUse(Bash) matcher holds exactly nine entries;
-    the last invokes heredoc-stdin-guard.py in the pinned invocation form
-    with a 10-second timeout; the first eight (now including
-    loop-command-guard.py, directly after interpreter-mismatch-guard.py and
-    directly before destructive-guard.py) are unchanged in order, command,
-    timeout and status message."""
+    FR10, AC-6) and cross-repo-write-guard task0001 (FR1, FR14, AC-1): the
+    PreToolUse(Bash) matcher holds exactly ten entries
+    (`EXPECTED_BASH_ENTRY_COUNT`); the last invokes heredoc-stdin-guard.py in
+    the pinned invocation form with a 10-second timeout; the first nine
+    (including loop-command-guard.py, then cross-repo-write-guard.py, then
+    destructive-guard.py) are unchanged in order, command, timeout and
+    status message.
+
+    The class and method names keep the historical "nine" wording on purpose
+    (see the module docstring): the `test-docs` records reference them."""
 
     @classmethod
     def setUpClass(cls):
@@ -410,26 +462,84 @@ class TestPreToolUseBashArrayHasTheNineEntryOrderedShape(unittest.TestCase):
         cls.entries = groups[0].get("hooks", [])
 
     def test_exactly_nine_entries(self):
-        self.assertEqual(len(self.entries), 9, self.entries)
+        # Name kept for test-docs ID stability; the pinned count is ten.
+        self.assertEqual(len(self.entries), EXPECTED_BASH_ENTRY_COUNT, self.entries)
 
     def test_entries_before_heredoc_guard_are_unchanged_verbatim(self):
-        self.assertEqual(self.entries[:8], EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC)
+        self.assertEqual(
+            self.entries[:-1], EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC
+        )
 
     def test_last_entry_invokes_the_heredoc_guard_in_the_pinned_form(self):
-        last = self.entries[8] if len(self.entries) >= 9 else {}
+        last = self.entries[-1] if self.entries else {}
         self.assertEqual(last.get("type"), "command")
         self.assertEqual(last.get("command"), EXPECTED_HEREDOC_GUARD_COMMAND)
         self.assertEqual(last.get("timeout"), EXPECTED_HEREDOC_GUARD_TIMEOUT)
 
     def test_reordering_the_pinned_entries_would_be_caught(self):
         # Non-vacuity guard: a config with the pinned entries reordered
-        # (destructive-guard.py moved ahead of loop-command-guard.py) must
-        # NOT equal the pinned expectation.
-        reordered = (
-            EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[:6]
-            + [EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[7], EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC[6]]
+        # (destructive-guard.py moved ahead of cross-repo-write-guard.py)
+        # must NOT equal the pinned expectation.
+        pinned = EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC
+        reordered = pinned[:-2] + [pinned[-1], pinned[-2]]
+        self.assertNotEqual(reordered, pinned)
+
+    def test_cross_repo_write_guard_sits_between_the_loop_and_destructive_guards(self):
+        names = [e.get("command", "").rsplit("/", 1)[-1] for e in self.entries]
+        index = names.index(CROSS_REPO_WRITE_GUARD)
+        self.assertEqual(names[index - 1], "loop-command-guard.py")
+        self.assertEqual(names[index + 1], "destructive-guard.py")
+
+
+class TestCrossRepoWriteGuardIsRegisteredForBothWriteToolPaths(unittest.TestCase):
+    """cross-repo-write-guard task0001 AC-1 (FR1; TM-1): the one script is
+    registered under PreToolUse `Bash` (pinned in full above) and under
+    `Write|Edit|MultiEdit` right after `gitleaks-write-guard.sh`, with the
+    same command form, timeout 15 and status message, and under no other
+    event or matcher -- so neither tool path bypasses the hook."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = json.loads(HOOKS_JSON_PATH.read_text())
+
+    def _group(self, matcher):
+        groups = [
+            g
+            for g in self.config.get("hooks", {}).get("PreToolUse", [])
+            if g.get("matcher") == matcher
+        ]
+        self.assertEqual(len(groups), 1, f"matcher {matcher!r}: {len(groups)} groups")
+        return groups[0].get("hooks", [])
+
+    def test_write_edit_multiedit_group_lists_the_guard_after_the_gitleaks_guard(self):
+        entries = self._group("Write|Edit|MultiEdit")
+        names = [e.get("command", "").rsplit("/", 1)[-1] for e in entries]
+        self.assertEqual(
+            names, ["gitleaks-write-guard.sh", CROSS_REPO_WRITE_GUARD], names
         )
-        self.assertNotEqual(reordered, EXPECTED_PRETOOLUSE_BASH_BEFORE_HEREDOC)
+
+    def test_both_registrations_are_the_same_standard_entry(self):
+        bash_entry = self._group("Bash")[-3]
+        write_entry = self._group("Write|Edit|MultiEdit")[-1]
+        self.assertEqual(write_entry, bash_entry)
+        self.assertEqual(
+            write_entry["command"],
+            'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/cross-repo-write-guard.py',
+        )
+        self.assertEqual(write_entry["timeout"], STANDARD_HOOK_TIMEOUT)
+        self.assertTrue(write_entry.get("statusMessage"))
+        self.assertNotIn(CROSS_REPO_WRITE_GUARD, NONSTANDARD_HOOK_TIMEOUTS)
+
+    def test_the_guard_is_registered_nowhere_else(self):
+        places = sorted(
+            (event, matcher)
+            for event, matcher, hook in iter_all_hook_commands(self.config)
+            if CROSS_REPO_WRITE_GUARD in hook.get("command", "")
+        )
+        self.assertEqual(
+            places,
+            [("PreToolUse", "Bash"), ("PreToolUse", "Write|Edit|MultiEdit")],
+        )
 
 
 class TestEveryRegisteredHookIsWellFormed(unittest.TestCase):
@@ -467,18 +577,70 @@ class TestEveryRegisteredHookIsWellFormed(unittest.TestCase):
     def test_no_duplicate_script_registered_twice_under_the_same_event(self):
         # A copy/merge-conflict artifact (e.g. a hook entry pasted in twice
         # by a parent-side-adoption re-implementation) would otherwise pass
-        # every other check here silently.
-        seen = {}
-        duplicates = []
-        for event, matcher, hook in self.entries:
-            script_path = extract_script_path(hook.get("command", ""), PLUGIN_ROOT)
-            key = (event, str(script_path))
-            if key in seen:
-                duplicates.append(key)
-            seen[key] = True
+        # every other check here silently. The key is (event, matcher,
+        # script): cross-repo-write-guard.py is deliberately registered under
+        # two matchers of PreToolUse, so the method name keeps its historical
+        # "same event" wording (test-docs IDs) while the check is per matcher.
+        duplicates = find_duplicate_registrations(self.config, PLUGIN_ROOT)
         self.assertEqual(
-            duplicates, [], f"script(s) registered more than once under the same event: {duplicates}"
+            duplicates,
+            [],
+            f"script(s) registered more than once under the same event and matcher: {duplicates}",
         )
+
+
+class TestDuplicateRegistrationCheckKey(unittest.TestCase):
+    """cross-repo-write-guard task0001 AC-1 (FR14): the duplicate check is
+    keyed by `(event, matcher, script)` -- proven on fabricated configs,
+    independent of the real hooks.json."""
+
+    @staticmethod
+    def _hook(name="a_hook.py"):
+        return {
+            "type": "command",
+            "command": f'python3 "${{CLAUDE_PLUGIN_ROOT}}"/hooks/{name}',
+            "timeout": 15,
+        }
+
+    def _config(self, *groups):
+        return {"hooks": {"PreToolUse": [
+            {"matcher": matcher, "hooks": hooks} for matcher, hooks in groups
+        ]}}
+
+    def test_one_script_under_two_matchers_of_one_event_is_accepted(self):
+        config = self._config(
+            ("Bash", [self._hook()]),
+            ("Write|Edit|MultiEdit", [self._hook()]),
+        )
+        self.assertEqual(find_duplicate_registrations(config, PLUGIN_ROOT), [])
+
+    def test_a_script_listed_twice_under_one_matcher_is_reported(self):
+        config = self._config(("Bash", [self._hook(), self._hook()]))
+        duplicates = find_duplicate_registrations(config, PLUGIN_ROOT)
+        self.assertEqual(len(duplicates), 1, duplicates)
+        self.assertEqual(duplicates[0][:2], ("PreToolUse", "Bash"))
+
+    def test_a_script_listed_in_two_groups_with_the_same_matcher_is_reported(self):
+        config = self._config(
+            ("Bash", [self._hook()]),
+            ("Bash", [self._hook()]),
+        )
+        self.assertEqual(len(find_duplicate_registrations(config, PLUGIN_ROOT)), 1)
+
+    def test_one_script_under_the_same_matcher_of_two_events_is_accepted(self):
+        config = {
+            "hooks": {
+                "PreToolUse": [{"matcher": "Bash", "hooks": [self._hook()]}],
+                "PostToolUse": [{"matcher": "Bash", "hooks": [self._hook()]}],
+            }
+        }
+        self.assertEqual(find_duplicate_registrations(config, PLUGIN_ROOT), [])
+
+    def test_two_different_scripts_under_one_matcher_are_accepted(self):
+        config = self._config(
+            ("Bash", [self._hook("a_hook.py"), self._hook("b_hook.py")])
+        )
+        self.assertEqual(find_duplicate_registrations(config, PLUGIN_ROOT), [])
 
 
 class TestValidationDetectsBrokenConfigs(unittest.TestCase):
