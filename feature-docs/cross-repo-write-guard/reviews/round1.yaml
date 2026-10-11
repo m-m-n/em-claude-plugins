@@ -1,0 +1,199 @@
+round: 1
+executed_at: '2026-10-12T05:40:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8da4c593dc059a9195e9dc9856b4ba43378b00ff
+  head_commit: 4372436689082b4acce497bd51e356549b80436c
+  changed_files:
+  - .claude/rules/hook-tests.md
+  - em-workflow/README.md
+  - em-workflow/hooks/cross-repo-write-guard.py
+  - em-workflow/hooks/hooks.json
+  - test-docs/cross-repo-write-guard/task0001.tests.yaml
+  - test-docs/cross-repo-write-guard/task0002.tests.yaml
+  - tests/test_cross_repo_write_guard.py
+  - tests/test_guardrail_hooks_migration.py
+  - tests/test_hooks_registration.py
+  - tests/test_muse_guard_registration.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 8c467a5c688b5e0c
+  severity: medium
+  category: security
+  file: em-workflow/hooks/cross-repo-write-guard.py
+  line: 1078
+  title: 'TM-3: シンボリックリンクを解決する前に `..` を字面で畳むため、リンク経由の外部書き込みを見逃す'
+  description: normalize()（os.path.normpath）が、パスを結合した直後に `link/..` を字面で除去する。リンクの解決（resolve_path()）はその後になる。カーネルは `link` を先に解決し、解決後のパスに `..` を当てる。このため repo/link が外部ディレクトリを指すとき、`printf x > link/../victim` の実際の書き込み先は外部になる。hook は repo/victim と判定して何も出力せず、CLAUDE_BATCH でも deny にならない。THREAT-MODEL の TB-2 / TM-3 が求める「実パスの意味での比較」を満たしていない。同じ根本原因で逆向きの誤判定も起きる。/var/run -> /run のホストでは `/var/run/../tmp/x` の実体は除外対象の /tmp/x だが、hook は /var/tmp/x として ask（無人実行では deny）を返す。comprehensive#0 がこの箇所を誤爆側から報告しており、本件に統合した。
+  suggestion: 境界判定と除外判定に使うパスは字面正規化を通さず、realpath と同じ方法（解決済みのパスに `..` を当てる）で解決する。/dev シンクの照合（FR5）は、従来どおり字面正規化後のパスで行う。resolve_path() の親ディレクトリのキャッシュは、末尾要素が `.` / `..` のときは使わず realpath に直接渡す。修正の前に、`echo hi > link_out/../x`（ask）と `/var/run/../tmp` 相当（silent）を CASES に追加する。
+  reproduction: メモリ上で cwd と git toplevel を /var/cwg-review/repo、repo/link を /var/cwg-review/outside/child へのリンクとして模擬する。CLAUDE_BATCH=1 で Bash の command に `printf x > link/../victim` を渡すと judge() は None を返す。一方、元のパスを realpath() に渡すと /var/cwg-review/outside/victim となることを確認した。直接この外部パスを指定すると deny になる
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+- stable_id: ff6cd61642b66f56
+  severity: medium
+  category: security
+  file: em-workflow/hooks/cross-repo-write-guard.py
+  line: 805
+  title: 'TM-3: cp のコピー先がディレクトリのとき、実際に書き込む子パスのリンクを検査しない'
+  description: cpmv_destinations() は `-t DIR` か最後のオペランドだけを返し、resolve_path() はそのディレクトリ自身しか解決しない。GNU cp は既存ディレクトリへコピーするとき DIR/<コピー元の名前> に書き込む。その子パスが既存のシンボリックリンクなら、リンク先を開いて上書きする。repo/dest/config が外部の既存ファイルを指していれば、`cp payload/config dest/` は外部ファイルを上書きするが、hook は repo/dest を内部と判定して何も出力しない。SPEC FR7(d) の字面は「ディレクトリ自身」を書き込み先としているが、TM-3 の「repo 内のリンクが外を指す場合」の穴にあたる。mv は rename でリンク自体を置き換えるので、外部には書き込まない。
+  suggestion: cp で書き込み先が `-t` か既存ディレクトリのときは、静的に解決できる各コピー元の basename を結合したパスも resolve_path() で解決して判定する。コピー元が解決できなければ、従来どおりディレクトリだけを判定する。-r の深い階層までは追わなくてよい。
+  reproduction: repo/dest/config が外部の既存ファイル /var/cwg-review/outside/config を指し、repo/payload/config がコピー元となる構成で、Bash の command に `cp payload/config dest/` を渡す。リンクを模擬した検証では、CLAUDE_BATCH=1 でも judge() は None を返した。実際のコピー先 dest/config の realpath() は外部を指し、同じ宛先を明示した `cp payload/config dest/config` は deny になる
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+- stable_id: 65ce106ecde3320d
+  severity: medium
+  category: security
+  file: em-workflow/hooks/cross-repo-write-guard.py
+  line: 812
+  title: 'TM-1: コマンドを絶対パスで書くと tee / sed / cp / mv とラッパーを認識しない'
+  description: command_destinations() は名前を `tee` / `sed` / `cp` / `mv` との完全一致で比べる。resolve_command() の WRAPPERS 判定（695 行）も同じ比べ方をしている。このため `/usr/bin/tee /outside/x`、`/bin/cp a /outside/b`、`/usr/bin/env tee /outside/x` では書き込み先が集まらず、確認も無人実行時の deny も起きない。TM-1 の「FR7 の形を FR8 の範囲で必ず認識する」を満たしていない。
+  suggestion: 引用されていないコマンド語が `/` を含むときは basename で比べる。ラッパーの判定（WRAPPERS）にも同じ扱いを入れ、`/usr/bin/tee` と `/usr/bin/env tee` の ask ケースを CASES に追加する。
+  reproduction: 実際の git リポジトリを cwd とし、CLAUDE_BATCH=1 で Bash の command に `/usr/bin/tee /var/cwg-outside/victim` を渡すと、候補が空になり judge() は None を返した。`tee /var/cwg-outside/victim` に変更すると deny になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+- stable_id: 68b94bbc127e2544
+  severity: medium
+  category: security
+  file: em-workflow/hooks/cross-repo-write-guard.py
+  line: 390
+  title: 'TM-1: ブレース展開で生成される外部パスを見逃す'
+  description: scan_word() は `{` `,` `}` を普通の文字として扱う。このため `tee {../outside/victim,local}` を 1 つの相対パスとみなし、内部と判定される。実際の Bash は引用されていないブレースを展開し、`../outside/victim` と `local` の 2 つに書き込む。FR9 は glob（`*` `?` `[`）を解決不能として扱うが、ブレース展開には触れていない。TM-1 の「シェル構文の読み違い」にあたる。
+  suggestion: 引用されていない `{a,b}` 形式（必要なら `{x..y}` も）を静的に展開し、展開後の各要素を書き込み先として判定する。展開できない形は FR9 の解決不能に寄せる。ただし解決不能に寄せるだけでは見逃しのまま残るため、カンマ形式の展開は実装する。
+  reproduction: git リポジトリ内で CLAUDE_BATCH=1 とし、Bash の command に `printf x | tee {../outside/victim,local}` を渡すと judge() は None を返した。`bash -c "printf '%s\n' {../outside/victim,local}"` では実際の引数が2つに分かれることを確認した
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+- stable_id: f8fa575926616404
+  severity: medium
+  category: security
+  file: em-workflow/hooks/cross-repo-write-guard.py
+  line: 880
+  title: 'TM-1: ファイルへの `>&` リダイレクトを検査しない'
+  description: _WRITE_REDIRECTS（822 行）に `>&` が無く、take_redirect() は `>&` の対象を常に捨てている。Bash では fd 番号を省いた `>&word` で、word が数字でも `-` でもないとき、`&>word` と同じく標準出力と標準エラーを word に書き込む。このため `printf x >& /outside/victim` は何も出力されずに通る。SPEC FR7(a) が除外するのは fd の複製（`>&N` / `N>&M` / `>&-`）だけで、この形は複製ではない。
+  suggestion: fd 番号の付かない `>&` で、対象の語が数字だけでも `-` でもないときは、`&>` と同じく書き込み先として扱う。/dev シンクの除外は従来どおり適用する。既存の silent ケース（`>&2`、`>&-`、`2>&1`）が維持されることを確かめる。
+  reproduction: git リポジトリ内で CLAUDE_BATCH=1 とし、Bash の command に `printf x >& /var/cwg-outside/victim` を渡すと、候補が空になり judge() は None を返した。`>` に変更すると deny になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+- stable_id: 072c33ebbe5f52a5
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/cross-repo-write-guard.py
+  line: 772
+  title: 未解決の値を添付した target-directory があると、コピー元を書き込み先と取り違える
+  description: '`cp --target-directory="$DEST" /etc/hosts` や `cp -t"$DEST" /etc/hosts` では、変数を含むオプション語全体の literal() が None になる。そのため 774 行の条件でオプションとして解析されず、オペランドに入る。オペランドが 2 つになるので、最後の `/etc/hosts`（読み取り元）が書き込み先とされ、ask（CLAUDE_BATCH では deny）になる。分離形式の `cp -t "$DEST" /etc/hosts` は、正しく何も出力しない。TM-2（誤爆が無人実行を止める）にあたる。'
+  suggestion: literal() が None でも、先頭の引用されていない部分が `-` / `--` で始まるなら、オプション名の部分だけを解析する。target-directory / `-t` と判明し値が未解決なら、その cp / mv には判定対象なし（空リスト）を返す。`cp --target-directory="$D" /etc/hosts` と `cp -t"$D" /etc/hosts` を silent ケースとして追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+evaluation:
+  round_summary: 'Round 1 は cross_validation が有効なので、精査を強めて評価した。critical / high の報告は無い。security#0 の 5 件は、すべて reproduction の手順をコード読みでたどった（実行はしていない）。結果は 5 件とも reproduced。comprehensive#0 の 1078 行は security#0 と同じ根本原因（リンク解決前の字面正規化）なので、security の指摘に統合した。comprehensive#0 の 2 件は確認できた。そのうち `~` の 1 件は稀な書き方なので low に下げた。architecture#0 の 1 件は変更前からある重複なので low に下げた。evaluator 自身の読みで `<>` リダイレクトの見逃しを 1 件追加した（sources は空、扱いは evaluator 由来）。reviewer の出力に、指示の注入を狙った文面は無かった。観点ごとの状況: security: findings（5 件を裏付け、加えて自分の指摘 1 件）。comprehensive: corroborated。performance: corroborated。architecture: corroborated。spec: corroborated（FR4 は字面どおりには満たしているが、TM-3 の意図との差は security の指摘で扱う）。'
+  recommended_action: auto_fix
+  action_rationale: 指摘はすべて medium 以下で、修正はほぼ cross-repo-write-guard.py 1 ファイルに閉じる。各指摘には具体的な直し方と、CASES に足すケースがある。ただし security の 5 件は TM-1 / TM-3 の緩和策にある穴で、フックの目的に直結するため complete にはしない。設計のやり直しが要る構造上の問題は無いので、rework も要らない。
+dismissed_sites:
+- file: em-workflow/hooks/cross-repo-write-guard.py
+  line: 1078
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+r3b_dropped:
+- run_id: evaluator
+  severity: low
+  line: 822
+  reason: evaluator 由来の low、R3b step 2 の severity ゲートで除外（読み書き両用リダイレクト `<>` による外部ファイルの作成・書き込みを検査しない）
+- run_id: comprehensive#0
+  severity: low
+  line: 794
+  reason: evaluator が medium から low に下げ、R3b step 2 の severity ゲートで除外（添付オプションから切り出した `~` を HOME に展開して誤判定する）
+- run_id: architecture#0
+  severity: low
+  line: 151
+  reason: evaluator が medium から low に下げ、R3b step 2 の severity ゲートで除外（重複登録のキー計算が 2 つのテストモジュールで別々に実装されている）
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-cross-repo-write-guard-20261011T203527Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
