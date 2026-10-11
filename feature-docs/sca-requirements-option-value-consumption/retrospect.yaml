@@ -1,0 +1,55 @@
+feature: sca-requirements-option-value-consumption
+collected_at: "2026-10-11T13:06:00+09:00"
+session_ids:
+  - 01a128e8-1985-7154-90fa-567ee22a4d03
+  - 01a128f9-d45e-71a5-a269-032cab93ad6a
+  - 01a12905-a631-77e1-9f5b-efc2e217d2b1
+  - 01a12917-3b0f-760a-8bc8-c50a56bf8480
+  - 01a1291e-0cc5-77b1-ba62-6979ec49ae18
+  - 01a12922-5c27-7679-a458-2c705548cca1
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の読みでバケット 1（ルール追加 + テスト追加）が 0.98 で最有力となり、reduced を採用した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.02
+          confidence: 0.98
+          probabilities: {"0": 0.0, "1": 0.98, "2": 0.02, "3": 0.0}
+        observed_at: "2026-10-11T12:01:48+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.02
+          confidence: 0.98
+          probabilities: {"0": 0.0, "1": 0.98, "2": 0.02, "3": 0.0}
+        observed_at: "2026-10-11T12:04:40+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/scan-dependencies.py
+        - tests/test_scan_dependencies_pip_directness.py
+      changed_lines_approx: 80
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 10
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 2
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 は 5 観点すべて medium 以上の指摘なし。評価者の非ブロック所見: test_ac6_a_constraint_abbreviation_is_not_flagged は名前と逆の complete=False を期待する（FR7 / AC-12 の指定どおり）、単独の -- の扱いが pip と異なる（以前からの挙動で A3 により対象外）"
