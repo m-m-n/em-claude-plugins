@@ -1,0 +1,116 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any edit: 10066 tests OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 -m unittest discover -s tests: 10107 tests OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac1_a_workspace_without_members_and_a_root_path_dependency_is_counted_not_a_finding
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac1_a_workspace_with_an_empty_members_list_and_a_root_path_dependency_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac1_an_empty_workspace_table_and_a_root_path_dependency_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac1_the_member_manifest_declaration_does_not_turn_the_advisory_into_a_finding
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation (every AC-1 test, the cargo scan of a
+      `[workspace]` root with a path dependency): "AssertionError: False is not
+      true : Scanned cargo; 0 finding(s) at or above threshold." -- the
+      summary carried no cargo undetermined note because the old workspace
+      view kept the set complete without `members`.
+  AC-2:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_dev_dependencies_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_build_dependencies_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_a_target_dependencies_table_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_a_target_dev_dependencies_table_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_a_target_build_dependencies_table_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_the_sub_table_form_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_the_dev_dependencies_sub_table_form_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_in_the_target_sub_table_form_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac2_a_path_entry_next_to_a_plain_version_entry_is_counted
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation (all nine placements, one test per
+      placement): the same "AssertionError: False is not true : Scanned cargo;
+      0 finding(s) at or above threshold." -- the undeclared advisory was
+      dropped as transitive and no note was counted.
+  AC-3:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac3_a_path_inherited_through_workspace_true_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac3_a_path_inherited_in_the_sub_table_form_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac3_a_path_inherited_in_a_target_table_is_counted
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac3_an_inherited_path_with_a_package_rename_counts_the_undeclared_advisory_once
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac3_an_advisory_for_the_renamed_package_of_an_inherited_path_is_a_finding
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation (all five tests): the path inherited
+      through `workspace = true` was not seen, so the undeclared advisory was
+      dropped as transitive ("AssertionError: False is not true : Scanned
+      cargo; 0 finding(s) at or above threshold."); the renamed-package test
+      failed on the missing note, not on the finding.
+  AC-4:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac4_a_crate_declared_in_the_root_stays_a_finding_without_a_note_under_fr1
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac4_a_crate_declared_in_the_root_stays_a_finding_without_a_note_under_fr2
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac4_a_declared_finding_and_an_undeclared_advisory_give_one_finding_and_the_note
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac4_an_undeclared_advisory_below_the_threshold_is_dropped_uncounted_under_fr1
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac4_an_undeclared_advisory_below_the_threshold_is_dropped_uncounted_under_fr2
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac4_a_below_threshold_advisory_next_to_an_undetermined_one_is_not_counted
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation:
+      test_ac4_a_declared_finding_and_an_undeclared_advisory_give_one_finding_and_the_note
+      and test_ac4_a_below_threshold_advisory_next_to_an_undetermined_one_is_not_counted
+      (the note was missing). The four tests that only assert a declared
+      crate stays a finding, or that a determined-below-threshold advisory is
+      dropped uncounted, describe behavior that pre-existed; they were green
+      before the change and are regression guards, not reds.
+  AC-5:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_a_workspace_without_members_and_without_a_path_entry_stays_transitive
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_a_workspace_with_an_empty_members_list_and_without_a_path_entry_stays_transitive
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_an_unreferenced_workspace_dependencies_path_entry_stays_transitive
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_a_workspace_dependencies_path_entry_referenced_under_another_key_stays_transitive
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_an_inherited_entry_without_a_path_in_workspace_dependencies_stays_transitive
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_a_package_manifest_without_a_workspace_and_with_a_path_dependency_stays_transitive
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_a_path_dependency_in_a_target_table_without_a_workspace_stays_transitive
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_a_patch_path_entry_does_not_make_a_workspace_incomplete
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac5_a_replace_path_entry_does_not_make_a_workspace_incomplete
+      - tests.test_scan_dependencies_cargo_directness.TestAc4WorkspaceMembers.test_ac4_a_workspace_without_members_is_complete
+      - tests.test_scan_dependencies_cargo_directness.TestAc4WorkspaceMembers.test_ac4_a_workspace_with_an_empty_members_list_is_complete
+    red_confirmed: false
+    red_reason: >-
+      The criterion states behavior that must NOT change (the complete set
+      stays complete), so these tests were green before the implementation and
+      no red state occurred; they guard against the widened rule
+      over-reaching. The two existing tests are the pre-existing detectors of
+      the same behavior and pass unchanged.
+  AC-6:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac6_a_path_value_pointing_outside_the_project_is_never_followed
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac6_an_integer_path_value_on_a_root_entry_is_handled
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac6_a_table_path_value_on_a_root_entry_is_handled
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac6_an_integer_path_value_on_an_inherited_workspace_entry_is_handled
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac6_a_table_path_value_on_an_inherited_workspace_entry_is_handled
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac6_a_path_bearing_entry_still_contributes_its_name_as_before
+      - tests.test_scan_dependencies_cargo_directness.TestCargoImplicitWorkspaceMembers.test_ac6_the_incompleteness_comes_from_the_flag_alone_not_from_a_new_reason_text
+    red_confirmed: true
+    red_reason: >-
+      Watched fail before implementation (all seven tests): the old rule left
+      the set complete, so the scan returned no cargo note ("AssertionError:
+      False is not true : Scanned cargo; 0 finding(s) at or above
+      threshold.") and the direct-name resolution reported complete; the
+      name-contribution test failed on the same completeness flag.
+  AC-7:
+    tests:
+      - tests.test_scan_dependencies_cargo_directness.TestAc8StandardLibraryOnly.test_ac8_the_script_imports_only_the_standard_library_and_guarded_yaml
+      - tests.test_scan_dependencies_cargo_directness.TestAc8StandardLibraryOnly.test_ac8_tomllib_is_reached_only_through_the_guarded_import
+      - tests.test_scan_dependencies_cargo_directness.TestAc8StandardLibraryOnly.test_ac8_this_module_imports_only_the_standard_library
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestAc8StandardLibraryOnly tests detect a non-standard-library import in
+      the script and in the test module; no red state occurred for this
+      change. The remaining outcomes of the criterion (the full suite
+      passing, no edit to plugin.json, marketplace.json or
+      feature-docs/sca-directness-resolution/) are verified by running
+      `python3 -m unittest discover -s tests` and by inspecting the change
+      set, not by a test that can be made to fail first.
