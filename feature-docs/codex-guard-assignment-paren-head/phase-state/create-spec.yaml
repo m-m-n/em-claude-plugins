@@ -46,7 +46,14 @@ worker_runs:
   status: completed
   input_digest: sha256:fe2b5e7e811f7ed347321367f788ffad9bb448b8c5b4daa2e9a20faec602148b
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:c433e555634155e40758ae81a736a4de05f00222883b0197754127cd0e71f94d
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-assignment-paren-head/SPEC.md
+  sha256: sha256:3dbad2bf50b4005559e3ca56391083baed8c59707da66e7d000f02d0214f696c
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
