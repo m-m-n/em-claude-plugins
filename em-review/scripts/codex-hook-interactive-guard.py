@@ -74,7 +74,8 @@ Decision flow:
      top level, wrappers and options included. The connection passes down
      through every level, so a command inside a nested string is connected
      when the command that holds the string is. A string the reader cannot
-     read (an unbalanced quote, an unterminated heredoc, an unclosed group)
+     read (an unbalanced quote, an unterminated heredoc, an unclosed group, a
+     string for which an unexpected error occurred while it was being read)
      is skipped and passes, and so does a dynamic operand; the walk goes on
      with the command after the one that holds it. Nested strings are walked
      with an explicit stack (a work list), never by recursion, so nesting
@@ -218,6 +219,10 @@ FAMILIES = (
 )
 
 DIGITS = "0123456789"
+
+# The largest file descriptor number, as text: a digit-only word of ten digits
+# is an fd when it is not greater than this as a string.
+MAX_FD = "2147483647"
 
 
 class _Word:
@@ -689,10 +694,20 @@ class _Parser:
             self._put(s[i:end], quoted=True, dynamic=True)
             self.i = end
             return
+        # The file descriptor named by a digit-only word right before the
+        # operator, as its digits without leading zeros ("" is fd 0); None when
+        # the operator has no fd word. The word is never converted to a number,
+        # so its length costs nothing and raises nothing.
         fd = None
         if self.started and self.digits and self.buf:
-            fd = int("".join(self.buf))
-            self._reset_word()
+            word = "".join(self.buf).lstrip("0")
+            if len(word) < 10 or (len(word) == 10 and word <= MAX_FD):
+                fd = word
+                self._reset_word()
+            else:
+                # Past the largest fd: an ordinary operand, and the redirect
+                # binds to the default fd of its operator.
+                self._finish_word()
         else:
             self._finish_word()
         if ch == "<":
@@ -709,7 +724,7 @@ class _Parser:
                 op = ">"
         self.i = i + len(op)
         self.redirected = True
-        if fd == 0 or (fd is None and ch == "<"):
+        if fd == "" or (fd is None and ch == "<"):
             self.stdin = True
             if self.after_group is not None:
                 self.after_group.stdin = True
@@ -1038,6 +1053,10 @@ def _scan(commands):
         try:
             inner_commands = parse(inner)
         except _Undecidable:
+            continue
+        except Exception:
+            # An unexpected error is handled like an unreadable string: this
+            # one is skipped and the walk goes on. Never a reason to deny.
             continue
         pending.append([inner_commands, 0, connected, level + 1])
     return None
