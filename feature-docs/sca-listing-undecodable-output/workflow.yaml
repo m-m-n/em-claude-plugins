@@ -131,7 +131,11 @@ tasks:
     status: merged
     branch: em-workflow/sca-listing-undecodable-output/task0001
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
