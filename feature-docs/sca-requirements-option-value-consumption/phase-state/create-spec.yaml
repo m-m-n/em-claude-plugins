@@ -91,7 +91,14 @@ worker_runs:
   status: completed
   input_digest: sha256:280fb6e0d1aa8b833d78db7d0a24f2d413e16455ed95553eaab9be20ae8fc9c8
   output_digest: sha256:2448f48ab145f27c3e8296b2a632f7beb6e98e25f146e425f182e0fce1eda679
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:7c8fde6b807d2308c35a3cb8b194f9251640155862f90ccc12c793828a07452a
+  output_digest: sha256:f2cb1b519f085fa512eba090c217d63fc5d208be59394d45137565955af7afa5
+artifacts:
+- path: feature-docs/sca-requirements-option-value-consumption/SPEC.md
+  digest: sha256:7bca92a6f0331b6ceb4dd53fcb0641dc777521475894e7288744b2373452137b
+  request_id: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
