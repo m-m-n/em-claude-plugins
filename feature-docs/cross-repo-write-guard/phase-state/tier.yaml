@@ -1,0 +1,79 @@
+schema_version: 2
+feature: cross-repo-write-guard
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 2.27
+    confidence: 0.53
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.1
+      '2': 0.53
+      '3': 0.37
+  observed_at: '2026-10-12T02:21:21+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.5
+    confidence: 0.5
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.5
+      '3': 0.5
+  observed_at: '2026-10-12T02:21:21+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/cross-repo-write-guard.py
+  - em-workflow/hooks/hooks.json
+  - em-workflow/hooks/destructive-guard.py
+  - tests/test_cross_repo_write_guard.py
+  - tests/test_hooks_registration.py
+  - tests/test_guardrail_hooks_migration.py
+  - .claude/rules/hook-tests.md
+  - em-workflow/README.md
+  changed_lines_approx: 600
+  new_functions_needed: 10
+  new_files_needed: 2
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/hooks/destructive-guard.py
+  - tests/test_hooks_registration.py
+  - tests/test_guardrail_hooks_migration.py
+  - tests/test_guard_deferral_parity.py
+  - em-workflow/README.md
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 40
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 対象フック、専用テスト、.claude/rules/hook-tests.md の対象節は存在しない。em-workflow/hooks/hooks.json
+    は Bash に9本、Write|Edit|MultiEdit に1本を登録する。tests/test_hooks_registration.py は本数・順序を固定し、matcher
+    を区別せず同一イベント内の同一スクリプトを重複扱いする。tests/test_guardrail_hooks_migration.py と em-workflow/README.md:138
+    も順序を固定する。destructive-guard.py:9132 は広域 allow を返し、既存の判定委譲は kill と failed-run-cleanup
+    用。bash_guard.py、failed-run-cleanup-guard.py、tests/test_guard_deferral_parity.py
+    も確認した。数値の概算根拠は interpreter-mismatch-guard.py の380行・10関数と tests/test_interpreter_mismatch_guard.py
+    の146行・40ケースであり、実装後の実測値ではない。呼び出し元・依存数は2 matcher と既存の git を数えた。ファイル変更とテスト実行は行っていない。
+decided_at: '2026-10-12T02:21:21+09:00'
