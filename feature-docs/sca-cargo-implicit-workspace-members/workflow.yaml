@@ -97,7 +97,7 @@ workflow:
   base_commit: dad69f312e33ce39d2f49e1efa84458403eea47c
   completed_at_commit: 50d7e33930cf83222025c23152844ce8ed4bba62
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -130,6 +130,14 @@ tasks:
     branch: em-workflow/sca-cargo-implicit-workspace-members/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: path 依存を持つワークスペースを不完全として扱う
