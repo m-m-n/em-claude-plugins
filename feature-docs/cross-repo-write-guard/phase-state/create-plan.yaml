@@ -31,7 +31,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: cross-repo-write-guard-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:3d15a83ab02306d6743bbe9441ba066d7ad7cd96ab375c72e2eddca2822b6273
   base_workflow_blob: 07d07aba2de94211733b546bae381b6e71fe518a
 progress_fingerprint: null
