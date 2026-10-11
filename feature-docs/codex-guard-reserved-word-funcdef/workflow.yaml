@@ -2,40 +2,82 @@ schema_version: 1
 feature: codex-guard-reserved-word-funcdef
 created: '2026-10-11'
 base_branch: main
-goal: |
-  # codex-hook-interactive-guard: 予約語（then / do / else / ! / time）の直後に書いた関数定義の本体を判定し、正当なコマンドを deny する（回帰）
+goal: '# codex-hook-interactive-guard: 予約語（then / do / else / ! / time）の直後に書いた関数定義の本体を判定し、正当なコマンドを
+  deny する（回帰）
+
 
   Notion: <notion-url>
 
+
   ## 現象 (必須)
-  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、予約語（`then` `do` `else` `!` `time` など）の直後に書いた関数定義の本体を判定し、呼び出していない関数の中身を理由に deny を返す。基準版 `726917f4` では何も出力しなかったもので、feature `codex-guard-assignment-paren-head` の変更による回帰。review round 1 の finding `75a8159e787c3781`（medium, comprehensive）として未解決のまま残った。
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、予約語（`then` `do`
+  `else` `!` `time` など）の直後に書いた関数定義の本体を判定し、呼び出していない関数の中身を理由に deny を返す。基準版 `726917f4`
+  では何も出力しなかったもので、feature `codex-guard-assignment-paren-head` の変更による回帰。review round
+  1 の finding `75a8159e787c3781`（medium, comprehensive）として未解決のまま残った。
+
   同じ原因で次も deny になる:
+
   - `for x in 1; do f() { python3 -i; }; done`
+
   - `! f() { python3 -i; }`
+
   - `time f() { python3 -i; }`
+
   - `else` の直後の `f() { python3 -i; }`
+
   ## 再現手順 (必須)
-  1. コマンド `if true; then f() { python3 -i; }; fi` を `{"tool_input": {"command": "..."}}` として hook の標準入力に渡す
+
+  1. コマンド `if true; then f() { python3 -i; }; fi` を `{"tool_input": {"command": "..."}}`
+  として hook の標準入力に渡す
+
   2. deny が出力される（`bash -n -c` では構文として正しく、関数は呼び出されていない）
+
   ## 期待する挙動 (必須)
-  何も出力しない（silent）。単独の `f() { python3 -i; }` と同じ扱いにする。一方で `if true; then a=()` + 改行 + `(python3 -i)` + 改行 + `fi` のような配列代入の後のサブシェルは deny のまま保つ。
+
+  何も出力しない（silent）。単独の `f() { python3 -i; }` と同じ扱いにする。一方で `if true; then a=()` + 改行
+  + `(python3 -i)` + 改行 + `fi` のような配列代入の後のサブシェルは deny のまま保つ。
+
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
-  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に予約語の直後の関数定義を silent として、予約語の直後の配列代入 + サブシェルを deny として追加
+
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に予約語の直後の関数定義を silent
+  として、予約語の直後の配列代入 + サブシェルを deny として追加
+
   - [ ] 両コピーがバイト単位で同一のまま
+
   ## 該当箇所 (任意)
-  - `em-workflow/scripts/codex-hook-interactive-guard.py:350`（`_names_function`: `(` の直前の単純コマンドの語の並びが「語 1 つだけ」か `function NAME` かを見る。パーサーは予約語を区切りとして扱わず語として積むため、`[then, f]` が関数名にならない）
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:350`（`_names_function`: `(`
+  の直前の単純コマンドの語の並びが「語 1 つだけ」か `function NAME` かを見る。パーサーは予約語を区切りとして扱わず語として積むため、`[then,
+  f]` が関数名にならない）
+
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
-  - 修正案: `_names_function` で長さを見る前に、先頭に続く予約語を取り除いてから判定する。モジュール docstring の手順 4 と `_Group.head` の説明、DOCSTRING_MARKERS も合わせる
-  - 記録: `feature-docs/codex-guard-assignment-paren-head/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-assignment-paren-head/integration`）
+
+  - 修正案: `_names_function` で長さを見る前に、先頭に続く予約語を取り除いてから判定する。モジュール docstring の手順 4 と `_Group.head`
+  の説明、DOCSTRING_MARKERS も合わせる
+
+  - 記録: `feature-docs/codex-guard-assignment-paren-head/reviews/round1.yaml`（ブランチ
+  `em-workflow/codex-guard-assignment-paren-head/integration`）
+
   ## 実害・発生条件 (任意)
+
   deny 側の誤爆で、すり抜けではない。Codex レビュアーが制御構文の中で関数を定義する正当なコマンドを実行できず止まる。
 
+
   ## 追加指示（起動時）
-  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration
+  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+
   - その議論内容を Notion に記録する
+
+  '
 parent_branch: em-workflow/codex-guard-reserved-word-funcdef/integration
 tier: full
 tier_decision:
@@ -89,7 +131,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 078d50b7264b5e0e33b884e7ee075ea71ff42c97
 - id: implement
   status: pending
 - id: review
@@ -98,7 +141,36 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Strip leading reserved words in function-name recognition
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -111,106 +183,191 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
   FR2:
     title: time の直後の静的な -p も取り除く
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   FR3:
     title: 何も残らないときは現行の判定のまま
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-15
+    - TS-23
   FR4:
     title: 除去は関数定義の認識の中だけ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-24
+    - TS-25
   FR5:
     title: 除去後の名前の条件は現行どおり
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-27
+    - TS-28
   FR6:
     title: docstring と _Group.head の説明を合わせる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-29
   FR7:
     title: DOCSTRING_MARKERS に新しい記述のマーカーを足す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-29
   FR8:
     title: CASES に回帰検出ケースを足す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-23
+    - TS-31
   FR9:
     title: 両コピーを同時に直す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-30
   NFR1:
     title: 両コピーはバイト単位で同一
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-30
   NFR2:
     title: 標準ライブラリだけを使い、外部に触れない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-33
   NFR3:
     title: 判定できない入力は何も出力しない（fail-open）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-32
+    - TS-34
   NFR4:
     title: グループは再帰を使わずスタックで追う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-31
+    - TS-32
   NFR5:
     title: 既存の CASES を消さず判定も変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-24
+    - TS-25
+    - TS-26
+    - TS-27
+    - TS-28
+    - TS-36
   NFR6:
     title: em-workflow / em-review の version は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-35
 batch:
   review_rework_count: 0
   verify_rework:
