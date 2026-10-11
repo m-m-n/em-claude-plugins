@@ -138,8 +138,8 @@ workflow:
   base_commit: e0364890c7976625c116d73caa5d478d5fa10d3b
   completed_at_commit: 1cfe2b4b502024155116ad34446c499f04cb0b62
 - id: review
-  status: in_progress
-  completed_at_commit: 7a9e0fb7de6b7a8409ba332e50ffb4af7b0eb64f
+  status: completed
+  completed_at_commit: 9b4e2428e643cda5e399be5e6cbe7b96618f4937
 - id: verify
   status: pending
   result: fail
@@ -204,7 +204,7 @@ tasks:
       review_round: null
 review:
   status: completed
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives: [comprehensive, security, architecture, spec]
   plan:
     floor: [comprehensive, security, architecture, spec]
