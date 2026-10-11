@@ -78,6 +78,6 @@ signals:
 follow_up_drafts: []
 lessons_candidates:
 - review round 1 で evaluator が low に下げた残件（二重の bash -c の内側が未判定）は R3b で findings から外れ
-  triage 起票されなかった。batch-audit の決定（別タスク起票）は完了処理で起票した
+  triage 起票されなかった。batch-audit の決定（別タスク起票）に従い review の起動で Notion に起票済み（<notion-url>）
 - task0001 の files 予測に test-docs/codex-guard-extglob-funcname/task0001.tests.yaml
   が含まれていなかった（差分には現れる）
