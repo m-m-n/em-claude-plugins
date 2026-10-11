@@ -1,0 +1,61 @@
+schema_version: 2
+feature: sca-requirements-option-value-consumption
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-10-11T12:01:48+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-10-11T12:04:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_scan_dependencies_pip_directness.py
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 10
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 現在の処理で再現した。値の読み取りだけをメモリ上の内容に置換して既存関数を実行すると、--trusted-host -c -r deps.txt と -f -c -r deps.txt は直接依存が空、complete=True となった。-i、--index-url、--extra-index-url、--trusted、--index、--find でも同じ結果だった（em-workflow/scripts/scan-dependencies.py:2449、em-workflow/scripts/scan-dependencies.py:2131、em-workflow/scripts/scan-dependencies.py:2242）。その状態で
+    normalize_pip を実行すると high・critical とも findings が空、skip_info=None だった（em-workflow/scripts/scan-dependencies.py:2743、em-workflow/scripts/scan-dependencies.py:2776、em-workflow/scripts/scan-dependencies.py:2791）。-f
+    "-enamed-pkg" -r actual.txt は named-pkg を直接依存に加え、--find-links "-rdeps.txt" -r actual.txt は deps.txt も読み取った（em-workflow/scripts/scan-dependencies.py:2137、em-workflow/scripts/scan-dependencies.py:2227、em-workflow/scripts/scan-dependencies.py:2234）。実環境の
+    pip の解析では前二例の -c はオプションの値となり、後二例の引用された値も editable・include として扱われなかった（/usr/lib/python3/dist-packages/pip/_internal/req/req_file.py:475、/usr/lib/python3.14/optparse.py:1493、/usr/lib/python3.14/optparse.py:1531）。現行の値消費対象は
+    include・constraint・editable のみで、省略形の検出対象も --requirement・--editable のみである（em-workflow/scripts/scan-dependencies.py:2061、em-workflow/scripts/scan-dependencies.py:2068、em-workflow/scripts/scan-dependencies.py:2132）。既存テストは通常の
+    index-url 値の後の include、constraint の値が -r の場合、通常の trusted-host・find-links 値を扱うが、今回必須の4入力は含まれていない（tests/test_scan_dependencies_pip_directness.py:1154、tests/test_scan_dependencies_pip_directness.py:1220、tests/test_scan_dependencies_pip_directness.py:1518）。本体の既存関数・定数と既存テストの補助処理を拡張する場合の概算を80行・10ケースとした。新規の本体関数・ファイル・依存追加を要する構造は確認されなかった（em-workflow/scripts/scan-dependencies.py:2061、em-workflow/scripts/scan-dependencies.py:2098、em-workflow/scripts/scan-dependencies.py:2110、tests/test_scan_dependencies_pip_directness.py:1138、tests/test_scan_dependencies_pip_directness.py:1089）。呼び出し元・依存数2は、対象関数のリポジトリ内の直接呼び出し元1関数と直接呼び出す補助関数1関数を数えた（em-workflow/scripts/scan-dependencies.py:2220、em-workflow/scripts/scan-dependencies.py:2145）。本体の変更箇所は同一モジュール内にあり、既存の返却形式で修正後の名前集合・不完全状態を伝達できる（em-workflow/scripts/scan-dependencies.py:2147、em-workflow/scripts/scan-dependencies.py:2224、em-workflow/scripts/scan-dependencies.py:2242）。
+decided_at: '2026-10-11T12:05:10+09:00'
