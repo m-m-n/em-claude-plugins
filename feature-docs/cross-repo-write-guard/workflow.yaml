@@ -122,7 +122,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 4c2926f9769f73d2d10d746903686d65a1291d8f
 tasks:
   task0001:
     title: cross-repo-write-guard hook, tests and registration
