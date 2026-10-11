@@ -1,0 +1,21 @@
+schema_version: 1
+feature: cross-repo-write-guard
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: efb5a3e39d4b8b1882f92c351c9664932659d667
+last_input_digest: sha256:3d15a83ab02306d6743bbe9441ba066d7ad7cd96ab375c72e2eddca2822b6273
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:3d15a83ab02306d6743bbe9441ba066d7ad7cd96ab375c72e2eddca2822b6273
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
