@@ -37,8 +37,10 @@ Unavailable →
 ## Step 2: Load the perspective skill
 
 Load `perspective_skill` with the Skill tool (fail-closed skip on failure,
-same as Step 0). Extract from it the perspective brief: the "What to flag" /
-"What NOT to flag" content. When the skill has a `## reproduction` section
+same as Step 0). `perspective_skill` is plugin-qualified (e.g.
+`em-review:review-security`); pass it to the Skill tool exactly as given.
+Extract from it the perspective brief: the "What to flag" / "What NOT to
+flag" content. When the skill has a `## reproduction` section
 (only the security skill does), that section is part of the brief too. That
 brief becomes the `<task>` block below.
 
