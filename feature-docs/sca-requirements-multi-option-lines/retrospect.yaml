@@ -1,0 +1,53 @@
+feature: sca-requirements-multi-option-lines
+collected_at: "2026-10-11T11:04:00+09:00"
+session_ids:
+  - 01a12896-87d9-7513-9c41-97414349de72
+  - 01a128a3-be0f-70d1-af45-dbffc8f445cf
+  - 01a128ad-7c22-75f0-94db-9408b2d6a54a
+  - 01a128b2-0fd7-731d-81cb-3a473117ebda
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の読みでバケット 1（ルール追加 + テスト追加）が 0.88 で最有力となり、reduced を採用した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.06
+          confidence: 0.94
+          probabilities: {"0": 0.0, "1": 0.94, "2": 0.06, "3": 0.0}
+        observed_at: "2026-10-11T10:05:00+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.12
+          confidence: 0.88
+          probabilities: {"0": 0.0, "1": 0.88, "2": 0.12, "3": 0.0}
+        observed_at: "2026-10-11T10:09:30+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/scan-dependencies.py
+        - tests/test_scan_dependencies_pip_directness.py
+      changed_lines_approx: 110
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 6
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 9
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium finding eac54f8271361426（値を取る他の pip オプションの引数を独立したトークンとして解析している）が auto-fix 閾値未満で unresolved のまま残った。triage は report 分岐で起票 0 件"

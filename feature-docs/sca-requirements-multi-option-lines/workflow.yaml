@@ -104,7 +104,8 @@ workflow:
   failed_items: []
   excluded_scenarios: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 2c92a8029684d1d243b23c54acdc32c0c916774f
 tasks:
   task0001:
     title: Tokenize requirements option lines and follow includes at any position
