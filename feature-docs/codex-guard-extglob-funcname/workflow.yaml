@@ -139,7 +139,8 @@ workflow:
   base_commit: 50972f733f38102ff8cbd9310aa383630b30e439
   completed_at_commit: 38de45e3c3c3058d6b804e214ac5eaac596afb67
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: ee4d74f3bc1375a8a254c0e0bf0411ebe9de485f
 - id: verify
   status: pending
   result: null
@@ -172,8 +173,11 @@ tasks:
     status: merged
     branch: em-workflow/codex-guard-extglob-funcname/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive

@@ -1,0 +1,12 @@
+schema_version: 1
+feature: codex-guard-extglob-funcname
+records:
+  - question_id: review.low-residual-threat-model-scope
+    packet_id: null
+    answered_at: "2026-10-11T20:32:00+09:00"
+    source: codex
+    answer_mode: freeform
+    selected_option_ids: [A]
+    freeform: "A: THREAT-MODEL.md の TM-1 の文言を実際の範囲（グループの入れ子はすべて、bash -c の文字列は 1 段まで）に合わせて直し、二段目以降の -c を残存リスクとして明記する。二段目以降の bash -c を判定対象にするかは別タスクとして起票する"
+    normalized_answer: "A"
+    resolution_note: "gate: review round 1 の low 残件（二重の bash -c の内側が未判定）の扱い（gate_id 無し・unlisted）; options: A=TM-1 文言修正+別タスク起票 / B=別タスク起票のみ / C=記録のみ; choice: A; codex_consulted: true; opus_escalation: false; 議論の要点: TM-1 の『at every nesting level』は _scan の depth == 0 制限と docstring 手順 7 を超える説明。範囲を明記すれば実装と既存 CASES を変えずに FR4 を守れる。B・C では文書の過大な説明が残る。判定範囲の拡大は別タスクで検討する"
