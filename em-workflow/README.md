@@ -122,7 +122,7 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 
 ## ガードレール hook（同梱・インストールしただけで全セッションに効く）
 
-このプラグインは上記のコマンド実行ガードとは別に、PreToolUse ガード hook を 4 本同梱している。em-workflow の外側でも、プラグインが有効な全セッションの Bash / Write / Edit / MultiEdit に対して動く。
+このプラグインは上記のコマンド実行ガードとは別に、PreToolUse ガード hook を同梱している。em-workflow の外側でも、プラグインが有効な全セッションの Bash / Write / Edit / MultiEdit に対して動く。
 
 | hook | イベント | 役割 |
 |------|---------|------|
@@ -133,9 +133,10 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 | `hooks/destructive-guard.py` | PreToolUse(Bash) | 破壊的コマンドの静的ブロックリスト。**マッチしないコマンドは `allow` で返す** |
 | `hooks/interpreter-mismatch-guard.py` | PreToolUse(Bash) | `bash` / `sh` / `zsh` / `source` などに渡したスクリプトの先頭行（shebang が無ければ拡張子）を読み、Python や Node などシェル以外のスクリプトなら拒否する。対象を読めない・特定できない場合は判定しない |
 | `hooks/loop-command-guard.py` | PreToolUse(Bash) | コマンド位置（`-c` 文字列・eval 引数・コマンド置換・bash/sh/zsh に渡したヒアドキュメント/ヒアストリングなど、入れ子になったシェルテキストを含む）にある `while` / `until` ループを拒否する。構造を確定できない入力には判定しない |
+| `hooks/cross-repo-write-guard.py` | PreToolUse(Bash) / PreToolUse(Write\|Edit\|MultiEdit) | ファイルの書き込み先がカレントディレクトリの git toplevel の外にあれば確認（`ask`）に回す（無人実行では `deny` に降格）。Write / Edit / MultiEdit は `file_path`、Bash は静的に解決できるリダイレクト・`tee`・`sed -i`・`cp` / `mv` の書き込み先を見る。`/tmp` 配下・`~/.claude/` 配下・`/dev/null` など列挙した `/dev` 配下の書き込み先と、静的に解決できない書き込み先は判定しない |
 | `hooks/gitleaks-write-guard.sh` | PreToolUse(Write\|Edit\|MultiEdit) | 書き込む内容を gitleaks でスキャンし、シークレットを含むなら書き込みをブロックする |
 
-PreToolUse(Bash) の 9 本は `hooks.json` の配列順（gitleaks-precommit.sh → kill-guard.py → bash_guard.py → failed-run-cleanup-guard.py → muse_guard.py → interpreter-mismatch-guard.py → loop-command-guard.py → destructive-guard.py → heredoc-stdin-guard.py）で実行される。`destructive-guard.py` は広域 `allow` を返すため、判定を返しうるガードはすべてその前に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。`heredoc-stdin-guard.py` は判定を返さず `updatedInput` の書き換えのみなので最後に置く。
+PreToolUse(Bash) の 10 本は `hooks.json` の配列順（gitleaks-precommit.sh → kill-guard.py → bash_guard.py → failed-run-cleanup-guard.py → muse_guard.py → interpreter-mismatch-guard.py → loop-command-guard.py → cross-repo-write-guard.py → destructive-guard.py → heredoc-stdin-guard.py）で実行される。`destructive-guard.py` は広域 `allow` を返すため、判定を返しうるガードはすべてその前に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。`heredoc-stdin-guard.py` は判定を返さず `updatedInput` の書き換えのみなので最後に置く。
 
 gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/share/mise/shims/gitleaks` の順で解決し、どちらにも無ければスキャンせず通す（fail-open）。gitleaks 未インストール環境で全コミット・全書き込みがブロックされるのを避けるため。develop の Step 0（git-setup ゲート）が gitleaks 不在で workflow ごと中断するのとは判断が異なる — この hook は develop の外でも動くため。
 

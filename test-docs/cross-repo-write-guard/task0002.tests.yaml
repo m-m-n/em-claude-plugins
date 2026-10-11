@@ -1,0 +1,75 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests, before any edit: Ran 10298 tests, OK (skipped=1)
+final_failures: []             # same command re-executed after the README / hook-tests.md edits and this record: Ran 10299 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Documentation-only criterion (the cross-repo-write-guard.py row of the
+      guardrail hook table in em-workflow/README.md). Searched tests/ by
+      path (em-workflow/README.md) and basename (README.md); the existing
+      readers of that file (tests.test_loop_command_guard.TestDocumentationMatchesRegistration,
+      test_llm_led_review_user_docs, test_merge_unverified_exit_doc_contract,
+      test_implement_routeback_gate, test_reference_sweep) pin other
+      guards' rows and other sections, none pins a row for
+      cross-repo-write-guard.py, so no executable check exists that could be
+      made to fail first. Outcome checked by reading the table row after the
+      edit (event column names both PreToolUse(Bash) and
+      PreToolUse(Write|Edit|MultiEdit); summary states ask / deny under
+      unattended runs / /tmp, ~/.claude/, /dev sinks and unresolvable
+      destinations not judged). Adding a document-contract test is outside
+      the task's file scope (AC-5).
+  AC-2:
+    tests:
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_readme_execution_order_sentence_matches_hooks_json_order
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_readme_execution_order_sentence_matches_hooks_json_order
+      detects a README PreToolUse(Bash) order sentence whose relative
+      order disagrees with the PreToolUse(Bash) group of hooks.json; no red
+      state occurred for this change. In this worktree hooks.json still holds
+      the pre-change 9 Bash entries, so the test cannot see
+      cross-repo-write-guard.py here and stays green both before and after;
+      it becomes binding for the new hook on the integrated tree. The count
+      (10) and the position immediately after loop-command-guard.py and
+      immediately before destructive-guard.py are taken from
+      IMPLEMENTATION.md C1 and checked by reading the edited sentence; no
+      existing test pins the count.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Documentation-only criterion (the opening sentence of the guardrail
+      hook section of em-workflow/README.md no longer states a number of
+      hooks; no new rows for muse_guard.py or heredoc-stdin-guard.py).
+      Searched tests/ by path (em-workflow/README.md) and basename
+      (README.md); no existing test reads the opening sentence or counts
+      the table rows, so no executable check exists that could be made to
+      fail first. Outcome checked by searching the edited README for the
+      removed count and for table rows naming the two hooks.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Documentation-only criterion (the new ## cross-repo-write-guard
+      section of .claude/rules/hook-tests.md). Searched tests/ by path
+      (.claude/rules/hook-tests.md) and basename (hook-tests.md); the
+      existing readers (tests.test_loop_command_guard.TestDocumentationMatchesRegistration
+      and tests.test_codex_hook_interactive_guard.TestRulesDocument) pin
+      the loop-command-guard tokens in the whole file and the
+      codex-hook-interactive-guard section respectively, none pins a
+      cross-repo-write-guard section, so no executable check exists that
+      could be made to fail first. Outcome checked by reading the new
+      section after the edit. Adding a document-contract test is outside
+      the task's file scope (AC-5).
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Scope criterion on the task's diff, not on runtime behavior. Searched
+      tests/ by path and basename of the two changed documents; no test
+      evaluates a task's diff against its declared files. Outcome checked
+      by git diff --stat against the parent branch after the edit
+      (README.md, hook-tests.md and this record only).
