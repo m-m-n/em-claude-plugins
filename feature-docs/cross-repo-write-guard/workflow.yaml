@@ -114,7 +114,7 @@ workflow:
   completed_at_commit: 0083f20b7c9d45800b2c7225dc3cb72742d98bbd
   base_commit: 8da4c593dc059a9195e9dc9856b4ba43378b00ff
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -181,8 +181,17 @@ tasks:
     branch: em-workflow/cross-repo-write-guard/task0002
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: フックスクリプトと登録
