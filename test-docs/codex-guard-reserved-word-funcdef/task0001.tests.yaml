@@ -1,0 +1,95 @@
+task_id: task0001
+# The suite as inherited: three failures unrelated to the Codex interactive guard
+# (reviewer-brief digests and a codex-reviewer frontmatter line).
+baseline_failures:
+  - "test_ac5_unchanged_ranges_are_byte_identical (test_reproduction_reviewer_instructions.TestCodexReviewerBriefs) plugin='em-review'"
+  - "test_ac5_unchanged_ranges_are_byte_identical (test_reproduction_reviewer_instructions.TestCodexReviewerBriefs) plugin='em-workflow'"
+  - "test_frontmatter_fields_unchanged (test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement) line='model: sonnet'"
+# Actually re-executed after the implementation (python3 -m unittest discover
+# -s tests, 10249 tests): the same three failures, nothing new.
+final_failures:
+  - "test_ac5_unchanged_ranges_are_byte_identical (test_reproduction_reviewer_instructions.TestCodexReviewerBriefs) plugin='em-review'"
+  - "test_ac5_unchanged_ranges_are_byte_identical (test_reproduction_reviewer_instructions.TestCodexReviewerBriefs) plugin='em-workflow'"
+  - "test_frontmatter_fields_unchanged (test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement) line='model: sonnet'"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the fourteen silent cases added to CASES and no change to either
+      hook, test_cases_run_against_both_copies failed for both copies on each
+      of them (if true; then f() { python3 -i; }; fi, the do / ! / time /
+      else / elif / if / while / until / time -p / ! time forms, the function
+      keyword form, and the f() newline { and f() ( bodies): standard output
+      held a deny object where it had to be empty (AssertionError:
+      '{"hookSpecificOutput": {...' != '').
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      then()\n(python3 -i) (silent) and time -p()\n(python3 -i) (deny) already
+      held their verdicts on the unchanged hooks: a lone reserved word is one
+      word and time -p is two. The two cases guard that, when the removal
+      leaves no word, the unstripped sequence is judged. No red state
+      occurred for this criterion.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The seven deny cases (array assignment, export a=, a dynamic name, a
+      two-word head and a mid-sequence reserved word behind then / do / else /
+      echo) already denied on the unchanged hooks. They guard that the widened
+      recognition does not turn any of those shapes into a function body. No
+      red state occurred for this criterion.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_hold_both_a_deny_and_a_silent_case
+    red_confirmed: false
+    red_reason: >-
+      The table only gained entries; no existing case was removed and no
+      expected verdict changed, and the existing entries (time -p python3 -i,
+      time python3 -i, f() { python3; }, a=()\n(python3 -i),
+      a b c()\n(python3 -i)) passed before and after. No red state occurred
+      for this criterion. The parser's word list and the words recorded for
+      each simple command are not modified: the removal is an index walk
+      inside _names_function.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_long_run_of_reserved_words_before_a_paren_is_answered
+    red_confirmed: false
+    red_reason: >-
+      The new test passed on the unchanged hooks, because the old recognition
+      rejected a run of words in constant time. It is a time-limit guard for
+      the new removal pass: 50,000 reserved words answer in about 0.07 s and
+      200,000 in about 0.25 s, so the cost is linear. No red state occurred
+      for this criterion.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_head_description_states_the_removal
+    red_confirmed: true
+    red_reason: >-
+      With the four new markers added and the docstrings unchanged, both
+      tests failed for both copies (AssertionError: the marker, e.g. "a
+      non-dynamic `-p` right after `time` is removed with it", not found in
+      the folded docstring). All existing markers, including "only `name()`
+      and `function name()` start a function definition", are kept and still
+      pass.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing byte-identity
+      and static-constraints tests detect a drift between the copies and a
+      non-standard-library import or file / network / process access; no red
+      state occurred for this change, since the copies were made identical
+      with cp and the change adds no import. That the change touches only the
+      files in Scope (neither plugin.json nor marketplace.json) has no
+      executable check and was confirmed with git diff --stat.
