@@ -1,0 +1,66 @@
+schema_version: 2
+feature: codex-guard-extglob-funcname
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-11T19:49:57+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.9400000000000001
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-10-11T19:54:01+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 7
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 3
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 両コピーの :385 は末尾の ?*+@! を除外せず、:946 は関数本体を検査から除外する。HEADでは time・then・予約語なしの再現入力がすべて無出力だった。tests/test_codex_hook_interactive_guard.py:236
+    の extglob ケースは非対話のみで、:481 に両コピー共通の試験、:797 にコピー一致試験がある。末尾除外条件と3ケース追加をメモリ上で検証し、追加・削除合計7行、既存371ケースと追加3ケースに不一致なし。呼出元2件は
+    em-workflow/scripts/run_codex_exec.sh:241、em-review/scripts/run_codex_exec.sh:195、依存2件は両コピー
+    :90 の json・sys。ファイルへの書込みなし。
+decided_at: '2026-10-11T19:54:11+09:00'
