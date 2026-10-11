@@ -127,7 +127,8 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/sca-listing-undecodable-output/task0001
 review:
   status: pending
 requirements:
