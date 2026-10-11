@@ -6,7 +6,19 @@ generation: 1
 base_revision: 097d9770cdb3816a11aad59fe49a83ec17bf849b
 last_input_digest: sha256:d613b455c06ed38f25f6679855e8cf4de29d3a261f4f445a84ea257f9847a29d
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T23:08:31+09:00'
+    questions:
+    - question_id: create-spec.req.huge-fd-reading
+      status: answered
+    - question_id: create-spec.req.docstring-step7
+      status: answered
+    - question_id: create-spec.req.extra-tests
+      status: answered
+    - question_id: create-spec.design-step
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: orchestrator-batch
@@ -17,9 +29,70 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from task description: codex-guard-nested-parse-error'
+  create-spec.req.huge-fd-reading:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T23:08:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - follow_bash_int_range
+    freeform: null
+    normalized_answer: 'follow_bash_int_range: リダイレクト演算子の直前の数字だけの語は、値が 2147483647
+      以下のときだけ fd として読む。超えるもの（先頭の 0 を除いて 11 桁以上、または 10 桁で 2147483647 超）は普通の語として残す。値の判定は
+      int 変換に頼らず桁数と文字列比較で行い、桁数によらず例外を出さない。全ゼロは fd 0。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex, 3 questions
+      batched); opus_escalation: false; options: keep_existing_reading / follow_bash_int_range;
+      choice: follow_bash_int_range (Codex 提案を採用、worker の推奨とは異なる); 議論の要点: bash は 2147483647
+      を超える数字列を fd ではなく語として扱う（orchestrator が bash で確認: `echo 2147483648>/dev/null`
+      は rc=0、`echo 2147483647>/dev/null` は「不正なファイル記述子」）。現行どおり fd として読むと `python3 <巨大な数字>>/dev/null`
+      が誤拒否になり NFR2（誤拒否より通過を優先）に反する。既存 CASES に 2 桁以上の fd を固定するものは無く、変更範囲の拡大は小さい。後続の
+      python3 -i は走査を続けて拒否するので安全側の目的も保たれる。'
+  create-spec.req.docstring-step7:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T23:08:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - extend_step7
+    freeform: null
+    normalized_answer: 'extend_step7: docstring 手順 7 の読めない文字列の例に「読んでいる途中で想定外のエラーが出た文字列」を加え、DOCSTRING_MARKERS
+      に固定する。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex, 3 questions
+      batched); opus_escalation: false; options: extend_step7 / keep_docstring; choice:
+      extend_step7; 議論の要点: 手順 9 の unexpected -> no output と入れ子の挙動が食い違うため、読み飛ばして続行する挙動を明記してテストで固定する。'
+  create-spec.req.extra-tests:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T23:08:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: multi_select
+    selected_option_ids:
+    - pin_zero_fd
+    - level1_case
+    freeform: null
+    normalized_answer: 'pin_zero_fd + level1_case: `python3 00< f` を silent に固定するケースと、1
+      段目の巨大な fd のあとに 0 段目の python3 -i が続く deny ケースを足す。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption); codex_consulted: true (1 turn, harness codex, 3 questions
+      batched); opus_escalation: false; options: pin_zero_fd / level1_case / none;
+      choice: pin_zero_fd, level1_case; 議論の要点: 全ゼロを fd 0 とする既存動作を文字列判定の書き換えから守り、1
+      段目経路の見逃しも固定する。'
+  create-spec.design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T23:08:31+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'decide_autonomously: requirements-analyst の推奨 skip を採用（UI
+      なし）'
+    resolution_note: 'gate: create-spec.design-step; policy option_id decide_autonomously
+      → analyst recommendation skip'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:d613b455c06ed38f25f6679855e8cf4de29d3a261f4f445a84ea257f9847a29d
   output_digest: null
 artifacts: []
