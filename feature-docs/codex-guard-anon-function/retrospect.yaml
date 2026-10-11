@@ -1,0 +1,36 @@
+feature: codex-guard-anon-function
+collected_at: "2026-10-12T00:05:00+09:00"
+session_ids: [01a12b77-b933-7157-b7e0-4607ff44aea7]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "最終読み（description_plus_code）で P(0)+P(1)=0.90 が reduced の閾値 0.85 以上"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.02, confidence: 0.98, probabilities: {"0": 0.0, "1": 0.98, "2": 0.02, "3": 0.0}}
+        observed_at: "2026-10-11T22:59:28+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.1, confidence: 0.9, probabilities: {"0": 0.0, "1": 0.9, "2": 0.1, "3": 0.0}}
+        observed_at: "2026-10-11T23:02:23+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 7
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      work_still_required: true
+      change_containment: multiple_modules
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium（stable_id 85d39f52fcef8612: パイプ/入力リダイレクトを受けた匿名関数本体の誤 deny）は本変更で生まれた誤検知。deferred とし別タスク起票の方針"
