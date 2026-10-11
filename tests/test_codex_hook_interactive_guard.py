@@ -379,6 +379,25 @@ CASES = [
     # Removal leaves no word: the words are judged as they stand
     ("silent", "予約語だけの 1 語は関数名", "then()\n(python3 -i)"),
     ("deny", "time -p だけの 2 語は関数名でない", "time -p()\n(python3 -i)"),
+    # A word that ends in an extglob operator character (`?` `*` `+` `@` `!`)
+    # is no function name: the group after its `()` stays judged. Extglob being
+    # on or off changes nothing, and neither do quotes, an escape or a space
+    # between the word and the `(`
+    ("deny", "extglob の ? で終わる語の () のあとの括弧（予約語の有り、bash -c の中）",
+     "bash -O extglob -c 'time /bin/true?()\n(python3 -i)'"),
+    ("deny", "extglob の ? で終わる語の () のあとの括弧（予約語の無し、bash -c の中）",
+     "bash -O extglob -c 'f?()\n(python3 -i)'"),
+    ("deny", "then の直後の ? で終わる語の () のあとの括弧", "if true; then f?()\n(python3 -i)\nfi"),
+    ("deny", "time -p の直後の ? で終わる語の () のあとの括弧", "time -p f?()\n(python3 -i)"),
+    ("deny", "function 付きの ? で終わる語の () のあとの波括弧", "function f?()\n{ python3 -i; }"),
+    ("deny", "* で終わる語の () のあとの括弧", "f*()\n(python3 -i)"),
+    ("deny", "+ で終わる語の () のあとの括弧", "f+()\n(python3 -i)"),
+    ("deny", "@ で終わる語の () のあとの括弧", "f@()\n(python3 -i)"),
+    ("deny", "! で終わる語の () のあとの括弧", "f!()\n(python3 -i)"),
+    ("deny", "単引用符で囲んだ ? で終わる語の () のあとの括弧", "'f?'()\n(python3 -i)"),
+    ("deny", "バックスラッシュで逃がした ? で終わる語の () のあとの括弧", "f\\?()\n(python3 -i)"),
+    ("deny", "? で終わる語と ( の間の空白のあとの括弧", "f? ()\n(python3 -i)"),
+    ("deny", "予約語だけの ! の () のあとの括弧", "!()\n(python3 -i)"),
     # A group after a head that is no definition stays judged, whatever the
     # reserved words in front of it
     ("deny", "then の直後の配列代入のあとの改行と括弧", "if true; then a=()\n(python3 -i)\nfi"),
@@ -715,6 +734,11 @@ class TestGuardDocumentation(unittest.TestCase):
         "a non-dynamic `-p` right after `time` is removed with it",
         "When nothing remains, the original words are judged",
         "three words or more left after the removal",
+        # A word that ends in an extglob operator character is no function name
+        "ends in one of the extglob operator characters `?` `*` `+` `@` `!`",
+        "after quote removal",
+        "the group after its `()` is judged",
+        "whether extglob is enabled is never checked",
     )
 
     # The same removal in the description of a group's `head` attribute
@@ -724,6 +748,17 @@ class TestGuardDocumentation(unittest.TestCase):
         "a non-dynamic `-p` right after `time` is removed with it",
         "When nothing remains, the original words are judged",
         "counts are the words left after the removal",
+        "ends in one of the extglob operator characters `?` `*` `+` `@` `!`",
+        "after quote removal",
+        "the group after its `()` is judged",
+    )
+
+    # The same rule in the docstring of the parser's function-name judgment
+    NAMES_FUNCTION_MARKERS = (
+        "ends in one of the extglob operator characters `?` `*` `+` `@` `!`",
+        "after quote removal",
+        "the group after its `()` is judged",
+        "whether extglob is enabled is never checked",
     )
 
     def test_the_docstring_describes_the_new_behaviour(self):
@@ -742,6 +777,22 @@ class TestGuardDocumentation(unittest.TestCase):
             )
             doc = " ".join((ast.get_docstring(group) or "").split())
             for marker in self.GROUP_HEAD_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_names_function_docstring_states_the_extglob_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            parser = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Parser"
+            )
+            method = next(
+                node for node in parser.body
+                if isinstance(node, ast.FunctionDef) and node.name == "_names_function"
+            )
+            doc = " ".join((ast.get_docstring(method) or "").split())
+            for marker in self.NAMES_FUNCTION_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
 
