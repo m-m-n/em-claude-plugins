@@ -1,0 +1,190 @@
+schema_version: 1
+feature: sca-cargo-implicit-workspace-members
+created: '2026-10-11'
+base_branch: main
+goal: |
+  # SCA 軸: Cargo の path 依存による暗黙のワークスペースメンバーがあっても直接依存の集合を完全として扱う
+
+  種別: バグ
+  Notion: https://www.notion.so/3f03509ec8ee8107b10fc1283d34c9b2
+
+  ## 現象 (必須)
+  `_cargo_workspace_view` は `[workspace]` に `members` が無いとき、または空配列のとき `complete=True` を返す。Cargo ではワークスペースのディレクトリ配下にある path 依存は自動でメンバーになり、その依存は Cargo.lock に入るが、メンバーのマニフェストは読まれない。
+  その結果、メンバーの直接依存に対する advisory が推移的依存として黙って捨てられ、判定不能の件数にも残らない（THREAT-MODEL の TB-1 / TM-5 が防ぐはずの経路）。
+
+  ## 再現手順 (必須)
+  1. ルートの `Cargo.toml` に `members` を書かない `[workspace]` と、`member = { path = "member" }` の依存を置く
+  2. `member/Cargo.toml` に advisory のあるクレートを宣言する
+  3. 軸 2 を走らせる → 直接依存の集合は `{'member'}` のまま `complete=True`、member 側の advisory が落ちる
+
+  ## 期待する挙動 (必須)
+  - `[workspace]` があり、ルートの依存テーブル（target 配下も含む）に `path` を持つエントリがあるときは `complete=False` にし、判定不能の件数として報告する
+  - path 依存を含まない `members` 省略・空配列のワークスペースは、従来どおり完全として扱う
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`members` の省略・空配列と path 依存の組み合わせ）
+
+  ## 該当箇所 (任意)
+  `em-workflow/scripts/scan-dependencies.py:1669`（`_cargo_workspace_view`）
+
+  ## 実害・発生条件 (任意)
+  SPEC FR5 は「members を列挙している」場合だけを不完全の条件にしているため、この修正は FR5 の文言より範囲を広げる。
+  出典: em-workflow feature `sca-directness-resolution` のレビュー round 1 の finding `b34e1e48141a9af9`（security / medium）。閾値未満のため auto-fix されず `unresolved` のまま残った残件。ブランチ `em-workflow/sca-directness-resolution/integration`。
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを remote に push し base_branch に向けて gh pr create で PR を作る。ブランチはローカル・リモート両方に残す（自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/sca-cargo-implicit-workspace-members/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  at: '2026-10-11T08:58:37+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: d22408f252138bea5e9e0f0935e8fed66ac280c8
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI の無い Python スクリプトの判定条件の修正で、デザイン対象が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: path 依存を持つワークスペースを不完全として扱う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: workspace = true で継承した path も対象にする
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: path 依存の無いワークスペースは完全のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 不完全な集合での advisory の扱いは既存の規則のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 読み取り範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 例外
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 結果の文言
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 互換性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
