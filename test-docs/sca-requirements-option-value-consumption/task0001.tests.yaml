@@ -1,0 +1,142 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any edit: 10141 tests OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 -m unittest discover -s tests: 10176 tests OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac1_the_separated_form_of_every_value_only_option_consumes_the_next_token
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac1_the_scan_gives_one_finding_and_no_undetermined_note
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac1_the_include_after_the_consumed_value_is_followed_in_an_included_file
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac1_the_include_after_the_consumed_value_is_followed_across_a_continuation
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (all four). For
+      every one of the 14 separated forms `<option> -c -r deps.txt` the
+      resolver returned "AssertionError: DirectNames() != {'vuln-pkg'}" (the
+      value-only option was ignored, so `-c` swallowed `-r` and deps.txt was
+      never opened); the scan returned "AssertionError: 0 != 1 : {'findings':
+      [], 'summary': 'Scanned pip; 0 finding(s) at or above threshold.'...";
+      the included-file and continuation-line forms returned
+      "DirectNames() != {'deeper-pkg'}".
+  AC-2:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac2_a_consumed_value_shaped_like_an_editable_adds_no_name
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac2_a_consumed_value_shaped_like_an_include_is_not_opened
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac2_consecutive_value_only_options_each_consume_their_own_value
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac2_a_lone_double_dash_is_consumed_as_the_value
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac2_a_consumed_value_shaped_like_a_constraint_does_not_hide_the_include_after_it
+      - tests.test_scan_dependencies_pip_directness.TestValueOnlyOptionConsumption.test_ac2_a_value_only_option_consumes_exactly_one_token
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py: the first
+      three, for all 14 options (`-f "-enamed-pkg" -r actual.txt` gave
+      "AssertionError: 'named-pkg' unexpectedly found in
+      DirectNames({'actual-pkg', 'named-pkg'})"; `--find-links "-rdeps.txt"
+      -r actual.txt` gave "AssertionError: '.../project/deps.txt' unexpectedly
+      found in [...requirements.txt, ...actual.txt, ...deps.txt]"; the
+      consecutive-options line gave "DirectNames() != {'deps-pkg'}"). The
+      other three (`<option> -- -r deps.txt`, a value-shaped `-c...` value,
+      exactly one token consumed) were already green before the change: the
+      old reader ignored the option and its value token, which gives the same
+      result for those shapes. They are regression guards, not reds.
+  AC-3:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestSelfContainedValueForms.test_ac3_the_equals_and_attached_forms_consume_no_following_token
+      - tests.test_scan_dependencies_pip_directness.TestSelfContainedValueForms.test_ac3_every_value_only_long_option_in_its_equals_form_is_self_contained
+      - tests.test_scan_dependencies_pip_directness.TestSelfContainedValueForms.test_ac3_every_value_only_short_option_with_an_attached_value_is_self_contained
+      - tests.test_scan_dependencies_pip_directness.TestSelfContainedValueForms.test_ac3_a_self_contained_value_is_never_interpreted
+      - tests.test_scan_dependencies_pip_directness.TestSelfContainedValueForms.test_ac3_the_short_forms_are_case_sensitive
+    red_confirmed: false
+    red_reason: >-
+      The behaviour pre-existed: the old reader ignored `--trusted-host=x`,
+      `--index-url=`, `-iURL`, `-f./wheels` as unknown tokens and read the
+      `-r deps.txt` after them, so all five tests passed against the original
+      scan-dependencies.py. No input can fail the old code, because the
+      self-contained forms are indistinguishable from an ignored option; the
+      tests are regression guards that fail if a self-contained form were
+      made to consume the following token.
+  AC-4:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestValueTakingLongOptionAbbreviations.test_ac4_an_abbreviation_makes_the_set_incomplete_and_opens_nothing_after_c
+      - tests.test_scan_dependencies_pip_directness.TestValueTakingLongOptionAbbreviations.test_ac4_the_scan_counts_the_undeclared_advisory_once_and_reports_no_finding
+      - tests.test_scan_dependencies_pip_directness.TestValueTakingLongOptionAbbreviations.test_ac4_an_abbreviation_does_not_consume_the_following_token
+      - tests.test_scan_dependencies_pip_directness.TestValueTakingLongOptionAbbreviations.test_ac4_the_value_after_an_equals_is_never_a_name_or_a_file
+      - tests.test_scan_dependencies_pip_directness.TestValueTakingLongOptionAbbreviations.test_ac4_every_proper_prefix_of_every_value_taking_long_option_is_undetermined
+      - tests.test_scan_dependencies_pip_directness.TestValueTakingLongOptionAbbreviations.test_ac4_an_abbreviation_inside_an_included_file_is_undetermined_too
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (all six):
+      "AssertionError: True is not false : --trusted -c -r deps.txt" (an
+      abbreviation of a value-only long option was an ignored unknown option,
+      so the set stayed complete), and the scan returned "AssertionError: '
+      1 pip advisory with undetermined directness
+      (pip_directness_undetermined).' not found in 'Scanned pip; 0 finding(s)
+      at or above threshold.'". The proper-prefix sweep failed for 228
+      prefix lines (for example `--c -r deps.txt`, `--use-feat -r deps.txt`).
+  AC-5:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviationBoundaries.test_ac5_constraint_and_ambiguous_abbreviations_are_undetermined
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviatedAndIgnoredOptions.test_ac6_a_constraint_abbreviation_is_not_flagged
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviationBoundaries.test_ac5_a_name_longer_than_a_long_option_is_not_an_abbreviation
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviationBoundaries.test_ac5_the_flags_without_a_value_are_not_abbreviations_of_a_value_taking_option
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviationBoundaries.test_ac5_an_exact_long_name_is_never_its_own_abbreviation
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviationBoundaries.test_ac5_a_bare_double_dash_is_not_an_abbreviation
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py: the first two
+      ("AssertionError: True is not false : --constraint-extra x --con y",
+      the same for `--con y` and `--no x`; the rewritten existing test
+      `test_ac6_a_constraint_abbreviation_is_not_flagged` failed with "True
+      is not false"). The remaining four (`--constraint-extra x` alone and
+      the other over-long names stay complete, pip's value-less flags are not
+      prefixes, exact names, a bare `--`) describe behaviour that already held
+      and are regression guards, not reds.
+  AC-6:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestUnchangedOptionLineBehaviour.test_ac6_a_value_taking_option_at_the_end_of_the_line_leaves_the_set_complete
+      - tests.test_scan_dependencies_pip_directness.TestUnchangedOptionLineBehaviour.test_ac6_the_value_less_forms_of_the_spec_resolve_to_the_own_name_only
+      - tests.test_scan_dependencies_pip_directness.TestUnchangedOptionLineBehaviour.test_ac6_a_lone_double_dash_that_is_not_a_value_is_ignored
+      - tests.test_scan_dependencies_pip_directness.TestUnchangedOptionLineBehaviour.test_ac6_the_interpreted_options_keep_their_meaning
+      - tests.test_scan_dependencies_pip_directness.TestUnchangedOptionLineBehaviour.test_ac6_an_include_outside_the_root_after_a_consumed_value_is_still_refused
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviatedAndIgnoredOptions.test_ac6_a_lone_double_dash_and_other_options_are_ignored_and_stay_complete
+    red_confirmed: false
+    red_reason: >-
+      The criterion states behaviour that must not change, so no red state
+      can occur: all six tests passed against the original scan-dependencies.py
+      (the old reader already left value-less options and an unconsumed lone
+      `--` complete). The existing test
+      `test_ac6_a_lone_double_dash_and_other_options_are_ignored_and_stay_complete`
+      already detects the `--`, `-f ./wheels --` and `--index-url URL --
+      --no-index` lines; the new tests add the value-less lines and keep the
+      interpreted options' behaviour pinned.
+  AC-7:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestOptionValuesStayOutOfTheSummary.test_ac7_an_abbreviation_with_a_secret_looking_value_reaches_the_summary_nowhere
+      - tests.test_scan_dependencies_pip_directness.TestOptionValuesStayOutOfTheSummary.test_ac7_consumed_credentials_before_a_constraint_reach_nothing
+      - tests.test_scan_dependencies_pip_directness.TestOptionValuesStayOutOfTheSummary.test_ac7_consumed_credentials_before_an_include_reach_neither_the_summary_nor_a_finding
+    red_confirmed: true
+    red_reason: >-
+      The abbreviation test was watched fail against the original
+      scan-dependencies.py ("AssertionError: ' 1 pip advisory with
+      undetermined directness (pip_directness_undetermined).' not found in
+      'Scanned pip; 0 finding(s) at or above threshold.'" for
+      `--trusted=secret-host.invalid`): the abbreviation was not yet
+      undetermined. The two consumed-credential tests passed before the
+      change (the old reader never echoed a token either) and are regression
+      guards for the new consumption path.
+  AC-8:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestStandardLibraryOnly.test_the_script_imports_nothing_new_outside_the_standard_library
+      - tests.test_scan_dependencies_pip_directness.TestStandardLibraryOnly.test_this_test_module_imports_only_the_standard_library
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviatedAndIgnoredOptions.test_ac6_a_constraint_abbreviation_is_not_flagged
+    red_confirmed: false
+    red_reason: >-
+      The criterion is verified by two commands, not by one failing check:
+      `python3 -m unittest discover -s tests` (10176 tests OK, skipped=1) and
+      `python3 em-workflow/scripts/check-plugin-invariants.py .` (exit 0), both
+      green before and after; the existing standard-library-only tests listed
+      detect a new import in the script or in this test module and passed
+      before the change (no red state occurred for this change). The one
+      rewritten expectation is the AC-5 test listed, which was watched red.
+      The docstring and comment part (FR8, TS-15) has no executable check and
+      is judged by inspection.
