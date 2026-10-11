@@ -1,0 +1,112 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_the_bash_c_section_comment_says_every_level_is_judged
+    red_confirmed: true
+    red_reason: >-
+      Changed the three rows (`bash -c "bash -c 'python3 -i'"`,
+      `sh -c 'bash -lc "python3 -i"'`, `bash -cx "bash -c 'python3 -i'"`) to
+      deny and added the seven new deny rows, then ran the unchanged guard:
+      both copies printed nothing and test_cases_run_against_both_copies
+      errored on every one of those rows with a JSON decode error on empty
+      standard output instead of a deny decision. The table comment is pinned
+      by the comment test: with the old text `one level of literals` put back
+      it failed with `literal shell -c strings are judged at every level` not
+      found in the comment line.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      Regression guard for behavior that pre-existed: the seven new silent
+      rows (outer pipe and stdin reach the second level, a pipe inside it, a
+      dynamic operand, a harmless string, an unbalanced quote, a function body)
+      and every pre-existing row other than the three changed ones passed
+      before the traversal changed, because a second-level string was never
+      read; no red state occurred. The existing TestCasesTable test detects a
+      changed verdict on any row.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestNestedJudgmentOrder.test_a_nested_launch_is_judged_before_a_later_level_zero_launch
+      - tests.test_codex_hook_interactive_guard.TestNestedJudgmentOrder.test_a_nested_launch_is_judged_before_a_later_command_of_its_holder
+      - tests.test_codex_hook_interactive_guard.TestNestedJudgmentOrder.test_a_launch_before_the_nested_string_decides_first
+    red_confirmed: true
+    red_reason: >-
+      Ran against the unchanged guard: for `bash -c "bash -c node"; python3 -i`
+      the reason named `python3` with the -i wording, so the assertion that
+      "`node` を" appears failed on both copies; the same failure for
+      `bash -c "bash -c node; python3 -i"`. The third test
+      (`bash -c "python3 -i; bash -c node"` names `python3`) already passed
+      before the change and still does; it pins that a launch before the
+      nested string keeps deciding first.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_the_checker_flags_a_direct_self_call
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_the_checker_flags_a_method_that_calls_itself_through_self
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_the_checker_flags_a_two_function_cycle
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_the_checker_passes_a_chain_and_a_method_named_like_a_function
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_scan_walks_the_nested_strings_and_find_deny_keeps_its_signature
+    red_confirmed: true
+    red_reason: >-
+      Ran against the unchanged guard: test_no_function_calls_itself_and_no_functions_form_a_cycle
+      failed on both copies with `['_scan calls itself by name'] != []`,
+      because the old `_scan` called itself for the nested string. The checker
+      sample tests and the signature test pass before and after (they pin the
+      checker and the unchanged `find_deny` signature).
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_each_copy_defines_the_limit_once_with_the_specified_value
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_a_string_that_brings_the_total_exactly_to_the_limit_is_read
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_one_more_character_and_the_string_is_not_read
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_the_total_runs_across_the_strings_of_one_first_level_string
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_the_total_runs_across_first_level_strings
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_an_over_limit_string_in_one_first_level_string_stops_the_later_ones
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_a_string_that_proves_undecidable_still_counts
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_a_launch_before_an_over_limit_string_is_denied
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_first_level_strings_are_never_counted
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_a_level_zero_launch_after_the_limit_is_reached_is_denied
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_a_first_level_launch_after_the_limit_is_reached_is_denied
+    red_confirmed: true
+    red_reason: >-
+      Ran against the unchanged guard: the constant test failed on both copies
+      with `0 != 1 : the constant is assigned exactly once`; the exact-limit
+      test (a second-level `python3 -i` string of 1,000,000 characters)
+      failed with 'silent' != 'deny' because the second level was never read;
+      the one-first-level-string total test and the launch-before-over-limit
+      test failed likewise. The remaining tests (one character past the limit,
+      across first-level strings, undecidable still counts, first-level
+      strings never counted, level-0 and first-level launches after the limit)
+      assert silent or deny outcomes that the unchanged guard already gave, so
+      they were green before the change; each was shown to fail under a
+      deliberately broken traversal (off-by-one bound, no limit-reached flag,
+      undecidable strings uncounted, first-level strings counted).
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_nesting_to_the_depth_the_limit_admits_is_denied
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_nesting_one_level_deeper_than_the_limit_admits_is_answered
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_many_sibling_second_level_strings_over_the_limit_are_answered
+    red_confirmed: true
+    red_reason: >-
+      Ran against the unchanged guard: the deepest-nesting test (depth 13,
+      `python3 -i` quoted again at each level) errored on both copies with a
+      JSON decode error on empty standard output instead of a deny. The
+      one-level-deeper and many-siblings tests accept empty output or one deny
+      object (SPEC TS-3), so the unchanged guard already satisfied them; they
+      pin that the new traversal still answers in time with exit status 0 and
+      empty standard error.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      The existing TestCopies and TestStaticConstraints detect a diverging copy
+      and a constraint violation; they passed before the change and still pass,
+      so no red state occurred. That the diff leaves out both plugin.json files
+      and marketplace.json is a property of the change set, checked with git
+      diff against the base, not by a test.

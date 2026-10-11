@@ -135,6 +135,12 @@ EXTGLOB_OPERATORS = ("?", "*", "+", "@", "!")
 # these; the short informational options belong to each family (info_letters).
 INFO_LONG = ("--version", "--help")
 
+# The characters the traversal re-reads from the literal shell `-c` strings of
+# the second level and deeper, per hook command. A string's length is the
+# length of its value as handed to the parser, after the holding level's quote
+# removal. First-level strings are never counted.
+NESTED_READ_LIMIT = 1000000
+
 
 class _Undecidable(Exception):
     pass
@@ -981,8 +987,38 @@ def _judge(words, connected):
     return ("noprogram", name), None
 
 
-def _scan(commands, inherited, depth):
-    for command in commands:
+def _scan(commands):
+    """Walk the commands of the hook command and of every literal shell `-c`
+    string nested in them, and return (kind, name) for the first launch to
+    deny, or None.
+
+    Nesting is followed with an explicit work list, never by a call to this
+    function or to another that leads back here, so the depth of nested strings
+    costs no call stack. Each work-list entry is [commands, position,
+    inherited, level]: the simple commands of one string, the index of the
+    next command to judge, whether the string inherits a stdin connection from
+    its holder, and the nesting level (0 for the hook command, 1 for a
+    first-level string, and so on). The entry on top is read first, so the
+    commands of a nested string, and of the strings nested in it, are judged
+    before the command that follows their holder.
+
+    The strings of the second level and deeper share one running total of
+    characters. A string that would carry the total past NESTED_READ_LIMIT is
+    not read, and neither is any later one of those levels. First-level strings
+    are always read. Reaching the limit is no verdict: the commands still to be
+    judged at level 0 and in first-level strings are judged as before.
+    """
+    pending = [[commands, 0, False, 0]]
+    total = 0
+    limit_reached = False
+    while pending:
+        entry = pending[-1]
+        entry_commands, position, inherited, level = entry
+        if position >= len(entry_commands):
+            pending.pop()
+            continue
+        entry[1] = position + 1
+        command = entry_commands[position]
         group = command.group
         if group is not None and group.skipped:
             continue
@@ -992,20 +1028,24 @@ def _scan(commands, inherited, depth):
         verdict, inner = _judge(command.words, connected)
         if verdict:
             return verdict
-        if inner is not None and depth == 0:
-            try:
-                inner_commands = parse(inner)
-            except _Undecidable:
+        if inner is None:
+            continue
+        if level >= 1:
+            if limit_reached or total + len(inner) > NESTED_READ_LIMIT:
+                limit_reached = True
                 continue
-            verdict = _scan(inner_commands, connected, depth + 1)
-            if verdict:
-                return verdict
+            total += len(inner)
+        try:
+            inner_commands = parse(inner)
+        except _Undecidable:
+            continue
+        pending.append([inner_commands, 0, connected, level + 1])
     return None
 
 
 def find_deny(command):
     """Return (kind, name) for the first launch to deny, or None."""
-    return _scan(parse(command), False, 0)
+    return _scan(parse(command))
 
 
 def deny_reason(kind, name):
