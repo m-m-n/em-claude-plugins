@@ -1,12 +1,22 @@
 schema_version: 1
 feature: codex-guard-reserved-word-funcdef
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 6d9ebcb9e537edc3d6559a2c6f11f30422312bf5
 last_input_digest: sha256:eb3097c4718b85fca848b70ea6aa4c4f17ddac91f326209bf90bc1006a3fe193
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T18:05:51+09:00'
+    questions:
+    - question_id: requirement.reserved-word-set
+      status: answered
+    - question_id: requirement.reserved-word-only-head
+      status: answered
+    - question_id: design-step.decision
+      status: answered
 answers:
   create-spec.feature-identity:
     question_id: create-spec.feature-identity
@@ -19,9 +29,64 @@ answers:
     freeform: codex-guard-reserved-word-funcdef
     normalized_answer: feature 名をタスク記述から codex-guard-reserved-word-funcdef と導出した
     resolution_note: 'gate: create-spec.feature-identity; policy option_id: derive_from_task_description'
+  requirement.reserved-word-set:
+    question_id: requirement.reserved-word-set
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T18:05:51+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - with_time_options
+    freeform: null
+    normalized_answer: 先頭に連続する予約語 ! do elif else if then time until while の 9 語と、time
+      直後の静的な -p を外してから判定する。除去は関数定義の認識に限り、time -p python3 -i 等の判定は変えない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation (record_as_assumption); 起動時指示（不明点は Codex に相談）と batch policy
+      codex_consultation により Codex に相談（codex_consulted: true, 1 turn, entry codex）。議論内容を
+      Notion タスクページにコメントで記録済み。Codex: 5 語では if/elif/while/until 直後が誤爆のまま、time -p f()
+      も bash -n で有効'
+  requirement.reserved-word-only-head:
+    question_id: requirement.reserved-word-only-head
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T18:05:51+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_silent
+    freeform: null
+    normalized_answer: 予約語を外して何も残らないときは、外す前の語の並びで今の規則のまま判定する（現行挙動を変えない）
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation (record_as_assumption); 起動時指示（不明点は Codex に相談）と batch policy
+      codex_consultation により Codex に相談（codex_consulted: true, 1 turn, entry codex）。議論内容を
+      Notion タスクページにコメントで記録済み。Codex: then() は構文エラーで実行されず、本体判定は新たな誤爆を生む'
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T18:05:51+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design step は analyst の推奨どおり skip（UI なし）
+    resolution_note: 'gate: create-spec.design-step; policy option_id: decide_autonomously
+      (analyst recommendation skip を採用)'
+  analyst.assumptions-codex-review:
+    question_id: analyst.assumptions-codex-review
+    packet_id: null
+    answered_at: '2026-10-11T18:05:51+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: A1 agree; A2 agree
+    normalized_answer: 'A1: 先頭に連続する予約語だけを外す（echo then f() は外さない）。A2: 外した後は 1 語か function+1
+      語、名前は動的でなく = を含まない'
+    resolution_note: 'analyst の仮定 A1/A2 を同じ Codex 相談で確認し、どちらも支持された。起動時指示（不明点は Codex
+      に相談）と batch policy codex_consultation により Codex に相談（codex_consulted: true, 1
+      turn, entry codex）。議論内容を Notion タスクページにコメントで記録済み'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:eb3097c4718b85fca848b70ea6aa4c4f17ddac91f326209bf90bc1006a3fe193
   output_digest: null
 artifacts: []
