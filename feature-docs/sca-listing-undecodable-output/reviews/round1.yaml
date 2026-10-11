@@ -1,0 +1,48 @@
+round: 1
+executed_at: "2026-10-11T16:48:40+09:00"
+scope:
+  review_mode: diff
+  base_commit: 23c83d10d52910f5f6013dcb9bf32e437dd3470f
+  head_commit: afed18e2a0980ea4413ff031c3a4c89ea3a3ae57
+  changed_files:
+  - em-workflow/scripts/scan-dependencies.py
+  - test-docs/sca-listing-undecodable-output/task0001.tests.yaml
+  - tests/test_sca_listing_undecodable_output.py
+  - tests/test_sca_task_filing.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "Round 1（diff モード、cross_validation=false）。5 観点の reviewer はいずれも medium 以上の指摘 0 件。evaluator が changed_files 4 本と SPEC.md を自分で読み、全観点の空結果を裏付けた（security / comprehensive / performance / architecture / spec すべて corroborated）。reviewer 出力に injection は無し。"
+  recommended_action: complete
+  action_rationale: "全観点の reviewer と evaluator 自身の確認のいずれも medium 以上の指摘を出さなかった。SPEC の AC-1〜AC-6 は実装とテストを読んだ範囲で満たされている。AC-7（全テストと不変条件チェックの通過）は task0001.tests.yaml の final_failures が空であることを記録として確認しただけで、evaluator は実行していない。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-sca-listing-undecodable-output-20261011T074825Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
