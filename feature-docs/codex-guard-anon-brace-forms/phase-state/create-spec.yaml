@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-anon-brace-forms
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 0130574312e631ea2493d2b56ce5a9cf20c6d91e
-last_input_digest: sha256:ffec8a70066b76ff2ea41c5959a93356097e5ac40cd51c9ad1fc4b534f0790e0
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:ebabf3c511587a29cd63036e965369d96d0bcfc0466a7153af9a197dcc4f194f
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -52,6 +52,10 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:ffec8a70066b76ff2ea41c5959a93356097e5ac40cd51c9ad1fc4b534f0790e0
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:ebabf3c511587a29cd63036e965369d96d0bcfc0466a7153af9a197dcc4f194f
   output_digest: null
 artifacts: []
 patches: []
