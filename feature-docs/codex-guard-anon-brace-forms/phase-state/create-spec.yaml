@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-brace-forms
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 0130574312e631ea2493d2b56ce5a9cf20c6d91e
+last_input_digest: sha256:ffec8a70066b76ff2ea41c5959a93356097e5ac40cd51c9ad1fc4b534f0790e0
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:ffec8a70066b76ff2ea41c5959a93356097e5ac40cd51c9ad1fc4b534f0790e0
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
