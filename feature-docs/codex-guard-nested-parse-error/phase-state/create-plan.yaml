@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-nested-parse-error
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 8d2a5ef4485989828be3f50479b459350cec9f4f
+last_input_digest: sha256:d44781384658b1bfdf993e5e8830e0028011d4f3c09f538cd990b16091f5be05
+active_request_id: create-plan-dispatch-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-dispatch-0001
+  status: dispatched
+  input_digest: sha256:d44781384658b1bfdf993e5e8830e0028011d4f3c09f538cd990b16091f5be05
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
