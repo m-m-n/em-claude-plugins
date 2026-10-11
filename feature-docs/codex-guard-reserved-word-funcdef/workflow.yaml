@@ -171,7 +171,8 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/codex-guard-reserved-word-funcdef/task0001
 review:
   status: pending
   rounds_completed: 0
