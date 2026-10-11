@@ -121,7 +121,6 @@ workflow:
   completed_at_commit: fd0d433c985fe39d37bf3e734b05891ddfec17c3
   result: pass
   failed_items: []
-  excluded_scenarios: []
 - id: retrospect
   status: pending
 tasks:
