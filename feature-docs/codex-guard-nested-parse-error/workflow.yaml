@@ -2,37 +2,64 @@ schema_version: 1
 feature: codex-guard-nested-parse-error
 created: '2026-10-11'
 base_branch: main
-goal: |
-  # codex-hook-interactive-guard: 入れ子の parse で出る ValueError が後続コマンドの拒否判定を止める
+goal: '# codex-hook-interactive-guard: 入れ子の parse で出る ValueError が後続コマンドの拒否判定を止める
+
 
   Notion: <notion-url>
 
+
   ## 現象 (必須)
+
   `codex-hook-interactive-guard.py` の `_scan` が二段目以降の `bash -c` の文字列も parse するようになったため、`_Parser._redirection` の `int("".join(self.buf))` が、4300 桁を超える数字だけのファイル記述子で `ValueError` を出す経路に入れ子の段から届くようになった。`_scan` が `parse(inner)` で捕まえるのは `_Undecidable` だけなので、`ValueError` は `find_deny` を抜け、`main` の `except Exception: return` が無出力で返す。その結果、後続の 0 段目の `python3 -i` も判定されずに通る。
+
   0 段目・一段目では変更前から同じ `ValueError` が起きる（例: `: ` + 5000 桁の数字 + `>/dev/null; python3 -i` は変更前から無出力）。
+
   feature `codex-guard-nested-bash-c` の review round 1 で検出し、deferred とした（stable_id `815e62007171d07b`、severity medium、category security）。
+
   ## 再現手順 (必須)
-  1. Python で `cmd = ': ' + '9' * 5000 + '>/dev/null'` を作る
-  2. `cmd = 'bash -c ' + json.dumps(cmd)` を 2 回実行する
-  3. `cmd += '; python3 -i'` を追加する
+
+  1. Python で `cmd = '': '' + ''9'' * 5000 + ''>/dev/null''` を作る
+
+  2. `cmd = ''bash -c '' + json.dumps(cmd)` を 2 回実行する
+
+  3. `cmd += ''; python3 -i''` を追加する
+
   4. この `cmd` を `tool_input.command` に設定した JSON をガードの `main` に渡すと、標準出力が空になる（拒否が出ない）
+
   ## 期待する挙動 (必須)
+
   後続の `python3 -i` が deny になる。読めない文字列は読み飛ばし、それを持つコマンドの次から走査を続ける（docstring 手順 7 のとおり）。
+
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
   ## 該当箇所 (任意)
+
   - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_Parser._redirection`（int 変換）と `_scan`（`parse(inner)` の例外捕捉）
+
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容。2 コピーをバイト単位で同一に保つ）
+
   - 修正案: fd を int 変換せず文字列で 0 かどうかを判定する。防御として `_scan` の `parse(inner)` で起きた想定外の例外も読み飛ばしにする。`tests/test_codex_hook_interactive_guard.py` の `CASES` に、二段目の巨大な fd のあとに 0 段目の `python3 -i` が続く入力と、0 段目の同じ形の deny ケースを足す
+
   - 記録: ブランチ `em-workflow/codex-guard-nested-bash-c/integration` の `feature-docs/codex-guard-nested-bash-c/reviews/round1.yaml`
+
   ## 実害・発生条件 (任意)
+
   対話起動を拒否すべきコマンドが通り、無人実行が対話プロセスで止まる経路が残る。数千桁の数字のファイル記述子を含むコマンドのときだけ起きる。
 
+
   ## 追加指示（起動時）
+
   - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+
   - その議論内容を Notion に記録する
+
+  '
 parent_branch: em-workflow/codex-guard-nested-parse-error/integration
 tier: full
 tier_decision:
@@ -95,7 +122,34 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Huge-fd and nested-parse-error fix in codex-hook-interactive-guard
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -105,7 +159,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -115,7 +170,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR3:
@@ -123,7 +179,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -132,7 +189,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   FR5:
@@ -140,7 +198,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -150,7 +209,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
   FR7:
@@ -158,7 +218,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
     - TS-4
@@ -168,7 +229,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   NFR2:
@@ -176,7 +238,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   NFR3:
@@ -184,7 +247,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   NFR4:
@@ -192,7 +256,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-9
   NFR5:
@@ -200,7 +265,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
 batch:

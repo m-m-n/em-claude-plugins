@@ -28,7 +28,7 @@ artifacts:
   produced_by: create-plan-dispatch-0001
 patches:
 - patch_id: codex-guard-nested-parse-error-create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:d44781384658b1bfdf993e5e8830e0028011d4f3c09f538cd990b16091f5be05
   base_workflow_blob: d73f4562f11548069447e201c012f269680d0671
 progress_fingerprint: null
