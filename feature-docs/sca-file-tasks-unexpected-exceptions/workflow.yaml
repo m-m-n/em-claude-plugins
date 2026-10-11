@@ -1,0 +1,276 @@
+schema_version: 1
+feature: sca-file-tasks-unexpected-exceptions
+created: '2026-10-11'
+base_branch: main
+goal: |
+  # file-tasks: OSError 以外の例外（ValueError / UnicodeEncodeError）が起票ループを抜けてスクリプトを落とす
+
+  Notion タスク: https://www.notion.so/3f03509ec8ee816ebfb8df1a1a7992f8 （種別: バグ）
+
+  ## 現象 (必須)
+  `em-workflow/scripts/scan-dependencies.py` の `file_tasks` の起票ループは、起票ヘルパの失敗を `EntryPointError` だけで捕捉している。sca-file-tasks-robustness（task0002）で、`create_security_task` / `append_security_task_references` の `OSError` は `EntryPointError` に変換されるようになったが、`OSError` 以外の例外は変換されない。
+  - `subprocess.run` が送出する `ValueError`（パッケージ名などの引数に NUL 文字が含まれる場合）
+  - 一時ファイル書き込み時の `UnicodeEncodeError`（advisory id に孤立サロゲートが含まれる場合）
+  これらは `file_tasks` を抜けてスクリプトを落とし、stdout に JSON が出ず、そのバッチで起票済みのパッケージの記録も失われうる。
+
+  ## 再現手順 (必須)
+  1. パッケージ名に NUL 文字を含む finding、または advisory id に孤立サロゲートを含む finding を用意する
+  2. 複数パッケージのバッチで `file-tasks` を実行する
+  3. traceback で終了し、stdout に JSON が出ないことを確認する
+
+  ## 期待する挙動 (必須)
+  起票ヘルパ由来の例外は、既存の break-and-return 経路（`failed_package` / `failure_reason` / `unattempted_packages` を返す途中失敗ルート）に乗り、スクリプトは JSON サマリを出して終了する。
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+  `em-workflow/scripts/scan-dependencies.py` の `create_security_task` / `append_security_task_references` / `_write_references_tempfile` / `file_tasks` の起票ループ
+
+  ## 実害・発生条件 (任意)
+  advisory やパッケージ名に異常な文字が含まれる場合のみ発生する。出典: sca-file-tasks-robustness の implement フェーズで task0002 の実装者がスコープ外として報告した残件。元タスク: https://www.notion.so/3d43509ec8ee81108eb9f4524a79638d
+
+  ## 追加指示（起動者より）
+  - 実装完了後、integration ブランチを remote に push し、base_branch への PR を gh pr create で作成する。integration ブランチはローカル・リモートともに残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+  - その議論の内容を Notion に記録する
+parent_branch: em-workflow/sca-file-tasks-unexpected-exceptions/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.89
+      '2': 0.11
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+  at: '2026-10-11T13:42:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: c1adef59738b01ac4c5752edf5a9a755fd419d71
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や見た目の成果物が無く、CLI スクリプトの例外処理とテストの修正だけのため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: c4dce85a8827671d576144a6efdb4966fdfc13fb
+- id: implement
+  status: completed
+  base_commit: 642357b33841fd53c381616583111b46aacf180a
+  completed_at_commit: f096272750545ddc31ae2e80f4cd4bc1769385e0
+- id: review
+  status: completed
+  completed_at_commit: 8c04e7db4231fdaf517d57850634a45491fb72c0
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  summary: 'repo-tests (python3 -m unittest discover -s tests): 10217 tests OK (1 skipped); plugin-invariants: 7/7 PASS; TS-1..TS-12 pass (manual: no import added to scan-dependencies.py, plugin version files and tests/test_sca_file_tasks_oserror.py absent from diff vs base, test module imports stdlib only, FR6 docstrings reviewed); excluded requirements: none'
+  completed_at_commit: 8539e6e49a37069706c67d0e9c622d94f327f982
+- id: retrospect
+  status: completed
+  completed_at_commit: 30df2ef2198f401fa603bde7d9553bb2ff8dc7c8
+tasks:
+  task0001:
+    title: file-tasks survives non-OSError helper failures and unencodable finding text
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/scan-dependencies.py
+    - tests/test_sca_file_tasks_unexpected_exceptions.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/sca-file-tasks-unexpected-exceptions/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Filing helpers convert OSError and ValueError
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+  FR2:
+    title: Break-and-return routing for converted helper failures
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  FR3:
+    title: Temporary file cleanup widened to the same scope
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  FR4:
+    title: Unencodable finding text is skipped as malformed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-7
+  FR5:
+    title: NUL in a package name ends the batch through break-and-return
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR6:
+    title: Docstrings describe the widened behaviour
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+    - TS-9
+  NFR1:
+    title: Summary contract and output content
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-6
+    - TS-10
+  NFR2:
+    title: Standard library only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-11
+  NFR3:
+    title: Existing tests pass unmodified
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+  NFR4:
+    title: Docstring wording constraints
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+    - TS-9
+  NFR5:
+    title: Plugin version unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-12
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

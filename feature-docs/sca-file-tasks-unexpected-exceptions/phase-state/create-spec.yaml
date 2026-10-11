@@ -1,0 +1,92 @@
+schema_version: 1
+feature: sca-file-tasks-unexpected-exceptions
+phase: create-spec
+status: completed
+generation: 1
+base_revision: fd99a591850b784ad5547f55680b9b0b869aaf0d
+last_input_digest: sha256:d93f0101809d1de03a31d02551eb573142ce95164e18ad8e69e1f7a258fd53ab
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T13:55:00+09:00'
+    questions:
+    - question_id: requirement.helper-exception-scope
+      status: answered
+    - question_id: requirement.pre-loop-unencodable-text
+      status: answered
+    - question_id: requirement.nul-package-handling
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.helper-exception-scope:
+    question_id: requirement.helper-exception-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T13:55:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - oserror_and_valueerror
+    freeform: null
+    normalized_answer: 起票ヘルパは OSError に加えて ValueError（UnicodeEncodeError を含む）を EntryPointError に変換し、元の例外を __cause__ に残す。TypeError 等のプログラム誤りは従来どおり伝播する。_write_references_tempfile の書き込み失敗時の一時ファイル削除も OSError
+      と ValueError に広げる（書き込み関数自体は生の例外を送出したまま）
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose oserror_and_valueerror (対象例外だけを追加し既存の原因保持を維持できる。scan-dependencies.py:461、tests/test_sca_file_tasks_oserror.py:518。書込失敗時の削除対象も広げ、削除失敗で結果を変えない契約は維持する);
+      recorded as assumption'
+  requirement.pre-loop-unencodable-text:
+    question_id: requirement.pre-loop-unencodable-text
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T13:55:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_as_malformed
+    freeform: null
+    normalized_answer: package / advisory_id / severity（文字列のとき）のいずれかが UTF-8 にエンコードできない finding は集約段階で除外し、malformed_findings に position と新しい固定の理由文字列（既存のタイトル契約違反の理由とは別）で記録する。他の finding は通常どおり処理する。report 分岐も同じ集約を通るため落ちなくなる
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose skip_as_malformed (集約は分岐前なので文字列の severity も含めて検証・除外すれば起票と報告の両方を保護できる。scan-dependencies.py:528、:293。正常な
+      finding を処理し続ける既存方針にも合う。tests/test_sca_task_filing.py:709); recorded as assumption'
+  requirement.nul-package-handling:
+    question_id: requirement.nul-package-handling
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T13:55:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - break_and_return
+    freeform: null
+    normalized_answer: NUL を含むパッケージ名は create 経路でヘルパが ValueError を EntryPointError に変換し、failed_package = そのパッケージ、failure_reason = task_create_failed、unattempted_packages = そのパッケージ以降で返す
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose break_and_return (パッケージ名は create の引数になるため、そこでの
+      ValueError を既存の停止処理へ流すのが依頼に合う。scan-dependencies.py:455。failed_package / task_create_failed / 後続を未処理として返す契約を維持できる。:613、:625); recorded as assumption'
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T13:55:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design step は analyst の推奨どおり skip
+    resolution_note: 'gate: create-spec.design-step; policy option_id: decide_autonomously'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:d93f0101809d1de03a31d02551eb573142ce95164e18ad8e69e1f7a258fd53ab
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:d93f0101809d1de03a31d02551eb573142ce95164e18ad8e69e1f7a258fd53ab
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:d93f0101809d1de03a31d02551eb573142ce95164e18ad8e69e1f7a258fd53ab
+  output_digest: null
+artifacts:
+- path: feature-docs/sca-file-tasks-unexpected-exceptions/SPEC.md
+  digest: sha256:8553adbed670e3c6c5a477c08b3392fe7fff805929cd9d8aae644a99ce586e05
+  request_id: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
