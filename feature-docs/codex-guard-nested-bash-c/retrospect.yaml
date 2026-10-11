@@ -28,5 +28,5 @@ signals:
       work_still_required: true
 follow_up_drafts: []
 lessons_candidates:
-  - "review round 1 の medium finding 815e62007171d07b（二段目以降の parse で出る ValueError が走査全体を止める）は deferred。triage は report 分岐で起票されていないため、オーケストレーターが別タスクとして起票する"
+  - "review round 1 の medium finding 815e62007171d07b（二段目以降の parse で出る ValueError が走査全体を止める）は deferred。triage は report 分岐で自動起票されず、review 時にオーケストレーターが別タスクとして起票済み: <notion-url>"
   - "journal.jsonl に implementer 報告の conflict_retries / deviations が残っておらず、retrospect で signals を検証できなかった"
