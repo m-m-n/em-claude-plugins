@@ -109,7 +109,7 @@ workflow:
   failed_items: []
   summary: repo-tests 10247 件 OK (skipped=1)、plugin-invariants 全 PASS、TS-1〜TS-16 を両コピーで確認、両コピーはバイト単位で同一
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: 配列代入の後のグループを関数本体とみなさないようにする
