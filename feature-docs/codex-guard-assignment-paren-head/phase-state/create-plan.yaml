@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-assignment-paren-head
 phase: create-plan
-status: in_progress
+status: completed
 generation: 1
 base_revision: 1fab124b500cd71f86820536b2976c965ee89bcd
 last_input_digest: sha256:ad4a9ec02333a3b2fe496b303752a73960360c0b85f8954bcce6d299b3d2a830
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -25,7 +25,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: create-plan-p0001
-  status: applying
+  status: applied
   base_input_digest: sha256:ad4a9ec02333a3b2fe496b303752a73960360c0b85f8954bcce6d299b3d2a830
   base_workflow_blob: 2067d09aa4e82d0d76cac5c277b42cf5eb17b3d9
 progress_fingerprint: null
