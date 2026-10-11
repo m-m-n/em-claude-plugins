@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-file-tasks-unexpected-exceptions
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 1ba15c5e83a179f8367a1aef643c4b48056cc1f4
 last_input_digest: sha256:e78b835499044f6e526c773ed0a9f800e67b4f361ada9f6eb43467535e3a6e17
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
