@@ -124,7 +124,8 @@ workflow:
   completed_at_commit: ce5fc3935b208bde56de959bbe09d9c30203f5aa
   summary: 'TS-1..TS-8 pass: unittest discover (10282 tests OK, 1 skipped; includes test_codex_hook_interactive_guard with TestCopies / TestStaticConstraints / TestGuardDocumentation), plugin invariants all PASS, copies byte-identical, no version file changes vs base_commit; manual checks (SPEC 判断記録 / CASES change reasons, docstring step 7) confirmed'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: ed7a13889ef6931e7c55ceacf9d060ad6fb55480
 tasks:
   task0001:
     title: Judge shell -c strings at every level with an explicit work list and a
