@@ -1,0 +1,67 @@
+schema_version: 2
+feature: sca-file-tasks-unexpected-exceptions
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.11
+    confidence: 0.89
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.89
+      '2': 0.11
+      '3': 0.0
+  observed_at: '2026-10-11T13:37:25+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.15
+    confidence: 0.85
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+  observed_at: '2026-10-11T13:41:59+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_sca_file_tasks_oserror.py
+  changed_lines_approx: 120
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 17
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: '欠陥は現在も存在する。入力読み取りと一時ファイルをメモリ上で代用し、外部起票先を true に置き換えた読み取り専用の main 呼出確認で、3パッケージ中2件目の名前に NUL を含めると、先頭の起票ヘルパ正常終了後に実際の subprocess.run が ValueError(''embedded null byte'') を送出し、stdout は空になった（em-workflow/scripts/scan-dependencies.py:455、em-workflow/scripts/scan-dependencies.py:421、em-workflow/scripts/scan-dependencies.py:612）。追記側も、既存タスクの
+    id に NUL を含めると同じ結果になった（em-workflow/scripts/scan-dependencies.py:479、em-workflow/scripts/scan-dependencies.py:602）。両ヘルパの変換対象は OSError のみ、起票ループの捕捉対象は EntryPointError のみで、main も ExecutionError のみを捕捉するため、JSON
+    出力に到達しない（em-workflow/scripts/scan-dependencies.py:461、em-workflow/scripts/scan-dependencies.py:483、em-workflow/scripts/scan-dependencies.py:603、em-workflow/scripts/scan-dependencies.py:613、em-workflow/scripts/scan-dependencies.py:3891、em-workflow/scripts/scan-dependencies.py:3894）。
+
+    依頼文の advisory id の孤立サロゲートは、現コードでは一時ファイル書込みより前に失敗する。確認では起票ヘルパの呼出回数が0のまま UnicodeEncodeError が漏れ、stdout は空だった。file_tasks 冒頭で全 finding を集約し、advisory id を truncate_untrusted の UTF-8 encode に渡しているため、ヘルパの例外変換だけではこの再現入力を解消できない（em-workflow/scripts/scan-dependencies.py:528、em-workflow/scripts/scan-dependencies.py:191、em-workflow/scripts/scan-dependencies.py:113）。この前処理から既存の途中失敗経路へつなぐ具体的な実装方式は未確定である。
+
+    一時ファイル書込み由来の UnicodeEncodeError も、両ヘルパへ孤立サロゲートを含む参照行を直接渡す確認で未変換のまま漏れた。書込み失敗時の削除も OSError のみを対象とし、確認では削除処理が呼ばれなかった（em-workflow/scripts/scan-dependencies.py:398、em-workflow/scripts/scan-dependencies.py:399、em-workflow/scripts/scan-dependencies.py:420）。既存の途中失敗経路には失敗理由、失敗パッケージ、未完了パッケージと先行成功分を返す処理があるため、例外処理の変更でこの経路を利用できる（em-workflow/scripts/scan-dependencies.py:604、em-workflow/scripts/scan-dependencies.py:614、em-workflow/scripts/scan-dependencies.py:618、em-workflow/scripts/scan-dependencies.py:624、em-workflow/scripts/scan-dependencies.py:628）。既存引数と返却キーの変更は必要と確認されていない（em-workflow/scripts/scan-dependencies.py:438、em-workflow/scripts/scan-dependencies.py:467、em-workflow/scripts/scan-dependencies.py:628）。
+
+    既存テストには作成・追記の途中失敗、JSON出力、OSError変換の検証があるが、対象例外は OSError であり、NUL／孤立サロゲートによる今回の挙動を覆っていない（tests/test_sca_file_tasks_oserror.py:400、tests/test_sca_file_tasks_oserror.py:434、tests/test_sca_file_tasks_oserror.py:459、tests/test_sca_file_tasks_oserror.py:509、tests/test_sca_file_tasks_oserror.py:517）。追加8ケースは、両ヘルパ×2例外の4ケースと、作成・追記×NUL・孤立サロゲート入力の4ケースを想定した概算である。変更120行も同じ前提での概算で、実装方式とテスト構成により変わる。既存の両ヘルパ呼出支援、JSON検証、途中失敗検証を拡張でき、新規の実装関数・ファイル・依存を必須とする箇所は確認されていない（tests/test_sca_file_tasks_oserror.py:343、tests/test_sca_file_tasks_oserror.py:315、tests/test_sca_file_tasks_oserror.py:465、tests/test_sca_file_tasks_oserror.py:482）。
+
+    呼出関係17件は、create_security_task、append_security_task_references、_write_references_tempfile、file_tasks、group_findings_by_package の直接呼出元3関数と直接依存15関数を重複除外して集計した値である。組込み、例外型、インスタンスメソッド、テストからの呼出しを除外した（em-workflow/scripts/scan-dependencies.py:186、em-workflow/scripts/scan-dependencies.py:190、em-workflow/scripts/scan-dependencies.py:395、em-workflow/scripts/scan-dependencies.py:400、em-workflow/scripts/scan-dependencies.py:420、em-workflow/scripts/scan-dependencies.py:448、em-workflow/scripts/scan-dependencies.py:451、em-workflow/scripts/scan-dependencies.py:472、em-workflow/scripts/scan-dependencies.py:475、em-workflow/scripts/scan-dependencies.py:528、em-workflow/scripts/scan-dependencies.py:531、em-workflow/scripts/scan-dependencies.py:532、em-workflow/scripts/scan-dependencies.py:548、em-workflow/scripts/scan-dependencies.py:574、em-workflow/scripts/scan-dependencies.py:590、em-workflow/scripts/scan-dependencies.py:598、em-workflow/scripts/scan-dependencies.py:602、em-workflow/scripts/scan-dependencies.py:612、em-workflow/scripts/scan-dependencies.py:657）。実装対象は同一モジュール内にあり、別の実装モジュールへの変更は確認されていない。ただし
+    truncate_untrusted 自体を変更する場合は、同一モジュールの scan 側にも利用箇所がある（em-workflow/scripts/scan-dependencies.py:1568、em-workflow/scripts/scan-dependencies.py:1578、em-workflow/scripts/scan-dependencies.py:1581）。'
+decided_at: '2026-10-11T13:42:30+09:00'
