@@ -5,12 +5,86 @@ status: dispatching
 generation: 1
 base_revision: 8e45993dc2a494ed9da2de2d2b4856738467b06c
 last_input_digest: sha256:0467b09ae4963280eba9ab2457b6e0b8f61204c337e79c214534ef8b2846f2c5
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T12:13:30+09:00'
+    questions:
+    - question_id: requirement.abbreviation-handling
+      status: answered
+    - question_id: requirement.value-option-set
+      status: answered
+    - question_id: requirement.constraint-abbreviation
+      status: answered
+    - question_id: requirement.lone-double-dash
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  requirement.abbreviation-handling:
+    question_id: requirement.abbreviation-handling
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T12:13:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - incomplete_without_consuming
+    freeform: null
+    normalized_answer: 値を取る長形式（--constraint を含む）の真の接頭辞（= より前の名前が -- より長く、完全一致しないもの）は、一意・曖昧を問わず undetermined として complete=False にし、次のトークンを消費しない。--requirement / --editable の省略形の扱いは変えない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose incomplete_without_consuming (consume_like_pip
+      は値を取らないオプションや別名まで含む一意性判定の表を保守する必要がある。complete=False は既存の省略形処理の拡張で済み、取りこぼした advisory は既存の判定不能件数に計上されるため黙った除外にならない); recorded as assumption'
+  requirement.value-option-set:
+    question_id: requirement.value-option-set
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T12:13:30+09:00'
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - pip_requirements_file_set
+    freeform: null
+    normalized_answer: '分離形の値を消費する対象は、既存の -r / -c / -e に加えて、pip 25.1.1 の requirements ファイル用パーサ（req_file.py の SUPPORTED_OPTIONS / SUPPORTED_OPTIONS_REQ）が受け付ける値を取るオプションすべて: -i / --index-url / --pypi-url、--extra-index-url、-f
+      / --find-links、--trusted-host、--no-binary、--only-binary、--use-feature、--hash、--global-option、-C / --config-settings。--install-option は含めない'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose pip_requirements_file_set (インストール済み pip 25.1.1
+      の req_file.py:52/70 と cmdoptions.py で確認した集合。例示分だけでは他の値を取るオプションで同じ誤解釈が残る。--install-option は確認したパーサの受付範囲外。選択肢の列挙に欠けていた別名 --pypi-url と -C も pip の定義に含まれるため集合に入れる); recorded as assumption'
+  requirement.constraint-abbreviation:
+    question_id: requirement.constraint-abbreviation
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T12:13:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - include_constraint_abbreviation
+    freeform: null
+    normalized_answer: --constraint の省略形（--con、--cons 等）も値を取る長形式の省略形として complete=False にする。既存テスト test_ac6_a_constraint_abbreviation_is_not_flagged の期待を complete=False に書き換える
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose include_constraint_abbreviation (--con は --constraint
+      と --config-settings の曖昧な接頭辞で、対象外にすると新たに対象とする --config-settings の省略形と衝突し例外が要る。対象に含めて既存テストを書き換える方が扱いが統一できる); recorded as assumption'
+  requirement.lone-double-dash:
+    question_id: requirement.lone-double-dash
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T12:13:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - out_of_scope
+    freeform: null
+    normalized_answer: 値として消費されない単独の -- の扱いは今回は変えない。値として消費される -- は今回の対象に含める
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose out_of_scope (-- 以降を解釈しない案は pip と一致するが、今回の値の消費とは別の挙動変更になる。範囲を限定し既存テストの扱いを保つ);
+      recorded as assumption'
+  design.step.recommendation:
+    question_id: design.step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T12:13:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は analyst の推奨どおり skip
+    resolution_note: 'gate: create-spec.design-step; policy option_id: decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:0467b09ae4963280eba9ab2457b6e0b8f61204c337e79c214534ef8b2846f2c5
   output_digest: null
 artifacts: []
