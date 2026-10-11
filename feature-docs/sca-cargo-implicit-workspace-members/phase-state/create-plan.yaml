@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-cargo-implicit-workspace-members
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 8a79000e7ae3905b0dd602509d65a35b7265b313
+last_input_digest: sha256:00642b95f13ccf937d775a9cd12942a1b297b279c1a2d802488b9efaed3ee79d
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:00642b95f13ccf937d775a9cd12942a1b297b279c1a2d802488b9efaed3ee79d
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
