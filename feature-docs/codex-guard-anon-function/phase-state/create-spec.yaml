@@ -1,0 +1,75 @@
+schema_version: 1
+feature: codex-guard-anon-function
+phase: create-spec
+status: completed
+generation: 1
+base_revision: ead9e6a473b2cd119567f57713f4cff87db447c0
+last_input_digest: sha256:de745dc94fb58a7ab35bf539e6b52cad5c2430781219b47e3fddc599642fbde6
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T23:10:16+09:00'
+    questions:
+    - question_id: assumption.a1.quoted-function
+      status: answered
+    - question_id: assumption.a4.out-of-scope-forms
+      status: answered
+    - question_id: assumption.a2.function-function
+      status: answered
+answers:
+  assumption.a1.quoted-function:
+    selected_option_ids:
+    - track_quotedness
+    normalized_answer: '引用・エスケープを含む `function`（例: `''function'' ()`）は zsh では予約語にならず
+      function という名前の関数定義になり本体は実行されない（zsh 5.9 で確認）。名前のない匿名関数として扱うのは、予約語を取り除いた後に残った
+      1 語が引用もエスケープも含まない `function` のときに限る。引用の有無は既存の `_Parser.bare` を `_Word` に引き継いで判定する。`zsh
+      -c "''function'' () { python3 -i; }"` は silent のまま（回帰ケースとして CASES に silent で追加）。'
+    answer_mode: select_or_freeform
+    freeform: null
+    source: codex
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T23:10:16+09:00'
+  assumption.a4.out-of-scope-forms:
+    selected_option_ids:
+    - exclude
+    normalized_answer: '`function { python3 -i; }`（括弧なし）と `function () { python3 -i;
+      } arg`（閉じ波括弧の後に引数）は zsh では本体をその場で実行するが、関数名判定の修正では直らない（波括弧の認識と閉じた後の引数処理の変更が要る）。今回は対象外とし、残存する見逃しとして記録する。'
+    answer_mode: select_or_freeform
+    freeform: null
+    source: codex
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T23:10:16+09:00'
+  assumption.a2.function-function:
+    selected_option_ids:
+    - keep_definition
+    normalized_answer: '`function function () { ... }` は zsh 5.9 / bash 5.3 とも function
+      という名前の関数定義で本体は実行されない。従来どおり関数定義として扱う。除外条件は、2 語の `function` 前置の処理より前に、予約語除去後に残った
+      1 語に対してだけ適用する。'
+    answer_mode: select_or_freeform
+    freeform: null
+    source: codex
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T23:10:16+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:e340a447600f1362d85de2aded278727d0758f6c664a28f7336149c4bbf5eb8d
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:23691c42b4298b5db4536cd1cf06a53719a858061026be594f12e48447576f94
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:de745dc94fb58a7ab35bf539e6b52cad5c2430781219b47e3fddc599642fbde6
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-anon-function/SPEC.md
+  sha256: sha256:30e57fb1e5cce3e6c988f9b3df7e8592840e6ca338448e4d91133b822c840094
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

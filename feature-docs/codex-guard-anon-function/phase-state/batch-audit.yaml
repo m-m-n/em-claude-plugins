@@ -1,0 +1,12 @@
+schema_version: 1
+feature: codex-guard-anon-function
+records:
+  - question_id: review.medium-finding-handling
+    packet_id: null
+    answered_at: "2026-10-11T23:49:34+09:00"
+    source: codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "A: レビューを完了し、medium を deferred として記録し、パイプ・入力接続を匿名関数本体へ引き継ぐ修正は別タスクにする"
+    normalized_answer: "defer medium finding 85d39f52fcef8612 and file a follow-up task"
+    resolution_note: "gate: review round 1 medium finding (no gate_id; protocol already excludes medium from auto-fix); options: A=defer+follow-up task, B=fix inside this feature; chosen: A; codex_consulted: true; opus_escalation: false; key points: medium は自動修正対象外で完了を妨げない / 誤拒否側で理由付き deny のため緊急性は低い / _open_group・_close_group の状態管理を急いで変えると回帰リスク / パイプ入力を匿名関数に渡す用途の頻度は不明"

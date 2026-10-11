@@ -1,0 +1,94 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Added the three deny entries (`zsh -c '! function () { python3 -i; }'`,
+      `zsh -c 'if true; then function () { python3 -i; }; fi'`,
+      `zsh -c 'function () { python3 -i; }'`) to CASES and ran the unchanged
+      guard: both copies printed nothing, and the six subtests errored with
+      `json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)`
+      instead of reading a deny decision. The bare form on the outer command
+      line (`function () { python3 -i; }`) and inside `bash -c` were fed on
+      standard input to both unchanged copies as well and printed nothing;
+      they are not CASES entries and are denied by both copies after the
+      change.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      Regression guard for behavior that pre-existed: the silent entry
+      `zsh -c "'function' () { python3 -i; }"` already passed before the change
+      (the unchanged guard read a quoted `function` as a function name) and
+      still passes; no red state occurred for this criterion. It guards the
+      new rule against being read too broadly. The double-quoted spelling
+      `zsh -c '"function" () { python3 -i; }'` and the backslash-escaped
+      spelling `zsh -c '\function () { python3 -i; }'` were fed on standard
+      input to both copies and print nothing, before and after the change.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      Regression guard for behavior that pre-existed: the silent entry
+      `function function () { python3 -i; }` already passed before the change
+      (a definition of a function named `function`) and still passes; no red
+      state occurred for this criterion. It guards the new rule against
+      swallowing the two-word `function` form.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_head_description_states_the_removal
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_names_function_docstring_states_the_extglob_rule
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope (the plan adds no docstring
+      test); the existing TestGuardDocumentation tests detect removal or
+      rewording of the pinned phrases in the module docstring, the `_Group`
+      `head` description and the `_names_function` docstring, and still pass
+      with every pinned phrase intact. The presence of the new lone-bare-
+      function sentences in those three places is checked by reading the
+      diff; no red state occurred for this change.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      Regression guards: the byte-identity test, the CASES uniqueness test
+      and the run of every pre-existing CASES entry against both copies
+      passed before the change and pass after it; no red state occurred for
+      this criterion. No pre-existing CASES entry was removed or altered
+      (the diff only appends five entries). `python3 -m unittest discover -s
+      tests` and `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      pass after the change.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope; the existing TestNoRecursion
+      and TestStaticConstraints tests detect a self-call, a call cycle or an
+      import outside the standard library in either copy, and passed before
+      and after the change; no red state occurred for this criterion. That
+      `_names_function` keeps its name and stays a single forward pass that
+      does not modify the words is checked by reading the diff.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/ by the paths `em-workflow/.claude-plugin/plugin.json`,
+      `em-review/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
+      and by the basenames `plugin.json` and `marketplace.json`. The hits are
+      other features' version-floor checks (for example
+      tests/test_em_workflow_version.py asserts a strict lower bound), none of
+      which fails when a version stays unchanged, so no existing test covers
+      this criterion. Unchanged versions are checked by `git diff --stat`
+      showing none of the three files modified.
