@@ -1,0 +1,62 @@
+round: 1
+executed_at: "2026-10-11T23:49:34+09:00"
+scope:
+  review_mode: diff
+  base_commit: ac43712c8f25c7d25444223224dbf29bce377a3b
+  head_commit: 75c57b3b54a3630ac4a325ed0f7d915e457909f3
+  changed_files:
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - test-docs/codex-guard-anon-function/task0001.tests.yaml
+    - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 85d39f52fcef8612
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 441
+    title: "パイプや入力リダイレクトを受けた匿名関数の本体を「プログラムなし」で誤って拒否する"
+    description: "_open_group(\"(\") が _names_function([function]) を呼び、新しい 441 行目の分岐で False が返る。続く _flush() は [function] を 1 つの単純コマンドとして出力し、その時点の pipe_pending と self.stdin をこの [function] が受け取る。空の `()` グループは pipe=False で作られ、fn_head も立たないため、続く `{` グループも pipe=False・stdin=False・connected=False になる。本体の `python3` はオペランドなし・未接続と判定され、noprogram で deny になる。変更前は本体が skip され何も出力しなかった。zsh はパイプラインの入力を匿名関数の本体に渡すので、python3 はプログラムをパイプから読み対話にならない。今回の変更で生まれた誤検知（拒否側）。em-review 側のコピーも同一。オーケストレーターも zsh -c 'printf \"print(1)\\n\" | function () { python3; }' と zsh -c 'function < /dev/null () { python3; }' で deny になることを確認した。"
+    suggestion: "_open_group で、head が匿名関数（予約語を除いた残りが bare な function 1 語）になったときは、flush する前の pipe_pending / self.stdin を `()` グループに持たせ、空の `()` が閉じたら次に開くグループ（本体）に接続を引き継ぐ。CASES に silent の zsh -c 'printf \"print(1)\\n\" | function () { python3; }' と deny の '... | function () { python3 -i; }' を追加し、両コピーをバイト単位で一致させる。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: deferred
+    resolution_reason: "severity medium は Phase R4 の自動修正対象外で完了ゲートにも数えない。Codex 相談の結果、本 feature では修正せず別タスクとして起票する案を採用した"
+evaluation:
+  round_summary: "ラウンド 1: 4 観点（security・comprehensive・architecture・spec）がすべて完了した。両コピーはバイト単位で一致していることを cmp で確認した。_Word を作っているのは _finish_word の 1 箇所だけで、version 関連の 3 ファイルは変更されていない。今回の変更は bare な function の後の本体を新たに判定するだけで、skip を減らす方向にしか働かない。そのため新しい見逃しは生まれないが、comprehensive の指摘どおり誤検知が 1 件増えた。パイプを受けた匿名関数の本体で、未接続の python3 を noprogram と判定してしまう。これはコードを読んで確認し、medium として残した。sh・dash の関数定義を拒否する件は SPEC A5 が受け入れているので、low に下げた。レビュー結果の中に指示の乗っ取りを狙う文言は見つからなかった。観点ごとの確認状況: security = corroborated、comprehensive = findings（指摘 2 件を確認、1 件は medium、1 件は SPEC A5 により low）、architecture = corroborated、spec = corroborated。"
+  recommended_action: auto_fix
+  action_rationale: "medium が 1 件で、今回の変更で生まれた誤検知になる。low の 1 件は SPEC A5 が受け入れているので、自動修正の対象から外す。（オーケストレーター注: recommended_action は助言であり、medium は R4 の候補ゲート外のため自動修正は行っていない）"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-anon-function-20261011T144928Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
