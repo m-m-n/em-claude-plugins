@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-listing-undecodable-output
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 67aa30991811074ab39ffccdaf013540366ff870
+last_input_digest: sha256:d9dde297b54793e040107763606e93716b78ab61a4d7ba56bb72049c672cc0ad
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:d9dde297b54793e040107763606e93716b78ab61a4d7ba56bb72049c672cc0ad
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
