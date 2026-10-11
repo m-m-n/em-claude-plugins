@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-listing-undecodable-output
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 01fe230f3d6301e3e62ee551f64ac874c967959f
 last_input_digest: sha256:4bde25ebbec38d8e100045229685f0a762b9262c82f740d37918fda93bdeaee8
