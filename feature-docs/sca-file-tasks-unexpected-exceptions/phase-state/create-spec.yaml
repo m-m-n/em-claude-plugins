@@ -1,0 +1,17 @@
+schema_version: 1
+feature: sca-file-tasks-unexpected-exceptions
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: fd99a591850b784ad5547f55680b9b0b869aaf0d
+last_input_digest: null
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
