@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-cargo-implicit-workspace-members
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 3304a7985a72122b5ca21d0e15e0f39410d261da
 last_input_digest: sha256:1a04fd2f7f40c87b13a6d4d44c8232eaea23c140c4054a459826600e9f35d817
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -48,4 +48,4 @@ worker_runs:
     status: completed
   create-spec-run-0003:
     worker: spec-writer
-    status: dispatched
+    status: completed
