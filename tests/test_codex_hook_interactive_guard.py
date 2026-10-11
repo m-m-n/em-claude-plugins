@@ -344,6 +344,22 @@ CASES = [
     ("silent", "引用符内の波括弧はグループではない", "echo '{'; echo '}'"),
     ("silent", "語の一部の波括弧は引数", "echo {a,b}"),
     ("silent", "関数定義の本体は実行しない", "f() { python3; }"),
+    # A group after an array assignment is not a function body; only `name()`
+    # and `function name()` start a definition
+    ("deny", "配列代入のあとの改行と括弧", "a=()\n(python3 -i)"),
+    ("deny", "配列への追加のあとの改行と括弧", "a+=()\n(python3 -i)"),
+    ("deny", "export の配列代入のあとの改行と括弧", "export a=()\n(python3 -i)"),
+    ("deny", "配列代入のあとの空行と括弧", "a=()\n\n(python3)"),
+    ("deny", "配列代入のあとのコメント行と括弧", "a=()\n# c\n(python3 -i)"),
+    ("deny", "配列代入のあとの改行と波括弧", "a=()\n{ python3 -i; }"),
+    ("deny", "配列代入のあとの ; と括弧", "a=() ; (python3 -i)"),
+    ("deny", "動的な語の () のあとの括弧", "$f()\n(python3 -i)"),
+    ("deny", "3 語の () のあとの括弧", "a b c()\n(python3 -i)"),
+    ("silent", "関数名のあとの改行と括弧は本体", "foo()\n(python3 -i)"),
+    ("silent", "識別子でない関数名のあとの改行と括弧は本体", "my-func()\n(python3 -i)"),
+    ("silent", "関数名のあとの括弧は本体", "f() (python3 -i)"),
+    ("silent", "function 付きの関数定義の本体は実行しない", "function f() { python3; }"),
+    ("silent", "function 付きの関数名のあとの改行と波括弧は本体", "function f()\n{ python3 -i; }"),
     ("silent", "閉じていない括弧は判定不能", "(python3"),
     ("silent", "閉じていない波括弧は判定不能", "{ python3;"),
     ("silent", "} がコマンドの位置に無い波括弧は判定不能", "{ python3 }"),
@@ -649,6 +665,8 @@ class TestGuardDocumentation(unittest.TestCase):
         "stdin redirect",
         # FR5
         "pending pipe",
+        # A function definition starts only at `name(` or `function name(`
+        "only `name()` and `function name()` start a function definition",
     )
 
     def test_the_docstring_describes_the_new_behaviour(self):
