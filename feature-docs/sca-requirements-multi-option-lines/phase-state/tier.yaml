@@ -20,7 +20,7 @@ bases:
       '1': 0.94
       '2': 0.06
       '3': 0.0
-  observed_at: '2026-10-11T10:10:00+09:00'
+  observed_at: '2026-10-11T10:05:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.88
       '2': 0.12
       '3': 0.0
-  observed_at: '2026-10-11T10:20:00+09:00'
+  observed_at: '2026-10-11T10:09:30+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/scripts/scan-dependencies.py
@@ -61,4 +61,4 @@ pre_survey_estimate:
   evidence: em-workflow/scripts/scan-dependencies.py:2094 は先頭のみ解析し、:2189 は未認識・制約を読み飛ばす。メモリ上の入力で指定2形式とも空集合、complete=True、finding=0、skip_info=Noneを確認した。:2732
     に未完了時の計数処理がある。tests/test_scan_dependencies_pip_directness.py:369、:414、:734 は単独オプションを検証し、複合行のテストはない。概算は既存2関数の修正と、再現2形式・長形式2種類・複数参照・分割失敗の追加6ケースに基づく。呼出関係は:2189、:2369
     の本番呼出元2と既存内部依存7を合算した。:1087 に標準ライブラリ限定の検証がある
-decided_at: '2026-10-11T10:21:00+09:00'
+decided_at: '2026-10-11T10:10:00+09:00'
