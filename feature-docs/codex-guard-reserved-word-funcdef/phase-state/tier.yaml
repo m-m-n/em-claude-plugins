@@ -12,7 +12,7 @@ bases:
       '1': 0.94
       '2': 0.06
       '3': 0.0
-  observed_at: '2026-10-11T17:56:00+09:00'
+  observed_at: '2026-10-11T17:54:28+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -23,7 +23,7 @@ bases:
       '1': 0.67
       '2': 0.33
       '3': 0.0
-  observed_at: '2026-10-11T18:05:00+09:00'
+  observed_at: '2026-10-11T17:57:38+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/scripts/codex-hook-interactive-guard.py
@@ -48,4 +48,4 @@ pre_survey_estimate:
   caller_and_dependency_count: 2
   changes_external_contract: false
   changes_behavior: true
-decided_at: '2026-10-11T18:06:00+09:00'
+decided_at: '2026-10-11T17:57:45+09:00'
