@@ -1,0 +1,28 @@
+schema_version: 1
+feature: codex-guard-reserved-word-funcdef
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 6d9ebcb9e537edc3d6559a2c6f11f30422312bf5
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    answered_at: '2026-10-11T17:58:59+09:00'
+    source: batch-decision-table
+    answer_mode: freeform
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: codex-guard-reserved-word-funcdef
+    normalized_answer: feature 名をタスク記述から codex-guard-reserved-word-funcdef と導出した
+    resolution_note: 'gate: create-spec.feature-identity; policy option_id: derive_from_task_description'
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
