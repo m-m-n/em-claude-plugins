@@ -1,0 +1,122 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any edit: 10107 tests OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 -m unittest discover -s tests: 10141 tests OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestOptionLineIncludeFollowing.test_ac1_ac2_the_resolver_follows_an_include_that_is_not_the_first_option
+      - tests.test_scan_dependencies_pip_directness.TestOptionLineIncludeFollowing.test_ac1_ac2_the_scan_gives_one_finding_and_no_undetermined_note
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (both tests, both
+      forms `-c constraints.txt -r deps.txt` and `--index-url ... -r deps.txt`):
+      the resolver returned "AssertionError: DirectNames() != {'vuln-pkg'}"
+      (the line was read as a constraint / ignored, so deps.txt was never
+      followed) and the scan returned "AssertionError: 0 != 1 : {'findings':
+      [], 'summary': 'Scanned pip; 0 finding(s) at or above threshold.'...".
+  AC-2:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestOptionLineIncludeFollowing.test_ac2_several_includes_on_one_line_are_all_followed
+      - tests.test_scan_dependencies_pip_directness.TestOptionLineIncludeFollowing.test_ac2_an_include_after_another_option_is_followed_and_the_constraint_is_not_opened
+      - tests.test_scan_dependencies_pip_directness.TestOptionLineIncludeFollowing.test_ac2_the_same_target_named_more_than_once_on_one_line_is_opened_once
+      - tests.test_scan_dependencies_pip_directness.TestOptionLineIncludeFollowing.test_ac2_a_cycle_formed_by_mid_line_includes_terminates_and_opens_each_file_once
+      - tests.test_scan_dependencies_pip_directness.TestOptionLineIncludeFollowing.test_ac2_an_include_in_an_included_file_after_an_option_is_relative_to_that_file
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (all five):
+      only the leading option of a line was read, e.g. "AssertionError:
+      DirectNames({'own-pkg', 'a-pkg'}) != {'own-pkg', 'a-pkg', 'b-pkg'}"
+      for `-r a.txt -r b.txt` and "DirectNames({'first-pkg'}) !=
+      {'first-pkg', 'second-pkg'}" for the cycle formed by mid-line includes.
+      The never-opened-constraint assertions inside these tests were already
+      true before the change (the old code never opened constraints); the
+      failing assertion in each test is the missing include.
+  AC-3:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestUnsplittableAndValuelessOptionLines.test_ac3_an_unsplittable_line_takes_nothing_and_is_incomplete
+      - tests.test_scan_dependencies_pip_directness.TestUnsplittableAndValuelessOptionLines.test_ac3_an_unsplittable_line_does_not_stop_other_lines_and_files
+      - tests.test_scan_dependencies_pip_directness.TestUnsplittableAndValuelessOptionLines.test_ac3_an_unsplittable_line_raises_nothing_and_counts_an_undeclared_advisory_once
+      - tests.test_scan_dependencies_pip_directness.TestUnsplittableAndValuelessOptionLines.test_ac3_a_missing_include_value_makes_the_set_incomplete
+      - tests.test_scan_dependencies_pip_directness.TestUnsplittableAndValuelessOptionLines.test_ac3_a_missing_include_value_counts_an_undeclared_advisory_once
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (all five):
+      "AssertionError: True is not false" -- an unsplittable line such as
+      `-c a -r "deps.txt` or a value-less `--index-url URL -r` was ignored and
+      left the set complete; the scan returned "' 1 pip advisory with
+      undetermined directness (pip_directness_undetermined).' not found in
+      'Scanned pip; 0 finding(s) at or above threshold.'".
+  AC-4:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestMidLineIncludeContainment.test_ac4_a_mid_line_include_outside_the_root_is_never_opened
+      - tests.test_scan_dependencies_pip_directness.TestMidLineIncludeContainment.test_ac4_a_mid_line_symlink_leading_outside_the_root_is_never_opened
+      - tests.test_scan_dependencies_pip_directness.TestMidLineIncludeContainment.test_ac4_a_mid_line_url_include_is_never_fetched
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (all three):
+      "AssertionError: True is not false : -c a -r ../outside/outside-reqs.txt"
+      and the same for an absolute path and for a mid-line URL include -- the
+      line was ignored, so the set stayed complete (the file was never opened
+      and no network call happened before the change either; the failing
+      assertion is the missing incompleteness).
+  AC-5:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestMidLineEditable.test_ac5_a_named_editable_is_read_at_any_position
+      - tests.test_scan_dependencies_pip_directness.TestMidLineEditable.test_ac5_an_editable_without_a_name_or_a_value_makes_the_set_incomplete
+      - tests.test_scan_dependencies_pip_directness.TestMidLineEditable.test_ac5_an_unnamed_editable_counts_an_undeclared_advisory_once
+      - tests.test_scan_dependencies_pip_directness.TestMidLineEditable.test_ac5_a_named_editable_after_an_option_makes_its_advisory_a_finding
+      - tests.test_scan_dependencies_pip_directness.TestMidLineEditable.test_ac5_a_leading_editable_takes_only_the_next_token_as_its_value
+      - tests.test_scan_dependencies_pip_directness.TestMidLineEditable.test_ac5_a_leading_editable_without_a_name_does_not_hide_a_later_include
+      - tests.test_scan_dependencies_pip_directness.TestMidLineEditable.test_ac5_a_quoted_editable_value_is_one_token
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (all seven):
+      "AssertionError: 'named-pkg' not found in DirectNames({'own-pkg'}) :
+      --index-url https://example.invalid/simple -e named-pkg" (an editable
+      not at the start of the line was not read), "True is not false" for the
+      name-less / value-less forms, and the leading `-e named-pkg -r deps.txt`
+      swallowed the rest of the line so deps.txt was never followed.
+  AC-6:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviatedAndIgnoredOptions.test_ac6_an_abbreviated_long_option_makes_the_set_incomplete_and_opens_nothing
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviatedAndIgnoredOptions.test_ac6_an_abbreviation_does_not_consume_the_following_token
+      - tests.test_scan_dependencies_pip_directness.TestAbbreviatedAndIgnoredOptions.test_ac6_an_abbreviated_value_is_never_read_as_a_name_or_a_file
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (all three):
+      "AssertionError: True is not false : --requirem deps.txt" (and the other
+      abbreviated forms) -- an abbreviation was ignored and left the set
+      complete. The other half of the criterion (a lone `--`, `--index-url`,
+      `--hash=` and unknown options are ignored and leave completeness
+      unchanged) is pre-existing behaviour: test_ac6_a_lone_double_dash_and_other_options_are_ignored_and_stay_complete
+      and test_ac6_a_constraint_abbreviation_is_not_flagged passed before the
+      change and pass after it, so that half has no red state.
+  AC-7:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestIncompleteSetsReportOnlyThroughTheExistingNote.test_ac7_every_incomplete_case_is_reported_through_the_existing_note_only
+      - tests.test_scan_dependencies_pip_directness.TestIncompleteSetsReportOnlyThroughTheExistingNote.test_ac7_the_note_counts_each_undeclared_advisory_with_the_fixed_wording
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the original scan-dependencies.py (both):
+      "' 1 pip advisory with undetermined directness
+      (pip_directness_undetermined).' not found in 'Scanned pip; 0 finding(s)
+      at or above threshold.'" -- the incomplete cases were not reported at
+      all before the change. The absence checks (no splitter error text, no
+      line content, no path name, no other note token) hold after the change.
+  AC-8:
+    tests:
+      - tests.test_scan_dependencies_pip_directness.TestStandardLibraryOnly.test_the_script_imports_nothing_new_outside_the_standard_library
+      - tests.test_scan_dependencies_pip_directness.TestStandardLibraryOnly.test_this_test_module_imports_only_the_standard_library
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestStandardLibraryOnly tests detect an import of a module outside the
+      standard library in the script and in this test module (shlex and re are
+      standard library); no red state occurred for this change. The other
+      outcomes of the criterion are command results with no failing state
+      before the change: python3 -m unittest discover -s tests passes (see
+      final_failures), python3 em-workflow/scripts/check-plugin-invariants.py .
+      passes, `git diff --numstat` of
+      tests/test_scan_dependencies_pip_directness.py shows 0 deletions, and the
+      version fields of em-workflow/.claude-plugin/plugin.json and
+      .claude-plugin/marketplace.json are untouched.
