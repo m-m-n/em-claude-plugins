@@ -169,6 +169,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: 全段の -c 走査（作業リスト・読み直し上限）が深い入れ子での応答時間（NFR3）に直結するため
+    cross_validation: true
   residual_critical_high: 0
   needs_rework: false
 requirements:
