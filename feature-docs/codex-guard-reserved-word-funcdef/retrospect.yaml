@@ -1,0 +1,61 @@
+feature: codex-guard-reserved-word-funcdef
+collected_at: '2026-10-11T19:42:33+09:00'
+session_ids:
+- 01a12a8d-be2b-732e-9b9c-1df45f6935ec
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みで bucket 1 が 0.67（bucket 2 が 0.33）となり、評価器が full を返した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.06
+        confidence: 0.94
+        probabilities:
+          '0': 0.0
+          '1': 0.94
+          '2': 0.06
+          '3': 0.0
+      observed_at: '2026-10-11T17:54:28+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.33
+        confidence: 0.67
+        probabilities:
+          '0': 0.0
+          '1': 0.67
+          '2': 0.33
+          '3': 0.0
+      observed_at: '2026-10-11T17:57:38+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/codex-hook-interactive-guard.py
+      - em-review/scripts/codex-hook-interactive-guard.py
+      - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 60
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      work_still_required_evidence: HEAD d05aa447328b1c04e0fa7fecc2b57624cc62b754 と一致する両コピーで、then・do・else・!・time の直後の関数定義が deny になることを確認した。全例が bash -n -c を通過した。パーサーは予約語を words に追加し、_names_function は [then, f] などを関数名と認めない。単独の関数定義は silent、予約語直後の配列代入と後続サブシェルは deny だった。基準版 726917f4 の再現コマンドは両コピーで無出力だった。既存 CASES 348 件は両コピーで通過したが、この回帰を検出するケースはない。両コピーはバイト単位で同一で、_names_function の直接呼び出しは各コピーに1か所ある。ファイル変更は行っていない
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 10
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 2
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- verify 1 回目で TS-31 が失敗（main の 7656e549 で codex-reviewer の model が sonnet→haiku に変わり、既存テスト 3 件が古くなっていた）。feature 外のテスト期待値ずれが rework 1 ラウンドを消費した（task0002 で再固定）
+- review round 1/2 で low 指摘（`then function ()` / `! function ()`、extglob の `?()`、zsh の無名関数 `function ()`）が出た。予約語の無い形で基準コミットから既に silent だった穴で、直すには FR5 の名前の条件を広げる必要がある。findings には残らず、triage は report 分岐で起票されていない
