@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-extglob-funcname
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: edcd7272fff694f561574d43ae8777029de4fb34
 last_input_digest: sha256:9a9a6d0a01e165b9ed220d9dcdc9377586cd0f381219026ad900dc1c48b47347
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -23,10 +23,12 @@ worker_runs:
   input_digest: sha256:9a9a6d0a01e165b9ed220d9dcdc9377586cd0f381219026ad900dc1c48b47347
   output_digest: sha256:c3aec5a74279783021331c94dc5dc4258ee1226ffc03ff6fc88821755a3777a1
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:92a89151f5e13e16d7f24c02dd9929122e8510fd2a96a70ca1101f40117e8ffb
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-extglob-funcname/SPEC.md
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
