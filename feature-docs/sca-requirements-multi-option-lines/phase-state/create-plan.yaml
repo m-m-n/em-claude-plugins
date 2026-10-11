@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-requirements-multi-option-lines
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: ebef036c526c4a0ac00ed805c15e812f83d84786
 last_input_digest: sha256:e1e873edf2dbb77b6e64a65be81d8fe7ad1cb2ebe823160dbccbb79ac82c8248
@@ -10,11 +10,24 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:e1e873edf2dbb77b6e64a65be81d8fe7ad1cb2ebe823160dbccbb79ac82c8248
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:4a2849ddf61227cdd8b39d3645b3721205f221d6757d27c1d17e5e105001dfc8
+artifacts:
+- path: feature-docs/sca-requirements-multi-option-lines/THREAT-MODEL.md
+  sha256: sha256:0554b9d4838fd3e641b745d5e31c42e010e31b6f8112e619b821822ef2c710c8
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-requirements-multi-option-lines/VERIFICATION.md
+  sha256: sha256:525053a7924b784e955ce5b76968e358c749a80983d162c011b8418abbf97ae2
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-requirements-multi-option-lines/tasks/task0001.md
+  sha256: sha256:727e7efeb339c631544d3f60a960a46c4edaa8dca87cf2a07d6f1bd8a96e4295
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:e1e873edf2dbb77b6e64a65be81d8fe7ad1cb2ebe823160dbccbb79ac82c8248
+  base_workflow_blob: 33833a9ddeb986202fc85915f4535a31a582b687
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
