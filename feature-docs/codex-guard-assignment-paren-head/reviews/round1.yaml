@@ -1,0 +1,62 @@
+round: 1
+executed_at: "2026-10-11T17:38:32+09:00"
+scope:
+  review_mode: diff
+  base_commit: 726917f4380dfbf3210c8374da0aaadfc56ff561
+  head_commit: 01a23a013071c714b0ff6170bdd69db398c40ba7
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-assignment-paren-head/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 75a8159e787c3781
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 350
+  title: "予約語の直後に書いた関数定義の本体を判定してしまい、正当なコマンドを deny する回帰"
+  description: "_open_group は `(` の直前の単純コマンドの語の並びを _names_function に渡す。パーサーは `then` `do` `else` `!` `time` などの予約語を区切りとして扱わず、普通の語として words に積む。そのため `if true; then f() { python3 -i; }; fi` では `(` の時点の words が [then, f] になり head が False になる。空の `()` を閉じても fn_head が立たず、続く `{` のグループで呼び出されていない関数本体の `python3 -i` が判定されて deny になる。変更前は何も出力していなかった。`do f()`、`else f()`、`! f()`、`time f()` も同じ経路を通る。em-review 側も同一内容のため同じ回帰がある。CASES には予約語の直後の関数定義のケースが無い。"
+  suggestion: "_names_function で長さを見る前に、先頭に続く予約語（`!` `time` `then` `do` `else` `if` `elif` `while` `until`）を取り除き、残りを (a)(b) の条件で判定する。silent のケース（`if true; then f() { python3 -i; }; fi` など）と deny のケース（`if true; then a=()\\n(python3 -i)\\nfi` など）を CASES に足し、両コピーをバイト単位で同一に保つ。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 90
+  resolution: deferred
+  resolution_reason: "severity medium: auto-fix 候補（critical/high）の対象外。オーケストレーターが base 726917f4 と HEAD で再現を確認（base は無出力、HEAD は deny）。別タスクとして起票する"
+evaluation:
+  round_summary: "Round 1（diff、cross_validation=true）。報告された指摘は comprehensive#0 の medium 1 件だけで、critical / high は 0 件。この 1 件はコードを読んで確認した（_names_function・_open_group・_finish_word・_close_group の経路）。予約語の直後に書いた関数定義の本体を判定してしまい、誤って deny する回帰で、両コピーにある。reviewer の出力に指示の注入を試みる記述は見つからなかった。security=corroborated（新しい head 条件は変更前の made 条件の真部分集合で、新しいすり抜けは無い。回帰は deny 側の誤爆）。architecture=corroborated。spec=corroborated（FR1〜FR6・NFR2 は diff と一致。comprehensive の回帰は SPEC FR1 と Objective の食い違いでもある）。"
+  recommended_action: auto_fix
+  action_rationale: "critical / high は無く、残るのは medium の回帰 1 件だけ。原因は _names_function の 1 か所に絞れている。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-assignment-paren-head-20261011T083836Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
