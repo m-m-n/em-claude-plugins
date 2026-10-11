@@ -131,6 +131,7 @@ tasks:
     - tests/test_hooks_registration.py
     - tests/test_guardrail_hooks_migration.py
     - test-docs/cross-repo-write-guard/task0001.tests.yaml
+    - tests/test_muse_guard_registration.py
     skills:
     - infra-impl
     domains:
@@ -158,7 +159,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/cross-repo-write-guard/task0001
     notes: null
   task0002:
