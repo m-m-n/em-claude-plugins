@@ -359,9 +359,23 @@ class ListingOutcome:
       first-run state, not an error). Entries dropped item-wise by
       validation while others survive do not make the listing unavailable
       -- they are just counted in `dropped_count`.
-    - `available=False` -- one of the five genuine unavailability
+    - `available=False` -- one of the six genuine unavailability
       conditions (IMPLEMENTATION.md D6): `tasks` is None and `reason` is a
-      machine-stable identifier distinguishing which condition occurred.
+      machine-stable identifier distinguishing which condition occurred. In
+      the order they are checked:
+
+      1. `entry_point_invalid` -- the entry point is not an executable file.
+      2. `listing_launch_failed` -- launching it fails with an
+         operating-system error.
+      3. `listing_exit_nonzero` -- it exits non-zero (its output is not
+         inspected).
+      4. `listing_output_undecodable` -- it exits zero but stdout is not
+         strictly decodable as UTF-8.
+      5. `listing_output_not_json` -- stdout is not JSON.
+      6. `listing_output_not_array` -- stdout is JSON but not an array.
+
+    The `reason` is only the token, never decode-error wording and never any
+    part of the listing output.
     """
 
     def __init__(self, available, tasks=None, reason=None, dropped_count=0):
@@ -378,14 +392,32 @@ def list_security_tasks(entry_point):
     listing with zero validated entries must reach the filing branch.
     `status` is one of "incomplete" / "complete" / "discarded";
     `references` is the raw current 参照 field text (possibly empty,
-    possibly multi-line)."""
+    possibly multi-line).
+
+    The output of `task list` is received as bytes, and no decoding error
+    ever leaves this function. The six unavailable conditions are checked in
+    this order and the first match wins:
+
+    1. `entry_point_invalid` -- the entry point is not an executable file.
+    2. `listing_launch_failed` -- launching it fails with an
+       operating-system error.
+    3. `listing_exit_nonzero` -- it exits non-zero; neither stdout nor
+       stderr is inspected.
+    4. `listing_output_undecodable` -- it exits zero but stdout is not
+       strictly decodable as UTF-8 (the codec is fixed to UTF-8, not taken
+       from the locale, and no error handler replaces or passes through
+       invalid sequences).
+    5. `listing_output_not_json` -- the decoded stdout is not JSON.
+    6. `listing_output_not_array` -- it is JSON but not an array.
+
+    Only stdout is decoded; stderr is not decoded, so invalid bytes on
+    stderr do not affect the outcome."""
     if not _entry_point_is_valid(entry_point):
         return ListingOutcome(available=False, reason="entry_point_invalid")
     try:
         proc = subprocess.run(
             [str(entry_point), "task", "list", "--type", SECURITY_TASK_TYPE, "--format", "json"],
             capture_output=True,
-            text=True,
             check=False,
         )
     except OSError:
@@ -393,7 +425,11 @@ def list_security_tasks(entry_point):
     if proc.returncode != 0:
         return ListingOutcome(available=False, reason="listing_exit_nonzero")
     try:
-        data = json.loads(proc.stdout)
+        stdout_text = proc.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return ListingOutcome(available=False, reason="listing_output_undecodable")
+    try:
+        data = json.loads(stdout_text)
     except (json.JSONDecodeError, ValueError):
         return ListingOutcome(available=False, reason="listing_output_not_json")
     if not isinstance(data, list):
