@@ -1,11 +1,11 @@
 schema_version: 1
 feature: cross-repo-write-guard
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: efb5a3e39d4b8b1882f92c351c9664932659d667
 last_input_digest: sha256:3d15a83ab02306d6743bbe9441ba066d7ad7cd96ab375c72e2eddca2822b6273
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
