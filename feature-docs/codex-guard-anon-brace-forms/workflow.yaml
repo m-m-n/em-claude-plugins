@@ -1,0 +1,298 @@
+schema_version: 1
+feature: codex-guard-anon-brace-forms
+created: '2026-10-12'
+base_branch: main
+goal: '# codex-hook-interactive-guard: zsh の括弧なし匿名関数 function { ... } と、閉じ波括弧の後に引数を取る function () { ... } arg の本体を判定せず対話起動を見逃す
+
+
+  Notion タスク: <notion-url> (種別: バグ)
+
+
+  ## 現象 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、次の 2 つの zsh の匿名関数の形で本体の対話起動を見逃す。zsh ではどちらも定義した匿名関数をその場で実行する。
+
+  - 括弧なしの `function { python3 -i; }`: 現行パーサーは 1 つのコマンドとして読み、本体を判定しない
+
+  - 閉じ波括弧の後に引数を取る `function () { python3 -i; } arg`: 判定不能として素通しする
+
+  feature `codex-guard-anon-function`（名前のない `function ()` を匿名関数として本体を判定する修正）の create-spec で、Codex に確認したうえで対象外とし、残存する見逃しとして記録した。関数名判定の修正だけでは直らず、波括弧の認識と閉じた後の引数処理の変更が要る。
+
+
+  ## 再現手順 (必須)
+
+  1. コマンド `zsh -c ''function { python3 -i; }''` を `{"tool_input": {"command": "..."}}` として hook の標準入力に渡す
+
+  2. 何も出力されない（silent）
+
+  3. `zsh -c ''function () { python3 -i; } arg''` でも同じく silent
+
+
+  ## 期待する挙動 (必須)
+
+  どちらの形も zsh の匿名関数として本体を判定し、本体に対話起動があれば deny する。
+
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上の 2 コマンドを deny として追加
+
+  - [ ] 両コピーがバイト単位で同一のまま
+
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py`
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
+  - 記録: `feature-docs/codex-guard-anon-function/phase-state/create-spec.yaml` の `assumption.a4.out-of-scope-forms`（ブランチ `em-workflow/codex-guard-anon-function/integration`）
+
+
+  ## 実害・発生条件 (任意)
+
+  見逃し側（fail-open）。zsh -c の中でこれらの形の匿名関数を使って対話プログラムを起動すると、ガードを通り抜けて対話待ちの孤児プロセスが残りうる。
+
+
+  ## 追加指示（起動時）
+
+  - 完了時は integration branch を remote に push し、base_branch へ gh pr create で PR を作る。integration branch はローカル・リモートとも残す（base_branch へ自動マージしない）。
+
+  - 不明点は Codex に相談し、比較的良いと判断された選択肢を採用する。
+
+  - その議論の内容を Notion に記録する。
+
+  '
+parent_branch: em-workflow/codex-guard-anon-brace-forms/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.73
+      '2': 0.27
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.4
+      '2': 0.6
+      '3': 0.0
+  at: '2026-10-12T00:30:13+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 7a529a8f9baf77c644135115c4c9f580d201e1e5
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たないフックスクリプトのパーサー修正とテスト追加のみのため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 3751c2d5508e0ba32b28511589b43d08b88dfcd4
+- id: implement
+  status: completed
+  completed_at_commit: dd0b797684e2885eee9b1074ea9ab76a58db9c08
+  base_commit: 328f1d1c7eb49e32a60cd21773aa62fc546c3a70
+- id: review
+  status: completed
+  completed_at_commit: 1b57e3972f932171a2be40a2df2a2ef2f86a03c4
+- id: verify
+  status: completed
+  completed_at_commit: 01afef04f13454b5f5ec7a1b0fd7461156c53697
+  result: pass
+  failed_items: []
+- id: retrospect
+  status: completed
+  completed_at_commit: 08f6444b0d22fd270a94c98711517ba492804387
+tasks:
+  task0001:
+    title: Judge zsh anonymous-function bodies, their arguments and their pipe connection
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/codex-guard-anon-brace-forms/task0001
+review:
+  status: completed
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR3 が括弧なし形の判別に線形時間を要求し、パーサーの前向き走査を変更しているため
+    cross_validation: true
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 括弧なしの匿名関数を読む
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
+    - TS-5
+  FR2:
+    title: 匿名関数の本体を特定し、閉じ波括弧の後の語を引数として読む
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-3
+    - TS-5
+  FR3:
+    title: パイプの接続を匿名関数の本体に渡す
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  FR4:
+    title: 既存の読みを保つ
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  FR5:
+    title: 説明文を新しい規則に合わせる
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-9
+  FR6:
+    title: 両コピーへ同一の変更
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-10
+  FR7:
+    title: 回帰テストを追加する
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+  NFR1:
+    title: 既存テストの維持
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+    - TS-8
+  NFR2:
+    title: 標準ライブラリのみ・非再帰・1 回の前向き走査
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-11
+  NFR3:
+    title: 括弧なし形の判別の線形時間
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+  NFR4:
+    title: テストスイートの成功
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+  NFR5:
+    title: version を変更しない
+    status: ok
+    tbd_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-12
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

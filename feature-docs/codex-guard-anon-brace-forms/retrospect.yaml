@@ -1,0 +1,46 @@
+feature: codex-guard-anon-brace-forms
+collected_at: "2026-10-12T01:52:00+09:00"
+session_ids: [01a12be0-11f6-7711-99f0-301cc9fc8e41]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "NFR3 が括弧なし形の判別に線形時間を要求し、パーサーの前向き走査を変更しているため"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み（description_plus_code）で P(0)+P(1)=0.40 が reduced の閾値に届かず full"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.27, confidence: 0.73, probabilities: {"0": 0.0, "1": 0.73, "2": 0.27, "3": 0.0}}
+        observed_at: "2026-10-12T00:27:15+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.6, confidence: 0.6, probabilities: {"0": 0.0, "1": 0.4, "2": 0.6, "3": 0.0}}
+        observed_at: "2026-10-12T00:30:10+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 80
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium（stable_id 155bd6279d2d5a79: `}` の前にセミコロンが無い括弧なし匿名関数が文字列全体を判定不能にし、同じ文字列の対話起動を見逃す）は unresolved のまま。後続タスクとして起票する方針"
+  - "evaluator が low に下げて除外した 2 件（匿名関数の頭より前の標準入力リダイレクト、引数中の `(` で after_group が切れる件）はいずれも非対話実行の誤 deny"
+  - "実変更は約 560 行（推定 80 行）。事前調査の changed_lines_approx が大きく下振れした"
