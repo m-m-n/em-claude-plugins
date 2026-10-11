@@ -79,8 +79,8 @@ CASES = [
     ("silent", "heredoc 本文", "cat <<'EOF'\npython3 -i\nEOF"),
     ("silent", "heredoc 本文の引数なし起動", "cat <<EOF\npython3\nEOF"),
     ("silent", "<<- の heredoc 本文", "cat <<-EOF\n\tpython3 -i\n\tEOF"),
-    ("silent", "第 2 段の bash -c は評価しない", "bash -c \"bash -c 'python3 -i'\""),
-    ("silent", "sh -c の中の bash -lc の中", "sh -c 'bash -lc \"python3 -i\"'"),
+    ("deny", "第 2 段の bash -c の中の -i を判定する", "bash -c \"bash -c 'python3 -i'\""),
+    ("deny", "sh -c の中の bash -lc の中の -i を判定する", "sh -c 'bash -lc \"python3 -i\"'"),
     # AC-4: undecidable input passes (FR11)
     ("silent", "env -i", "env -i python3"),
     ("silent", "env -i と -i", "env -i python3 -i"),
@@ -262,7 +262,7 @@ CASES = [
     ("silent", "ipython とスクリプト", "ipython script.py"),
     ("silent", "ipython -i はスクリプト実行後に対話", "ipython -i script.py"),
     ("silent", "ipython3 -c", "ipython3 -c 'x'"),
-    # bash -c: one level of literals (FR9)
+    # bash -c: literal shell `-c` strings are judged at every level (FR9)
     ("deny", "bash -c の中の -i", 'bash -c "python3 -i"'),
     ("deny", "bash -c の中の引数なし起動", "bash -c 'python3'"),
     ("deny", "sh -c の中の cd と -i", "sh -c 'cd x && python3 -i'"),
@@ -302,7 +302,25 @@ CASES = [
     ("silent", "bash -cx と外側のパイプ", "echo | bash -cx python3"),
     ("silent", "bash -cx と外側の入力", "bash -cx 'python3' < f"),
     ("silent", "bash -cx の動的な文字列", 'bash -cx "$CMD"'),
-    ("silent", "bash -cx の文字列も 1 段だけ判定する", "bash -cx \"bash -c 'python3 -i'\""),
+    ("deny", "bash -cx の文字列はどの段でも判定する", "bash -cx \"bash -c 'python3 -i'\""),
+    # A literal shell -c string is judged at every nesting level, with the
+    # first-level rules
+    ("deny", "第 2 段の引数なし起動", "bash -c \"bash -c 'python3'\""),
+    ("deny", "第 2 段の中の extglob の ? で終わる語の () のあとの括弧",
+     "bash -c 'bash -O extglob -c \"time /bin/true?()\n(python3 -i)\"'"),
+    ("deny", "第 3 段の -i を判定する", "bash -c \"bash -c \\\"bash -c 'python3 -i'\\\"\""),
+    ("deny", "第 2 段の zsh -c", "bash -c \"zsh -c 'python3 -i'\""),
+    ("deny", "第 2 段の束ねた -lc", "bash -c \"bash -lc 'python3 -i'\""),
+    ("deny", "第 2 段の env 経由の bash -c", "bash -c \"env FOO=1 bash -c 'python3 -i'\""),
+    ("deny", "第 2 段の中の cd と -i", "bash -c \"bash -c 'cd x && python3 -i'\""),
+    ("deny", "読めない第 2 段の文字列のあとの起動も判定する", "bash -c \"bash -c 'echo \\\"x'; python3 -i\""),
+    ("silent", "外側のパイプは第 2 段にも届く", "echo | bash -c \"bash -c python3\""),
+    ("silent", "外側の入力リダイレクトは第 2 段にも届く", "bash -c \"bash -c python3\" < f"),
+    ("silent", "第 2 段の中のパイプの右側", "bash -c \"bash -c 'echo x | python3'\""),
+    ("silent", "第 2 段の動的な文字列", "bash -c 'bash -c \"$CMD\"'"),
+    ("silent", "第 2 段の無害な文字列", "bash -c \"bash -c 'echo hi'\""),
+    ("silent", "第 2 段の閉じていない引用符は判定不能", "bash -c \"bash -c 'python3 -i \\\"x'\""),
+    ("silent", "第 2 段の中の関数定義の本体は判定しない", "bash -c \"bash -c 'f() { python3 -i; }'\""),
     # Information short options belong to each interpreter (FR2)
     ("deny", "bash -h は情報表示ではない", "bash -h"),
     ("deny", "sh -h は情報表示ではない", "sh -h"),
@@ -488,6 +506,59 @@ class HookCopiesMixin:
                 yield plugin, path
 
 
+# The value the specification gives the re-read limit: the characters a
+# second-level-and-deeper string may add to the running total.
+NESTED_READ_LIMIT = 1000000
+
+
+def sq(text):
+    """Quote `text` for a shell inside single quotes."""
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
+def holding(*strings):
+    """Commands that each run one of `strings` as a literal shell `-c` string.
+    The length of a string as the parser sees it is its own length, so the
+    boundary arithmetic of the limit tests stays plain."""
+    return "; ".join("bash -c " + sq(text) for text in strings)
+
+
+def padded_echo(length):
+    """A string of exactly `length` characters that echoes quoted padding."""
+    head, tail = "echo '", "'"
+    return head + "x" * (length - len(head) - len(tail)) + tail
+
+
+def padded_launch(length, launch="python3 -i"):
+    """A string of exactly `length` characters that echoes quoted padding and
+    then runs `launch`."""
+    head, tail = "echo '", "'; " + launch
+    return head + "x" * (length - len(head) - len(tail)) + tail
+
+
+def unreadable(length):
+    """A string of exactly `length` characters with an unbalanced quote."""
+    head = "echo '"
+    return head + "x" * (length - len(head))
+
+
+def quoted_nesting(depth):
+    """`python3 -i` inside `depth` shell `-c` strings, each level quoted again.
+    Return (command, counted): counted is the total length of the strings from
+    the second level down, which is what the limit counts."""
+    levels = ["python3 -i"]
+    for _ in range(depth):
+        levels.append(holding(levels[-1]))
+    return levels[-1], sum(len(text) for text in levels[:depth - 1])
+
+
+def deepest_nesting_within_the_limit():
+    depth = 1
+    while quoted_nesting(depth + 1)[1] <= NESTED_READ_LIMIT:
+        depth += 1
+    return depth
+
+
 class TestCasesTable(HookCopiesMixin, unittest.TestCase):
     def test_cases_hold_both_a_deny_and_a_silent_case(self):
         verdicts = {expected for expected, _, _ in CASES}
@@ -496,6 +567,16 @@ class TestCasesTable(HookCopiesMixin, unittest.TestCase):
     def test_cases_are_unique(self):
         commands = [command for _, _, command in CASES]
         self.assertEqual(len(commands), len(set(commands)))
+
+    def test_the_bash_c_section_comment_says_every_level_is_judged(self):
+        lines = [
+            line.strip()
+            for line in Path(__file__).read_text(encoding="utf-8").splitlines()
+            if line.strip().startswith("# bash -c:")
+        ]
+        self.assertEqual(len(lines), 1)
+        self.assertIn("literal shell `-c` strings are judged at every level", lines[0])
+        self.assertNotIn("one level", lines[0])
 
     def test_cases_run_against_both_copies(self):
         for plugin, path in self.for_each_copy():
@@ -701,6 +782,292 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
         for name, command in inputs.items():
             with self.subTest(shape=name):
                 self.assert_every_copy_answers(command)
+
+    def test_nesting_to_the_depth_the_limit_admits_is_denied(self):
+        # Each level quotes the one inside it again, so the quote characters
+        # multiply and the depth the limit admits stays small; the absence of
+        # recursion is pinned by TestNoRecursion.
+        depth = deepest_nesting_within_the_limit()
+        self.assertGreater(depth, 5)
+        command, counted = quoted_nesting(depth)
+        self.assertLessEqual(counted, NESTED_READ_LIMIT)
+        for plugin, path in self.for_each_copy():
+            code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+            self.assertEqual((code, err), (0, ""))
+            decision = json.loads(out)["hookSpecificOutput"]
+            self.assertEqual(decision["permissionDecision"], "deny")
+
+    def test_nesting_one_level_deeper_than_the_limit_admits_is_answered(self):
+        command, counted = quoted_nesting(deepest_nesting_within_the_limit() + 1)
+        self.assertGreater(counted, NESTED_READ_LIMIT)
+        self.assert_every_copy_answers(command)
+
+    def test_many_sibling_second_level_strings_over_the_limit_are_answered(self):
+        each = 600
+        count = NESTED_READ_LIMIT // each + 1
+        strings = [padded_echo(each)] * count + ["python3 -i"]
+        self.assert_every_copy_answers(holding(holding(*strings)))
+
+
+class TestNestedJudgmentOrder(HookCopiesMixin, unittest.TestCase):
+    """The first launch to deny in judgment order decides the reason: a nested
+    string is judged, command by command, before the command after its
+    holder (TM-1)."""
+
+    def reason_of(self, path, command):
+        code, out, err = run_hook(path, payload_for(command))
+        self.assertEqual((code, err), (0, ""))
+        return json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+
+    def assert_program_less_reason(self, reason, name):
+        self.assertIn(f"`{name}` を", reason)
+        self.assertIn("プログラムを渡さずに", reason)
+        self.assertNotIn("（-i）", reason)
+
+    def assert_interactive_reason(self, reason, name):
+        self.assertIn(f"`{name}` を", reason)
+        self.assertIn("（-i）", reason)
+        self.assertNotIn("プログラムを渡さずに", reason)
+
+    def test_a_nested_launch_is_judged_before_a_later_level_zero_launch(self):
+        for plugin, path in self.for_each_copy():
+            reason = self.reason_of(path, 'bash -c "bash -c node"; python3 -i')
+            self.assert_program_less_reason(reason, "node")
+            self.assertNotIn("`python3` を", reason)
+
+    def test_a_nested_launch_is_judged_before_a_later_command_of_its_holder(self):
+        for plugin, path in self.for_each_copy():
+            reason = self.reason_of(path, 'bash -c "bash -c node; python3 -i"')
+            self.assert_program_less_reason(reason, "node")
+            self.assertNotIn("`python3` を", reason)
+
+    def test_a_launch_before_the_nested_string_decides_first(self):
+        for plugin, path in self.for_each_copy():
+            reason = self.reason_of(path, 'bash -c "python3 -i; bash -c node"')
+            self.assert_interactive_reason(reason, "python3")
+            self.assertNotIn("`node` を", reason)
+
+    def test_the_commands_of_a_nested_string_are_judged_in_source_order(self):
+        for plugin, path in self.for_each_copy():
+            reason = self.reason_of(path, "bash -c \"bash -c 'node; python3 -i'\"")
+            self.assert_program_less_reason(reason, "node")
+            reason = self.reason_of(path, "bash -c \"bash -c 'python3 -i; node'\"")
+            self.assert_interactive_reason(reason, "python3")
+
+    def test_the_whole_nested_string_is_judged_before_the_next_command(self):
+        for plugin, path in self.for_each_copy():
+            command = "bash -c \"bash -c 'bash -c \\\"node\\\"'; python3 -i\""
+            reason = self.reason_of(path, command)
+            self.assert_program_less_reason(reason, "node")
+
+
+def recursion_findings(source):
+    """Name every function that calls itself and every cycle among the
+    module-level functions in `source`. A function calls itself when a call in
+    its body is its own bare name (a method is not meant by a bare name), or,
+    for a method, when it is `self.<method>`."""
+    tree = ast.parse(source)
+    functions = (ast.FunctionDef, ast.AsyncFunctionDef)
+    findings = []
+    method_ids = set()
+    for cls in ast.walk(tree):
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        for member in cls.body:
+            if not isinstance(member, functions):
+                continue
+            method_ids.add(id(member))
+            for call in ast.walk(member):
+                if (
+                    isinstance(call, ast.Call)
+                    and isinstance(call.func, ast.Attribute)
+                    and isinstance(call.func.value, ast.Name)
+                    and call.func.value.id == "self"
+                    and call.func.attr == member.name
+                ):
+                    findings.append(f"{cls.name}.{member.name} calls itself through self")
+    for fn in ast.walk(tree):
+        if not isinstance(fn, functions) or id(fn) in method_ids:
+            continue
+        for call in ast.walk(fn):
+            if (
+                isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Name)
+                and call.func.id == fn.name
+            ):
+                findings.append(f"{fn.name} calls itself by name")
+    module_level = {node.name: node for node in tree.body if isinstance(node, functions)}
+    pending = {
+        name: {
+            call.func.id
+            for call in ast.walk(node)
+            if isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Name)
+            and call.func.id in module_level
+            and call.func.id != name
+        }
+        for name, node in module_level.items()
+    }
+    # Drop the functions that call nothing still pending, until none is left to
+    # drop. What remains lies on a cycle or leads into one.
+    changed = True
+    while changed:
+        changed = False
+        for name in [name for name, targets in pending.items() if not targets]:
+            del pending[name]
+            for targets in pending.values():
+                targets.discard(name)
+            changed = True
+    if pending:
+        findings.append("cycle among module-level functions: " + ", ".join(sorted(pending)))
+    return findings
+
+
+def called_names(node):
+    return {
+        call.func.id
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+    }
+
+
+class TestNoRecursion(unittest.TestCase):
+    """Nesting is followed with a work list, so the depth of nested strings
+    costs no call stack (TM-2)."""
+
+    def test_no_function_calls_itself_and_no_functions_form_a_cycle(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertEqual(recursion_findings(path.read_text(encoding="utf-8")), [])
+
+    def test_the_checker_flags_a_direct_self_call(self):
+        findings = recursion_findings("def f(n):\n    return f(n - 1)\n")
+        self.assertEqual(findings, ["f calls itself by name"])
+
+    def test_the_checker_flags_a_method_that_calls_itself_through_self(self):
+        source = "class A:\n    def walk(self, node):\n        return self.walk(node)\n"
+        self.assertEqual(recursion_findings(source), ["A.walk calls itself through self"])
+
+    def test_the_checker_flags_a_two_function_cycle(self):
+        source = "def a():\n    return b()\n\ndef b():\n    return a()\n"
+        findings = recursion_findings(source)
+        self.assertEqual(len(findings), 1)
+        self.assertIn("a, b", findings[0])
+
+    def test_the_checker_passes_a_chain_and_a_method_named_like_a_function(self):
+        source = (
+            "def a():\n    return b()\n\n"
+            "def b():\n    return 1\n\n"
+            "def parse(text):\n    return Parser(text).parse()\n\n"
+            "class Parser:\n"
+            "    def __init__(self, text):\n        self.text = text\n"
+            "    def parse(self):\n        return self._read()\n"
+            "    def _read(self):\n        return self.text\n"
+        )
+        self.assertEqual(recursion_findings(source), [])
+
+    def test_scan_walks_the_nested_strings_and_find_deny_keeps_its_signature(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+                functions = {
+                    node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)
+                }
+                find_deny = functions["find_deny"]
+                arguments = find_deny.args
+                self.assertEqual([arg.arg for arg in arguments.args], ["command"])
+                self.assertEqual(
+                    (arguments.posonlyargs, arguments.kwonlyargs, arguments.vararg, arguments.kwarg),
+                    ([], [], None, None),
+                )
+                self.assertIn("_scan", called_names(find_deny))
+                self.assertTrue({"_judge", "parse"} <= called_names(functions["_scan"]))
+
+
+class TestNestedReadLimit(HookCopiesMixin, unittest.TestCase):
+    """The characters re-read from second-level-and-deeper strings are capped
+    at `NESTED_READ_LIMIT` per hook command (TM-2). First-level strings are
+    never counted. The strings below are built so that the length of a
+    second-level string is plain arithmetic (see `holding`)."""
+
+    TIMEOUT = 60
+
+    def verdict(self, path, command):
+        result = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+        return verdict_of(result)
+
+    def assert_verdict(self, expected, command):
+        for plugin, path in self.for_each_copy():
+            self.assertEqual(self.verdict(path, command), expected)
+
+    def test_each_copy_defines_the_limit_once_with_the_specified_value(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+                stores = [
+                    node for node in ast.walk(tree)
+                    if isinstance(node, ast.Name)
+                    and node.id == "NESTED_READ_LIMIT"
+                    and isinstance(node.ctx, ast.Store)
+                ]
+                self.assertEqual(len(stores), 1, "the constant is assigned exactly once")
+                assigns = [
+                    node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == "NESTED_READ_LIMIT" for t in node.targets)
+                ]
+                self.assertEqual(len(assigns), 1, "the assignment is at module level")
+                value = assigns[0].value
+                self.assertIsInstance(value, ast.Constant)
+                self.assertIs(type(value.value), int)
+                self.assertEqual(value.value, 1000000)
+
+    def test_a_string_that_brings_the_total_exactly_to_the_limit_is_read(self):
+        self.assert_verdict("deny", holding(holding(padded_launch(NESTED_READ_LIMIT))))
+
+    def test_one_more_character_and_the_string_is_not_read(self):
+        self.assert_verdict("silent", holding(holding(padded_launch(NESTED_READ_LIMIT + 1))))
+
+    def test_the_total_runs_across_the_strings_of_one_first_level_string(self):
+        half = NESTED_READ_LIMIT // 2
+        self.assert_verdict("deny", holding(holding(padded_echo(half), padded_launch(half))))
+        self.assert_verdict("silent", holding(holding(padded_echo(half), padded_launch(half + 1))))
+
+    def test_the_total_runs_across_first_level_strings(self):
+        half = NESTED_READ_LIMIT // 2
+        self.assert_verdict(
+            "silent", holding(holding(padded_echo(half)), holding(padded_launch(half + 1)))
+        )
+
+    def test_an_over_limit_string_in_one_first_level_string_stops_the_later_ones(self):
+        command = holding(holding(padded_echo(NESTED_READ_LIMIT + 1)), holding("python3 -i"))
+        self.assert_verdict("silent", command)
+
+    def test_a_string_that_proves_undecidable_still_counts(self):
+        command = holding(holding(unreadable(NESTED_READ_LIMIT)), holding("python3 -i"))
+        self.assert_verdict("silent", command)
+
+    def test_a_launch_before_an_over_limit_string_is_denied(self):
+        self.assert_verdict(
+            "deny", holding(holding("python3 -i", padded_echo(NESTED_READ_LIMIT + 1)))
+        )
+        self.assert_verdict(
+            "deny", holding(holding("python3 -i"), holding(padded_echo(NESTED_READ_LIMIT + 1)))
+        )
+
+    def test_first_level_strings_are_never_counted(self):
+        each = NESTED_READ_LIMIT // 2 + 1
+        command = holding(padded_echo(each), padded_echo(each), "python3 -i")
+        self.assert_verdict("deny", command)
+
+    def test_a_level_zero_launch_after_the_limit_is_reached_is_denied(self):
+        command = holding(holding(padded_echo(NESTED_READ_LIMIT + 1))) + "; python3 -i"
+        self.assert_verdict("deny", command)
+
+    def test_a_first_level_launch_after_the_limit_is_reached_is_denied(self):
+        over = holding(padded_echo(NESTED_READ_LIMIT + 1))
+        self.assert_verdict("deny", holding(over, "python3 -i"))
+        self.assert_verdict("deny", holding(over + "; python3 -i"))
 
 
 def module_docstring(path):
