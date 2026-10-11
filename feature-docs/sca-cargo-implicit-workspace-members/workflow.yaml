@@ -97,7 +97,8 @@ workflow:
   base_commit: dad69f312e33ce39d2f49e1efa84458403eea47c
   completed_at_commit: 50d7e33930cf83222025c23152844ce8ed4bba62
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 5cd8af42a46515950d81b66163193fcce8e9e835
 - id: verify
   status: pending
 - id: retrospect
@@ -129,7 +130,15 @@ tasks:
     status: merged
     branch: em-workflow/sca-cargo-implicit-workspace-members/task0001
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
