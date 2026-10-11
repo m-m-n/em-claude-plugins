@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-nested-parse-error
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 097d9770cdb3816a11aad59fe49a83ec17bf849b
 last_input_digest: sha256:d613b455c06ed38f25f6679855e8cf4de29d3a261f4f445a84ea257f9847a29d
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -100,10 +100,16 @@ worker_runs:
   input_digest: sha256:d613b455c06ed38f25f6679855e8cf4de29d3a261f4f445a84ea257f9847a29d
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: null
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-nested-parse-error/REQUIREMENTS.md
+  sha256: sha256:52703631606b11f431ff03f425b55b67a417ade4df370fb588388a21def05e0a
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-nested-parse-error/SPEC.md
+  sha256: sha256:bf6b651b2baa9ee6bab7fb98818b1bb7f39d2f08c2f41d165b113eb84cb91622
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
