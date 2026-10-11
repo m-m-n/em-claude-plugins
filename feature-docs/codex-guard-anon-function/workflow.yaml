@@ -139,7 +139,8 @@ workflow:
   completed_at_commit: 28fe6ce1fad0cbb520c63ec7732a4112a1dc8d83
   base_commit: ac43712c8f25c7d25444223224dbf29bce377a3b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 75c57b3b54a3630ac4a325ed0f7d915e457909f3
 - id: verify
   status: pending
 - id: retrospect
@@ -172,7 +173,11 @@ tasks:
     status: merged
     branch: em-workflow/codex-guard-anon-function/task0001
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
