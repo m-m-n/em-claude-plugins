@@ -125,7 +125,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/sca-cargo-implicit-workspace-members/task0001
 review:
   status: pending
