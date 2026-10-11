@@ -1,0 +1,62 @@
+task_id: task0002
+# The suite as inherited (python3 -m unittest discover -s tests, 10250 tests,
+# 202.6 s, FAILED failures=3 skipped=1): the three stale codex-reviewer
+# expectations this task re-pins.
+baseline_failures:
+  - "test_ac5_unchanged_ranges_are_byte_identical (test_reproduction_reviewer_instructions.TestCodexReviewerBriefs) plugin='em-review'"
+  - "test_ac5_unchanged_ranges_are_byte_identical (test_reproduction_reviewer_instructions.TestCodexReviewerBriefs) plugin='em-workflow'"
+  - "test_frontmatter_fields_unchanged (test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement) line='model: sonnet'"
+# Actually re-executed after the implementation and this record
+# (python3 -m unittest discover -s tests): no failures.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_unchanged_ranges_are_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      Before the digests were re-pinned the test failed for both plugins:
+      "AC-5 em-workflow [head]: byte content changed (expected sha256
+      d4aff4b9..., got 54028155...)" and "AC-5 em-review [head]: byte content
+      changed (expected sha256 56a5b355..., got d4e7a6f7...)".
+  AC-2:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_frontmatter_fields_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Before the expected value was changed the test failed with
+      AssertionError: 'model: sonnet' not found in the codex-reviewer
+      frontmatter, which holds model: haiku.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion constrains the git diff of the two test files against the
+      task base. No existing test reads that diff (a search of tests/ for
+      codex-reviewer, test_reproduction_reviewer_instructions and
+      test_reviewer_roles_protocol finds only tests of the agent files and
+      the modules themselves), so no executable red exists. Checked with git
+      diff: three changed lines, the two head digests and the model value.
+  AC-4:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_unchanged_ranges_are_byte_identical
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_frontmatter_fields_unchanged
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      test_ac5_unchanged_ranges_are_byte_identical and
+      test_frontmatter_fields_unchanged detect an edit to the head range or
+      the model line of either codex-reviewer agent file; no red state
+      occurred for this change because neither agent file is modified. The
+      full criterion (no modification anywhere in the files) is checked with
+      git diff.
+  AC-5:
+    tests:
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_unchanged_ranges_are_byte_identical
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_frontmatter_fields_unchanged
+      - tests.test_codex_hook_interactive_guard
+    red_confirmed: true
+    red_reason: >-
+      The baseline full-suite run ended FAILED (failures=3), non-zero, on the
+      three tests listed under baseline_failures. tests.test_codex_hook_interactive_guard
+      was not among them and still passes.
