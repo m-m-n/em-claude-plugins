@@ -1,0 +1,55 @@
+feature: cross-repo-write-guard
+collected_at: "2026-10-12T06:21:11+09:00"
+session_ids: [01a12cd6-7e7a-7768-835b-6fc20616a373]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み（description_plus_code）で P(0)+P(1)=0.0 が reduced の閾値に届かず full"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 2.27, confidence: 0.53, probabilities: {"0": 0.0, "1": 0.1, "2": 0.53, "3": 0.37}}
+        observed_at: "2026-10-12T02:21:21+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 2.5, confidence: 0.5, probabilities: {"0": 0.0, "1": 0.0, "2": 0.5, "3": 0.5}}
+        observed_at: "2026-10-12T02:21:21+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/cross-repo-write-guard.py
+        - em-workflow/hooks/hooks.json
+        - em-workflow/hooks/destructive-guard.py
+        - tests/test_cross_repo_write_guard.py
+        - tests/test_hooks_registration.py
+        - tests/test_guardrail_hooks_migration.py
+        - .claude/rules/hook-tests.md
+        - em-workflow/README.md
+      changed_lines_approx: 600
+      new_functions_needed: 10
+      new_files_needed: 2
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules:
+        - em-workflow/hooks/destructive-guard.py
+        - tests/test_hooks_registration.py
+        - tests/test_guardrail_hooks_migration.py
+        - tests/test_guard_deferral_parity.py
+        - em-workflow/README.md
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 40
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 3
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 6 件（8c467a5c688b5e0c, ff6cd61642b66f56, 65ce106ecde3320d, 68b94bbc127e2544, f8fa575926616404, 072c33ebbe5f52a5）は unresolved のまま。うち 5 件は TM-1 / TM-3 の見逃しで、フックの目的に直結する。後続タスクとして起票する方針"
+  - "evaluator が low に下げて除外した 3 件（`<>` リダイレクトの見逃し、添付オプションの `~` 展開の誤判定、重複登録キー計算の二重実装）"
+  - "実変更はコードとテストで約 2700 行（推定 600 行）。事前調査の changed_lines_approx が大きく下振れした"
+  - "事前調査は destructive-guard.py の変更を見込んだが、create-spec で FR16（変更しない）に決まり、実際には触れていない"
