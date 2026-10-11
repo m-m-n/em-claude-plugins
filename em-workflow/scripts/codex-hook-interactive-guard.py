@@ -44,7 +44,13 @@ Decision flow:
      definition written right after `then` or `do` still starts one; a
      non-dynamic `-p` right after `time` is removed with it, and a reserved
      word later in the words is never removed. When nothing remains, the
-     original words are judged. The group that follows the empty `()` of a
+     original words are judged. When the one word left after the removal is
+     `function` and it holds no quote, no escape and no expansion (a zsh
+     anonymous function `function () { ...; }`), it is no function name: the
+     `()` after it starts no definition and the group after its `()` is
+     judged, with or without a reserved word in front of it. A quoted or
+     escaped `function` is still a name, and so is the first `function` of
+     `function function ()`. The group that follows the empty `()` of a
      definition is its body, `( ... )` or `{ ...; }`, even when newlines come
      between. Any other words before `()` (an assignment such as `a=()` or
      `export a=()`, a dynamic word, three words or more left after the
@@ -221,12 +227,14 @@ DIGITS = "0123456789"
 
 
 class _Word:
-    __slots__ = ("text", "dynamic")
+    __slots__ = ("text", "dynamic", "bare")
 
-    def __init__(self, text, dynamic):
+    def __init__(self, text, dynamic, bare):
         self.text = text
         # True when the word holds an expansion, so its value is unknown.
         self.dynamic = dynamic
+        # True when the word holds no quote, no escape and no expansion.
+        self.bare = bare
 
 
 class _Command:
@@ -260,8 +268,10 @@ class _Group:
                a non-dynamic `-p` right after `time` is removed with it. When
                nothing remains, the original words are judged. The "one word"
                and "`function` and one word" counts are the words left after
-               the removal. A later empty `()` makes the group that follows a
-               function body
+               the removal. When the one word left is `function` and it holds
+               no quote, no escape and no expansion, it is no name: the group
+               after its `()` is judged (a zsh anonymous function). A later
+               empty `()` makes the group that follows a function body
     size       (commands, groups) counted when the group opened, itself included
     connected  settled once the whole command is read: the group, or a group
                that holds it, has its standard input connected
@@ -366,7 +376,7 @@ class _Parser:
             raise _Undecidable("word after a brace group")
         self.fn_head = False
         self.after_group = None
-        self.words.append(_Word(text, dynamic))
+        self.words.append(_Word(text, dynamic, bare))
 
     def _flush(self):
         """End the simple command in progress. Return (made, redirected):
@@ -406,6 +416,12 @@ class _Parser:
         nothing remains, the original words are judged. What remains must be
         one word, or `function` and one word, where the name is not dynamic and
         holds no `=` (an assignment such as `a=` or `export a=` is not a name).
+        When the one word left is `function` and it holds no quote, no escape
+        and no expansion, it is not a function name: the `()` after it starts
+        no definition and the group after its `()` is judged (a zsh anonymous
+        function). That reading comes before the `function` and one word
+        reading, so `function function` is still a definition, and a quoted or
+        escaped `function` is still a name.
         A name whose content, after quote removal, ends in one of the extglob
         operator characters `?` `*` `+` `@` `!` is not a function name either,
         even when it is the one reserved word left (`!`): the group after its
@@ -422,6 +438,8 @@ class _Parser:
                 first += 1
         if first == end:
             first = 0
+        if end - first == 1 and words[first].text == "function" and words[first].bare:
+            return False
         if end - first == 2 and words[first].text == "function":
             first += 1
         if end - first != 1:
