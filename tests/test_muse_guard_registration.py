@@ -9,7 +9,7 @@ muse_guard.py's own registration: that BOTH plugins declare it (em-review
 had no `hooks/hooks.json` before this feature), that the verbatim command
 form and timeout match the pin in IMPLEMENTATION.md, that em-workflow's
 copy sits ahead of destructive-guard.py, and that neither file registers
-any script twice under one event.
+any script twice under one event and matcher.
 
 Standard library only, per test/README.md.
 """
@@ -151,7 +151,12 @@ class TestNoDuplicateRegistrationUnderOneEvent(unittest.TestCase):
                         for hook in group.get("hooks", []):
                             command = hook.get("command", "")
                             script = command.rsplit("/", 1)[-1]
-                            key = (event, script)
+                            # Keyed by matcher too (cross-repo-write-guard
+                            # task0001 AC-1, FR14): one script registered
+                            # under two matchers of one event is deliberate;
+                            # a script listed twice under one matcher is
+                            # still reported.
+                            key = (event, group.get("matcher"), script)
                             if key in seen:
                                 duplicates.append(key)
                             seen[key] = True
