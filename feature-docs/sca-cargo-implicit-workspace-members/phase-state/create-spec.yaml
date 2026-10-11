@@ -5,10 +5,44 @@ status: dispatching
 generation: 1
 base_revision: 3304a7985a72122b5ca21d0e15e0f39410d261da
 last_input_digest: sha256:2e46c13c38091094349c34edfa979f262fa309b32f7271c1c568e8e08bb0d12f
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T09:03:23+09:00'
+    questions:
+    - question_id: requirement.inherited-workspace-path
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  requirement.inherited-workspace-path:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T09:03:23+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - include_inherited_path
+    freeform: null
+    normalized_answer: workspace = true で [workspace.dependencies] の path を継承するルートのエントリも
+      path を持つエントリとして扱い complete=False にする
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action:
+      codex_consultation; codex_consulted: true; Codex chose include_inherited_path
+      (継承した path を除外すると未読メンバーの直接依存を推移的依存と確定する同じ判定漏れが残るため); recorded as assumption'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T09:03:23+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は analyst の推奨どおり skip
+    resolution_note: 'gate: create-spec.design-step; policy option_id: decide_autonomously'
 worker_runs:
   create-spec-run-0001:
+    worker: requirements-analyst
+    status: needs_user_input
+  create-spec-run-0002:
     worker: requirements-analyst
     status: dispatched
