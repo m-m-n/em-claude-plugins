@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-requirements-option-value-consumption
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 8e45993dc2a494ed9da2de2d2b4856738467b06c
 last_input_digest: sha256:280fb6e0d1aa8b833d78db7d0a24f2d413e16455ed95553eaab9be20ae8fc9c8
