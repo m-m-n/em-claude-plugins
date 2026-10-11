@@ -363,14 +363,14 @@ TEMP_FILE_HEADING = "## Temp-file discipline (only if writing a file to disk)"
 #   tail      temp-file discipline heading to end of file (incl. Steps 5, 6)
 UNCHANGED_RANGE_SHA256 = {
     "em-workflow": {
-        "head": "d4aff4b9a96cb810599698abaa2a1133ac2246c28b6fc21f3650f8f7042b355f",
+        "head": "54028155df297a7642404d52600cb3a3d65c63399a3ab45dcdc29538974a59a5",
         "step3": "c873b8184432641ebd4a9ccc2127376f5e1d74abe3c00b30cdf88c3954537813",
         "step4pre": "75339de2a62cd48e20a419e3487973c533ec9968a0a025cd1aceafd9192c3e00",
         "step4rest": "6b81b6ff0b1c177cc6d2f8c1cfab5f38330a285d49418204660b0f24f6f7e534",
         "tail": "78d59febbe3f0d2a982726a16a7aef3d1898a9878a046ff2753c0fa8e8866d3b",
     },
     "em-review": {
-        "head": "56a5b35584c00ca959121a9a0168f6f699539a6da04446d1d53d442bff6eb7b7",
+        "head": "d4e7a6f7f19c104d6243d15414e4197eb1d9f18a8cc9cf133447cb8cd741e191",
         "step3": "2d929f478b3b6cd316f42c347d7da7c2dbbebc72d9038f1dd684aa213898c366",
         "step4pre": "75339de2a62cd48e20a419e3487973c533ec9968a0a025cd1aceafd9192c3e00",
         "step4rest": "0c68d4eac8375e6ce0f58a9b68090a5fcead8c43babb0993a83c80951100df50",
