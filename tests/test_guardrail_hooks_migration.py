@@ -55,6 +55,16 @@ message pinning) is the separate, more detailed job of
 tests/test_hooks_registration.py's
 `TestPreToolUseBashArrayHasTheNineEntryOrderedShape`.
 
+Extended again by cross-repo-write-guard task0001 (FR1, FR14, AC-1): a tenth
+PreToolUse(Bash) entry, `cross-repo-write-guard.py`, is inserted directly
+after `loop-command-guard.py` and directly before `destructive-guard.py`. It
+asks (or denies under claude-batch) and never allows, so -- like the other
+decision-capable guards before it -- it must run before
+`destructive-guard.py`'s blanket allow; `EXPECTED_BASH_GUARD_ORDER` reflects
+the insertion. The same script is also registered under the PreToolUse
+`Write|Edit|MultiEdit` matcher, after `gitleaks-write-guard.sh`
+(`test_write_edit_multiedit_registers_the_cross_repo_guard_after_the_write_guard`).
+
 Standard library only, per test/README.md.
 """
 
@@ -94,7 +104,11 @@ MIGRATED_HOOK_FILES = (
 # and directly before `destructive-guard.py` for the same reason again: it
 # denies, so it must run before the blanket allow
 # (loop-command-guard task0001.md Design, "Registration").
-# `heredoc-stdin-guard.py` runs LAST of all nine (heredoc-stdin-guard
+# `cross-repo-write-guard.py` sits directly after `loop-command-guard.py`
+# and directly before `destructive-guard.py` for the same reason once more:
+# it asks / denies, so it must run before the blanket allow
+# (cross-repo-write-guard IMPLEMENTATION.md C1).
+# `heredoc-stdin-guard.py` runs LAST of all ten (heredoc-stdin-guard
 # task0001.md D3): it only ever rewrites `command`, never denies, so
 # placing it after every other Bash guard means none of them ever sees a
 # rewritten command in place of the original.
@@ -106,6 +120,7 @@ EXPECTED_BASH_GUARD_ORDER = [
     "muse_guard.py",
     "interpreter-mismatch-guard.py",
     "loop-command-guard.py",
+    "cross-repo-write-guard.py",
     "destructive-guard.py",
     "heredoc-stdin-guard.py",
 ]
@@ -320,6 +335,26 @@ class TestPreToolUseBashGuardOrder(unittest.TestCase):
     def test_write_edit_multiedit_registers_the_write_guard(self):
         group = _pretooluse_group(self.config, "Write|Edit|MultiEdit")
         self.assertIn("gitleaks-write-guard.sh", _script_filenames_in(group))
+
+    def test_write_edit_multiedit_registers_the_cross_repo_guard_after_the_write_guard(self):
+        # cross-repo-write-guard task0001 AC-1: the Write / Edit / MultiEdit
+        # path must not bypass the cross-repo guard.
+        group = _pretooluse_group(self.config, "Write|Edit|MultiEdit")
+        names = _script_filenames_in(group)
+        self.assertIn("cross-repo-write-guard.py", names)
+        self.assertLess(
+            names.index("gitleaks-write-guard.sh"),
+            names.index("cross-repo-write-guard.py"),
+            f"order is {names}",
+        )
+
+    def test_cross_repo_guard_precedes_the_blanket_allow_in_the_bash_group(self):
+        names = _script_filenames_in(_pretooluse_group(self.config, "Bash"))
+        self.assertLess(
+            names.index("cross-repo-write-guard.py"),
+            names.index("destructive-guard.py"),
+            "an ask / deny must be raised before the blanket allow ends the decision",
+        )
 
 
 class GitleaksResolutionTestCase(unittest.TestCase):

@@ -1,0 +1,202 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_exactly_nine_entries
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_entries_before_heredoc_guard_are_unchanged_verbatim
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_last_entry_invokes_the_heredoc_guard_in_the_pinned_form
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_reordering_the_pinned_entries_would_be_caught
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheNineEntryOrderedShape.test_cross_repo_write_guard_sits_between_the_loop_and_destructive_guards
+      - tests.test_hooks_registration.TestCrossRepoWriteGuardIsRegisteredForBothWriteToolPaths.test_write_edit_multiedit_group_lists_the_guard_after_the_gitleaks_guard
+      - tests.test_hooks_registration.TestCrossRepoWriteGuardIsRegisteredForBothWriteToolPaths.test_both_registrations_are_the_same_standard_entry
+      - tests.test_hooks_registration.TestCrossRepoWriteGuardIsRegisteredForBothWriteToolPaths.test_the_guard_is_registered_nowhere_else
+      - tests.test_hooks_registration.TestEveryRegisteredHookIsWellFormed.test_every_registered_hook_command_is_well_formed
+      - tests.test_hooks_registration.TestEveryRegisteredHookIsWellFormed.test_no_duplicate_script_registered_twice_under_the_same_event
+      - tests.test_hooks_registration.TestDuplicateRegistrationCheckKey.test_one_script_under_two_matchers_of_one_event_is_accepted
+      - tests.test_hooks_registration.TestDuplicateRegistrationCheckKey.test_a_script_listed_twice_under_one_matcher_is_reported
+      - tests.test_hooks_registration.TestDuplicateRegistrationCheckKey.test_a_script_listed_in_two_groups_with_the_same_matcher_is_reported
+      - tests.test_hooks_registration.TestDuplicateRegistrationCheckKey.test_one_script_under_the_same_matcher_of_two_events_is_accepted
+      - tests.test_hooks_registration.TestDuplicateRegistrationCheckKey.test_two_different_scripts_under_one_matcher_are_accepted
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_bash_guards_are_declared_in_the_required_order
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_destructive_guard_is_last_among_decision_capable_guards
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_write_edit_multiedit_registers_the_cross_repo_guard_after_the_write_guard
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_cross_repo_guard_precedes_the_blanket_allow_in_the_bash_group
+      - tests.test_muse_guard_registration.TestEmWorkflowOrderingAgainstDestructiveGuard.test_extracted_order_matches_the_pinned_ordered_guard_constant
+      - tests.test_muse_guard_registration.TestNoDuplicateRegistrationUnderOneEvent.test_no_script_is_registered_twice_under_the_same_event_in_either_plugin
+    red_confirmed: true
+    red_reason: >-
+      Registration half: with the updated registration tests in place and
+      em-workflow/hooks/hooks.json still at its pre-task content (nine
+      PreToolUse(Bash) entries, one Write|Edit|MultiEdit entry), the three
+      modules were re-run and failed: test_exactly_nine_entries (9 != 10),
+      test_entries_before_heredoc_guard_are_unchanged_verbatim,
+      test_bash_guards_are_declared_in_the_required_order,
+      test_extracted_order_matches_the_pinned_ordered_guard_constant,
+      test_write_edit_multiedit_group_lists_the_guard_after_the_gitleaks_guard,
+      test_both_registrations_are_the_same_standard_entry,
+      test_the_guard_is_registered_nowhere_else,
+      test_write_edit_multiedit_registers_the_cross_repo_guard_after_the_write_guard
+      (all FAIL) and test_cross_repo_write_guard_sits_between_the_loop_and_destructive_guards,
+      test_cross_repo_guard_precedes_the_blanket_allow_in_the_bash_group
+      (both ERROR: ValueError, script not in the array). Duplicate-key half:
+      the pre-task copies of the three modules (git show HEAD) were run against
+      the edited hooks.json and failed with the old (event, script) key --
+      test_hooks_registration...test_no_duplicate_script_registered_twice_under_the_same_event
+      and test_muse_guard_registration...test_no_script_is_registered_twice_under_the_same_event_in_either_plugin
+      reported ('PreToolUse', 'cross-repo-write-guard.py') as a duplicate; the
+      muse module needed the same (event, matcher, script) key and is a plan
+      deviation. Not observed red on their own: test_reordering_the_pinned_entries_would_be_caught
+      (non-vacuity check against the pinned constant, true both before and
+      after), test_destructive_guard_is_last_among_decision_capable_guards and
+      test_every_registered_hook_command_is_well_formed (retention checks over
+      what was already true), and the five TestDuplicateRegistrationCheckKey
+      tests, which exercise the new find_duplicate_registrations helper added in
+      the same change (they cover the "still reports a script listed twice
+      under one matcher" clause). "destructive-guard.py has no diff" has no
+      executable check that can fail; it is confirmed by an empty
+      git diff -- em-workflow/hooks/destructive-guard.py.
+  AC-2:
+    tests:
+      - tests.test_cross_repo_write_guard.TestFileWriteTools.test_outside_file_path_asks
+      - tests.test_cross_repo_write_guard.TestFileWriteTools.test_inside_and_excluded_file_path_is_silent
+      - tests.test_cross_repo_write_guard.TestFileWriteTools.test_relative_file_path_is_made_absolute_against_the_cwd
+      - tests.test_cross_repo_write_guard.TestFileWriteTools.test_other_tool_names_are_not_judged
+    red_confirmed: true
+    red_reason: >-
+      With em-workflow/hooks/cross-repo-write-guard.py absent (renamed away
+      for the run, restored afterwards) every Write / Edit / MultiEdit
+      subtest failed in run_hook with "exit code 2; stderr=... can't open
+      file '.../cross-repo-write-guard.py': [Errno 2] No such file or
+      directory" (the test module run: 56 tests, failures=542, errors=1).
+  AC-3:
+    tests:
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_baseline_payloads_do_ask
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_stdin_that_is_not_a_json_object
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_tool_name_other_than_the_four
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_tool_input_that_is_not_an_object
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_file_path_missing_non_string_or_empty
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_command_missing_non_string_or_empty
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_cwd_missing_non_string_or_empty
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_cwd_outside_every_git_repository
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_cwd_that_does_not_exist_on_disk
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_cwd_that_is_a_file
+      - tests.test_cross_repo_write_guard.TestInvalidInputFailsOpen.test_nul_byte_in_the_destination_is_silent
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: every test of TestInvalidInputFailsOpen failed
+      with exit code 2 / "No such file or directory" from run_hook (a
+      missing script exits 2, not the required silent exit 0), including the
+      non-vacuity test_baseline_payloads_do_ask.
+  AC-4:
+    tests:
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_linked_worktree_inside_the_main_tree_writing_into_the_main_tree
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_linked_worktree_outside_the_main_tree_writing_into_the_main_tree
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_linked_worktree_writing_into_itself_is_silent
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_main_tree_writing_into_a_nested_worktree_is_inside
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_not_yet_existing_file_through_a_symlink_pointing_outside
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_not_yet_existing_nested_path_through_a_symlink_pointing_outside
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_dangling_symlink_pointing_outside
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_symlink_as_the_final_component_is_followed
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_symlink_pointing_inside_is_silent
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_symlink_to_the_excluded_tmp_root_is_resolved_before_excluding
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_destination_under_a_sibling_sharing_the_toplevel_prefix
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_destination_under_the_toplevel_is_silent
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_cwd_in_a_subdirectory_compares_against_the_toplevel
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_cwd_reached_through_a_symlink
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_excluded_root_boundary_is_a_path_component_boundary
+      - tests.test_cross_repo_write_guard.TestPathResolution.test_many_distinct_destinations_are_judged_well_within_the_time_limit
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: every TestPathResolution test failed with exit
+      code 2 / "No such file or directory". Mutation checks on a scratch
+      copy of the hook (not part of the suite) also turned the class red: a
+      naive string-prefix boundary failed 5 subtests, and dropping the
+      symbolic-link resolution failed 9.
+  AC-5:
+    tests:
+      - tests.test_cross_repo_write_guard.TestBashCases.test_every_row_is_well_formed
+      - tests.test_cross_repo_write_guard.TestBashCases.test_cases_ac5_write_forms_and_dev_sinks
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_every_ask_row_of_the_write_forms_is_a_deny_under_batch
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: test_cases_ac5_write_forms_and_dev_sinks failed
+      on 91 rows (exit code 2 / "No such file or directory"), and
+      test_every_ask_row_of_the_write_forms_is_a_deny_under_batch on 41.
+      test_every_row_is_well_formed checks the shape of the CASES table only
+      and was green in that run by design. A scratch-copy mutant that
+      excluded all of /dev instead of the listed sinks failed 2 subtests.
+  AC-6:
+    tests:
+      - tests.test_cross_repo_write_guard.TestBashCases.test_cases_ac6_scopes_and_non_command_text
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: test_cases_ac6_scopes_and_non_command_text
+      failed on 81 rows (exit code 2 / "No such file or directory"). The two
+      rows that put a heredoc inside a $( ) were additionally run against
+      the hook before its skip_paren learned heredoc bodies and failed (no
+      ask was emitted) -- the apostrophe and the unbalanced "(" in the
+      heredoc body made the end of the substitution unfindable.
+  AC-7:
+    tests:
+      - tests.test_cross_repo_write_guard.TestBashCases.test_cases_ac7_unresolvable_tilde_and_directory_changes
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: test_cases_ac7_unresolvable_tilde_and_directory_changes
+      failed on 94 rows (exit code 2 / "No such file or directory").
+      Scratch-copy mutants also turned it red: no tilde expansion failed 6
+      subtests, and letting a subshell's cd leak out failed 3.
+  AC-8:
+    tests:
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_reason_names_every_outside_destination_once_and_the_toplevel
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_exactly_one_decision_document
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_reason_for_a_write_tool_names_the_resolved_path
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_batch_values_other_than_empty_0_false_no_deny
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_downgrade_notice_is_in_the_deny_reason_only
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_batch_unset_empty_0_false_no_ask
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_batch_downgrade_applies_to_the_write_tools_too
+      - tests.test_cross_repo_write_guard.TestDecisionOutput.test_batch_does_not_make_silent_cases_loud
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: all eight TestDecisionOutput tests listed failed
+      with exit code 2 / "No such file or directory". A scratch-copy mutant
+      without the CLAUDE_BATCH downgrade failed 52 subtests. No test
+      observes an allow: run_hook raises on any decision other than ask or
+      deny, for every run of the module.
+  AC-9:
+    tests:
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_git_is_never_started_when_every_destination_is_excluded
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_git_is_never_started_when_every_destination_is_unresolvable
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_git_is_never_started_for_invalid_input
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_git_is_started_exactly_once_for_one_destination
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_git_is_started_exactly_once_for_several_destinations
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_git_is_asked_for_the_toplevel_in_the_payload_cwd
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_decision_is_made_from_the_stubbed_toplevel
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_empty_or_failing_git_output_is_silent
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_missing_git_is_silent
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_git_that_does_not_answer_in_time_leads_to_no_output
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_cwd_with_shell_metacharacters_is_decided_correctly_and_runs_nothing
+      - tests.test_cross_repo_write_guard.TestGitInvocation.test_hook_runs_leave_the_fixture_repository_and_home_untouched
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: every TestGitInvocation test failed with exit
+      code 2 / "No such file or directory". A scratch-copy mutant that starts
+      git before the exclusion step failed 20 subtests of the class.
+  AC-10:
+    tests:
+      - tests.test_cross_repo_write_guard.TestBashCases.test_every_row_is_well_formed
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_every_imported_module_belongs_to_the_standard_library
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_hook_does_not_import_dynamically
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_hook_does_not_start_a_shell
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_hook_script_exists_next_to_hooks_json
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_hook_runs_with_the_current_interpreter_as_a_subprocess
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_every_hook_run_environment_is_isolated
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_fixture_root_and_home_are_outside_tmp
+      - tests.test_cross_repo_write_guard.TestHookSourceAndIsolation.test_the_real_home_is_never_judged
+    red_confirmed: true
+    red_reason: >-
+      Same hook-absent run: TestHookSourceAndIsolation.setUpClass errored
+      (FileNotFoundError reading the hook source), which errored every test
+      of the class; test_every_row_is_well_formed is a table-shape check and
+      was green in that run by design.
