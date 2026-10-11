@@ -1,0 +1,61 @@
+schema_version: 2
+feature: codex-guard-assignment-paren-head
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-10-11T17:02:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.14
+    confidence: 0.86
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  observed_at: '2026-10-11T17:05:46+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 30
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 8
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: '現行の両コピーに指定の標準入力を渡すと、a=()／a+=()／export a=() の後の改行、空行、コメント行を使う5通りすべてで標準出力が空となり、再現した。セミコロン区切りは deny、foo() の後の改行と f() の後の括弧は silent だった。全実行の終了コードは0、標準エラーは空だった（入力処理: em-workflow/scripts/codex-hook-interactive-guard.py:931、対応する再現例:
+    feature-docs/codex-guard-parser-fixes/reviews/round1.yaml:35、関数定義例: feature-docs/codex-guard-parser-fixes/reviews/round1.yaml:36）。原因は、語の有無だけを head に渡し、空の括弧で fn_head を立て、改行で解除しない処理にある（em-workflow/scripts/codex-hook-interactive-guard.py:311、em-workflow/scripts/codex-hook-interactive-guard.py:341、em-workflow/scripts/codex-hook-interactive-guard.py:354、em-workflow/scripts/codex-hook-interactive-guard.py:325）。関数本体扱いの命令は走査から除外される（em-workflow/scripts/codex-hook-interactive-guard.py:892）。修正形状は、両コピーの既存
+    _open_group で、語を消す _flush の前に関数ヘッダーを判定し、動的でなく ''='' を含まない有効な関数名1語、または function NAME の形に head を限定することになる（em-workflow/scripts/codex-hook-interactive-guard.py:317、em-workflow/scripts/codex-hook-interactive-guard.py:335、em-review/scripts/codex-hook-interactive-guard.py:335）。既存の
+    CASES は334件で、再現5通りと上記の対照例は含まれていない。両コピーを検査する既存の仕組みに、再現5件の deny、セミコロン区切り1件の deny、関数定義2件の silent を追加する形で8件を数えた（tests/test_codex_hook_interactive_guard.py:34、tests/test_codex_hook_interactive_guard.py:384、tests/test_codex_hook_interactive_guard.py:437）。両コピーは現在バイト単位で一致し、一致を検査する既存テストもある（tests/test_codex_hook_interactive_guard.py:710）。既存の表・出力・コピー一致・静的制約の16テストは通過した（tests/test_codex_hook_interactive_guard.py:428、tests/test_codex_hook_interactive_guard.py:451、tests/test_codex_hook_interactive_guard.py:704、tests/test_codex_hook_interactive_guard.py:838）。約30行は、両コピーの判定変更とテスト表8行追加という修正形状の概算であり、新関数・新ファイル・追加依存は必要ない（em-workflow/scripts/codex-hook-interactive-guard.py:335、em-review/scripts/codex-hook-interactive-guard.py:335、tests/test_codex_hook_interactive_guard.py:437）。呼び出し関係は各コピーで呼び出し元2箇所と依存2箇所の計8箇所を数えた（em-workflow/scripts/codex-hook-interactive-guard.py:294、em-workflow/scripts/codex-hook-interactive-guard.py:682、em-workflow/scripts/codex-hook-interactive-guard.py:336、em-workflow/scripts/codex-hook-interactive-guard.py:341、em-review/scripts/codex-hook-interactive-guard.py:294、em-review/scripts/codex-hook-interactive-guard.py:682、em-review/scripts/codex-hook-interactive-guard.py:336、em-review/scripts/codex-hook-interactive-guard.py:341）。入力・出力形式を維持し、再現入力の判定を
+    silent から deny に変更する形で、呼び出し側への変更は必要ない（em-workflow/scripts/codex-hook-interactive-guard.py:939、em-workflow/scripts/codex-hook-interactive-guard.py:947、em-workflow/scripts/run_codex_exec.sh:241、em-review/scripts/run_codex_exec.sh:195）。'
+decided_at: '2026-10-11T17:06:30+09:00'
