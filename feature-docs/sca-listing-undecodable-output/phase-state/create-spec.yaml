@@ -1,0 +1,28 @@
+schema_version: 1
+feature: sca-listing-undecodable-output
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 01fe230f3d6301e3e62ee551f64ac874c967959f
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    answered_at: '2026-10-11T16:14:00+09:00'
+    source: batch-decision-table
+    answer_mode: freeform
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: sca-listing-undecodable-output
+    normalized_answer: feature 名をタスク記述から sca-listing-undecodable-output と導出した
+    resolution_note: 'gate: create-spec.feature-identity; policy option_id: derive_from_task_description'
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
