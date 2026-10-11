@@ -151,15 +151,36 @@ def recover_package_advisory(finding):
 
 
 # Poison-finding policy (task plan "Poison-finding policy: skip and
-# record"): the ONE reason string recorded for every malformed finding,
-# derived from this script's own contract text -- NEVER from the offending
-# finding's own content (NFR4: advisory-sourced text never becomes part of
-# a reason identifier). recover_package_advisory's own exception message
-# is deliberately not reused here since it may echo the offending finding.
+# record"): a malformed finding is recorded with a FIXED reason string that
+# names the kind of defect. This constant is the reason for a title that
+# violates the finding text-encoding contract; UNENCODABLE_FINDING_REASON
+# below is the reason for recovered text that cannot be encoded as UTF-8.
+# Each is derived from this script's own contract text -- NEVER from the
+# offending finding's own content (NFR4: advisory-sourced text never becomes
+# part of a reason identifier). recover_package_advisory's own exception
+# message is deliberately not reused here since it may echo the offending
+# finding.
 MALFORMED_FINDING_REASON = (
     "finding title does not match the finding text-encoding contract "
     "'{package}: {advisory_id} — {advisory short title}'"
 )
+
+# The reason recorded for a finding whose recovered package, recovered
+# advisory id or (string) severity cannot be encoded as UTF-8, a lone
+# surrogate for example. Fixed text written by this script; it never echoes
+# the offending finding.
+UNENCODABLE_FINDING_REASON = (
+    "finding package, advisory id or severity cannot be encoded as UTF-8"
+)
+
+
+def _is_utf8_encodable(text):
+    """True when `text` can be encoded as UTF-8 (False for a lone surrogate)."""
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
 
 
 def group_findings_by_package(findings):
@@ -172,12 +193,18 @@ def group_findings_by_package(findings):
     A finding whose title violates the Finding text-encoding contract is
     SKIPPED and recorded rather than aborting the whole batch (task plan
     "Poison-finding policy") -- every other finding is still grouped, even
-    when every finding in the input is malformed.
+    when every finding in the input is malformed. A finding whose recovered
+    package, recovered advisory id or severity (checked only when it is a
+    string) cannot be encoded as UTF-8 is skipped and recorded the same way,
+    with UNENCODABLE_FINDING_REASON instead of MALFORMED_FINDING_REASON; that
+    check runs on the recovered values BEFORE any truncation, and a skipped
+    finding joins no group and takes no part in de-duplication. Every branch
+    of `file_tasks` groups through this function, so all of them are covered.
 
     Returns (groups, malformed) where `groups` is an ordered dict-like
     mapping {package: [(advisory_id, severity), ...]} and `malformed` is a
     list of {"position": <index in `findings`>, "reason": <machine-stable
-    reason>} dicts, in input order."""
+    reason>} dicts, in input order across both reasons."""
     groups = {}
     order = []
     malformed = []
@@ -187,9 +214,16 @@ def group_findings_by_package(findings):
         except FindingTitleError:
             malformed.append({"position": position, "reason": MALFORMED_FINDING_REASON})
             continue
+        severity = finding.get("severity") if isinstance(finding, dict) else None
+        if not (
+            _is_utf8_encodable(package)
+            and _is_utf8_encodable(advisory_id)
+            and (not isinstance(severity, str) or _is_utf8_encodable(severity))
+        ):
+            malformed.append({"position": position, "reason": UNENCODABLE_FINDING_REASON})
+            continue
         package = truncate_untrusted(package)
         advisory_id = truncate_untrusted(advisory_id)
-        severity = finding.get("severity") if isinstance(finding, dict) else None
         if package not in groups:
             groups[package] = []
             order.append(package)
@@ -389,14 +423,17 @@ def list_security_tasks(entry_point):
 
 def _write_references_tempfile(reference_lines):
     """Writes `reference_lines` to a new temporary file and returns its path.
-    A failure while writing removes the partial file before the OS error
-    propagates, so the caller never has a path to clean up that it was not
-    given."""
+    A failure while writing -- an OSError, or a ValueError (UnicodeEncodeError
+    included) -- removes the partial file before the original exception is
+    re-raised unchanged, so the caller never has a path to clean up that it
+    was not given. A failure of that removal itself is suppressed. Any other
+    exception type keeps its current behaviour. The writer raises the raw
+    exception; turning it into an EntryPointError is the filing helpers' job."""
     fh = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
     try:
         with fh:
             fh.write("\n".join(reference_lines) + "\n")
-    except OSError:
+    except (OSError, ValueError):
         with contextlib.suppress(OSError):
             Path(fh.name).unlink(missing_ok=True)
         raise
@@ -407,14 +444,15 @@ def _run_entry_point_with_references(reference_lines, build_argv):
     """Writes `reference_lines` to a temporary references file, launches the
     entry point with the argv `build_argv(<that file's path>)` builds, removes
     the file afterwards (also when the launch failed) and returns the
-    CompletedProcess. An OS error raised while creating or writing the file
-    or while launching the process propagates as an OSError for the two
-    public helpers below to convert. An OS error raised while removing the
-    file is reported on stderr only and leaves the result unchanged: the
-    CompletedProcess is still returned, and a launch error already in flight
-    still reaches the caller as it was. Removal is attempted once; a file
-    that cannot be removed stays, and a file that is already absent is
-    accepted silently."""
+    CompletedProcess. An OSError or a ValueError (UnicodeEncodeError
+    included) raised while creating or writing the file or while launching
+    the process reaches the caller raw, for the two public helpers below to
+    convert; an exception of any other type reaches the caller raw as well.
+    An OS error raised while removing the file is reported on stderr only and
+    leaves the result unchanged: the CompletedProcess is still returned, and
+    a launch error already in flight still reaches the caller as it was.
+    Removal is attempted once; a file that cannot be removed stays, and a
+    file that is already absent is accepted silently."""
     refs_path = None
     try:
         refs_path = _write_references_tempfile(reference_lines)
@@ -439,12 +477,15 @@ def create_security_task(entry_point, package, reference_lines):
     """Creates one security task for `package` through the entry point.
     Pre: unchanged -- an entry point that is not an executable file raises
     EntryPointError. Post: the task was created, or EntryPointError was
-    raised: for a non-zero exit of the launched process, and for ANY OS error
-    raised while writing the temporary references file or launching the
-    process (the OS error is kept as the cause and its text may appear in the
-    message, which only ever reaches stderr). A raw OS error never leaves
-    this function. An OS error raised while removing the temporary file is
-    reported on stderr only and leaves the result unchanged."""
+    raised: for a non-zero exit of the launched process, and for ANY OSError
+    or ValueError (UnicodeEncodeError included) raised while writing the
+    temporary references file or launching the process (the original
+    exception object is kept as the cause and its text may appear in the
+    message, which only ever reaches stderr). A raw OSError or ValueError
+    never leaves this function; an exception of any other type, a TypeError
+    for example, is not converted and leaves this function as it was raised.
+    An OS error raised while removing the temporary file is reported on
+    stderr only and leaves the result unchanged."""
     if not _entry_point_is_valid(entry_point):
         raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
     try:
@@ -458,7 +499,7 @@ def create_security_task(entry_point, package, reference_lines):
                 "--references-file", refs_path,
             ],
         )
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         raise EntryPointError(f"task create failed for package {package!r}: {exc}") from exc
     if proc.returncode != 0:
         raise EntryPointError(f"task create failed for package {package!r}: {proc.stderr.strip()}")
@@ -466,9 +507,11 @@ def create_security_task(entry_point, package, reference_lines):
 
 def append_security_task_references(entry_point, task_id, reference_lines):
     """Appends `reference_lines` to the references of task `task_id` through
-    the entry point. Same pre/postcondition as `create_security_task`: the
-    only exception that leaves this function for a launch, file or exit
-    failure is EntryPointError."""
+    the entry point. Same pre/postcondition as `create_security_task`: an
+    OSError or a ValueError (UnicodeEncodeError included) raised while writing
+    the temporary references file or launching the process, and a non-zero
+    exit, leave this function as EntryPointError; an exception of any other
+    type is not converted."""
     if not _entry_point_is_valid(entry_point):
         raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
     try:
@@ -480,7 +523,7 @@ def append_security_task_references(entry_point, task_id, reference_lines):
                 "--append-references-file", refs_path,
             ],
         )
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         raise EntryPointError(f"task update failed for task {task_id!r}: {exc}") from exc
     if proc.returncode != 0:
         raise EntryPointError(f"task update failed for task {task_id!r}: {proc.stderr.strip()}")
@@ -506,16 +549,20 @@ def file_tasks(project_root, feature, findings, entry_point):
     name and meaning (task plan "the summary dict grows, never changes
     shape"). Five keys are ADDED:
 
-    - `malformed_findings` -- findings skipped by the poison-finding policy
-      (position + machine-stable reason, never advisory-sourced text).
+    - `malformed_findings` -- findings skipped by the poison-finding policy:
+      a title that violates the finding text-encoding contract, or a package,
+      advisory id or string severity that cannot be encoded as UTF-8 (position
+      + machine-stable reason, never advisory-sourced text).
     - `listing_dropped_count` -- entries the task listing dropped item-wise
       by validation (0 when no listing was consulted or nothing dropped).
     - `failed_package` / `failure_reason` -- set when the external task
-      system failed mid-batch (an entry-point failure, which includes an OS
-      error raised while launching the entry point or writing its temporary
-      references file); both None on a batch that completed without such a
-      failure. `failure_reason` is a fixed token, never OS-error or
-      advisory-sourced text; that text goes to stderr only.
+      system failed mid-batch (an entry-point failure, which includes an
+      OSError or a ValueError -- UnicodeEncodeError included, a NUL in a
+      launch argument for example -- raised while launching the entry point or
+      writing its temporary references file); both None on a batch that
+      completed without such a failure. `failure_reason` is a fixed token,
+      never exception or advisory-sourced text; that text goes to stderr
+      only.
     - `unattempted_packages` -- on a mid-batch failure, the failed package
       followed by every later package in the group order (after title
       recovery, de-duplication and truncation), in that order; malformed
