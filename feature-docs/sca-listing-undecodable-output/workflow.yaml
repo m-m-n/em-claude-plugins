@@ -102,7 +102,8 @@ workflow:
   excluded: []
   completed_at_commit: 844dd17d1a0fa4bc82b1c8955aea0f54fa25e143
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: f16b6f2c22b1ea139f7c578dc5d203e0dcb2ec5b
 tasks:
   task0001:
     title: Treat undecodable task-listing output as a sixth unavailable-listing condition
