@@ -71,7 +71,14 @@ worker_runs:
   status: completed
   input_digest: sha256:4bde25ebbec38d8e100045229685f0a762b9262c82f740d37918fda93bdeaee8
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:4bde25ebbec38d8e100045229685f0a762b9262c82f740d37918fda93bdeaee8
+  output_digest: null
+artifacts:
+- path: feature-docs/sca-listing-undecodable-output/SPEC.md
+  sha256: sha256:97fbe6435841a32edddd7eae5f080a03f6a1c4a8edc0e8a2ab19eb0c798960cc
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
