@@ -1,0 +1,72 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Added the two `bash -O extglob -c` deny cases (with and without
+      `time /bin/true`) to CASES, then ran the unchanged guard: both copies
+      printed nothing (silent) and the subtests errored with a JSON decode
+      error on empty stdout instead of reading a deny decision.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Cases `if true; then f?()\n(python3 -i)\nfi`, `time -p f?()\n(python3 -i)`
+      and `function f?()\n{ python3 -i; }` were run against the unchanged
+      guard: all three printed nothing on both copies (expected deny).
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Cases `f*()`, `f+()`, `f@()` and `f!()` followed by a newline and
+      `(python3 -i)` were run against the unchanged guard: each printed
+      nothing on both copies (expected deny).
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Cases `'f?'()`, `f\?()`, `f? ()` and `!()` followed by a newline and
+      `(python3 -i)` were run against the unchanged guard: each printed
+      nothing on both copies (expected deny).
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      Regression guard for behavior that pre-existed: every existing CASES
+      entry (including `foo()\n(python3 -i)`, `then()\n(python3 -i)` and
+      `time f() { python3 -i; }`) already passed before the change and still
+      passes; no red state occurred for this criterion. The existing
+      TestCasesTable test detects a changed decision on any entry.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_head_description_states_the_removal
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_names_function_docstring_states_the_extglob_rule
+    red_confirmed: true
+    red_reason: >-
+      Added the new markers to DOCSTRING_MARKERS and GROUP_HEAD_MARKERS and
+      the new NAMES_FUNCTION_MARKERS test, then ran TestGuardDocumentation on
+      the unchanged guard: 22 subtests failed (assertIn of the extglob-rule
+      marker in the module docstring, the _Group docstring and the
+      _names_function docstring, on both copies).
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      The existing TestCopies and TestStaticConstraints detect a diverging
+      copy and a constraint violation; they passed before the change (both
+      copies were unchanged and identical) and no red state occurred for
+      them. `python3 -m unittest discover -s tests` and
+      `python3 em-workflow/scripts/check-plugin-invariants.py .` exit 0 after
+      the change; the changed files are the two guard copies and the test
+      file only (no plugin.json or marketplace.json).
