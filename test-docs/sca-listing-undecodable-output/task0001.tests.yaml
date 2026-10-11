@@ -1,0 +1,107 @@
+task_id: task0001
+baseline_failures: []          # 4a, before any edit: python3 -m unittest discover -s tests: 10217 tests OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: 10246 tests OK (10217 + 28 new + 1 record-check case for this record; skipped=1); check-plugin-invariants.py: all checks PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_listing_undecodable_output.TestCliRecurrence.test_ac1_invalid_utf8_listing_ends_through_the_degraded_report_summary
+      - tests.test_sca_listing_undecodable_output.TestCliRecurrence.test_ac1_summary_and_report_carry_neither_the_output_nor_decode_wording
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: the file-tasks CLI exited 1 with a traceback
+      on stderr ending in "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position
+      0: invalid start byte", raised by subprocess.run in list_security_tasks (text-mode
+      capture); no JSON summary was printed. Assertions: "'Traceback' unexpectedly found in
+      stderr" and "1 != 0".
+  AC-2:
+    tests:
+      - tests.test_sca_listing_undecodable_output.TestDirectClassification.test_ac2a_invalid_utf8_stdout_is_unavailable_without_raising
+      - tests.test_sca_listing_undecodable_output.TestDirectClassification.test_ac2a_invalid_bytes_inside_otherwise_valid_json_are_unavailable
+      - tests.test_sca_listing_undecodable_output.TestDirectClassification.test_ac2a_truncated_multibyte_sequence_is_unavailable
+      - tests.test_sca_listing_undecodable_output.TestDirectClassification.test_ac2b_utf8_encoded_surrogate_is_unavailable
+      - tests.test_sca_listing_undecodable_output.TestDirectClassification.test_ac2b_bare_surrogate_bytes_are_unavailable
+      - tests.test_sca_listing_undecodable_output.TestDirectClassification.test_ac2c_valid_utf8_array_with_non_ascii_text_is_available_and_parsed
+      - tests.test_sca_listing_undecodable_output.TestDirectClassification.test_reason_is_the_bare_token_not_the_decode_error_or_the_output
+      - tests.test_sca_listing_undecodable_output.TestUnchangedSurfaces.test_listing_invocation_is_not_in_text_mode
+      - tests.test_sca_listing_undecodable_output.TestUnchangedSurfaces.test_listing_output_is_decoded_as_utf8_strict_whatever_the_locale
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: every invalid-bytes test (clauses a and b,
+      including the 0xED 0xA0 0x80 surrogate) raised "UnicodeDecodeError: 'utf-8' codec can't
+      decode byte 0xff in position 0: invalid start byte" (or "byte 0xed in position 2: invalid
+      continuation byte") out of list_security_tasks instead of returning an outcome; the two
+      FR1 source checks failed with "'text' unexpectedly found in {'capture_output': True,
+      'text': True, 'check': False}" and "0 != 1 : stdout is decoded exactly once". Clause c
+      (test_ac2c_valid_utf8_array_with_non_ascii_text_is_available_and_parsed) describes
+      behavior that pre-existed under a UTF-8 locale and was green before the change; it is a
+      regression guard for the happy path of the new byte capture, not an observed red.
+  AC-3:
+    tests:
+      - tests.test_sca_listing_undecodable_output.TestCheckOrder.test_ac3_nonzero_exit_with_invalid_utf8_stdout_is_exit_nonzero
+      - tests.test_sca_listing_undecodable_output.TestCheckOrder.test_ac3_nonzero_exit_with_invalid_utf8_on_both_streams_is_exit_nonzero
+      - tests.test_sca_listing_undecodable_output.TestCheckOrder.test_ac3_nonzero_exit_reaches_the_report_branch_with_the_exit_token
+      - tests.test_sca_listing_undecodable_output.TestCheckOrder.test_ac3_undecodable_is_decided_before_the_json_step
+      - tests.test_sca_listing_undecodable_output.TestCheckOrder.test_ac3_existing_tokens_keep_their_conditions
+      - tests.test_sca_listing_undecodable_output.TestCheckOrder.test_ac3_launch_failure_is_still_launch_failed
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_listing_failure_degrades_to_report_and_states_degradation
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_listing_unparsable_output_also_degrades
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: a non-zero exit with invalid UTF-8 on stdout
+      (and on both streams) raised "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff
+      in position 0: invalid start byte" from subprocess.run instead of yielding
+      listing_exit_nonzero, and the CLI variant showed the traceback; the decode-before-JSON
+      order test raised the same error. test_ac3_existing_tokens_keep_their_conditions,
+      test_ac3_launch_failure_is_still_launch_failed and the two existing TestFileTasksBranches
+      tests pin behavior that pre-existed and were green before the change (regression guards
+      for the unchanged tokens; their expectations are not modified).
+  AC-4:
+    tests:
+      - tests.test_sca_listing_undecodable_output.TestStderrIsNeverDecoded.test_ac4_invalid_stderr_with_empty_array_stdout_keeps_the_listing_available
+      - tests.test_sca_listing_undecodable_output.TestStderrIsNeverDecoded.test_ac4_file_tasks_takes_the_filing_branch_despite_invalid_stderr
+      - tests.test_sca_listing_undecodable_output.TestStderrIsNeverDecoded.test_ac4_invalid_stderr_with_undecodable_stdout_is_still_undecodable
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: with stdout "[]" and invalid bytes on stderr
+      only, the text-mode capture decoded stderr too and raised "UnicodeDecodeError: 'utf-8'
+      codec can't decode byte 0xff in position 0: invalid start byte" out of
+      list_security_tasks (and out of file_tasks) instead of leaving the listing available.
+  AC-5:
+    tests:
+      - tests.test_sca_task_filing.TestListingUnavailableReasons.test_five_unavailability_conditions_have_five_distinct_reasons
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script after the sixth condition (exit 0, stdout
+      b"\xff\xfe" written to the binary stream) was added to the existing method: it errored
+      with "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 0: invalid
+      start byte" instead of reaching the report branch. The method name keeps its original
+      count so the ID recorded in test-docs/review-sca-axis/task0007.tests.yaml keeps
+      resolving.
+  AC-6:
+    tests:
+      - tests.test_sca_listing_undecodable_output.TestDocstrings.test_ac6_listing_outcome_docstring_states_six_conditions_and_names_all_tokens
+      - tests.test_sca_listing_undecodable_output.TestDocstrings.test_ac6_listing_outcome_docstring_lists_the_six_tokens_in_classification_order
+      - tests.test_sca_listing_undecodable_output.TestDocstrings.test_ac6_list_security_tasks_docstring_describes_the_six_conditions_in_order
+      - tests.test_sca_listing_undecodable_output.TestDocstrings.test_ac6_list_security_tasks_docstring_states_bytes_and_undecoded_stderr
+      - tests.test_sca_listing_undecodable_output.TestDocstrings.test_ac6_the_two_docstrings_agree_on_the_condition_count
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: "Regex didn't match: '\bsix\b' not found in
+      'The task-listing outcome is three-valued ... one of the five genuine unavailability
+      conditions ...'", "-1 unexpectedly found in [-1, -1, -1, -1, -1, -1] : a reason token is
+      missing", "'bytes' not found in 'Returns a ListingOutcome ...'" and "Regex matched: 'five'
+      matches '\b(five|four|seven)\b'".
+  AC-7:
+    tests:
+      - tests.test_sca_listing_undecodable_output.TestUnchangedSurfaces.test_references_invocation_keeps_its_text_mode_capture
+      - tests.test_sca_listing_undecodable_output.TestUnchangedSurfaces.test_worktree_root_resolution_keeps_its_text_mode_capture
+      - tests.test_sca_listing_undecodable_output.TestUnchangedSurfaces.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      The criterion is a preservation criterion: the full-suite run and
+      check-plugin-invariants.py must stay green, resolve_main_worktree_root and
+      _run_entry_point_with_references must stay unchanged, and the added tests import only the
+      standard library. The three tests above pin the unchanged surfaces and the import rule;
+      they passed before any implementation existed (nothing in them describes a change), so no
+      red state occurred. The full-suite run and check-plugin-invariants.py are the
+      definition-of-done run, not tests with a failing state.

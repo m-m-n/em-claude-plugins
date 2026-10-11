@@ -30,9 +30,10 @@ task0007.md) -- additional acceptance criteria covered on top of the above:
 - AC-1 (task0007): TestListingThreeValuedOutcome -- an available listing
   with zero validated entries (empty JSON array, or every entry dropped
   item-wise by validation) takes the filing branch, not the report branch.
-- AC-2 (task0007): TestListingUnavailableReasons -- each of the five
+- AC-2 (task0007): TestListingUnavailableReasons -- each of the six
   genuine unavailability conditions degrades to the report branch with its
-  own distinguishable machine-stable reason.
+  own distinguishable machine-stable reason (the sixth, exit 0 with stdout
+  that is not valid UTF-8, was added by sca-listing-undecodable-output).
 - AC-3 (task0007): TestPoisonFindingIsolation -- one malformed finding is
   skipped and recorded (position + reason, no advisory-sourced text) rather
   than aborting the batch; an entirely-malformed batch returns the
@@ -404,7 +405,7 @@ class TestFileTasksBranches(unittest.TestCase):
             # AC-2: a non-zero listing exit is its OWN machine-stable reason,
             # distinguishable from the other unavailability conditions --
             # see TestListingUnavailableReasons for the full distinctness
-            # check across all five.
+            # check across all six.
             self.assertEqual(result["degraded_reason"], "listing_exit_nonzero")
             content = Path(result["report_path"]).read_text(encoding="utf-8")
             self.assertIn("DEGRADED", content)
@@ -466,7 +467,7 @@ class TestListingThreeValuedOutcome(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # AC-2 (task0007): each genuine unavailability condition degrades to the
 # report branch with its OWN machine-stable reason, distinguishable from
-# the other four.
+# every other condition.
 # ---------------------------------------------------------------------------
 
 class TestListingUnavailableReasons(unittest.TestCase):
@@ -481,6 +482,9 @@ class TestListingUnavailableReasons(unittest.TestCase):
         self.assertTrue(reason)
         return reason
 
+    # The method name below keeps its original count: test IDs recorded in
+    # test-docs/**/*.tests.yaml refer to it, so it must keep resolving. The
+    # method covers all six conditions.
     def test_five_unavailability_conditions_have_five_distinct_reasons(self):
         reasons = {}
 
@@ -521,7 +525,24 @@ class TestListingUnavailableReasons(unittest.TestCase):
             )
             reasons["not_array"] = self._degraded_reason(tmp, str(standin))
 
-        self.assertEqual(len(set(reasons.values())), 5, reasons)
+        with tempfile.TemporaryDirectory() as tmp:
+            # 6. exits zero but stdout is not valid UTF-8 (raw bytes written
+            # to the binary stream; a text stream would not carry them).
+            undecodable_standin = Path(tmp) / "undecodable-standin"
+            undecodable_standin.write_text(
+                "#!/usr/bin/env python3\n"
+                "import sys\n"
+                "sys.stdout.buffer.write(b'\\xff\\xfe')\n"
+                "sys.stdout.buffer.flush()\n",
+                encoding="utf-8",
+            )
+            undecodable_standin.chmod(
+                undecodable_standin.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+            )
+            reasons["output_undecodable"] = self._degraded_reason(tmp, str(undecodable_standin))
+
+        self.assertEqual(reasons["output_undecodable"], "listing_output_undecodable")
+        self.assertEqual(len(set(reasons.values())), 6, reasons)
 
 
 # ---------------------------------------------------------------------------
