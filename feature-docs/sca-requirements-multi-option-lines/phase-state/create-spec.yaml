@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-requirements-multi-option-lines
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: af3b8fbbf65d23758c75afc2bb6401e4fc446fa0
 last_input_digest: sha256:a4da4bd487ca732910f956398c049ab4202eb9cd3c20d4c7d479ffc1b042d4ad
