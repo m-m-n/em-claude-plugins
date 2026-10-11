@@ -493,6 +493,30 @@ CASES = [
     ("deny", "前置のない匿名関数の本体", "zsh -c 'function () { python3 -i; }'"),
     ("silent", "単引用符で囲んだ function は関数名", "zsh -c \"'function' () { python3 -i; }\""),
     ("silent", "function function は関数定義", "function function () { python3 -i; }"),
+    # The three zsh anonymous-function forms (`function { ...; }`,
+    # `function () { ...; } arg`, `() { ...; } arg`): the body is judged, the
+    # words after its closing brace are arguments up to the next separator, and
+    # a pipe connection on the head reaches the body and nothing after it
+    ("deny", "括弧なしの匿名関数の本体", "zsh -c 'function { python3 -i; }'"),
+    ("deny", "閉じ波括弧の後に引数がある匿名関数の本体", "zsh -c 'function () { python3 -i; } arg'"),
+    ("deny", "括弧なしの匿名関数の本体と引数", "zsh -c 'function { python3 -i; } arg'"),
+    ("deny", "! の直後の括弧なしの匿名関数の本体", "zsh -c '! function { python3 -i; }'"),
+    ("deny", "語の無い () の匿名関数の本体と引数", "zsh -c '() { python3 -i; } arg'"),
+    ("deny", "() と { の間に改行がある匿名関数の本体と引数", "zsh -c 'function ()\n{ python3 -i; } arg'"),
+    ("deny", "パイプの右側の括弧なしの匿名関数の中の -i", "zsh -c 'echo x | function { python3 -i; }'"),
+    ("deny", "パイプの右側の匿名関数の後の別コマンドには接続が届かない", "zsh -c 'echo x | function { cat; }; python3'"),
+    ("deny", "引数の後の区切りの先の起動", "zsh -c 'function { :; } arg; python3 -i'"),
+    ("silent", "名前付きの括弧なし定義の本体は実行しない", "zsh -c 'function f { python3 -i; }'"),
+    ("silent", "単引用符で囲んだ function の後の { は匿名関数でない", "zsh -c \"'function' { python3 -i; }\""),
+    ("silent", "引数に置いた python3 は起動でない", "zsh -c 'function { echo hi; } python3'"),
+    ("silent", "引数の後の入力リダイレクトは本体を接続する", "zsh -c 'function () { python3; } arg < f'"),
+    ("silent", "パイプの右側の括弧なしの匿名関数の本体は接続される", "zsh -c 'echo x | function { python3; }'"),
+    ("silent", "パイプの右側の function () の本体は接続される", "zsh -c 'echo x | function () { python3; }'"),
+    ("silent", "パイプの右側の語の無い () の本体は接続される", "zsh -c 'echo x | () { python3; }'"),
+    ("silent", "パイプの接続は匿名関数の本体の入れ子の群にも届く", "zsh -c 'echo x | function { { python3; }; }'"),
+    ("silent", "匿名関数でない波括弧群の後の語は判定不能", "zsh -c '{ python3 -i; } arg'"),
+    ("silent", "名前付き関数定義の本体の後の語は判定不能", "zsh -c 'f() { python3 -i; } arg'"),
+    ("silent", "function 付きの名前付き関数定義の本体の後の語は判定不能", "zsh -c 'function f () { python3 -i; } arg'"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -801,18 +825,35 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
             with self.subTest(shape=name):
                 self.assert_every_copy_answers(command)
 
+    def reserved_run(self):
+        reserved = ("!", "do", "elif", "else", "if", "then", "time", "until", "while")
+        return " ".join(reserved[i % len(reserved)] for i in range(self.RESERVED_RUN))
+
     def test_a_long_run_of_reserved_words_before_a_paren_is_answered(self):
         # The run before `(` is removed in one pass (TM-2): the cost stays
-        # linear in the number of words, whatever the run is made of.
-        reserved = ("!", "do", "elif", "else", "if", "then", "time", "until", "while")
-        run = " ".join(reserved[i % len(reserved)] for i in range(self.RESERVED_RUN))
+        # linear in the number of words, whatever the run is made of. The run
+        # before a parenless `function {` is read as the words are appended
+        # (TM-3): a run then a non-reserved word then a `function {` pair per
+        # word of the run is where a re-read of the words at each `{` is
+        # quadratic.
+        run = self.reserved_run()
         inputs = {
             "run then a name and a body": run + " f() { python3 -i; }",
             "run of reserved words only": run + "()",
+            "run then a parenless anonymous function": run + " function { python3 -i; }",
+            "run, a word, then many function and brace pairs": run + " x" + " function {" * self.RESERVED_RUN,
         }
         for name, command in inputs.items():
             with self.subTest(shape=name):
                 self.assert_every_copy_answers(command)
+
+    def test_a_parenless_anonymous_function_after_a_long_run_is_denied(self):
+        command = self.reserved_run() + " function { python3 -i; }"
+        for plugin, path in self.for_each_copy():
+            code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+            self.assertEqual((code, err), (0, ""))
+            decision = json.loads(out)["hookSpecificOutput"]
+            self.assertEqual(decision["permissionDecision"], "deny")
 
     def test_nesting_to_the_depth_the_limit_admits_is_denied(self):
         # Each level quotes the one inside it again, so the quote characters
@@ -1302,6 +1343,13 @@ class TestGuardDocumentation(unittest.TestCase):
         "Passing the limit is never a reason to deny",
         # A string whose reading ends in an unexpected error is skipped too
         "a string for which an unexpected error occurred while it was being read",
+        # The three zsh anonymous-function forms, their arguments and their pipe
+        "`function { ...; }`",
+        "`function () { ...; } arg`",
+        "`() { ...; } arg`",
+        "is an argument of the anonymous function",
+        "A stdin redirect among or after the arguments connects the body",
+        "the pipe connection passes to the body",
     )
 
     # Sentences step 7 carried before it judged a literal `-c` string at every
@@ -1309,6 +1357,9 @@ class TestGuardDocumentation(unittest.TestCase):
     STALE_DOCSTRING_SENTENCES = (
         "the first operand is judged once",
         "A literal inside the command string is not judged",
+        # Step 4 limited `{` to command position before a `{` could open a group
+        # right after the head of an anonymous function
+        "delimit a group only as a standalone word at command position",
     )
 
     # The same removal in the description of a group's `head` attribute
@@ -1321,6 +1372,22 @@ class TestGuardDocumentation(unittest.TestCase):
         "ends in one of the extglob operator characters `?` `*` `+` `@` `!`",
         "after quote removal",
         "the group after its `()` is judged",
+    )
+
+    # How the `_Group` description marks an anonymous body and where its pipe
+    # connection comes from
+    GROUP_ANON_MARKERS = (
+        "the group is an anonymous body",
+        "the words after its `}` are arguments",
+        "the anonymous body takes it as its `pipe`",
+        "the pipe connection comes from the head",
+    )
+
+    # The rule of the method that decides the parenless anonymous-function form
+    PARENLESS_MARKERS = (
+        "exactly one `function` that holds no quote, no escape and no expansion",
+        "the same reserved-run removal",
+        "constant time",
     )
 
     # The same rule in the docstring of the parser's function-name judgment
@@ -1354,6 +1421,41 @@ class TestGuardDocumentation(unittest.TestCase):
             )
             doc = " ".join((ast.get_docstring(group) or "").split())
             for marker in self.GROUP_HEAD_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_group_description_names_the_anonymous_body_and_its_pipe_source(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            group = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Group"
+            )
+            doc = " ".join((ast.get_docstring(group) or "").split())
+            for marker in self.GROUP_ANON_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_parenless_form_method_states_its_rule_and_its_constant_time(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            parser = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Parser"
+            )
+            method = next(
+                (
+                    node for node in parser.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "_names_anonymous_function"
+                ),
+                None,
+            )
+            with self.subTest(copy=plugin, method="_names_anonymous_function"):
+                self.assertIsNotNone(method, "no _names_anonymous_function method in _Parser")
+            if method is None:
+                continue
+            doc = " ".join((ast.get_docstring(method) or "").split())
+            for marker in self.PARENLESS_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
 

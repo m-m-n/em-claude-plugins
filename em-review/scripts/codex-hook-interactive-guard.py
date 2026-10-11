@@ -22,23 +22,25 @@ Decision flow:
      with certainty -> no output. After the closing quote ordinary reading
      resumes, so a launch outside the quotes is still judged.
   4. A subshell `( ... )` and a brace group `{ ...; }` are groups. `{` and
-     `}` delimit a group only as a standalone word at command position; a
-     brace inside a larger word (`{a,b}`) does not. A group is connected when
-     it is the right side of `|` or `|&`, or when a stdin redirect follows
-     its close (`<` `<<` `<<<` `<&` `0<`). Other redirects (`2>` `>`) and a
-     pipe on the right of the group do not connect it. A connected group
-     passes the connection to every command inside it, nested groups
-     included, so the commands of a group are judged once the redirects after
-     its close are known. A group that is not closed -> no output. The body
-     of a function definition (`name() { ...; }`) is not judged. The guard
-     reads a definition by the words before the `(` alone: only `name()` and
-     `function name()` start a function definition, where `name` is one word
-     that is not dynamic and holds no `=`. A word whose content, after quote
-     removal, ends in one of the extglob operator characters `?` `*` `+` `@`
-     `!` is no function name, even when it is the one reserved word left (`!`):
-     the `()` after it starts no definition and the group after its `()` is
-     judged. Only the last character is read, whether it is quoted, escaped or
-     followed by a space, and whether extglob is enabled is never checked. The
+     `}` delimit a group only as a standalone word: a `{` opens a group at
+     command position, and also right after the head of a zsh anonymous
+     function (below); a brace inside a larger word (`{a,b}`) does not. A
+     group is connected when it is the right side of `|` or `|&`, or when a
+     stdin redirect follows its close (`<` `<<` `<<<` `<&` `0<`). Other
+     redirects (`2>` `>`) and a pipe on the right of the group do not connect
+     it. A connected group passes the connection to every command inside it,
+     nested groups included, so the commands of a group are judged once the
+     redirects after its close are known. A group that is not closed -> no
+     output. The body of a function definition (`name() { ...; }`) is not
+     judged. The guard reads a definition by the words before the `(` alone:
+     only `name()` and `function name()` start a function definition, where
+     `name` is one word that is not dynamic and holds no `=`. A word whose
+     content, after quote removal, ends in one of the extglob operator
+     characters `?` `*` `+` `@` `!` is no function name, even when it is the
+     one reserved word left (`!`): the `()` after it starts no definition and
+     the group after its `()` is judged. Only the last character is read,
+     whether it is quoted, escaped or followed by a space, and whether extglob
+     is enabled is never checked. The
      words before `(` are judged after the leading run of the reserved words
      `!` `do` `elif` `else` `if` `then` `time` `until` `while` is removed, so a
      definition written right after `then` or `do` still starts one; a
@@ -56,6 +58,26 @@ Decision flow:
      `export a=()`, a dynamic word, three words or more left after the
      removal) start no definition, so the group after them is judged. `while`
      `for` `until` `if` and `case` are not read as groups.
+     A zsh anonymous function has three forms, and the commands inside the
+     body of each are judged like those of any other group: `function { ...; }`
+     (a standalone `{` in the same simple command right after one `function`
+     word that holds no quote, no escape and no expansion, once the leading
+     run of reserved words is removed as above), `function () { ...; } arg`
+     (the empty `()` right after that `function`) and `() { ...; } arg` (an
+     empty `()` read where the simple command holds no word yet; a reserved
+     word in front of the `()` keeps the function-name judgment above).
+     Newlines may come between the empty `()` and the `{`. Every word after
+     the closing `}` of an anonymous body, up to the next `;` `&&` `||` `|`
+     `|&` `&` or newline, or the close of an enclosing subshell, is an argument
+     of the anonymous function: it is no command and does not make the string
+     undecidable. A stdin redirect among or after the arguments connects the
+     body, exactly as when it is written right after the `}`; other redirects
+     do not. When the head of an anonymous function is the right side of `|` or
+     `|&`, the pipe connection passes to the body and, through the body, to the
+     groups nested in it, and no further: the commands after the arguments are
+     not connected, and an explicit `-i` is still denied. The words after the
+     `}` of any other brace group, and of a function definition's body, still
+     make the string undecidable.
   5. After `|` or `|&` the right side is awaited: a pending pipe survives
      newlines, blank lines, comment-only lines and heredoc bodies, and the
      next non-empty command is the right side. A newline after `&&` or `||`
@@ -277,6 +299,20 @@ class _Group:
                no quote, no escape and no expansion, it is no name: the group
                after its `()` is judged (a zsh anonymous function). A later
                empty `()` makes the group that follows a function body
+    anon       a zsh anonymous function. On a `{` group: the group is an
+               anonymous body, so the words after its `}` are arguments, not
+               commands and not a reason to call the string undecidable. On a
+               `(` group: its empty `()` is the head of an anonymous function
+               (one `function` that holds no quote, no escape and no expansion
+               once the leading reserved words are removed, or no word at
+               all), and the brace group that follows the `()` is the
+               anonymous body
+    anon_pipe  on a `(` group with `anon`: the head is on the right side of a
+               pipe, and the anonymous body takes it as its `pipe`, so the
+               pipe connection comes from the head and reaches the body alone;
+               the `pipe` of the `(` group itself keeps its own reading. A body
+               opened by the parenless `function {` takes the pipe state of
+               the simple command that holds the `function`
     size       (commands, groups) counted when the group opened, itself included
     connected  settled once the whole command is read: the group, or a group
                that holds it, has its standard input connected
@@ -284,15 +320,20 @@ class _Group:
                function body
     """
 
-    __slots__ = ("kind", "parent", "pipe", "stdin", "skip", "head", "size", "connected", "skipped")
+    __slots__ = (
+        "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "size",
+        "connected", "skipped",
+    )
 
-    def __init__(self, kind, parent, pipe, skip, head, size):
+    def __init__(self, kind, parent, pipe, skip, head, size, anon=False, anon_pipe=False):
         self.kind = kind
         self.parent = parent
         self.pipe = pipe
         self.stdin = False
         self.skip = skip
         self.head = head
+        self.anon = anon
+        self.anon_pipe = anon_pipe
         self.size = size
         self.connected = False
         self.skipped = False
@@ -314,7 +355,7 @@ class _Parser:
         self.n = len(command)
         self.i = 0
         self.commands = []
-        self.words = []
+        self._start_words()
         self.stdin = False
         self.pipe_pending = False
         # Set between a redirection operator and its target word:
@@ -326,11 +367,47 @@ class _Parser:
         # Open groups, innermost last, and every group in the order it opened.
         self.frames = []
         self.groups = []
-        # The group closed last, while only redirections have followed it.
+        # The group closed last, while only redirections have followed it (and,
+        # for an anonymous body, its arguments).
         self.after_group = None
         # A `name()` was just read: the next group is the body of a function.
         self.fn_head = False
+        # The empty `()` of an anonymous-function head was just read: the `(`
+        # group of that `()`. The next brace group is the anonymous body.
+        self.anon_head = None
         self._reset_word()
+
+    def _start_words(self):
+        """Begin a simple command with no word. The reserved-run state below
+        is what `_names_anonymous_function` reads; `_append_word` keeps it."""
+        self.words = []
+        # Every word so far is removed by the leading reserved-run removal.
+        self.run_open = True
+        # The last word appended was a `time` that was removed, so a
+        # non-dynamic `-p` right after it is removed too.
+        self.after_time = False
+        # The words so far are the removed run and then exactly one bare
+        # `function`.
+        self.lone_function = False
+
+    def _append_word(self, word):
+        """Append a word to the simple command and keep the reserved-run state
+        in step with it. The state follows the removal `_names_function`
+        applies: a word of RESERVED_WORDS that is not dynamic, and a
+        non-dynamic `-p` right after a removed `time`, stay in the run; the
+        first other word ends it. Constant time per word."""
+        if self.run_open:
+            if self.after_time and not word.dynamic and word.text == "-p":
+                self.after_time = False
+            elif not word.dynamic and word.text in RESERVED_WORDS:
+                self.after_time = word.text == "time"
+            else:
+                self.run_open = False
+                self.after_time = False
+                self.lone_function = word.text == "function" and word.bare
+        else:
+            self.lone_function = False
+        self.words.append(word)
 
     def _reset_word(self):
         self.buf = []
@@ -366,22 +443,37 @@ class _Parser:
                     raise _Undecidable("heredoc delimiter")
                 self.heredocs.append((text, strips_tabs))
             return
-        # `{` and `}` delimit a brace group only as a standalone word at
-        # command position. A `}` that matches no open brace group is an
-        # ordinary word, as it was before groups were read.
-        if bare and not self.words:
-            if text == "{":
-                self._open_group("{")
-                return
-            if text == "}" and self.frames and self.frames[-1].kind == "{":
-                self._close_group()
-                return
+        # `{` and `}` delimit a brace group only as a standalone word. A `{`
+        # opens one at command position, and right after the one `function` of
+        # a parenless anonymous function. A `}` that matches no open brace
+        # group is an ordinary word, as it was before groups were read. The
+        # words after the `}` of an anonymous body are its arguments: none of
+        # them opens a group, and a `}` among them still closes an enclosing
+        # brace group, as zsh does.
+        arguments = self._in_arguments()
+        if bare and text == "{" and not arguments and (not self.words or self._names_anonymous_function()):
+            self._open_group("{")
+            return
+        if bare and text == "}" and not self.words and self.frames and self.frames[-1].kind == "{":
+            self._close_group()
+            return
         if self.after_group is not None and self.after_group.kind == "{":
+            if arguments:
+                # An argument of the anonymous function: no command, and
+                # nothing the guard has to read.
+                return
             # Only a redirection, a separator or a comment may follow the `}`.
             raise _Undecidable("word after a brace group")
         self.fn_head = False
+        self.anon_head = None
         self.after_group = None
-        self.words.append(_Word(text, dynamic, bare))
+        self._append_word(_Word(text, dynamic, bare))
+
+    def _in_arguments(self):
+        """Whether the words now being read follow the closing `}` of an
+        anonymous body, so they are its arguments."""
+        group = self.after_group
+        return group is not None and group.kind == "{" and group.anon
 
     def _flush(self):
         """End the simple command in progress. Return (made, redirected):
@@ -394,7 +486,7 @@ class _Parser:
             group = self.frames[-1] if self.frames else None
             self.commands.append(_Command(self.words, self.stdin, self.pipe_pending, group))
             self.pipe_pending = False
-        self.words = []
+        self._start_words()
         self.stdin = False
         self.redirected = False
         self.after_group = None
@@ -404,6 +496,7 @@ class _Parser:
         _, redirected = self._flush()
         if sep != "\n":
             self.fn_head = False
+            self.anon_head = None
         if sep in ("|", "|&"):
             self.pipe_pending = True
         elif sep != "\n" or redirected:
@@ -454,17 +547,53 @@ class _Parser:
             return False
         return not name.text.endswith(EXTGLOB_OPERATORS)
 
+    def _names_anonymous_function(self):
+        """Whether the words read so far in the simple command are, after the
+        same reserved-run removal that `_names_function` applies, exactly one
+        `function` that holds no quote, no escape and no expansion. This is
+        the rule of the parenless anonymous function `function { ...; }`: a
+        standalone `{` right after such words, in the same simple command,
+        opens the body of an anonymous function. `function f {`, a quoted or
+        escaped `function`, a dynamic word and a `function` on an earlier line
+        do not. The empty `()` of `function () { ...; }` is decided by the same
+        rule.
+        The decision takes constant time per `{`. It reads `lone_function`,
+        which `_append_word` keeps as each word is appended, and never the
+        list of words, so a command with many `{` words stays linear in its
+        length."""
+        return self.lone_function
+
     def _open_group(self, kind):
         self._finish_word()
         head = kind == "(" and self._names_function(self.words)
+        # Whether the group belongs to an anonymous function, and the pipe
+        # state of its head, are read before the flush takes the words away and
+        # ends a pending pipe. A `{` is the anonymous body after the empty `()`
+        # of a head, or right after the one `function` of the parenless form;
+        # the body is on the right side of the pipe when its head is. A `(` is
+        # an anonymous head after the one `function`, or where the simple
+        # command holds no word (not as the body of a function definition, and
+        # not among the arguments of an anonymous body).
+        anon = False
+        anon_pipe = self.pipe_pending
+        if kind == "{":
+            if self.anon_head is not None:
+                anon = True
+                anon_pipe = self.anon_head.anon_pipe
+            elif self._names_anonymous_function():
+                anon = True
+        elif not head and not self.fn_head and not self._in_arguments():
+            anon = self._names_anonymous_function() or not self.words
         self._flush()
         parent = self.frames[-1] if self.frames else None
         # The sizes as they stand once this group is in the list: an empty
         # group is closed with the same sizes.
         size = (len(self.commands), len(self.groups) + 1)
-        group = _Group(kind, parent, self.pipe_pending, self.fn_head, head, size)
+        pipe = anon_pipe if kind == "{" and anon else self.pipe_pending
+        group = _Group(kind, parent, pipe, self.fn_head, head, size, anon, anon and anon_pipe)
         self.pipe_pending = False
         self.fn_head = False
+        self.anon_head = None
         self.frames.append(group)
         self.groups.append(group)
 
@@ -473,9 +602,13 @@ class _Parser:
         group = self.frames.pop()
         self.pipe_pending = False
         self.after_group = group
-        if group.kind == "(" and group.head and group.size == (len(self.commands), len(self.groups)):
-            # `name()` with nothing inside: the group that follows is the body.
-            self.fn_head = True
+        if group.kind == "(" and group.size == (len(self.commands), len(self.groups)):
+            # `()` with nothing inside: the group that follows is the body of
+            # a function (`name()`) or of an anonymous function.
+            if group.head:
+                self.fn_head = True
+            elif group.anon:
+                self.anon_head = group
 
     def _close_paren(self):
         self._finish_word()
