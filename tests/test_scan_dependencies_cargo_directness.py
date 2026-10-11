@@ -818,5 +818,351 @@ class TestAc8StandardLibraryOnly(unittest.TestCase):
         self.assertEqual({m for m in modules if m not in sys.stdlib_module_names}, set())
 
 
+# ---------------------------------------------------------------------------
+# sca-cargo-implicit-workspace-members task0001: a `[workspace]` root manifest
+# with a path-bearing root dependency entry leaves the direct set incomplete
+# (feature-docs/sca-cargo-implicit-workspace-members/tasks/task0001.md)
+#
+# - AC-1 (FR1, FR4, FR5, TM-1, TM-2): a `[workspace]` without `members` (or
+#   with `members = []`) and a root path dependency counts an undeclared
+#   advisory in the cargo note; the member manifest is not read.
+# - AC-2 (FR1, FR5, TM-1): the path entry in dev-dependencies,
+#   build-dependencies, a target table and the sub-table form.
+# - AC-3 (FR2, FR5, TM-1): a path inherited through `workspace = true`, also
+#   with a `package` rename.
+# - AC-4 (FR4): declared crates stay findings, determined-below-threshold
+#   advisories are dropped uncounted.
+# - AC-5 (FR3, NFR5): workspaces without a path-bearing root entry, `[patch]`
+#   and `[replace]` paths, and manifests without `[workspace]` stay complete.
+# - AC-6 (NFR2, NFR3, NFR4, TM-2, TM-3, TM-4): the path value is never
+#   followed, non-string `path` values raise nothing, and no manifest-derived
+#   text reaches the result.
+# - AC-7 (NFR1, NFR5, NFR6) is the full suite plus the plugin-invariants
+#   check, run by the implementer, not from in here.
+# ---------------------------------------------------------------------------
+
+class TestCargoImplicitWorkspaceMembers(CargoScanCase):
+    UNDECLARED = ("undeclared-member-dep", "RUSTSEC-2025-0100")
+
+    # -- helpers ----------------------------------------------------------
+
+    def assertUndeterminedOnce(self, manifest):
+        """An undeclared high-severity advisory is no finding and is counted
+        once in the cargo undetermined note."""
+        result = self.scan_cargo(manifest, cargo_entry(*self.UNDECLARED))
+        self.assertNoFinding(result)
+        self.assertCompletedWithNote(result, CARGO_NOTE_ONE)
+        return result
+
+    def assertStaysTransitive(self, manifest):
+        """An undeclared high-severity advisory stays transitive: no finding
+        and no cargo undetermined note."""
+        result = self.scan_cargo(manifest, cargo_entry(*self.UNDECLARED))
+        self.assertNoFinding(result)
+        self.assertCompletedWithoutDirectnessNote(result)
+        return result
+
+    def write_member(self, declared="undeclared-member-dep"):
+        """member/Cargo.toml declares `declared`; it must never be read."""
+        self.write("member/Cargo.toml", f"[dependencies]\n{declared} = '1'\n")
+
+    # -- AC-1 (FR1, FR4, FR5, TM-1, TM-2) ---------------------------------
+
+    def test_ac1_a_workspace_without_members_and_a_root_path_dependency_is_counted_not_a_finding(self):
+        self.write_member()
+        self.assertUndeterminedOnce(
+            '[workspace]\nresolver = "2"\n\n[dependencies]\nmember = { path = "member" }\n'
+        )
+
+    def test_ac1_a_workspace_with_an_empty_members_list_and_a_root_path_dependency_is_counted(self):
+        self.write_member()
+        self.assertUndeterminedOnce(
+            '[workspace]\nmembers = []\n\n[dependencies]\nmember = { path = "member" }\n'
+        )
+
+    def test_ac1_an_empty_workspace_table_and_a_root_path_dependency_is_counted(self):
+        self.write_member()
+        self.assertUndeterminedOnce('[workspace]\n\n[dependencies]\nmember = { path = "member" }\n')
+
+    def test_ac1_the_member_manifest_declaration_does_not_turn_the_advisory_into_a_finding(self):
+        # member/Cargo.toml declares the advisory's crate; the root's set stays
+        # incomplete and the member manifest is not read.
+        self.write_member()
+        result = self.scan_cargo(
+            '[workspace]\n\n[dependencies]\nmember = { path = "member" }\n',
+            cargo_entry(*self.UNDECLARED),
+        )
+        self.assertNoFinding(result)
+        self.assertCompletedWithNote(result, CARGO_NOTE_ONE)
+        self.assertFalse(result["skipped"])
+        self.assertIsNone(result["skip_reason"])
+
+    # -- AC-2 (FR1, FR5, TM-1) --------------------------------------------
+
+    def test_ac2_a_path_entry_in_dev_dependencies_is_counted(self):
+        self.assertUndeterminedOnce(
+            '[workspace]\n\n[dev-dependencies]\nmember = { path = "member" }\n'
+        )
+
+    def test_ac2_a_path_entry_in_build_dependencies_is_counted(self):
+        self.assertUndeterminedOnce(
+            '[workspace]\n\n[build-dependencies]\nmember = { path = "member" }\n'
+        )
+
+    def test_ac2_a_path_entry_in_a_target_dependencies_table_is_counted(self):
+        self.assertUndeterminedOnce(
+            "[workspace]\n\n[target.'cfg(unix)'.dependencies]\nmember = { path = 'member' }\n"
+        )
+
+    def test_ac2_a_path_entry_in_a_target_dev_dependencies_table_is_counted(self):
+        self.assertUndeterminedOnce(
+            "[workspace]\n\n[target.'cfg(unix)'.dev-dependencies]\nmember = { path = 'member' }\n"
+        )
+
+    def test_ac2_a_path_entry_in_a_target_build_dependencies_table_is_counted(self):
+        self.assertUndeterminedOnce(
+            "[workspace]\n\n[target.'cfg(windows)'.build-dependencies]\nmember = { path = 'member' }\n"
+        )
+
+    def test_ac2_a_path_entry_in_the_sub_table_form_is_counted(self):
+        self.assertUndeterminedOnce('[workspace]\n\n[dependencies.member]\npath = "member"\n')
+
+    def test_ac2_a_path_entry_in_the_dev_dependencies_sub_table_form_is_counted(self):
+        self.assertUndeterminedOnce('[workspace]\n\n[dev-dependencies.member]\npath = "member"\n')
+
+    def test_ac2_a_path_entry_in_the_target_sub_table_form_is_counted(self):
+        self.assertUndeterminedOnce(
+            "[workspace]\n\n[target.'cfg(unix)'.dependencies.member]\npath = 'member'\n"
+        )
+
+    def test_ac2_a_path_entry_next_to_a_plain_version_entry_is_counted(self):
+        self.assertUndeterminedOnce(
+            '[workspace]\n\n[dependencies]\nserde = "1"\nmember = { path = "member", version = "0.1" }\n'
+        )
+
+    # -- AC-3 (FR2, FR5, TM-1) --------------------------------------------
+
+    def test_ac3_a_path_inherited_through_workspace_true_is_counted(self):
+        self.assertUndeterminedOnce(
+            '[workspace.dependencies]\nmember = { path = "member" }\n\n'
+            "[dependencies]\nmember = { workspace = true }\n"
+        )
+
+    def test_ac3_a_path_inherited_in_the_sub_table_form_is_counted(self):
+        self.assertUndeterminedOnce(
+            '[workspace.dependencies]\nmember = { path = "member" }\n\n'
+            "[dependencies.member]\nworkspace = true\n"
+        )
+
+    def test_ac3_a_path_inherited_in_a_target_table_is_counted(self):
+        self.assertUndeterminedOnce(
+            '[workspace.dependencies]\nmember = { path = "member" }\n\n'
+            "[target.'cfg(unix)'.dependencies]\nmember = { workspace = true }\n"
+        )
+
+    def test_ac3_an_inherited_path_with_a_package_rename_counts_the_undeclared_advisory_once(self):
+        self.assertUndeterminedOnce(
+            '[workspace.dependencies]\nmember = { path = "member", package = "real-member" }\n\n'
+            "[dependencies]\nmember = { workspace = true }\n"
+        )
+
+    def test_ac3_an_advisory_for_the_renamed_package_of_an_inherited_path_is_a_finding(self):
+        result = self.scan_cargo(
+            '[workspace.dependencies]\nmember = { path = "member", package = "real-member" }\n\n'
+            "[dependencies]\nmember = { workspace = true }\n",
+            cargo_entry("real-member", "RUSTSEC-2025-0101"),
+            cargo_entry(*self.UNDECLARED),
+        )
+        self.assertEqual(len(result["findings"]), 1)
+        self.assertFindingFor(result, "real-member", "RUSTSEC-2025-0101")
+        self.assertCompletedWithNote(result, CARGO_NOTE_ONE)
+
+    # -- AC-4 (FR4) -------------------------------------------------------
+
+    def test_ac4_a_crate_declared_in_the_root_stays_a_finding_without_a_note_under_fr1(self):
+        result = self.scan_cargo(
+            '[workspace]\n\n[dependencies]\nserde = "1"\nmember = { path = "member" }\n',
+            cargo_entry("serde", "RUSTSEC-2025-0102"),
+        )
+        self.assertEqual(len(result["findings"]), 1)
+        self.assertFindingFor(result, "serde", "RUSTSEC-2025-0102")
+        self.assertCompletedWithoutDirectnessNote(result)
+
+    def test_ac4_a_crate_declared_in_the_root_stays_a_finding_without_a_note_under_fr2(self):
+        result = self.scan_cargo(
+            '[workspace.dependencies]\nmember = { path = "member" }\n\n'
+            '[dependencies]\nserde = "1"\nmember = { workspace = true }\n',
+            cargo_entry("serde", "RUSTSEC-2025-0103"),
+        )
+        self.assertEqual(len(result["findings"]), 1)
+        self.assertFindingFor(result, "serde", "RUSTSEC-2025-0103")
+        self.assertCompletedWithoutDirectnessNote(result)
+
+    def test_ac4_a_declared_finding_and_an_undeclared_advisory_give_one_finding_and_the_note(self):
+        result = self.scan_cargo(
+            '[workspace]\n\n[dependencies]\nserde = "1"\nmember = { path = "member" }\n',
+            cargo_entry("serde", "RUSTSEC-2025-0104"),
+            cargo_entry(*self.UNDECLARED),
+        )
+        self.assertEqual(len(result["findings"]), 1)
+        self.assertFindingFor(result, "serde", "RUSTSEC-2025-0104")
+        self.assertCompletedWithNote(result, CARGO_NOTE_ONE)
+
+    def test_ac4_an_undeclared_advisory_below_the_threshold_is_dropped_uncounted_under_fr1(self):
+        result = self.scan_cargo(
+            '[workspace]\n\n[dependencies]\nmember = { path = "member" }\n',
+            cargo_entry("undeclared-low", "RUSTSEC-2025-0105", severity="low"),
+        )
+        self.assertNoFinding(result)
+        self.assertCompletedWithoutDirectnessNote(result)
+
+    def test_ac4_an_undeclared_advisory_below_the_threshold_is_dropped_uncounted_under_fr2(self):
+        result = self.scan_cargo(
+            '[workspace.dependencies]\nmember = { path = "member" }\n\n'
+            "[dependencies]\nmember = { workspace = true }\n",
+            cargo_entry("undeclared-low", "RUSTSEC-2025-0106", severity="low"),
+        )
+        self.assertNoFinding(result)
+        self.assertCompletedWithoutDirectnessNote(result)
+
+    def test_ac4_a_below_threshold_advisory_next_to_an_undetermined_one_is_not_counted(self):
+        result = self.scan_cargo(
+            '[workspace]\n\n[dependencies]\nmember = { path = "member" }\n',
+            cargo_entry("undeclared-low", "RUSTSEC-2025-0107", severity="low"),
+            cargo_entry(*self.UNDECLARED),
+        )
+        self.assertNoFinding(result)
+        self.assertCompletedWithNote(result, CARGO_NOTE_ONE)
+
+    # -- AC-5 (FR3, NFR5) -------------------------------------------------
+
+    def test_ac5_a_workspace_without_members_and_without_a_path_entry_stays_transitive(self):
+        self.assertStaysTransitive('[workspace]\n\n[dependencies]\nserde = "1"\n')
+
+    def test_ac5_a_workspace_with_an_empty_members_list_and_without_a_path_entry_stays_transitive(self):
+        self.assertStaysTransitive('[workspace]\nmembers = []\n\n[dependencies]\nserde = "1"\n')
+
+    def test_ac5_an_unreferenced_workspace_dependencies_path_entry_stays_transitive(self):
+        self.assertStaysTransitive(
+            '[workspace.dependencies]\nmember = { path = "member" }\n\n[dependencies]\nserde = "1"\n'
+        )
+
+    def test_ac5_a_workspace_dependencies_path_entry_referenced_under_another_key_stays_transitive(self):
+        self.assertStaysTransitive(
+            '[workspace.dependencies]\nmember = { path = "member" }\nserde = "1"\n\n'
+            "[dependencies]\nserde = { workspace = true }\n"
+        )
+
+    def test_ac5_an_inherited_entry_without_a_path_in_workspace_dependencies_stays_transitive(self):
+        self.assertStaysTransitive(
+            '[workspace.dependencies]\nserde = "1"\nlog = { version = "0.4" }\n\n'
+            "[dependencies]\nserde = { workspace = true }\nlog = { workspace = true }\n"
+        )
+
+    def test_ac5_a_package_manifest_without_a_workspace_and_with_a_path_dependency_stays_transitive(self):
+        self.assertStaysTransitive(
+            '[package]\nname = "demo"\n\n[dependencies]\nmember = { path = "member" }\n'
+        )
+
+    def test_ac5_a_path_dependency_in_a_target_table_without_a_workspace_stays_transitive(self):
+        self.assertStaysTransitive(
+            "[target.'cfg(unix)'.dependencies]\nmember = { path = 'member' }\n"
+        )
+
+    def test_ac5_a_patch_path_entry_does_not_make_a_workspace_incomplete(self):
+        self.assertStaysTransitive(
+            '[workspace]\n\n[dependencies]\nserde = "1"\n\n'
+            '[patch.crates-io]\nserde = { path = "vendor/serde" }\n'
+        )
+
+    def test_ac5_a_replace_path_entry_does_not_make_a_workspace_incomplete(self):
+        self.assertStaysTransitive(
+            '[workspace]\n\n[dependencies]\nserde = "1"\n\n'
+            '[replace]\n"serde:1.0.0" = { path = "vendor/serde" }\n'
+        )
+
+    # -- AC-6 (NFR2, NFR3, NFR4, TM-2, TM-3, TM-4) ------------------------
+
+    DISTINCTIVE_DEP = "zz-distinctive-dependency-q7"
+    OUTSIDE_CRATE = "outside-declared-crate"
+
+    def assertCountedWithoutLeaking(self, manifest, leaks=()):
+        """The scan of `manifest` returns normally; the resolver called
+        directly flags the set incomplete without raising and reads the root
+        manifest only; the undeclared advisory is counted once, no finding;
+        neither summary nor skip_reason carries manifest-derived text."""
+        manifest_path = self.cargo_project(manifest)
+        self.install_cargo(cargo_entry(self.OUTSIDE_CRATE, "RUSTSEC-2025-0108"))
+        result = self.scan()
+        self.assertNoFinding(result)
+        self.assertCompletedWithNote(result, CARGO_NOTE_ONE)
+        for fragment in (*leaks, "Cargo.toml", str(manifest_path), str(self.root)):
+            self.assertNotIn(fragment, result["summary"])
+        reads = []
+        original = SCAN._read_resolved_text
+
+        def recording(path):
+            reads.append(str(path))
+            return original(path)
+
+        with mock.patch.object(SCAN, "_read_resolved_text", recording):
+            names = SCAN._cargo_direct_dependency_names(str(manifest_path))
+        self.assertFalse(names.complete)
+        self.assertEqual(reads, [str(manifest_path)])
+
+    def test_ac6_a_path_value_pointing_outside_the_project_is_never_followed(self):
+        outside = self.base / "outside-the-project-q7"
+        outside.mkdir()
+        (outside / "Cargo.toml").write_text(
+            f"[dependencies]\n{self.OUTSIDE_CRATE} = '1'\n", encoding="utf-8"
+        )
+        manifest = f"[workspace]\n\n[dependencies]\n{self.DISTINCTIVE_DEP} = {{ path = '{outside}' }}\n"
+        self.assertCountedWithoutLeaking(manifest, leaks=(self.DISTINCTIVE_DEP, str(outside), "outside-the-project-q7"))
+
+    def test_ac6_an_integer_path_value_on_a_root_entry_is_handled(self):
+        manifest = f"[workspace]\n\n[dependencies]\n{self.DISTINCTIVE_DEP} = {{ path = 5 }}\n"
+        self.assertCountedWithoutLeaking(manifest, leaks=(self.DISTINCTIVE_DEP,))
+
+    def test_ac6_a_table_path_value_on_a_root_entry_is_handled(self):
+        manifest = f"[workspace]\n\n[dependencies]\n{self.DISTINCTIVE_DEP} = {{ path = {{ nested = 1 }} }}\n"
+        self.assertCountedWithoutLeaking(manifest, leaks=(self.DISTINCTIVE_DEP,))
+
+    def test_ac6_an_integer_path_value_on_an_inherited_workspace_entry_is_handled(self):
+        manifest = (
+            f"[workspace.dependencies]\n{self.DISTINCTIVE_DEP} = {{ path = 5 }}\n\n"
+            f"[dependencies]\n{self.DISTINCTIVE_DEP} = {{ workspace = true }}\n"
+        )
+        self.assertCountedWithoutLeaking(manifest, leaks=(self.DISTINCTIVE_DEP,))
+
+    def test_ac6_a_table_path_value_on_an_inherited_workspace_entry_is_handled(self):
+        manifest = (
+            f"[workspace.dependencies]\n{self.DISTINCTIVE_DEP} = {{ path = {{ nested = 1 }} }}\n\n"
+            f"[dependencies]\n{self.DISTINCTIVE_DEP} = {{ workspace = true }}\n"
+        )
+        self.assertCountedWithoutLeaking(manifest, leaks=(self.DISTINCTIVE_DEP,))
+
+    def test_ac6_a_path_bearing_entry_still_contributes_its_name_as_before(self):
+        manifest_path = self.cargo_project(
+            "[workspace.dependencies]\n"
+            'inherited = { path = "inherited", package = "real-inherited" }\n\n'
+            "[dependencies]\n"
+            'member = { path = "member" }\n'
+            'alias = { path = "alias", package = "real-alias" }\n'
+            "inherited = { workspace = true }\n"
+        )
+        names = SCAN._cargo_direct_dependency_names(str(manifest_path))
+        self.assertEqual(set(names), {"member", "real-alias", "real-inherited"})
+        self.assertFalse(names.complete)
+
+    def test_ac6_the_incompleteness_comes_from_the_flag_alone_not_from_a_new_reason_text(self):
+        result = self.scan_cargo(
+            '[workspace]\n\n[dependencies]\nmember = { path = "member" }\n',
+            cargo_entry(*self.UNDECLARED),
+        )
+        self.assertIsNone(result["skip_reason"])
+        self.assertEqual(result["summary"].count("undetermined directness"), 1)
+        self.assertIn("cargo_directness_undetermined", result["summary"])
+
+
 if __name__ == "__main__":
     unittest.main()
