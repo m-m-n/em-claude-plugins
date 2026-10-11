@@ -175,7 +175,7 @@ tasks:
     requirements:
     - FR13
     - FR15
-    status: in_progress
+    status: merged
     branch: em-workflow/cross-repo-write-guard/task0002
     notes: null
 review:
