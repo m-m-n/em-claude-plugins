@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: ead9e6a473b2cd119567f57713f4cff87db447c0
 last_input_digest: sha256:de745dc94fb58a7ab35bf539e6b52cad5c2430781219b47e3fddc599642fbde6
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -61,10 +61,13 @@ worker_runs:
   input_digest: sha256:23691c42b4298b5db4536cd1cf06a53719a858061026be594f12e48447576f94
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:de745dc94fb58a7ab35bf539e6b52cad5c2430781219b47e3fddc599642fbde6
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-anon-function/SPEC.md
+  sha256: sha256:30e57fb1e5cce3e6c988f9b3df7e8592840e6ca338448e4d91133b822c840094
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
