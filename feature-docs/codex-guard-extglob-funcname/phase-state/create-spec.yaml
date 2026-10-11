@@ -1,22 +1,31 @@
 schema_version: 1
 feature: codex-guard-extglob-funcname
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: edcd7272fff694f561574d43ae8777029de4fb34
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:9a9a6d0a01e165b9ed220d9dcdc9377586cd0f381219026ad900dc1c48b47347
+active_request_id: create-spec-run-0002
 packets: {}
 answers:
   create-spec.feature-identity:
     packet_id: orchestrator-batch
-    answered_at: "2026-10-11T19:54:33+09:00"
+    answered_at: '2026-10-11T19:54:33+09:00'
     source: batch_policy
     answer_mode: select
-    selected_option_ids: [derive_from_task_description]
+    selected_option_ids:
+    - derive_from_task_description
     freeform: null
-    normalized_answer: "feature name derived from task description: codex-guard-extglob-funcname"
-worker_runs: []
+    normalized_answer: 'feature name derived from task description: codex-guard-extglob-funcname'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:9a9a6d0a01e165b9ed220d9dcdc9377586cd0f381219026ad900dc1c48b47347
+  output_digest: sha256:c3aec5a74279783021331c94dc5dc4258ee1226ffc03ff6fc88821755a3777a1
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:92a89151f5e13e16d7f24c02dd9929122e8510fd2a96a70ca1101f40117e8ffb
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
