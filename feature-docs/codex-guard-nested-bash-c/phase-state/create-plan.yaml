@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-nested-bash-c
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 6aaf962b81dccc1fac74dc4c862605f9a027ed42
+last_input_digest: sha256:6e1b4ec67de6ad51fd22fbd069cfd2f6a4c5fe2af00b9e71791c06819f681fbf
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:6e1b4ec67de6ad51fd22fbd069cfd2f6a4c5fe2af00b9e71791c06819f681fbf
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
