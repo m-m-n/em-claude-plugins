@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-listing-undecodable-output
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: 6945bbc3ae98ee0434d591cd9579fbf3784126a9
+base_revision: 162dad8afb72ffc76f0e8707d05ad3842d8773cf
 last_input_digest: sha256:d9dde297b54793e040107763606e93716b78ab61a4d7ba56bb72049c672cc0ad
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
