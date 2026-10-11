@@ -141,15 +141,13 @@ workflow:
   status: completed
   completed_at_commit: 9b4e2428e643cda5e399be5e6cbe7b96618f4937
 - id: verify
-  status: in_progress
-  result: fail
-  failed_items:
-  - id: TS-31
-    category: comprehensive
-    note: 'python3 -m unittest discover -s tests が 3 件失敗（test_reproduction_reviewer_instructions
-      の AC-5 digest x2、test_reviewer_roles_protocol の model: sonnet 期待）。main の 7656e549（codex-reviewer
-      の model を sonnet→haiku）で古くなったテストで、main でも同じ 3 件が再現する。feature 固有の tests.test_codex_hook_interactive_guard（40
-      件）は成功'
+  status: completed
+  result: pass
+  failed_items: []
+  summary: repo-tests 10251 件 OK (skipped=1)、tests.test_codex_hook_interactive_guard
+    40 件 OK、plugin-invariants 全 PASS、両コピーはバイト単位で同一、version ファイル差分なし、既存 CASES の削除・変更なし。TS-1〜TS-36
+    すべて pass
+  completed_at_commit: 3dc06c889a5ff8b411b2f9487a9301d22a0e61f8
 - id: retrospect
   status: pending
 tasks:
