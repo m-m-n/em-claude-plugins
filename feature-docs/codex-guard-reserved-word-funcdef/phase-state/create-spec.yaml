@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 6d9ebcb9e537edc3d6559a2c6f11f30422312bf5
-last_input_digest: sha256:bd43c58cd0478be02bd93a6ca97a983de8852d816709e7137b642abfd72b7fb9
+last_input_digest: sha256:0479bdd8e13f4a692afcc6966610aace47cbeb2d59c5a3f5124a6cb4de4d449a
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -84,6 +84,17 @@ answers:
     resolution_note: 'analyst の仮定 A1/A2 を同じ Codex 相談で確認し、どちらも支持された。起動時指示（不明点は Codex
       に相談）と batch policy codex_consultation により Codex に相談（codex_consulted: true, 1
       turn, entry codex）。議論内容を Notion タスクページにコメントで記録済み'
+  create-spec.design-system:
+    question_id: create-spec.design-system
+    packet_id: null
+    answered_at: '2026-10-11T18:05:51+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'design step skipped かつ候補 0 件のため kind: none'
+    resolution_note: 'create-spec 11a exception: skipped + zero candidates -> none'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
@@ -93,7 +104,17 @@ worker_runs:
   status: completed
   input_digest: sha256:bd43c58cd0478be02bd93a6ca97a983de8852d816709e7137b642abfd72b7fb9
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:0479bdd8e13f4a692afcc6966610aace47cbeb2d59c5a3f5124a6cb4de4d449a
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-reserved-word-funcdef/REQUIREMENTS.md
+  sha256: sha256:c2bf691ab96d7495caf622ac060909dfafd8930cbf0f076b98e48e25d9c67b53
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-reserved-word-funcdef/SPEC.md
+  sha256: sha256:4389a7df99920c980600d6b35292727ff42176d0e338b70e89f0dcb484027a33
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
