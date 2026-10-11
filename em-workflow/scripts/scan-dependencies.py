@@ -44,6 +44,7 @@ import dataclasses
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -2062,6 +2063,9 @@ _REQUIREMENTS_OPTION_FORMS = (
     ("constraint", "-c", "--constraint"),
     ("editable", "-e", "--editable"),
 )
+# The long options whose abbreviations are never resolved: an abbreviation of
+# either one leaves the name set incomplete.
+_ABBREVIATED_REQUIREMENTS_OPTIONS = ("--requirement", "--editable")
 
 
 def _requirements_logical_lines(content):
@@ -2091,33 +2095,56 @@ def _requirements_logical_lines(content):
     return logical
 
 
-def _requirements_option(text):
-    """(kind, value) when the option line `text` is an include, constraint
-    or editable line in any of its forms (`-r X`, `-rX`, `--requirement X`,
-    `--requirement=X`, and the same for the other two); None for every
-    other line. `value` may be empty. An include or constraint value is the
-    first token, or the quoted text; an editable value is the rest of the
-    line."""
-    for kind, short, long in _REQUIREMENTS_OPTION_FORMS:
-        if text.startswith(long):
-            rest = text[len(long):]
-            if rest.startswith("="):
-                value = rest[1:].strip()
-            elif rest[:1].isspace():
-                value = rest.strip()
+def _is_abbreviated_requirements_option(token):
+    """True when `token` abbreviates `--requirement` or `--editable`: it
+    starts with `--` and the part before any `=` is longer than `--` and a
+    proper prefix of one of the two (`--requirem`, `--re`, `--e`, ...)."""
+    if not token.startswith("--"):
+        return False
+    name = token.split("=", 1)[0]
+    return len(name) > 2 and any(
+        long.startswith(name) and name != long for long in _ABBREVIATED_REQUIREMENTS_OPTIONS
+    )
+
+
+def _requirements_option_items(text):
+    """The meaningful options of the option line `text` (a logical line
+    starting with `-`), as a list of `(kind, value)` in line order, or None
+    when the line cannot be split into tokens (an unclosed quote, a trailing
+    escape or any other splitting error).
+
+    The line is split with POSIX shell-style splitting and the tokens are
+    read left to right. `kind` is `include` (`-r X`, `-rX`, `--requirement X`,
+    `--requirement=X`), `editable` (`-e X`, `-eX`, `--editable X`,
+    `--editable=X`) or `undetermined` (an abbreviation of `--requirement` or
+    `--editable`, never interpreted: its value is empty and the token after
+    it is not consumed). A separate form takes the next token verbatim as its
+    value, or an empty value when the line ends there. Constraints
+    (`-c` / `--constraint` in any form) are consumed and not listed, as is
+    every other token (`--index-url`, `--hash=...`, a lone `--`, unknown
+    options and stray words)."""
+    try:
+        tokens = iter(shlex.split(text))
+    except Exception:
+        return None
+    items = []
+    for token in tokens:
+        for kind, short, long in _REQUIREMENTS_OPTION_FORMS:
+            if token == short or token == long:
+                value = next(tokens, "")
+            elif token.startswith(long + "="):
+                value = token[len(long) + 1:]
+            elif token.startswith(short):
+                value = token[len(short):]
             else:
                 continue
-        elif text.startswith(short):
-            value = text[len(short):].strip()
+            if kind != "constraint":
+                items.append((kind, value))
+            break
         else:
-            continue
-        if kind != "editable":
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-                value = value[1:-1]
-            else:
-                value = value.split(None, 1)[0] if value else ""
-        return kind, value
-    return None
+            if _is_abbreviated_requirements_option(token):
+                items.append(("undetermined", ""))
+    return items
 
 
 def _requirements_include_target(project_root, including_rel, target):
@@ -2144,19 +2171,23 @@ def _requirements_include_target(project_root, including_rel, target):
 def _pip_requirements_direct_names(path, project_root):
     """The direct names of the requirements file at `path` (inside
     `project_root`), following `-r` includes -- `-r X`, `-rX`,
-    `--requirement X`, `--requirement=X` -- recursively. Returns a
-    `DirectNames`; never raises, never opens a file outside the project
-    root and never fetches a URL.
+    `--requirement X`, `--requirement=X`, at any position on an option line
+    -- recursively. Returns a `DirectNames`; never raises, never opens a
+    file outside the project root and never fetches a URL.
 
     Each include is taken relative to the including file's directory and
     opened only when `_resolve_project_relative` confines it to the root;
     every file is opened at most once per walk (keyed by its resolved
     location), so cycles end without error. Names declared by an included
-    file are direct. The set is incomplete when a file is missing or
-    unreadable, an include is a URL or leaves the root, a requirement line
-    has no resolvable name (a URL or a local path), or an editable line has
-    none. Constraint files (`-c` / `--constraint`) are neither opened nor
-    cause incompleteness; every other option line is ignored."""
+    file are direct, and so are the names of `-e` / `--editable` values at
+    any position on an option line. The set is incomplete when a file is
+    missing or unreadable, an include is a URL or leaves the root, a
+    requirement line has no resolvable name (a URL or a local path), an
+    editable value has none or is missing, an option line cannot be split
+    into tokens (nothing is taken from it) or it holds an abbreviation of
+    `--requirement` / `--editable` (never interpreted). Constraint files
+    (`-c` / `--constraint`) are neither opened nor cause incompleteness;
+    every other option token is ignored."""
     names = set()
     complete = True
     try:
@@ -2186,27 +2217,26 @@ def _pip_requirements_direct_names(path, project_root):
                     else:
                         names.add(name)
                     continue
-                option = _requirements_option(line)
-                if option is None:
-                    continue
-                kind, value = option
-                if kind == "constraint":
-                    continue
-                if kind == "editable":
-                    name = _requirement_name(value)
-                    if name is None:
-                        complete = False
-                    else:
-                        names.add(name)
-                    continue
-                target = _requirements_include_target(root, file_rel, value)
-                if target is None:
+                items = _requirements_option_items(line)
+                if items is None:
                     complete = False
                     continue
-                if target[1] in visited:
-                    continue
-                visited.add(target[1])
-                pending.append(target)
+                for kind, value in items:
+                    if kind == "undetermined":
+                        complete = False
+                    elif kind == "editable":
+                        name = _requirement_name(value)
+                        if name is None:
+                            complete = False
+                        else:
+                            names.add(name)
+                    else:
+                        target = _requirements_include_target(root, file_rel, value)
+                        if target is None:
+                            complete = False
+                        elif target[1] not in visited:
+                            visited.add(target[1])
+                            pending.append(target)
     except Exception:
         complete = False
     return DirectNames(names, complete=complete)

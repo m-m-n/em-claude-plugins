@@ -35,6 +35,8 @@ import builtins
 import importlib.util
 import json
 import os
+import re
+import shlex
 import socket
 import sys
 import tempfile
@@ -1108,6 +1110,497 @@ class TestStandardLibraryOnly(unittest.TestCase):
     def test_this_test_module_imports_only_the_standard_library(self):
         outside = _imported_top_level_modules(__file__) - set(self.stdlib)
         self.assertEqual(outside, set())
+
+
+# ---------------------------------------------------------------------------
+# task0001 (sca-requirements-multi-option-lines): an option line is split into
+# tokens and an include (`-r`) or editable (`-e`) is read at any position on
+# it; a line that cannot be interpreted leaves the name set incomplete.
+#
+# - AC-1 / AC-2: an include after a constraint or an index option is followed;
+#   several includes on one line are all followed; a constraint is never
+#   opened; a repeated target is opened at most once.
+# - AC-3: an unsplittable line takes nothing and is incomplete; a missing
+#   include value is incomplete.
+# - AC-4: a mid-line include outside the root, or a URL, is never opened.
+# - AC-5: `-e` / `--editable` is read at any position.
+# - AC-6: abbreviated long options are incomplete; `--` and other options
+#   are ignored.
+# - AC-7: the summary carries the existing note token and a count only.
+# ---------------------------------------------------------------------------
+
+EXAMPLE_INDEX_URL = "https://example.invalid/simple"
+UNDETERMINED_NOTE_TOKEN = "pip_directness_undetermined"
+# A note token in a scan summary: a parenthesized snake_case word.
+NOTE_TOKEN_RE = re.compile(r"\(([a-z]+(?:_[a-z]+)+)\)")
+
+
+class MultiOptionLineCase(PipDirectnessCase):
+    def real(self, rel):
+        return os.path.realpath(self.root / rel)
+
+    def resolve_line(self, line, files=None, tail="own-pkg\n"):
+        """Resolve a requirements.txt made of `line` and `tail`; returns the
+        direct names, the real paths opened and the network attempts."""
+        self.write("requirements.txt", line + "\n" + tail)
+        for rel, text in (files or {}).items():
+            self.write(rel, text)
+        with OpenRecorder() as recorder, NetworkGuard() as network:
+            names = self.resolve()
+        return names, recorder.opened, network.calls
+
+
+class TestOptionLineIncludeFollowing(MultiOptionLineCase):
+    LEADING_FORMS = (
+        "-c constraints.txt -r deps.txt",
+        f"--index-url {EXAMPLE_INDEX_URL} -r deps.txt",
+    )
+
+    def test_ac1_ac2_the_resolver_follows_an_include_that_is_not_the_first_option(self):
+        for line in self.LEADING_FORMS:
+            with self.subTest(line=line):
+                self.write("deps.txt", "vuln-pkg==1.0\n")
+                constraints = self.write("constraints.txt", "pinned-pkg==1.0\n")
+                names, opened, network_calls = self.resolve_line(line, tail="")
+                self.assertEqual(names, {"vuln-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("deps.txt"), opened)
+                self.assertNotIn(os.path.realpath(constraints), opened)
+                self.assertEqual(network_calls, [])
+
+    def test_ac1_ac2_the_scan_gives_one_finding_and_no_undetermined_note(self):
+        for line in self.LEADING_FORMS:
+            with self.subTest(line=line), OpenRecorder() as recorder, NetworkGuard() as network:
+                result = self.scan_requirements(
+                    line + "\n",
+                    payload(advisory("vuln-pkg")),
+                    extra_files={
+                        "deps.txt": "vuln-pkg==1.0\n",
+                        "constraints.txt": "pinned-pkg==1.0\n",
+                    },
+                )
+                self.assertEqual(len(result["findings"]), 1, result)
+                self.assertTrue(result["findings"][0]["title"].startswith("vuln-pkg:"))
+                self.assertNotIn(UNDETERMINED_NOTE_TOKEN, result["summary"])
+                self.assertFalse(result["skipped"], result)
+                self.assertNotIn(self.real("constraints.txt"), recorder.opened)
+                self.assertEqual(network.calls, [])
+
+    def test_ac2_several_includes_on_one_line_are_all_followed(self):
+        names, opened, _ = self.resolve_line(
+            "-r a.txt -r b.txt", {"a.txt": "a-pkg\n", "b.txt": "b-pkg\n"}
+        )
+        self.assertEqual(names, {"own-pkg", "a-pkg", "b-pkg"})
+        self.assertTrue(names.complete)
+        self.assertIn(self.real("a.txt"), opened)
+        self.assertIn(self.real("b.txt"), opened)
+
+    def test_ac2_an_include_after_another_option_is_followed_and_the_constraint_is_not_opened(self):
+        forms = {
+            "long equals after a constraint": "-c c.txt --requirement=b.txt",
+            "attached after a constraint": "-c c.txt -rb.txt",
+            "long with space after an index option": f"--index-url {EXAMPLE_INDEX_URL} --requirement b.txt",
+            "short after a long constraint": "--constraint c.txt -r b.txt",
+            "short after an attached constraint": "-cc.txt -r b.txt",
+            "short after a long equals constraint": "--constraint=c.txt -r b.txt",
+            "constraint after the include": "-r b.txt -c c.txt",
+            "include between two constraints": "-c c.txt -r b.txt -c c.txt",
+            "short after a hash option": "--hash=sha256:abc -r b.txt",
+        }
+        for label, line in forms.items():
+            with self.subTest(form=label):
+                constraints = self.write("c.txt", "pinned-pkg==1.0\n")
+                names, opened, network_calls = self.resolve_line(line, {"b.txt": "b-pkg\n"})
+                self.assertEqual(names, {"own-pkg", "b-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("b.txt"), opened)
+                self.assertNotIn(os.path.realpath(constraints), opened)
+                self.assertEqual(network_calls, [])
+
+    def test_ac2_a_constraint_value_that_looks_like_an_include_is_not_followed(self):
+        # `-c -r`: the constraint takes the next token as its value.
+        names, opened, _ = self.resolve_line("-c -r b.txt", {"b.txt": "b-pkg\n"})
+        self.assertEqual(names, {"own-pkg"})
+        self.assertTrue(names.complete)
+        self.assertNotIn(self.real("b.txt"), opened)
+
+    def test_ac2_the_same_target_named_more_than_once_on_one_line_is_opened_once(self):
+        names, opened, _ = self.resolve_line(
+            "-c c.txt -r b.txt -r b.txt -rb.txt --requirement=b.txt --requirement b.txt",
+            {"b.txt": "b-pkg\n"},
+        )
+        self.assertEqual(names, {"own-pkg", "b-pkg"})
+        self.assertTrue(names.complete)
+        self.assertEqual(opened.count(self.real("b.txt")), 1)
+
+    def test_ac2_a_cycle_formed_by_mid_line_includes_terminates_and_opens_each_file_once(self):
+        names, opened, _ = self.resolve_line(
+            "-c c.txt -r other.txt",
+            {
+                "other.txt": f"--index-url {EXAMPLE_INDEX_URL} -r requirements.txt\nsecond-pkg\n",
+                "c.txt": "pinned-pkg==1.0\n",
+            },
+            tail="first-pkg\n",
+        )
+        self.assertEqual(names, {"first-pkg", "second-pkg"})
+        self.assertTrue(names.complete)
+        self.assertEqual(opened.count(self.real("requirements.txt")), 1)
+        self.assertEqual(opened.count(self.real("other.txt")), 1)
+        self.assertNotIn(self.real("c.txt"), opened)
+
+    def test_ac2_an_include_in_an_included_file_after_an_option_is_relative_to_that_file(self):
+        names, _, _ = self.resolve_line(
+            "-r sub/inc.txt",
+            {"sub/inc.txt": "-c c.txt -r deeper.txt\n", "sub/deeper.txt": "deep-pkg\n"},
+        )
+        self.assertEqual(names, {"own-pkg", "deep-pkg"})
+        self.assertTrue(names.complete)
+
+
+class TestUnsplittableAndValuelessOptionLines(MultiOptionLineCase):
+    UNSPLITTABLE = {
+        "unclosed double quote": '-c a -r "deps.txt',
+        "unclosed single quote": "-c a -r 'deps.txt",
+        "unclosed quote after an include": '-r deps.txt -r "other.txt',
+        # The trailing space keeps the backslash from joining the next line;
+        # the logical line is stripped, which leaves the escape trailing.
+        "trailing escape": "-r deps.txt \\ ",
+    }
+
+    def test_ac3_the_unsplittable_forms_really_cannot_be_split(self):
+        for label, line in self.UNSPLITTABLE.items():
+            with self.subTest(form=label):
+                logical = SCAN._requirements_logical_lines(line + "\nown-pkg\n")[0]
+                with self.assertRaises(ValueError):
+                    shlex.split(logical)
+
+    def test_ac3_an_unsplittable_line_takes_nothing_and_is_incomplete(self):
+        for label, line in self.UNSPLITTABLE.items():
+            with self.subTest(form=label):
+                names, opened, network_calls = self.resolve_line(
+                    line, {"deps.txt": "deps-pkg\n", "other.txt": "other-pkg\n"}
+                )
+                self.assertFalse(names.complete)
+                self.assertEqual(names, {"own-pkg"})
+                self.assertNotIn(self.real("deps.txt"), opened)
+                self.assertNotIn(self.real("other.txt"), opened)
+                self.assertEqual(network_calls, [])
+
+    def test_ac3_an_unsplittable_line_does_not_stop_other_lines_and_files(self):
+        for label, line in self.UNSPLITTABLE.items():
+            with self.subTest(form=label):
+                self.write("requirements.txt", f"first-pkg\n-r inc.txt\n{line}\n-r after.txt\nlast-pkg\n")
+                self.write("inc.txt", f"{line}\ninc-pkg\n")
+                self.write("after.txt", "after-pkg\n")
+                self.write("deps.txt", "deps-pkg\n")
+                names = self.resolve()
+                self.assertFalse(names.complete)
+                self.assertEqual(names, {"first-pkg", "inc-pkg", "after-pkg", "last-pkg"})
+
+    def test_ac3_an_unsplittable_line_raises_nothing_and_counts_an_undeclared_advisory_once(self):
+        for label, line in self.UNSPLITTABLE.items():
+            with self.subTest(form=label):
+                result = self.scan_requirements(
+                    line + "\nown-pkg\n", payload(advisory("undeclared-pkg"))
+                )
+                self.assertUndeterminedOne(result)
+                self.assertEqual(result["summary"].count(UNDETERMINED_NOTE_TOKEN), 1)
+
+    def test_ac3_a_missing_include_value_makes_the_set_incomplete(self):
+        forms = {
+            "short after an index option": f"--index-url {EXAMPLE_INDEX_URL} -r",
+            "trailing long option": "--requirement",
+            "trailing long option after a constraint": "-c a --requirement",
+            "empty long equals": "--requirement=",
+            "empty long equals after an index option": f"--index-url {EXAMPLE_INDEX_URL} --requirement=",
+            "quoted empty value": '-c a -r ""',
+        }
+        for label, line in forms.items():
+            with self.subTest(form=label):
+                names, opened, network_calls = self.resolve_line(line)
+                self.assertFalse(names.complete)
+                self.assertEqual(names, {"own-pkg"})
+                self.assertEqual(network_calls, [])
+
+    def test_ac3_a_missing_include_value_counts_an_undeclared_advisory_once(self):
+        result = self.scan_requirements(
+            f"--index-url {EXAMPLE_INDEX_URL} -r\nown-pkg\n", payload(advisory("undeclared-pkg"))
+        )
+        self.assertUndeterminedOne(result)
+
+    def test_ac3_a_constraint_without_a_value_leaves_the_set_complete(self):
+        for line in ("-c", "--constraint", f"--index-url {EXAMPLE_INDEX_URL} -c"):
+            with self.subTest(line=line):
+                names, _, _ = self.resolve_line(line)
+                self.assertTrue(names.complete)
+                self.assertEqual(names, {"own-pkg"})
+
+
+class TestMidLineIncludeContainment(MultiOptionLineCase):
+    def setUp(self):
+        super().setUp()
+        self.outside_file = self.write("outside-reqs.txt", "outside-pkg==1.0\n", base=self.outside)
+
+    def assert_contained(self, line):
+        names, opened, network_calls = self.resolve_line(line)
+        self.assertNotIn(os.path.realpath(self.outside_file), opened, line)
+        self.assertEqual(names, {"own-pkg"}, line)
+        self.assertFalse(names.complete, line)
+        self.assertEqual(network_calls, [], line)
+
+    def test_ac4_a_mid_line_include_outside_the_root_is_never_opened(self):
+        absolute = shlex.quote(str(self.outside_file))
+        forms = {
+            "dot dot after a constraint": "-c a -r ../outside/outside-reqs.txt",
+            "absolute after a constraint": f"-c a -r {absolute}",
+            "absolute long form after an index option": (
+                f"--index-url {EXAMPLE_INDEX_URL} --requirement {absolute}"
+            ),
+            "dot dot long equals": "-c a --requirement=../outside/outside-reqs.txt",
+            "dot dot attached": "-c a -r../outside/outside-reqs.txt",
+            "dot dot after another include": "-r ok.txt -r ../outside/outside-reqs.txt",
+        }
+        self.write("ok.txt", "ok-pkg\n")
+        for label, line in forms.items():
+            with self.subTest(form=label):
+                names, opened, network_calls = self.resolve_line(line)
+                self.assertNotIn(os.path.realpath(self.outside_file), opened, line)
+                self.assertFalse(names.complete, line)
+                self.assertNotIn("outside-pkg", names)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac4_a_mid_line_symlink_leading_outside_the_root_is_never_opened(self):
+        try:
+            os.symlink(self.outside_file, self.root / "linked.txt")
+        except (OSError, NotImplementedError):
+            self.skipTest("this platform cannot create symlinks")
+        self.assert_contained("-c a -r linked.txt")
+
+    def test_ac4_a_mid_line_url_include_is_never_fetched(self):
+        targets = (
+            "https://example.invalid/reqs.txt",
+            "http://example.invalid/reqs.txt",
+            "file:///etc/hostname",
+            "ftp://example.invalid/reqs.txt",
+        )
+        for target in targets:
+            for prefix in (f"--index-url {EXAMPLE_INDEX_URL} -r", "-c a --requirement"):
+                with self.subTest(target=target, prefix=prefix):
+                    self.assert_contained(f"{prefix} {target}")
+            with self.subTest(target=target, form="equals"):
+                self.assert_contained(f"-c a --requirement={target}")
+            with self.subTest(target=target, form="attached"):
+                self.assert_contained(f"-c a -r{target}")
+
+
+class TestMidLineEditable(MultiOptionLineCase):
+    def test_ac5_a_named_editable_is_read_at_any_position(self):
+        forms = {
+            "leading short": "-e named-pkg",
+            "leading attached": "-enamed-pkg",
+            "leading long": "--editable named-pkg",
+            "leading long equals": "--editable=named-pkg",
+            "short after an index option": f"--index-url {EXAMPLE_INDEX_URL} -e named-pkg",
+            "attached after a constraint": "-c a -enamed-pkg",
+            "long after an index option": f"--index-url {EXAMPLE_INDEX_URL} --editable named-pkg",
+            "long equals after an index option": f"--index-url {EXAMPLE_INDEX_URL} --editable=named-pkg",
+            "long equals with extras": "-c a --editable=named-pkg[extra]",
+            "short after an include": "-r inc.txt -e named-pkg",
+        }
+        for label, line in forms.items():
+            with self.subTest(form=label):
+                names, _, network_calls = self.resolve_line(line, {"inc.txt": "inc-pkg\n"})
+                self.assertIn("named-pkg", names, line)
+                self.assertIn("own-pkg", names, line)
+                self.assertTrue(names.complete, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac5_an_editable_without_a_name_or_a_value_makes_the_set_incomplete(self):
+        forms = {
+            "local path after a constraint": "-c a -e ./pkg",
+            "local path attached": "-c a -e../pkg",
+            "current directory": "-c a -e .",
+            "long local path": "-c a --editable ./pkg",
+            "long equals local path": "-c a --editable=./pkg",
+            "url without a name": f"--index-url {EXAMPLE_INDEX_URL} -e git+https://example.invalid/org/pkg.git#egg=pkg",
+            "short without a value": f"--index-url {EXAMPLE_INDEX_URL} -e",
+            "long without a value": "-c a --editable",
+            "empty long equals": "-c a --editable=",
+            "quoted empty value": '-c a -e ""',
+        }
+        for label, line in forms.items():
+            with self.subTest(form=label):
+                names, _, network_calls = self.resolve_line(line)
+                self.assertFalse(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac5_an_unnamed_editable_counts_an_undeclared_advisory_once(self):
+        result = self.scan_requirements(
+            "-c a -e ./pkg\nown-pkg\n", payload(advisory("undeclared-pkg"))
+        )
+        self.assertUndeterminedOne(result)
+
+    def test_ac5_a_named_editable_after_an_option_makes_its_advisory_a_finding(self):
+        result = self.scan_requirements(
+            f"--index-url {EXAMPLE_INDEX_URL} --editable=named-pkg\n",
+            payload(advisory("named-pkg")),
+        )
+        self.assertEqual(len(result["findings"]), 1, result)
+        self.assertTrue(result["findings"][0]["title"].startswith("named-pkg:"))
+        self.assertNotIn(UNDETERMINED_NOTE_TOKEN, result["summary"])
+
+    def test_ac5_a_leading_editable_takes_only_the_next_token_as_its_value(self):
+        names, opened, _ = self.resolve_line(
+            "-e named-pkg -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+        )
+        self.assertEqual(names, {"named-pkg", "deps-pkg"})
+        self.assertTrue(names.complete)
+        self.assertIn(self.real("deps.txt"), opened)
+
+    def test_ac5_a_leading_editable_without_a_name_does_not_hide_a_later_include(self):
+        names, opened, _ = self.resolve_line(
+            "-e ./pkg -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+        )
+        self.assertEqual(names, {"deps-pkg"})
+        self.assertFalse(names.complete)
+        self.assertIn(self.real("deps.txt"), opened)
+
+    def test_ac5_a_quoted_editable_value_is_one_token(self):
+        names, _, _ = self.resolve_line('-c a -e "named-pkg>=1.0"', tail="")
+        self.assertEqual(names, {"named-pkg"})
+        self.assertTrue(names.complete)
+
+
+class TestAbbreviatedAndIgnoredOptions(MultiOptionLineCase):
+    def test_ac6_an_abbreviated_long_option_makes_the_set_incomplete_and_opens_nothing(self):
+        forms = (
+            "--requirem deps.txt",
+            "--requirem=deps.txt",
+            "-c a --editab ./pkg",
+            "--re deps.txt",
+            "--re=deps.txt",
+            "--e ./pkg",
+            "--e=./pkg",
+            "--r deps.txt",
+            "--requireme deps.txt",
+            "--edit=deps.txt",
+            "--editabl deps.txt",
+            f"--index-url {EXAMPLE_INDEX_URL} --requirem deps.txt",
+            "-c a --requirem=deps.txt",
+        )
+        for line in forms:
+            with self.subTest(line=line):
+                names, opened, network_calls = self.resolve_line(line, {"deps.txt": "deps-pkg\n"})
+                self.assertFalse(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+                self.assertNotIn(self.real("deps.txt"), opened, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac6_an_abbreviation_does_not_consume_the_following_token(self):
+        for line in ("--requirem -r other.txt", "--e -r other.txt", "--editab -r other.txt"):
+            with self.subTest(line=line):
+                names, opened, _ = self.resolve_line(
+                    line, {"other.txt": "other-pkg\n", "deps.txt": "deps-pkg\n"}
+                )
+                self.assertFalse(names.complete, line)
+                self.assertEqual(names, {"own-pkg", "other-pkg"}, line)
+                self.assertIn(self.real("other.txt"), opened, line)
+
+    def test_ac6_an_abbreviated_value_is_never_read_as_a_name_or_a_file(self):
+        names, opened, _ = self.resolve_line(
+            "--editab named-pkg --requirem deps.txt", {"deps.txt": "deps-pkg\n"}
+        )
+        self.assertFalse(names.complete)
+        self.assertEqual(names, {"own-pkg"})
+        self.assertNotIn(self.real("deps.txt"), opened)
+
+    def test_ac6_a_lone_double_dash_and_other_options_are_ignored_and_stay_complete(self):
+        forms = (
+            "--",
+            f"--index-url {EXAMPLE_INDEX_URL}",
+            "--hash=sha256:abc",
+            "--no-binary :all:",
+            "--unknown-option value",
+            "--unknown-option=value stray-word",
+            "--extra-index-url https://x.invalid --trusted-host x.invalid",
+            "-f ./wheels --",
+            "--prefer-binary",
+            "-i",
+            f"--index-url {EXAMPLE_INDEX_URL} -- --no-index",
+        )
+        for line in forms:
+            with self.subTest(line=line):
+                names, opened, network_calls = self.resolve_line(line, {"deps.txt": "deps-pkg\n"})
+                self.assertTrue(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac6_a_constraint_abbreviation_is_not_flagged(self):
+        # Only `--requirement` and `--editable` abbreviations are interpreted.
+        names, _, _ = self.resolve_line("--constraint-extra x --con y")
+        self.assertTrue(names.complete)
+        self.assertEqual(names, {"own-pkg"})
+
+
+class TestIncompleteSetsReportOnlyThroughTheExistingNote(MultiOptionLineCase):
+    UNSPLITTABLE_SECRET = '-c secret-constraint.txt -r "secret-deps.txt'
+
+    def split_error_texts(self):
+        texts = set()
+        for line in ('x "y', "x \\"):
+            try:
+                shlex.split(line)
+            except ValueError as error:
+                texts.add(str(error))
+        return texts
+
+    def test_ac7_the_splitter_error_texts_are_known(self):
+        self.assertEqual(len(self.split_error_texts()), 2)
+
+    def test_ac7_every_incomplete_case_is_reported_through_the_existing_note_only(self):
+        outside_file = self.write("secret-outside.txt", "outside-pkg==1.0\n", base=self.outside)
+        cases = {
+            "unsplittable line": self.UNSPLITTABLE_SECRET,
+            "trailing escape": "-r secret-deps.txt \\ ",
+            "include outside the root": "-c secret-constraint.txt -r ../outside/secret-outside.txt",
+            "absolute include outside the root": f"-c a -r {shlex.quote(str(outside_file))}",
+            "url include": "--index-url https://secret-host.invalid/simple -r https://secret-host.invalid/secret-deps.txt",
+            "missing include value": "--index-url https://secret-host.invalid/simple -r",
+            "empty long equals": "--requirement=",
+            "unnamed editable": "-c a -e ./secret-pkg-dir",
+            "missing editable value": "-c a --editable",
+            "abbreviation": "--requirem secret-deps.txt",
+            "editable abbreviation": "-c secret-constraint.txt --editab ./secret-pkg-dir",
+        }
+        forbidden = {
+            "secret",
+            str(self.root),
+            str(self.outside),
+            "undeclared-pkg",
+            "constraint",
+            "deps.txt",
+        } | self.split_error_texts()
+        for label, line in cases.items():
+            with self.subTest(case=label):
+                result = self.scan_requirements(
+                    line + "\nown-pkg\n", payload(advisory("undeclared-pkg"))
+                )
+                self.assertUndeterminedOne(result)
+                summary = result["summary"]
+                self.assertEqual(summary.count(UNDETERMINED_NOTE_TOKEN), 1, summary)
+                self.assertEqual(set(NOTE_TOKEN_RE.findall(summary)), {UNDETERMINED_NOTE_TOKEN}, summary)
+                for text in forbidden | {line}:
+                    self.assertNotIn(text, summary)
+
+    def test_ac7_the_note_counts_each_undeclared_advisory_with_the_fixed_wording(self):
+        result = self.scan_requirements(
+            "-c a --requirem deps.txt\nown-pkg\n",
+            payload(advisory("undeclared-one"), advisory("undeclared-two"), advisory("own-pkg")),
+        )
+        self.assertIn(PIP_NOTE_TWO, result["summary"])
+        self.assertEqual(len(result["findings"]), 1, result)
+        self.assertEqual(set(NOTE_TOKEN_RE.findall(result["summary"])), {UNDETERMINED_NOTE_TOKEN})
 
 
 if __name__ == "__main__":
