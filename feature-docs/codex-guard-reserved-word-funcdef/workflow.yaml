@@ -195,7 +195,7 @@ tasks:
     complexity: low
     requirements:
     - FR8
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-guard-reserved-word-funcdef/task0002
     provenance:
       source: verify
