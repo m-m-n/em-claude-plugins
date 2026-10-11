@@ -123,7 +123,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-guard-nested-parse-error/task0001
     notes: null
 review:
