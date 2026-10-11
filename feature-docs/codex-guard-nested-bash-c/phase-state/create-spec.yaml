@@ -1,12 +1,20 @@
 schema_version: 1
 feature: codex-guard-nested-bash-c
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 916c3d0a9f340771f4fbc9e3693852626c353806
 last_input_digest: sha256:cf3dc93be280b9de51f33147555e7f0faa3c5a38afd73f813ce8382cd7d21ca4
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T20:52:00+09:00'
+    questions:
+    - question_id: scope.nested-c-depth
+      status: answered
+    - question_id: design-step.decision
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: orchestrator-batch
@@ -17,9 +25,36 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from task description: codex-guard-nested-bash-c'
+  scope.nested-c-depth:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T20:56:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - all_levels
+    freeform: null
+    normalized_answer: 'all_levels: -c の文字列を何段目でも一段目と同じ規則で判定する。条件(Codex 相談で採用): 再帰ではなく明示的なスタックで走査する。読み直す文字数の合計に上限を設け、上限を超えた分は判定せず通す（拒否理由にしない）。深い入れ子・多数の入れ子でも時間内に応答することをテストで確かめる。既存
+      silent 3 件は deny に変え理由を SPEC に書く。-n（実行抑止）の扱いは一段目と同じ規則のまま変えない（範囲外）。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption); options: all_levels / two_levels / keep_one_level; choice:
+      all_levels; codex_consulted: true (1 turn, harness codex); opus_escalation:
+      false; 議論の要点: 段数で止めると同じ対話起動を見逃し無人実行が止まる経路が残る。元の FR9 は一段を上限にする理由を示していない。リスクは再帰例外を
+      main() が黙って通す点と処理時間なので、明示スタックと総文字数上限（超過は通す）を条件にする。-n 未考慮による誤拒否の可能性は一段目と共通の既存挙動で、本件では変えない。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T20:56:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'decide_autonomously: requirements-analyst の推奨 skip を採用（UI
+      なし）'
+    resolution_note: 'gate: create-spec.design-step; policy option_id decide_autonomously
+      → analyst recommendation skip'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:cf3dc93be280b9de51f33147555e7f0faa3c5a38afd73f813ce8382cd7d21ca4
   output_digest: null
 artifacts: []
