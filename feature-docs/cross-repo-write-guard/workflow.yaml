@@ -2,36 +2,58 @@ schema_version: 1
 feature: cross-repo-write-guard
 created: '2026-10-12'
 base_branch: main
-goal: |
-  # em-workflow に、カレント git リポジトリ外への書き込みを確認するフック cross-repo-write-guard を追加する
+goal: '# em-workflow に、カレント git リポジトリ外への書き込みを確認するフック cross-repo-write-guard を追加する
+
 
   Notion タスク: <notion-url>
 
+
   ## やりたいこと (必須)
+
   カレントの git リポジトリの外へのファイル書き込みを検知し、確認を挟むフックを em-workflow に追加する。
 
+
   ## 背景・なぜ (必須)
+
   `~/.claude/rules/cross-repository-writes.md` のルール（カレントリポジトリ外への書き込み前に確認する）をフックで強制する。
 
+
   ## 受け入れ条件 / 完了の定義 (必須)
+
   - [ ] `em-workflow/hooks/cross-repo-write-guard.py`（仮称）を追加し、`em-workflow/hooks/hooks.json` の `Write|Edit|MultiEdit` matcher に登録する
+
   - [ ] 書き込み先が `git rev-parse --show-toplevel` の配下でないとき `ask` を返す
+
   - [ ] `/tmp` 配下と `~/.claude/` 配下は判定せず通す
+
   - [ ] Bash 経由の書き込み（`>` リダイレクト、`tee`、`sed -i`、`cp` / `mv` の書き込み先）のうち静的に解決できるものを判定対象にし、`Bash` matcher に登録する
+
   - [ ] 静的に解決できないパス（変数展開など）は判定しない
+
   - [ ] `tests/test_cross_repo_write_guard.py` に `CASES` 表 `(期待する判定, ラベル, コマンド)` でテストを置く
+
   - [ ] `.claude/rules/hook-tests.md` に cross-repo-write-guard の節を追加する
 
+
   ## スコープ外 (任意)
+
   ユーザーが名指ししたパスの判別。
 
+
   ## 制約・前提 (任意)
+
   - `.claude/worktrees/` 配下の worktree から、メインリポジトリ側へ書く場合の扱いを決めておく
+
   - `claude-batch` 下では `ask` が `deny` に降格される
 
+
   ## 実行時の追加指示
+
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+
   - その議論の内容を Notion（タスクページへのコメント）に記録する。
+
+  '
 parent_branch: em-workflow/cross-repo-write-guard/integration
 tier: full
 tier_decision:
@@ -97,7 +119,62 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: cross-repo-write-guard hook, tests and registration
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/cross-repo-write-guard.py
+    - tests/test_cross_repo_write_guard.py
+    - em-workflow/hooks/hooks.json
+    - tests/test_hooks_registration.py
+    - tests/test_guardrail_hooks_migration.py
+    - test-docs/cross-repo-write-guard/task0001.tests.yaml
+    skills:
+    - infra-impl
+    domains:
+    - auth
+    - input-handling
+    - external-io
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR14
+    - FR16
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+  task0002:
+    title: README and hook-tests.md documentation for cross-repo-write-guard
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/README.md
+    - .claude/rules/hook-tests.md
+    - test-docs/cross-repo-write-guard/task0002.tests.yaml
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR13
+    - FR15
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -107,7 +184,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-11
   FR2:
@@ -115,7 +193,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -124,7 +203,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-3
@@ -133,7 +213,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
     - TS-8
@@ -142,7 +223,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-5
@@ -151,7 +233,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-10
@@ -160,7 +243,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR8:
@@ -168,7 +252,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
   FR9:
@@ -176,7 +261,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   FR10:
@@ -184,7 +270,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-9
   FR11:
@@ -192,7 +279,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR12:
@@ -200,7 +288,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-11
   FR13:
@@ -208,7 +297,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-11
   FR14:
@@ -216,7 +306,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-11
   FR15:
@@ -224,7 +315,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-11
   FR16:
@@ -232,7 +324,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-11
   NFR1:
@@ -240,29 +333,37 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
   NFR2:
     title: 副作用
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-13
   NFR3:
     title: 時間
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-14
   NFR4:
     title: テストの隔離
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-15
 batch:
   review_rework_count: 0
   verify_rework:
