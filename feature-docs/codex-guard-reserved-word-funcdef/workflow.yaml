@@ -178,6 +178,10 @@ review:
   status: pending
   rounds_completed: 0
   perspectives: []
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary: []
+    cross_validation: true
   residual_critical_high: 0
   needs_rework: false
 requirements:
