@@ -100,7 +100,7 @@ workflow:
   failed_items: []
   completed_at_commit: 512894c9ff54152302586c51de3933febf5e42c0
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Consume the values of value-taking pip options on requirements option lines
