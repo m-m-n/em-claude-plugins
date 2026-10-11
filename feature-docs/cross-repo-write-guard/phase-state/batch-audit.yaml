@@ -1,0 +1,83 @@
+schema_version: 1
+feature: cross-repo-write-guard
+records:
+- question_id: requirement.worktree-to-main-repo
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - treat_as_outside
+  freeform: null
+  normalized_answer: cwd の --show-toplevel だけと比較し、worktree からメイン作業ツリーへの書き込みも外側として ask（batch では deny）にする。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: same_repo_passes, main_tree_only_passes; reasons: README:36 keeps the main tree unchanged until final merge; git common dir is used for approval sharing, not write scope'
+- question_id: requirement.destructive-guard-allow-override
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - no_destructive_change
+  freeform: null
+  normalized_answer: destructive-guard.py は変更しない。公式仕様の判定優先順位（deny > defer > ask > allow）により、destructive-guard の allow は新フックの ask / deny を上書きしない。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen (worker recommended add_deferral_mirror): add_deferral_mirror, shared_module; reasons: official hooks doc states precedence deny > defer > ask > allow, so the blanket allow cannot override ask; parity test compares script outputs only; Codex also suggested correcting the stale docstring claim — recorded as out-of-scope follow-up'
+- question_id: requirement.no-repo-cwd
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - no_judgement
+  freeform: null
+  normalized_answer: cwd が git リポジトリ内でないときは判定しない（出力なし）。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: ask_all; reasons: git failure yields no root to compare; under batch ask_all would deny every write'
+- question_id: requirement.dev-targets
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - exclude_dev_list
+  freeform: null
+  normalized_answer: /dev/null、/dev/stdout、/dev/stderr、/dev/tty、/dev/fd/ 配下だけを判定対象から除く。除外はシンボリックリンク解決より前に、字面で行う。それ以外の /dev 配下は通常どおり判定する。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen (worker recommended exclude_dev_all): exclude_dev_all, no_dev_exclusion; reasons: /dev/null false positive is documented in hook-tests.md; excluding all of /dev is not justified and would hide writes to devices; apply the list before realpath'
+- question_id: requirement.cd-in-command
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - unresolvable_after_cd
+  freeform: null
+  normalized_answer: 同じコマンド内で cd / pushd / popd（および env -C、sudo --chdir 等の作業ディレクトリ変更）の後に現れる相対パスの書き込み先は判定しない。絶対パスは引き続き判定する。サブシェル内の cd は外側へ持ち出さない。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: follow_static_cd, ignore_cd; reasons: joining to payload cwd after cd misjudges; statement ordering of nested parsing makes cwd tracking error-prone; env -C / sudo --chdir treated the same'
+- question_id: requirement.nesting-scope
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - groups_and_wrappers
+  freeform: null
+  normalized_answer: 最上位の単純コマンド、サブシェル ( ) と波括弧 { } の内部、ラッパー（sudo / env / nohup / time / command / nice）の後のコマンドを判定する。bash -c 等の文字列と $( ) の本体は判定しない。それらを含む文の外側のリダイレクトは判定する。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: full_recursion, top_level_only; reasons: existing group parsing examples in failed-run-cleanup-guard; -c recursion is separate from wrapper stripping; state outer redirections remain judged'
+- question_id: requirement.path-normalization
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - realpath
+  freeform: null
+  normalized_answer: . / .. を正規化し、存在する最長の親までシンボリックリンクを解決して（os.path.realpath 相当）比較する。toplevel と除外根（/tmp、~/.claude）も同じ方法で解決し、パス要素の境界で比較する。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: lexical_only; reasons: destructive-guard itself notes lexical normalization misses symlink targets; a new file whose existing parent points outside must be caught; compare at directory boundaries'
+- question_id: requirement.home-expansion
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-12T02:33:01+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - tilde_only
+  freeform: null
+  normalized_answer: 引用されていない先頭の ~ と ~/ だけを HOME に展開する。$HOME / ${HOME} は変数展開として判定しない。
+  resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: tilde_and_home; reasons: failed-run-cleanup-guard treats $HOME as dynamic; HOME reassignment within a command is not tracked; restrict ~ expansion to unquoted ~ and ~/...'
