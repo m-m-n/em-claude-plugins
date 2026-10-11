@@ -141,15 +141,15 @@ workflow:
   status: completed
   completed_at_commit: 9b4e2428e643cda5e399be5e6cbe7b96618f4937
 - id: verify
-  status: pending
+  status: in_progress
   result: fail
   failed_items:
   - id: TS-31
     category: comprehensive
     note: 'python3 -m unittest discover -s tests が 3 件失敗（test_reproduction_reviewer_instructions
       の AC-5 digest x2、test_reviewer_roles_protocol の model: sonnet 期待）。main の 7656e549（codex-reviewer
-      の model を sonnet→haiku）で古くなったテストで、main でも同じ 3 件が再現する。feature 固有の
-      tests.test_codex_hook_interactive_guard（40 件）は成功'
+      の model を sonnet→haiku）で古くなったテストで、main でも同じ 3 件が再現する。feature 固有の tests.test_codex_hook_interactive_guard（40
+      件）は成功'
 - id: retrospect
   status: pending
 tasks:
@@ -205,9 +205,17 @@ tasks:
 review:
   status: completed
   rounds_completed: 2
-  perspectives: [comprehensive, security, architecture, spec]
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   plan:
-    floor: [comprehensive, security, architecture, spec]
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
     discretionary: []
     cross_validation: true
   residual_critical_high: 0
