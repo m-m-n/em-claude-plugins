@@ -1,0 +1,17 @@
+schema_version: 1
+feature: codex-guard-assignment-paren-head
+phase: create-plan
+status: in_progress
+generation: 1
+base_revision: 1fab124b500cd71f86820536b2976c965ee89bcd
+last_input_digest: sha256:ad4a9ec02333a3b2fe496b303752a73960360c0b85f8954bcce6d299b3d2a830
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
