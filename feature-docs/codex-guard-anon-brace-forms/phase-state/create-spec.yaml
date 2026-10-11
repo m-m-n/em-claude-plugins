@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-brace-forms
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 0130574312e631ea2493d2b56ce5a9cf20c6d91e
 last_input_digest: sha256:a93b09b7143061933239d4e880117bd6ebd7a2e5a94f34de646cd86258093226
