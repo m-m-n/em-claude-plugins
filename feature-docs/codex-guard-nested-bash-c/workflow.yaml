@@ -10,19 +10,25 @@ goal: '# codex-hook-interactive-guard: 二段目以降の bash -c の文字列�
 
   ## やりたいこと (必須)
 
-  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、二段目以降の `bash -c` の文字列も判定対象にするかを決め、対象にするなら実装する。
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、二段目以降の `bash -c`
+  の文字列も判定対象にするかを決め、対象にするなら実装する。
 
   ## 背景・なぜ (必須)
 
-  `_scan` は `depth == 0` の `-c` 文字列しか解析しない。そのため `bash -c ''bash -O extglob -c "time /bin/true?()` + 改行 + `(python3 -i)"''` のような二重の `bash -c` の内側にある対話起動を検出しない（拒否を出さず、無人実行が対話プロセスで止まる経路が残る）。extglob に限らず `bash -c "bash -c ''python3 -i''"` でも同じ。
+  `_scan` は `depth == 0` の `-c` 文字列しか解析しない。そのため `bash -c ''bash -O extglob -c "time
+  /bin/true?()` + 改行 + `(python3 -i)"''` のような二重の `bash -c` の内側にある対話起動を検出しない（拒否を出さず、無人実行が対話プロセスで止まる経路が残る）。extglob
+  に限らず `bash -c "bash -c ''python3 -i''"` でも同じ。
 
-  この範囲の限界はガード導入時からあり、既存の `CASES`（「第 2 段の bash -c は評価しない」）が silent として固定している。feature `codex-guard-extglob-funcname` の review round 1 で確認し、同 feature の `THREAT-MODEL.md` の TM-1 に残存リスクとして記載した。
+  この範囲の限界はガード導入時からあり、既存の `CASES`（「第 2 段の bash -c は評価しない」）が silent として固定している。feature
+  `codex-guard-extglob-funcname` の review round 1 で確認し、同 feature の `THREAT-MODEL.md`
+  の TM-1 に残存リスクとして記載した。
 
   ## 受け入れ条件 / 完了の定義 (必須)
 
   - [ ] 二段目以降の `bash -c` を判定対象にするかを決め、決定と理由を残す
 
-  - [ ] 対象にする場合、二重以上の `bash -c` の内側の対話起動を deny するケースを `tests/test_codex_hook_interactive_guard.py` の `CASES` に足す
+  - [ ] 対象にする場合、二重以上の `bash -c` の内側の対話起動を deny するケースを `tests/test_codex_hook_interactive_guard.py`
+  の `CASES` に足す
 
   - [ ] 既存の silent ケースの期待を変える場合は、その理由を SPEC に書く
 
@@ -41,7 +47,8 @@ goal: '# codex-hook-interactive-guard: 二段目以降の bash -c の文字列�
 
   ## 追加指示（起動時）
 
-  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration
+  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
 
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
 
@@ -101,7 +108,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: da470d28cd0d8213052075be7e036e61df4289ac
 - id: implement
   status: pending
 - id: review
@@ -110,7 +118,50 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Judge shell -c strings at every level with an explicit work list and a
+      re-read limit
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+  task0002:
+    title: Rewrite docstring step 7 for every-level judgment, the explicit work list
+      and the re-read limit
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills: []
+    domains: []
+    complexity: low
+    requirements:
+    - FR6
+    - FR7
+    - NFR4
+    - NFR5
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -122,85 +173,117 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR2:
     title: 再帰ではなく明示的なスタックで走査する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-7
   FR3:
     title: 読み直す文字数の上限
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
   FR4:
     title: 既存の silent ケースを deny に変える
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   FR5:
     title: テストケースの追加
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR6:
     title: docstring の書き換え
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-5
   FR7:
     title: 2 つのコピーをバイト単位で同一に保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-6
   NFR1:
     title: 標準ライブラリのみ・副作用なし
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   NFR2:
     title: 誤拒否より通過を優先する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-4
   NFR3:
     title: 深い入れ子でも時間内に応答する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
   NFR4:
     title: テストスイートが通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-6
   NFR5:
     title: version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-8
 batch:
   review_rework_count: 0
   verify_rework:
