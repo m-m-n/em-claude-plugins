@@ -2,65 +2,36 @@ schema_version: 1
 feature: sca-listing-undecodable-output
 created: '2026-10-11'
 base_branch: main
-goal: '# file-tasks: list_security_tasks がリスティング出力の UnicodeDecodeError を捕捉せず、file-tasks
-  がスクリプトごと落ちる
-
+goal: |
+  # file-tasks: list_security_tasks がリスティング出力の UnicodeDecodeError を捕捉せず、file-tasks がスクリプトごと落ちる
 
   Notion タスク: <notion-url> （種別: バグ）
 
-
   ## 現象 (必須)
-
-  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks` は、notion-task-dispatch
-  の `task list` を `subprocess.run(..., text=True)` で起動し、例外を `except OSError` だけで受けている。リスティング出力に
-  UTF-8 として不正なバイト列が含まれると、`subprocess.run` の内部デコードで `UnicodeDecodeError` が送出され、`ListingOutcome(available=False,
-  ...)` に落ちずに `file_tasks` の外まで伝播してスクリプトが落ちる。stdout に JSON サマリが出ない。
-
+  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks` は、notion-task-dispatch の `task list` を `subprocess.run(..., text=True)` で起動し、例外を `except OSError` だけで受けている。リスティング出力に UTF-8 として不正なバイト列が含まれると、`subprocess.run` の内部デコードで `UnicodeDecodeError` が送出され、`ListingOutcome(available=False, ...)` に落ちずに `file_tasks` の外まで伝播してスクリプトが落ちる。stdout に JSON サマリが出ない。
 
   ## 再現手順 (必須)
-
   1. `task list --type セキュリティ --format json` が UTF-8 として不正なバイト列を stdout に出すエントリポイント（スタブ）を用意する
-
   2. そのエントリポイントを `--entry-point` に渡して `file-tasks` を実行する
-
   3. traceback で終了し、stdout に JSON が出ないことを確認する
 
-
   ## 期待する挙動 (必須)
-
-  デコードできないリスティング出力は、既存の「リスティング不能」経路（`ListingOutcome(available=False, reason=...)`
-  → report 分岐への縮退）に乗り、スクリプトは JSON サマリを出して終了する。
-
+  デコードできないリスティング出力は、既存の「リスティング不能」経路（`ListingOutcome(available=False, reason=...)` → report 分岐への縮退）に乗り、スクリプトは JSON サマリを出して終了する。
 
   ## 完了の定義 (必須)
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
 
-
   ## 該当箇所 (任意)
-
-  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks`（`subprocess.run(...,
-  text=True)` と `except OSError`）
-
+  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks`（`subprocess.run(..., text=True)` と `except OSError`）
 
   ## 実害・発生条件 (任意)
-
-  リスティング出力が不正な UTF-8 を含む場合のみ発生する。出典: sca-file-tasks-unexpected-exceptions の review
-  フェーズで、評価者が差分範囲外の参考事項として報告した残件。元タスク: <notion-url>
-
+  リスティング出力が不正な UTF-8 を含む場合のみ発生する。出典: sca-file-tasks-unexpected-exceptions の review フェーズで、評価者が差分範囲外の参考事項として報告した残件。元タスク: <notion-url>
 
   ## 追加指示（起動時）
-
-  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration
-  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
-
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
-
   - その議論内容を Notion に記録する
-
-  '
 parent_branch: em-workflow/sca-listing-undecodable-output/integration
 tier: reduced
 tier_decision:
