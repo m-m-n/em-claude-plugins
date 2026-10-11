@@ -1,0 +1,210 @@
+schema_version: 1
+feature: sca-requirements-multi-option-lines
+created: '2026-10-11'
+base_branch: main
+goal: |
+  # SCA 軸: requirements の 1 行に複数オプションがあると -r の参照先が直接依存にならない
+
+  出典 Notion タスク: https://www.notion.so/3f03509ec8ee8140b4a8d9ea32fd852b （種別: バグ）
+
+  ## 現象 (必須)
+  requirements ファイルの 1 行に複数のオプションがあると、`-r` の参照先が直接依存として数えられない。`_requirements_option` は行の先頭のオプションしか見ないため、先頭が `-c` の行は制約の行として読み飛ばされ、先頭が `-r` / `-c` / `-e` 以外のオプション行は無視される。
+  pip は行のオプションをすべて解析して `-r` の参照先を読むので、pip-audit は参照先のパッケージを監査する。一方スキャナ側は直接依存の集合が空のまま `complete=True` になり、参照先で宣言した直接依存の high / critical の advisory が推移的依存として黙って捨てられる。finding にも判定不能の件数にも残らない（THREAT-MODEL の TB-1 / TM-5 が防ぐはずの経路）。
+
+  ## 再現手順 (必須)
+  1. `requirements.txt` に `-c constraints.txt -r deps.txt` の 1 行だけを書き、`deps.txt` に advisory のあるパッケージを宣言する
+  2. 軸 2 を走らせる → 直接依存の集合が空で `complete=True`、advisory が落ちる
+  3. `--index-url https://x/simple -r deps.txt` でも同じ結果になる
+
+  ## 期待する挙動 (必須)
+  - オプション部分を shlex で分割し、位置に関係なく `-r` / `--requirement`（`=` 形式も含む）の値をすべて辿る
+  - オプション行を解釈できないとき（分割の失敗など）は `complete=False` にし、判定不能の件数として報告する
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`-c a -r b` と `--index-url URL -r b` の 2 形式）
+
+  ## 該当箇所 (任意)
+  `em-workflow/scripts/scan-dependencies.py:1996`（`_requirements_option` と `_pip_requirements_direct_names`）
+
+  ## 実害・発生条件 (任意)
+  出典: em-workflow feature `sca-directness-resolution` のレビュー round 1 の finding `41bbbe176869ebfc`（security / medium）。閾値未満のため auto-fix されず `unresolved` のまま残った残件。ブランチ `em-workflow/sca-directness-resolution/integration`。
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較してより良いと判断した案を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/sca-requirements-multi-option-lines/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.88
+      '2': 0.12
+      '3': 0.0
+  at: '2026-10-11T10:10:00+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: ba19b0911fcfff94ef0673c79c7e14d93438385b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI の無い Python スクリプトの requirements オプション行の解析の修正で、デザイン対象が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 行内の位置に関係なく -r を辿る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 同じ行の制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 分割に失敗したら不完全にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 値の無い -r
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 任意の位置の -e / --editable
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 長いオプションの省略形は不完全にする
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: その他のオプション行
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 判定不能の報告
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 例外を出さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 封じ込め
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: サマリーの内容
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 既存テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: バージョン
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
