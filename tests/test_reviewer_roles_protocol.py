@@ -612,7 +612,7 @@ class TestReviewerAgentFallbackRoleStatement(unittest.TestCase):
 
 CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
     "name: codex-reviewer",
-    "model: sonnet",
+    "model: haiku",
     "effort: medium",
     "tools: Bash, Read, Skill",
     "skills:",
