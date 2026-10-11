@@ -2063,9 +2063,34 @@ _REQUIREMENTS_OPTION_FORMS = (
     ("constraint", "-c", "--constraint"),
     ("editable", "-e", "--editable"),
 )
-# The long options whose abbreviations are never resolved: an abbreviation of
-# either one leaves the name set incomplete.
-_ABBREVIATED_REQUIREMENTS_OPTIONS = ("--requirement", "--editable")
+# The value-only options: their separated form consumes the next token as a
+# value that is discarded and never interpreted. Short forms are
+# case-sensitive (`-C` is `--config-settings`, not the `-c` constraint).
+# `--install-option` belongs to neither group; it stays an ignored unknown
+# option.
+_VALUE_ONLY_SHORT_OPTIONS = ("-i", "-f", "-C")
+_VALUE_ONLY_LONG_OPTIONS = (
+    "--index-url",
+    "--pypi-url",
+    "--extra-index-url",
+    "--find-links",
+    "--trusted-host",
+    "--no-binary",
+    "--only-binary",
+    "--use-feature",
+    "--hash",
+    "--global-option",
+    "--config-settings",
+)
+# Every value-taking long option: the three interpreted ones (`--requirement`,
+# `--constraint`, `--editable`) and every value-only one. A token that is a
+# proper prefix of any of them (an abbreviation, unique or ambiguous alike) is
+# never resolved to the option it stands for: it leaves the name set
+# incomplete.
+_ABBREVIATED_REQUIREMENTS_OPTIONS = (
+    tuple(long for _kind, _short, long in _REQUIREMENTS_OPTION_FORMS)
+    + _VALUE_ONLY_LONG_OPTIONS
+)
 
 
 def _requirements_logical_lines(content):
@@ -2096,9 +2121,14 @@ def _requirements_logical_lines(content):
 
 
 def _is_abbreviated_requirements_option(token):
-    """True when `token` abbreviates `--requirement` or `--editable`: it
-    starts with `--` and the part before any `=` is longer than `--` and a
-    proper prefix of one of the two (`--requirem`, `--re`, `--e`, ...)."""
+    """True when `token` abbreviates a value-taking long option: it starts
+    with `--` and the part before any `=` is longer than `--` and a proper
+    prefix (not an exact match) of at least one of `--requirement`,
+    `--constraint`, `--editable` and the long names of the value-only options
+    (`--trusted`, `--index`, `--con`, `--no`, `--e`, ...), whether the prefix is
+    unique or ambiguous. Exact long names are never abbreviations of
+    themselves, and a name longer than a long option (`--constraint-extra`) is
+    not a prefix of it."""
     if not token.startswith("--"):
         return False
     name = token.split("=", 1)[0]
@@ -2114,15 +2144,44 @@ def _requirements_option_items(text):
     escape or any other splitting error).
 
     The line is split with POSIX shell-style splitting and the tokens are
-    read left to right. `kind` is `include` (`-r X`, `-rX`, `--requirement X`,
-    `--requirement=X`), `editable` (`-e X`, `-eX`, `--editable X`,
-    `--editable=X`) or `undetermined` (an abbreviation of `--requirement` or
-    `--editable`, never interpreted: its value is empty and the token after
-    it is not consumed). A separate form takes the next token verbatim as its
-    value, or an empty value when the line ends there. Constraints
-    (`-c` / `--constraint` in any form) are consumed and not listed, as is
-    every other token (`--index-url`, `--hash=...`, a lone `--`, unknown
-    options and stray words)."""
+    read left to right; for each token the first matching rule applies.
+
+    Two groups of value-taking options are told apart. The interpreted ones
+    are `-r` / `--requirement` (kind `include`), `-e` / `--editable` (kind
+    `editable`) and `-c` / `--constraint` (consumed, never listed). The
+    value-only ones are `-i` / `--index-url` / `--pypi-url`,
+    `--extra-index-url`, `-f` / `--find-links`, `--trusted-host`,
+    `--no-binary`, `--only-binary`, `--use-feature`, `--hash`,
+    `--global-option` and `-C` / `--config-settings`; their value is consumed
+    and discarded. Short forms are case-sensitive. `--install-option` is in
+    neither group and stays an ignored unknown option.
+
+    1. The separated form of an interpreted option (the token equals its
+       short or long name) takes the next token verbatim as its value, or an
+       empty value when the line ends there.
+    2. The separated form of a value-only option (the token equals one of its
+       names) consumes the next token as its value whatever that token looks
+       like -- a leading `-`, a lone `--`, `-r...`, `-e...`, `-c...` -- and
+       discards it; at the end of the line nothing is consumed and the line
+       stays complete.
+    3. A self-contained form -- `long=value` of any value-taking long name (the
+       value may be empty), or a short name with the value attached (`-iURL`,
+       `-f./wheels`, `-Ckey=val`, `-rX`, `-cX`, `-eX`) -- carries the option in
+       the token alone and consumes no following token. Interpreted options
+       keep their meaning (an include or editable item for `-r` / `-e`, a
+       consumed constraint); the value of a value-only option is discarded.
+    4. An abbreviation -- the token starts with `--`, the part before its
+       first `=` is longer than `--` and a proper prefix of at least one
+       value-taking long name over both groups, unique or ambiguous alike --
+       yields one `undetermined` item with an empty value. The following token
+       is not consumed and the text after `=` is never used as a name or a
+       file.
+    5. Anything else is ignored: unknown options, stray words and a lone `--`
+       that was not consumed as a value.
+
+    Rules 1-3 run before rule 4. The value of a constraint (rule 1) and of a
+    value-only option (rules 2 and 3) is consumed and never interpreted: no
+    item is derived from it."""
     try:
         tokens = iter(shlex.split(text))
     except Exception:
@@ -2142,7 +2201,14 @@ def _requirements_option_items(text):
                 items.append((kind, value))
             break
         else:
-            if _is_abbreviated_requirements_option(token):
+            name, equals, _value = token.partition("=")
+            if token in _VALUE_ONLY_SHORT_OPTIONS or token in _VALUE_ONLY_LONG_OPTIONS:
+                next(tokens, None)  # separated form: the next token is discarded
+            elif token.startswith(_VALUE_ONLY_SHORT_OPTIONS):
+                continue  # short name with the value attached: nothing to consume
+            elif equals and name in _VALUE_ONLY_LONG_OPTIONS:
+                continue  # `long=value`: nothing to consume
+            elif _is_abbreviated_requirements_option(token):
                 items.append(("undetermined", ""))
     return items
 
@@ -2185,7 +2251,12 @@ def _pip_requirements_direct_names(path, project_root):
     requirement line has no resolvable name (a URL or a local path), an
     editable value has none or is missing, an option line cannot be split
     into tokens (nothing is taken from it) or it holds an abbreviation of
-    `--requirement` / `--editable` (never interpreted). Constraint files
+    any value-taking long option -- `--requirement`, `--constraint`,
+    `--editable` or a value-only option such as `--trusted-host`,
+    `--index-url` or `--find-links` (never interpreted). The values of the
+    value-only options (index URLs, find-links locations, trusted hosts,
+    hashes and the like) are consumed and discarded: they are never opened,
+    fetched or added as names, whatever they look like. Constraint files
     (`-c` / `--constraint`) are neither opened nor cause incompleteness;
     every other option token is ignored."""
     names = set()

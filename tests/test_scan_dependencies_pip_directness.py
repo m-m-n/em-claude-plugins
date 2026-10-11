@@ -1537,9 +1537,12 @@ class TestAbbreviatedAndIgnoredOptions(MultiOptionLineCase):
                 self.assertEqual(network_calls, [], line)
 
     def test_ac6_a_constraint_abbreviation_is_not_flagged(self):
-        # Only `--requirement` and `--editable` abbreviations are interpreted.
+        # task0001 (sca-requirements-option-value-consumption), AC-5: `--con`
+        # abbreviates the value-taking `--constraint` (and `--config-settings`),
+        # so a line holding it leaves the set incomplete. The method name is
+        # kept: this record is cited by other test records.
         names, _, _ = self.resolve_line("--constraint-extra x --con y")
-        self.assertTrue(names.complete)
+        self.assertFalse(names.complete)
         self.assertEqual(names, {"own-pkg"})
 
 
@@ -1601,6 +1604,487 @@ class TestIncompleteSetsReportOnlyThroughTheExistingNote(MultiOptionLineCase):
         self.assertIn(PIP_NOTE_TWO, result["summary"])
         self.assertEqual(len(result["findings"]), 1, result)
         self.assertEqual(set(NOTE_TOKEN_RE.findall(result["summary"])), {UNDETERMINED_NOTE_TOKEN})
+
+
+# ---------------------------------------------------------------------------
+# task0001 (sca-requirements-option-value-consumption): the value of every
+# value-taking pip option on a requirements option line is consumed and
+# discarded, so a value token is never read as `-r` / `-c` / `-e`, and every
+# abbreviation of a value-taking long option leaves the name set incomplete.
+#
+# - AC-1: the separated form of every value-only option consumes the next
+#   token (`--trusted-host -c -r deps.txt` still follows deps.txt), at the top
+#   level, in an included file and across a continuation line.
+# - AC-2: a consumed value is never interpreted.
+# - AC-3: `long=value` and short-with-value forms are self-contained.
+# - AC-4: abbreviations of value-taking long options are undetermined and
+#   consume nothing.
+# - AC-5: constraint, ambiguous and over-long names.
+# - AC-6: unchanged behaviour: a value-less option at line end and a lone `--`.
+# - AC-7: the summary and findings carry nothing from the line.
+# ---------------------------------------------------------------------------
+
+# Every option whose separated form takes a value that is only consumed.
+VALUE_ONLY_OPTIONS = (
+    "-i",
+    "--index-url",
+    "--pypi-url",
+    "--extra-index-url",
+    "-f",
+    "--find-links",
+    "--trusted-host",
+    "--no-binary",
+    "--only-binary",
+    "--use-feature",
+    "--hash",
+    "--global-option",
+    "-C",
+    "--config-settings",
+)
+# The long names of those options, and the three interpreted long options.
+VALUE_ONLY_LONG_OPTIONS = tuple(option for option in VALUE_ONLY_OPTIONS if option.startswith("--"))
+VALUE_TAKING_LONG_OPTIONS = ("--requirement", "--constraint", "--editable") + VALUE_ONLY_LONG_OPTIONS
+
+
+class TestValueOnlyOptionConsumption(MultiOptionLineCase):
+    def test_ac1_the_separated_form_of_every_value_only_option_consumes_the_next_token(self):
+        for option in VALUE_ONLY_OPTIONS:
+            with self.subTest(option=option):
+                names, opened, network_calls = self.resolve_line(
+                    f"{option} -c -r deps.txt", {"deps.txt": "vuln-pkg==1.0\n"}, tail=""
+                )
+                self.assertEqual(names, {"vuln-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("deps.txt"), opened)
+                self.assertEqual(network_calls, [])
+
+    def test_ac1_the_scan_gives_one_finding_and_no_undetermined_note(self):
+        with OpenRecorder() as recorder, NetworkGuard() as network:
+            result = self.scan_requirements(
+                "--trusted-host -c -r deps.txt\n",
+                payload(advisory("vuln-pkg")),
+                extra_files={"deps.txt": "vuln-pkg==1.0\n"},
+            )
+        self.assertEqual(len(result["findings"]), 1, result)
+        self.assertTrue(result["findings"][0]["title"].startswith("vuln-pkg:"))
+        self.assertNotIn(UNDETERMINED_NOTE_TOKEN, result["summary"])
+        self.assertFalse(result["skipped"], result)
+        self.assertIn(self.real("deps.txt"), recorder.opened)
+        self.assertEqual(network.calls, [])
+
+    def test_ac1_the_include_after_the_consumed_value_is_followed_in_an_included_file(self):
+        names, opened, network_calls = self.resolve_line(
+            "-r inc.txt",
+            {"inc.txt": "--trusted-host -c -r deeper.txt\n", "deeper.txt": "deeper-pkg\n"},
+            tail="",
+        )
+        self.assertEqual(names, {"deeper-pkg"})
+        self.assertTrue(names.complete)
+        self.assertIn(self.real("deeper.txt"), opened)
+        self.assertEqual(network_calls, [])
+
+    def test_ac1_the_include_after_the_consumed_value_is_followed_across_a_continuation(self):
+        names, opened, network_calls = self.resolve_line(
+            "--trusted-host \\\n-c -r deeper.txt", {"deeper.txt": "deeper-pkg\n"}, tail=""
+        )
+        self.assertEqual(names, {"deeper-pkg"})
+        self.assertTrue(names.complete)
+        self.assertIn(self.real("deeper.txt"), opened)
+        self.assertEqual(network_calls, [])
+
+    def test_ac2_a_consumed_value_shaped_like_an_editable_adds_no_name(self):
+        for option in VALUE_ONLY_OPTIONS:
+            with self.subTest(option=option):
+                names, opened, _ = self.resolve_line(
+                    f'{option} "-enamed-pkg" -r actual.txt', {"actual.txt": "actual-pkg\n"}, tail=""
+                )
+                self.assertNotIn("named-pkg", names)
+                self.assertEqual(names, {"actual-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("actual.txt"), opened)
+
+    def test_ac2_a_consumed_value_shaped_like_an_include_is_not_opened(self):
+        for option in VALUE_ONLY_OPTIONS:
+            with self.subTest(option=option):
+                names, opened, network_calls = self.resolve_line(
+                    f'{option} "-rdeps.txt" -r actual.txt',
+                    {"deps.txt": "deps-pkg\n", "actual.txt": "actual-pkg\n"},
+                    tail="",
+                )
+                self.assertNotIn(self.real("deps.txt"), opened)
+                self.assertNotIn("deps-pkg", names)
+                self.assertEqual(names, {"actual-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("actual.txt"), opened)
+                self.assertEqual(network_calls, [])
+
+    def test_ac2_a_consumed_value_shaped_like_a_constraint_does_not_hide_the_include_after_it(self):
+        for option in VALUE_ONLY_OPTIONS:
+            with self.subTest(option=option):
+                names, opened, _ = self.resolve_line(
+                    f"{option} -cconstraints.txt -r deps.txt",
+                    {"deps.txt": "deps-pkg\n", "constraints.txt": "pinned-pkg\n"},
+                    tail="",
+                )
+                self.assertEqual(names, {"deps-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("deps.txt"), opened)
+                self.assertNotIn(self.real("constraints.txt"), opened)
+
+    def test_ac2_a_lone_double_dash_is_consumed_as_the_value(self):
+        for option in VALUE_ONLY_OPTIONS:
+            with self.subTest(option=option):
+                names, opened, network_calls = self.resolve_line(
+                    f"{option} -- -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+                )
+                self.assertEqual(names, {"deps-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("deps.txt"), opened)
+                self.assertEqual(network_calls, [])
+
+    def test_ac2_a_value_only_option_consumes_exactly_one_token(self):
+        names, opened, _ = self.resolve_line(
+            "-f one two -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+        )
+        self.assertEqual(names, {"deps-pkg"})
+        self.assertTrue(names.complete)
+        self.assertIn(self.real("deps.txt"), opened)
+
+    def test_ac2_consecutive_value_only_options_each_consume_their_own_value(self):
+        names, opened, _ = self.resolve_line(
+            "-i -c --find-links -r --trusted-host -e -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+        )
+        self.assertEqual(names, {"deps-pkg"})
+        self.assertTrue(names.complete)
+        self.assertIn(self.real("deps.txt"), opened)
+
+
+class TestSelfContainedValueForms(MultiOptionLineCase):
+    def test_ac3_the_equals_and_attached_forms_consume_no_following_token(self):
+        forms = (
+            "--trusted-host=x -r deps.txt",
+            "--index-url= -r deps.txt",
+            "-ihttps://example.invalid/simple -r deps.txt",
+            "-f./wheels -r deps.txt",
+            "-Ckey=val -r deps.txt",
+        )
+        for line in forms:
+            with self.subTest(line=line):
+                names, opened, network_calls = self.resolve_line(
+                    line, {"deps.txt": "deps-pkg\n"}, tail=""
+                )
+                self.assertEqual(names, {"deps-pkg"}, line)
+                self.assertTrue(names.complete, line)
+                self.assertIn(self.real("deps.txt"), opened, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac3_every_value_only_long_option_in_its_equals_form_is_self_contained(self):
+        for option in VALUE_ONLY_LONG_OPTIONS:
+            for value in ("", "x"):
+                with self.subTest(option=option, value=value):
+                    names, opened, _ = self.resolve_line(
+                        f"{option}={value} -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+                    )
+                    self.assertEqual(names, {"deps-pkg"})
+                    self.assertTrue(names.complete)
+                    self.assertIn(self.real("deps.txt"), opened)
+
+    def test_ac3_every_value_only_short_option_with_an_attached_value_is_self_contained(self):
+        for option in ("-i", "-f", "-C"):
+            with self.subTest(option=option):
+                names, opened, _ = self.resolve_line(
+                    f"{option}value -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+                )
+                self.assertEqual(names, {"deps-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("deps.txt"), opened)
+
+    def test_ac3_a_self_contained_value_is_never_interpreted(self):
+        forms = (
+            '--find-links="-rdeps.txt" -r actual.txt',
+            "--find-links=-rdeps.txt -r actual.txt",
+            "-f-rdeps.txt -r actual.txt",
+            "-C-rdeps.txt -r actual.txt",
+            "--trusted-host=-enamed-pkg -r actual.txt",
+            "-i-enamed-pkg -r actual.txt",
+        )
+        for line in forms:
+            with self.subTest(line=line):
+                names, opened, _ = self.resolve_line(
+                    line, {"deps.txt": "deps-pkg\n", "actual.txt": "actual-pkg\n"}, tail=""
+                )
+                self.assertEqual(names, {"actual-pkg"}, line)
+                self.assertTrue(names.complete, line)
+                self.assertNotIn(self.real("deps.txt"), opened, line)
+                self.assertIn(self.real("actual.txt"), opened, line)
+
+    def test_ac3_the_short_forms_are_case_sensitive(self):
+        # The upper-case letters of `-i`, `-f`, `-r` and `-e` are not options
+        # of the reader: they consume nothing, so the include after them is read.
+        for option in ("-I", "-F", "-R", "-E"):
+            with self.subTest(option=option):
+                names, opened, _ = self.resolve_line(
+                    f"{option} -r deps.txt", {"deps.txt": "deps-pkg\n"}, tail=""
+                )
+                self.assertEqual(names, {"deps-pkg"})
+                self.assertTrue(names.complete)
+                self.assertIn(self.real("deps.txt"), opened)
+
+
+class TestValueTakingLongOptionAbbreviations(MultiOptionLineCase):
+    def test_ac4_an_abbreviation_makes_the_set_incomplete_and_opens_nothing_after_c(self):
+        for line in ("--trusted -c -r deps.txt", "--index -c -r deps.txt", "--find -c -r deps.txt"):
+            with self.subTest(line=line):
+                names, opened, network_calls = self.resolve_line(line, {"deps.txt": "deps-pkg\n"})
+                self.assertFalse(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+                self.assertNotIn(self.real("deps.txt"), opened, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac4_the_scan_counts_the_undeclared_advisory_once_and_reports_no_finding(self):
+        for line in ("--trusted -c -r deps.txt", "--index -c -r deps.txt", "--find -c -r deps.txt"):
+            with self.subTest(line=line), OpenRecorder() as recorder, NetworkGuard() as network:
+                result = self.scan_requirements(
+                    line + "\nown-pkg\n",
+                    payload(advisory("undeclared-pkg")),
+                    extra_files={"deps.txt": "deps-pkg\n"},
+                )
+                self.assertUndeterminedOne(result)
+                self.assertEqual(result["summary"].count(UNDETERMINED_NOTE_TOKEN), 1)
+                self.assertNotIn(self.real("deps.txt"), recorder.opened)
+                self.assertEqual(network.calls, [])
+
+    def test_ac4_an_abbreviation_does_not_consume_the_following_token(self):
+        names, opened, _ = self.resolve_line("--trusted -r deps.txt", {"deps.txt": "deps-pkg\n"})
+        self.assertFalse(names.complete)
+        self.assertEqual(names, {"own-pkg", "deps-pkg"})
+        self.assertIn(self.real("deps.txt"), opened)
+
+    def test_ac4_the_value_after_an_equals_is_never_a_name_or_a_file(self):
+        names, opened, network_calls = self.resolve_line(
+            "--trusted=-rdeps.txt", {"deps.txt": "deps-pkg\n"}
+        )
+        self.assertFalse(names.complete)
+        self.assertEqual(names, {"own-pkg"})
+        self.assertNotIn(self.real("deps.txt"), opened)
+        self.assertEqual(network_calls, [])
+        names, opened, _ = self.resolve_line("--index=-enamed-pkg")
+        self.assertFalse(names.complete)
+        self.assertEqual(names, {"own-pkg"})
+
+    def test_ac4_every_proper_prefix_of_every_value_taking_long_option_is_undetermined(self):
+        for long in VALUE_TAKING_LONG_OPTIONS:
+            for end in range(3, len(long)):
+                abbreviation = long[:end]
+                for line in (
+                    f"{abbreviation} -r deps.txt",
+                    f"{abbreviation}=-rother.txt -r deps.txt",
+                ):
+                    with self.subTest(line=line):
+                        names, opened, _ = self.resolve_line(
+                            line, {"deps.txt": "deps-pkg\n", "other.txt": "other-pkg\n"}
+                        )
+                        self.assertFalse(names.complete, line)
+                        self.assertEqual(names, {"own-pkg", "deps-pkg"}, line)
+                        self.assertIn(self.real("deps.txt"), opened, line)
+                        self.assertNotIn(self.real("other.txt"), opened, line)
+
+    def test_ac4_an_abbreviation_inside_an_included_file_is_undetermined_too(self):
+        names, opened, _ = self.resolve_line(
+            "-r inc.txt", {"inc.txt": "--trusted -c -r deeper.txt\n", "deeper.txt": "deeper-pkg\n"}
+        )
+        self.assertFalse(names.complete)
+        self.assertEqual(names, {"own-pkg"})
+        self.assertNotIn(self.real("deeper.txt"), opened)
+
+
+class TestAbbreviationBoundaries(MultiOptionLineCase):
+    def test_ac5_constraint_and_ambiguous_abbreviations_are_undetermined(self):
+        for line in ("--constraint-extra x --con y", "--con y", "--no x"):
+            with self.subTest(line=line):
+                names, _, network_calls = self.resolve_line(line)
+                self.assertFalse(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac5_a_name_longer_than_a_long_option_is_not_an_abbreviation(self):
+        for line in (
+            "--constraint-extra x",
+            "--hash-extra x",
+            "--index-urls x",
+            "--requirement-extra x",
+            "--editable-extra=x",
+            "--trusted-host-extra x",
+        ):
+            with self.subTest(line=line):
+                names, _, _ = self.resolve_line(line)
+                self.assertTrue(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+
+    def test_ac5_the_flags_without_a_value_are_not_abbreviations_of_a_value_taking_option(self):
+        for line in (
+            "--no-index",
+            "--prefer-binary",
+            "--require-hashes",
+            "--pre",
+            "--install-option=--x",
+            "--install-option --x",
+            "--no-index --prefer-binary --require-hashes --pre",
+        ):
+            with self.subTest(line=line):
+                names, _, _ = self.resolve_line(line)
+                self.assertTrue(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+
+    def test_ac5_an_exact_long_name_is_never_its_own_abbreviation(self):
+        for option in VALUE_TAKING_LONG_OPTIONS:
+            with self.subTest(option=option):
+                names, _, _ = self.resolve_line(f"{option}=x", {"x": "x-pkg\n"})
+                self.assertTrue(names.complete, option)
+
+    def test_ac5_a_bare_double_dash_is_not_an_abbreviation(self):
+        for line in ("--", "--=x"):
+            with self.subTest(line=line):
+                names, _, _ = self.resolve_line(line)
+                self.assertTrue(names.complete, line)
+                self.assertEqual(names, {"own-pkg"}, line)
+
+
+class TestUnchangedOptionLineBehaviour(MultiOptionLineCase):
+    def test_ac6_a_value_taking_option_at_the_end_of_the_line_leaves_the_set_complete(self):
+        for option in VALUE_ONLY_OPTIONS:
+            for line in (option, f"-r deps.txt {option}"):
+                with self.subTest(line=line):
+                    names, opened, network_calls = self.resolve_line(line, {"deps.txt": "deps-pkg\n"})
+                    self.assertTrue(names.complete, line)
+                    self.assertLessEqual({"own-pkg"}, set(names), line)
+                    self.assertEqual(network_calls, [], line)
+
+    def test_ac6_the_value_less_forms_of_the_spec_resolve_to_the_own_name_only(self):
+        for line in ("-i", "-f", "--trusted-host"):
+            with self.subTest(line=line):
+                names, _, _ = self.resolve_line(line)
+                self.assertEqual(names, {"own-pkg"}, line)
+                self.assertTrue(names.complete, line)
+
+    def test_ac6_a_lone_double_dash_that_is_not_a_value_is_ignored(self):
+        forms = (
+            "--",
+            "-f ./wheels --",
+            f"--index-url {EXAMPLE_INDEX_URL} -- --no-index",
+            "-- --trusted-host",
+        )
+        for line in forms:
+            with self.subTest(line=line):
+                names, _, network_calls = self.resolve_line(line)
+                self.assertEqual(names, {"own-pkg"}, line)
+                self.assertTrue(names.complete, line)
+                self.assertEqual(network_calls, [], line)
+
+    def test_ac6_the_interpreted_options_keep_their_meaning(self):
+        names, opened, _ = self.resolve_line(
+            "-c c.txt -r deps.txt -e named-pkg --requirement=more.txt",
+            {"deps.txt": "deps-pkg\n", "more.txt": "more-pkg\n", "c.txt": "pinned-pkg\n"},
+        )
+        self.assertEqual(names, {"own-pkg", "deps-pkg", "named-pkg", "more-pkg"})
+        self.assertTrue(names.complete)
+        self.assertNotIn(self.real("c.txt"), opened)
+
+    def test_ac6_an_include_outside_the_root_after_a_consumed_value_is_still_refused(self):
+        outside_file = self.write("outside-reqs.txt", "outside-pkg==1.0\n", base=self.outside)
+        names, opened, network_calls = self.resolve_line(
+            "--trusted-host x -r ../outside/outside-reqs.txt"
+        )
+        self.assertNotIn(os.path.realpath(outside_file), opened)
+        self.assertFalse(names.complete)
+        self.assertEqual(names, {"own-pkg"})
+        self.assertEqual(network_calls, [])
+        names, opened, network_calls = self.resolve_line(
+            "--trusted-host x -r https://example.invalid/reqs.txt"
+        )
+        self.assertFalse(names.complete)
+        self.assertEqual(names, {"own-pkg"})
+        self.assertEqual(network_calls, [])
+
+
+class TestOptionValuesStayOutOfTheSummary(MultiOptionLineCase):
+    SECRET_URL = "https://user:secret-token@secret-host.invalid/simple"
+
+    def assert_nothing_from_the_line(self, result, line):
+        summary = result["summary"]
+        texts = [summary] + [finding["title"] for finding in result["findings"]]
+        forbidden = (
+            "secret",
+            "user:",
+            "deps.txt",
+            "-c -r",
+            str(self.root),
+            str(self.outside),
+            line,
+        )
+        for text in texts:
+            for fragment in forbidden:
+                self.assertNotIn(fragment, text)
+        self.assertLessEqual(summary.count(UNDETERMINED_NOTE_TOKEN), 1, summary)
+        self.assertLessEqual(set(NOTE_TOKEN_RE.findall(summary)), {UNDETERMINED_NOTE_TOKEN}, summary)
+
+    def test_ac7_an_abbreviation_with_a_secret_looking_value_reaches_the_summary_nowhere(self):
+        lines = (
+            "--trusted=secret-host.invalid",
+            f"--index={self.SECRET_URL}",
+            "--find=secret-host.invalid -c -r deps.txt",
+            "--trusted secret-host.invalid",
+        )
+        for line in lines:
+            with self.subTest(line=line):
+                result = self.scan_requirements(
+                    line + "\nown-pkg\n",
+                    payload(advisory("undeclared-pkg")),
+                    extra_files={"deps.txt": "deps-pkg\n"},
+                )
+                self.assertUndeterminedOne(result)
+                self.assertEqual(result["summary"].count(UNDETERMINED_NOTE_TOKEN), 1)
+                self.assert_nothing_from_the_line(result, line)
+
+    def test_ac7_consumed_credentials_before_a_constraint_reach_nothing(self):
+        # The index URL is consumed; `-c -r deps.txt` is then a constraint that
+        # takes `-r`, so the set stays complete and the undeclared advisory is
+        # transitive: no finding and no note.
+        lines = (
+            f"--index-url {self.SECRET_URL} -c -r deps.txt",
+            f"-i {self.SECRET_URL} -c -r deps.txt",
+            f"--extra-index-url {self.SECRET_URL} --trusted-host secret-host.invalid -c -r deps.txt",
+            f"--index-url={self.SECRET_URL} -c -r deps.txt",
+        )
+        for line in lines:
+            with self.subTest(line=line):
+                result = self.scan_requirements(
+                    line + "\nown-pkg\n",
+                    payload(advisory("undeclared-pkg")),
+                    extra_files={"deps.txt": "deps-pkg\n"},
+                )
+                self.assertEqual(result["findings"], [], result)
+                self.assertNotIn(UNDETERMINED_NOTE_TOKEN, result["summary"])
+                self.assert_nothing_from_the_line(result, line)
+
+    def test_ac7_consumed_credentials_before_an_include_reach_neither_the_summary_nor_a_finding(self):
+        lines = (
+            f"--index-url {self.SECRET_URL} -r deps.txt",
+            f"-i {self.SECRET_URL} -r deps.txt",
+            f"--extra-index-url {self.SECRET_URL} --trusted-host secret-host.invalid -r deps.txt",
+            f"--index-url={self.SECRET_URL} -r deps.txt",
+        )
+        for line in lines:
+            with self.subTest(line=line):
+                result = self.scan_requirements(
+                    line + "\n",
+                    payload(advisory("deps-pkg"), advisory("undeclared-pkg")),
+                    extra_files={"deps.txt": "deps-pkg\n"},
+                )
+                self.assertEqual(len(result["findings"]), 1, result)
+                self.assertTrue(result["findings"][0]["title"].startswith("deps-pkg:"))
+                self.assertNotIn(UNDETERMINED_NOTE_TOKEN, result["summary"])
+                self.assert_nothing_from_the_line(result, line)
 
 
 if __name__ == "__main__":
