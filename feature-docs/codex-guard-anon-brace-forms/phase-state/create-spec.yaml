@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 0130574312e631ea2493d2b56ce5a9cf20c6d91e
 last_input_digest: sha256:a93b09b7143061933239d4e880117bd6ebd7a2e5a94f34de646cd86258093226
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -58,10 +58,16 @@ worker_runs:
   input_digest: sha256:ebabf3c511587a29cd63036e965369d96d0bcfc0466a7153af9a197dcc4f194f
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:a93b09b7143061933239d4e880117bd6ebd7a2e5a94f34de646cd86258093226
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-anon-brace-forms/REQUIREMENTS.md
+  sha256: sha256:8d0b1d28e5c476b05bfc70298c789c6ecd1bc9d99de13e9754f4744735aed526
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-anon-brace-forms/SPEC.md
+  sha256: sha256:0ddd5897e6f1fa3d514287f59d83087d43184e72238ce11267582851d4b90c4e
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
