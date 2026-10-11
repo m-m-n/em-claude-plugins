@@ -1,0 +1,221 @@
+schema_version: 1
+feature: sca-requirements-option-value-consumption
+created: '2026-10-11'
+base_branch: main
+goal: |
+  # SCA 軸: requirements のオプション行で値を取る pip オプションの値を消費せず、後ろの -c が -r を食って include を取りこぼす
+
+  出典 Notion タスク: https://www.notion.so/3f63509ec8ee8141ae3ceb16fb1be5f4 （種別: バグ）
+
+
+  ## 現象 (必須)
+  requirements ファイルのオプション行で、`-r` / `-c` / `-e` 以外の値を取る pip オプション（`-i` / `--index-url`、`--extra-index-url`、`-f` / `--find-links`、`--trusted-host` 等）を読み飛ばすとき、その値のトークンを消費していない。pip（optparse）は値を取るオプションの直後のトークンを、先頭が `-` でも値として消費するため、スキャナと pip の解釈がずれる。
+  - 過小方向（TM-5 の経路）: `--trusted-host -c -r deps.txt` では、pip は `-c` を trusted-host の値とし、`deps.txt` を include として辿る。スキャナは `-c` が `-r` を制約の値として消費し、直接依存の集合が空のまま `complete=True` になる。`deps.txt` で宣言した直接依存の high / critical の advisory が推移的依存として黙って捨てられる。`-f -c -r X`、`-i -c -r X`、`--extra-index-url -c -r X`、省略形の `--trusted -c -r X` も同じ。
+  - 過大方向: `-f "-enamed-pkg" -r actual.txt` で、pip は `-enamed-pkg` を find-links の値とするが、スキャナは editable と読んで `named-pkg` を直接依存に加える。`--find-links "-rdeps.txt" -r actual.txt` でも `deps.txt` を辿る（封じ込めは効く）。
+  ## 再現手順 (必須)
+  1. `requirements.txt` に `--trusted-host -c -r deps.txt` の 1 行だけを書き、`deps.txt` に advisory のあるパッケージを宣言する
+  2. 軸 2 を走らせる → 直接依存の集合が空で `complete=True`、advisory が落ちる
+  3. `-f "-enamed-pkg" -r actual.txt` では `named-pkg` が直接依存に入る
+  ## 期待する挙動 (必須)
+  - 値を取る pip のオプションは、分離形のとき次のトークンを値として消費して読み捨てる
+  - それらの長形式の省略形（`--trusted`、`--index`、`--find` 等）も値を消費するか、`--requirement` / `--editable` の省略形と同じく `complete=False` にする
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`--trusted-host -c -r deps.txt`、`-f -c -r deps.txt`、`-f "-enamed-pkg" -r actual.txt`、`--find-links "-rdeps.txt" -r actual.txt`）
+  ## 該当箇所 (任意)
+  `em-workflow/scripts/scan-dependencies.py:2131`（`_requirements_option_items` のトークン走査）
+  ## 実害・発生条件 (任意)
+  出典: em-workflow feature `sca-requirements-multi-option-lines` のレビュー round 1 の finding `eac54f8271361426`（comprehensive / medium）。auto-fix の対象外（critical / high のみ）のため `unresolved` のまま残った残件。ブランチ `em-workflow/sca-requirements-multi-option-lines/integration`。変更前は行全体を無視していたため回帰ではない。
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作る。integration ブランチはローカル・remote とも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較してより良いと判断した案を採用する
+  - その議論内容を Notion に記録する
+
+parent_branch: em-workflow/sca-requirements-option-value-consumption/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  at: '2026-10-11T12:04:45+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: c5c6d86d9a8f15da3a585ad7b6f5a1f15ddb7c0b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や見た目の成果物が無く、スクリプト内部のトークン解析の修正だけのため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 値を取るオプションの集合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-11
+  FR2:
+    title: 分離形の値の消費
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-11
+  FR3:
+    title: = 形式と短形式の連結形
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR4:
+    title: 消費した値は解釈しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-11
+  FR5:
+    title: 値を取る長形式の省略形
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+    - TS-8
+    - TS-9
+  FR6:
+    title: 変えない挙動
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  FR7:
+    title: 既存テストの期待の書き換え
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-9
+  FR8:
+    title: コード内の説明の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 標準ライブラリのみ・例外を外へ出さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: ファイルとネットワークへの到達
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: summary に中身を出さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: テストの書き方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
