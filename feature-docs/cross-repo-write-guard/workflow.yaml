@@ -158,7 +158,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/cross-repo-write-guard/task0001
     notes: null
   task0002:
     title: README and hook-tests.md documentation for cross-repo-write-guard
@@ -174,7 +175,8 @@ tasks:
     requirements:
     - FR13
     - FR15
-    status: pending
+    status: in_progress
+    branch: em-workflow/cross-repo-write-guard/task0002
     notes: null
 review:
   status: pending
