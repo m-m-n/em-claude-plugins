@@ -134,14 +134,14 @@ workflow:
   status: completed
   completed_at_commit: 078d50b7264b5e0e33b884e7ee075ea71ff42c97
 - id: implement
-  status: completed
+  status: pending
   base_commit: e0364890c7976625c116d73caa5d478d5fa10d3b
   completed_at_commit: 9a3b5b7e7505956bee4566e6f59da5fc02d469ab
 - id: review
-  status: completed
+  status: pending
   completed_at_commit: 7a9e0fb7de6b7a8409ba332e50ffb4af7b0eb64f
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: TS-31
@@ -183,6 +183,24 @@ tasks:
     - NFR6
     status: merged
     branch: em-workflow/codex-guard-reserved-word-funcdef/task0001
+  task0002:
+    title: Update stale codex-reviewer test expectations to the haiku model
+    plan: tasks/task0002.md
+    files:
+    - tests/test_reproduction_reviewer_instructions.py
+    - tests/test_reviewer_roles_protocol.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR8
+    status: pending
+    provenance:
+      source: verify
+      source_ids:
+      - TS-31
+      review_round: null
 review:
   status: completed
   rounds_completed: 1
@@ -288,6 +306,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
