@@ -1,0 +1,221 @@
+schema_version: 1
+feature: codex-guard-reserved-word-funcdef
+created: '2026-10-11'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 予約語（then / do / else / ! / time）の直後に書いた関数定義の本体を判定し、正当なコマンドを deny する（回帰）
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、予約語（`then` `do` `else` `!` `time` など）の直後に書いた関数定義の本体を判定し、呼び出していない関数の中身を理由に deny を返す。基準版 `726917f4` では何も出力しなかったもので、feature `codex-guard-assignment-paren-head` の変更による回帰。review round 1 の finding `75a8159e787c3781`（medium, comprehensive）として未解決のまま残った。
+  同じ原因で次も deny になる:
+  - `for x in 1; do f() { python3 -i; }; done`
+  - `! f() { python3 -i; }`
+  - `time f() { python3 -i; }`
+  - `else` の直後の `f() { python3 -i; }`
+  ## 再現手順 (必須)
+  1. コマンド `if true; then f() { python3 -i; }; fi` を `{"tool_input": {"command": "..."}}` として hook の標準入力に渡す
+  2. deny が出力される（`bash -n -c` では構文として正しく、関数は呼び出されていない）
+  ## 期待する挙動 (必須)
+  何も出力しない（silent）。単独の `f() { python3 -i; }` と同じ扱いにする。一方で `if true; then a=()` + 改行 + `(python3 -i)` + 改行 + `fi` のような配列代入の後のサブシェルは deny のまま保つ。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に予約語の直後の関数定義を silent として、予約語の直後の配列代入 + サブシェルを deny として追加
+  - [ ] 両コピーがバイト単位で同一のまま
+  ## 該当箇所 (任意)
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:350`（`_names_function`: `(` の直前の単純コマンドの語の並びが「語 1 つだけ」か `function NAME` かを見る。パーサーは予約語を区切りとして扱わず語として積むため、`[then, f]` が関数名にならない）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 修正案: `_names_function` で長さを見る前に、先頭に続く予約語を取り除いてから判定する。モジュール docstring の手順 4 と `_Group.head` の説明、DOCSTRING_MARKERS も合わせる
+  - 記録: `feature-docs/codex-guard-assignment-paren-head/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-assignment-paren-head/integration`）
+  ## 実害・発生条件 (任意)
+  deny 側の誤爆で、すり抜けではない。Codex レビュアーが制御構文の中で関数を定義する正当なコマンドを実行できず止まる。
+
+  ## 追加指示（起動時）
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-reserved-word-funcdef/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.67
+      '2': 0.33
+      '3': 0.0
+  at: '2026-10-11T17:57:45+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: a69dc6e24753f605c2f1dbaa0f0da2958513b092
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない hook スクリプトの判定修正で、デザイン対象がないため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: []
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 先頭に連続する予約語を除いて関数名を判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: time の直後の静的な -p も取り除く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 何も残らないときは現行の判定のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 除去は関数定義の認識の中だけ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 除去後の名前の条件は現行どおり
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: docstring と _Group.head の説明を合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: DOCSTRING_MARKERS に新しい記述のマーカーを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: CASES に回帰検出ケースを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: 両コピーを同時に直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 両コピーはバイト単位で同一
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 標準ライブラリだけを使い、外部に触れない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 判定できない入力は何も出力しない（fail-open）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: グループは再帰を使わずスタックで追う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 既存の CASES を消さず判定も変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: em-workflow / em-review の version は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

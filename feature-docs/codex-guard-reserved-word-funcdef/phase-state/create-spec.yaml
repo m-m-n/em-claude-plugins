@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-reserved-word-funcdef
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 6d9ebcb9e537edc3d6559a2c6f11f30422312bf5
 last_input_digest: sha256:0479bdd8e13f4a692afcc6966610aace47cbeb2d59c5a3f5124a6cb4de4d449a
