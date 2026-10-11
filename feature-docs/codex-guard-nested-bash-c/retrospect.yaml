@@ -1,0 +1,32 @@
+feature: codex-guard-nested-bash-c
+collected_at: "2026-10-11T21:57:40+09:00"
+session_ids: [01a12b08-4b65-755e-9b94-b7fae14c339d]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: 全段の -c 走査（作業リスト・読み直し上限）が深い入れ子での応答時間（NFR3）に直結するため
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが bucket 1 (0.49) と bucket 2 (0.50) に割れ、新しい判定ロジックと複数モジュールへの変更を見込んで full とした"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.12, confidence: 0.86}
+        observed_at: "2026-10-11T20:44:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.5, confidence: 0.49}
+        observed_at: "2026-10-11T20:47:05+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 60
+      added_test_cases_approx: 8
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium finding 815e62007171d07b（二段目以降の parse で出る ValueError が走査全体を止める）は deferred。triage は report 分岐で起票されていないため、オーケストレーターが別タスクとして起票する"
+  - "journal.jsonl に implementer 報告の conflict_retries / deviations が残っておらず、retrospect で signals を検証できなかった"
