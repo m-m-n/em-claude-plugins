@@ -1,0 +1,69 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+    red_confirmed: true
+    red_reason: >-
+      Added the marker "found inside a command string is judged too, at every
+      level, with the same rules" to DOCSTRING_MARKERS, then ran
+      TestGuardDocumentation against the unchanged docstrings: the subtest
+      failed on both copies with an AssertionError (marker not found in the
+      folded module docstring).
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+    red_confirmed: true
+    red_reason: >-
+      Added the markers "walked with an explicit stack (a work list), never by
+      recursion", "are judged before the commands after the command that
+      holds it" and "the first launch to deny decides", then ran
+      TestGuardDocumentation against the unchanged docstrings: each subtest
+      failed on both copies with an AssertionError (marker not found).
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+    red_confirmed: true
+    red_reason: >-
+      Added the markers "up to 1,000,000 characters", "First-level strings
+      are not counted", "pass unread" and "Passing the limit is never a
+      reason to deny", then ran TestGuardDocumentation against the unchanged
+      docstrings: each subtest failed on both copies with an AssertionError
+      (marker not found).
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_no_longer_limits_a_literal_c_string_to_the_first_level
+    red_confirmed: true
+    red_reason: >-
+      Wrote the test first and ran it against the unchanged docstrings: both
+      stale sentences ("the first operand is judged once" and "A literal
+      inside the command string is not judged") were found in both copies, so
+      the four subtests failed with an AssertionError from assertNotIn.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_head_description_states_the_removal
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_names_function_docstring_states_the_extglob_rule
+    red_confirmed: false
+    red_reason: >-
+      Regression guard for text that pre-existed: every marker in
+      DOCSTRING_MARKERS, GROUP_HEAD_MARKERS and NAMES_FUNCTION_MARKERS that
+      was there before already passed on both copies and still passes; no red
+      state occurred for those. The confinement of the change to step 7 of
+      the module docstring has no executable check; it is read off the diff
+      (the only hunk in each script copy starts inside step 7).
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestCopies.test_the_two_copies_are_byte_identical detects a divergence
+      between the two script copies; the copies were identical before the
+      change and are identical after it, so no red state occurred. That the
+      diff against the base touches neither plugin.json file nor
+      marketplace.json has no executable check; it is read off
+      `git diff --name-only`, which lists only the two script copies, the
+      test file and this record.
