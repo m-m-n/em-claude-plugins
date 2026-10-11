@@ -360,6 +360,34 @@ CASES = [
     ("silent", "関数名のあとの括弧は本体", "f() (python3 -i)"),
     ("silent", "function 付きの関数定義の本体は実行しない", "function f() { python3; }"),
     ("silent", "function 付きの関数名のあとの改行と波括弧は本体", "function f()\n{ python3 -i; }"),
+    # A function definition written right after a leading run of reserved words
+    # is still a definition: the run is removed before the words are read
+    ("silent", "then の直後の関数定義", "if true; then f() { python3 -i; }; fi"),
+    ("silent", "do の直後の関数定義", "for x in 1; do f() { python3 -i; }; done"),
+    ("silent", "! の直後の関数定義", "! f() { python3 -i; }"),
+    ("silent", "time の直後の関数定義", "time f() { python3 -i; }"),
+    ("silent", "else の直後の関数定義", "if false; then :; else f() { python3 -i; }; fi"),
+    ("silent", "elif の直後の関数定義", "if false; then :; elif f() { python3 -i; }; then :; fi"),
+    ("silent", "if の直後の関数定義", "if f() { python3 -i; }; then :; fi"),
+    ("silent", "while の直後の関数定義", "while f() { python3 -i; }; do :; done"),
+    ("silent", "until の直後の関数定義", "until f() { python3 -i; }; do :; done"),
+    ("silent", "time -p の直後の関数定義", "time -p f() { python3 -i; }"),
+    ("silent", "! time の連なりの直後の関数定義", "! time f() { python3 -i; }"),
+    ("silent", "then の直後の function 付きの関数定義", "if true; then function f() { python3 -i; }; fi"),
+    ("silent", "then の直後の関数名のあとの改行と波括弧は本体", "if true; then f()\n{ python3 -i; }\nfi"),
+    ("silent", "then の直後の関数名のあとの括弧は本体", "if true; then f() (python3 -i); fi"),
+    # Removal leaves no word: the words are judged as they stand
+    ("silent", "予約語だけの 1 語は関数名", "then()\n(python3 -i)"),
+    ("deny", "time -p だけの 2 語は関数名でない", "time -p()\n(python3 -i)"),
+    # A group after a head that is no definition stays judged, whatever the
+    # reserved words in front of it
+    ("deny", "then の直後の配列代入のあとの改行と括弧", "if true; then a=()\n(python3 -i)\nfi"),
+    ("deny", "then の直後の export の配列代入のあとの改行と括弧", "if true; then export a=()\n(python3 -i)\nfi"),
+    ("deny", "do の直後の配列代入のあとの改行と括弧", "for x in 1; do a=()\n(python3 -i)\ndone"),
+    ("deny", "else の直後の配列代入のあとの改行と波括弧", "if false; then :; else a=()\n{ python3 -i; }\nfi"),
+    ("deny", "語の途中の予約語は取り除かない", "echo then f()\n(python3 -i)"),
+    ("deny", "then の直後の 2 語の () のあとの括弧", "if true; then a b()\n(python3 -i)\nfi"),
+    ("deny", "then の直後の動的な語の () のあとの括弧", "if true; then $f()\n(python3 -i)\nfi"),
     ("silent", "閉じていない括弧は判定不能", "(python3"),
     ("silent", "閉じていない波括弧は判定不能", "{ python3;"),
     ("silent", "} がコマンドの位置に無い波括弧は判定不能", "{ python3 }"),
@@ -583,6 +611,7 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
     """
 
     DEPTH = 6000  # the criteria ask for at least 5000 levels
+    RESERVED_RUN = 50000  # the criteria ask for at least 50,000 reserved words
     TIMEOUT = 60
 
     def assert_answers(self, path, command):
@@ -641,6 +670,19 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
             with self.subTest(shape=name):
                 self.assert_every_copy_answers(command)
 
+    def test_a_long_run_of_reserved_words_before_a_paren_is_answered(self):
+        # The run before `(` is removed in one pass (TM-2): the cost stays
+        # linear in the number of words, whatever the run is made of.
+        reserved = ("!", "do", "elif", "else", "if", "then", "time", "until", "while")
+        run = " ".join(reserved[i % len(reserved)] for i in range(self.RESERVED_RUN))
+        inputs = {
+            "run then a name and a body": run + " f() { python3 -i; }",
+            "run of reserved words only": run + "()",
+        }
+        for name, command in inputs.items():
+            with self.subTest(shape=name):
+                self.assert_every_copy_answers(command)
+
 
 def module_docstring(path):
     """The module docstring with its line breaks and indentation folded into
@@ -667,12 +709,39 @@ class TestGuardDocumentation(unittest.TestCase):
         "pending pipe",
         # A function definition starts only at `name(` or `function name(`
         "only `name()` and `function name()` start a function definition",
+        # A leading run of reserved words is removed before the words are read
+        "after the leading run of the reserved words `!` `do` `elif` `else` `if` "
+        "`then` `time` `until` `while` is removed",
+        "a non-dynamic `-p` right after `time` is removed with it",
+        "When nothing remains, the original words are judged",
+        "three words or more left after the removal",
+    )
+
+    # The same removal in the description of a group's `head` attribute
+    GROUP_HEAD_MARKERS = (
+        "the leading run of the reserved words `!` `do` `elif` `else` `if` "
+        "`then` `time` `until` `while` is removed",
+        "a non-dynamic `-p` right after `time` is removed with it",
+        "When nothing remains, the original words are judged",
+        "counts are the words left after the removal",
     )
 
     def test_the_docstring_describes_the_new_behaviour(self):
         for plugin, path in HOOK_PATHS.items():
             doc = module_docstring(path)
             for marker in self.DOCSTRING_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_group_head_description_states_the_removal(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            group = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Group"
+            )
+            doc = " ".join((ast.get_docstring(group) or "").split())
+            for marker in self.GROUP_HEAD_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
 
