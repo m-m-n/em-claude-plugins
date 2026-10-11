@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-nested-parse-error
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: 8d2a5ef4485989828be3f50479b459350cec9f4f
+base_revision: c44e69d66b5a167059c9ae619c47642f65a259cb
 last_input_digest: sha256:d44781384658b1bfdf993e5e8830e0028011d4f3c09f538cd990b16091f5be05
-active_request_id: create-plan-dispatch-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
