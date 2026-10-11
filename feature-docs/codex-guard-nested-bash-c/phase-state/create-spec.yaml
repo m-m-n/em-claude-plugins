@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 916c3d0a9f340771f4fbc9e3693852626c353806
 last_input_digest: sha256:8d6abd9d3df004c90e592931a828f787d27694e37661da8275644fe38a9b20c1
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -62,10 +62,16 @@ worker_runs:
   input_digest: sha256:8d6abd9d3df004c90e592931a828f787d27694e37661da8275644fe38a9b20c1
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: null
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-nested-bash-c/REQUIREMENTS.md
+  sha256: sha256:f6e31e122d2e3e6701ce178499c4f19793cd46148b00450448e13665dacdc62f
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-nested-bash-c/SPEC.md
+  sha256: sha256:15431554b3f30cfb78a0e85b07432c47e973bc83c8e063749784ffe29518508c
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
