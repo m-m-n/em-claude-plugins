@@ -1,10 +1,10 @@
 schema_version: 1
 feature: sca-listing-undecodable-output
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 01fe230f3d6301e3e62ee551f64ac874c967959f
-last_input_digest: sha256:95f9a0c1cca8b2e90af2724c02fca47c9bcb2e873a9cf0910cadec10fb521a96
+last_input_digest: sha256:4bde25ebbec38d8e100045229685f0a762b9262c82f740d37918fda93bdeaee8
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -51,10 +51,25 @@ answers:
     normalized_answer: リスティングはバイト列で受け取り、終了コード確認の後に stdout だけを UTF-8 で厳密にデコードする。stderr はデコードしない。非ゼロ終了は出力の中身に関係なく listing_exit_nonzero。stderr だけが不正でも stdout が正しければ一覧は利用可能。ロケールに依存しない
     resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose bytes_strict_utf8_stdout (終了コードを先に判定し stdout
       だけを解析する既存の順序を保ち、stderr の不正バイトで利用可能な一覧を失わない。scan-dependencies.py:393); recorded as assumption'
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: null
+    answered_at: '2026-10-11T16:30:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は analyst の推奨どおり skip（UI なし）
+    resolution_note: 'gate: create-spec.design-step; policy option_id: decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:95f9a0c1cca8b2e90af2724c02fca47c9bcb2e873a9cf0910cadec10fb521a96
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:4bde25ebbec38d8e100045229685f0a762b9262c82f740d37918fda93bdeaee8
   output_digest: null
 artifacts: []
 patches: []
