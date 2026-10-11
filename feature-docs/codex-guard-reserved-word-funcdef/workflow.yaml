@@ -149,7 +149,7 @@ workflow:
     すべて pass
   completed_at_commit: 3dc06c889a5ff8b411b2f9487a9301d22a0e61f8
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Strip leading reserved words in function-name recognition
