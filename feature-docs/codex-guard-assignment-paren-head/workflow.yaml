@@ -1,0 +1,173 @@
+schema_version: 1
+feature: codex-guard-assignment-paren-head
+created: '2026-10-11'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 配列代入 a=() の後に改行を挟んだサブシェルを関数本体とみなし、対話起動を通す（回帰）
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、配列代入 `a=()` の後に改行を挟んだサブシェルを関数本体とみなし、対話起動を通す。基準版 `fa502d0f` では deny だったものが、PR https://github.com/m-m-n/em-claude-plugins/pull/87 の変更後は何も出力しない（回帰）。review round 1 の finding `08a75f1657a9298e`（medium, security）として未解決のまま残った。
+  同じ原因で次も deny から許可に変わる:
+  - `a+=()` の後に改行して `(python3 -i)`
+  - `export a=()` の後に改行して `(python3 -i)`
+  - `a=()` の後に空行を挟んで `(python3)`
+  - `a=()` の後にコメント行を挟んで `(python3 -i)`
+  `;` で区切った `a=() ; (python3 -i)` は deny のまま。`a=()` の後に改行して `{ python3 -i; }` も通るが、こちらは基準版でも通っていた既存の見落とし。
+  ## 再現手順 (必須)
+  1. コマンド `a=()` + 改行 + `(python3 -i)` を `{"tool_input": {"command": "..."}}` として hook の標準入力に渡す
+  2. 何も出力されない（拒否されない）
+  ## 期待する挙動 (必須)
+  deny を出力する。`foo()` + 改行 + `(python3 -i)` と `f() (python3 -i)` は bash の関数定義なので、silent のまま保つ。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に `a=()` / `a+=()` + 改行 + `(python3 -i)` を deny として追加
+  - [ ] 両コピーがバイト単位で同一のまま
+  ## 該当箇所 (任意)
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:341`（`_open_group`: `(` の直前に語があれば中身を問わず head を立てる。代入語 `a=` も関数名として扱われる）
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:354`（`_close_group`: 中身が空の `()` を閉じると fn_head を立てる）
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:325`（fn_head が改行で消えない）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 修正案: `_open_group` で head を立てる条件を、`(` の直前の単純コマンドが動的でない語 1 つだけで、`=` を含まない有効な関数名のとき（または `function NAME` の形）に限る
+  - 記録: `feature-docs/codex-guard-parser-fixes/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-parser-fixes/integration`）
+  ## 実害・発生条件 (任意)
+  Codex レビュアーが対話モードの処理系を起動して孤児プロセスが残る経路が残る。THREAT-MODEL TM-2 の「緩和は定めた条件の範囲だけに効かせる」を満たしていない。
+
+  ## 追加指示（起動時）
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-assignment-paren-head/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  at: '2026-10-11T17:05:50+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 392ebf7d5350ec9040a8e2f2b555207af4fb5f5b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない Python フックの判定ロジックの修正で、画面設計の対象が無いため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 関数名の判定条件を絞る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 配列代入の後のグループを判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 関数定義の本体は判定しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: ; 区切りの判定を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 両コピーを同時に直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: テーブルにケースを追加する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 判定できないものは通す方針を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: docstring を実装に合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
