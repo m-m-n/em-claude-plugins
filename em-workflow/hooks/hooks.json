@@ -47,6 +47,12 @@
           },
           {
             "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/cross-repo-write-guard.py",
+            "timeout": 15,
+            "statusMessage": "リポジトリの外への書き込みでないか検証中..."
+          },
+          {
+            "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/destructive-guard.py",
             "timeout": 10,
             "statusMessage": "破壊的コマンドを検証中..."
@@ -67,6 +73,12 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/gitleaks-write-guard.sh",
             "timeout": 30,
             "statusMessage": "gitleaksで書き込み内容をスキャン中..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/cross-repo-write-guard.py",
+            "timeout": 15,
+            "statusMessage": "リポジトリの外への書き込みでないか検証中..."
           }
         ]
       },
