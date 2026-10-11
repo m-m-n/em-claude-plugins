@@ -1,0 +1,47 @@
+round: 1
+executed_at: "2026-10-11T20:27:41+09:00"
+scope:
+  review_mode: diff
+  base_commit: 50972f733f38102ff8cbd9310aa383630b30e439
+  head_commit: ee4d74f3bc1375a8a254c0e0bf0411ebe9de485f
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-extglob-funcname/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "4 観点（security / comprehensive / architecture / spec）すべて完了。security#0 の medium 1 件（二重の bash -c の内側は _scan が -c 文字列を解析しないため、extglob と対話起動の検出が届かない。em-workflow/scripts/codex-hook-interactive-guard.py:973）は再現を確認したが、ガード導入時（f4004fdb）からある既存の範囲の限界で、今回の差分とも extglob とも無関係なため evaluator が low に下げた。low は R3b step 2 で findings から外れる。critical / high は無い。プロンプト注入の試みは無い。各観点の独自確認はいずれも corroborated。"
+  recommended_action: complete
+  action_rationale: "残るのは low 1 件のみで、今回の差分の外にある既存の範囲の限界。ガードのコードを直すと SPEC FR4 と既存 CASES（第 2 段の bash -c は評価しない）に反する。対応は THREAT-MODEL.md の TM-1 の文言修正と別機能としての記録。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
