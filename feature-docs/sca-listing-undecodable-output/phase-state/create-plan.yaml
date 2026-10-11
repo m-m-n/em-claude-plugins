@@ -25,7 +25,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: sca-listing-undecodable-output-create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:d9dde297b54793e040107763606e93716b78ab61a4d7ba56bb72049c672cc0ad
   base_workflow_blob: 135a0f47abeb228c23d33e4e79fd4a45d29ab529
 progress_fingerprint: null

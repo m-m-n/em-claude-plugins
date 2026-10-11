@@ -2,36 +2,65 @@ schema_version: 1
 feature: sca-listing-undecodable-output
 created: '2026-10-11'
 base_branch: main
-goal: |
-  # file-tasks: list_security_tasks がリスティング出力の UnicodeDecodeError を捕捉せず、file-tasks がスクリプトごと落ちる
+goal: '# file-tasks: list_security_tasks がリスティング出力の UnicodeDecodeError を捕捉せず、file-tasks
+  がスクリプトごと落ちる
+
 
   Notion タスク: <notion-url> （種別: バグ）
 
+
   ## 現象 (必須)
-  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks` は、notion-task-dispatch の `task list` を `subprocess.run(..., text=True)` で起動し、例外を `except OSError` だけで受けている。リスティング出力に UTF-8 として不正なバイト列が含まれると、`subprocess.run` の内部デコードで `UnicodeDecodeError` が送出され、`ListingOutcome(available=False, ...)` に落ちずに `file_tasks` の外まで伝播してスクリプトが落ちる。stdout に JSON サマリが出ない。
+
+  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks` は、notion-task-dispatch
+  の `task list` を `subprocess.run(..., text=True)` で起動し、例外を `except OSError` だけで受けている。リスティング出力に
+  UTF-8 として不正なバイト列が含まれると、`subprocess.run` の内部デコードで `UnicodeDecodeError` が送出され、`ListingOutcome(available=False,
+  ...)` に落ちずに `file_tasks` の外まで伝播してスクリプトが落ちる。stdout に JSON サマリが出ない。
+
 
   ## 再現手順 (必須)
+
   1. `task list --type セキュリティ --format json` が UTF-8 として不正なバイト列を stdout に出すエントリポイント（スタブ）を用意する
+
   2. そのエントリポイントを `--entry-point` に渡して `file-tasks` を実行する
+
   3. traceback で終了し、stdout に JSON が出ないことを確認する
 
+
   ## 期待する挙動 (必須)
-  デコードできないリスティング出力は、既存の「リスティング不能」経路（`ListingOutcome(available=False, reason=...)` → report 分岐への縮退）に乗り、スクリプトは JSON サマリを出して終了する。
+
+  デコードできないリスティング出力は、既存の「リスティング不能」経路（`ListingOutcome(available=False, reason=...)`
+  → report 分岐への縮退）に乗り、スクリプトは JSON サマリを出して終了する。
+
 
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
 
+
   ## 該当箇所 (任意)
-  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks`（`subprocess.run(..., text=True)` と `except OSError`）
+
+  `em-workflow/scripts/scan-dependencies.py` の `list_security_tasks`（`subprocess.run(...,
+  text=True)` と `except OSError`）
+
 
   ## 実害・発生条件 (任意)
-  リスティング出力が不正な UTF-8 を含む場合のみ発生する。出典: sca-file-tasks-unexpected-exceptions の review フェーズで、評価者が差分範囲外の参考事項として報告した残件。元タスク: <notion-url>
+
+  リスティング出力が不正な UTF-8 を含む場合のみ発生する。出典: sca-file-tasks-unexpected-exceptions の review
+  フェーズで、評価者が差分範囲外の参考事項として報告した残件。元タスク: <notion-url>
+
 
   ## 追加指示（起動時）
-  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration
+  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+
   - その議論内容を Notion に記録する
+
+  '
 parent_branch: em-workflow/sca-listing-undecodable-output/integration
 tier: reduced
 tier_decision:
@@ -95,7 +124,37 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Treat undecodable task-listing output as a sixth unavailable-listing condition
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/scan-dependencies.py
+    - tests/test_sca_task_filing.py
+    - tests/test_sca_listing_undecodable_output.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
 review:
   status: pending
 requirements:
@@ -104,99 +163,132 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-5
+    - TS-8
   FR2:
     title: 判定の順序
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
   FR3:
     title: デコード失敗の新しい理由トークン
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-5
   FR4:
     title: stderr はデコードしない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   FR5:
     title: report 分岐への切り替え
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   FR6:
     title: docstring の条件数
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   FR7:
     title: 不能条件の区別性テストを 6 条件にする
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   FR8:
     title: 再発を検出するテスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   NFR1:
     title: 変更範囲
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR2:
     title: 既存の理由トークンを変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-10
   NFR3:
     title: サマリに不正なバイト列や出力の中身を載せない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   NFR4:
     title: テストは標準ライブラリだけ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
   NFR5:
     title: version は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR6:
     title: 既存テストと不変条件チェックが通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
 batch:
   review_rework_count: 0
   verify_rework:
