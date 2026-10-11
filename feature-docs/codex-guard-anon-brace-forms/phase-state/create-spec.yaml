@@ -1,16 +1,56 @@
 schema_version: 1
 feature: codex-guard-anon-brace-forms
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 0130574312e631ea2493d2b56ce5a9cf20c6d91e
 last_input_digest: sha256:ffec8a70066b76ff2ea41c5959a93356097e5ac40cd51c9ad1fc4b534f0790e0
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-12T00:45:00+09:00'
+    questions:
+    - question_id: scope.nameless-paren-form
+      status: answered
+    - question_id: requirement.anon-body-stdin-connection
+      status: answered
+answers:
+  scope.nameless-paren-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T00:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - include
+    freeform: null
+    normalized_answer: 含める。直前に語の無い空の `()` の直後の波括弧グループも匿名関数の本体として扱い、閉じた後の語を引数として読む。`zsh
+      -c '() { python3 -i; } arg'` を deny として CASES に追加する。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation);
+      Codex turn 1 recommended include; reasons: same root cause (word after brace
+      group); restricting to an empty () with no preceding word avoids confusion with
+      array assignment / named definitions; boundary cases must be tested'
+  requirement.anon-body-stdin-connection:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T00:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - connect
+    freeform: null
+    normalized_answer: 本体に渡す。`function` / `()` の前のパイプ接続を匿名関数の本体のグループに渡し、`echo x |
+      function { python3; }`、`echo x | function () { python3; }`、`echo x | () { python3;
+      }` を silent にする。継承は匿名関数の本体に限定し、`-i` 等の明示的な対話起動は接続下でも deny のまま。回帰ケース（入れ子、群の後の別コマンド、接続下の
+      -i）を CASES に追加する。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation);
+      Codex turn 1 recommended connect; reasons: _flush consumes pipe_pending on the
+      `function` word so the body loses its connection (false deny); FR1 would otherwise
+      add new false denies; _judge denies -i before the connection check so no new
+      miss; limit inheritance to anonymous bodies and test nested / following-command
+      / -i-under-connection cases'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:ffec8a70066b76ff2ea41c5959a93356097e5ac40cd51c9ad1fc4b534f0790e0
   output_digest: null
 artifacts: []
