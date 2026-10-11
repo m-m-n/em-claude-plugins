@@ -163,7 +163,7 @@ tasks:
     - FR7
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-guard-nested-bash-c/task0002
 review:
   status: pending
