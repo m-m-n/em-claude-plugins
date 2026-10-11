@@ -1,0 +1,213 @@
+schema_version: 1
+feature: codex-guard-extglob-funcname
+created: '2026-10-11'
+base_branch: main
+goal: '# codex-hook-interactive-guard: extglob の ?() を含む語を関数名と読み、後ろの実行グループの対話起動を見逃す
+
+
+  Notion: <notion-url>
+
+
+
+  ## 脆弱性の概要 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、extglob の `?()` を含む語を関数定義の名前と読み、その後ろの改行に続く実行グループ（`( ... )` など）を関数本体として判定から外す。予約語の直後（`then f?()` / `time /bin/true?()`）でも、予約語の無い形（`f?()`）でも起きる。
+
+  ## 参照 (必須)
+
+  - CVE / GHSA ID: 該当なし
+
+  - アドバイザリ URL: 該当なし
+
+  - severity: low
+
+  - 該当パッケージ: 該当なし
+
+  - 現在のバージョン: feature `codex-guard-reserved-word-funcdef` の integration ブランチ時点
+
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ (必須)
+
+  Codex レビュアーが `bash -O extglob -c ''time /bin/true?()` + 改行 + `(python3 -i)''` のようなコマンドを実行すると、Bash では `?()` が拡張パターンになり、1 行目は通常のコマンド、2 行目のサブシェルも実行される。ガードは 1 行目を関数定義と読むため、対話起動の `python3 -i` を deny しない。
+
+  ## 影響範囲 (必須)
+
+  対話起動の検出漏れ（fail-open）。ガードは誤読を検出漏れとして扱う設計で、すり抜けの類型は予約語の無い形 `f?()` で基準コミットから既にあった。feature `codex-guard-reserved-word-funcdef` の予約語の除去（SPEC FR1）で、同じ読み違いが予約語の後にも広がった。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 攻撃シナリオが成立しない
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  - [ ] 予約語の有り・無しの両方について `bash -O extglob -c` の deny ケースを `tests/test_codex_hook_interactive_guard.py` の `CASES` に足す
+
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:373`（`_names_function`）
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
+  - 修正案: 末尾が extglob の演算子文字（`?` `*` `+` `@` `!`）の語は関数名とみなさない
+
+  - 記録: `feature-docs/codex-guard-reserved-word-funcdef/reviews/round2.yaml`（ブランチ `em-workflow/codex-guard-reserved-word-funcdef/integration`）
+
+  ## 暫定緩和策 (任意)
+
+  \<修正までの回避手段。あれば\>
+
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+
+  - その議論内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/codex-guard-extglob-funcname/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.9400000000000001
+      '2': 0.06
+      '3': 0.0
+  at: '2026-10-11T19:54:11+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (unless multiple tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: f563818e3faa83a77155b9db8b7ec731d036c03a
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI・画面を持たない、コマンド文字列を判定する Python スクリプトの修正のため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: extglob の演算子文字で終わる語は関数名とみなさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 予約語の有無によらず同じ扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: bash -c の文字列の中でも同じ判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 既存の関数定義の判定は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 説明文の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: テストケースの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 両コピーのバイト単位の同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 標準ライブラリのみ・外部に触れない既存制約の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: プラグインの version は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
