@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-nested-bash-c
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 6aaf962b81dccc1fac74dc4c862605f9a027ed42
 last_input_digest: sha256:6e1b4ec67de6ad51fd22fbd069cfd2f6a4c5fe2af00b9e71791c06819f681fbf
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -31,7 +31,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: codex-guard-nested-bash-c-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:6e1b4ec67de6ad51fd22fbd069cfd2f6a4c5fe2af00b9e71791c06819f681fbf
   base_workflow_blob: 75aab4b273ceb58d52a5e158f554e599719d49e0
 progress_fingerprint: null
