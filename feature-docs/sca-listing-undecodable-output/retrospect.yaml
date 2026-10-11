@@ -1,0 +1,37 @@
+feature: sca-listing-undecodable-output
+collected_at: "2026-10-11T16:53:47+09:00"
+session_ids: [01a129f3-7fbb-7231-8f53-1b375f151662]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1（ルール追加とテスト追加、または少数ファイルへの小さな変更）が確率 0.99 となり reduced を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.01, confidence: 0.99}
+        observed_at: "2026-10-11T16:09:07+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.01, confidence: 0.99}
+        observed_at: "2026-10-11T16:12:49+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/scan-dependencies.py
+        - tests/test_sca_task_filing.py
+      changed_lines_approx: 20
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      work_still_required: true
+      body_change_kind: new_logic
+      change_containment: single_function
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査の files_expected は 2 ファイルだったが、計画は新規テストファイル tests/test_sca_listing_undecodable_output.py を加えた 3 ファイルとなり、実装も計画どおりだった（new_files_needed: 0 の見積りとの差）"
