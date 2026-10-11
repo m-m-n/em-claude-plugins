@@ -33,18 +33,23 @@ Decision flow:
      of a function definition (`name() { ...; }`) is not judged. The guard
      reads a definition by the words before the `(` alone: only `name()` and
      `function name()` start a function definition, where `name` is one word
-     that is not dynamic and holds no `=`. The words before `(` are judged
-     after the leading run of the reserved words `!` `do` `elif` `else` `if`
-     `then` `time` `until` `while` is removed, so a definition written right
-     after `then` or `do` still starts one; a non-dynamic `-p` right after
-     `time` is removed with it, and a reserved word later in the words is
-     never removed. When nothing remains, the original words are judged. The
-     group that follows the empty `()` of a definition is its body, `( ... )`
-     or `{ ...; }`, even when newlines come between. Any other words before
-     `()` (an assignment such as `a=()` or `export a=()`, a dynamic word,
-     three words or more left after the removal) start no definition, so the
-     group after them is judged. `while` `for` `until` `if` and `case` are
-     not read as groups.
+     that is not dynamic and holds no `=`. A word whose content, after quote
+     removal, ends in one of the extglob operator characters `?` `*` `+` `@`
+     `!` is no function name, even when it is the one reserved word left (`!`):
+     the `()` after it starts no definition and the group after its `()` is
+     judged. Only the last character is read, whether it is quoted, escaped or
+     followed by a space, and whether extglob is enabled is never checked. The
+     words before `(` are judged after the leading run of the reserved words
+     `!` `do` `elif` `else` `if` `then` `time` `until` `while` is removed, so a
+     definition written right after `then` or `do` still starts one; a
+     non-dynamic `-p` right after `time` is removed with it, and a reserved
+     word later in the words is never removed. When nothing remains, the
+     original words are judged. The group that follows the empty `()` of a
+     definition is its body, `( ... )` or `{ ...; }`, even when newlines come
+     between. Any other words before `()` (an assignment such as `a=()` or
+     `export a=()`, a dynamic word, three words or more left after the
+     removal) start no definition, so the group after them is judged. `while`
+     `for` `until` `if` and `case` are not read as groups.
   5. After `|` or `|&` the right side is awaited: a pending pipe survives
      newlines, blank lines, comment-only lines and heredoc bodies, and the
      next non-empty command is the right side. A newline after `&&` or `||`
@@ -99,6 +104,10 @@ WRAPPERS = ("env", "nohup", "nice", "exec", "command", "time", "sudo")
 # Reserved words removed in front of the words before a `(`, so a function
 # defined right after `then`, `do`, `!` and the like is still read as one.
 RESERVED_WORDS = ("!", "do", "elif", "else", "if", "then", "time", "until", "while")
+
+# A word that ends in one of these is no function name: `f?()` and the like are
+# extglob patterns, not definitions, so the group after the `()` is judged.
+EXTGLOB_OPERATORS = ("?", "*", "+", "@", "!")
 
 # Long informational options that never open a REPL. Every family shares
 # these; the short informational options belong to each family (info_letters).
@@ -215,13 +224,16 @@ class _Group:
     skip       the group is a function body: defined here, run elsewhere
     head       the words right before the `(` are a function name: `name(` or
                `function name(`, where `name` is one word that is not dynamic
-               and holds no `=`. The words are judged after the leading run of
-               the reserved words `!` `do` `elif` `else` `if` `then` `time`
-               `until` `while` is removed, and a non-dynamic `-p` right after
-               `time` is removed with it. When nothing remains, the original
-               words are judged. The "one word" and "`function` and one word"
-               counts are the words left after the removal. A later empty `()`
-               makes the group that follows a function body
+               and holds no `=`. A word whose content, after quote removal,
+               ends in one of the extglob operator characters `?` `*` `+` `@`
+               `!` is no name, so the group after its `()` is judged. The words
+               are judged after the leading run of the reserved words `!` `do`
+               `elif` `else` `if` `then` `time` `until` `while` is removed, and
+               a non-dynamic `-p` right after `time` is removed with it. When
+               nothing remains, the original words are judged. The "one word"
+               and "`function` and one word" counts are the words left after
+               the removal. A later empty `()` makes the group that follows a
+               function body
     size       (commands, groups) counted when the group opened, itself included
     connected  settled once the whole command is read: the group, or a group
                that holds it, has its standard input connected
@@ -366,8 +378,13 @@ class _Parser:
         nothing remains, the original words are judged. What remains must be
         one word, or `function` and one word, where the name is not dynamic and
         holds no `=` (an assignment such as `a=` or `export a=` is not a name).
-        The removal is a view over `words` read in one forward pass: the list
-        itself is not changed."""
+        A name whose content, after quote removal, ends in one of the extglob
+        operator characters `?` `*` `+` `@` `!` is not a function name either,
+        even when it is the one reserved word left (`!`): the group after its
+        `()` is judged. The rule rejects the word the steps above chose and
+        never changes which word that is. Only the last character is read, and
+        whether extglob is enabled is never checked. The removal is a view over
+        `words` read in one forward pass: the list itself is not changed."""
         end = len(words)
         first = 0
         while first < end and not words[first].dynamic and words[first].text in RESERVED_WORDS:
@@ -382,7 +399,9 @@ class _Parser:
         if end - first != 1:
             return False
         name = words[first]
-        return not name.dynamic and "=" not in name.text
+        if name.dynamic or "=" in name.text:
+            return False
+        return not name.text.endswith(EXTGLOB_OPERATORS)
 
     def _open_group(self, kind):
         self._finish_word()
