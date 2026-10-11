@@ -100,7 +100,12 @@ workflow:
   status: completed
   completed_at_commit: 5cd8af42a46515950d81b66163193fcce8e9e835
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  summary: 'repo-tests: python3 -m unittest discover -s tests -> OK (10107 tests, skipped=1). plugin-invariants: all PASS, exit 0. TS-1..TS-8 covered by tests/test_scan_dependencies_cargo_directness.py (additions only, 0 removed lines). TS-9: changed source limited to em-workflow/scripts/scan-dependencies.py and tests/ (plus test-docs/ record); no plugin.json / marketplace.json / feature-docs/sca-directness-resolution edits.'
+  excluded: []
+  completed_at_commit: 9d5e077757a2d4c19110b648a98b6e389c944e06
 - id: retrospect
   status: pending
 tasks:
