@@ -739,6 +739,24 @@ class TestGuardDocumentation(unittest.TestCase):
         "after quote removal",
         "the group after its `()` is judged",
         "whether extglob is enabled is never checked",
+        # A literal shell `-c` string is judged at every level, with the same rules
+        "found inside a command string is judged too, at every level, with the same rules",
+        # The nested strings are walked with an explicit stack, in a fixed order
+        "walked with an explicit stack (a work list), never by recursion",
+        "are judged before the commands after the command that holds it",
+        "the first launch to deny decides",
+        # The characters re-read from nested strings are limited
+        "up to 1,000,000 characters",
+        "First-level strings are not counted",
+        "pass unread",
+        "Passing the limit is never a reason to deny",
+    )
+
+    # Sentences step 7 carried before it judged a literal `-c` string at every
+    # level; the docstring no longer says them.
+    STALE_DOCSTRING_SENTENCES = (
+        "the first operand is judged once",
+        "A literal inside the command string is not judged",
     )
 
     # The same removal in the description of a group's `head` attribute
@@ -767,6 +785,13 @@ class TestGuardDocumentation(unittest.TestCase):
             for marker in self.DOCSTRING_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
+
+    def test_the_docstring_no_longer_limits_a_literal_c_string_to_the_first_level(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for stale in self.STALE_DOCSTRING_SENTENCES:
+                with self.subTest(copy=plugin, stale=stale):
+                    self.assertNotIn(stale, doc)
 
     def test_the_group_head_description_states_the_removal(self):
         for plugin, path in HOOK_PATHS.items():

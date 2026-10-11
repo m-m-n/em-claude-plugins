@@ -65,12 +65,34 @@ Decision flow:
      read as options, letter by letter: an `i` anywhere is a launch with
      `-i`, and each `o` / `O` takes the next word as its value (so do
      `--rcfile` and `--init-file`). `--` or a lone `-` ends the options. With
-     `-c`, the first operand is judged once, the same way, as a command
-     string and inherits the standard input connection of the command that
-     holds it; the words after it are positional parameters, never options.
-     `-c` without an operand -> no output. A literal inside the command
-     string is not judged. Other interpreters keep their reading of
-     `-c` `-m` `-e`.
+     `-c`, the literal first operand is judged as a command string and
+     inherits the standard input connection of the command that holds it; the
+     words after it are positional parameters, never options. The literal
+     first operand of a shell `-c` found inside a command string is judged
+     too, at every level, with the same rules: the string is split into
+     simple commands, and each is read and judged exactly as a command at the
+     top level, wrappers and options included. The connection passes down
+     through every level, so a command inside a nested string is connected
+     when the command that holds the string is. A string the reader cannot
+     read (an unbalanced quote, an unterminated heredoc, an unclosed group)
+     is skipped and passes, and so does a dynamic operand; the walk goes on
+     with the command after the one that holds it. Nested strings are walked
+     with an explicit stack (a work list), never by recursion, so nesting
+     depth costs no call-stack depth. The commands of a nested string are
+     judged before the commands after the command that holds it, and the
+     first launch to deny decides: no string after it is read. The
+     characters re-read from second-level and deeper strings (the operands of
+     a shell `-c` inside a first-level string or deeper, as the parser
+     receives them after the quote removal of the level that holds them) are
+     counted in one running total per hook command, up to 1,000,000
+     characters (`NESTED_READ_LIMIT`). First-level strings are not counted
+     and are always read; they are the operands of a shell `-c` in the
+     command the hook receives. Once the next second-level or deeper string
+     would pass the limit, it and every later second-level or deeper string
+     pass unread. Passing the limit is never a reason to deny: the commands
+     at the top level and in first-level strings are still judged. `-c`
+     without an operand -> no output. Other interpreters keep their reading
+     of `-c` `-m` `-e`.
   8. Deny a launch that carries `-i` before the first operand (python, node,
      the shells and lua), and a launch that gives the interpreter no program
      to run: no operand, no code option, standard input neither redirected
