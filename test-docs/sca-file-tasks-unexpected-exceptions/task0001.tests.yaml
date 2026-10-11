@@ -1,0 +1,141 @@
+task_id: task0001
+baseline_failures: []          # 4a, before any edit: python3 -m unittest discover -s tests: 10176 tests OK (skipped=1); check-plugin-invariants.py: all checks PASS
+final_failures: []             # re-executed after implementation and after writing this record: 10217 tests OK (10176 + 40 new + 1 record-check case for this record; skipped=1); check-plugin-invariants.py: all checks PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestFilingHelpersConvertValueErrors.test_ac1_writer_error_becomes_entry_point_error_with_the_exact_cause
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestFilingHelpersConvertValueErrors.test_ac1_launch_error_becomes_entry_point_error_and_temp_file_is_gone
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestFilingHelpersConvertValueErrors.test_ac1_type_error_at_the_writer_is_not_converted
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestFilingHelpersConvertValueErrors.test_ac1_type_error_at_the_launch_is_not_converted
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestFilingHelpersConvertValueErrors.test_ac1_non_zero_exit_still_raises_entry_point_error_without_a_cause
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestFilingHelpersConvertValueErrors.test_ac1_non_executable_entry_point_raises_without_launching
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script (new module run with the original
+      scan-dependencies.py in a scratch copy): the writer-error test and the launch-error test
+      errored for both helpers and both exception types with the raw exception escaping the
+      helper ("ValueError: simulated value error" and "UnicodeEncodeError: 'utf-8' codec can't
+      encode character '\ud800' in position 0: surrogates not allowed") instead of an
+      EntryPointError. The TypeError-not-converted, non-zero-exit-without-cause and
+      non-executable-entry-point tests describe behavior that pre-existed and were green before
+      the change (regression guards for the "unchanged" parts of the criterion).
+  AC-2:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestTempFileWriter.test_ac2_lone_surrogate_line_raises_unicode_encode_error_and_leaves_no_file
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestTempFileWriter.test_ac2_value_error_while_writing_surfaces_raw_and_leaves_no_file
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestTempFileWriter.test_ac2_os_error_while_writing_surfaces_raw_and_leaves_no_file
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestTempFileWriter.test_ac2_failing_removal_of_the_partial_file_stays_suppressed
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestTempFileWriter.test_ac2_successful_write_returns_the_path_of_the_written_file
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: the lone-surrogate test and the ValueError
+      test failed with "AssertionError: True is not false" (the partial temporary file still
+      existed after the UnicodeEncodeError / ValueError, because the old cleanup only caught
+      OSError). The OSError-while-writing test, the suppressed-removal-failure test and the
+      successful-write test describe behavior that pre-existed and were green before the change
+      (regression guards).
+  AC-3:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestCliCreatePathNulPackageName.test_ac3_nul_package_name_ends_the_batch_through_the_summary
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: "AssertionError: 1 != 0" with the CLI's stderr
+      showing a traceback ending in "ValueError: embedded null byte" from subprocess.run (the
+      NUL-containing package name in the create argv); no summary was printed.
+  AC-4:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestInProcessFilingFailures.test_ac4a_nul_in_a_listed_task_id_ends_the_append_path
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestInProcessFilingFailures.test_ac4b_unicode_encode_error_from_the_writer_ends_the_create_path
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestInProcessFilingFailures.test_ac4b_unicode_encode_error_from_the_writer_ends_the_append_path
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: file_tasks raised instead of returning a
+      summary -- "ValueError: embedded null byte" for the NUL task id on the append path, and
+      "UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 0:
+      ENCODEMARK-91c4" for the writer double on the create and append paths.
+  AC-5:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestGroupingSkipsUnencodableText.test_ac5_each_kind_of_unencodable_text_is_skipped_and_recorded
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestGroupingSkipsUnencodableText.test_ac5_skipped_finding_joins_no_group_and_no_deduplication
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestGroupingSkipsUnencodableText.test_ac5_the_new_reason_is_a_fixed_text_and_never_finding_content
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestGroupingSkipsUnencodableText.test_ac5_title_contract_and_encoding_failures_are_recorded_in_input_order
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestGroupingSkipsUnencodableText.test_ac5_the_check_precedes_truncation
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestGroupingSkipsUnencodableText.test_ac5_a_severity_that_is_not_a_string_is_not_checked
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestGroupingSkipsUnencodableText.test_ac5_encodable_text_is_grouped_exactly_as_before
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestCliUnencodableAdvisoryId.test_ac5_cli_skips_the_finding_and_files_the_other_packages
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestReportBranchesSkipUnencodableText.test_ac5_report_branch_writes_the_report_and_records_the_finding
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestReportBranchesSkipUnencodableText.test_ac5_degraded_report_branch_writes_the_report_and_records_the_finding
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: direct grouping raised "UnicodeEncodeError:
+      'utf-8' codec can't encode character '\ud800' ..." from truncate_untrusted for a surrogate
+      in the package and in the advisory id (and for the over-long package); the severity case
+      failed with "Lists differ: ['pkg-a', 'pkg-b', 'pkg-c'] != ['pkg-a', 'pkg-c']" (the finding
+      was grouped, not skipped); the real CLI exited 1 ("AssertionError: 1 != 0", traceback
+      ending in the same UnicodeEncodeError); the report branch and the degraded report branch
+      errored with the same UnicodeEncodeError during grouping; the tests that read the new
+      reason constant errored with AttributeError (no UNENCODABLE_FINDING_REASON). The
+      non-string-severity test and the encodable-text-as-before test describe behavior that
+      pre-existed and were green before the change (regression guards for "what is not changed").
+  AC-6:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestCliCreatePathNulPackageName.test_ac3_nul_package_name_ends_the_batch_through_the_summary
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestInProcessFilingFailures.test_ac4a_nul_in_a_listed_task_id_ends_the_append_path
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestInProcessFilingFailures.test_ac4b_unicode_encode_error_from_the_writer_ends_the_create_path
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestInProcessFilingFailures.test_ac4b_unicode_encode_error_from_the_writer_ends_the_append_path
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestCliUnencodableAdvisoryId.test_ac5_cli_skips_the_finding_and_files_the_other_packages
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestReportBranchesSkipUnencodableText.test_ac5_report_branch_writes_the_report_and_records_the_finding
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestReportBranchesSkipUnencodableText.test_ac5_degraded_report_branch_writes_the_report_and_records_the_finding
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestSummaryDisciplineMarkers
+    red_confirmed: true
+    red_reason: >-
+      The summary-discipline check (twelve keys, failure_reason token-only, no exception /
+      package / advisory-id text in failure_reason or malformed_findings[].reason, exception
+      text on stderr) is asserted inside each AC-3, AC-4 and AC-5 run, and those runs were
+      watched fail against the unmodified script before the check could pass: no summary was
+      produced at all (traceback and exit code 1, or an exception out of file_tasks), so the
+      criterion about the summary of those runs did not hold. TestSummaryDisciplineMarkers pins
+      the check itself on hand-built summaries (a marker in failure_reason, a marker in a
+      malformed reason, an unknown token and an extra key are all rejected); of its four tests
+      only test_a_clean_summary_passes was red before (AttributeError, no
+      UNENCODABLE_FINDING_REASON); the three rejection tests are green by construction because
+      they exercise only this module's own helper.
+  AC-7:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_helpers_and_runner_name_value_error_alongside_os_error
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_filing_helper_docstrings_name_unicode_encode_error
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_writer_docstring_states_removal_on_both_and_the_raw_reraise
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_grouping_docstring_states_the_utf8_encodability_skip
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_file_tasks_docstring_names_value_error_among_mid_batch_failures
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_file_tasks_docstring_keeps_the_five_added_keys
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_nfr4_removal_sentences_never_claim_conversion_or_propagation
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_nfr4_runner_and_create_keep_a_removal_sentence_with_stderr_and_unchanged
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_malformed_reason_comment_does_not_claim_to_be_the_only_reason
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_ac7_new_reason_constant_sits_next_to_the_existing_one
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: "'OSError' not found in 'Appends ...'" and
+      "'ValueError' not found in ..." for the two helper docstrings and the runner docstring;
+      "'UnicodeEncodeError' not found" for the helper and writer docstrings; "'UTF-8' not found"
+      for the grouping docstring; "'ValueError' not found" for the file_tasks docstring;
+      "'the one reason' unexpectedly found" and "'every malformed finding' unexpectedly found"
+      for the comment above MALFORMED_FINDING_REASON; StopIteration for the missing
+      UNENCODABLE_FINDING_REASON constant. The "Five keys are ADDED" test and the two NFR4
+      wording tests describe wording that pre-existed and were green before the change
+      (regression guards; the existing tests/test_sca_file_tasks_oserror.py also detects the
+      NFR4 and "Five keys are ADDED" wording; no red state occurred for those parts).
+  AC-8:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions.TestDocstringAndCommentContent.test_only_standard_library_imports
+      - tests.test_sca_file_tasks_oserror
+    red_confirmed: false
+    red_reason: >-
+      The import scan of the new test module was green from the moment the module was written
+      (it only ever imports standard-library modules), and tests/test_sca_file_tasks_oserror.py
+      detects the OSError behavior it already covered; no red state occurred for this change.
+      The two suite commands (python3 -m unittest discover -s tests and
+      python3 em-workflow/scripts/check-plugin-invariants.py .) were run as the baseline in 4a
+      (both green) and again after implementation (both green); the no-new-import and
+      untouched-version-files parts are diff checks, with no executable check that can be made
+      to fail first.
