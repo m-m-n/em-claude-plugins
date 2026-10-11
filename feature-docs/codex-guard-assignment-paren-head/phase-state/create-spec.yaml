@@ -4,7 +4,7 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 883181291719b5f1d7f68497f75e16a1873adb87
-last_input_digest: null
+last_input_digest: sha256:fe2b5e7e811f7ed347321367f788ffad9bb448b8c5b4daa2e9a20faec602148b
 active_request_id: null
 packets: {}
 answers:
@@ -19,7 +19,33 @@ answers:
     freeform: codex-guard-assignment-paren-head
     normalized_answer: feature 名をタスク記述から codex-guard-assignment-paren-head と導出した
     resolution_note: 'gate: create-spec.feature-identity; policy option_id: derive_from_task_description'
-worker_runs: []
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: null
+    answered_at: '2026-10-11T17:16:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は analyst の推奨どおり skip（UI なし）
+    resolution_note: 'gate: create-spec.design-step; policy option_id: decide_autonomously'
+  analyst.assumptions-codex-review:
+    question_id: analyst.assumptions-codex-review
+    packet_id: null
+    answered_at: '2026-10-11T17:20:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: Q1 no_equals_word; Q2 include_and_pin
+    normalized_answer: 'A1: 関数名の条件は動的でなく = を含まない語（識別子に絞らない）。A2: a=() + 改行 + { python3 -i; } も対象に含め CASES に deny として固定する'
+    resolution_note: '起動時指示（不明点は Codex に相談）により analyst の仮定 A1/A2 を Codex に確認。codex_consulted: true (1 turn, entry codex); Codex は両方とも analyst 仮案を支持（guard.py:341, :352, :325; test:346, :437）。議論内容を Notion
+      タスクページにコメントで記録済み'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:fe2b5e7e811f7ed347321367f788ffad9bb448b8c5b4daa2e9a20faec602148b
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
