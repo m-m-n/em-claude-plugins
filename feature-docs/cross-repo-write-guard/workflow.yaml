@@ -122,7 +122,7 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: cross-repo-write-guard hook, tests and registration
