@@ -30,8 +30,15 @@ Decision flow:
      passes the connection to every command inside it, nested groups
      included, so the commands of a group are judged once the redirects after
      its close are known. A group that is not closed -> no output. The body
-     of a function definition (`name() { ...; }`) is not judged. `while`
-     `for` `until` `if` and `case` are not read as groups.
+     of a function definition (`name() { ...; }`) is not judged. The guard
+     reads a definition by the words before the `(` alone: only `name()` and
+     `function name()` start a function definition, where `name` is one word
+     that is not dynamic and holds no `=`. The group that follows the empty
+     `()` of a definition is its body, `( ... )` or `{ ...; }`, even when
+     newlines come between. Any other words before `()` (an assignment such
+     as `a=()` or `export a=()`, a dynamic word, three words or more) start no
+     definition, so the group after them is judged. `while` `for` `until`
+     `if` and `case` are not read as groups.
   5. After `|` or `|&` the right side is awaited: a pending pipe survives
      newlines, blank lines, comment-only lines and heredoc bodies, and the
      next non-empty command is the right side. A newline after `&&` or `||`
@@ -196,7 +203,10 @@ class _Group:
     pipe       the group is the right side of a pipe
     stdin      a stdin redirect follows the close of the group
     skip       the group is a function body: defined here, run elsewhere
-    head       a command word stood right before the `(`: `name(`
+    head       the words right before the `(` are a function name: `name(` or
+               `function name(`, where `name` is one word that is not dynamic
+               and holds no `=`. A later empty `()` makes the group that
+               follows a function body
     size       (commands, groups) counted when the group opened, itself included
     connected  settled once the whole command is read: the group, or a group
                that holds it, has its standard input connected
@@ -332,13 +342,27 @@ class _Parser:
             # right side.
             self.pipe_pending = False
 
+    @staticmethod
+    def _names_function(words):
+        """Whether the words before a `(` are a function name: one word, or
+        `function` and one word, where the name is not dynamic and holds no
+        `=` (an assignment such as `a=` or `export a=` is not a name)."""
+        if len(words) == 2 and words[0].text == "function":
+            words = words[1:]
+        if len(words) != 1:
+            return False
+        name = words[0]
+        return not name.dynamic and "=" not in name.text
+
     def _open_group(self, kind):
-        made, _ = self._flush()
+        self._finish_word()
+        head = kind == "(" and self._names_function(self.words)
+        self._flush()
         parent = self.frames[-1] if self.frames else None
         # The sizes as they stand once this group is in the list: an empty
         # group is closed with the same sizes.
         size = (len(self.commands), len(self.groups) + 1)
-        group = _Group(kind, parent, self.pipe_pending, self.fn_head, made, size)
+        group = _Group(kind, parent, self.pipe_pending, self.fn_head, head, size)
         self.pipe_pending = False
         self.fn_head = False
         self.frames.append(group)

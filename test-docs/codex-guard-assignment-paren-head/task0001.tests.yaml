@@ -1,0 +1,81 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the six cases added to CASES and no implementation change, the
+      subtests for a=() / a+=() / export a=() followed by a newline, a blank
+      line or a comment line and then (python3 -i), and for a=() followed by
+      a newline and { python3 -i; }, errored for both copies: the hook
+      printed nothing where deny was expected (JSONDecodeError on empty
+      stdout).
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The four function-definition bodies (foo() + newline + (python3 -i),
+      f() (python3 -i), f() { python3; }, function f() { python3; }) were
+      already skipped before the change; the cases pin that the narrowed
+      head condition does not start judging them. No red state occurred for
+      this criterion.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      a=() ; (python3 -i) was already denied before the change because the
+      ; clears the pending function body; the case pins that behavior. No
+      red state occurred for this criterion.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_hold_both_a_deny_and_a_silent_case
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation, the new CASES entries made
+      TestCasesTable.test_cases_run_against_both_copies fail (the same
+      errors as AC-1, plus the dynamic-word and three-word heads). The
+      table only gained entries; the diff removes no case and changes no
+      expected verdict.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      The existing test_the_two_copies_are_byte_identical detects a
+      divergence between the two copies; both copies were changed together
+      in one step (the second is a byte copy of the first), so no red state
+      occurred for this change.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+    red_confirmed: true
+    red_reason: >-
+      With the new marker "only `name()` and `function name()` start a
+      function definition" added to DOCSTRING_MARKERS and the module
+      docstring unchanged, the test failed for both copies: the marker was
+      not found in the module docstring.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_input_that_is_not_json_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_json_that_is_not_an_object_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_missing_tool_input_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_missing_command_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_non_string_command_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_an_unclosed_quote_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_an_unterminated_heredoc_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_env_with_an_option_passes
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_a_very_long_command_still_gets_an_answer
+    red_confirmed: false
+    red_reason: >-
+      These existing tests already passed before the change and are
+      regression guards for the whole-suite criterion; the added code uses
+      only the standard library, reads no file and spawns nothing. No red
+      state occurred for this criterion.
