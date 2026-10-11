@@ -1,0 +1,93 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Added the reproduction row (5000 nines before `>/dev/null` two shell
+      `-c` levels down, then `; python3 -i`) and ran it against the unchanged
+      guard: both copies printed nothing, and the table test errored on that
+      row with a JSON decode error on empty standard output instead of a deny
+      decision, because the digit word reached `int()` and raised.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Added the depth-0 row and the depth-1 row (5000 nines before
+      `>/dev/null`, then `; python3 -i`) and ran them against the unchanged
+      guard: both copies printed nothing for each, and the table test errored
+      on both rows with a JSON decode error on empty standard output instead
+      of a deny decision.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Added `python3 2147483648>/dev/null` as a silent row and ran it against
+      the unchanged guard: both copies printed a deny decision (the word was
+      read as fd 2147483648, no operand was left), so the silent assertion
+      failed. The other two rows (`python3 00< f` silent, `python3
+      2147483647>/dev/null` deny) already passed before the change because
+      words at or below 2147483647 keep their verdicts; they and every
+      pre-existing row are regression guards for which no red state occurred.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_each_copy_catches_the_general_exception_class_and_goes_on
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_passes_two_handlers_that_continue
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_passes_one_handler_for_both_classes_that_continues
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_flags_a_handler_for_undecidable_alone
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_flags_a_handler_for_the_general_class_alone
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_flags_a_bare_except_as_no_general_class
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_flags_a_general_handler_that_returns
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_flags_a_general_handler_that_raises
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_flags_a_nested_parse_call_with_no_try
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment.test_the_checker_flags_a_missing_scan_function
+    red_confirmed: true
+    red_reason: >-
+      Ran against the unchanged guard: the copy test
+      test_each_copy_catches_the_general_exception_class_and_goes_on failed on
+      both copies with `['the general exception class is not caught around the
+      nested parse call'] != []`, because the only handler was for
+      `_Undecidable`. The checker sample tests run the checker on synthetic
+      source, not on the guard, so they passed before and after; they pin the
+      checker.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+    red_confirmed: true
+    red_reason: >-
+      Added the marker `a string for which an unexpected error occurred while
+      it was being read` to DOCSTRING_MARKERS and ran it against the unchanged
+      guard: the docstring test failed on both copies with the marker not
+      found in the docstring.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+    red_confirmed: false
+    red_reason: >-
+      Regression guards for properties that held before the change: the
+      existing copy-identity, no-recursion, static-constraint and
+      case-uniqueness tests passed with no implementation present, and no red
+      state occurred for this change. They detect a copy left behind, a
+      recursive call, a non-standard-library import and a duplicate case
+      command. The three suite commands of the criterion are executed as
+      whole-suite runs, which are not a single selectable test.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No executable check can be made to fail inside the task: the criterion
+      is a property of the change set (no plugin manifest and no marketplace
+      manifest in it), checked at verify time by a diff from the implement
+      base commit. Searched the test directory by `plugin.json`,
+      `marketplace.json` and the two basenames; the existing
+      `*_version_bump.py` modules and tests/test_em_workflow_version.py read
+      the manifests but assert version consistency and a minimum version, not
+      that a change set leaves them untouched, so none covers this criterion.
