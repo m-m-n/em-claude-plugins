@@ -1,0 +1,40 @@
+feature: codex-guard-assignment-paren-head
+collected_at: "2026-10-11T17:46:00+09:00"
+session_ids:
+- 01a12a0d-43b1-71c0-8d2d-69cdf6c597fd
+- 01a12a22-df82-70fa-bb2d-3f0a334bd82e
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1（ルール追加とテスト追加の小さな変更）の確率 0.86、スコア 1.14 により reduced と判定"
+    bases:
+    - basis: description_only
+      score: {type: score, score: 1.03, confidence: 0.97}
+      observed_at: "2026-10-11T17:02:30+09:00"
+    - basis: description_plus_code
+      score: {type: score, score: 1.14, confidence: 0.86}
+      observed_at: "2026-10-11T17:05:46+09:00"
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/codex-hook-interactive-guard.py
+      - em-review/scripts/codex-hook-interactive-guard.py
+      - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 30
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      work_still_required: true
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- "review round 1 で medium の回帰 75a8159e787c3781（予約語の直後の関数定義を deny する）が deferred。関数名判定を絞る修正では、予約語の直後という文脈のケースを CASES に含めないと silent 側の回帰を見落とす"
