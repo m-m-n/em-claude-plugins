@@ -11,7 +11,9 @@ goal: '# codex-hook-interactive-guard: extglob の ?() を含む語を関数名�
 
   ## 脆弱性の概要 (必須)
 
-  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、extglob の `?()` を含む語を関数定義の名前と読み、その後ろの改行に続く実行グループ（`( ... )` など）を関数本体として判定から外す。予約語の直後（`then f?()` / `time /bin/true?()`）でも、予約語の無い形（`f?()`）でも起きる。
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、extglob の `?()`
+  を含む語を関数定義の名前と読み、その後ろの改行に続く実行グループ（`( ... )` など）を関数本体として判定から外す。予約語の直後（`then f?()`
+  / `time /bin/true?()`）でも、予約語の無い形（`f?()`）でも起きる。
 
   ## 参照 (必須)
 
@@ -29,11 +31,14 @@ goal: '# codex-hook-interactive-guard: extglob の ?() を含む語を関数名�
 
   ## 攻撃シナリオ (必須)
 
-  Codex レビュアーが `bash -O extglob -c ''time /bin/true?()` + 改行 + `(python3 -i)''` のようなコマンドを実行すると、Bash では `?()` が拡張パターンになり、1 行目は通常のコマンド、2 行目のサブシェルも実行される。ガードは 1 行目を関数定義と読むため、対話起動の `python3 -i` を deny しない。
+  Codex レビュアーが `bash -O extglob -c ''time /bin/true?()` + 改行 + `(python3 -i)''` のようなコマンドを実行すると、Bash
+  では `?()` が拡張パターンになり、1 行目は通常のコマンド、2 行目のサブシェルも実行される。ガードは 1 行目を関数定義と読むため、対話起動の `python3
+  -i` を deny しない。
 
   ## 影響範囲 (必須)
 
-  対話起動の検出漏れ（fail-open）。ガードは誤読を検出漏れとして扱う設計で、すり抜けの類型は予約語の無い形 `f?()` で基準コミットから既にあった。feature `codex-guard-reserved-word-funcdef` の予約語の除去（SPEC FR1）で、同じ読み違いが予約語の後にも広がった。
+  対話起動の検出漏れ（fail-open）。ガードは誤読を検出漏れとして扱う設計で、すり抜けの類型は予約語の無い形 `f?()` で基準コミットから既にあった。feature
+  `codex-guard-reserved-word-funcdef` の予約語の除去（SPEC FR1）で、同じ読み違いが予約語の後にも広がった。
 
   ## 完了の定義 (必須)
 
@@ -41,7 +46,8 @@ goal: '# codex-hook-interactive-guard: extglob の ?() を含む語を関数名�
 
   - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
 
-  - [ ] 予約語の有り・無しの両方について `bash -O extglob -c` の deny ケースを `tests/test_codex_hook_interactive_guard.py` の `CASES` に足す
+  - [ ] 予約語の有り・無しの両方について `bash -O extglob -c` の deny ケースを `tests/test_codex_hook_interactive_guard.py`
+  の `CASES` に足す
 
   - [ ] 両コピーがバイト単位で同一のまま
 
@@ -53,7 +59,8 @@ goal: '# codex-hook-interactive-guard: extglob の ?() を含む語を関数名�
 
   - 修正案: 末尾が extglob の演算子文字（`?` `*` `+` `@` `!`）の語は関数名とみなさない
 
-  - 記録: `feature-docs/codex-guard-reserved-word-funcdef/reviews/round2.yaml`（ブランチ `em-workflow/codex-guard-reserved-word-funcdef/integration`）
+  - 記録: `feature-docs/codex-guard-reserved-word-funcdef/reviews/round2.yaml`（ブランチ
+  `em-workflow/codex-guard-reserved-word-funcdef/integration`）
 
   ## 暫定緩和策 (任意)
 
@@ -62,7 +69,8 @@ goal: '# codex-hook-interactive-guard: extglob の ?() を含む語を関数名�
 
   ## 追加指示（起動時）
 
-  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration
+  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
 
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
 
@@ -124,7 +132,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: e81d1a9600b1450e8f0fc8f1cab8e5ad30c2ea36
 - id: implement
   status: pending
 - id: review
@@ -135,7 +144,30 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Treat words ending in an extglob operator as non-function names in codex-hook-interactive-guard
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -145,64 +177,97 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-7
+    - TS-8
   FR2:
     title: 予約語の有無によらず同じ扱い
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-5
+    - TS-7
   FR3:
     title: bash -c の文字列の中でも同じ判定
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR4:
     title: 既存の関数定義の判定は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-12
   FR5:
     title: 説明文の更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   FR6:
     title: テストケースの追加
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   NFR1:
     title: 両コピーのバイト単位の同一性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
+    - TS-12
   NFR2:
     title: 標準ライブラリのみ・外部に触れない既存制約の維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
+    - TS-12
   NFR3:
     title: プラグインの version は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-13
 batch:
   review_rework_count: 0
   verify_rework:
