@@ -145,7 +145,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/codex-guard-nested-bash-c/task0001
   task0002:
     title: Rewrite docstring step 7 for every-level judgment, the explicit work list
       and the re-read limit
@@ -162,7 +163,8 @@ tasks:
     - FR7
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/codex-guard-nested-bash-c/task0002
 review:
   status: pending
   rounds_completed: 0
