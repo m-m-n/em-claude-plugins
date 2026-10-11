@@ -462,6 +462,15 @@ CASES = [
     ("silent", "全部非対話", "ls; python3 script.py && node app.js | cat"),
     ("silent", "heredoc を使う 2 つのコマンド", "python3 - <<EOF\nprint(1)\nEOF\npython3 script.py"),
     ("silent", "複数の heredoc", "cat <<A <<B\na\nA\nb\nB"),
+    # A lone `function` with no quote, escape or expansion is no function name:
+    # the `()` after it starts no definition (a zsh anonymous function), so the
+    # group after it is judged. A quoted `function`, and `function function`,
+    # keep their reading as a function definition
+    ("deny", "! の直後の匿名関数の本体", "zsh -c '! function () { python3 -i; }'"),
+    ("deny", "then の直後の匿名関数の本体", "zsh -c 'if true; then function () { python3 -i; }; fi'"),
+    ("deny", "前置のない匿名関数の本体", "zsh -c 'function () { python3 -i; }'"),
+    ("silent", "単引用符で囲んだ function は関数名", "zsh -c \"'function' () { python3 -i; }\""),
+    ("silent", "function function は関数定義", "function function () { python3 -i; }"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
