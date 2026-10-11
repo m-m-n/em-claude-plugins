@@ -175,9 +175,9 @@ tasks:
     status: merged
     branch: em-workflow/codex-guard-reserved-word-funcdef/task0001
 review:
-  status: pending
-  rounds_completed: 0
-  perspectives: []
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
