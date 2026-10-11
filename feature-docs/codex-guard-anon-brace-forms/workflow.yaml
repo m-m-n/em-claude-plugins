@@ -127,7 +127,8 @@ workflow:
   completed_at_commit: dd0b797684e2885eee9b1074ea9ab76a58db9c08
   base_commit: 328f1d1c7eb49e32a60cd21773aa62fc546c3a70
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 1b57e3972f932171a2be40a2df2a2ef2f86a03c4
 - id: verify
   status: pending
 - id: retrospect
@@ -161,7 +162,7 @@ tasks:
     status: merged
     branch: em-workflow/codex-guard-anon-brace-forms/task0001
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -172,6 +173,15 @@ review:
     - perspective: performance
       reason: NFR3 が括弧なし形の判別に線形時間を要求し、パーサーの前向き走査を変更しているため
     cross_validation: true
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: 括弧なしの匿名関数を読む
