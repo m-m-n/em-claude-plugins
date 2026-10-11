@@ -169,8 +169,9 @@ Read references/reviewers.yaml. For each selected perspective (skip
 `requires_spec` ones when `spec_available == false` — render as SKIPPED):
 
 - Launch `Task(subagent_type="em-review:reviewer")` with the review-protocol
-  input block (perspective, perspective_skill = registry `claude_skill`,
-  review_mode, protocol_path, schema_path, changed_files, diff_cmd_quoted —
+  input block (perspective, perspective_skill = `em-review:` + registry
+  `claude_skill` (e.g. `em-review:review-security`), review_mode,
+  protocol_path, schema_path, changed_files, diff_cmd_quoted —
   in pr-diff mode `diff_path` + optional `pr_head_sha` instead —,
   spec_path when perspective == spec, project_root, round_context).
   Normalize `changed_files` and `spec_path` to **project_root-based absolute

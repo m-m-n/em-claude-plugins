@@ -480,7 +480,7 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Phases R3b, R4 and R5 gained the `unresolved` / `unverified` record of an
 # unverifiable finding whose basis is not confirmed (never `declined`).
 REVIEW_PHASE_SHA256 = (
-    "0d9650a0e99b28beedc702f870c6cd15e7326f92be303f26002c1bda4cef9a2d"
+    "310a61d8927edf4deedbd859738c7e460ca44b3b937425df25e796c346060618"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

@@ -656,7 +656,7 @@ CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "29479e3a3ac72856a3e5a48624739ce0af0deb1326954e3c2797cdde105de02f"
+    "85d1f5cdbf669f44c4acc698dcc8ac90af0fe4f3a9206ded87d12d585b5892bd"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"

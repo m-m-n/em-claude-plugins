@@ -211,8 +211,9 @@ harness reviewer for the same perspective. Exactly one primary reviewer runs
 per selected perspective.
 
 Every dispatch — primary harness reviewer or Claude fallback — carries the
-same review-protocol input block (perspective, perspective_skill = registry
-`claude_skill`, review_mode, protocol_path, schema_path, changed_files,
+same review-protocol input block (perspective, perspective_skill =
+`em-workflow:` + registry `claude_skill` (e.g. `em-workflow:review-security`),
+review_mode, protocol_path, schema_path, changed_files,
 diff_cmd_quoted, spec_path when perspective == spec, project_license when
 perspective == license (develop-駆動: workflow.yaml `project.license`;
 standalone: detect from `{project_root}/LICENSE*`, `none` when absent),
