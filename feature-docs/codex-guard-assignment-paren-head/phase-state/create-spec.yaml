@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-assignment-paren-head
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 883181291719b5f1d7f68497f75e16a1873adb87
 last_input_digest: sha256:fe2b5e7e811f7ed347321367f788ffad9bb448b8c5b4daa2e9a20faec602148b
