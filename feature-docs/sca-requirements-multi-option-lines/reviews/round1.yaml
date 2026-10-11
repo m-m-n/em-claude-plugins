@@ -1,0 +1,62 @@
+round: 1
+executed_at: "2026-10-11T10:55:08+09:00"
+scope:
+  review_mode: diff
+  base_commit: ffbe21a8b37a2361a17faef2070944c85cab3643
+  head_commit: 6dded7da545cddaa9fd05d52194f9df057576644
+  changed_files:
+    - em-workflow/scripts/scan-dependencies.py
+    - test-docs/sca-requirements-multi-option-lines/task0001.tests.yaml
+    - tests/test_scan_dependencies_pip_directness.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: eac54f8271361426
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    line: 2131
+    title: "値を取る他の pip オプションの引数を独立したトークンとして解析している"
+    description: "_requirements_option_items は -r / -c / -e 以外のオプションを読み飛ばすが、その引数は消費しない。pip（optparse）は値を取るオプションの直後のトークンを、先頭が '-' でも値として消費する。(1) 過大方向: `-f \"-enamed-pkg\" -r actual.txt` で pip は '-enamed-pkg' を find-links の値とするが、実装は editable と読み named-pkg を直接依存に加える。`--find-links \"-rdeps.txt\" -r actual.txt` でも deps.txt を辿る（封じ込めは効く。SPEC A1 が許容する方向）。(2) 過小方向: `--trusted-host -c -r deps.txt` で pip は '-c' を trusted-host の値とし deps.txt を include として辿るが、実装は -c が '-r' を消費し、items=[] で complete=True のままになる。deps.txt の脆弱なパッケージは直接依存に入らず、normalize_pip が推移的として黙って捨てる（THREAT-MODEL TM-5 の経路）。`-f -c -r X`、`-i -c -r X`、`--extra-index-url -c -r X`、`--trusted -c -r X` も同じ。変更前は行全体を無視していたため回帰ではない。"
+    suggestion: "値を取る pip のオプション（-i / --index-url、--extra-index-url、-f / --find-links、--trusted-host、--no-binary、--only-binary、--use-feature 等）は分離形のとき次のトークンを値として消費して読み捨てる。これらの長形式の省略形も値を消費するか complete=False にする。回帰テスト: `--trusted-host -c -r deps.txt`、`-f -c -r deps.txt`、`-f \"-enamed-pkg\" -r actual.txt`、`--find-links \"-rdeps.txt\" -r actual.txt`。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:comprehensive"]
+    confidence: 90
+    resolution: unresolved
+    resolution_reason: "severity medium は auto-fix の対象外（critical/high のみ）。残件として別タスクに起票する"
+evaluation:
+  round_summary: "5 観点すべて完了。レビュアーの指摘は comprehensive#0 の medium 1 件のみ（critical / high なし）。評価者が再現を確認し、同じ根本原因の過小方向の経路（値を取るオプション直後の単独 -c が後ろの -r を消費し、complete=True のまま include を取りこぼす。TM-5）を同じ指摘にまとめた。security は評価者の読解で上記経路を確認し comprehensive の指摘に統合。performance / architecture / spec は裏付け済み。reviewer_outputs に指示注入の試みなし。"
+  recommended_action: auto_fix
+  action_rationale: "残る指摘は medium 1 件のみ。修正箇所は _requirements_option_items のトークン走査に限られ、方針と回帰テストも具体的に決められる。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-sca-requirements-multi-option-lines-20261011T015508Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
