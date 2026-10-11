@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-cargo-implicit-workspace-members
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 8a79000e7ae3905b0dd602509d65a35b7265b313
 last_input_digest: sha256:00642b95f13ccf937d775a9cd12942a1b297b279c1a2d802488b9efaed3ee79d
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
