@@ -1803,11 +1803,40 @@ def _cargo_dependency_tables(data):
     return tables, understood
 
 
-def _cargo_workspace_view(data):
+def _cargo_entry_has_path(key, value, workspace_dependencies):
+    """True when one root dependency entry (key `key`, parsed value `value`)
+    is path-bearing: a table that has a `path` key, or a table with
+    `workspace = true` whose same-key entry in `workspace_dependencies` is a
+    table that has a `path` key. Only the presence of the key counts; its
+    value is never interpreted, resolved or opened, and a non-table entry is
+    not path-bearing."""
+    if not isinstance(value, dict):
+        return False
+    if "path" in value:
+        return True
+    if value.get("workspace") is True:
+        inherited = workspace_dependencies.get(key)
+        return isinstance(inherited, dict) and "path" in inherited
+    return False
+
+
+def _cargo_workspace_view(data, tables):
     """`(workspace_dependencies, complete)` of a parsed Cargo.toml's
     `[workspace]` table: its `[workspace.dependencies]` table (empty when
-    absent or not a table), and false when the table lists members (their
-    manifests are not read) or has an unexpected shape."""
+    absent or not a table), and whether the root's direct set is complete.
+    `tables` are the root dependency tables (`_cargo_dependency_tables`).
+
+    `complete` is false when the table lists members (their manifests are not
+    read), when it has an unexpected shape, and when a `[workspace]` table is
+    present and any entry of `tables` is path-bearing -- it carries a `path`
+    key directly or through `workspace = true` and the same key's
+    `[workspace.dependencies]` entry; the path target may be an implicit
+    workspace member whose manifest is not read. This also holds when
+    `members` is absent or an empty list. The set stays complete when there is
+    no `[workspace]` table (path dependencies included), when the only path
+    entries sit in `[workspace.dependencies]` and no root entry inherits them,
+    and for `[patch]` / `[replace]` paths, which are not root dependency
+    tables."""
     if "workspace" not in data:
         return {}, True
     workspace = data["workspace"]
@@ -1821,6 +1850,12 @@ def _cargo_workspace_view(data):
     workspace_dependencies = workspace.get("dependencies", {})
     if not isinstance(workspace_dependencies, dict):
         return {}, False
+    if any(
+        _cargo_entry_has_path(key, value, workspace_dependencies)
+        for table in tables
+        for key, value in table.items()
+    ):
+        complete = False
     return workspace_dependencies, complete
 
 
@@ -1838,15 +1873,25 @@ def _cargo_direct_dependency_names(manifest_path):
     The result is incomplete when the manifest cannot be resolved, read or
     parsed (no tomllib included), when its `[workspace]` lists members -- the
     member manifests are not read -- and for any unexpected shape; the names
-    resolved up to that point stay in the set."""
+    resolved up to that point stay in the set. It is also incomplete when the
+    manifest has a `[workspace]` table (with `members` absent or empty) and a
+    root dependency table holds a path-bearing entry -- a `path` key, directly
+    or inherited through `workspace = true` from the same manifest's
+    `[workspace.dependencies]` -- because the path target may be an implicit
+    workspace member whose manifest is not read; the path value is never
+    interpreted or opened, and a path-bearing entry still contributes its name
+    as above. It stays complete without a `[workspace]` table (path
+    dependencies included), when the only path entries are unreferenced
+    `[workspace.dependencies]` entries, and for `[patch]` / `[replace]`
+    paths."""
     incomplete = DirectNames((), complete=False)
     try:
         text = _read_resolved_text(manifest_path) if manifest_path else None
         data = _parse_toml(text) if text is not None else None
         if data is None:
             return incomplete
-        workspace_dependencies, complete = _cargo_workspace_view(data)
         tables, understood = _cargo_dependency_tables(data)
+        workspace_dependencies, complete = _cargo_workspace_view(data, tables)
         names = set()
         for table in tables:
             for key, value in table.items():
