@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-reserved-word-funcdef
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 6d9ebcb9e537edc3d6559a2c6f11f30422312bf5
-last_input_digest: sha256:eb3097c4718b85fca848b70ea6aa4c4f17ddac91f326209bf90bc1006a3fe193
-active_request_id: null
+last_input_digest: sha256:bd43c58cd0478be02bd93a6ca97a983de8852d816709e7137b642abfd72b7fb9
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -88,6 +88,10 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:eb3097c4718b85fca848b70ea6aa4c4f17ddac91f326209bf90bc1006a3fe193
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:bd43c58cd0478be02bd93a6ca97a983de8852d816709e7137b642abfd72b7fb9
   output_digest: null
 artifacts: []
 patches: []
