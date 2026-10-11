@@ -1,0 +1,114 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Added the six deny entries of AC-1 (`zsh -c 'function { python3 -i; }'`,
+      `zsh -c 'function () { python3 -i; } arg'`,
+      `zsh -c 'function { python3 -i; } arg'`,
+      `zsh -c '! function { python3 -i; }'`, `zsh -c '() { python3 -i; } arg'`
+      and `zsh -c 'function ()\n{ python3 -i; } arg'`) to CASES and ran the
+      unchanged guard: both copies printed nothing for each of them, and the
+      subtests errored with `json.decoder.JSONDecodeError: Expecting value:
+      line 1 column 1 (char 0)` instead of reading a deny decision.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Added the AC-2 entries to CASES and ran the unchanged guard. The deny
+      entry `zsh -c 'echo x | function { python3 -i; }'` printed nothing and
+      errored with `JSONDecodeError: Expecting value: line 1 column 1 (char
+      0)`. The silent entries `zsh -c 'echo x | function () { python3; }'` and
+      `zsh -c 'echo x | () { python3; }'` failed on `assertEqual(out, "")`
+      because the unchanged guard printed a deny object (the pipe connection
+      was lost at the `function` / `()` head). Three entries of the criterion
+      already passed before the change and only guard against reading the
+      connection too broadly: the silent `echo x | function { python3; }` and
+      `echo x | function { { python3; }; }` (the body was never opened as a
+      group, so nothing was judged), and the deny `echo x | function { cat; };
+      python3` (the program-less `python3` after `;` is not connected).
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      Regression guards for readings that pre-existed: every entry of this
+      criterion (the silent `function { echo hi; } python3`, `function () {
+      python3; } arg < f`, `function f { python3 -i; }`, `'function' {
+      python3 -i; }`, `{ python3 -i; } arg`, `f() { python3 -i; } arg`,
+      `function f () { python3 -i; } arg`, and the deny `function { :; } arg;
+      python3 -i`) already passed on the unchanged guard, so no red state
+      occurred. The deny `function { :; } arg; python3 -i` passed because the
+      `{` was not yet opened as a group (the `}` was an ordinary word and the
+      later `python3 -i` was judged); it guards a parser that opens the body
+      but lets the argument span swallow the command after `;`.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_hold_both_a_deny_and_a_silent_case
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the 20 new entries (8 deny and 10 silent of FR7, plus the two extra
+      commands of AC-3) in CASES and no parser change,
+      `test_cases_run_against_both_copies` failed (14 errors and 4 failures
+      over the two copies: see AC-1 and AC-2); the uniqueness and
+      both-verdicts tests passed. That the entries are present and that no
+      earlier entry changed is read from the diff, which only appends to
+      CASES; no executable check fails when an entry is missing.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_parenless_anonymous_function_after_a_long_run_is_denied
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_long_run_of_reserved_words_before_a_paren_is_answered
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_names_function_docstring_states_the_extglob_rule
+    red_confirmed: true
+    red_reason: >-
+      `test_a_parenless_anonymous_function_after_a_long_run_is_denied` (input
+      (a), the 50,000-word reserved run then ` function { python3 -i; }`)
+      errored on the unchanged guard with `JSONDecodeError: Expecting value:
+      line 1 column 1 (char 0)` for both copies. The answered-in-time inputs
+      (a) and (b) in `test_a_long_run_of_reserved_words_before_a_paren_is_answered`
+      passed before the change (the unchanged parser never re-reads the words
+      at a `{`), so no red state was observed for the linearity itself; they
+      guard the new decision against a per-`{` re-read. The no-recursion,
+      static-constraint and `_names_function`-by-name tests are regression
+      guards that passed before and after.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_no_longer_limits_a_literal_c_string_to_the_first_level
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_description_names_the_anonymous_body_and_its_pipe_source
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parenless_form_method_states_its_rule_and_its_constant_time
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_head_description_states_the_removal
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_names_function_docstring_states_the_extglob_rule
+    red_confirmed: true
+    red_reason: >-
+      Added the new marker tuples, the stale step 4 phrase and the two new
+      documentation tests, then ran `TestGuardDocumentation` against the
+      unchanged guard: 24 subtest failures (the six new module docstring
+      markers and the stale phrase `delimit a group only as a standalone word
+      at command position` still present, the four `_Group` markers missing,
+      and no `_names_anonymous_function` method in `_Parser`) for both copies.
+      The existing marker tests (`head` removal, `_names_function` extglob
+      rule, existing module markers) passed before and after.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope; the existing byte-identity test
+      detects a difference between the two copies, and it never ran against
+      a state with one copy changed, so no red state occurred for this
+      criterion. The rest of the criterion is a command result, not a test:
+      `python3 -m unittest tests.test_codex_hook_interactive_guard`,
+      `python3 -m unittest discover -s tests` and `python3
+      em-workflow/scripts/check-plugin-invariants.py .` pass after the change,
+      and `git diff --stat` shows no `plugin.json` and no `marketplace.json`
+      in the change set.
