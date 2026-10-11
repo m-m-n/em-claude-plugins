@@ -132,6 +132,15 @@ tasks:
     branch: em-workflow/sca-listing-undecodable-output/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: 一覧出力をバイト列で受け取る
