@@ -1,0 +1,60 @@
+schema_version: 2
+feature: sca-listing-undecodable-output
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-11T16:09:07+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-11T16:12:49+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_sca_task_filing.py
+  changed_lines_approx: 20
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 不具合は残っている。list_security_tasks は text=True で出力をデコードし、起動処理の例外を OSError だけで捕捉している（em-workflow/scripts/scan-dependencies.py:385、em-workflow/scripts/scan-dependencies.py:388、em-workflow/scripts/scan-dependencies.py:391）。呼出元にもデコード例外の捕捉がなく、main
+    は ExecutionError だけを捕捉してからJSONを出力する（em-workflow/scripts/scan-dependencies.py:595、em-workflow/scripts/scan-dependencies.py:3938、em-workflow/scripts/scan-dependencies.py:3941）。入力読込と書込をメモリ上で差し替え、不正バイト0xFFを出す実子プロセスで確認したところ、UnicodeDecodeError
+    が main の外へ伝播し、stdout は空だった。リスティング不能時のreport分岐は既存実装にある（em-workflow/scripts/scan-dependencies.py:596）。関連テストは存在するが、不正UTF-8出力の回帰ケースはない。既存テストはJSONとして解釈できない文字列を確認し、スタブも文字列を出力している（tests/test_sca_task_filing.py:412、tests/test_sca_task_filing.py:134）。行数・関数数・テスト分類は、既存テストに不正バイト出力の1ケースを加え、既存の
+    listing_output_not_json を利用する構成を前提とする（em-workflow/scripts/scan-dependencies.py:398）。本体の変更対象は list_security_tasks の1関数で、引数や返却構造の変更は不要。直接呼出元は file_tasks の1件、組込関数とlist/dict操作を除く直接呼出依存は _entry_point_is_valid、subprocess.run、json.loads、ListingOutcome
+    の4件で、合計5件となる（em-workflow/scripts/scan-dependencies.py:382、em-workflow/scripts/scan-dependencies.py:383、em-workflow/scripts/scan-dependencies.py:385、em-workflow/scripts/scan-dependencies.py:396、em-workflow/scripts/scan-dependencies.py:595）。ファイルの変更・作成・削除は行っていない
+decided_at: '2026-10-11T16:12:53+09:00'
