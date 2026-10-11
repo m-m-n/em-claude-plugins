@@ -103,7 +103,11 @@ workflow:
   status: completed
   completed_at_commit: b7467385d90c0ef4695b4b9ea8f38d9ee11b8c36
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 58e641e9c8a266841055fd55d0efcb46b61c029d
+  result: pass
+  failed_items: []
+  summary: repo-tests 10247 件 OK (skipped=1)、plugin-invariants 全 PASS、TS-1〜TS-16 を両コピーで確認、両コピーはバイト単位で同一
 - id: retrospect
   status: pending
 tasks:
