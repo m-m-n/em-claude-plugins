@@ -1,12 +1,20 @@
 schema_version: 1
 feature: sca-listing-undecodable-output
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
 base_revision: 01fe230f3d6301e3e62ee551f64ac874c967959f
-last_input_digest: null
+last_input_digest: sha256:95f9a0c1cca8b2e90af2724c02fca47c9bcb2e873a9cf0910cadec10fb521a96
 active_request_id: null
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-11T16:21:00+09:00'
+    questions:
+    - question_id: listing.undecodable.reason-token
+      status: answered
+    - question_id: listing.undecodable.decode-scope
+      status: answered
 answers:
   create-spec.feature-identity:
     question_id: create-spec.feature-identity
@@ -19,7 +27,35 @@ answers:
     freeform: sca-listing-undecodable-output
     normalized_answer: feature 名をタスク記述から sca-listing-undecodable-output と導出した
     resolution_note: 'gate: create-spec.feature-identity; policy option_id: derive_from_task_description'
-worker_runs: []
+  listing.undecodable.reason-token:
+    question_id: listing.undecodable.reason-token
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T16:24:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - new_token
+    freeform: null
+    normalized_answer: デコードできないリスティング出力には新しい理由トークン listing_output_undecodable を割り当て、6 つ目の不能条件とする。ListingOutcome / list_security_tasks の docstring の件数と、不能条件の区別性テストを 6 条件に合わせる
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose new_token (不能条件ごとに理由を区別する契約に沿い、デコード失敗と JSON
+      解析失敗を区別できる。scan-dependencies.py:362); recorded as assumption'
+  listing.undecodable.decode-scope:
+    question_id: listing.undecodable.decode-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-11T16:24:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - bytes_strict_utf8_stdout
+    freeform: null
+    normalized_answer: リスティングはバイト列で受け取り、終了コード確認の後に stdout だけを UTF-8 で厳密にデコードする。stderr はデコードしない。非ゼロ終了は出力の中身に関係なく listing_exit_nonzero。stderr だけが不正でも stdout が正しければ一覧は利用可能。ロケールに依存しない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation; codex_consulted: true (1 turn, entry codex); Codex chose bytes_strict_utf8_stdout (終了コードを先に判定し stdout
+      だけを解析する既存の順序を保ち、stderr の不正バイトで利用可能な一覧を失わない。scan-dependencies.py:393); recorded as assumption'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:95f9a0c1cca8b2e90af2724c02fca47c9bcb2e873a9cf0910cadec10fb521a96
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
