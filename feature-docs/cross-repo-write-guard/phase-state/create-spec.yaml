@@ -6,13 +6,134 @@ generation: 1
 base_revision: 2f823feeaa4a899dd5fa7a45ebc16fd230b67f00
 last_input_digest: sha256:774d72deffd9043cef905a1266f1e83863d104dc1472317f6feca7dc1f8ace59
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-12T02:33:01+09:00'
+    questions:
+    - question_id: requirement.worktree-to-main-repo
+      status: answered
+    - question_id: requirement.destructive-guard-allow-override
+      status: answered
+    - question_id: requirement.no-repo-cwd
+      status: answered
+    - question_id: requirement.dev-targets
+      status: answered
+    - question_id: requirement.cd-in-command
+      status: answered
+    - question_id: requirement.nesting-scope
+      status: answered
+    - question_id: requirement.path-normalization
+      status: answered
+    - question_id: requirement.home-expansion
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.worktree-to-main-repo:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - treat_as_outside
+    freeform: null
+    normalized_answer: cwd の --show-toplevel だけと比較し、worktree からメイン作業ツリーへの書き込みも外側として ask（batch では deny）にする。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: same_repo_passes, main_tree_only_passes; reasons: README:36 keeps the main tree unchanged until final merge; git common dir is used for approval sharing, not write scope'
+  requirement.destructive-guard-allow-override:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - no_destructive_change
+    freeform: null
+    normalized_answer: destructive-guard.py は変更しない。公式仕様の判定優先順位（deny > defer > ask > allow）により、destructive-guard の allow は新フックの ask / deny を上書きしない。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen (worker recommended add_deferral_mirror): add_deferral_mirror, shared_module; reasons: official hooks doc states precedence deny > defer > ask > allow, so the blanket allow cannot override ask; parity test compares script outputs only; Codex also suggested correcting the stale docstring claim — recorded as out-of-scope follow-up'
+  requirement.no-repo-cwd:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - no_judgement
+    freeform: null
+    normalized_answer: cwd が git リポジトリ内でないときは判定しない（出力なし）。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: ask_all; reasons: git failure yields no root to compare; under batch ask_all would deny every write'
+  requirement.dev-targets:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exclude_dev_list
+    freeform: null
+    normalized_answer: /dev/null、/dev/stdout、/dev/stderr、/dev/tty、/dev/fd/ 配下だけを判定対象から除く。除外はシンボリックリンク解決より前に、字面で行う。それ以外の /dev 配下は通常どおり判定する。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen (worker recommended exclude_dev_all): exclude_dev_all, no_dev_exclusion; reasons: /dev/null false positive is documented in hook-tests.md; excluding all of /dev is not justified and would hide writes to devices; apply the list before realpath'
+  requirement.cd-in-command:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - unresolvable_after_cd
+    freeform: null
+    normalized_answer: 同じコマンド内で cd / pushd / popd（および env -C、sudo --chdir 等の作業ディレクトリ変更）の後に現れる相対パスの書き込み先は判定しない。絶対パスは引き続き判定する。サブシェル内の cd は外側へ持ち出さない。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: follow_static_cd, ignore_cd; reasons: joining to payload cwd after cd misjudges; statement ordering of nested parsing makes cwd tracking error-prone; env -C / sudo --chdir treated the same'
+  requirement.nesting-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - groups_and_wrappers
+    freeform: null
+    normalized_answer: 最上位の単純コマンド、サブシェル ( ) と波括弧 { } の内部、ラッパー（sudo / env / nohup / time / command / nice）の後のコマンドを判定する。bash -c 等の文字列と $( ) の本体は判定しない。それらを含む文の外側のリダイレクトは判定する。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: full_recursion, top_level_only; reasons: existing group parsing examples in failed-run-cleanup-guard; -c recursion is separate from wrapper stripping; state outer redirections remain judged'
+  requirement.path-normalization:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - realpath
+    freeform: null
+    normalized_answer: . / .. を正規化し、存在する最長の親までシンボリックリンクを解決して（os.path.realpath 相当）比較する。toplevel と除外根（/tmp、~/.claude）も同じ方法で解決し、パス要素の境界で比較する。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: lexical_only; reasons: destructive-guard itself notes lexical normalization misses symlink targets; a new file whose existing parent points outside must be caught; compare at directory boundaries'
+  requirement.home-expansion:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - tilde_only
+    freeform: null
+    normalized_answer: 引用されていない先頭の ~ と ~/ だけを HOME に展開する。$HOME / ${HOME} は変数展開として判定しない。
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation); codex harness turn 1 (converged); Opus escalation not run; not chosen: tilde_and_home; reasons: failed-run-cleanup-guard treats $HOME as dynamic; HOME reassignment within a command is not tracked; restrict ~ expansion to unquoted ~ and ~/...'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design ステップをスキップする（UI を持たないフックとテスト・文書の変更のみ）。
+    resolution_note: 'gate: create-spec.design-step; policy option decide_autonomously -> accept requirements-analyst design_step_recommendation (skip)'
+  note.registration-duplicate-key:
+    packet_id: null
+    answered_at: '2026-10-12T02:33:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 1 本のスクリプトを PreToolUse の Bash と Write|Edit|MultiEdit の 2 つの matcher に登録する。tests/test_hooks_registration.py の重複検査のキーを (event, matcher, script) に変え、同じ matcher 内の重複検出は維持する。
+    resolution_note: 'orchestrator-raised point folded into the same Codex consultation (Q-registration); chosen: relax test key (a); not chosen: split into two scripts (b); reasons: iter_all_hook_commands already yields matcher; matchers do not overlap'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:774d72deffd9043cef905a1266f1e83863d104dc1472317f6feca7dc1f8ace59
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:774d72deffd9043cef905a1266f1e83863d104dc1472317f6feca7dc1f8ace59
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
