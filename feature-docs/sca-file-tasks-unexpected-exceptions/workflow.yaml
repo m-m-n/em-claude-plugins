@@ -2,63 +2,39 @@ schema_version: 1
 feature: sca-file-tasks-unexpected-exceptions
 created: '2026-10-11'
 base_branch: main
-goal: '# file-tasks: OSError 以外の例外（ValueError / UnicodeEncodeError）が起票ループを抜けてスクリプトを落とす
-
+goal: |
+  # file-tasks: OSError 以外の例外（ValueError / UnicodeEncodeError）が起票ループを抜けてスクリプトを落とす
 
   Notion タスク: https://www.notion.so/3f03509ec8ee816ebfb8df1a1a7992f8 （種別: バグ）
 
-
   ## 現象 (必須)
-
   `em-workflow/scripts/scan-dependencies.py` の `file_tasks` の起票ループは、起票ヘルパの失敗を `EntryPointError` だけで捕捉している。sca-file-tasks-robustness（task0002）で、`create_security_task` / `append_security_task_references` の `OSError` は `EntryPointError` に変換されるようになったが、`OSError` 以外の例外は変換されない。
-
   - `subprocess.run` が送出する `ValueError`（パッケージ名などの引数に NUL 文字が含まれる場合）
-
   - 一時ファイル書き込み時の `UnicodeEncodeError`（advisory id に孤立サロゲートが含まれる場合）
-
   これらは `file_tasks` を抜けてスクリプトを落とし、stdout に JSON が出ず、そのバッチで起票済みのパッケージの記録も失われうる。
 
-
   ## 再現手順 (必須)
-
   1. パッケージ名に NUL 文字を含む finding、または advisory id に孤立サロゲートを含む finding を用意する
-
   2. 複数パッケージのバッチで `file-tasks` を実行する
-
   3. traceback で終了し、stdout に JSON が出ないことを確認する
 
-
   ## 期待する挙動 (必須)
-
   起票ヘルパ由来の例外は、既存の break-and-return 経路（`failed_package` / `failure_reason` / `unattempted_packages` を返す途中失敗ルート）に乗り、スクリプトは JSON サマリを出して終了する。
 
-
   ## 完了の定義 (必須)
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
 
-
   ## 該当箇所 (任意)
-
   `em-workflow/scripts/scan-dependencies.py` の `create_security_task` / `append_security_task_references` / `_write_references_tempfile` / `file_tasks` の起票ループ
 
-
   ## 実害・発生条件 (任意)
-
   advisory やパッケージ名に異常な文字が含まれる場合のみ発生する。出典: sca-file-tasks-robustness の implement フェーズで task0002 の実装者がスコープ外として報告した残件。元タスク: https://www.notion.so/3d43509ec8ee81108eb9f4524a79638d
 
-
   ## 追加指示（起動者より）
-
   - 実装完了後、integration ブランチを remote に push し、base_branch への PR を gh pr create で作成する。integration ブランチはローカル・リモートともに残す（base_branch へ自動マージしない）
-
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
-
   - その議論の内容を Notion に記録する
-
-  '
 parent_branch: em-workflow/sca-file-tasks-unexpected-exceptions/integration
 tier: reduced
 tier_decision:
