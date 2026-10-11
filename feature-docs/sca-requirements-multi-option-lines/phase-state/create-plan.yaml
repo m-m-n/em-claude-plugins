@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-requirements-multi-option-lines
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: ebef036c526c4a0ac00ed805c15e812f83d84786
+last_input_digest: sha256:e1e873edf2dbb77b6e64a65be81d8fe7ad1cb2ebe823160dbccbb79ac82c8248
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:e1e873edf2dbb77b6e64a65be81d8fe7ad1cb2ebe823160dbccbb79ac82c8248
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
