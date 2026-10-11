@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-nested-bash-c
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 916c3d0a9f340771f4fbc9e3693852626c353806
-last_input_digest: sha256:cf3dc93be280b9de51f33147555e7f0faa3c5a38afd73f813ce8382cd7d21ca4
-active_request_id: null
+last_input_digest: sha256:8d6abd9d3df004c90e592931a828f787d27694e37661da8275644fe38a9b20c1
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -56,6 +56,10 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:cf3dc93be280b9de51f33147555e7f0faa3c5a38afd73f813ce8382cd7d21ca4
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:8d6abd9d3df004c90e592931a828f787d27694e37661da8275644fe38a9b20c1
   output_digest: null
 artifacts: []
 patches: []
