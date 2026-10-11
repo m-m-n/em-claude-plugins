@@ -1,0 +1,25 @@
+schema_version: 1
+feature: codex-guard-extglob-funcname
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: edcd7272fff694f561574d43ae8777029de4fb34
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: orchestrator-batch
+    answered_at: "2026-10-11T19:54:33+09:00"
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids: [derive_from_task_description]
+    freeform: null
+    normalized_answer: "feature name derived from task description: codex-guard-extglob-funcname"
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
