@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-nested-bash-c
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 916c3d0a9f340771f4fbc9e3693852626c353806
 last_input_digest: sha256:8d6abd9d3df004c90e592931a828f787d27694e37661da8275644fe38a9b20c1
