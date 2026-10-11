@@ -30,6 +30,19 @@ HOOK_PATHS = {
     "em-review": REPO_ROOT / "em-review" / "scripts" / HOOK_NAME,
 }
 
+# A digit-only word of 5000 nines: longer than any int-from-string conversion
+# the interpreter accepts by default, and far past the largest file descriptor.
+HUGE_FD_WORD = "9" * 5000
+
+
+def json_quoted_nesting(command, depth):
+    """`command` as the operand of `depth` shell `-c` levels: each level is the
+    previous command quoted as a JSON string literal behind `bash -c `."""
+    for _ in range(depth):
+        command = "bash -c " + json.dumps(command)
+    return command
+
+
 # (expected, label, command)
 CASES = [
     # AC-1: launches with -i (FR6, FR8, FR9)
@@ -462,6 +475,15 @@ CASES = [
     ("silent", "全部非対話", "ls; python3 script.py && node app.js | cat"),
     ("silent", "heredoc を使う 2 つのコマンド", "python3 - <<EOF\nprint(1)\nEOF\npython3 script.py"),
     ("silent", "複数の heredoc", "cat <<A <<B\na\nA\nb\nB"),
+    # A digit-only word of any length before a redirect operator is read
+    # without an error, at every nesting depth; a word above 2147483647 is no
+    # fd (FR1, FR3, FR5, FR7)
+    ("deny", "桁数の大きい fd 語（第 2 段）のあとの起動", json_quoted_nesting(f": {HUGE_FD_WORD}>/dev/null", 2) + "; python3 -i"),
+    ("deny", "桁数の大きい fd 語（第 0 段）のあとの起動", f": {HUGE_FD_WORD}>/dev/null; python3 -i"),
+    ("deny", "桁数の大きい fd 語（第 1 段）のあとの起動", f"bash -c ': {HUGE_FD_WORD}>/dev/null'; python3 -i"),
+    ("silent", "0 だけの 2 桁は fd 0", "python3 00< f"),
+    ("silent", "2147483648 は fd でなく引数", "python3 2147483648>/dev/null"),
+    ("deny", "2147483647 は fd", "python3 2147483647>/dev/null"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -984,6 +1006,158 @@ class TestNoRecursion(unittest.TestCase):
                 self.assertTrue({"_judge", "parse"} <= called_names(functions["_scan"]))
 
 
+def caught_names(handler):
+    """The bare names an `except` clause catches (`<bare>` for a bare except)."""
+    kind = handler.type
+    if kind is None:
+        return {"<bare>"}
+    elements = kind.elts if isinstance(kind, ast.Tuple) else [kind]
+    return {element.id for element in elements if isinstance(element, ast.Name)}
+
+
+def nested_parse_handler_findings(source):
+    """Name what is wrong with the handling around the nested parse call in
+    `_scan`. The call is the one to `parse` inside a try statement of `_scan`.
+    The handlers must catch `_Undecidable` and, in addition, the general
+    exception class; the handler that catches the general exception class must
+    neither return nor raise, so the scan goes on with the next command."""
+    tree = ast.parse(source)
+    scan = next(
+        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_scan"),
+        None,
+    )
+    if scan is None:
+        return ["no _scan function"]
+    tries = [
+        node
+        for node in ast.walk(scan)
+        if isinstance(node, ast.Try)
+        and any(
+            isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Name)
+            and call.func.id == "parse"
+            for statement in node.body
+            for call in ast.walk(statement)
+        )
+    ]
+    if len(tries) != 1:
+        return [f"expected one try around the nested parse call in _scan, found {len(tries)}"]
+    handlers = tries[0].handlers
+    findings = []
+    if not any("_Undecidable" in caught_names(handler) for handler in handlers):
+        findings.append("_Undecidable is not caught around the nested parse call")
+    general = [handler for handler in handlers if "Exception" in caught_names(handler)]
+    if not general:
+        findings.append("the general exception class is not caught around the nested parse call")
+    for handler in general:
+        for statement in handler.body:
+            for node in ast.walk(statement):
+                if isinstance(node, ast.Return):
+                    findings.append("the handler of the general exception class returns")
+                if isinstance(node, ast.Raise):
+                    findings.append("the handler of the general exception class raises")
+    return findings
+
+
+class TestNestedParseErrorContainment(unittest.TestCase):
+    """An unexpected error while a nested string is parsed skips that string
+    and the walk goes on with the command after the one holding it (NFR5).
+    No known input reaches that path once a digit word of any length is read
+    without an error, so the handling is checked on the syntax tree."""
+
+    GOOD = (
+        "def _scan(commands):\n"
+        "    while pending:\n"
+        "        try:\n"
+        "            inner_commands = parse(inner)\n"
+        "        except _Undecidable:\n"
+        "            continue\n"
+        "        except Exception:\n"
+        "            continue\n"
+        "        pending.append(inner_commands)\n"
+    )
+
+    def source_with_handlers(self, handlers):
+        return (
+            "def _scan(commands):\n"
+            "    while pending:\n"
+            "        try:\n"
+            "            inner_commands = parse(inner)\n"
+            + handlers
+            + "        pending.append(inner_commands)\n"
+        )
+
+    def test_each_copy_catches_the_general_exception_class_and_goes_on(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertEqual(
+                    nested_parse_handler_findings(path.read_text(encoding="utf-8")), []
+                )
+
+    def test_the_checker_passes_two_handlers_that_continue(self):
+        self.assertEqual(nested_parse_handler_findings(self.GOOD), [])
+
+    def test_the_checker_passes_one_handler_for_both_classes_that_continues(self):
+        source = self.source_with_handlers(
+            "        except (_Undecidable, Exception):\n            continue\n"
+        )
+        self.assertEqual(nested_parse_handler_findings(source), [])
+
+    def test_the_checker_flags_a_handler_for_undecidable_alone(self):
+        source = self.source_with_handlers("        except _Undecidable:\n            continue\n")
+        self.assertEqual(
+            nested_parse_handler_findings(source),
+            ["the general exception class is not caught around the nested parse call"],
+        )
+
+    def test_the_checker_flags_a_handler_for_the_general_class_alone(self):
+        source = self.source_with_handlers("        except Exception:\n            continue\n")
+        self.assertEqual(
+            nested_parse_handler_findings(source),
+            ["_Undecidable is not caught around the nested parse call"],
+        )
+
+    def test_the_checker_flags_a_bare_except_as_no_general_class(self):
+        source = self.source_with_handlers(
+            "        except _Undecidable:\n            continue\n"
+            "        except:\n            continue\n"
+        )
+        self.assertEqual(
+            nested_parse_handler_findings(source),
+            ["the general exception class is not caught around the nested parse call"],
+        )
+
+    def test_the_checker_flags_a_general_handler_that_returns(self):
+        source = self.source_with_handlers(
+            "        except _Undecidable:\n            continue\n"
+            "        except Exception:\n            return None\n"
+        )
+        self.assertEqual(
+            nested_parse_handler_findings(source),
+            ["the handler of the general exception class returns"],
+        )
+
+    def test_the_checker_flags_a_general_handler_that_raises(self):
+        source = self.source_with_handlers(
+            "        except _Undecidable:\n            continue\n"
+            "        except Exception:\n            raise\n"
+        )
+        self.assertEqual(
+            nested_parse_handler_findings(source),
+            ["the handler of the general exception class raises"],
+        )
+
+    def test_the_checker_flags_a_nested_parse_call_with_no_try(self):
+        source = "def _scan(commands):\n    inner_commands = parse(inner)\n"
+        self.assertEqual(
+            nested_parse_handler_findings(source),
+            ["expected one try around the nested parse call in _scan, found 0"],
+        )
+
+    def test_the_checker_flags_a_missing_scan_function(self):
+        self.assertEqual(nested_parse_handler_findings("x = 1\n"), ["no _scan function"])
+
+
 class TestNestedReadLimit(HookCopiesMixin, unittest.TestCase):
     """The characters re-read from second-level-and-deeper strings are capped
     at `NESTED_READ_LIMIT` per hook command (TM-2). First-level strings are
@@ -1117,6 +1291,8 @@ class TestGuardDocumentation(unittest.TestCase):
         "First-level strings are not counted",
         "pass unread",
         "Passing the limit is never a reason to deny",
+        # A string whose reading ends in an unexpected error is skipped too
+        "a string for which an unexpected error occurred while it was being read",
     )
 
     # Sentences step 7 carried before it judged a literal `-c` string at every
