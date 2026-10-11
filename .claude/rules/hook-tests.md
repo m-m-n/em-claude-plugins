@@ -70,3 +70,16 @@ python3 -m unittest tests.test_codex_hook_interactive_guard
   `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `deny` か `silent`。
 - 同じ表を 2 つのコピーの両方に流す。
 - 2 つのコピーは同じ変更の中で一緒に直し、バイト単位で同一に保つ。
+
+## cross-repo-write-guard
+
+`em-workflow/hooks/cross-repo-write-guard.py` を変更したら、同じ変更の中で次を走らせる。
+
+```
+python3 -m unittest tests.test_cross_repo_write_guard
+```
+
+- ケースは `tests/test_cross_repo_write_guard.py` の `CASES` に
+  `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `ask` か `silent`。
+- `CASES` は Bash の判定。Write / Edit / MultiEdit、`CLAUDE_BATCH` による `deny` への降格、
+  不正な入力は別のテストで確かめる。
