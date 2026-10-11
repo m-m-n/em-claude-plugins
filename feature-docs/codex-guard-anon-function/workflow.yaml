@@ -139,7 +139,7 @@ workflow:
   completed_at_commit: 28fe6ce1fad0cbb520c63ec7732a4112a1dc8d83
   base_commit: ac43712c8f25c7d25444223224dbf29bce377a3b
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -173,6 +173,14 @@ tasks:
     branch: em-workflow/codex-guard-anon-function/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 引用のない `function` 1 語は関数名にしない
