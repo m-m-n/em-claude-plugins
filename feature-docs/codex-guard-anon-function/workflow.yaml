@@ -1,0 +1,221 @@
+schema_version: 1
+feature: codex-guard-anon-function
+created: '2026-10-11'
+base_branch: main
+goal: '# codex-hook-interactive-guard: 予約語の直後の zsh 匿名関数 function () { ... } の本体を判定せず、対話起動を見逃す
+
+
+  Notion: <notion-url>  (種別: バグ)
+
+
+  ## 現象
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、予約語の直後に書いた zsh の匿名関数 `function ()
+  { ... }` を関数定義とみなし、本体を判定しない。zsh ではこの構文は定義した匿名関数をその場で実行するため、本体の対話起動を見逃す。
+
+  feature `codex-guard-reserved-word-funcdef`（先頭に続く予約語を取り除いてから関数名を判定する修正）の review round 1 で、security 観点のレビュアーが報告した。evaluator
+  はコードを読んで再現を確認し、重大度を low とした。
+
+  - 変更前: `! function () { python3 -i; }` は語の並び `[!, function]` が 2 語で関数名にならず、本体を判定して deny していた
+
+  - 変更後: `!` を取り除いた残りの 1 語 `function` を関数名とみなし、本体を判定しない（silent）
+
+  - `then function () { python3 -i; }` も同じ動きになる
+
+  - 前置のない `function () { python3 -i; }` は変更前から silent
+
+
+  ## 再現手順
+
+  1. コマンド `zsh -c ''! function () { python3 -i; }''` を `{"tool_input": {"command": "..."}}` として hook の標準入力に渡す
+
+  2. 何も出力されない（silent）
+
+  3. 参考: `zsh -c ''! function () { builtin printf "BODY\n"; }''` を実行すると本体がその場で実行される
+
+
+  ## 期待する挙動
+
+  名前のない `function ()` は zsh の匿名関数として、実行されるグループと同じく本体を判定し、deny する。予約語の直後でも、前置がなくても同じ扱いにする。
+
+
+  ## 完了の定義
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に `zsh -c ''! function () { python3 -i;
+  }''`、`zsh -c ''if true; then function () { python3 -i; }; fi''`、`zsh -c ''function () { python3 -i;
+  }''` を deny として追加
+
+  - [ ] 両コピーがバイト単位で同一のまま
+
+
+  ## 該当箇所
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:380`（`_names_function`: 予約語を取り除いた後に残った 1 語が `function`
+  のときも関数名として扱っている）
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
+  - 記録: `feature-docs/codex-guard-reserved-word-funcdef/reviews/round1.yaml` の `evaluation.round_summary`（ブランチ
+  `em-workflow/codex-guard-reserved-word-funcdef/integration`）
+
+
+  ## 実害・発生条件
+
+  見逃し側（fail-open）。zsh -c の中で匿名関数を使って対話プログラムを起動すると、ガードを通り抜けて対話待ちの孤児プロセスが残りうる。前置のない形は以前から同じ穴があり、今回の変更で新しく生まれた回避手段ではない。
+
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモートとも残す（自動マージしない）
+
+  - 不明点は Codex に相談し、比較的よいと判断した案を採用する
+
+  - その議論内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/codex-guard-anon-function/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.9
+      '2': 0.1
+      '3': 0.0
+  at: '2026-10-11T23:02:34+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (unless multiple tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 9257012009515efa4f4f583ad0bf9752bc04738e
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たないフックスクリプトの判定ロジック修正のため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: 引用のない `function` 1 語は関数名にしない
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 引用の有無を `_Word` に引き継ぐ
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 引用・エスケープを含む `function` は従来どおり関数名
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: '`function function ()` は従来どおり関数定義'
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 関数名判定の説明文を新しい規則に合わせる
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 両コピーへ同一の変更
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 回帰テストの追加
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 既存ケースを消さない
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 既存の実装制約の維持
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストコマンド
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version を触らない
+    status: ok
+    tbd_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
