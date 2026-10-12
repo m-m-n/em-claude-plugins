@@ -20,7 +20,7 @@ bases:
       '1': 0.01
       '2': 0.0
       '3': 0.0
-  observed_at: '2026-10-12T12:47:30+09:00'
+  observed_at: '2026-10-12T12:46:50+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.01
       '2': 0.01
       '3': 0.0
-  observed_at: '2026-10-12T12:52:40+09:00'
+  observed_at: '2026-10-12T12:49:20+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/hooks/destructive-guard.py
@@ -70,4 +70,4 @@ pre_survey_estimate:
   caller_and_dependency_count: 0
   changes_external_contract: false
   changes_behavior: false
-decided_at: '2026-10-12T12:52:45+09:00'
+decided_at: '2026-10-12T12:49:30+09:00'
