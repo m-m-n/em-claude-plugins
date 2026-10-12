@@ -1,20 +1,36 @@
 schema_version: 1
 feature: sca-go-replace-direct-deps
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
-base_revision: 54731cd79d7f51dfa8abfc1c8b94332ce47cddb9
+base_revision: 3c7f50740f95c26bd9e77c1e94826f3e44105129
 last_input_digest: sha256:65eb6a19345b3953c5469a5e9ef13a114c756a96334f91d4b9e77e49ad9e339f
 active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:65eb6a19345b3953c5469a5e9ef13a114c756a96334f91d4b9e77e49ad9e339f
   output_digest: null
-artifacts: []
-patches: []
+artifacts:
+- path: feature-docs/sca-go-replace-direct-deps/IMPLEMENTATION.md
+  sha256: sha256:f1875eae20c36000c51e6e60bb9e77c0a9cf4f719ab28601176ae85c344522bb
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-go-replace-direct-deps/VERIFICATION.md
+  sha256: sha256:0b7bd01e54f4416d1d8858808d265281b650e96901719eb5b57b791264f7dcbf
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-go-replace-direct-deps/THREAT-MODEL.md
+  sha256: sha256:8b3473dd59e9a514f429bdf9a2bcd2e61e35f74f45972546d51a57a362e75934
+  produced_by: create-plan-run-0001
+- path: feature-docs/sca-go-replace-direct-deps/tasks/task0001.md
+  sha256: sha256:603bf7ea731e1a6bdc5fd2334de634e579fdbf164ab1c7c465cc121e7ee15a4f
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:65eb6a19345b3953c5469a5e9ef13a114c756a96334f91d4b9e77e49ad9e339f
+  base_workflow_blob: 97e1c93b6c73794debeae881dcc0d2a607577161
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
