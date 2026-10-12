@@ -62,7 +62,8 @@ workflow:
     completed_at_commit: 5767788a6ff207b2a27e70ad7d2495e75665653f
     base_commit: c116358543fb27978ecc9afe18f2366e510c157b
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: a749e6041e91715b65863ba88af33cb8206ecd57
   - id: verify
     status: pending
     result: null
@@ -87,13 +88,14 @@ tasks:
     branch: em-workflow/hook-decision-precedence-docs/task0001
 
 review:
-  status: in_progress
+  status: completed
   plan:
     floor: [comprehensive, security]
     discretionary: []
     cross_validation: false
     spec_skipped: "SPEC.md absent (minimal tier, TASK.md only)"
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives: [comprehensive, security]
   residual_critical_high: 0
   needs_rework: false
 
