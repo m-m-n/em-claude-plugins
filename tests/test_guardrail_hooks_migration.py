@@ -7,14 +7,12 @@ in the user's global `~/.claude/` configuration and were registered from
 `~/.claude/settings.json`. They now ship with the plugin, which makes three
 properties repository invariants rather than facts about one machine:
 
-1. **Order.** All four PreToolUse(Bash) guards live in ONE matcher group, so
-   `hooks.json`'s array order IS the execution order.
-   `destructive-guard.py` returns a blanket `allow` for anything its
-   blocklist does not match, which ends the permission decision for that
-   call — it must therefore run LAST, after `bash_guard.py` has had the
-   chance to apply the workflow command-approval gate. A reordering that
-   put it earlier would silently disable that gate while every other test
-   in this repository stayed green.
+1. **Order.** All four PreToolUse(Bash) guards live in ONE matcher group,
+   and `EXPECTED_BASH_GUARD_ORDER` pins the order in which `hooks.json`
+   declares them. Hooks that match one call run in parallel; when several
+   of them return a decision, the one with the highest precedence applies
+   (deny > defer > ask > allow), and an `allow` from a hook declared later
+   never overrides a `deny` or `ask` from a hook declared earlier.
 
 2. **Fail-open gitleaks resolution.** Both gitleaks hooks resolve the binary
    `command -v` first, then the mise shims path, and scan nothing at all
@@ -36,18 +34,17 @@ Extended by heredoc-stdin-guard task0001 (D6, AC-8): a seventh
 PreToolUse(Bash) entry, `heredoc-stdin-guard.py`, is appended after
 `destructive-guard.py`. It never returns a permission decision -- only
 `updatedInput` or nothing (heredoc-stdin-guard IMPLEMENTATION.md D4) -- so
-it cannot reopen the "blanket allow ends the decision" gate `destructive-
-guard.py`'s tail position exists to protect; `EXPECTED_BASH_GUARD_ORDER`
-and `test_destructive_guard_is_last_among_decision_capable_guards` are
-both updated accordingly.
+its last place in the declared order is pinned by
+`EXPECTED_BASH_GUARD_ORDER`, and
+`test_destructive_guard_is_last_among_decision_capable_guards` leaves it out
+of the decision-capable check; both are updated accordingly.
 
 Extended again by loop-command-guard task0001 (FR9, FR10, AC-6): a ninth
 PreToolUse(Bash) entry, `loop-command-guard.py`, is inserted directly after
 `interpreter-mismatch-guard.py` and directly before `destructive-guard.py`.
-It denies (never allows or asks), so -- like `muse_guard.py` and
-`interpreter-mismatch-guard.py` before it -- it must run before
-`destructive-guard.py`'s blanket allow ends the decision;
-`EXPECTED_BASH_GUARD_ORDER` reflects the insertion, and
+It denies (never allows or asks). Like `muse_guard.py` and
+`interpreter-mismatch-guard.py` before it, its place in the declared order
+is pinned by `EXPECTED_BASH_GUARD_ORDER`, which reflects the insertion, and
 `test_destructive_guard_is_last_among_decision_capable_guards` keeps
 excluding only `heredoc-stdin-guard.py` from the decision-capable tail
 check. The full nine-entry ordered shape (exact command/timeout/status-
@@ -58,10 +55,10 @@ tests/test_hooks_registration.py's
 Extended again by cross-repo-write-guard task0001 (FR1, FR14, AC-1): a tenth
 PreToolUse(Bash) entry, `cross-repo-write-guard.py`, is inserted directly
 after `loop-command-guard.py` and directly before `destructive-guard.py`. It
-asks (or denies under claude-batch) and never allows, so -- like the other
-decision-capable guards before it -- it must run before
-`destructive-guard.py`'s blanket allow; `EXPECTED_BASH_GUARD_ORDER` reflects
-the insertion. The same script is also registered under the PreToolUse
+asks (or denies under claude-batch) and never allows. Like the other
+decision-capable guards before it, its place in the declared order is
+pinned by `EXPECTED_BASH_GUARD_ORDER`, which reflects the insertion. The
+same script is also registered under the PreToolUse
 `Write|Edit|MultiEdit` matcher, after `gitleaks-write-guard.sh`
 (`test_write_edit_multiedit_registers_the_cross_repo_guard_after_the_write_guard`).
 
@@ -90,28 +87,22 @@ MIGRATED_HOOK_FILES = (
     "destructive-guard.py",
 )
 
-# The execution order the PreToolUse(Bash) group must declare, verbatim.
-# `failed-run-cleanup-guard.py` runs after `bash_guard.py` and before
-# `destructive-guard.py`'s blanket allow (failed-run-cleanup-guard
-# IMPLEMENTATION.md decision D1). `muse_guard.py` runs immediately ahead of
-# `destructive-guard.py` too, for the identical reason: that guard's
-# blanket allow must not be able to terminate the decision before the
-# contributor-tier consent check has had a chance to deny
-# (muse-spark-contributor-consent task0001.md Design, "Registration").
-# `interpreter-mismatch-guard.py` also denies, so it sits before
-# `destructive-guard.py` for the same reason as muse_guard.py.
-# `loop-command-guard.py` sits directly after `interpreter-mismatch-guard.py`
-# and directly before `destructive-guard.py` for the same reason again: it
-# denies, so it must run before the blanket allow
+# The order in which the PreToolUse(Bash) group declares its guards,
+# verbatim. `failed-run-cleanup-guard.py` is declared after `bash_guard.py`
+# and before `destructive-guard.py` (failed-run-cleanup-guard
+# IMPLEMENTATION.md decision D1). `muse_guard.py` is declared immediately
+# ahead of `destructive-guard.py` too (muse-spark-contributor-consent
+# task0001.md Design, "Registration"). `interpreter-mismatch-guard.py` is
+# declared before `destructive-guard.py` as well, directly after
+# `muse_guard.py`. `loop-command-guard.py` is declared directly after
+# `interpreter-mismatch-guard.py` and directly before `destructive-guard.py`
 # (loop-command-guard task0001.md Design, "Registration").
-# `cross-repo-write-guard.py` sits directly after `loop-command-guard.py`
-# and directly before `destructive-guard.py` for the same reason once more:
-# it asks / denies, so it must run before the blanket allow
+# `cross-repo-write-guard.py` is declared directly after
+# `loop-command-guard.py` and directly before `destructive-guard.py`
 # (cross-repo-write-guard IMPLEMENTATION.md C1).
-# `heredoc-stdin-guard.py` runs LAST of all ten (heredoc-stdin-guard
-# task0001.md D3): it only ever rewrites `command`, never denies, so
-# placing it after every other Bash guard means none of them ever sees a
-# rewritten command in place of the original.
+# `heredoc-stdin-guard.py` is declared last of all ten (heredoc-stdin-guard
+# task0001.md D3): it returns no decision, only an `updatedInput` rewrite of
+# `command`, so it goes at the end of the declared order.
 EXPECTED_BASH_GUARD_ORDER = [
     "gitleaks-precommit.sh",
     "kill-guard.py",
@@ -295,8 +286,8 @@ class TestMigratedHookFilesArePresentAndExecutable(unittest.TestCase):
 
 
 class TestPreToolUseBashGuardOrder(unittest.TestCase):
-    """The blanket-allow guard runs last among the guards that can return a
-    permission decision -- see this module's docstring."""
+    """destructive-guard.py is the last of the Bash guards that return a
+    decision in the declared order -- see this module's docstring."""
 
     @classmethod
     def setUpClass(cls):
@@ -307,20 +298,20 @@ class TestPreToolUseBashGuardOrder(unittest.TestCase):
         self.assertEqual(_script_filenames_in(group), EXPECTED_BASH_GUARD_ORDER)
 
     def test_destructive_guard_is_last_among_decision_capable_guards(self):
-        # heredoc-stdin-guard.py runs after destructive-guard.py too, but
-        # it never returns a permission decision -- only `updatedInput` or
-        # nothing (heredoc-stdin-guard IMPLEMENTATION.md D4) -- so its
-        # position does not reopen the gate this test protects.
-        # destructive-guard.py must still be the last entry able to
-        # return a decision at all.
+        # heredoc-stdin-guard.py is declared after destructive-guard.py too,
+        # but it never returns a permission decision -- only `updatedInput`
+        # or nothing (heredoc-stdin-guard IMPLEMENTATION.md D4) -- so it is
+        # excluded from this check.
+        # destructive-guard.py must still be the last entry in the declared
+        # order able to return a decision at all.
         group = _pretooluse_group(self.config, "Bash")
         names = _script_filenames_in(group)
         decision_capable = [n for n in names if n != "heredoc-stdin-guard.py"]
         self.assertEqual(
             decision_capable[-1],
             "destructive-guard.py",
-            "destructive-guard.py returns a blanket allow and must run after "
-            f"every other decision-capable Bash guard; order is {names}",
+            "destructive-guard.py must stay last among the decision-capable "
+            f"Bash guards in the declared order; order is {names}",
         )
 
     def test_bash_guard_still_precedes_the_blanket_allow(self):
@@ -328,8 +319,7 @@ class TestPreToolUseBashGuardOrder(unittest.TestCase):
         self.assertLess(
             names.index("bash_guard.py"),
             names.index("destructive-guard.py"),
-            "the workflow command-approval gate must be consulted before the "
-            "blanket allow ends the decision",
+            "bash_guard.py must precede destructive-guard.py in the declared order",
         )
 
     def test_write_edit_multiedit_registers_the_write_guard(self):
@@ -353,7 +343,7 @@ class TestPreToolUseBashGuardOrder(unittest.TestCase):
         self.assertLess(
             names.index("cross-repo-write-guard.py"),
             names.index("destructive-guard.py"),
-            "an ask / deny must be raised before the blanket allow ends the decision",
+            "cross-repo-write-guard.py must precede destructive-guard.py in the declared order",
         )
 
 

@@ -1,0 +1,30 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py: 943/943 passed; python3 -m unittest discover -s tests: Ran 10437 tests, OK (skipped=1). Run before any edit, from the parent branch's checkout (cwd does not persist between Bash calls); that checkout's tests/ and em-workflow/ are identical to this task's base, only feature-docs/*/workflow.yaml differs
+final_failures: []             # same two commands re-executed inside this worktree after the edits and after this record was written: 943/943 passed; Ran 10438 tests, OK (skipped=1) (one more test than the baseline: this record)
+# TASK.md carries no numbered Acceptance Criteria; AC-1..AC-5 below are its five
+# 'Expected Result' bullets, in order.
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: "No committed test covers the wording: a search of tests/ by repository-relative path and by basename (test_guardrail_hooks_migration, test_muse_guard_registration, test_hooks_registration) found only these modules themselves plus a comment in tests/test_check_plugin_invariants.py, and no test that reads their comments, docstrings or messages. The criterion was therefore checked with an uncommitted scratch script (not selectable by the project test command, hence tests: []) that scans the four test files for ends the decision / IS the execution order / before the blanket allow / blanket allow must run / reopen / silently disable plus close variants. Before any edit it exited 1 listing those phrases in test_guardrail_hooks_migration.py, test_muse_guard_registration.py and test_hooks_registration.py; after the edits it exits 0. test_guard_deferral_parity.py is unchanged and contains none of the six phrases."
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: "Same uncommitted scratch script, precedence check. Before any edit it exited 1: the migration module docstring had 0 statements of deny > defer > ask > allow and no statement that a later allow never overrides an earlier deny / ask. After the edits it exits 0: exactly 1 statement, inside the module docstring of tests/test_guardrail_hooks_migration.py, and 0 in tests/test_muse_guard_registration.py, tests/test_hooks_registration.py and tests/test_guard_deferral_parity.py."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "Invariance criterion (nothing but docstrings, comments and assertion msg arguments may change), so no red state exists: the scratch AST comparison against git HEAD passed both before and after the edits. It is not vacuous - run against a throwaway repo it accepted a message-only change and rejected a changed assertion expected value. No committed test compares ASTs; the existing tests in the three modules keep their names and still pass, e.g. tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_destructive_guard_is_last_among_decision_capable_guards, but they do not detect wording or AST drift."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Scope criterion verified with git status / git diff --name-only against the merge-base with the parent branch: only tests/test_guardrail_hooks_migration.py, tests/test_muse_guard_registration.py, tests/test_hooks_registration.py and this record (test-docs/test-hook-precedence-wording/task0001.tests.yaml) differ. It held trivially before the edits (empty diff), so no red state occurred. No committed test covers repository diff scope."
+  AC-5:
+    tests:
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_destructive_guard_is_last_among_decision_capable_guards
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_bash_guard_still_precedes_the_blanket_allow
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_cross_repo_guard_precedes_the_blanket_allow_in_the_bash_group
+      - tests.test_muse_guard_registration.TestEmWorkflowOrderingAgainstDestructiveGuard.test_muse_guard_precedes_destructive_guard
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing suite (python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests) detects any behavior change in these modules; no red state occurred for this change, because the suite was already green before the edits (943/943 passed; Ran 10437 tests, OK, skipped=1) and is green after (943/943 passed; Ran 10438 tests, OK, skipped=1, the extra test being this record). The four listed tests are the ones whose assertion messages were reworded; their assertions are unchanged."

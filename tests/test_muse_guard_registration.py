@@ -96,10 +96,9 @@ class TestBothPluginsRegisterMuseGuard(unittest.TestCase):
 
 
 class TestEmWorkflowOrderingAgainstDestructiveGuard(unittest.TestCase):
-    """muse_guard.py must sit ahead of destructive-guard.py's blanket allow
+    """muse_guard.py comes before destructive-guard.py in the declared order
     (task0001.md Design, "Registration"; IMPLEMENTATION.md decision D-B is
-    unrelated -- this is about destructive-guard.py's own trailing `allow`
-    ending the decision first)."""
+    unrelated)."""
 
     @classmethod
     def setUpClass(cls):
@@ -114,15 +113,14 @@ class TestEmWorkflowOrderingAgainstDestructiveGuard(unittest.TestCase):
         self.assertLess(
             self.order.index("muse_guard.py"),
             self.order.index("destructive-guard.py"),
-            f"muse_guard.py must run before destructive-guard.py's blanket allow; order={self.order}",
+            f"muse_guard.py must precede destructive-guard.py in the declared order; order={self.order}",
         )
 
     def test_destructive_guard_remains_last_among_decision_capable_guards(self):
-        # heredoc-stdin-guard.py (heredoc-stdin-guard task0001) runs after
-        # destructive-guard.py too, but it never returns a permission
+        # heredoc-stdin-guard.py (heredoc-stdin-guard task0001) is declared
+        # after destructive-guard.py too, but it never returns a permission
         # decision -- only `updatedInput` or nothing (heredoc-stdin-guard
-        # IMPLEMENTATION.md D4) -- so its tail position does not reopen
-        # the "blanket allow ends the decision" gate this test protects.
+        # IMPLEMENTATION.md D4) -- so it is excluded from this check.
         decision_capable = [n for n in self.order if n != "heredoc-stdin-guard.py"]
         self.assertEqual(decision_capable[-1], "destructive-guard.py")
 
