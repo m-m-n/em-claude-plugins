@@ -1,0 +1,56 @@
+schema_version: 2
+feature: sca-go-replace-direct-deps
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.96
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+    expectation_clear: 0.78
+  observed_at: '2026-10-12T11:28:03+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.16
+    confidence: 0.84
+    probabilities:
+      '0': 0.0
+      '1': 0.84
+      '2': 0.16
+      '3': 0.0
+    expectation_clear: 0.77
+  observed_at: '2026-10-12T11:28:03+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/scan-dependencies.py
+  - tests/test_sca_go_govulncheck_real_output.py
+  - feature-docs/sca-go-govulncheck-real-output/SPEC.md
+  - feature-docs/sca-go-govulncheck-real-output/REQUIREMENTS.md
+  - feature-docs/sca-go-govulncheck-real-output/tasks/task0001.md
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: em-workflow/scripts/scan-dependencies.py:3003 の _go_mod_direct_modules
+    は require のみを収集し、replace を無視する。em-workflow/scripts/scan-dependencies.py:3115 は直接依存集合にないモジュールを重大度判定前に除外する。既存の取得済みストリームをメモリ上で再生すると、単独行・ブロックの置換例は双方とも
+    findings と重大度未確定件数が0になった。tests/test_sca_go_govulncheck_real_output.py:737 の replace
+    テストには対応する require がなく、今回の条件を検証していない。非 indirect の require に対応する置換先を加え、ローカルパスを除外する処理と回帰テストが必要になる。replace
+    を無視する規則は feature-docs/sca-go-govulncheck-real-output/SPEC.md:40、feature-docs/sca-go-govulncheck-real-output/REQUIREMENTS.md:87、feature-docs/sca-go-govulncheck-real-output/tasks/task0001.md:70
+    に記載されている
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 7
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 4
+  changes_external_contract: true
+  changes_behavior: true
+decided_at: '2026-10-12T11:28:03+09:00'
