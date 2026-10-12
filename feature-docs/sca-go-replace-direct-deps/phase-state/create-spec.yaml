@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-go-replace-direct-deps
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: c8a593b467b887ce9be636dba79938a7a57517d3
-last_input_digest: sha256:84119dbbdf815bd536f59ebc52b1262e2c88926f8c528e284aaeec1073b1d7e9
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:fecbaa5ab213a63021a2c097a74a338587332178c8bc467ec604f64a3e923e99
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -100,6 +100,10 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:84119dbbdf815bd536f59ebc52b1262e2c88926f8c528e284aaeec1073b1d7e9
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:fecbaa5ab213a63021a2c097a74a338587332178c8bc467ec604f64a3e923e99
   output_digest: null
 artifacts: []
 patches: []
