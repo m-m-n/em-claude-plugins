@@ -1,28 +1,106 @@
 schema_version: 1
 feature: sca-go-replace-direct-deps
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: c8a593b467b887ce9be636dba79938a7a57517d3
 last_input_digest: sha256:84119dbbdf815bd536f59ebc52b1262e2c88926f8c528e284aaeec1073b1d7e9
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-12T11:36:46+09:00'
+    questions:
+    - question_id: requirement.replace.local-path-rule
+      status: answered
+    - question_id: requirement.replace.versioned-source
+      status: answered
+    - question_id: requirement.replace.keep-original
+      status: answered
+    - question_id: requirement.prior-fr3-docs
+      status: answered
+    - question_id: design-step
+      status: answered
 answers:
   create-spec.feature-identity:
     question_id: create-spec.feature-identity
     packet_id: null
-    answered_at: "2026-10-12T11:28:52+09:00"
+    answered_at: '2026-10-12T11:28:52+09:00'
     source: batch-decision-table
     answer_mode: single_select
-    selected_option_ids: [derive_from_task_description]
+    selected_option_ids:
+    - derive_from_task_description
     freeform: null
-    normalized_answer: "feature name derived from the task description: sca-go-replace-direct-deps"
-    resolution_note: "batch-policies.yaml create-spec.feature-identity -> derive_from_task_description"
+    normalized_answer: 'feature name derived from the task description: sca-go-replace-direct-deps'
+    resolution_note: batch-policies.yaml create-spec.feature-identity -> derive_from_task_description
+  requirement.replace.local-path-rule:
+    question_id: requirement.replace.local-path-rule
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T11:36:46+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - version_and_non_directory
+    freeform: null
+    normalized_answer: 'version_and_non_directory: Replacement contributes only when it is `path version` and the path is not Go IsDirectoryPath form (., .., ./ ../ .\ ..\ / \ prefixes, drive letter). Unversioned
+      replacement and directory-with-version add nothing.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1, single batched consultation for the packet) chose version_and_non_directory: Go modfile parseReplace と整合し、不正な置換まで直接依存に含めない。既存のローカル置換テストと整合.
+      Orchestrator mapped it onto the question''s own option_id (matches worker tentative). Opus escalation: not run. Recorded as assumption (batch-policies create-spec.requirement-clarification record_as_assumption).'
+  requirement.replace.versioned-source:
+    question_id: requirement.replace.versioned-source
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T11:36:46+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - match_version_versioned_wins
+    freeform: null
+    normalized_answer: 'match_version_versioned_wins: Versioned source applies only when the require version string matches exactly; unversioned source applies to any version; when a matching versioned
+      replace exists it wins over the unversioned one (Go precedence), and if the winning replacement is local nothing is added (no fallback to the unversioned replace).'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1, single batched consultation for the packet) chose match_version_versioned_wins: Go の優先順位に合わせ適用外の置換先を合算しない。優先先がローカルでも版なし置換へ戻さない。require
+      は最低版のため解決後の版差による誤判定は残る. Orchestrator mapped it onto the question''s own option_id (matches worker tentative). Opus escalation: not run. Recorded as assumption (batch-policies create-spec.requirement-clarification
+      record_as_assumption).'
+  requirement.replace.keep-original:
+    question_id: requirement.replace.keep-original
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T11:36:46+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_original
+    freeform: null
+    normalized_answer: 'keep_original: Direct set is the union of the original require path and the applied replacement path.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1, single batched consultation for the packet) chose keep_original: 元パスで報告される場合の取りこぼしを避け、既存テスト 709-712 / 792-809 と整合. Orchestrator
+      mapped it onto the question''s own option_id (matches worker tentative). Opus escalation: not run. Recorded as assumption (batch-policies create-spec.requirement-clarification record_as_assumption).'
+  requirement.prior-fr3-docs:
+    question_id: requirement.prior-fr3-docs
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T11:36:46+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - leave_prior_docs
+    freeform: null
+    normalized_answer: 'leave_prior_docs: Prior feature docs stay as historical record; new SPEC states it supplements prior FR3; code docstrings/comments are updated.'
+    resolution_note: 'Codex (run_codex_exec.sh readonly, entry codex, turn 1, single batched consultation for the packet) chose leave_prior_docs: 完了時の仕様を履歴として残し、新 SPEC で補正を明記する方が変更境界が明確. Orchestrator mapped
+      it onto the question''s own option_id (matches worker tentative). Opus escalation: not run. Recorded as assumption (batch-policies create-spec.requirement-clarification record_as_assumption).'
+  design-step:
+    question_id: design-step
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T11:36:46+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'skip: UI を持たないスクリプトの go.mod 解析とテストの変更'
+    resolution_note: batch-policies create-spec.design-step -> decide_autonomously (accept requirements-analyst design_step_recommendation = skip). The packet offered skip/run rather than decide_autonomously;
+      the policy's meaning (accept the recommendation) was applied by selecting the recommended option skip.
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:84119dbbdf815bd536f59ebc52b1262e2c88926f8c528e284aaeec1073b1d7e9
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:84119dbbdf815bd536f59ebc52b1262e2c88926f8c528e284aaeec1073b1d7e9
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
