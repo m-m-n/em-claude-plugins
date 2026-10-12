@@ -1,7 +1,7 @@
 schema_version: 1
 feature: test-hook-precedence-wording
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: eb55515d28f1615e21ac3fe5f0647cde89e637ea
 last_input_digest: sha256:b6806414931342cae0dd99775653e0feef109830851e9827544e55603c53856b

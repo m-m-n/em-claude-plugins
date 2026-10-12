@@ -1,0 +1,92 @@
+schema_version: 1
+feature: test-hook-precedence-wording
+created: 2026-10-12
+base_branch: main
+goal: |-
+  # em-workflow: テストのコメント・メッセージに残る「blanket allow が判定を終わらせる」記述を公式の判定優先順位（deny > defer > ask > allow）に合わせて直す
+  
+  Notion タスク: <notion-url>
+  
+  ## やりたいこと (必須)
+  em-workflow のテストのコメント・docstring・アサーションメッセージに残る「destructive-guard.py の blanket allow が判定を終わらせる（ends the decision）」という趣旨の記述を、公式仕様の判定優先順位（deny > defer > ask > allow）と食い違わない記述に直す。
+  
+  ## 背景・なぜ (必須)
+  feature hook-decision-precedence-docs（PR https://github.com/m-m-n/em-claude-plugins/pull/169 ）で、`em-workflow/hooks/destructive-guard.py` と `em-workflow/README.md` の同趣旨の記述は直した。公式ドキュメント（ https://code.claude.com/docs/en/hooks ）では、複数の PreToolUse フックの判定は deny > defer > ask > allow の優先順位で決まり、後続フックの allow が先行フックの deny / ask を上書きすることはない。
+  一方、次のテストには「blanket allow が判定を終わらせるので、ask / deny を出すガードはそれより前に登録されなければならない」という前提の記述が残っている（その feature ではスコープ外とした）。
+  - `tests/test_guardrail_hooks_migration.py`（39・49・63・95-109 行付近のコメント、322・332・356 行付近のアサーションメッセージ）
+  - `tests/test_muse_guard_registration.py`（99・117・125 行付近）
+  - `tests/test_hooks_registration.py`（68 行付近）
+  - `tests/test_guard_deferral_parity.py`（18・129・207 行付近。「blanket allow must survive」の表現が上書きの前提を含むか確認する）
+  - `em-workflow/hooks/destructive-guard.py` 8883・8992 行付近の「blanket allow」の言及も同じ観点で確認する
+  
+  ## 受け入れ条件 / 完了の定義 (必須)
+  - [ ] 上記の記述が公式仕様の判定優先順位と食い違わない
+  - [ ] テストの判定内容（登録順を検査するアサーションそのもの）は変更しない。変更するのはコメント・docstring・メッセージ文字列だけ
+  - [ ] `python3 -m unittest discover -s tests` と `python3 em-workflow/hooks/tests/run-destructive-guard.py` が通る
+  
+  ## スコープ外 (任意)
+  hooks.json の登録順そのものの見直し、登録順テストを残すかどうかの判断。
+  
+  ## 追加指示（起動時）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+  - その議論内容を Notion に記録する。
+parent_branch: em-workflow/test-hook-precedence-wording/integration
+tier: minimal
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only: {"0": 0.99, "1": 0.01, "2": 0.0, "3": 0.0}
+    description_plus_code: {"0": 0.98, "1": 0.02, "2": 0.0, "3": 0.0}
+  at: "2026-10-12T14:49:40+09:00"
+  reductions: [REQUIREMENTS.md, IMPLEMENTATION.md, design step, SPEC.md (replaced by TASK.md), task split, VERIFICATION.md, task-level parallelism]
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: "Python / Markdown"
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [TASK.md]
+    status: completed
+    completed_at_commit: 9a7ba8fa4b022267e9b8308c2812db5576d787a1
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "minimal tier subtracts the design step; also the change is test comment/docstring/assertion-message wording only with no UI and zero design-system candidates (gate create-spec.design-step = skip)"
+  - id: create-plan
+    artifacts: [TASK.md]
+    status: pending
+  - id: implement
+    status: pending
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+
+requirements: {}
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
