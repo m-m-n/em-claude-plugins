@@ -65,8 +65,8 @@ it asserts the array holds exactly nine entries, pins every entry before
 `heredoc-stdin-guard.py` verbatim (command, timeout, status message) so a
 later reordering or edit to any of them fails here, and pins the last
 entry's invocation form for the `heredoc-stdin-guard.py` hook. The relative ordering invariant
-("`destructive-guard.py`'s blanket allow must run last among the
-decision-capable guards") stays the sole concern of
+("`destructive-guard.py` is the last of the Bash guards that return a
+decision in the declared order") stays the sole concern of
 tests/test_guardrail_hooks_migration.py -- not duplicated here.
 
 Extended again by loop-command-guard task0001 (FR9, FR10, NFR3, AC-6): the
