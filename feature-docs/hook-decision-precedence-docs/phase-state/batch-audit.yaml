@@ -1,0 +1,18 @@
+schema_version: 1
+feature: hook-decision-precedence-docs
+records:
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-10-12T12:59:33+09:00'
+  source: batch-decision-table
+  answer_mode: multi_select
+  selected_option_ids: []
+  freeform: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m
+    unittest discover -s tests
+  normalized_answer: 'auto-recorded: python3 em-workflow/hooks/tests/run-destructive-guard.py
+    && python3 -m unittest discover -s tests'
+  resolution_note: 'gate: create-spec.command-approval; policy auto_record; no refusal
+    pattern; source field project.components.main.test_command; auto-approved command
+    string: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m
+    unittest discover -s tests (resolves to the destructive-guard case runner followed
+    by the repository unittest suite)'
