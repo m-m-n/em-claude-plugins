@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: eb55515d28f1615e21ac3fe5f0647cde89e637ea
 last_input_digest: sha256:b6806414931342cae0dd99775653e0feef109830851e9827544e55603c53856b
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -77,10 +77,13 @@ worker_runs:
   input_digest: sha256:6510e5a8fbf4ff920ddf4ea41bccaa244cf9b0ec4d0bcc847b2215e33cfffca5
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:b6806414931342cae0dd99775653e0feef109830851e9827544e55603c53856b
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/test-hook-precedence-wording/TASK.md
+  sha256: sha256:c1149d786865ff399eb3474dc90881ac947a831af86cf695230937a040a94bf6
+  produced_by: orchestrator
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
