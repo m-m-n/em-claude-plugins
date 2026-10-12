@@ -129,7 +129,7 @@ workflow:
   completed_at_commit: 2db949fa9e3cc451d80ec96dfd2205dd56ae3b38
   summary: 'repo-tests (10436 tests, OK, skipped=1) and plugin-invariants (7/7 PASS) passed; TS1-TS12, AC1-AC7, SC1-SC3 and TM-1..TM-3 satisfied (tests.test_sca_go_replace_direct_deps 60 tests OK; TS9 diff under feature-docs/sca-go-govulncheck-real-output/ is empty; TS10 stdlib-only imports; TM-2 inspection found no filesystem access built from replace paths). No requirement excluded.'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Go replace directives add replacement modules to the direct set
