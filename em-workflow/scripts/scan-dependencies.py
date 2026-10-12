@@ -2951,11 +2951,14 @@ def normalize_pip(ecosystem, data, manifest_file, project_root=None):
 
 
 # ---------------------------------------------------------------------------
-# Go normalization (sca-go-govulncheck-real-output). `govulncheck -json`
-# carries no per-finding directness and no severity string the registry can
-# map, so both are resolved here: directness from the unit's own go.mod
-# require entries (or the synthetic `stdlib` / `toolchain` modules), severity
-# only from the OSV object's top-level CVSS v3 vectors. An advisory whose
+# Go normalization (sca-go-govulncheck-real-output; `replace` handling from
+# sca-go-replace-direct-deps). `govulncheck -json` carries no per-finding
+# directness and no severity string the registry can map, so both are
+# resolved here: directness from the unit's own go.mod -- its non-indirect
+# require entries plus, for each of them, the replacement module of the
+# `replace` directive that applies to it (a local-directory replacement adds
+# none) -- or the synthetic `stdlib` / `toolchain` modules; severity only
+# from the OSV object's top-level CVSS v3 vectors. An advisory whose
 # severity cannot be determined is counted, never treated as below threshold.
 # ---------------------------------------------------------------------------
 
@@ -2963,6 +2966,12 @@ _GO_SYNTHETIC_DIRECT_MODULES = frozenset({"stdlib", "toolchain"})
 _GO_SEVERITY_BANDS_DESCENDING = ("critical", "high", "medium", "low", "none")
 _GO_CVSS_V3_PREFIXES = ("CVSS:3.0/", "CVSS:3.1/")
 _GO_MOD_TOKEN_RE = re.compile(r'"[^"\n]*"|`[^`\n]*`|[()]|[^\s()"`]+|["`]')
+_GO_MOD_REPLACE_ARROW = "=>"
+# Tokens the tokenizer yields for parentheses and for a quote with no partner;
+# none of them is part of a replace entry.
+_GO_MOD_STRAY_TOKENS = frozenset({"(", ")", '"', "`"})
+_GO_DIRECTORY_PATH_PREFIXES = ("./", "../", ".\\", "..\\", "/", "\\")
+_ASCII_LETTERS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 
 def _go_mod_split_comment(line):
@@ -3000,15 +3009,94 @@ def _go_mod_comment_marks_indirect(comment):
     return words == ["indirect"] or (len(words) > 1 and words[0] == "indirect;")
 
 
+def _go_mod_replace_entry(tokens):
+    """`(source, source_version, replacement, replacement_version)` of the
+    tokens of one replace entry (`src [v] => dst [v]`, `=>` a token of its
+    own), the versions None when absent and every value unquoted; None when
+    the tokens are not exactly that shape -- another token count, a missing
+    side, a glued or repeated `=>`, a parenthesis or a stray quote, an empty
+    value. Nothing is raised for any input."""
+    if tokens.count(_GO_MOD_REPLACE_ARROW) != 1:
+        return None
+    if any(token in _GO_MOD_STRAY_TOKENS for token in tokens):
+        return None
+    arrow = tokens.index(_GO_MOD_REPLACE_ARROW)
+    after = len(tokens) - arrow - 1
+    if arrow not in (1, 2) or after not in (1, 2):
+        return None
+    values = [_go_mod_unquote(token) for token in tokens]
+    left, right = values[:arrow], values[arrow + 1:]
+    if not all(left) or not all(right):
+        return None
+    return (
+        left[0],
+        left[1] if arrow == 2 else None,
+        right[0],
+        right[1] if after == 2 else None,
+    )
+
+
+def _go_path_is_directory_form(path):
+    """True for a path in Go's directory-path form: `.` or `..`; a leading
+    `./`, `../`, `.\\`, `..\\`, `/` or `\\`; or an ASCII letter followed by
+    `:`. The path is compared as a string only -- never resolved, never
+    opened."""
+    return (
+        path in (".", "..")
+        or path.startswith(_GO_DIRECTORY_PATH_PREFIXES)
+        or (len(path) >= 2 and path[0] in _ASCII_LETTERS and path[1] == ":")
+    )
+
+
+def _go_mod_record_replace(tokens, versioned, unversioned):
+    """Records the replace entry held by `tokens` (ignored when the tokens
+    are not an entry). `versioned` maps `(source, source version)` and
+    `unversioned` maps `source` to the set of replacement MODULE paths; a
+    replace that is not a module replacement still creates its key, with an
+    empty set, because it is the applicable replace for its source."""
+    entry = _go_mod_replace_entry(tokens)
+    if entry is None:
+        return
+    source, source_version, target, target_version = entry
+    if source_version is None:
+        targets = unversioned.setdefault(source, set())
+    else:
+        targets = versioned.setdefault((source, source_version), set())
+    if target_version is not None and not _go_path_is_directory_form(target):
+        targets.add(target)
+
+
 def _go_mod_direct_modules(content):
-    """The module paths of every `require` entry of go.mod `content` that is
-    not marked indirect. Only the single-line `require m v` and the
-    `require ( ... )` block forms contribute. Every other directive (single
-    line or block, known or unknown), every full-line comment and every
-    line that is not shaped like an entry contributes nothing -- malformed
-    content just yields fewer entries."""
-    direct = set()
-    block = None  # None outside a block; "require" or "other" inside one
+    r"""The direct set of go.mod `content`: the module path of every
+    `require` entry that is not marked indirect (the single-line `require m v`
+    and the `require ( ... )` block forms), plus, for each such entry, the
+    replacement path of the `replace` that applies to it when that replace is
+    a module replacement.
+
+    A replace entry is `src [v] => dst [v]`, in a single-line `replace` or
+    inside a `replace ( ... )` block, with `=>` as a token of its own; a line
+    of any other shape is ignored. For a require entry (path P, version V)
+    the applicable replace is the one whose source is P and whose source
+    version equals V exactly; when there is none, the one whose source is P
+    and has no version; when there is neither, no replace applies. A replace
+    is a module replacement only when it has a replacement path and a
+    replacement version and the path is not in directory-path form (`.`,
+    `..`, a leading `./`, `../`, `.\`, `..\`, `/` or `\`, or an ASCII letter
+    followed by `:`). When the applicable replace is not a module
+    replacement nothing is added, and no other replace is tried. The
+    original require path stays direct, a replacement is applied once and
+    never chained, a replace whose source is no non-indirect require entry
+    adds no path, and the result does not depend on the order of the
+    directives. Replacement paths are compared as strings only; nothing is
+    opened from them.
+
+    Every other directive (single line or block, known or unknown), every
+    full-line comment and every line that is not shaped like an entry is
+    ignored -- malformed content just yields fewer entries."""
+    requires = set()  # (path, version) of every non-indirect require entry
+    versioned = {}  # (source, source version) -> replacement module paths
+    unversioned = {}  # source -> replacement module paths
+    block = None  # None outside a block; "require", "replace" or "other" inside
     for raw_line in content.split("\n"):
         code, comment = _go_mod_split_comment(raw_line.rstrip("\r"))
         tokens = _GO_MOD_TOKEN_RE.findall(code)
@@ -3017,15 +3105,28 @@ def _go_mod_direct_modules(content):
                 block = None
             elif block == "require" and len(tokens) == 2:
                 if not _go_mod_comment_marks_indirect(comment):
-                    direct.add(_go_mod_unquote(tokens[0]))
+                    requires.add((_go_mod_unquote(tokens[0]), _go_mod_unquote(tokens[1])))
+            elif block == "replace":
+                _go_mod_record_replace(tokens, versioned, unversioned)
             continue
         if not tokens:
             continue
         if len(tokens) == 2 and tokens[1] == "(":
-            block = "require" if tokens[0] == "require" else "other"
+            block = tokens[0] if tokens[0] in ("require", "replace") else "other"
         elif tokens[0] == "require" and len(tokens) == 3:
             if not _go_mod_comment_marks_indirect(comment):
-                direct.add(_go_mod_unquote(tokens[1]))
+                requires.add((_go_mod_unquote(tokens[1]), _go_mod_unquote(tokens[2])))
+        elif tokens[0] == "replace":
+            _go_mod_record_replace(tokens[1:], versioned, unversioned)
+    direct = set()
+    unversioned_applied = set()
+    for path, version in requires:
+        direct.add(path)
+        if (path, version) in versioned:
+            direct |= versioned[(path, version)]
+        elif path in unversioned and path not in unversioned_applied:
+            unversioned_applied.add(path)
+            direct |= unversioned[path]
     return direct
 
 
@@ -3097,8 +3198,10 @@ def normalize_go(ecosystem, data, manifest_file, project_root=None):
     -- never a fallback to an empty direct set. Nothing is written.
 
     The stream is reduced to one advisory per (OSV id, module). An advisory
-    is direct when its module is a non-indirect require entry of that go.mod
-    or the synthetic `stdlib` / `toolchain` module; a non-direct advisory is
+    is direct when its module is a non-indirect require entry of that go.mod,
+    the replacement module a `replace` directive gives such an entry (a
+    local-directory replacement gives none; see `_go_mod_direct_modules`), or
+    the synthetic `stdlib` / `toolchain` module; a non-direct advisory is
     neither a finding nor counted. A direct advisory with no CVSS v3 band is
     undetermined: counted in `undetermined`, never a finding. A direct
     advisory with a band is mapped through the registry and the threshold
