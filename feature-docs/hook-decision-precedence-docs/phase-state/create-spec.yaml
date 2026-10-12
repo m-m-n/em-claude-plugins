@@ -1,11 +1,11 @@
 schema_version: 1
 feature: hook-decision-precedence-docs
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 1fe2b7a2dc83c614a463e63778845d475402e53b
 last_input_digest: sha256:3d9e2ab0f4d57f8c23085f2c666c902d2583f1da1b00b1b355ebc3355824d95e
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -76,10 +76,13 @@ worker_runs:
   input_digest: sha256:dad4850f45068c6e7bda705531b346710d965c6fa3e7273582fc51ad1bb5bec6
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:3d9e2ab0f4d57f8c23085f2c666c902d2583f1da1b00b1b355ebc3355824d95e
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/hook-decision-precedence-docs/TASK.md
+  sha256: sha256:f2e6a669aff2079543551ed68bdd4103f6782ce3a2b70abb2abe84cacd1b984b
+  produced_by: orchestrator
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

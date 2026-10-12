@@ -1,0 +1,88 @@
+schema_version: 1
+feature: hook-decision-precedence-docs
+created: 2026-10-12
+base_branch: main
+goal: |-
+  em-workflow: フック文書の「allow が別フックの判定を上書きする」記述を公式の判定優先順位（deny > defer > ask > allow）に合わせて直す
+  
+  ## やりたいこと (必須)
+  em-workflow のフック関連文書にある「hook の allow が別フックの判定を上書きする」旨の記述を、公式仕様の判定優先順位に合わせて直す。
+  ## 背景・なぜ (必須)
+  公式ドキュメント（ https://code.claude.com/docs/en/hooks ）では、複数の PreToolUse フックが異なる判定を返したときの優先順位は deny \> defer \> ask \> allow と定められている。
+  一方、次の箇所には allow が別フックの deny を上書きする、または hook の判定が permissions.deny より優先される、という趣旨の記述がある。
+  - `em-workflow/hooks/destructive-guard.py` の docstring（30-31 行付近、349-355 行付近）
+  - `em-workflow/README.md` の 148 行付近
+  feature cross-repo-write-guard の create-spec で Codex に相談した際に食い違いが判明した。この feature では destructive-guard.py を変更しないと決めたため、別タスクとして残す。
+  ## 受け入れ条件 / 完了の定義 (必須)
+  - [ ] 上記の記述が公式仕様の判定優先順位と食い違わない
+  - [ ] destructive-guard.py の判定処理（コード）は変更しない
+  - [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` が通る
+  ## スコープ外 (任意)
+  destructive-guard.py の委譲（defer_to_kill_guard 等）の挙動の見直し。
+  ## 制約・前提 (任意)
+  \<触ってほしくない箇所 / 使う技術 / 互換性など。あれば\>
+parent_branch: em-workflow/hook-decision-precedence-docs/integration
+tier: minimal
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only: {"0": 0.99, "1": 0.01, "2": 0.0, "3": 0.0}
+    description_plus_code: {"0": 0.98, "1": 0.01, "2": 0.01, "3": 0.0}
+  at: "2026-10-12T12:49:30+09:00"
+  reductions: [REQUIREMENTS.md, IMPLEMENTATION.md, design step, SPEC.md (replaced by TASK.md), task split, VERIFICATION.md, task-level parallelism]
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: "Python / Markdown"
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [TASK.md]
+    status: completed
+    completed_at_commit: 803ecbb1d037f23bcd31d98b8c18f5ac97206100
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "minimal tier subtracts the design step; also the change is comment/docstring/README wording only with no UI and zero design-system candidates (gate create-spec.design-step = skip)"
+  - id: create-plan
+    artifacts: [TASK.md]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: c116358543fb27978ecc9afe18f2366e510c157b
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements: {}
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
