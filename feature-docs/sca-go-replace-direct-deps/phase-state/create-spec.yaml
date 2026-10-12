@@ -106,10 +106,16 @@ worker_runs:
   input_digest: sha256:fecbaa5ab213a63021a2c097a74a338587332178c8bc467ec604f64a3e923e99
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: null
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/sca-go-replace-direct-deps/REQUIREMENTS.md
+  sha256: sha256:dd9a3a5975f3e56732913052468ee15b5b4797b89e0853a70cd41d1c51bf10b0
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-go-replace-direct-deps/SPEC.md
+  sha256: sha256:4a33ddb0c0d0351483787bab843c9e99cb152b610f3f228a270ba7fe1112d2ad
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
