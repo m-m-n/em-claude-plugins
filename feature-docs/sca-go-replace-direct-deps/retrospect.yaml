@@ -1,0 +1,43 @@
+feature: sca-go-replace-direct-deps
+collected_at: "2026-10-12T12:29:07+09:00"
+session_ids: [01a12e27-55ae-765b-a7d7-85eb521a7387]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終判定（score 1.16, バケット 1 確率 0.84）を評価器の閾値行で解決し full を採用"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.04, confidence: 0.96, probabilities: {'0': 0.0, '1': 0.96, '2': 0.04, '3': 0.0}, expectation_clear: 0.78}
+        observed_at: "2026-10-12T11:28:03+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.16, confidence: 0.84, probabilities: {'0': 0.0, '1': 0.84, '2': 0.16, '3': 0.0}, expectation_clear: 0.77}
+        observed_at: "2026-10-12T11:28:03+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/scan-dependencies.py
+        - tests/test_sca_go_govulncheck_real_output.py
+        - feature-docs/sca-go-govulncheck-real-output/SPEC.md
+        - feature-docs/sca-go-govulncheck-real-output/REQUIREMENTS.md
+        - feature-docs/sca-go-govulncheck-real-output/tasks/task0001.md
+      changed_lines_approx: 80
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 7
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 4
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査は既存 feature の SPEC 等の書き換えを見込んだが、実装は新規テストファイル tests/test_sca_go_replace_direct_deps.py を作り、旧 feature-docs は変更しなかった（TS9）。files_expected と実際の変更ファイルがずれた"
