@@ -81,7 +81,7 @@ tasks:
     - config-infra
     complexity: low
     requirements: []
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/hook-decision-precedence-docs/task0001
 
