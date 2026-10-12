@@ -120,7 +120,8 @@ workflow:
   base_commit: 04d89c723aa8dc710efd6aaa565c32a191db6e43
   completed_at_commit: 3158df0815a1432ec4c62548684b668636f950e6
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: af4a48fe6eb7279081bd92cf72ad4195de6778a2
 - id: verify
   status: pending
   result: null
@@ -153,7 +154,7 @@ tasks:
     notes: null
     branch: em-workflow/sca-go-replace-direct-deps/task0001
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -161,7 +162,11 @@ review:
     - spec
     discretionary: []
     cross_validation: false
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
   residual_critical_high: 0
   needs_rework: false
 requirements:
