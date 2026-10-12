@@ -1,0 +1,70 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 943/943 passed; python3 -m unittest discover -s tests -> 10436 tests OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests, no failure
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      The task forbids changing tests (and limits the diff to destructive-guard.py, README.md and
+      the feature-docs), so the check is an uncommitted scratch script run with the python3
+      interpreter against the worktree. Before any edit it was observed to FAIL for all 7 places:
+      the module docstring still said "A hook decision also outranks `permissions.deny` rules ...
+      will not fire", the KILL_WORDS comment still said "would otherwise override kill-guard's
+      deny ... reinstating exactly the incident", the matches_target_shape() docstring still said
+      "it would override the other hook's deny", the main() comment still said "own deny/ask is
+      never overridden", the _OUTCOME_RANK comment still said "leaves the verdict to the guards
+      that decide, which an `allow` would not", README line 139 still said "先に allow が確定すると
+      ... 潰しかねない", and README line 149 still said "hook の判定は `permissions.deny` より優先される
+      ... には効かない". After the edit the same script passes for all 7. Existing-test search (by
+      path em-workflow/hooks/destructive-guard.py, em-workflow/README.md and by basenames
+      destructive-guard.py, README.md in tests/): the tests that read README.md
+      (tests.test_loop_command_guard.TestDocumentationMatchesRegistration,
+      tests.test_guardrail_hooks_migration.TestReadmeDocumentsTheClassifierSideEffect) assert
+      the hook-order sentence and the classifier / opt-out wording, not these 7 claims, and
+      the tests that run destructive-guard.py assert verdicts, not comments, so no existing
+      test detects a leftover claim.
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Same uncommitted scratch script. Before any edit it was observed to FAIL for the four
+      positive checks: the module docstring did not say that settings.json deny / ask rules are
+      still evaluated when the hook returns allow, README did not carry a line saying that
+      allow を返しても deny / ask ルールは評価される, README did not contain "deny > defer > ask >
+      allow", and the README hooks.json order paragraph did not state a registration order plus the
+      precedence together. After the edit all four pass. The existing
+      tests.test_loop_command_guard.TestDocumentationMatchesRegistration order-sentence test reads
+      the same README paragraph and stayed green before and after (the order of the hook names is
+      unchanged); it does not check the new wording, so no red state of it occurred.
+  AC-3:
+    tests:
+      - tests.test_guard_deferral_parity.TestSupersetInvariantHoldsAcrossTheCorpus
+      - tests.test_guard_deferral_parity.TestNarrownessConverseHoldsAcrossTheCorpus
+    red_confirmed: false
+    red_reason: >-
+      The criterion is an invariant (the diff of destructive-guard.py is comments and docstrings
+      only; the AST without docstrings equals the pre-change AST). It held before any edit, so
+      no red state can occur for an unchanged file; a dedicated new module is out of scope, but
+      the existing tests.test_guard_deferral_parity classes detect a behavior change of the
+      kill-guard / failed-run-cleanup-guard allow withholding that the comments describe, and
+      run-destructive-guard.py (943 cases) detects any verdict change. The comment-only claim was
+      checked once by comparing ast.dump() of the docstring-stripped trees of the git HEAD version
+      and the edited file with the scratch script: equal. No red state occurred for this change.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The outcome is the project's test command itself
+      (python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests),
+      which was green before the change (943/943 and 10436 tests OK) and is green after it, so
+      there is no executable red state for this criterion. The existing suites are the check.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The outcome is the set of changed paths (git diff --name-only against the parent branch:
+      em-workflow/hooks/destructive-guard.py, em-workflow/README.md and this record under
+      test-docs/hook-decision-precedence-docs/). No test in tests/ pins the changed-path set of
+      this change (searched by the paths of the two edited files and their basenames), and the
+      set was correct before any edit (empty diff), so no red state occurred.

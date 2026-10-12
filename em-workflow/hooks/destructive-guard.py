@@ -27,8 +27,9 @@ hand-written list here anticipated. The cloud/IaC section below exists to
 narrow that gap, not to close it. Set ALLOW_NON_DESTRUCTIVE to False to keep
 the blocking half and hand undecided commands back to the classifier.
 
-A hook decision also outranks `permissions.deny` rules in settings.json, so
-a deny rule added later will not fire for a command this hook allows.
+When this hook returns `allow`, the deny and ask rules in settings.json are
+still evaluated: a matching deny rule refuses the command and a matching ask
+rule asks for confirmation.
 
 Decision tiers:
 
@@ -348,10 +349,9 @@ VALUE_TAKING_FLAGS = {
 
 # Process-termination command words. These belong to kill-guard.py, which
 # runs as its own PreToolUse hook and reaches a deny/ask/allow decision from
-# the live process tree. This hook must not answer for them at all: its
-# blanket `allow` at the end of main() would otherwise override kill-guard's
-# deny for a command like `pkill -f emterm`, reinstating exactly the incident
-# kill-guard exists to prevent.
+# the live process tree. This hook keeps running its own destructive checks on
+# a command that contains one of them, and only withholds the blanket `allow`
+# at the end of main() for it.
 KILL_WORDS = ("kill", "pkill", "killall")
 
 # em-workflow's exit-4 recovery resyncs an integration worktree to its own
@@ -8852,9 +8852,8 @@ def matches_target_shape(word, args, cwd):
     (S1/S2/S3)", decision D2): a `git worktree remove`, a `git branch`
     deletion carrying a non-force flag (`-d`/`--delete`), or a `gh pr
     create`. That other hook owns the verdict for these; this hook's own
-    checks below still run against them, but its trailing blanket `allow`
-    must be withheld or it would override the other hook's deny — the same
-    reason KILL_WORDS above is excluded from that allow.
+    checks below still run against them, but its trailing blanket `allow` is
+    not returned for them, as with KILL_WORDS above.
 
     WORD/ARGS are already the product of head()/split_redirects() over one
     lexed statement from statements(), the same quote-aware decomposition
@@ -8978,11 +8977,11 @@ def main(payload):
         sys.exit(0)
     cwd = payload.get("cwd") or ""
 
-    # Whether kill-guard.py owns the verdict for this command. The destructive
-    # checks below still run — a compound such as
-    # `pkill -f x; rm -rf /home/user/y` must still be denied for its `rm`
-    # half — but the blanket `allow` at the end is withheld, so kill-guard's
-    # own deny/ask is never overridden. See KILL_WORDS above.
+    # Whether the command string matches the KILL_WORDS search, which makes
+    # kill-guard.py the owner of the verdict. The blanket `allow` at the end is
+    # then withheld, but the destructive checks below still run for the rest
+    # of a compound command — `pkill -f x; rm -rf /home/user/y` must still
+    # be denied for its `rm` half. See KILL_WORDS above.
     defer_to_kill_guard = any(
         re.search(rf"(^|[^\w./-]){w}([^\w./-]|$)", command) for w in KILL_WORDS
     )
@@ -9134,9 +9133,8 @@ def main(payload):
     sys.exit(0)
 
 
-# How strict a judgment is, for keeping the stricter of two (_stricter()): the
-# hook staying silent leaves the verdict to the guards that decide, which an
-# `allow` would not.
+# How strict a judgment is, for keeping the stricter of two (_stricter()). The
+# hook staying silent (no output) ranks above `allow` and below `ask`.
 _OUTCOME_RANK = {"allow": 0, "ask": 2, "deny": 3}
 
 
