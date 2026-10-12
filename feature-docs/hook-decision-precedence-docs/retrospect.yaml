@@ -1,0 +1,46 @@
+feature: hook-decision-precedence-docs
+collected_at: "2026-10-12T13:31:40+09:00"
+session_ids: [01a12e60-8abf-74b4-ba8d-2d7b2b98f99e]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: minimal
+    rationale: "description_plus_code の最終読みでバケット 0（文言・ルール文の変更のみ）が 0.98、Codex 事前調査も挙動変更・テスト変更なしと報告したため minimal"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 0.01
+          confidence: 0.99
+          probabilities: {"0": 0.99, "1": 0.01, "2": 0.0, "3": 0.0}
+        observed_at: "2026-10-12T12:46:50+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 0.02
+          confidence: 0.97
+          probabilities: {"0": 0.98, "1": 0.01, "2": 0.01, "3": 0.0}
+        observed_at: "2026-10-12T12:49:20+09:00"
+    pre_survey_estimate:
+      files_expected: [em-workflow/hooks/destructive-guard.py, em-workflow/README.md]
+      changed_lines_approx: 19
+      new_functions_needed: false
+      new_files_needed: false
+      new_dependencies_needed: false
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: none
+      added_test_cases_approx: 0
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 0
+      changes_external_contract: false
+      changes_behavior: false
+follow_up_drafts: []
+lessons_candidates: []
