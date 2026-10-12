@@ -1,11 +1,11 @@
 schema_version: 1
 feature: sca-go-replace-direct-deps
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: c8a593b467b887ce9be636dba79938a7a57517d3
 last_input_digest: sha256:fecbaa5ab213a63021a2c097a74a338587332178c8bc467ec604f64a3e923e99
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered

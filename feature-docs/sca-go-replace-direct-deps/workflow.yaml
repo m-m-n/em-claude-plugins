@@ -1,0 +1,194 @@
+schema_version: 1
+feature: sca-go-replace-direct-deps
+created: '2026-10-12'
+base_branch: main
+goal: |
+  # SCA 軸: go.mod の replace で置き換えた直接依存の脆弱性が消える
+
+  (Notion タスク: <notion-url>  種別: バグ)
+
+  ## 現象 (必須)
+  go.mod に replace があると、govulncheck は trace に置き換え後のモジュールパスを出す（レビュー評価者はオフラインでの再確認をしていない）。直接依存の集合には require の置き換え前パスしか入らないため、`require example.org/text v0.3.6` + `replace example.org/text => golang.org/x/text v0.3.6` のとき `golang.org/x/text` の脆弱性が findings にも `go_severity_undetermined` の件数にも入らない。
+
+  ## 再現手順 (必須)
+  1. go.mod に `require example.org/text v0.3.6` と `replace example.org/text => golang.org/x/text v0.3.6` を書く
+  2. その go.mod と `golang.org/x/text` の finding を含む govulncheck ストリームを `scan-dependencies.py` の Go 正規化に流す
+  3. finding が消える
+
+  ## 期待する挙動 (必須)
+  replace を単独行とブロックの両方で読み、置き換え元が非 indirect の require と一致したら置き換え後のパスも直接依存に加える（ローカルパスへの置き換えは除く）。現行 SPEC の FR3 は replace を「何も寄与しない」と定めているため、FR3 を補う形の仕様変更になる。
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（replace の単独行とブロックの両方）
+
+  ## 該当箇所 (任意)
+  `em-workflow/scripts/scan-dependencies.py:2204`
+
+  ## 実害・発生条件 (任意)
+  go.mod で直接依存を別モジュールに replace しているときだけ、その脆弱性を取りこぼす。
+
+  ---
+  出典: em-workflow feature `sca-go-govulncheck-real-output` のレビュー round 1 の finding `d7fcc3a063e13401`（severity: medium, category: comprehensive, confidence: 55）。auto-fix の対象外（critical / high のみ）のため未対応で残った。
+  関連 PR: https://github.com/m-m-n/em-claude-plugins/pull/82
+
+  ## 追加指示（起動引数）
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作る。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
+  - 不明点は Codex に相談し、比較的良いと判断した案を採用する。
+  - その議論内容を Notion に記録する。
+parent_branch: em-workflow/sca-go-replace-direct-deps/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.84
+      '2': 0.16
+      '3': 0.0
+  at: '2026-10-12T11:28:03+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin-invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 0e0fe85d90ca67c468aae557b391d4dbf8a91f6a
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たないスクリプトの go.mod 解析とテストの変更
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Replace directives are parsed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS7
+  FR2:
+    title: Replacement of a non-indirect require is direct
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS5
+    - TS7
+  FR3:
+    title: Only module replacements contribute
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+    - TS5
+  FR4:
+    title: Original require path stays direct
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS6
+  FR5:
+    title: Non-matching replaces contribute nothing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+    - TS5
+  FR6:
+    title: Supplements prior FR3
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Testing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Compatibility
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+  NFR3:
+    title: Output Safety and Security
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
