@@ -68,7 +68,21 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: フック文書の判定優先順位の記述を公式仕様に合わせる
+    plan: TASK.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/README.md
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements: []
+    status: pending
+    notes: null
+    branch: em-workflow/hook-decision-precedence-docs/task0001
 
 review:
   status: pending
