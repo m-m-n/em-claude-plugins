@@ -5,12 +5,75 @@ status: in_progress
 generation: 1
 base_revision: eb55515d28f1615e21ac3fe5f0647cde89e637ea
 last_input_digest: sha256:6510e5a8fbf4ff920ddf4ea41bccaa244cf9b0ec4d0bcc847b2215e33cfffca5
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-12T14:55:00+09:00'
+    questions:
+    - question_id: requirement.wording-policy
+      status: answered
+    - question_id: requirement.adjacent-order-claims
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.wording-policy:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T14:58:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - declared-order-with-precedence
+    freeform: null
+    normalized_answer: 上書き・判定の打ち切りを理由とする記述を消し、登録順は hooks.json で宣言した順序をテストで固定しているという事実として書く。test_guardrail_hooks_migration.py
+      のモジュール docstring に判定の優先順位 deny > defer > ask > allow と、後の hook の allow が先の hook の deny / ask を上書きしないことを
+      1 回だけ書く。各アサーションメッセージは宣言順での位置の要件だけを書く。
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn); Codex: 検査対象は配列内の位置（test_guardrail_hooks_migration.py:328）なので宣言順の固定として説明し、優先順位をモジュール説明に一度だけ書けば
+      README.md:139 と整合する / options not chosen: delete-rationale-only, minimal-phrase-swap; wording guidance
+      per location: tests/test_guardrail_hooks_migration.py:10-17 -> pin the PreToolUse(Bash) order declared
+      in hooks.json; state once that precedence is deny > defer > ask > allow and a later hook''s allow
+      does not override an earlier hook''s deny/ask; 35-66 -> keep each hook''s position description,
+      replace the decision-terminating rationale with ''this position is pinned in the declared order
+      by EXPECTED_BASH_GUARD_ORDER''; 93-110 -> ''the required declared order of the PreToolUse(Bash)
+      guards''; 298-299 -> ''destructive-guard.py is last among decision-capable Bash guards in the declared
+      order''; 310-315 and tests/test_muse_guard_registration.py:121-125 -> heredoc-stdin-guard.py returns
+      no permission decision so it is excluded from this check; messages 322-323/331-332/356 -> ''<guard>
+      must precede destructive-guard.py in the declared order'' / ''destructive-guard.py must stay last
+      among the decision-capable Bash guards in the declared order; order is {names}''; tests/test_muse_guard_registration.py:99-102,117
+      -> ''muse_guard.py must precede destructive-guard.py in the declared order''; tests/test_hooks_registration.py:67-70
+      -> invariant is that destructive-guard.py is last among decision-capable Bash guards in the declared
+      order'
+  requirement.adjacent-order-claims:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T14:58:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - align-with-readme
+    freeform: null
+    normalized_answer: test_guardrail_hooks_migration.py 10-11 行の "array order IS the execution order"
+      を「hooks.json で宣言した順序」の表現にし、111-114 行の heredoc-stdin-guard.py を最後に置く理由を README.md 139 行と同じ趣旨（判定を返さず
+      updatedInput の書き換えのみなので宣言順の最後に置く）に寄せる。実行順や、他の hook が書き換え後のコマンドを見ないことを末尾配置から保証する記述はしない。
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn); Codex: 10 行は宣言順を実行順と断定し 111 行は末尾配置から入力の見え方を保証しているが、公式 hooks ドキュメントは一致する hook はすべて並列実行されると明記している。orchestrator
+      が https://code.claude.com/docs/en/hooks.md 412 行 "All matching hooks run in parallel." を直接確認した /
+      options not chosen: leave-unchanged (worker tentative)'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-12T14:58:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: デザイン工程は飛ばす
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously -> analyst recommendation
+      skip'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:6510e5a8fbf4ff920ddf4ea41bccaa244cf9b0ec4d0bcc847b2215e33cfffca5
   output_digest: null
 artifacts: []
