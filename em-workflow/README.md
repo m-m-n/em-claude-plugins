@@ -136,7 +136,7 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 | `hooks/cross-repo-write-guard.py` | PreToolUse(Bash) / PreToolUse(Write\|Edit\|MultiEdit) | ファイルの書き込み先がカレントディレクトリの git toplevel の外にあれば確認（`ask`）に回す（無人実行では `deny` に降格）。Write / Edit / MultiEdit は `file_path`、Bash は静的に解決できるリダイレクト・`tee`・`sed -i`・`cp` / `mv` の書き込み先を見る。`/tmp` 配下・`~/.claude/` 配下・`/dev/null` など列挙した `/dev` 配下の書き込み先と、静的に解決できない書き込み先は判定しない |
 | `hooks/gitleaks-write-guard.sh` | PreToolUse(Write\|Edit\|MultiEdit) | 書き込む内容を gitleaks でスキャンし、シークレットを含むなら書き込みをブロックする |
 
-PreToolUse(Bash) の 10 本は `hooks.json` の配列順（gitleaks-precommit.sh → kill-guard.py → bash_guard.py → failed-run-cleanup-guard.py → muse_guard.py → interpreter-mismatch-guard.py → loop-command-guard.py → cross-repo-write-guard.py → destructive-guard.py → heredoc-stdin-guard.py）で実行される。`destructive-guard.py` は広域 `allow` を返すため、判定を返しうるガードはすべてその前に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。`heredoc-stdin-guard.py` は判定を返さず `updatedInput` の書き換えのみなので最後に置く。
+PreToolUse(Bash) の 10 本は `hooks.json` に次の順で登録している（gitleaks-precommit.sh → kill-guard.py → bash_guard.py → failed-run-cleanup-guard.py → muse_guard.py → interpreter-mismatch-guard.py → loop-command-guard.py → cross-repo-write-guard.py → destructive-guard.py → heredoc-stdin-guard.py）。複数の hook が判定を返したときの優先順位は deny > defer > ask > allow。`heredoc-stdin-guard.py` は判定を返さず `updatedInput` の書き換えのみなので最後に置く。
 
 gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/share/mise/shims/gitleaks` の順で解決し、どちらにも無ければスキャンせず通す（fail-open）。gitleaks 未インストール環境で全コミット・全書き込みがブロックされるのを避けるため。develop の Step 0（git-setup ゲート）が gitleaks 不在で workflow ごと中断するのとは判断が異なる — この hook は develop の外でも動くため。
 
@@ -146,7 +146,7 @@ gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/sha
 
 - **代償**: ブロックリストが唯一の防波堤になる。リストが知らない破壊的パターンは素通りする。
 - **実例**: `gcloud projects add-iam-policy-binding` は classifier が止めたが、当時のリストは知らなかった。hook 内のクラウド / IaC セクションはこの隙間を狭めるために書かれたもので、塞ぎ切ってはいない。
-- **hook の判定は `permissions.deny` より優先される**。後から deny ルールを足しても、この hook が allow したコマンドには効かない。
+- **この hook が allow を返しても、settings.json の deny / ask ルールは引き続き評価される**。一致する deny ルールは実行を拒否し、一致する ask ルールは確認を求める。
 
 **なぜこの設計なのか**: 無人実行（`--batch`）で classifier の誤検知が run を止めるため。classifier は毎回新規に判定する LLM で、実測の誤検知率は 0.2〜0.8% ある。同一リポジトリで `commit-docs.sh` が 251 回 allow・2 回 deny され、その deny のペアが claude-batch を 11 時間凍らせた実例がある。
 
