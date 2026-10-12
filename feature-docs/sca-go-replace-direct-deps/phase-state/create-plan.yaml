@@ -1,0 +1,21 @@
+schema_version: 1
+feature: sca-go-replace-direct-deps
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 54731cd79d7f51dfa8abfc1c8b94332ce47cddb9
+last_input_digest: sha256:65eb6a19345b3953c5469a5e9ef13a114c756a96334f91d4b9e77e49ad9e339f
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:65eb6a19345b3953c5469a5e9ef13a114c756a96334f91d4b9e77e49ad9e339f
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
