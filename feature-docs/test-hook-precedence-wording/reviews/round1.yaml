@@ -1,0 +1,60 @@
+round: 1
+executed_at: "2026-10-12T15:38:11+09:00"
+scope:
+  review_mode: diff
+  base_commit: 2680dc3b6d42bf6f13343e0e8d9b6ea7efe54784
+  head_commit: d1246fc9a66834c6272a182d01786d7993caea7b
+  changed_files:
+    - test-docs/test-hook-precedence-wording/task0001.tests.yaml
+    - tests/test_guardrail_hooks_migration.py
+    - tests/test_hooks_registration.py
+    - tests/test_muse_guard_registration.py
+plan:
+  floor: [comprehensive, security]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 65c2df04d23aef61
+    severity: medium
+    category: comprehensive
+    file: tests/test_guardrail_hooks_migration.py
+    line: 93
+    title: "EXPECTED_BASH_GUARD_ORDER の上のコメントが、固定した宣言順と食い違っている"
+    description: "93〜95 行は muse_guard.py を destructive-guard.py の『immediately ahead』に宣言されると書いているが、間に interpreter-mismatch-guard.py、loop-command-guard.py、cross-repo-write-guard.py が入っている。97〜98 行は loop-command-guard.py を destructive-guard.py の『directly before』と書いているが、間に cross-repo-write-guard.py がある。記述はベースから引き継いだものだが、今回の差分が宣言順の事実として書き直している。アサーションは正しい順序を固定している。"
+    suggestion: "muse_guard.py は destructive-guard.py より前に宣言されると書き（『immediately』は外す）、loop-command-guard.py は interpreter-mismatch-guard.py の直後、cross-repo-write-guard.py の直前に宣言されると書く。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 90
+    resolution: unresolved
+    resolution_reason: "medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); carried to a follow-up task"
+evaluation:
+  round_summary: "1 回目、diff モード。変更はテストのコメント・docstring・アサーションのメッセージとテスト記録の yaml だけで、アサーションの式・期待値・テスト名は不変。新しい優先順位の記述（並列実行、deny > defer > ask > allow、後から宣言した allow は先の deny / ask を上書きしない）はタスクの目的と合っている。comprehensive: findings（medium 1 件を hooks.json と EXPECTED_BASH_GUARD_ORDER で裏付け、評価役が low 1 件を追加）。security: corroborated（指摘ゼロを裏付け）。注入の試みなし。critical / high なし。"
+  recommended_action: auto_fix
+  action_rationale: "残りはコメントの事実の食い違い 2 件（medium 1、low 1）だけで、critical / high はない。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-test-hook-precedence-wording-20261012T063755Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
