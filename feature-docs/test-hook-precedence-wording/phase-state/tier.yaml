@@ -1,0 +1,111 @@
+schema_version: 2
+feature: test-hook-precedence-wording
+tier: minimal
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.02
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.99
+      '1': 0.01
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-12T14:45:52+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 0.03
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.98
+      '1': 0.02
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-12T14:49:10+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_guardrail_hooks_migration.py
+  - tests/test_muse_guard_registration.py
+  - tests/test_hooks_registration.py
+  changed_lines_approx: 55
+  new_functions_needed: false
+  new_files_needed: false
+  new_dependencies_needed: false
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 'tests/test_guardrail_hooks_migration.py:13 "blocklist
+    does not match, which ends the permission decision for that"
+
+    tests/test_guardrail_hooks_migration.py:39 "it cannot reopen the \"blanket allow
+    ends the decision\" gate"
+
+    tests/test_guardrail_hooks_migration.py:49 "`destructive-guard.py`''s blanket
+    allow ends the decision;"
+
+    tests/test_guardrail_hooks_migration.py:98 "blanket allow must not be able to
+    terminate the decision before the"
+
+    tests/test_guardrail_hooks_migration.py:105 "denies, so it must run before the
+    blanket allow"
+
+    tests/test_guardrail_hooks_migration.py:109 "it asks / denies, so it must run
+    before the blanket allow"
+
+    tests/test_guardrail_hooks_migration.py:322 "destructive-guard.py returns a blanket
+    allow and must run after "
+
+    tests/test_guardrail_hooks_migration.py:332 "blanket allow ends the decision"
+
+    tests/test_guardrail_hooks_migration.py:356 "an ask / deny must be raised before
+    the blanket allow ends the decision"
+
+    tests/test_muse_guard_registration.py:102 "ending the decision first)."
+
+    tests/test_muse_guard_registration.py:117 "muse_guard.py must run before destructive-guard.py''s
+    blanket allow;"
+
+    tests/test_muse_guard_registration.py:125 "the \"blanket allow ends the decision\"
+    gate this test protects."
+
+    tests/test_hooks_registration.py:68 "`destructive-guard.py`''s blanket allow must
+    run last among the"
+
+    上記の変更対象はコメント・docstring・アサーションメッセージのみで、テストケース・チェック・期待値・関数名は変更対象に含まない。
+
+    tests/test_guard_deferral_parity.py:129 "must stay silent, and destructive-guard''s
+    blanket allow must survive." このテストは各ガードを個別に実行して出力を比較している（365・366行）。判定の上書きを検査していない。
+
+    em-workflow/hooks/destructive-guard.py:8883 "their blanket allow and fall through
+    to the auto mode classifier every"
+
+    em-workflow/hooks/destructive-guard.py:8992 "mention inside quotes or a here-doc
+    body must keep its blanket allow," この2箇所は同じガード内の allow 出力条件を説明している（9131・9132行）。
+
+    検索で追加確認した残存箇所も、変更予定の3ファイル内にある。既存テストの存在を確認したが、実行はしていない。ファイルの変更・作成・削除は行っていない。'
+  test_change_kind: none
+  added_test_cases_approx: 0
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: false
+  changes_behavior: false
+decided_at: '2026-10-12T14:49:40+09:00'
