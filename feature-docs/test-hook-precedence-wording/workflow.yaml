@@ -90,7 +90,7 @@ tasks:
     - config-infra
     complexity: low
     requirements: []
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/test-hook-precedence-wording/task0001
 
