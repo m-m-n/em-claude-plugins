@@ -1,0 +1,50 @@
+feature: test-hook-precedence-wording
+collected_at: "2026-10-12T15:58:00+09:00"
+session_ids: [01a12edc-7714-753b-bfc7-f4d6d5d541b1]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: minimal
+    rationale: "description_plus_code の読みでバケット 0（文言・ルール文の変更のみ）が 0.98 となり minimal に決定した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 0.02
+          confidence: 0.99
+          probabilities: {"0": 0.99, "1": 0.01, "2": 0.0, "3": 0.0}
+        observed_at: "2026-10-12T14:45:52+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 0.03
+          confidence: 0.98
+          probabilities: {"0": 0.98, "1": 0.02, "2": 0.0, "3": 0.0}
+        observed_at: "2026-10-12T14:49:10+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - tests/test_guardrail_hooks_migration.py
+        - tests/test_muse_guard_registration.py
+        - tests/test_hooks_registration.py
+      changed_lines_approx: 55
+      new_functions_needed: false
+      new_files_needed: false
+      new_dependencies_needed: false
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: none
+      added_test_cases_approx: 0
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 0
+      changes_external_contract: false
+      changes_behavior: false
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium finding 65c2df04d23aef61（EXPECTED_BASH_GUARD_ORDER 上のコメントの『immediately ahead』『directly before』が実際の宣言順と食い違う）は unresolved のまま。triage_filing は report 分岐で起票 0 件だった"
