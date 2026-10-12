@@ -75,7 +75,22 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: テストのコメント・docstring・メッセージに残る判定優先順位の記述を公式仕様に合わせる
+    plan: TASK.md
+    files:
+    - tests/test_guardrail_hooks_migration.py
+    - tests/test_muse_guard_registration.py
+    - tests/test_hooks_registration.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements: []
+    status: pending
+    notes: null
+    branch: em-workflow/test-hook-precedence-wording/task0001
 
 review:
   status: pending
