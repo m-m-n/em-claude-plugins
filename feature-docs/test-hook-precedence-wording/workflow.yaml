@@ -72,7 +72,8 @@ workflow:
     completed_at_commit: 9ada26b2887b20a991d1cfed602bcacae1002fd2
     base_commit: 2680dc3b6d42bf6f13343e0e8d9b6ea7efe54784
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: d1246fc9a66834c6272a182d01786d7993caea7b
   - id: verify
     status: pending
   - id: retrospect
@@ -96,7 +97,11 @@ tasks:
     branch: em-workflow/test-hook-precedence-wording/task0001
 
 review:
-  status: in_progress
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor: [comprehensive, security]
     discretionary: []
