@@ -65,7 +65,8 @@ workflow:
     skipped_reason: "minimal tier subtracts the design step; also the change is test comment/docstring/assertion-message wording only with no UI and zero design-system candidates (gate create-spec.design-step = skip)"
   - id: create-plan
     artifacts: [TASK.md]
-    status: pending
+    status: completed
+    completed_at_commit: 80e2089254193409eb28af92189659003dbab1a9
   - id: implement
     status: pending
   - id: review
