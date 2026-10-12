@@ -1,0 +1,111 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 10375 tests OK (skipped=1); check-plugin-invariants.py: all 7 checks PASS, exit 0
+final_failures: []             # re-executed after implementation (10435 tests OK) and again after writing this record (10436 tests OK, skipped=1; baseline was 10375, this module adds 60); check-plugin-invariants.py exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestSingleLineReplace
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: test_ac1_the_replacement_module_is_direct_finding_and_count
+      ("AssertionError: 0 != 1" - the run completed with findings [] and no
+      go_severity_undetermined note for an advisory on golang.org/x/text replaced in from
+      example.org/text), and likewise test_ac1_a_high_vector_gives_a_high_finding_on_the_replacement,
+      test_ac1_a_replace_before_the_require_is_applied_the_same_way,
+      test_ac1_a_versioned_source_equal_to_the_require_version_adds_the_replacement,
+      test_ac1_the_replacement_version_does_not_have_to_equal_the_require_version,
+      test_ac1_the_replace_beside_other_directives_and_a_block_require and
+      test_ac1_a_go_sum_target_takes_the_replace_from_the_sibling_go_mod. The FR4 / negative
+      tests of the class (original require path stays direct, no replace -> not direct,
+      vector below high) were green before the change and are regression guards.
+  AC-2:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestBlockReplace
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: test_ac2_a_block_holding_only_the_replace
+      ("AssertionError: 0 != 1", findings [], no note) and likewise
+      test_ac2_a_block_with_other_entries_and_comment_lines, test_ac2_a_block_with_a_versioned_source,
+      test_ac2_the_block_before_the_require, test_ac2_the_require_in_a_block_and_the_replace_in_a_block
+      and test_ac2_the_parenthesis_glued_to_the_keyword. The guards of the class (entry after a
+      closed block, entries of an exclude block, original require path stays direct) were green
+      before the change.
+  AC-3:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestDirectoryPathReplacements
+    red_confirmed: false
+    red_reason: >-
+      The criterion's claim (a directory-path replacement adds nothing; no file is read from a
+      replace path, TM-2) describes behavior that pre-existed: before this change replace
+      contributed nothing at all, so test_ac3_each_directory_path_form_adds_nothing and both
+      TM-2 tests passed before any implementation (regression guards against over-adding;
+      they were shown to fail against deliberately wrong variants of the new code that ignore
+      the directory-path rule). Only the complementary half of
+      test_ac3_the_parser_rule_for_directory_paths was red before the change: the 7 module-path
+      subtests (golang.org/x/text, .hidden.example/x, ..., x.org/./y, example.org:8080/x, 1:x,
+      and the non-ASCII drive-like prefix) failed because the replacement module was not added.
+  AC-4:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestSelectionRules
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: test_ac4_a_versioned_replace_equal_to_the_require_version_adds_its_replacement
+      ("AssertionError: 0 != 1", findings []), test_ac4_the_versioned_replace_wins_and_only_its_replacement_is_added
+      (4 subtests, the winning versioned replacement was not added),
+      test_ac4_an_unversioned_replace_applies_when_the_versioned_one_does_not_match and
+      test_ac4_a_comment_that_only_mentions_indirect_leaves_the_require_direct. The "adds nothing"
+      cases (indirect source, absent source, version mismatch, local winner without fallback,
+      chained) were green before the change because replace contributed nothing; they are
+      regression guards, shown to fail against deliberately wrong variants of the new code.
+  AC-5:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestParserDirectSet
+      - tests.test_sca_go_replace_direct_deps.TestMalformedReplaceKeepsTheGoModReadable
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script:
+      test_ac5_the_direct_set_holds_the_original_path_and_the_replacement_path ("Items in the second
+      set but not the first: 'golang.org/x/text'"), and likewise the replace-before-require,
+      quoted-paths, quoted-versions, trailing-comment, CRLF, chained (only the first replacement)
+      and per-require-entry tests, plus the TM-1 test that valid neighbours of a malformed line
+      still apply ("Items in the second set but not the first: 'golang.org/x/before'"). The
+      malformed-line cases themselves (glued arrow, missing right side, extra tokens, ...) pass
+      before the change because nothing was parsed; they are regression guards, shown to fail
+      against variants of the new code that accept repeated arrows, stray parentheses/quotes or
+      empty values.
+  AC-6:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestOutputSafety
+    red_confirmed: false
+    red_reason: >-
+      The criterion covers the malformed and non-contributing cases only, and for those no
+      replace text could reach the output before this change either: test_ac6_the_result_is_completed_clean_with_known_tokens_and_no_marker
+      and test_ac6_a_counted_advisory_keeps_the_note_counts_only passed before any
+      implementation (regression guards; they fail against variants of the new code that add a
+      path from a non-contributing replace). Only the companion
+      test_ac6_a_contributing_replace_adds_no_note_token_and_no_path_text (a contributing replace)
+      was red before the change ("Scanned go; 0 finding(s)..." lacked the expected
+      go_severity_undetermined note).
+  AC-7:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestDocumentationSites
+    red_confirmed: true
+    red_reason: >-
+      Watched fail against the unmodified script: test_ac7_every_site_describes_the_replace_contribution
+      (3 subtests, "Regex didn't match: '(?i)\\breplace\\b' not found" for the section comment and both
+      docstrings) and test_ac7_the_old_require_only_wording_is_gone (the old text "Only the
+      single-line `require m v` and the `require ( ... )` block forms contribute" was still in the
+      docstring). The second part of the criterion - no file under
+      feature-docs/sca-go-govulncheck-real-output/ is changed - has no executable check in the
+      suite; it was verified by an empty git diff for that path.
+  AC-8:
+    tests:
+      - tests.test_sca_go_replace_direct_deps.TestModuleHygiene
+    red_confirmed: false
+    red_reason: >-
+      The new module is a new file, so its hygiene tests (stdlib-only imports, no collection of the
+      existing module's cases, the existing stub harness reused) were green from the moment the
+      module existed; no red state occurred. The other halves of the criterion are suite-level
+      checks that were green at baseline and stay green: python3 -m unittest discover -s tests
+      (10435 tests OK) and python3 em-workflow/scripts/check-plugin-invariants.py . (exit 0), with
+      no existing module under tests/ changed (empty git diff for tests/ apart from the new file).
