@@ -1,0 +1,31 @@
+schema_version: 1
+feature: sca-go-replace-direct-deps
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: c8a593b467b887ce9be636dba79938a7a57517d3
+last_input_digest: sha256:84119dbbdf815bd536f59ebc52b1262e2c88926f8c528e284aaeec1073b1d7e9
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    answered_at: "2026-10-12T11:28:52+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [derive_from_task_description]
+    freeform: null
+    normalized_answer: "feature name derived from the task description: sca-go-replace-direct-deps"
+    resolution_note: "batch-policies.yaml create-spec.feature-identity -> derive_from_task_description"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:84119dbbdf815bd536f59ebc52b1262e2c88926f8c528e284aaeec1073b1d7e9
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
