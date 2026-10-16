@@ -1,0 +1,216 @@
+schema_version: 1
+feature: codex-guard-anon-stdin-args
+created: '2026-10-17'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 括弧なし匿名関数の頭の入力リダイレクトや引数中の ( で本体が未接続になり、非対話の python3 を誤って deny する（回帰）
+
+  Notion タスク: <notion-url> （種別: バグ）
+
+  ## 現象 (必須)
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、標準入力を /dev/null などへ向けた zsh 匿名関数の非対話実行を誤って deny する。feature `codex-guard-anon-brace-forms` で匿名関数の本体を群として開くようになったことで入った誤爆（変更前は silent）。
+  - 匿名関数の頭より前の入力リダイレクト: `_open_group` が `_flush()` で `self.stdin` を捨て、本体の群にはパイプの状態だけを渡すため、本体の `python3` が入力未接続として扱われる
+  - 匿名関数の引数中の `(`: 引数を読んでいる途中の `(` で `_open_group("(")` が `_flush()` を呼び、`after_group` が None になる。後ろの `<` は引数から作られた群に付き、本体は未接続のまま残る
+
+  ## 再現手順 (必須)
+  1. `zsh -c 'function < /dev/null { python3; }'` をフックに渡すと deny（実際の zsh では出力なし・終了コード 0）
+  2. `zsh -c '< /dev/null function { python3; }'` も同様
+  3. `zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(x) < /dev/null'` も deny（実際の zsh では正常終了）
+
+  ## 期待する挙動 (必須)
+  匿名関数の本体を開くとき、頭の単純コマンドで読んだ標準入力リダイレクトを本体の群に引き継ぐ。引数を読んでいる間は `(` を含む語も引数として読み、`after_group` が本体を指したままにする。上の 3 コマンドはいずれも silent になる。
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上の 3 コマンドを silent として追加
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:585`（引数中の `(`）、`:592`（本体へ渡す状態）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-anon-brace-forms/reviews/round1.yaml` の `r3b_dropped`（ブランチ `em-workflow/codex-guard-anon-brace-forms/integration`）
+
+  ## 実害・発生条件 (任意)
+  誤爆側（fail-closed）。書かれる見込みの小さい形で、deny の理由を読めば書き換えで回避できる。無人実行では誤爆がその場で走行を止める。
+
+  ## 追加指示（起動引数）
+  - 実装完了後、integration ブランチを remote へ push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモートとも残す（自動マージしない）。
+  - 不明点は Codex に相談し、比較的よいと判断した選択肢を採用する。
+  - その議論内容を Notion に記録する。
+parent_branch: em-workflow/codex-guard-anon-stdin-args/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.88
+      '2': 0.12
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.53
+      '2': 0.47
+      '3': 0.0
+  at: '2026-10-17T00:02:40+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: c3d9567e62a7f9eead738e6404abb535942300a9
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'CLI hook command-string parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Inherit the anonymous function head's stdin redirect into the body
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS4
+    - TS5
+    - TS6
+  FR2:
+    title: Scope of the inheritance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+    - TS8
+    - TS9
+    - TS14
+    - TS15
+  FR3:
+    title: Read ( inside anonymous-function arguments as part of an argument word
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+    - TS10
+    - TS11
+    - TS12
+    - TS13
+    - TS14
+    - TS15
+    - TS16
+    - TS17
+    - TS18
+    - TS19
+  FR4:
+    title: Align docstrings with the behavior
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS21
+  FR5:
+    title: Keep both copies identical
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Add regression tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+  NFR1:
+    title: Existing CASES keep their verdicts; no existing deny case removed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Parsing stays linear in input length
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS20
+  NFR3:
+    title: Stdlib only, no recursion, no file/network/subprocess access
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Keep existing TestGuardDocumentation docstring wording
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Plugin version is not changed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
