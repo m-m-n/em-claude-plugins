@@ -1,0 +1,116 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py (943/943 passed) and python3 -m unittest discover -s tests (10438 tests, OK, 1 skipped), both run in the task worktree before any edit
+final_failures: []             # the same command re-run after the last edit and after this record was written
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      The new CASES entries TS1, TS2, TS4, TS5, TS6 and the newline case
+      (stdin redirect before the head, a newline between the empty parens and
+      the brace, python3 in the body) were run against a copy of the base
+      revision's script (git show of 11f27966) installed as both plugin copies:
+      each of the six failed in test_cases_run_against_both_copies, for both
+      copies, with AssertionError - the hook printed a deny object where
+      silent was expected (python3 in the body read as launched with no
+      program and no connected stdin). Against the changed scripts all six
+      pass.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      TS7, TS8 and TS9 are deny cases that guard against over-correction; the
+      base revision already denies all three, so they passed before any
+      implementation and no red state occurred for them. Base-vs-changed
+      comparison for the SPEC Out-of-Scope forms (same input to the script at
+      base commit 11f27966 and to the changed script, verdicts base / changed):
+      zsh -c '() < f { python3; }' deny / deny; zsh -c '< f { python3; }'
+      deny / deny; zsh -c '< f ( python3 )' deny / deny. A differential run of
+      the two scripts over about 554,000 generated head, form, body, argument
+      and tail combinations plus 600,000 random structured commands found no
+      verdict change outside the forms with a head stdin redirect or a
+      parenthesis range among the arguments, and no deny-to-silent change for
+      a plain brace group, a subshell or a function definition.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Against the base revision's script installed as both copies, the silent
+      cases TS3, TS10, TS11, TS12 and TS13 (stdin redirect after an argument
+      word holding a parenthesis range, all with the setopt nonomatch
+      nobareglobqual prefix) each failed in test_cases_run_against_both_copies
+      with AssertionError - a deny object where silent was expected. TS14 and
+      TS15 are deny cases that already passed on the base revision (guards
+      against over-correction). All pass against the changed scripts.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      TS16, TS17, TS18 (deny) and TS19 (silent) describe the pre-change
+      reading that must be kept, so they passed against the base revision and
+      no red state occurred. Two more CASES entries (unclosed paren among the
+      arguments, silent; stray close paren among the arguments, deny) and one
+      for a stray close paren that closes an enclosing subshell (silent) also
+      passed on the base. Base-vs-changed comparison (verdicts base / changed):
+      zsh -c 'function { python3 -i; } foo(' silent / silent;
+      zsh -c 'function { python3; } foo(' silent / silent;
+      zsh -c 'function { :; } foo) python3' deny / deny;
+      zsh -c 'function { python3; } foo) < f' deny / deny;
+      zsh -c '( function { python3; } foo) < f' silent / silent;
+      and, where the scan cannot place the close paren because a comment hides
+      an open paren from the group reading (the scan does not read comments),
+      the fallback to the pre-change reading keeps the base verdict: the
+      string "function { :; } foo(# (" followed by a newline and
+      "); python3 -i", given to zsh -c, is deny / deny.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_nested_parens_among_anonymous_function_arguments_are_answered
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      The base revision has no range scan, so the new TS20 test (and its
+      siblings: ranges without a separator, unclosed ranges, a launch after
+      closed ranges, and the TS20 shape three times as deep) passes against it;
+      it is a regression guard for a quadratic implementation, not a red
+      against missing behavior. Its sensitivity was observed instead: against a
+      variant of the changed script with the work cap removed (every scan runs
+      to the matching close paren), the TS20 shape three times as deep
+      (18000 repetitions) did not finish within the 60-second limit, while the
+      changed script answers it in well under a second (TS20 itself, 6000
+      repetitions, takes 0.2 s).
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_head_redirect_and_the_parens_among_the_arguments
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_paren_search_is_not_described_as_fully_quote_aware
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_description_names_the_anonymous_body_and_its_pipe_source
+    red_confirmed: true
+    red_reason: >-
+      The two new documentation tests were run against the base revision's
+      script installed as both copies: test_the_docstring_describes_the_head_redirect_and_the_parens_among_the_arguments
+      failed for each of its six markers in both copies, and
+      test_the_paren_search_is_not_described_as_fully_quote_aware failed in both
+      copies (the base docstring lacks the sentence that a backquote and a
+      comment get no special reading). The existing TestGuardDocumentation
+      tests pass unchanged against the changed scripts, so every pinned marker
+      is kept verbatim.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+    red_confirmed: false
+    red_reason: >-
+      The existing TestCopies detects a difference between the two copies and
+      TestCasesTable detects duplicate commands; neither was red at any point
+      of this task (both copies were written together), so no red state
+      occurred for this change. That no pre-existing CASES entry is removed or
+      changed is read from git diff on tests/test_codex_hook_interactive_guard.py
+      (only additions inside CASES). The diff touches neither plugin.json nor
+      the root marketplace.json; no executable check covers that part, and it is
+      read from git diff --stat against base commit 11f27966.

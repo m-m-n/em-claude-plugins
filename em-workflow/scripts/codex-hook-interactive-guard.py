@@ -68,16 +68,41 @@ Decision flow:
      word in front of the `()` keeps the function-name judgment above).
      Newlines may come between the empty `()` and the `{`. Every word after
      the closing `}` of an anonymous body, up to the next `;` `&&` `||` `|`
-     `|&` `&` or newline, or the close of an enclosing subshell, is an argument
-     of the anonymous function: it is no command and does not make the string
-     undecidable. A stdin redirect among or after the arguments connects the
-     body, exactly as when it is written right after the `}`; other redirects
-     do not. When the head of an anonymous function is the right side of `|` or
-     `|&`, the pipe connection passes to the body and, through the body, to the
-     groups nested in it, and no further: the commands after the arguments are
-     not connected, and an explicit `-i` is still denied. The words after the
-     `}` of any other brace group, and of a function definition's body, still
-     make the string undecidable.
+     `|&` `&` or newline that lies outside a `(`...`)` range (below), or the
+     close of an enclosing subshell, is an argument of the anonymous function:
+     it is no command and does not make the string undecidable. A stdin
+     redirect among or after the arguments connects the body, exactly as when
+     it is written right after the `}`; other redirects do not. A `(` among the
+     arguments, in the middle of a word (`foo(x)`) or at its start (`(x)`), is
+     read together with everything up to its matching `)` as part of one
+     argument word: whitespace and `|` inside the range belong to the word and
+     end no argument, and the body stays the group the arguments belong to, so
+     a stdin redirect after the range still connects it. The matching `)` is
+     found by skipping backslash pairs, single-quoted text and double-quoted
+     text only; a backquote and a comment get no special reading, so a `)` inside
+     one closes the range. When the range from the `(` to that `)` holds an
+     unquoted `;`, `&` or newline, the `(` opens a group, exactly as before the
+     range was read as a word; so it does when no matching `)` is found, and a
+     group that is never closed -> no output. A `)` with no `(` among the
+     arguments is a separator, as anywhere else (it closes an enclosing subshell
+     when there is one). The work spent finding these ranges is capped at a
+     constant multiple of the length of the string; once the cap is spent, every
+     later `(` opens a group, as before.
+     A stdin redirect read in the head of an anonymous function also connects
+     its body (and so the groups nested in it). The head is the simple command
+     up to the body, and the redirect sits before `function`, between `function`
+     and the `{` (the parenless form), or before the `(` of the `()`, a newline
+     between `()` and `{` included. That connection reaches the body alone: not
+     the `(` group of the `()`, not a command after the separator that ends the
+     arguments, and not a group that is no anonymous body. A redirect between the
+     `()` and the `{` is not read as part of the head, and a redirect other than
+     stdin connects nothing.
+     When the head of an anonymous function is the right side of `|` or `|&`,
+     the pipe connection passes to the body and, through the body, to the groups
+     nested in it, and no further: the commands after the arguments are not
+     connected, and an explicit `-i` is still denied. The words after the `}` of
+     any other brace group, and of a function definition's body, still make the
+     string undecidable.
   5. After `|` or `|&` the right side is awaited: a pending pipe survives
      newlines, blank lines, comment-only lines and heredoc bodies, and the
      next non-empty command is the right side. A newline after `&&` or `||`
@@ -169,6 +194,13 @@ INFO_LONG = ("--version", "--help")
 # length of its value as handed to the parser, after the holding level's quote
 # removal. First-level strings are never counted.
 NESTED_READ_LIMIT = 1000000
+
+# The work, per character of the string being parsed, the parser may spend
+# locating the `(`...`)` ranges among the arguments of anonymous functions and
+# checking them for separators. The first range may span the whole string, so
+# the cap never falls below one scan; once it is spent every later `(` opens a
+# group, as before ranges were read.
+PAREN_SCAN_FACTOR = 4
 
 
 class _Undecidable(Exception):
@@ -313,19 +345,36 @@ class _Group:
                the `pipe` of the `(` group itself keeps its own reading. A body
                opened by the parenless `function {` takes the pipe state of
                the simple command that holds the `function`
+    anon_stdin on a `(` group with `anon`: a stdin redirect was read in the head
+               before the `(`, and the anonymous body takes it as its
+               `head_stdin`. The `(` group itself is not connected by it
+    head_stdin on an anonymous `{` body: a stdin redirect was read in the head
+               before the body, so the body is connected. The head is the
+               simple command up to the body: a redirect before `function`,
+               between `function` and the `{` of the parenless form, or before
+               the `(` of the `()` (it comes from the `(` group's `anon_stdin`,
+               however many newlines lie between the `()` and the `{`). A
+               redirect between the `()` and the `{` is not part of the head.
+               No other group has it; the groups nested in the body are
+               connected through the body, by the rule of `connected`
     size       (commands, groups) counted when the group opened, itself included
     connected  settled once the whole command is read: the group, or a group
-               that holds it, has its standard input connected
+               that holds it, has its standard input connected, by a pipe, by a
+               stdin redirect after its close, or (an anonymous body) by a stdin
+               redirect in its head
     skipped    settled likewise: the group, or a group that holds it, is a
                function body
     """
 
     __slots__ = (
-        "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "size",
-        "connected", "skipped",
+        "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "anon_stdin",
+        "head_stdin", "size", "connected", "skipped",
     )
 
-    def __init__(self, kind, parent, pipe, skip, head, size, anon=False, anon_pipe=False):
+    def __init__(
+        self, kind, parent, pipe, skip, head, size, anon=False, anon_pipe=False, anon_stdin=False,
+        head_stdin=False,
+    ):
         self.kind = kind
         self.parent = parent
         self.pipe = pipe
@@ -334,6 +383,8 @@ class _Group:
         self.head = head
         self.anon = anon
         self.anon_pipe = anon_pipe
+        self.anon_stdin = anon_stdin
+        self.head_stdin = head_stdin
         self.size = size
         self.connected = False
         self.skipped = False
@@ -348,6 +399,15 @@ class _Parser:
     stack, never by recursion, so any nesting depth is read in linear time.
     Raises _Undecidable on an unbalanced quote or group, an unclosed command
     substitution inside double quotes, or an unterminated heredoc.
+
+    Among the arguments of an anonymous function, a `(` is read with its range
+    up to the matching `)` as part of one argument word (`_read_argument_parens`),
+    unless the range holds an unquoted `;`, `&` or newline, or no matching `)` is
+    found: then the `(` opens a group, as it did before ranges were read. The
+    work spent on these ranges is capped at PAREN_SCAN_FACTOR times the length of
+    the string, so a string made of ranges that each hold a `;` and nest another
+    anonymous function is read in linear time. Once the cap is spent, every later
+    `(` opens a group.
     """
 
     def __init__(self, command):
@@ -358,6 +418,9 @@ class _Parser:
         self._start_words()
         self.stdin = False
         self.pipe_pending = False
+        # The characters the parser may still spend locating `(`...`)` ranges
+        # among the arguments of anonymous functions.
+        self.paren_budget = PAREN_SCAN_FACTOR * self.n
         # Set between a redirection operator and its target word:
         # (is_heredoc, strips_leading_tabs).
         self.redirect = None
@@ -368,7 +431,8 @@ class _Parser:
         self.frames = []
         self.groups = []
         # The group closed last, while only redirections have followed it (and,
-        # for an anonymous body, its arguments).
+        # for an anonymous body, its arguments, a `(`...`)` range among them
+        # included).
         self.after_group = None
         # A `name()` was just read: the next group is the body of a function.
         self.fn_head = False
@@ -573,24 +637,37 @@ class _Parser:
         # the body is on the right side of the pipe when its head is. A `(` is
         # an anonymous head after the one `function`, or where the simple
         # command holds no word (not as the body of a function definition, and
-        # not among the arguments of an anonymous body).
+        # not among the arguments of an anonymous body). The stdin redirects
+        # read in the head simple command are read here too, before the flush
+        # drops them: an anonymous `(` keeps them for its body, and a body
+        # opened by the parenless `function {` takes them at once. A body that
+        # follows the empty `()` takes what the `(` kept, never the redirects
+        # read after the `)`.
         anon = False
         anon_pipe = self.pipe_pending
+        anon_stdin = False
+        head_stdin = False
         if kind == "{":
             if self.anon_head is not None:
                 anon = True
                 anon_pipe = self.anon_head.anon_pipe
+                head_stdin = self.anon_head.anon_stdin
             elif self._names_anonymous_function():
                 anon = True
+                head_stdin = self.stdin
         elif not head and not self.fn_head and not self._in_arguments():
             anon = self._names_anonymous_function() or not self.words
+            anon_stdin = anon and self.stdin
         self._flush()
         parent = self.frames[-1] if self.frames else None
         # The sizes as they stand once this group is in the list: an empty
         # group is closed with the same sizes.
         size = (len(self.commands), len(self.groups) + 1)
         pipe = anon_pipe if kind == "{" and anon else self.pipe_pending
-        group = _Group(kind, parent, pipe, self.fn_head, head, size, anon, anon and anon_pipe)
+        group = _Group(
+            kind, parent, pipe, self.fn_head, head, size, anon, anon and anon_pipe, anon_stdin,
+            head_stdin,
+        )
         self.pipe_pending = False
         self.fn_head = False
         self.anon_head = None
@@ -636,11 +713,31 @@ class _Parser:
 
     def _skip_parens(self, start):
         """Return the index just after the `)` that closes the `(` at
-        `start`, skipping quoted text."""
+        `start`, skipping quoted text. Only backslash pairs, single-quoted text
+        and double-quoted text are skipped: a backquote and a comment get no
+        special reading. Raises _Undecidable when no `)` closes the `(`."""
+        end = self._scan_parens(start)[0]
+        if end is None:
+            raise _Undecidable("parenthesis")
+        return end
+
+    def _scan_parens(self, start, limit=None):
+        """Scan from the `(` at `start`, skipping quoted text as `_skip_parens`
+        does, and return (end, separated, reached). `end` is the index just
+        after the `)` that closes the `(`, or None when the scan finds none: the
+        `(` is never closed, a quote is not balanced, or `limit` characters past
+        `start` have been read without meeting the `)`. `separated` is whether
+        an unquoted `;`, `&` or newline lies between the `(` and the `)`; a
+        character after a backslash and the text inside quotes are never
+        separators. `reached` is the index the scan got to, which is what the
+        work it cost is read from. One pass, constant work per character."""
         s = self.s
+        n = self.n
+        stop = n if limit is None else min(n, start + limit)
         depth = 0
+        separated = False
         j = start
-        while j < self.n:
+        while j < stop:
             ch = s[j]
             if ch == "\\":
                 j += 2
@@ -648,21 +745,51 @@ class _Parser:
             if ch == "'":
                 j = s.find("'", j + 1)
                 if j == -1:
-                    raise _Undecidable("quote")
+                    return None, False, n
             elif ch == '"':
                 j += 1
-                while j < self.n and s[j] != '"':
+                while j < n and s[j] != '"':
                     j += 2 if s[j] == "\\" else 1
-                if j >= self.n:
-                    raise _Undecidable("quote")
+                if j >= n:
+                    return None, False, n
             elif ch == "(":
                 depth += 1
             elif ch == ")":
                 depth -= 1
                 if depth == 0:
-                    return j + 1
+                    return j + 1, separated, j + 1
+            elif ch in ";&\n":
+                separated = True
             j += 1
-        raise _Undecidable("parenthesis")
+        return None, False, min(j, n)
+
+    def _read_argument_parens(self):
+        """Read the `(` at `self.i`, met among the arguments of an anonymous
+        function (`_in_arguments`), whether it stands in the middle of a word
+        (`foo(x)`) or at its start (`(x)`). The `(` and everything up to its
+        matching `)` become part of the argument word being read, whitespace and
+        `|` included, and `after_group` is left alone: it still points at the
+        anonymous body, so a stdin redirect after the range connects the body. A
+        separator outside the range ends the arguments as usual.
+
+        The `(` opens a group instead, exactly as before ranges were read, when
+        the range holds an unquoted `;`, `&` or newline; when the scan finds no
+        matching `)` (the group reading goes on to settle a `(` that is never
+        closed, and it reads the comments and backquotes the scan does not); and
+        when the work cap is spent. Every scan is charged to `paren_budget`, the
+        characters it read: that is what keeps the whole parse linear. A range
+        that holds a `;` opens a group, and the arguments of an anonymous
+        function nested in it meet the next `(`, so a scan toward the end of the
+        string from each of them would be quadratic."""
+        start = self.i
+        end, separated, reached = self._scan_parens(start, self.paren_budget)
+        self.paren_budget = max(0, self.paren_budget - (reached - start))
+        if end is not None and not separated:
+            self._put(self.s[start:end], quoted=True)
+            self.i = end
+            return
+        self.i += 1
+        self._open_group("(")
 
     def _double_quoted(self):
         s = self.s
@@ -945,8 +1072,11 @@ class _Parser:
                     self.i += 1
                     self._separator("|")
             elif ch == "(":
-                self.i += 1
-                self._open_group("(")
+                if self._in_arguments():
+                    self._read_argument_parens()
+                else:
+                    self.i += 1
+                    self._open_group("(")
             elif ch == ")":
                 self.i += 1
                 self._close_paren()
@@ -964,7 +1094,10 @@ class _Parser:
         # every group.
         for group in self.groups:
             parent = group.parent
-            group.connected = group.pipe or group.stdin or (parent is not None and parent.connected)
+            group.connected = (
+                group.pipe or group.stdin or group.head_stdin
+                or (parent is not None and parent.connected)
+            )
             group.skipped = group.skip or (parent is not None and parent.skipped)
         return self.commands
 
