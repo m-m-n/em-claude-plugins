@@ -3,9 +3,9 @@ feature: codex-guard-anon-stdin-args
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 52ffd8b0a267748f96e541622238ee40d9ccaad7
-last_input_digest: sha256:1e55f28382c64913a2f015d80d53ad617a84f69f249299914f70bd149212114e
-active_request_id: create-spec-run-0002
+base_revision: b6037d48084ba066a9a040fbcaf58f26f32c95cd
+last_input_digest: sha256:dd8d547fb89395daaf1e76a23b2238630e03c5479633e7f641ad16f44d541cf0
+active_request_id: create-spec-run-0003
 packets: {}
 answers:
   create-spec.requirement-clarification.assumption-review:
@@ -43,8 +43,12 @@ worker_runs:
   input_digest: sha256:bf4bd5d1d6077d073acf8ec295f68486148f4dd4d8d555e4e0bc6489fba6c90f
   output_digest: sha256:5ad69dc7b9f02671117686a5c87bc8ea30d5d756cdac78df953289f4f0bc0cbb
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:1e55f28382c64913a2f015d80d53ad617a84f69f249299914f70bd149212114e
+  output_digest: sha256:feea39b1ca070c8f463e6ebc89e0a6ace1c413a916c41a692fba2a264b18175d
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:dd8d547fb89395daaf1e76a23b2238630e03c5479633e7f641ad16f44d541cf0
   output_digest: null
 artifacts: []
 patches: []
