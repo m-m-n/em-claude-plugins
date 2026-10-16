@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-stdin-args
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 42ce4fc6f11e3348ce14e25bb06629ca0ad5219a
+last_input_digest: sha256:bf4bd5d1d6077d073acf8ec295f68486148f4dd4d8d555e4e0bc6489fba6c90f
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:bf4bd5d1d6077d073acf8ec295f68486148f4dd4d8d555e4e0bc6489fba6c90f
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
