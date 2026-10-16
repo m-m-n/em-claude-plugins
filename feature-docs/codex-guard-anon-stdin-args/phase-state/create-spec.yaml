@@ -3,9 +3,9 @@ feature: codex-guard-anon-stdin-args
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: b6037d48084ba066a9a040fbcaf58f26f32c95cd
+base_revision: 1302577575e133cd31706c90ed1e9c666910cafa
 last_input_digest: sha256:dd8d547fb89395daaf1e76a23b2238630e03c5479633e7f641ad16f44d541cf0
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers:
   create-spec.requirement-clarification.assumption-review:
@@ -47,10 +47,16 @@ worker_runs:
   input_digest: sha256:1e55f28382c64913a2f015d80d53ad617a84f69f249299914f70bd149212114e
   output_digest: sha256:feea39b1ca070c8f463e6ebc89e0a6ace1c413a916c41a692fba2a264b18175d
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:dd8d547fb89395daaf1e76a23b2238630e03c5479633e7f641ad16f44d541cf0
-  output_digest: null
-artifacts: []
+  output_digest: sha256:4ae17692dbee1627721fad48dd66f12d3e3c80e3e8222def1920ae3a24da962a
+artifacts:
+- path: feature-docs/codex-guard-anon-stdin-args/REQUIREMENTS.md
+  sha256: sha256:9cd5eecd1c742d3c3f35fc9944da1f4e951d297e3e0fd155388f9f80c202649a
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-anon-stdin-args/SPEC.md
+  sha256: sha256:6615ad5a4dbf74df324e7f05994632b724ad54bbda84f8415d3c35095bb7b862
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
