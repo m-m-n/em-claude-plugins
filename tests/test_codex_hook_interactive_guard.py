@@ -517,6 +517,39 @@ CASES = [
     ("silent", "匿名関数でない波括弧群の後の語は判定不能", "zsh -c '{ python3 -i; } arg'"),
     ("silent", "名前付き関数定義の本体の後の語は判定不能", "zsh -c 'f() { python3 -i; } arg'"),
     ("silent", "function 付きの名前付き関数定義の本体の後の語は判定不能", "zsh -c 'function f () { python3 -i; } arg'"),
+    # A stdin redirect read in the head of an anonymous function (before
+    # `function`, between `function` and `{`, or before the `(` of `()`)
+    # connects the body and the groups nested in it, and nothing past the
+    # separator that ends the arguments. Only a stdin redirect counts, and an
+    # explicit `-i` in the body is still denied
+    ("silent", "function と { の間の入力リダイレクトは括弧なしの匿名関数の本体を接続する", "zsh -c 'function < /dev/null { python3; }'"),
+    ("silent", "function の前の入力リダイレクトは括弧なしの匿名関数の本体を接続する", "zsh -c '< /dev/null function { python3; }'"),
+    ("silent", "語の無い () の前の入力リダイレクトは匿名関数の本体を接続する", "zsh -c '< /dev/null () { python3; }'"),
+    ("silent", "function () の前の入力リダイレクトは匿名関数の本体を接続する", "zsh -c '< /dev/null function () { python3; }'"),
+    ("silent", "() の前の入力リダイレクトは () と { の間の改行を越えて本体を接続する", "zsh -c '< /dev/null ()\n{ python3; }'"),
+    ("silent", "頭部の入力リダイレクトの接続は匿名関数の本体の入れ子の群にも届く", "zsh -c '< /dev/null function { { python3; }; }'"),
+    ("deny", "頭部の入力リダイレクトがあっても本体の -i は拒否する", "zsh -c '< /dev/null function { python3 -i; }'"),
+    ("deny", "頭部の入力リダイレクトの接続は引数の後の区切りを越えない", "zsh -c '< /dev/null function { :; } arg; python3'"),
+    ("deny", "入力でないリダイレクトは匿名関数の本体を接続しない", "zsh -c '2> /dev/null function { python3; }'"),
+    # A `(` among the arguments of an anonymous function is read, up to its
+    # matching `)`, as part of one argument word, so a stdin redirect after it
+    # still connects the body. A range that holds an unquoted `;`, `&` or
+    # newline is read as a group, as before. These carry the setopt prefix
+    # because zsh reports `no matches found` for `foo(x)` without it
+    ("silent", "( を含む引数語の後の入力リダイレクトは本体を接続する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(x) < /dev/null'"),
+    ("silent", "語頭の ( の引数語の後の入力リダイレクトは本体を接続する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } (x) < /dev/null'"),
+    ("silent", "引数の ( ) の中の空白と | は語の一部", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(a b|c) < /dev/null'"),
+    ("silent", "引数の ( ) の中の引用符で囲んだ ; は群を開かない", "zsh -c \"setopt nonomatch nobareglobqual; function { python3; } foo(';') < /dev/null\""),
+    ("silent", "語の無い () の匿名関数でも引数の ( の後の入力リダイレクトは本体を接続する", "zsh -c 'setopt nonomatch nobareglobqual; () { python3; } foo(x) < /dev/null'"),
+    ("deny", "引数に ( があっても本体の -i は拒否する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(x) < /dev/null'"),
+    ("deny", "( を含む引数語の後の区切りの先の起動は拒否する", "zsh -c 'setopt nonomatch nobareglobqual; function { :; } foo(x); python3'"),
+    ("deny", "引数の ( ) の中に ; があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i)'"),
+    ("deny", "引数の ( ) の中に & があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a & python3 -i)'"),
+    ("deny", "引数の ( ) の中に改行があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a\npython3 -i)'"),
+    ("silent", "引数の ( ) の中に ; があり閉じ括弧がコメントの中なら従来どおり判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i #)'"),
+    ("silent", "引数の閉じていない ( は判定不能", "zsh -c 'function { python3 -i; } foo('"),
+    ("deny", "引数の対の無い ) は区切りとして読む", "zsh -c 'function { :; } foo) python3'"),
+    ("silent", "引数の対の無い ) は外側のサブシェルを閉じ、その後の入力リダイレクトが本体を接続する", "zsh -c '( function { python3; } foo) < f'"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -879,6 +912,29 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
         count = NESTED_READ_LIMIT // each + 1
         strings = [padded_echo(each)] * count + ["python3 -i"]
         self.assert_every_copy_answers(holding(holding(*strings)))
+
+    def test_nested_parens_among_anonymous_function_arguments_are_answered(self):
+        # A `(` among the arguments of an anonymous function is matched to its
+        # `)` by a scan toward the end of the input. When the range holds a `;`
+        # the `(` opens a group instead, and the arguments of the anonymous
+        # function nested in that group meet the next `(`. Restarting the scan
+        # from each of them is quadratic in the input length (TM-1). The first
+        # shape is the one the specification gives; the last is deep enough that
+        # a quadratic scan overruns the time limit, where the linear one answers
+        # in a fraction of a second.
+        depth = self.DEPTH
+        inputs = {
+            "ranges that hold a separator": "function { :; } x(" * depth + "; :" + ")" * depth,
+            "ranges that hold no separator before the last": "function { } x(" * depth + "; :" + ")" * depth,
+            "unclosed ranges": "function { :; } x(" * depth + "; :",
+            "closed ranges, then a launch": "function { :; } x(" * depth + "; :" + ")" * depth + "; python3 -i",
+            "ranges that hold a separator, three times as deep": (
+                "function { :; } x(" * (3 * depth) + "; :" + ")" * (3 * depth)
+            ),
+        }
+        for name, command in inputs.items():
+            with self.subTest(shape=name):
+                self.assert_every_copy_answers(command)
 
 
 class TestNestedJudgmentOrder(HookCopiesMixin, unittest.TestCase):
@@ -1404,6 +1460,36 @@ class TestGuardDocumentation(unittest.TestCase):
             for marker in self.DOCSTRING_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
+
+    # What step 4 says about the head's stdin redirect, a `(` among the
+    # arguments of an anonymous function, and where the arguments end
+    ANONYMOUS_ARGUMENT_MARKERS = (
+        "A stdin redirect read in the head of an anonymous function also connects its body",
+        "That connection reaches the body alone",
+        "is read together with everything up to its matching `)` as part of one argument word",
+        "whitespace and `|` inside the range belong to the word",
+        "holds an unquoted `;`, `&` or newline, the `(` opens a group",
+        "`|&` `&` or newline that lies outside a `(`...`)` range",
+    )
+
+    def test_the_docstring_describes_the_head_redirect_and_the_parens_among_the_arguments(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for marker in self.ANONYMOUS_ARGUMENT_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_paren_search_is_not_described_as_fully_quote_aware(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            texts = [" ".join((ast.get_docstring(tree) or "").split())]
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+                    texts.append(" ".join((ast.get_docstring(node) or "").split()))
+            with self.subTest(copy=plugin):
+                for text in texts:
+                    self.assertNotIn("fully quote-aware", text)
+                self.assertIn("a backquote and a comment get no special reading", texts[0])
 
     def test_the_docstring_no_longer_limits_a_literal_c_string_to_the_first_level(self):
         for plugin, path in HOOK_PATHS.items():
