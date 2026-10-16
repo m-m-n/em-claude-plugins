@@ -92,7 +92,8 @@ workflow:
   base_commit: 2aa96dc03a88781eb71c951e45730cc40df3e10c
   completed_at_commit: 4a6ce7004bba3cecf3767cba74879fa4c4f62b7c
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 32f7e68c9020c643a7db4e47e82ec9d1f1d58895
 - id: verify
   status: pending
   result: null
@@ -128,8 +129,9 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-anon-stdin-args/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []

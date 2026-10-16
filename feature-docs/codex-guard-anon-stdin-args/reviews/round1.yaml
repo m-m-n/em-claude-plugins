@@ -1,0 +1,77 @@
+round: 1
+executed_at: "2026-10-17T01:48:15+09:00"
+scope:
+  review_mode: diff
+  base_commit: 2aa96dc03a88781eb71c951e45730cc40df3e10c
+  head_commit: 32f7e68c9020c643a7db4e47e82ec9d1f1d58895
+  changed_files:
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - test-docs/codex-guard-anon-stdin-args/task0001.tests.yaml
+    - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 1241d15972c80d75
+    severity: medium
+    category: security
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 785
+    title: "TM-2: 引数の ( 範囲内のバッククォートで本体の明示的な -i の拒否が外れる"
+    description: "_scan_parens（724-764行）はバックスラッシュの対と単引用・二重引用しか読み飛ばさず、バッククォートの中の `)` でも範囲を閉じる。入力 zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`case x in x) echo x;; esac`)' では、範囲が最初の `x)` で閉じたと判定され、範囲内に `;` `&` 改行が無いため 787-790行で 1 語として読まれる。続く `echo x;;` は区切りとして処理され、残った `esac`)` のバッククォートは対が見つからず（1043-1046行）_Undecidable(\"quote\") となり、-c 文字列全体が読み飛ばされて無出力になる。変更前は匿名関数本体の python3 -i を拒否していた。deny から無出力への後退で、SPEC FR2、Objectives、THREAT-MODEL TB-1/TM-2 に反する。em-review 側のコピーも同じ。"
+    suggestion: "_scan_parens（または _read_argument_parens）で、範囲内に引用されていないバッククォートが現れたら separated と同じく扱い、従来の群の読みに戻す。上の入力を deny として CASES に追加し、両コピーをバイト同一に保つ。"
+    reproduction: "tool_input.command に \"zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`case x in x) echo x;; esac`)'\" を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）。変更前は permissionDecision: deny を出力するが、変更後は終了コード0・空出力となる。"
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:security"]
+    confidence: 90
+    resolution: unresolved
+    resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+  - stable_id: 82a19216944067b7
+    severity: medium
+    category: comprehensive
+    file: em-review/scripts/codex-hook-interactive-guard.py
+    line: 788
+    title: "引数位置のヒアドキュメント区切り語で ( 範囲の引用符が除去されず本文を誤判定する"
+    description: "_read_argument_parens は範囲の生テキスト self.s[start:end] を引用符除去せずに語へ入れる（788行）。匿名関数の引数位置で `<<` のリダイレクト先になると、_finish_word（502-509行）がそれをヒアドキュメントの区切り語として登録する。例: zsh -c \"function { :; } << foo('x')<改行>foo('x')<改行>python3 -i<改行>foo(x)\" では区切り語が foo(x) ではなく foo('x') として登録され、本文 1 行目で本文が終わり、本文の python3 -i をコマンドとして拒否する。変更前は判定不能（無出力）。無出力から deny への変化で、「判別できないものは通す」方針と SPEC Objectives に反する。成立条件は狭い。em-workflow 側のコピーも同じ。"
+    suggestion: "ヒアドキュメントの区切り語を待っている間は範囲を読まず、従来の群の読みに戻す。または区切り語に使う前に範囲内の引用符とバックスラッシュを除去する。上の入力を silent として CASES に追加し、両コピーをバイト同一に保つ。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:comprehensive"]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: medium のため Phase R4 の自動修正対象外（critical/high のみ）。後続タスクとして起票する
+evaluation:
+  round_summary: "round 1（diff、cross_validation 有効）。medium 2 件を採用し、critical/high は 0 件。security#0 の指摘は再現手順をコードを読んで追い reproduced と判定（変更前は deny、変更後は無出力）。再現手順の文面は実行していない。comprehensive#0 の指摘も読んで確認（変更前は判定不能で無出力、変更後は deny）。2 件はファイルも原因も別なので統合していない。どちらも両コピーに当てはまる（cmp でバイト同一を確認済み）。reviewer 出力にインジェクションの試みは無し。観点ごと: security — corroborated。comprehensive — corroborated。architecture — corroborated（既存 _Group/_Parser の anon_pipe と同じ作りの拡張、走査量 4n、再帰追加なし）。spec — FR1、FR3-FR6、TS1-TS20、TM-1 は満たす。security 指摘箇所は FR2 と Objectives に、comprehensive 指摘箇所も対象外の判定変更に当たるため、上の 2 件の中で扱う。読んだファイル 8 件（上限 10 件）。"
+  recommended_action: auto_fix
+  action_rationale: "medium が 2 件で critical/high は無い。どちらも _read_argument_parens/_scan_parens の中に閉じた欠陥で、修正は条件付きで変更前の群の読みに戻す小さなもの。回帰テストも CASES に 1 行ずつ足せば済む。それ以外の実装は健全で作り直しは不要。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-anon-stdin-args-20261016T164832Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
