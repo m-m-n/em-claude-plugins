@@ -1,9 +1,9 @@
 schema_version: 1
 feature: codex-guard-anon-stdin-args
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: 1302577575e133cd31706c90ed1e9c666910cafa
+base_revision: c3d9567e62a7f9eead738e6404abb535942300a9
 last_input_digest: sha256:dd8d547fb89395daaf1e76a23b2238630e03c5479633e7f641ad16f44d541cf0
 active_request_id: null
 packets: {}
