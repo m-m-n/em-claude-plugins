@@ -1,0 +1,39 @@
+schema_version: 1
+feature: codex-guard-anon-stdin-args
+records:
+- question_id: create-spec.requirement-clarification
+  packet_id: null
+  answered_at: '2026-10-17T00:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Codex consultation on assumptions A1/A2 (real zsh 5.9 observed).
+  normalized_answer: '1. A1 を採用（() 形式も含める）。実 zsh で `< /dev/null () { print BODY; python3;
+    }` と `< /dev/null function () { print BODY; python3; }` は本体まで stdin が届き正常終了した。
+
+    2. A2 を採用するが修正する: 引数中の `(`〜対応する `)` を 1 語として読むのは、その範囲に引用されていない `;` `&` 改行が無い場合に限る。実
+    zsh で `foo(a b|c)` は空白と `|` を含めて 1 引数になったが、`setopt nobadpattern` 下の `function
+    { :; } foo(a; python3 -i #)` では `;` の後の `python3 -i` が別コマンドとして実行された（現行フックは silent
+    の既存の見逃し）。範囲に引用されていない `;` `&` 改行を含む場合は、今回の変更前と同じ読み方（群を開く）を保ち、検知力も判定不能の範囲も変えない。
+
+    3. 語の先頭の `(`（`function { python3; } (x) < /dev/null`）も A2 の対象に含める（A2-b は不採用）。実
+    zsh で `setopt nonomatch nobareglobqual` 下では `(x)` が 1 引数になり本体の python3 は stdin
+    のコードを実行した。
+
+    4. `foo(x)` や `(x)` を引数に含むテストシナリオは、`setopt nonomatch nobareglobqual;` を前置する。前置しないと
+    zsh は `no matches found` で本体に到達しない（TS6, TS7, TS9, TS13, TS14 を修正）。
+
+    5. 対応する `(` の無い `)` は判定不能ではなく、現行の `_close_paren` が区切りとして扱う（:613）。閉じない `(` は従来どおり判定不能（:665）。FR3
+    の記述をこの区別に合わせる。
+
+    6. `_skip_parens` はバッククォートやコメントを専用に扱わないので「完全な引用対応探索」とは書かない。'
+  resolution_note: 'gate: create-spec.requirement-clarification (analyst assumptions
+    A1/A2, autonomous resolution per launch instruction ''consult Codex on unclear
+    points''); option chosen: A1 (include () forms) and A2 with carve-out (paren span
+    read as one argument word only when it has no unquoted ; & newline; word-initial
+    ( included); options not chosen: A1-b (parenless form only), A2 as-is (would swallow
+    unquoted ;), A2-b (exclude word-initial (); key points: real zsh 5.9 showed ()
+    forms pass head stdin to body, foo(a b|c) is one word, but foo(a; python3 -i #)
+    under nobadpattern runs python3 -i as a separate command; foo(x) tests need setopt
+    nonomatch nobareglobqual; unmatched ) is a separator not undecidable; codex_consulted:
+    true (1 turn); opus_escalation: not run'

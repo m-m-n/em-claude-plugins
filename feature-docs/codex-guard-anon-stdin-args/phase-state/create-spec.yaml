@@ -3,16 +3,49 @@ feature: codex-guard-anon-stdin-args
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 42ce4fc6f11e3348ce14e25bb06629ca0ad5219a
-last_input_digest: sha256:bf4bd5d1d6077d073acf8ec295f68486148f4dd4d8d555e4e0bc6489fba6c90f
-active_request_id: create-spec-run-0001
+base_revision: 52ffd8b0a267748f96e541622238ee40d9ccaad7
+last_input_digest: sha256:1e55f28382c64913a2f015d80d53ad617a84f69f249299914f70bd149212114e
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  create-spec.requirement-clarification.assumption-review:
+    packet_id: null
+    answered_at: '2026-10-17T00:20:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: Codex consultation on assumptions A1/A2 (real zsh 5.9 observed).
+    normalized_answer: '1. A1 を採用（() 形式も含める）。実 zsh で `< /dev/null () { print BODY;
+      python3; }` と `< /dev/null function () { print BODY; python3; }` は本体まで stdin
+      が届き正常終了した。
+
+      2. A2 を採用するが修正する: 引数中の `(`〜対応する `)` を 1 語として読むのは、その範囲に引用されていない `;` `&` 改行が無い場合に限る。実
+      zsh で `foo(a b|c)` は空白と `|` を含めて 1 引数になったが、`setopt nobadpattern` 下の `function
+      { :; } foo(a; python3 -i #)` では `;` の後の `python3 -i` が別コマンドとして実行された（現行フックは silent
+      の既存の見逃し）。範囲に引用されていない `;` `&` 改行を含む場合は、今回の変更前と同じ読み方（群を開く）を保ち、検知力も判定不能の範囲も変えない。
+
+      3. 語の先頭の `(`（`function { python3; } (x) < /dev/null`）も A2 の対象に含める（A2-b は不採用）。実
+      zsh で `setopt nonomatch nobareglobqual` 下では `(x)` が 1 引数になり本体の python3 は stdin
+      のコードを実行した。
+
+      4. `foo(x)` や `(x)` を引数に含むテストシナリオは、`setopt nonomatch nobareglobqual;` を前置する。前置しないと
+      zsh は `no matches found` で本体に到達しない（TS6, TS7, TS9, TS13, TS14 を修正）。
+
+      5. 対応する `(` の無い `)` は判定不能ではなく、現行の `_close_paren` が区切りとして扱う（:613）。閉じない `(` は従来どおり判定不能（:665）。FR3
+      の記述をこの区別に合わせる。
+
+      6. `_skip_parens` はバッククォートやコメントを専用に扱わないので「完全な引用対応探索」とは書かない。'
+    resolution_note: Codex (run_codex_exec.sh readonly) 1 turn; orchestrator adopted
+      A1, A2 with the semicolon/ampersand/newline carve-out, and the setopt test correction.
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:bf4bd5d1d6077d073acf8ec295f68486148f4dd4d8d555e4e0bc6489fba6c90f
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:bf4bd5d1d6077d073acf8ec295f68486148f4dd4d8d555e4e0bc6489fba6c90f
+  output_digest: sha256:5ad69dc7b9f02671117686a5c87bc8ea30d5d756cdac78df953289f4f0bc0cbb
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:1e55f28382c64913a2f015d80d53ad617a84f69f249299914f70bd149212114e
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
