@@ -1,0 +1,67 @@
+schema_version: 2
+feature: codex-guard-anon-stdin-args
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.12
+    confidence: 0.88
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.88
+      '2': 0.12
+      '3': 0.0
+  observed_at: '2026-10-17T00:00:05+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.47
+    confidence: 0.53
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.53
+      '2': 0.47
+      '3': 0.0
+  observed_at: '2026-10-17T00:02:29+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 25
+  new_functions_needed: false
+  new_files_needed: false
+  new_dependencies_needed: false
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 両コピーにJSON入力を渡して確認したところ、zsh -c 'function < /dev/null
+    { python3; }'、zsh -c '< /dev/null function { python3; }'、zsh -c 'setopt nonomatch
+    nobareglobqual; function { python3; } foo(x) < /dev/null' は全6実行で stdout に permissionDecision="deny"
+    を出力した。理由は「`python3` をプログラムを渡さずに起動する操作」で、終了コードは0、stderrは空だった。em-workflow/scripts/codex-hook-interactive-guard.py:490でstdin、:492でafter_groupが初期化され、:587の_flush後、:592ではパイプ状態だけが引き継がれる。:947では引数中でも
+    ( が群を開き、:880の入力接続先が本体から外れる。em-review/scripts/codex-hook-interactive-guard.py:587、:592、:947も同じ内容で、両コピーのバイト一致を確認した。tests/test_codex_hook_interactive_guard.py:512には関連する後置入力のテストがあるが、CASESに再現3例は存在しない。:636の既存テストでCASESを両コピーへ適用でき、:1527にはバイト一致の検証がある。修正対象候補の_open_groupと_Parser.parseの直接呼び出し元は、両コピー共通で_finish_word（:455）、_Parser.parse（:949）、公開parse（:973）の3関数となる。
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-17T00:02:40+09:00'
