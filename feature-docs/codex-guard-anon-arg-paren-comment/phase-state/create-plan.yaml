@@ -1,20 +1,36 @@
 schema_version: 1
 feature: codex-guard-anon-arg-paren-comment
 phase: create-plan
-status: in_progress
+status: applying_patch
 generation: 1
 base_revision: 2ec9aa07b294ba23d2013069dd38928806c89d78
 last_input_digest: sha256:3a2908ceb936eab3d439b7933507e58c67afdab0596f9253c5436740a4bf211d
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:3a2908ceb936eab3d439b7933507e58c67afdab0596f9253c5436740a4bf211d
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:19eabd2f8f0320f24b4cb7daa29eb6c594182d2dd8b9fda81bc63e54e6344dba
+artifacts:
+- path: feature-docs/codex-guard-anon-arg-paren-comment/IMPLEMENTATION.md
+  sha256: sha256:5c4e5ad7e8b39a0024cdc29571bb7a20abb00c7afb6fcc113d673bda2b1c6be0
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-arg-paren-comment/VERIFICATION.md
+  sha256: sha256:453f613778846b4f431fec20ffac56e6d598b1c704c64a9b785e4dafe657b1c2
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-arg-paren-comment/THREAT-MODEL.md
+  sha256: sha256:58a99b10dcf6652a82ad7e6113c12a75a8a8f150a0b458810fbde6a32e796f63
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-arg-paren-comment/tasks/task0001.md
+  sha256: sha256:54ef73a22285317b4c90d97480fff6edf93eb30842ed4ca55402a49752afa542
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-run-0001-p0001
+  status: pending
+  base_input_digest: sha256:3a2908ceb936eab3d439b7933507e58c67afdab0596f9253c5436740a4bf211d
+  base_workflow_blob: 4c573d7eb0b501f4b664886ba7d55d700a4d208c
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
