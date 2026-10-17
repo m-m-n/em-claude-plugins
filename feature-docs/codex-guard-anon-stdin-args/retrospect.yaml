@@ -1,0 +1,29 @@
+feature: codex-guard-anon-stdin-args
+collected_at: "2026-10-17T14:38:00+09:00"
+session_ids: [01a1485c-98a0-755f-85ec-01631751c98c]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code score 1.47 (confidence 0.53) with pre-survey new_logic across multiple modules; evaluator kept full"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.12, confidence: 0.88}
+        observed_at: "2026-10-17T00:00:05+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.47, confidence: 0.53}
+        observed_at: "2026-10-17T00:02:29+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 25
+      added_test_cases_approx: 3
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+follow_up_drafts: []
+lessons_candidates:
+  - "pre-survey estimated ~25 changed lines; actual diff was ~189 lines per guard copy plus 86 test lines (A2 carve-out for unquoted ; & newline added scope)"
+  - "review round 1 left 2 medium findings unresolved (1241d15972c80d75 backquote in paren span, 82a19216944067b7 heredoc delimiter in paren span); filed as follow-up tasks"
