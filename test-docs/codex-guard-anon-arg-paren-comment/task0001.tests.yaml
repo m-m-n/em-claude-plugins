@@ -1,0 +1,54 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py: 943/943 passed; python3 -m unittest discover -s tests: Ran 10448 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: same two commands, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "the five deny CASES (TS-1, TS-2, TS-4, TS-5, TS-7) returned silent from both copies before the implementation: json.decoder.JSONDecodeError Expecting value: line 1 column 1 on the empty stdout where a deny object was expected"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "the silent CASES (TS-3, TS-6, TS-8, TS-9, TS-10, TS-11, TS-18, TS-19, TS-20) already returned no output from both copies before the implementation: an unclosed group was undecidable for every input. They guard against a spurious deny from a rescue that triggers on a newline, an operator, a redirect, a quoted or escaped separator or a genuinely unclosed group, so no red state occurred"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-13 (echo x | function { :; } foo(a; python3 #)) returned silent from both copies before the implementation: JSONDecodeError on the empty stdout where a deny object was expected. TS-12 and TS-14 returned no output before the implementation as well and are guards against a rescue that ignores a command's own stdin redirect or judges a function body, not a red"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "the converted case (foo(a; python3 -i #), now a deny case with a label that states the rescue) returned silent from both copies before the implementation: JSONDecodeError on the empty stdout. The three closed-form deny cases of TS-15 and every other pre-existing deny case passed before and after"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_rescue_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_the_rescue_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_argument_paren_reader_states_the_rescue_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_no_longer_limits_a_literal_c_string_to_the_first_level
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_head_redirect_and_the_parens_among_the_arguments
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_paren_search_is_not_described_as_fully_quote_aware
+    red_confirmed: true
+    red_reason: "the three new rescue-rule tests failed before the docstrings were written (AssertionError: marker not found, for the markers of points (a) provisional group, (b) argument-word character and judged as following the anonymous function, (c) newline first not rescued, (d) genuinely unclosed group still yields no output), and the stale-sentence marker 'and a group that is never closed -> no output' failed while the old sentence was still in the module docstring. The existing step 4 markers (holds an unquoted ;, & or newline, the ( opens a group; a backquote and a comment get no special reading) were kept verbatim and passed before and after"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestCopies.test_the_two_copies_are_byte_identical detects a byte difference between the two copies; no red state occurred for this change (the em-review copy was copied from the em-workflow copy before the test ran)"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_unclosed_ranges_are_rescued_at_any_depth_and_the_launch_after_them_is_denied
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_unclosed_ranges_with_a_newline_first_stay_undecidable_at_any_depth
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_nested_parens_among_anonymous_function_arguments_are_answered
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+    red_confirmed: true
+    red_reason: "test_unclosed_ranges_are_rescued_at_any_depth_and_the_launch_after_them_is_denied failed for all three shapes (TS-16 form, wide tail, lone &) on both copies before the implementation: JSONDecodeError on the empty stdout where a deny object was expected. The response-time test (test_nested_parens_among_anonymous_function_arguments_are_answered, with the two new forms), the newline-first test and the recursion check passed before the implementation; they guard against a quadratic rescue and a spurious deny, not a red"
+  AC-8:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestWorkingDirectoryAndEnvironment.test_the_verdict_does_not_depend_on_the_working_directory
+      - tests.test_codex_hook_interactive_guard.TestWorkingDirectoryAndEnvironment.test_the_verdict_does_not_depend_on_environment_variables
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestStaticConstraints detects non-standard-library imports and file, network or process access in both copies, and TestWorkingDirectoryAndEnvironment detects a verdict that depends on the working directory or the environment; no red state occurred for this change. The three suite commands are verified by running them, and the no-version-change and three-file scope check by reading git diff --name-only"
