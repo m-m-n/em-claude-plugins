@@ -1,0 +1,217 @@
+schema_version: 1
+feature: codex-guard-anon-arg-backquote
+created: '2026-10-17'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 匿名関数の引数中の ( 〜 ) 範囲にバッククォートがあると範囲を誤って閉じ、-c 文字列全体を判定不能にして本体の python3 -i を見逃す（回帰）
+
+  Notion タスク: <notion-url> （種別: バグ）
+
+  ## 現象
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、zsh 匿名関数の引数中の `(`〜`)` 範囲にバッククォートがあると、範囲の終端をバッククォート内の `)` と誤認する。残ったバッククォートが未閉鎖と判定され、`-c` 文字列全体が判定不能（無出力）になり、匿名関数本体の明示的な `python3 -i` の deny が外れる。
+  feature `codex-guard-anon-stdin-args`（引数中の `(`〜`)` を 1 語として読む変更）で入った後退。変更前は deny だった。review round 1 の指摘（stable_id `1241d15972c80d75`、severity medium、category security）。
+
+  ## 再現手順
+  1. `tool_input.command` に `zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`case x in x) echo x;; esac`)'` を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+  2. 変更後は終了コード 0・空出力になる（変更前は `permissionDecision: deny`）
+
+  ## 期待する挙動
+  範囲内に引用されていないバッククォートがあるときは、`;` `&` 改行を含む場合と同じく従来の群の読みに戻し、本体の `python3 -i` を deny する。
+
+  ## 完了の定義
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上のコマンドを deny として追加
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所
+  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_scan_parens`（724-764行）、`_read_argument_parens`（785-790行）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-anon-stdin-args/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-anon-stdin-args/integration`）
+
+  ## 実害・発生条件
+  見逃し側（fail-open）。THREAT-MODEL の TB-1/TM-2（明示的な -i は拒否する）を満たさない。書かれる見込みの小さい形。
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを push し、base_branch へ gh pr create で PR を作る。integration ブランチはローカル・リモート共に残す（自動マージしない）。
+  - 不明点は Codex に相談し、比較して良い方を採用する。議論内容は Notion に記録する。
+parent_branch: em-workflow/codex-guard-anon-arg-backquote/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.74
+      '2': 0.26
+      '3': 0.0
+  at: '2026-10-17T21:05:40+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 5b1a6558701ca8c809c4560909309637f9ad130b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 引用されていないバッククォートで群の読みに戻す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR2:
+    title: 二重引用符内のバッククォートも契機にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+  FR3:
+    title: 単一引用符内とバックスラッシュの後のバッククォートは契機にしない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+    - TS6
+    - TS7
+  FR4:
+    title: 平衡したバッククォートも契機にする（既知の誤拒否）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+    - TS4
+  FR5:
+    title: 終端判定・作業上限・既存の契機と救済を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS10
+  FR6:
+    title: 閉じないバッククォートは判定不能
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+    - TS9
+  FR7:
+    title: docstring の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS11
+  FR8:
+    title: 2 つのコピーを同時に直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS11
+  FR9:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS8
+    - TS9
+    - IT1
+  NFR1:
+    title: 線形時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS12
+  NFR2:
+    title: 既存の制約の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - IT1
+  NFR3:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
