@@ -1,0 +1,37 @@
+feature: codex-guard-anon-heredoc-paren-delim
+collected_at: "2026-10-18T00:15:45+09:00"
+session_ids: [01a14a6d-f1f7-7733-8c14-ade312af8be9]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "NFR1 requires parsing time to stay linear in input length; the diff adds a new scan over heredoc delimiter ranges"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "事前調査で両コピーとも再現入力が deny を出すことを確認。区切り語待機の条件を既存分岐へ足す new_logic で、両コピーとテストの 3 ファイルに及ぶ"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.0, '1': 0.96, '2': 0.04, '3': 0.0}
+        observed_at: "2026-10-17T22:42:17+09:00"
+      - basis: description_plus_code
+        probabilities: {'0': 0.0, '1': 0.75, '2': 0.25, '3': 0.0}
+        observed_at: "2026-10-17T22:44:44+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 10
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium の指摘 5 件が deferred（b3f96f950a8b93fe / 11425081edad840a / 95566319fa29d884: 二重引用符内の $( ) の引用符まで除去する、e0fa8d779f7e9927: 範囲内の引用されていない $' で無出力、d81b76f7ebbcf315: 引用除去の規則が 2 か所に重複）。区切り語の引用除去を通常経路と別に実装したことが食い違いの源になっている"
