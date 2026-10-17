@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-anon-arg-paren-comment
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: d618d53cf1637825e635f03196865e77607465a8
 last_input_digest: sha256:1605581729f2f158a2b649091cdc9d1c3a92b24499815bb7e3ad7906e50b7a60
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets: {}
 answers:
   create-spec.requirement-clarification:
