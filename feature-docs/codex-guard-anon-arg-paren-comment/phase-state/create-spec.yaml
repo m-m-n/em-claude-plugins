@@ -3,18 +3,35 @@ feature: codex-guard-anon-arg-paren-comment
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: cc211a15250658ba903103a112c1b70b6adec003
+base_revision: 9e1f614063f076103fb0a3357854b9e70d570551
 last_input_digest: sha256:318ad79c714c42d4e9db57203d4cf7120924997074ade222ba4b7248e6ed38ee
 active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  create-spec.requirement-clarification:
+    packet_id: null
+    answered_at: '2026-10-17T19:29:53+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - semicolon_ampersand_deny_newline_silent
+    freeform: null
+    normalized_answer: 修正・検証範囲を ; だけでなく & と改行にも広げる。; と & の形（閉じ括弧がコメント内）は deny、改行の形は
+      zsh 5.9 が number expected で実行しないため silent のまま固定する。救済は匿名関数の引数から仮に開いた群で、実際に区切りになる
+      ; / & の後に限り、本物の未閉鎖群の silent と入力接続・関数定義の除外は維持する。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation、orchestrator
+      が analyst の仮定「; の形のみ」を検証するために開いた）。選択肢: (a) ; のみ / (b) ; & 改行を対象。Codex 1 ターン（codex
+      エントリ）で (b) を推奨、ただし改行は silent に分ける: guard.py:797 で 3 種を同じ separated=True にまとめ
+      :821 で群を開く。zsh 5.9 実測で ; と & は区切り後が実行、改行形は number expected で rc=1 実行されない。未閉鎖群から一律に
+      deny を採用すると (python3 -i #) のような構文エラー形を誤って拒否するため、救済は匿名関数の引数から仮に開いた群かつ ; / & の後に限定し、:1127/:1131
+      の除外は維持。orchestrator も同意し採用。Opus エスカレーションは不要。'
 worker_runs:
 - request_id: create-spec-run-0001
   status: dispatched
   input_digest: sha256:8328043abca5f4403340c3a410ab00d6c0a264ffa8536731b19a2885ab49c942
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:318ad79c714c42d4e9db57203d4cf7120924997074ade222ba4b7248e6ed38ee
   output_digest: null
 artifacts: []
