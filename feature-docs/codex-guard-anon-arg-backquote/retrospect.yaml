@@ -1,0 +1,37 @@
+feature: codex-guard-anon-arg-backquote
+collected_at: "2026-10-17T22:30:00+09:00"
+session_ids: [01a14a0a-947f-707b-ac7b-49bbd3223206]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "NFR1 requires the argument-range scan to stay linear time; the diff changes a character-scanning loop"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "事前調査で両コピーとも再現入力が終了コード 0・空出力になることを確認。_scan_parens の区切り判定に新しい契機を足す new_logic で、両コピーとテストの 3 ファイルに及ぶ"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.0, '1': 0.98, '2': 0.02, '3': 0.0}
+        observed_at: "2026-10-17T21:02:53+09:00"
+      - basis: description_plus_code
+        probabilities: {'0': 0.0, '1': 0.74, '2': 0.26, '3': 0.0}
+        observed_at: "2026-10-17T21:05:26+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 20
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium の security 指摘 2 件（dfdc820511d4c859: 入れ子のバッククォート、ab990994bd365064: バッククォートを含む範囲での空白後の #）が deferred。いずれも引数範囲の走査がシェルの字句規則を部分的にしか再現しないことに由来し、同系統の回帰が続いている"

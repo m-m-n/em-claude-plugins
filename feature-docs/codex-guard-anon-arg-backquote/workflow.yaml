@@ -122,7 +122,8 @@ workflow:
   failed_items: []
   completed_at_commit: d44c850e496a08d48b503432cb9e577d5aec852c
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: d5e8da95d600205867bdf1bf61fd6e81e030a9e4
 tasks:
   task0001:
     title: Fall back to the group reading when an argument range holds a backquote
