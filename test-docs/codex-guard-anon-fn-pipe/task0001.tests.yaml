@@ -1,0 +1,86 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py (943/943 passed) and python3 -m unittest discover -s tests (10442 tests, OK, 1 skipped), both run in the task worktree before any edit
+final_failures: []             # the same two commands re-run after the three CASES entries and this record were written (943/943 passed; 10443 tests, OK, 1 skipped)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The new silent CASES entry for the piped printf into function () passed
+      on the first run against the unmodified hook copies, so no red state
+      occurred; the behavior pre-existed (the entry is a regression pin, as
+      the task plan expects). The evaluated command string was checked: it
+      holds a backslash and n inside the printf argument and no real newline.
+      Sensitivity was observed instead: the same hook copies deny
+      zsh -c 'function () { python3; }' (no pipe), so the silent verdict
+      depends on the pipe connection to the body. The existing
+      test_cases_run_against_both_copies (the CASES runner) detects this
+      behavior for both copies.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The new deny CASES entry (explicit python3 -i in the piped function ()
+      body) passed on the first run against the unmodified hook copies, so no
+      red state occurred; it is a guard that a connected body still denies an
+      explicit -i. Run directly, each copy exits 0 with empty standard error
+      and one deny object on standard output. The evaluated command string
+      holds a backslash and n, not a real newline.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The new silent CASES entry for the stdin redirect between function and
+      () passed on the first run against the unmodified hook copies, so no red
+      state occurred; the behavior pre-existed. Sensitivity was observed
+      instead: the same hook copies deny zsh -c 'function () { python3; }'
+      (no redirect), so the silent verdict depends on the head redirect
+      connecting the body.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_hold_both_a_deny_and_a_silent_case
+    red_confirmed: false
+    red_reason: >-
+      The two existing table checks detect a duplicated command and a table
+      without a deny or a silent entry; neither was red at any point of this
+      task, so no red state occurred. The labels are Japanese and the entries
+      sit beside the existing function () pipe entry and the existing
+      function < /dev/null entry, read from git diff.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Searched tests/ by the path tests/test_codex_hook_interactive_guard.py
+      and by the basename test_codex_hook_interactive_guard: the only hit is
+      the file itself, which runs CASES but does not compare the table with
+      the base revision, so no existing test detects a removed or changed
+      entry and no executable check can fail for this criterion. It is read
+      from git diff against the base: 3 insertions in
+      tests/test_codex_hook_interactive_guard.py, no deletion, no import
+      added.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestCopies.test_the_two_copies_are_byte_identical detects a difference
+      between the two hook copies; no red state occurred for this change
+      because neither copy was modified (AC-1 to AC-3 passed on the unmodified
+      copies). That no plugin.json or marketplace.json version field changes
+      has no executable check and is read from git diff --stat.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard
+    red_confirmed: false
+    red_reason: >-
+      The full module and the project test command passed on the first run
+      after the entries were added; no hook copy was changed, so the existing
+      deny entries that bound the anonymous-body connection (launch after the
+      separator that ends the arguments, non-stdin redirect in the head, brace
+      group that is no anonymous body) were not put at risk, and no red state
+      occurred.
