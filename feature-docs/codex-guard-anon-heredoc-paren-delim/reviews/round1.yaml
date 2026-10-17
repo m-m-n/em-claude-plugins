@@ -1,0 +1,125 @@
+round: 1
+executed_at: "2026-10-18T00:05:23+09:00"
+scope:
+  review_mode: diff
+  base_commit: 74897bd4ad41872c3f4ed3602d1ad48e85d37e65
+  head_commit: d55840b6b44aed6a7704b7f41c247274c752e323
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-anon-heredoc-paren-delim/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+  - perspective: performance
+    reason: NFR1 requires parsing time to stay linear in input length; the diff adds a new scan over heredoc delimiter ranges
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: b3f96f950a8b93fe
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1013
+  title: "二重引用符内の $( ) の引用符まで除去し、zsh と違う区切り語を登録して終端後の起動を見逃す"
+  description: "_remove_range_quotes の二重引用符の分岐（1013〜1023 行）は `$(` を読み飛ばさず、次の `\"` で引用を閉じる。通常経路の _double_quoted（1059〜1064 行）は _skip_substitution で `$( ... )` を書いたまま残すため、SPEC FR1「除去の規則は通常経路と同じ」と THREAT-MODEL TM-1 の緩和策から外れる。`foo(\"$(echo \"x\")\")` は guard では `foo($(echo x))` として登録され、zsh では `foo($(echo \"x\"))` になる。実際の終端行と一致しないので heredoc が閉じず、_Undecidable が握りつぶされ、終端の後にある python3 -i を見逃す。変更前は deny されていた。em-review の複製も同一。"
+  suggestion: "二重引用符の分岐で `$(` / `$((` に当たったら _skip_substitution で読み飛ばし、その原文を残す（_double_quoted と同じ扱い）。読み飛ばしが範囲の終わりを越えるときは _Undecidable にする。再現コマンドを CASES に追加し、両コピーを同じ変更で直す。"
+  reproduction: "inner を \"function { :; } << foo(\\\"$(echo \\\"x\\\")\\\")\\nfoo(\\\"$(echo \\\"x\\\")\\\")\\nfoo($(echo \\\"x\\\"))\\npython3 -i\" とし、tool_input.command に \"zsh -c \" + shlex.quote(inner) を設定したJSONをフックへ渡す。変更前の読み取りでは deny、変更後は標準出力が空になる。"
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:security]
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual_critical_high; carried to a follow-up task'
+- stable_id: 11425081edad840a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1013
+  title: "二重引用符内のコマンド置換に含まれる引用符が消え、本文中の起動を誤って deny する"
+  description: "security の同箇所の欠陥を逆向きから見たもの。区切り語 `foo(\"$(echo \"a\")\")` は guard では `foo($(echo a))` として登録されるため、本文中に `foo($(echo a))` の行があるとそこで heredoc を閉じ、zsh では本文に含まれる python3 -i を deny する。変更前は無出力だった。両コピーとも該当する。"
+  suggestion: "二重引用符内の `$( )` を _double_quoted と同じく一塊として読み飛ばし、原文を残す。誤 deny と見逃しの両方を CASES で確かめる。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual_critical_high; carried to a follow-up task'
+- stable_id: 95566319fa29d884
+  severity: medium
+  category: spec
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1013
+  title: "区切り語の範囲の引用除去が FR1 の「通常経路と同じ規則」から外れている（二重引用符内の $( )）"
+  description: "評価者の独自点検による指摘。FR1 は除去の規則を通常経路と同じと定めるが、_remove_range_quotes の二重引用符の分岐は `$( ... )` を扱わず、置換の中の引用符を除去する。docstring の追記も二重引用符内については実装と合っていない。"
+  suggestion: "security の指摘と同じ修正で FR1 を満たし、docstring の記述と一致させる。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [claude:evaluator]
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual_critical_high; carried to a follow-up task'
+- stable_id: e0fa8d779f7e9927
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1027
+  title: "範囲内の引用されていない $' で入力全体が無出力になる（SPEC FR3 が定める動作）"
+  description: "変更前は生の区切り語 `foo($'x')` が本文の行に一致し python3 -i は deny されていた。変更後は 1027〜1028 行が _Undecidable を送出して無出力になる。ただし SPEC FR3 / AC-7 が明示的に求める動作で、TS-8 / TS-12 も silent を期待し、THREAT-MODEL TM-1 もこの残留リスクを受け入れている。「導出できなければ拒否」案は NFR4 に反する。"
+  suggestion: "このラウンドの修正対象にはしない。SPEC FR3 を見直すかは人が判断する。見直す場合は範囲内の `$'...'` を zsh と同じ規則で展開して区切り語を導出し、TS-8 / TS-12 の期待を改める。"
+  reproduction: "inner を \"function { :; } << foo($'x')\\nfoo($'x')\\nfoo(x)\\npython3 -i\" とし、tool_input.command に \"zsh -c \" + shlex.quote(inner) を設定したJSONをフックへ渡す。変更前の読み取りでは deny、変更後は標準出力が空になる。"
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:security]
+  confidence: 35
+  resolution: deferred
+  resolution_reason: 'medium severity and behaviour mandated by SPEC FR3 / AC-7; whether to revise FR3 is a human decision; carried to a follow-up task'
+- stable_id: d81b76f7ebbcf315
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 971
+  title: "引用除去の規則が 2 か所に重複し、すでに食い違いが出ている"
+  description: "_remove_range_quotes の二重引用符内・引用符外のバックスラッシュと単引用符の規則は _double_quoted と parse 本体の写しで、二重引用符内の `$( )` と `${ ... }` で既に食い違っている。どちらか一方だけを直すと区切り語の登録と本文の照合がずれ、TM-1 の見逃しや誤 deny が再発する。"
+  suggestion: "文字の範囲を受け取る共通の引用除去処理にまとめ、語の読み取りと区切り語の範囲の両方から呼ぶ。NFR2 に合わせて再帰と循環呼び出しは持ち込まない。1013 行の修正と同時に行う。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [litellm:muse-spark-contributor:architecture]
+  confidence: 65
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual_critical_high; carried to a follow-up task'
+evaluation:
+  round_summary: "第 1 ラウンド（cross_validation 有効）。critical / high の指摘はどの run からも出ていない。中心は 1013 行の欠陥で、二重引用符内の $( ) の引用符まで除去してしまい、zsh と違う区切り語を登録する。security#0 は見逃し、comprehensive#0 は誤 deny という逆向きの症状で同じ箇所を報告しており、コードを読んで両方の再現を確認した。SPEC FR1 と THREAT-MODEL TM-1 の緩和策から外れているので、spec 観点の指摘としても評価者から計上した。security#0 のもう 1 件（1027 行の $'）も再現を確認したが、SPEC FR3 / AC-7 と NFR4 が定める動作なので、確信度を下げて計上した。architecture#0 の規則の重複の指摘は、上の欠陥そのものが重複による食い違いの実例であり、裏付けが取れた。依頼文を装った指示などの注入の試みは、どの reviewer 出力にも無かった。観点ごとの点検結果: security: corroborated / comprehensive: corroborated / architecture: corroborated / spec: findings（FR1 からの逸脱を独自に検出。spec#0 の指摘なしの結果は裏付けられなかった） / performance: corroborated。読んだファイルは 10 件の上限のうち 9 件。"
+  recommended_action: rework
+  action_rationale: "critical / high は無いので完了ゲートは妨げられず、自動修正の対象にもならない。ただし 1013 行の欠陥は SPEC FR1 からの逸脱であり、TM-1 が防ぐはずの見逃しを新たに生んでいる。修正の範囲ははっきりしていて小さい。architecture の指摘する共通化と合わせて 1 つのやり直しタスクで扱うのがよい。1027 行の $' の件は SPEC が定める動作なので、このやり直しには含めない。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-anon-heredoc-paren-delim-20261017T150515Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
