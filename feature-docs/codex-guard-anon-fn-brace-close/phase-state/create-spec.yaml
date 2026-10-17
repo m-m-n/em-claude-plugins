@@ -1,17 +1,55 @@
 schema_version: 1
 feature: codex-guard-anon-fn-brace-close
 phase: create-spec
-status: in_progress
+status: dispatching
 generation: 1
 base_revision: d2b66461c2abc553024ec85c72cb02ff0b067e93
-last_input_digest: sha256:9a815467b3aaa7ac1b93c0c57e735cceea607d403aca9fde08008e8fae39e1f3
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:de2ea9196b918d225f8ca3a74ab863d3e709bd47a801f0bccf61e594da1563bc
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-17T17:58:00+09:00'
+    questions:
+    - question_id: requirement.anon-body-brace-close-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.anon-body-brace-close-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-17T18:02:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - anon_body_and_nested
+    freeform: null
+    normalized_answer: '語が残っていても単独の } で群を閉じる読み方を、最内の匿名関数本体に加えて、匿名関数本体の中に入れ子になった {
+      群にも使う。最上位のただの { : } と匿名関数の外の関数定義本体は従来どおり判定不能。'
+    resolution_note: 'gate create-spec.requirement-clarification (batch policy codex_consultation).
+      Codex 1 ターン（codex エントリ）で anon_body_and_nested を推奨: guard.py:521 は語が残ると閉じないため本体だけ直しても内側の
+      { : } が未閉鎖になり、:1092/:1339 で -c 文字列全体が検査から外れる。匿名関数外を対象外にすれば tests:443 の silent
+      も維持できる。リスク: 引用・エスケープ・リダイレクト先の扱いを維持、祖先の反復走査を避けて線形時間を保つ。orchestrator も同意し採用。Opus
+      エスカレーションは不要。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-17T18:02:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 設計段は省略する（UI 無し）
+    resolution_note: 'gate create-spec.design-step: decide_autonomously -> analyst
+      の推奨 skip を採用'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:9a815467b3aaa7ac1b93c0c57e735cceea607d403aca9fde08008e8fae39e1f3
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:de2ea9196b918d225f8ca3a74ab863d3e709bd47a801f0bccf61e594da1563bc
   output_digest: null
 artifacts: []
 patches: []
