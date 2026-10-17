@@ -512,6 +512,8 @@ CASES = [
     ("silent", "引数の後の入力リダイレクトは本体を接続する", "zsh -c 'function () { python3; } arg < f'"),
     ("silent", "パイプの右側の括弧なしの匿名関数の本体は接続される", "zsh -c 'echo x | function { python3; }'"),
     ("silent", "パイプの右側の function () の本体は接続される", "zsh -c 'echo x | function () { python3; }'"),
+    ("silent", "printf からのパイプの右側の function () の本体は接続される", "zsh -c 'printf \"print(1)\\n\" | function () { python3; }'"),
+    ("deny", "printf からのパイプで接続された function () の本体でも -i は拒否する", "zsh -c 'printf \"print(1)\\n\" | function () { python3 -i; }'"),
     ("silent", "パイプの右側の語の無い () の本体は接続される", "zsh -c 'echo x | () { python3; }'"),
     ("silent", "パイプの接続は匿名関数の本体の入れ子の群にも届く", "zsh -c 'echo x | function { { python3; }; }'"),
     ("silent", "匿名関数でない波括弧群の後の語は判定不能", "zsh -c '{ python3 -i; } arg'"),
@@ -523,6 +525,7 @@ CASES = [
     # separator that ends the arguments. Only a stdin redirect counts, and an
     # explicit `-i` in the body is still denied
     ("silent", "function と { の間の入力リダイレクトは括弧なしの匿名関数の本体を接続する", "zsh -c 'function < /dev/null { python3; }'"),
+    ("silent", "function と () の間の入力リダイレクトは匿名関数の本体を接続する", "zsh -c 'function < /dev/null () { python3; }'"),
     ("silent", "function の前の入力リダイレクトは括弧なしの匿名関数の本体を接続する", "zsh -c '< /dev/null function { python3; }'"),
     ("silent", "語の無い () の前の入力リダイレクトは匿名関数の本体を接続する", "zsh -c '< /dev/null () { python3; }'"),
     ("silent", "function () の前の入力リダイレクトは匿名関数の本体を接続する", "zsh -c '< /dev/null function () { python3; }'"),
