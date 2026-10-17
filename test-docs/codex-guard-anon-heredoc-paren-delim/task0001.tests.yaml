@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # run inside the task worktree before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py exit 0; python3 -m unittest discover -s tests: Ran 10459 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: the same two commands, exit 0, Ran 10462 tests, OK (skipped=1), no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "CASES entry TS-1 (the reproduction command, silent) printed a deny object from both copies before the implementation, because the raw range text foo('x') was registered as the delimiter and the first body line ended the heredoc early: AssertionError: '{\"hookSpecificOutput\": {\"hookEventName\": [269 chars]}}\\n' != ''"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "CASES entries TS-2, TS-4, TS-5, TS-6, TS-7 and TS-13 (deny) returned no output from both copies before the implementation, because the raw range text never matched the body lines, the heredoc stayed unterminated and the string was undecidable: json.decoder.JSONDecodeError Expecting value: line 1 column 1 on the empty stdout where a deny object was expected. TS-3 (silent) already returned no output before the implementation; it guards against registering only the part before the range, and no red state occurred for it. TS-13 guards against a second removal of the part outside the range (a second removal registers ab(x) and comes out silent)"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "CASES entries TS-8 and TS-9 (silent) printed a deny object from both copies before the implementation (AssertionError: '{\"hookSpecificOutput\": ... [269 chars]}}\\n' != ''), and TS-10 and TS-11 (deny) returned no output from both copies (JSONDecodeError on the empty stdout). TS-12 (silent) already returned no output before the implementation; it guards against reading the range by plain quote removal without the dollar-quote rule, and no red state occurred for it"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestCasesTable.test_cases_are_unique and test_cases_run_against_both_copies detect a removed or changed pre-existing CASES verdict and a duplicated command; no red state occurred for this change: every pre-existing CASES row passed before and after, no row was edited, and the added FR4 rows (a range that is no delimiter, the targets of < and <<<, a range that holds a separator) already returned their deny verdict from both copies before the implementation. They guard against a fix that reads those ranges as delimiters"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestCopies.test_the_two_copies_are_byte_identical detects a byte difference between the two guard copies; no red state occurred for this change (the em-review copy was copied from the em-workflow copy before the test ran)"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_delimiter_range_rules
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_head_redirect_and_the_parens_among_the_arguments
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_backquote_rule
+    red_confirmed: true
+    red_reason: "the new test_the_module_docstring_states_the_delimiter_range_rules failed for both copies against the guard files as they were before the docstring was written (AssertionError: marker not found in the module docstring, for each of its four markers). The existing TestGuardDocumentation markers are unchanged and passed before and after"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_delimiter_ranges_at_scale_are_read_in_time_and_the_launch_after_them_is_denied
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_nested_parens_among_anonymous_function_arguments_are_answered
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: true
+    red_reason: "the new test_delimiter_ranges_at_scale_are_read_in_time_and_the_launch_after_them_is_denied (three shapes of 280,000 to 330,000 characters: one long range, many ranges, many longer ranges, each followed by its true terminator and a final python3 -i) failed for both copies before the implementation: the raw range text never matched the terminator lines, the heredoc stayed unterminated and the output was empty (AssertionError: '' == '' : the launch after the last terminator is denied). After the implementation each shape is denied in well under a second, and the time is linear (4x the input took about 2x to 4x the time of the 1x input in a manual check). The existing deep-input timing test, the recursion AST check and the standard-library / side-effect constraint check passed before and after"

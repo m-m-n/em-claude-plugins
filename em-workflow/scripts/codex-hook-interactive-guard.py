@@ -88,6 +88,19 @@ Decision flow:
      whether the backquotes balance does not matter, and a backquote after the
      range's closing `)` is no trigger. The backquote is only noticed, never
      read: it moves neither the nesting depth nor the `)` that closes the range.
+     A range read as one word that is the delimiter of `<<` or `<<-`, or a part
+     of it, has its text quote-removed by the rules the reader applies to any
+     word, before the delimiter is registered: outside quotes a backslash is
+     dropped and the next character kept (a backslash and a newline are both
+     dropped), and `'` and `"` are dropped; single-quoted text is kept as it
+     stands; inside double quotes a backslash is dropped only before `$`, a
+     backquote, `"`, another backslash or a newline. The text of a `$( ... )` and
+     every other character stay as written. The part of the word outside the
+     range was quote-removed when it was read and is not processed again. A range
+     that opens a group, as above, keeps that reading while a delimiter is
+     awaited. An unquoted `$'` or `$"` inside such a range makes the whole input
+     unknowable -> no output; a `$'` or `$"` inside quotes and a
+     backslash-escaped `$` are no trigger.
      A group opened at such a `(` is provisional. When a provisional group is
      never closed (its `)` sits in a comment, or there is none) and the first
      separator read directly in it is a `;` or a lone `&`, its `(` is read as an
@@ -913,7 +926,9 @@ class _Parser:
         matching `)` become part of the argument word being read, whitespace and
         `|` included, and `after_group` is left alone: it still points at the
         anonymous body, so a stdin redirect after the range connects the body. A
-        separator outside the range ends the arguments as usual.
+        separator outside the range ends the arguments as usual. While the
+        target of `<<` or `<<-` is being read, the text of the range is
+        quote-removed before it joins the word (`_remove_range_quotes`).
 
         The `(` opens a group instead, exactly as before ranges were read, when
         the range holds an unquoted `;`, `&` or newline, or a backquote (one
@@ -941,12 +956,86 @@ class _Parser:
         )
         self.paren_budget = max(0, self.paren_budget - (reached - start))
         if end is not None and not separated and not backquoted:
-            self._put(self.s[start:end], quoted=True)
+            if self.redirect is not None and self.redirect[0]:
+                # The range is part of the delimiter of `<<` or `<<-`: register
+                # the delimiter zsh uses, not the raw text of the range.
+                self._put(self._remove_range_quotes(start, end), quoted=True)
+            else:
+                self._put(self.s[start:end], quoted=True)
             self.i = end
             return
         self.i += 1
         self._open_group("(")
         self.frames[-1].provisional = True
+
+    def _remove_range_quotes(self, start, end):
+        """Return the text of the range `self.s[start:end]` (from its `(` through
+        its `)`) with its quotes removed the way a word's quotes are removed
+        where the reader meets them: it is the delimiter of `<<` or `<<-`, so
+        the text zsh compares the body lines with is what gets registered.
+
+        One pass from left to right over the range, three quote states: outside
+        quotes, single-quoted, double-quoted. Outside quotes a backslash is
+        dropped and the next character kept (a backslash and a newline are both
+        dropped), `'` and `"` open their state and are dropped, and every other
+        character is kept: `$` not followed by a quote, `$x`, nested
+        parentheses, and the text of a `$( ... )`, which is kept as written
+        with the quotes inside it. A `$` right before a `'` or a `"` outside
+        quotes raises _Undecidable: what zsh reads there is not known.
+        Single-quoted text is kept as it stands, backslashes included, and the
+        closing `'` is dropped. In double quotes a backslash before `$`, a backquote, `"`, `\\`
+        or a newline is dropped (before a newline together with it) and the
+        next character kept, any other backslash stays with the next character,
+        a `$'` or `$"` there is no trigger, and the closing `"` is dropped. A
+        quote the range does not close raises _Undecidable. The part of the word
+        outside the range is not read here: it was quote-removed when it was
+        read and is not processed again. Time is linear in the length of the
+        range; a `$( ... )` is skipped once, never rescanned."""
+        s = self.s
+        out = []
+        j = start
+        while j < end:
+            ch = s[j]
+            if ch == "\\":
+                if j + 1 >= end:
+                    raise _Undecidable("trailing backslash")
+                if s[j + 1] != "\n":
+                    out.append(s[j + 1])
+                j += 2
+            elif ch == "'":
+                close = s.find("'", j + 1, end)
+                if close == -1:
+                    raise _Undecidable("quote")
+                out.append(s[j + 1:close])
+                j = close + 1
+            elif ch == '"':
+                j += 1
+                while j < end and s[j] != '"':
+                    if s[j] == "\\" and j + 1 < end:
+                        nxt = s[j + 1]
+                        if nxt in '"\\$`':
+                            out.append(nxt)
+                        elif nxt != "\n":
+                            out.append("\\" + nxt)
+                        j += 2
+                    else:
+                        out.append(s[j])
+                        j += 1
+                if j >= end:
+                    raise _Undecidable("quote")
+                j += 1
+            elif ch == "$" and j + 1 < end and s[j + 1] in "'\"":
+                raise _Undecidable("dollar quote")
+            elif ch == "$" and j + 1 < end and s[j + 1] == "(":
+                close = self._skip_parens(j + 1)
+                if close > end:
+                    raise _Undecidable("parenthesis")
+                out.append(s[j:close])
+                j = close
+            else:
+                out.append(ch)
+                j += 1
+        return "".join(out)
 
     def _double_quoted(self):
         s = self.s

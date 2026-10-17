@@ -651,6 +651,45 @@ CASES = [
     ("silent", "匿名関数の外の function 付きの関数定義の本体は語が残る } で閉じない", "zsh -c 'function f() { : }; python3 -i'"),
     ("silent", "匿名関数の外の ( ) の中の波括弧群は語が残る } で閉じない", "zsh -c '( { : } ); python3 -i'"),
     ("silent", "匿名関数の引数の後の波括弧群は匿名関数の本体の外", "zsh -c 'function { :; } arg; { : }; python3 -i'"),
+    # The `(`...`)` range of an anonymous function's argument that is the
+    # delimiter of `<<` / `<<-` is quote-removed the way zsh does before it is
+    # registered (FR1); the part of the word outside the range is not
+    # processed again (FR2); an unquoted `$'` / `$"` in the range makes the
+    # input unknowable (FR3). TS-1 to TS-11 are the specification's; TS-12 and
+    # TS-13 tell FR3 and FR2 from plain quote removal
+    ("silent", "TS-1 範囲の引用を除いた区切り語で heredoc の本文が閉じる (再現手順)", "zsh -c \"function { :; } << foo('x')\nfoo('x')\npython3 -i\nfoo(x)\""),
+    ("deny", "TS-2 範囲の単引用符を除いた区切り語の行より後の起動は deny", "zsh -c \"function { :; } << foo('x')\nfoo(x)\npython3 -i\""),
+    ("silent", "TS-3 範囲より前の部分だけの行では本文が終わらない", "zsh -c 'function { :; } << foo(python3)\nfoo\npython3 -i\nfoo(python3)'"),
+    ("deny", "TS-4 範囲の二重引用符を除いた区切り語の行より後の起動は deny", "zsh -c 'function { :; } << foo(\"x\")\nfoo(x)\npython3 -i'"),
+    ("deny", "TS-5 範囲のバックスラッシュを除いた区切り語の行より後の起動は deny", "zsh -c 'function { :; } << foo(\\x)\nfoo(x)\npython3 -i'"),
+    ("deny", "TS-6 <<- は先頭タブを除いて範囲の引用を除いた区切り語と比べる", "zsh -c \"function { :; } <<- foo('x')\n\tfoo(x)\npython3 -i\""),
+    ("deny", "TS-7 区切り語の範囲を除いて閉じたあとも匿名関数の本体の -i は deny", "zsh -c \"function { python3 -i; } << foo('x')\nfoo(x)\""),
+    ("silent", "TS-8 範囲内の引用されていない $' は判定不能", "function { :; } << foo($'x')\nfoo($'x')\npython3 -i"),
+    ("silent", "TS-9 範囲内の引用されていない $\" は判定不能", "function { :; } << foo($\"x\")\nfoo($\"x\")\npython3 -i"),
+    ("deny", "TS-10 範囲内の二重引用符の中の $' は契機にせず除去後の区切り語で読む", "function { :; } << foo(\"$'\")\nfoo($')\npython3 -i"),
+    ("deny", "TS-11 範囲内のバックスラッシュで逃がした $ は契機にせず除去後の区切り語で読む", "function { :; } << foo(\\$'x')\nfoo($x)\npython3 -i"),
+    ("silent", "TS-12 範囲内の $' は単なる引用除去として読まず判定不能", "function { :; } << foo($'x')\nfoo($x)\npython3 -i"),
+    ("deny", "TS-13 範囲の外のバックスラッシュは二重に除去しない", "function { :; } << a\\\\b(\"x\")\na\\b(x)\npython3 -i"),
+    # Readings the change leaves as they were (FR4): a range that is no
+    # heredoc delimiter, the target of `<` and `<<<`, and a range that holds a
+    # separator and so opens a group
+    ("deny", "引数の範囲が heredoc の区切り語でなければ $' があっても判定不能にしない", "function { :; } foo($'x'); python3 -i"),
+    ("deny", "<<< の目標の範囲の $' は判定不能にしない", "function { :; } <<< foo($'x')\npython3 -i"),
+    ("deny", "< の目標の範囲の $' は判定不能にしない", "function { :; } < foo($'x')\npython3 -i"),
+    ("deny", "<<< の目標の範囲は区切り語として登録しない", "function { :; } <<< foo('x')\npython3 -i"),
+    ("deny", "範囲が ; を含めば区切り語を待っていても群を開く従来の読みで $' は判定不能にしない", "function { :; } << foo($'x'; y)\nfoo\npython3 -i"),
+    # Rules of the removal beyond the specification's scenarios: a backslash
+    # and a newline are dropped together, a backslash before a backquote in
+    # double quotes is dropped, and the text of a `$( ... )` stays as written
+    ("deny", "範囲のバックスラッシュと改行の対は両方除く", "function { :; } << foo(a\\\nb)\nfoo(ab)\npython3 -i"),
+    ("deny", "範囲の二重引用符の中のバックスラッシュと改行の対は両方除く", "function { :; } << foo(\"a\\\nb\")\nfoo(ab)\npython3 -i"),
+    ("deny", "範囲の単引用符の中のバックスラッシュは残す", "function { :; } << foo('a\\b')\nfoo(a\\b)\npython3 -i"),
+    ("deny", "範囲の二重引用符の中の \\ の次が逃がす文字でなければ両方残す", "function { :; } << foo(\"a\\b\")\nfoo(a\\b)\npython3 -i"),
+    ("deny", "範囲の二重引用符の中の逃がしたバッククォートはバックスラッシュを除く", "function { :; } << foo(\"\\`\")\nfoo(`)\npython3 -i"),
+    ("silent", "範囲の $( ) の中身は引用を除かず、引用を除いた行では本文が終わらない", "function { :; } << foo($(echo 'a'))\nfoo($(echo a))\npython3 -i\nfoo($(echo 'a'))"),
+    ("deny", "範囲の $ の次が引用符でなければ文字のまま残す", "function { :; } << foo($x'y')\nfoo($xy)\npython3 -i"),
+    ("deny", "範囲の入れ子の括弧は文字のまま残す", "function { :; } << foo((a)'b')\nfoo((a)b)\npython3 -i"),
+    ("deny", "範囲の後ろに続く部分は範囲の引用除去のあとにそのままつなぐ", "function { :; } << foo('x')'y'z\nfoo(x)yz\npython3 -i"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -988,6 +1027,43 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
             self.assertEqual((code, err), (0, ""))
             decision = json.loads(out)["hookSpecificOutput"]
             self.assertEqual(decision["permissionDecision"], "deny")
+
+    # Eight characters of a delimiter range (a single-quoted, a double-quoted
+    # and a backslash-escaped `x`) that zsh reads as the three characters `xxx`.
+    QUOTED_UNITS = "'x'\"x\"\\x"
+
+    def heredoc_delimiter_ranges(self, heredocs, units):
+        """`heredocs` anonymous functions, each with a heredoc whose delimiter is
+        a `(`...`)` range of `units` quoted units (the delimiter itself is
+        `(` + `x` * 3 * units + `)`), each closed by its true terminator, then
+        a launch after the last one (TS-17). Most of the text is range text on
+        the quote-removal path, and the launch is a body line unless every
+        delimiter is derived the way zsh does."""
+        delimiter = "(" + self.QUOTED_UNITS * units + ")"
+        terminator = "(" + "x" * (3 * units) + ")"
+        block = "function { :; } << foo" + delimiter + "\nfoo" + terminator + "\n"
+        return block * heredocs + "python3 -i"
+
+    def test_delimiter_ranges_at_scale_are_read_in_time_and_the_launch_after_them_is_denied(self):
+        # TS-17: the quote removal of a delimiter range is one pass over the
+        # range (TM-2). One range as long as the input, and many ranges each
+        # closed by its terminator, both within the PAREN_SCAN_FACTOR bound;
+        # the launch is denied only when every delimiter was derived so that
+        # its terminator ends the body, so the verdict shows the removal ran.
+        inputs = {
+            "one long range": self.heredoc_delimiter_ranges(1, 30000),
+            "many ranges": self.heredoc_delimiter_ranges(2000, 10),
+            "many longer ranges": self.heredoc_delimiter_ranges(100, 300),
+        }
+        for name, command in inputs.items():
+            self.assertGreater(len(command), 100000, name)
+            for plugin, path in self.for_each_copy():
+                with self.subTest(shape=name, copy=plugin):
+                    code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                    self.assertEqual((code, err), (0, ""))
+                    self.assertNotEqual(out, "", "the launch after the last terminator is denied")
+                    decision = json.loads(out)["hookSpecificOutput"]
+                    self.assertEqual(decision["permissionDecision"], "deny")
 
     def test_nesting_to_the_depth_the_limit_admits_is_denied(self):
         # Each level quotes the one inside it again, so the quote characters
@@ -1845,6 +1921,26 @@ class TestGuardDocumentation(unittest.TestCase):
                 doc = parser_docstring(path, "_read_argument_parens")
                 self.assertIsNotNone(doc, "no _read_argument_parens method in _Parser")
                 self.assertIn(self.BACKQUOTE_READER_MARKER, doc or "")
+
+    # The delimiter-range rules (FR6): a range among the arguments of an
+    # anonymous function that is the delimiter of `<<` / `<<-` is quote-removed
+    # before it is registered, and an unquoted `$'` / `$"` in it makes the
+    # input unknowable
+    DELIMITER_RANGE_MARKERS = (
+        "has its text quote-removed by the rules the reader applies to any word, "
+        "before the delimiter is registered",
+        "The part of the word outside the range was quote-removed when it was read "
+        "and is not processed again",
+        "An unquoted `$'` or `$\"` inside such a range makes the whole input unknowable -> no output",
+        "a `$'` or `$\"` inside quotes and a backslash-escaped `$` are no trigger",
+    )
+
+    def test_the_module_docstring_states_the_delimiter_range_rules(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for marker in self.DELIMITER_RANGE_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
 
     # What step 4 says about the head's stdin redirect, a `(` among the
     # arguments of an anonymous function, and where the arguments end
