@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-anon-fn-brace-close
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: d2b66461c2abc553024ec85c72cb02ff0b067e93
 last_input_digest: sha256:bc951f6ea913474b141bd68c1668f2a85231d4e16212bb805d5e11205b62bfea
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
