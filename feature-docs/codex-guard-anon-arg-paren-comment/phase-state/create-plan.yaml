@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-arg-paren-comment
+phase: create-plan
+status: in_progress
+generation: 1
+base_revision: 2ec9aa07b294ba23d2013069dd38928806c89d78
+last_input_digest: sha256:3a2908ceb936eab3d439b7933507e58c67afdab0596f9253c5436740a4bf211d
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:3a2908ceb936eab3d439b7933507e58c67afdab0596f9253c5436740a4bf211d
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
