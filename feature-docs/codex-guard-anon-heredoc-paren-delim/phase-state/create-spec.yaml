@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-heredoc-paren-delim
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 43afbfb256dd131d23dd0c55ee6f3a605b482428
 last_input_digest: sha256:496eb6cff0dbfa71087856ef5c6af26360b4a91fef393831556060b7a737a2b3

@@ -1,0 +1,208 @@
+schema_version: 1
+feature: codex-guard-anon-heredoc-paren-delim
+created: '2026-10-17'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 匿名関数の引数位置のヒアドキュメント区切り語 foo('x') の引用符を除去せずに登録し、本文の python3 -i を誤って deny する（回帰）
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、zsh 匿名関数の引数位置で `<<` のリダイレクト先に `(`〜`)` を含む語を書くと、範囲の生テキストを引用符除去せずにヒアドキュメントの区切り語として登録する。`<< foo('x')` の区切り語が zsh の解釈する `foo(x)` ではなく `foo('x')` になり、本文中の同じ行で本文が早く終わって、本文の `python3 -i` をコマンドとして deny する。
+  feature `codex-guard-anon-stdin-args`（引数中の `(`〜`)` を 1 語として読む変更）で入った変化。変更前は判定不能（無出力）だった。review round 1 の指摘（stable_id `82a19216944067b7`、severity medium、category comprehensive）。
+  ## 再現手順 (必須)
+  1. `tool_input.command` に次の文字列を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）。`python3 -i` はヒアドキュメントの本文
+  ```plain text
+     zsh -c "function { :; } << foo('x')
+     foo('x')
+     python3 -i
+     foo(x)"
+  ```
+  1. deny が出る
+  ## 期待する挙動 (必須)
+  ヒアドキュメントの区切り語を待っている間は範囲を 1 語として読まず従来の群の読みに戻す、または区切り語に使う前に範囲内の引用符とバックスラッシュを除去する。上の入力は silent になる。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上のコマンドを silent として追加
+  - [ ] 両コピーがバイト単位で同一のまま
+  ## 該当箇所 (任意)
+  - `em-review/scripts/codex-hook-interactive-guard.py` の `_read_argument_parens`（788行）、`_finish_word`（502-509行）
+  - `em-workflow/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-anon-stdin-args/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-anon-stdin-args/integration`）
+  ## 実害・発生条件 (任意)
+  誤爆側（fail-closed）。本文に引用符付きのままの区切り語と同じ行があり、その後に対話起動の形の行が続く場合だけで、条件は狭い。
+
+  ## 追加指示
+
+  - 実装完了後、integration ブランチを push し、base_branch へ gh pr create で PR を作る。integration ブランチはローカル・リモート共に残す（自動マージしない）。
+  - 不明点は Codex に相談し、比較して良い方を採用する。議論内容は Notion に記録する。
+parent_branch: em-workflow/codex-guard-anon-heredoc-paren-delim/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.75
+      '2': 0.25
+      '3': 0.0
+  at: '2026-10-17T22:45:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3f6f68b4af5a63f84eb55632efba8c44d45e0300
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 区切り語の範囲の引用除去
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+  FR2:
+    title: 範囲の外は二重に除去しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 範囲内の $' と $"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+  FR4:
+    title: 変えない読み方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 両コピー
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: docstring
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+  NFR1:
+    title: 解析時間は入力長に対して線形のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 再帰や循環呼び出しを持ち込まない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 標準ライブラリだけを使い、ファイル・ネットワーク・子プロセスに触れない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 読めない入力は無出力のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
