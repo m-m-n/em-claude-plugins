@@ -1,5 +1,5 @@
 feature: codex-guard-anon-arg-paren-comment
-collected_at: "2026-10-17T20:50:00+09:00"
+collected_at: "2026-10-17T20:43:43+09:00"
 session_ids: [01a149ab-4ddf-7696-a07d-d08a98595bc4]
 signals:
   review_critical_high: []
