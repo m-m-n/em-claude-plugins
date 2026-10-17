@@ -82,12 +82,31 @@ Decision flow:
      text only; a backquote and a comment get no special reading, so a `)` inside
      one closes the range. When the range from the `(` to that `)` holds an
      unquoted `;`, `&` or newline, the `(` opens a group, exactly as before the
-     range was read as a word; so it does when no matching `)` is found, and a
-     group that is never closed -> no output. A `)` with no `(` among the
-     arguments is a separator, as anywhere else (it closes an enclosing subshell
-     when there is one). The work spent finding these ranges is capped at a
-     constant multiple of the length of the string; once the cap is spent, every
-     later `(` opens a group, as before.
+     range was read as a word; so it does when no matching `)` is found. A group
+     opened at such a `(` is provisional. When a provisional group is never
+     closed (its `)` sits in a comment, or there is none) and the first
+     separator read directly in it is a `;` or a lone `&`, its `(` is read as an
+     argument-word character: the group ends at that separator, what comes
+     before it keeps the reading it had, and the commands after that separator
+     are judged as following the anonymous function, as commands of the frame
+     that encloses the group (the pipe and the stdin redirect of the head reach
+     none of them). The first separator read directly is the first one the
+     reader meets while the provisional group is the innermost open group; a
+     separator inside a group nested in it is not direct. Only the reader's own
+     `;` and lone `&` count: a quoted or backslash-escaped `;` or `&`, a `&>` or
+     `>&` redirect and the `&&` `||` `|` `|&` operators are no trigger, and an
+     operator among them that comes first is the first separator, so the group
+     is not rescued. Provisional groups nested in each other are rescued from
+     the inside out, and an outer one with no separator of its own takes the
+     separator of the inner one as its first. A newline as the first direct
+     separator is not rescued -> no output. A group that is genuinely unclosed
+     still yields no output: a group that is no provisional group (a `(` at
+     command position, a `{` group, a function body) left open, even after a
+     rescue, and a provisional group with no separator read directly in it. A
+     `)` with no `(` among the arguments is a separator, as anywhere else (it
+     closes an enclosing subshell when there is one). The work spent finding
+     these ranges is capped at a constant multiple of the length of the string;
+     once the cap is spent, every later `(` opens a group, as before.
      A stdin redirect read in the head of an anonymous function also connects
      its body (and so the groups nested in it). The head is the simple command
      up to the body, and the redirect sits before `function`, between `function`
@@ -384,11 +403,22 @@ class _Group:
                redirect in its head
     skipped    settled likewise: the group, or a group that holds it, is a
                function body
+    provisional  the group was opened at a `(` among the arguments of an anonymous
+               function (`_read_argument_parens`); every other group is genuine.
+               A provisional group that is never closed may be rescued when input
+               ends, and no other group ever is
+    first_sep  on a provisional group: the first separator the reader met while
+               the group was the innermost open group, as the text of that
+               separator (`;`, `&`, `&&`, `||`, `|`, `|&` or a newline), or None
+               while there is none. Later separators do not change it, and a
+               separator met inside a group nested in this one is not recorded
+               here. A redirection (`&>`, `>&`), a quoted `;` or `&` and a
+               backslash-escaped one are no separator
     """
 
     __slots__ = (
         "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "anon_stdin",
-        "head_stdin", "in_anon", "size", "connected", "skipped",
+        "head_stdin", "in_anon", "size", "connected", "skipped", "provisional", "first_sep",
     )
 
     def __init__(
@@ -409,6 +439,8 @@ class _Group:
         self.size = size
         self.connected = False
         self.skipped = False
+        self.provisional = False
+        self.first_sep = None
 
 
 class _Parser:
@@ -429,6 +461,20 @@ class _Parser:
     the string, so a string made of ranges that each hold a `;` and nest another
     anonymous function is read in linear time. Once the cap is spent, every later
     `(` opens a group.
+
+    A group opened at such a `(` is provisional (`_Group.provisional`), and the
+    first separator the reader meets while it is the innermost open group is kept
+    on it (`_Group.first_sep`). When input ends, a provisional group that was
+    never closed is rescued if that first direct separator is a `;` or a lone
+    `&`: its `(` is read as an argument-word character, the group ends at that
+    separator, and the commands after that separator are judged as following the
+    anonymous function (`_rescue_argument_groups`). Provisional groups nested in
+    each other are rescued from the inside out. A newline as the first direct
+    separator is not rescued. A group that is genuinely unclosed still yields no
+    output: a group that is not provisional and is left open, and a provisional
+    group that is not rescued, raise _Undecidable. The rescue visits each open
+    group once and moves no command, so it costs time linear in the number of
+    open groups.
     """
 
     def __init__(self, command):
@@ -588,6 +634,13 @@ class _Parser:
 
     def _separator(self, sep):
         _, redirected = self._flush()
+        if self.frames:
+            # The first separator read while a provisional group is the
+            # innermost open group is its first direct separator; the main
+            # reader's own tokens are the only ones that reach here.
+            group = self.frames[-1]
+            if group.provisional and group.first_sep is None:
+                group.first_sep = sep
         if sep != "\n":
             self.fn_head = False
             self.anon_head = None
@@ -732,6 +785,42 @@ class _Parser:
             # No subshell is open (a `case` pattern, for one): a separator.
             self._separator(")")
 
+    def _rescue_argument_groups(self):
+        """When input ends, close the provisional groups that were never closed
+        and can be rescued, from the innermost out, and stop at the first open
+        group that cannot be.
+
+        A provisional group is rescued when the first separator read directly in
+        it is a `;` or a lone `&`: its `(` is then read as an argument-word
+        character, the group ends at that separator, and the commands after the
+        separator are judged as following the anonymous function. The separator
+        of a rescued group is the first direct separator of the group that
+        encloses it when that one has none of its own, so groups nested in each
+        other are rescued in one pass from the inside out. A group whose first
+        direct separator is a newline or another operator, a provisional group
+        with no separator, and a group that is not provisional are not rescued:
+        the group stays open, and the caller finds it so.
+
+        Nothing is moved. A provisional group opens among the arguments of an
+        anonymous function, right after the body is closed, where no pipe is
+        pending, and it is never closed, so no redirect reaches it; neither it
+        nor the provisional groups around it (all open, since a rescue succeeds
+        only when every open group is one) carries a connection, so the
+        commands of a rescued group already read as commands that follow the
+        anonymous function, and the final pass over the groups settles their
+        connection and skip from the groups they sit in as it does for any
+        other command. The work is one visit per open group."""
+        separator = None
+        while self.frames:
+            group = self.frames[-1]
+            if not group.provisional:
+                return
+            first = group.first_sep if group.first_sep is not None else separator
+            if first not in (";", "&"):
+                return
+            self.frames.pop()
+            separator = first
+
     def _read_heredocs(self):
         s = self.s
         for delim, strips_tabs in self.heredocs:
@@ -816,7 +905,14 @@ class _Parser:
         characters it read: that is what keeps the whole parse linear. A range
         that holds a `;` opens a group, and the arguments of an anonymous
         function nested in it meet the next `(`, so a scan toward the end of the
-        string from each of them would be quadratic."""
+        string from each of them would be quadratic.
+
+        The group opened here is provisional (`_Group.provisional`). When it is
+        never closed and the first separator read directly in it is a `;` or a
+        lone `&`, its `(` is read as an argument-word character after all: the
+        commands after that separator are judged as following the anonymous
+        function (`_rescue_argument_groups`, run when input ends). A newline as
+        the first direct separator is not rescued."""
         start = self.i
         end, separated, reached = self._scan_parens(start, self.paren_budget)
         self.paren_budget = max(0, self.paren_budget - (reached - start))
@@ -826,6 +922,7 @@ class _Parser:
             return
         self.i += 1
         self._open_group("(")
+        self.frames[-1].provisional = True
 
     def _double_quoted(self):
         s = self.s
@@ -1121,9 +1218,12 @@ class _Parser:
             else:
                 self._put(ch)
                 self.i += 1
-        self._separator("\n")
+        # The end of the input ends the command in progress; it is no newline
+        # the input held, so it is no group's first separator.
+        self._flush()
         if self.heredocs:
             raise _Undecidable("heredoc")
+        self._rescue_argument_groups()
         if self.frames:
             raise _Undecidable("group")
         # A group opens after the group that holds it, so one pass settles
