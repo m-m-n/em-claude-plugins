@@ -101,7 +101,7 @@ workflow:
   completed_at_commit: 5658216b4773c488f69ed84f88faaed882a63264
   summary: 'Full suite OK (run-destructive-guard all ok; unittest 10442 tests OK, skipped=1); targeted tests.test_codex_hook_interactive_guard 84 OK; TS1-TS25 pass (copies byte-identical, CASES diff adds only, no plugin.json/marketplace.json change); M-1 docstring check pass. Excluded requirements: none'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: "Fix anonymous-function stdin connection in codex-hook-interactive-guard"
