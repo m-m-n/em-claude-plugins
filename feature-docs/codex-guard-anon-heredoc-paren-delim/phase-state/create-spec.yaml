@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 43afbfb256dd131d23dd0c55ee6f3a605b482428
 last_input_digest: sha256:496eb6cff0dbfa71087856ef5c6af26360b4a91fef393831556060b7a737a2b3
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -50,10 +50,16 @@ worker_runs:
   input_digest: sha256:496eb6cff0dbfa71087856ef5c6af26360b4a91fef393831556060b7a737a2b3
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:2660d356ff27bbdefebeca273c3a1f12eb4e6da1e4fd582d1ac205c8d98aca8f
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-anon-heredoc-paren-delim/REQUIREMENTS.md
+  sha256: sha256:e9b7859fdea3b8e9e4c30332a307c656ffac3df6fe18ebc8d236744bafd49108
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-anon-heredoc-paren-delim/SPEC.md
+  sha256: sha256:09fb8cb0971b3d064bd6be24c20c992c1b0ab3c9efd99efba2116bb9c3dc4779
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
