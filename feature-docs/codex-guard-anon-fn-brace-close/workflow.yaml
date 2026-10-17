@@ -94,7 +94,8 @@ workflow:
   base_commit: 7bfb093a7d0abf0da2c4f6da6c1851d93d3eeea3
   completed_at_commit: 4aedad701f848844b7fbc3f1014c6f202f81d74e
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 824908032192f45272d9695ac2eadf5fe70b6797
 - id: verify
   status: pending
 - id: retrospect
@@ -129,12 +130,13 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-anon-fn-brace-close/task0001
 review:
-  status: in_progress
+  status: completed
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   residual_critical_high: 0
   needs_rework: false
 requirements:
