@@ -1,5 +1,5 @@
 feature: codex-guard-brace-anon-arg-rescue
-collected_at: "2026-10-18T02:20:00+09:00"
+collected_at: "2026-10-18T02:08:56+09:00"
 session_ids: [01a14ad5-bf73-753e-86fe-19d1ee5e6220]
 signals:
   review_critical_high: []
