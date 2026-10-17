@@ -1,20 +1,36 @@
 schema_version: 1
 feature: codex-guard-anon-fn-pipe
 phase: create-plan
-status: dispatching
+status: completed
 generation: 1
 base_revision: 9d6563152cf92e914cf1da30781e9c79b0e7b370
 last_input_digest: sha256:968880ae512060d83c0352a93560f4ad0793a8ed2945c5a6bb0257e286a6c2f9
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:968880ae512060d83c0352a93560f4ad0793a8ed2945c5a6bb0257e286a6c2f9
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:22dc113348fa3de0b38f96d94907786ed23746b590997d5967676b5b09f22ca1
+artifacts:
+- path: feature-docs/codex-guard-anon-fn-pipe/IMPLEMENTATION.md
+  sha256: sha256:5b626c36f5d9babc5c24637b5265452fe674fa9fd4d5ef8411aa0af16d024744
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-fn-pipe/VERIFICATION.md
+  sha256: sha256:c51ecf973453dbe3b48e87d422be42bf2218685905fbd1c99a963f57064364e6
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-fn-pipe/THREAT-MODEL.md
+  sha256: sha256:b955d64549478a69523c54c7d385740ffa315d2af977e930d508c3ebfa020389
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-fn-pipe/tasks/task0001.md
+  sha256: sha256:6144e1994039ab0853afc42272eaa3329793a228a8f67c98a0d5737e40a7207a
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: codex-guard-anon-fn-pipe-plan-p0001
+  status: applied
+  base_input_digest: sha256:968880ae512060d83c0352a93560f4ad0793a8ed2945c5a6bb0257e286a6c2f9
+  base_workflow_blob: 7ec9af842219cf9876db8c92846b1b6624cda924
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
