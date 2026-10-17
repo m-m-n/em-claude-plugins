@@ -95,7 +95,12 @@ workflow:
   status: completed
   completed_at_commit: d55840b6b44aed6a7704b7f41c247274c752e323
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'Full suite (run-destructive-guard.py + unittest discover, 10462 tests) passed; TS-1..TS-19 present and passing on both copies; copies byte-identical; reproduction command silent on both copies; TS-16 docstring rule text confirmed by reading'
+  completed_at_commit: 92e8887facd39e1c6ba483c0de545bef0419e054
 - id: retrospect
   status: pending
 tasks:
