@@ -1,0 +1,57 @@
+schema_version: 2
+feature: codex-guard-brace-anon-arg-rescue
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.19
+    confidence: 0.81
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.81
+      '2': 0.19
+      '3': 0.0
+  observed_at: '2026-10-18T00:24:27+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.49
+    confidence: 0.51
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.51
+      '2': 0.49
+      '3': 0.0
+  observed_at: '2026-10-18T00:27:27+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: -1
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: mainの両コピーに再現2形のJSONを渡し、終了0・出力なしを確認した。内部解析では } が通常語になり、外側の { が残って _Undecidable('group') になった。2コピーはバイト一致した。既存CASES560件に再現2形と対応する定義内ケースはなく、関連する既存15テストは成功した。レビュー記録の修正候補は既存2関数で、追加ケースはdeny2例・silent1例と記載されている。呼出元スクリプト2本と標準依存json・sysの2種を数えて4とした。変更行数は未確定のため-1とした。zshコマンド自体は実行せず、ファイルは変更していない
+decided_at: '2026-10-18T00:28:30+09:00'
