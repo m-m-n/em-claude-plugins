@@ -87,7 +87,12 @@ workflow:
   status: completed
   completed_at_commit: e5a3811aa9d02def9c2321dac694c90f34c4f2f7
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'full suite (run-destructive-guard + unittest discover, 10468 tests, skipped=1) pass; tests.test_codex_hook_interactive_guard 104 tests pass; TS1-TS27 pass; TS27 version diff empty; manual zsh reachability: REACHED for both forms'
+  completed_at_commit: 11a0355f964c4bbdbb8463f67d1d789e5611a50a
 - id: retrospect
   status: pending
 tasks:
