@@ -6,11 +6,43 @@ generation: 1
 base_revision: 9851114ae877d69364ceebd690b8ae3386600400
 last_input_digest: sha256:cd62f728ca9cc1f8dcabc3d641cd3475de8b27036f171b42b2582d00065749a4
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+answers:
+  create-spec.scope.dq-backquote:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-17T21:15:28+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_dq_backquote
+    freeform: null
+    normalized_answer: 範囲の走査が二重引用符の中でバッククォートに出会ったときも、引用されていないバッククォートと同じく ( で群を開く（群の読みに戻す）。単一引用符内とバックスラッシュの後のバッククォートは契機にしない。CASES に二重引用符内の形の deny を足す。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: include_dq_backquote / unquoted_only。Codex 1 ターン（codex エントリ）で include_dq_backquote を推奨: guard.py:874 の二重引用符の読み飛ばしが置換内の " を終端と誤認し x) で範囲を閉じる。群の読みの経路には _double_quoted(:946)→_skip_substitution(:988) がバッククォート全体を読む処理があり、戻せば deny になる。orchestrator も両コピーで foo("`echo "x)"`") が silent、foo("x") が deny を実測済み。同じ回帰の同じ原因なので同じ修正に含める方が比較的良いと判断し採用。Opus エスカレーションは不要。追加ケース案: deny foo("`echo "x)"`") / deny function { python3; } foo("`echo x`") < /dev/null / silent foo("\`x\`") < /dev/null / silent foo("`echo x")（未閉鎖）。'
+  create-spec.scope.balanced-backquote:
+    packet_id: null
+    answered_at: '2026-10-17T21:15:28+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - any_backquote_fallback
+    freeform: null
+    normalized_answer: 平衡したバッククォート（foo(`echo x`)）も含め、範囲内に契機となるバッククォートがあれば群の読みに戻す（analyst の仮定 A2 を採用）。その結果 function { python3; } foo(`echo x`) < /dev/null は deny になる。zsh では本体の標準入力が /dev/null になるため、これは既知の誤拒否（fail-closed 側）として SPEC に明記する。_skip_parens の終端判定と paren_budget の課金は変えない。
+    resolution_note: 'orchestrator が analyst の仮定 A2 を検証するため開いた gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: any_backquote_fallback / 平衡したバッククォート範囲を引用のように読み飛ばし未平衡のときだけ戻す代替案。Codex 1 ターン（codex エントリ）で any_backquote_fallback を推奨: チケットの期待挙動の範囲を優先、代替案は線形化可能だが置換終端の判別処理が増える。Codex が現行 silent・無害な代役での zsh 実行で本体の stdin が /dev/null になることを確認し、変更後の deny は既知の誤拒否として明記すべきと指摘。誤拒否は fail-closed 側で書かれる見込みも小さく、単純さを優先する方が比較的良いと判断し採用。Opus エスカレーションは不要。'
+  create-spec.design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-17T21:15:28+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック判定ロジックの修正、デザインシステム候補ゼロ）'
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:cd62f728ca9cc1f8dcabc3d641cd3475de8b27036f171b42b2582d00065749a4
   output_digest: null
 artifacts: []
