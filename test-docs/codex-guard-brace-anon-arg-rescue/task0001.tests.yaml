@@ -1,0 +1,93 @@
+task_id: task0001
+baseline_failures: []          # the suite as inherited: 943/943 destructive-guard cases and 10462 unittest tests passed (1 skipped)
+final_failures: []             # re-executed after the implementation and the record were written; the same command, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      The CASES entries for TS1, TS2, TS3, TS4, TS5, TS8, TS9 and TS10 were added
+      before the guard was touched. For each of them, in both copies, the hook
+      printed nothing where deny was expected and the test errored with
+      json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0).
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      TS12 and TS15 (expected deny) were observed failing in both copies before
+      the guard was touched, with the same JSONDecodeError (the hook printed
+      nothing). TS6, TS7, TS13 and TS14 (expected silent) already returned silent
+      before the change and act as regression guards for the connection, the
+      arguments of a closed anonymous body, the word after a plain brace group
+      and the skipped function-definition body.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      TS11, TS16, TS17, TS18, TS19, TS20, TS21 and the existing case 601 already
+      returned silent before the change: the behavior pre-existed and the entries
+      are regression guards that keep the new rule from firing on them. No state
+      in which they fail exists without a wrong implementation. Verified
+      differentially instead: 120000 generated inputs gave the same parse result
+      from this implementation and from a scratch variant that walks the chain at
+      every closing brace.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+    red_confirmed: false
+    red_reason: >-
+      The existing CASES entries are unchanged and already passed before the
+      change; this criterion asks that they keep their verdicts, so no red state
+      occurred for it. The label of case 604 was reworded and its verdict stays
+      silent; the label has no executable check. The two commands named in the
+      criterion are the project test command, run at the end.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_many_closing_braces_after_a_chain_that_cannot_be_rescued_are_answered
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_deep_chain_that_can_be_rescued_is_rescued_once_at_the_closing_brace
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+    red_confirmed: false
+    red_reason: >-
+      The TS22 test (many closing braces after a chain that cannot be rescued)
+      passed before the change, by design: its job is to reject a naive walk over
+      the chain, not to fail on the old reading. A scratch variant of the guard
+      that walks the chain at every closing brace did not finish the 1.26 MB
+      input within 30 s, while this implementation answers in about 2 s. The
+      second test (a chain that can be rescued, then closing braces) was observed
+      failing before the change in both copies with JSONDecodeError (no deny
+      output); TestNoRecursion passed before and after.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_that_a_brace_closes_the_group_after_a_rescue
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_that_a_brace_closes_the_group_after_a_rescue
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_no_longer_limits_a_literal_c_string_to_the_first_level
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_description_no_longer_limits_the_rescue_to_the_end_of_input
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_rescue_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_the_rescue_rule
+    red_confirmed: true
+    red_reason: >-
+      The two marker tests failed in both copies before the guard was touched:
+      AssertionError: 'A lone `}` read after a rescued separator closes the
+      enclosing `{` group' not found in the module docstring and in the _Parser
+      docstring. The two stale-sentence checks were added after the docstrings
+      were rewritten, so they were not run red as tests; the same assertions were
+      evaluated by a script against the unchanged guard (git HEAD) and both old
+      sentences were present there. The existing rescue-rule marker tests
+      (RESCUE_PROVISIONAL_MARKER, RESCUE_MARKERS) keep the sentences verbatim and
+      passed before and after.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      Both structural checks passed before the change and were not observed
+      failing at any step (the second copy was written right after the first
+      with cp). The version-field condition (plugin.json of em-workflow and
+      em-review, and .claude-plugin/marketplace.json, unchanged) has no
+      executable check in this task; it is checked at verify by a diff against
+      the feature's base commit.
