@@ -52,10 +52,13 @@ worker_runs:
   input_digest: sha256:de2ea9196b918d225f8ca3a74ab863d3e709bd47a801f0bccf61e594da1563bc
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:bc951f6ea913474b141bd68c1668f2a85231d4e16212bb805d5e11205b62bfea
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-anon-fn-brace-close/SPEC.md
+  sha256: sha256:1113ca48294c7c8b70bc4f79acc3506a8adb32f10b5732ef25460d75339ef297
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
