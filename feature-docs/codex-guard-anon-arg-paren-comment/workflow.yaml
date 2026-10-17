@@ -120,7 +120,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-guard-anon-arg-paren-comment/task0001
     notes: null
 review:
