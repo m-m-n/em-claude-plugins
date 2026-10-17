@@ -1,0 +1,90 @@
+schema_version: 2
+feature: codex-guard-anon-fn-brace-close
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-17T17:45:49+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.15
+    confidence: 0.85
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+  observed_at: '2026-10-17T17:48:03+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 0
+  new_functions_needed: false
+  new_files_needed: false
+  new_dependencies_needed: false
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 'HEAD と main はともに a5d1004a7a6081479c8b74b9630f2835d4e91a6c（git
+    rev-parse HEAD main で確認）
+
+    両コピーそれぞれに、printf ''%s\n'' で {"tool_input":{"command":"対象コマンド"}} を渡し、python3 em-workflow/scripts/codex-hook-interactive-guard.py
+    および python3 em-review/scripts/codex-hook-interactive-guard.py へパイプ入力した。対象コマンドは
+    zsh -c ''python3 -i; function { : }''、zsh -c ''function { : }; python3 -i''、zsh
+    -c ''function { python3 -i }''。計6回すべて終了コード0、出力なしで、deny は返らなかった
+
+    比較用の zsh -c ''python3 -i; function { :; }'' は、同じ方法で両コピーとも終了コード0、permissionDecision=deny
+    を返した
+
+    両コピーの _finish_word は、単独の } を閉じ括弧として扱う条件に not self.words を含む（em-workflow/scripts/codex-hook-interactive-guard.py:521、em-review/scripts/codex-hook-interactive-guard.py:521）。群が残ると
+    _Undecidable("group") を送出し、入れ子文字列の解析側で読み飛ばす（em-workflow/scripts/codex-hook-interactive-guard.py:1092、em-workflow/scripts/codex-hook-interactive-guard.py:1338）
+
+    runpy.run_path で既存 CASES を読み込み、3コマンドを完全一致で検索した結果、各0件だった。CASES は tests/test_codex_hook_interactive_guard.py:47
+    から同ファイル:556 にあり、セミコロン付きの deny ケースは同ファイル:500 にある。既存の実行処理は同ファイル:672 で同じ表を両コピーに適用するため、指定の追加対象は既存表の3件になる
+
+    単純コマンド確定と群を閉じる関数は既存にある（em-workflow/scripts/codex-hook-interactive-guard.py:542、同ファイル:677）。両コピーの同時修正と既存
+    CASES の使用は .claude/rules/hook-tests.md:69、同ファイル:72 に記載されている。現在の依存は json と sys（em-workflow/scripts/codex-hook-interactive-guard.py:171）。入力の取得と
+    deny JSON の出力は同ファイル:1371、同ファイル:1383 にあり、対象は判定ロジックの変更になる
+
+    caller_and_dependency_count は、確認した直接の起動登録2か所を数えた（em-workflow/scripts/run_codex_exec.sh:241、em-review/scripts/run_codex_exec.sh:195）
+
+    cmp em-workflow/scripts/codex-hook-interactive-guard.py em-review/scripts/codex-hook-interactive-guard.py
+    は終了コード0、出力なしで、両コピーはバイト単位で同一だった。同一性を検証する既存テストもある（tests/test_codex_hook_interactive_guard.py:1616）
+
+    git diff --stat と git status --porcelain=v1 --untracked-files=all はともに出力なし。changed_lines_approx
+    の0は今回の調査での実変更行数を表す'
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-17T17:48:30+09:00'
