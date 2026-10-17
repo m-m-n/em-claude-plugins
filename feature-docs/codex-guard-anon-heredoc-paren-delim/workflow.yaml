@@ -92,7 +92,7 @@ workflow:
   base_commit: 74897bd4ad41872c3f4ed3602d1ad48e85d37e65
   completed_at_commit: 5541174e3f099119b162eeaed1e7e457280f5e0b
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -125,8 +125,18 @@ tasks:
     status: merged
     branch: em-workflow/codex-guard-anon-heredoc-paren-delim/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR1 requires parsing time to stay linear in input length; the diff adds a new scan over heredoc delimiter ranges
+    cross_validation: true
 requirements:
   FR1:
     title: 区切り語の範囲の引用除去
