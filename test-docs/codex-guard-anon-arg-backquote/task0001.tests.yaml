@@ -1,0 +1,51 @@
+task_id: task0001
+baseline_failures: []          # run inside the task worktree before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py exit 0; python3 -m unittest discover -s tests: Ran 10454 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: same two commands, exit 0, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "the two deny CASES (unquoted backquote holding `)`, and the double-quoted backquote form) returned silent from both copies before the implementation: json.decoder.JSONDecodeError Expecting value: line 1 column 1 on the empty stdout where a deny object was expected"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "the two deny CASES with a balanced backquote (double-quoted, and unquoted, the latter labelled a known false deny) returned silent from both copies before the implementation: json.decoder.JSONDecodeError Expecting value: line 1 column 1 on the empty stdout where a deny object was expected"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "the three silent CASES (backslash-escaped backquote inside double quotes, backslash-escaped backquote unquoted, backquote inside single quotes) already returned no output from both copies before the implementation: a range holding a backquote was read as one argument word. They guard against a trigger that fires on an escaped or single-quoted backquote, so no red state occurred"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "both silent CASES (unclosed backquote, and unclosed backquote inside double quotes) printed a deny object from both copies before the implementation, because the range was read as one argument word and the body's python3 -i was denied: AssertionError: '{\"hookSpecificOutput\": {\"hookEventName\": [269 chars]}}\\n' != ''"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "the silent CASE with a backquote after the range's closing `)` already returned no output from both copies before the implementation, and every pre-existing CASES row passed before and after; they guard against a trigger that looks past the range's `)` and against a changed verdict in an old row, so no red state occurred"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_backquote_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_the_backquote_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_range_scan_states_the_backquote_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_argument_paren_reader_states_the_backquote_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_head_redirect_and_the_parens_among_the_arguments
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_paren_search_is_not_described_as_fully_quote_aware
+    red_confirmed: true
+    red_reason: "the four new backquote-rule tests failed for both copies before the docstrings were written (AssertionError: marker not found in the module docstring, the _Parser docstring, the _scan_parens docstring and the _read_argument_parens docstring). The existing markers (holds an unquoted ;, & or newline, the ( opens a group; a backquote and a comment get no special reading; no fully quote-aware) were kept verbatim and passed before and after"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_nested_parens_among_anonymous_function_arguments_are_answered
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+    red_confirmed: false
+    red_reason: "the new shape (depth repetitions of `function { :; } x(`:` ` followed by depth closing parentheses) was answered by both copies within the time limit before the implementation as well: the range was read as one argument word, in linear time. It guards the new fallback path against a quadratic parse, so no red state occurred"
+  AC-8:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestCopies.test_the_two_copies_are_byte_identical detects a byte difference between the two copies and TestStaticConstraints detects non-standard-library imports and file, network or process access; no red state occurred for this change (the em-review copy was copied from the em-workflow copy before the test ran). The two suite commands are verified by running them, and the no-version-change and three-file scope check by reading git diff --name-only"

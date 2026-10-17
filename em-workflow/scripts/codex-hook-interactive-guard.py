@@ -82,9 +82,14 @@ Decision flow:
      text only; a backquote and a comment get no special reading, so a `)` inside
      one closes the range. When the range from the `(` to that `)` holds an
      unquoted `;`, `&` or newline, the `(` opens a group, exactly as before the
-     range was read as a word; so it does when no matching `)` is found. A group
-     opened at such a `(` is provisional. When a provisional group is never
-     closed (its `)` sits in a comment, or there is none) and the first
+     range was read as a word; so it does when no matching `)` is found. A range
+     that holds a backquote, one inside double quotes included, opens a group
+     too, unless a backslash escapes the backquote or single quotes enclose it;
+     whether the backquotes balance does not matter, and a backquote after the
+     range's closing `)` is no trigger. The backquote is only noticed, never
+     read: it moves neither the nesting depth nor the `)` that closes the range.
+     A group opened at such a `(` is provisional. When a provisional group is
+     never closed (its `)` sits in a comment, or there is none) and the first
      separator read directly in it is a `;` or a lone `&`, its `(` is read as an
      argument-word character: the group ends at that separator, what comes
      before it keeps the reading it had, and the commands after that separator
@@ -455,9 +460,11 @@ class _Parser:
 
     Among the arguments of an anonymous function, a `(` is read with its range
     up to the matching `)` as part of one argument word (`_read_argument_parens`),
-    unless the range holds an unquoted `;`, `&` or newline, or no matching `)` is
-    found: then the `(` opens a group, as it did before ranges were read. The
-    work spent on these ranges is capped at PAREN_SCAN_FACTOR times the length of
+    unless the range holds an unquoted `;`, `&` or newline, or a backquote (one
+    inside double quotes included), or no matching `)` is found: then the `(`
+    opens a group, as it did before ranges were read. A backquote that a
+    backslash escapes, or that sits in single quotes, does not count. The work
+    spent on these ranges is capped at PAREN_SCAN_FACTOR times the length of
     the string, so a string made of ranges that each hold a `;` and nest another
     anonymous function is read in linear time. Once the cap is spent, every later
     `(` opens a group.
@@ -848,19 +855,26 @@ class _Parser:
 
     def _scan_parens(self, start, limit=None):
         """Scan from the `(` at `start`, skipping quoted text as `_skip_parens`
-        does, and return (end, separated, reached). `end` is the index just
-        after the `)` that closes the `(`, or None when the scan finds none: the
-        `(` is never closed, a quote is not balanced, or `limit` characters past
-        `start` have been read without meeting the `)`. `separated` is whether
-        an unquoted `;`, `&` or newline lies between the `(` and the `)`; a
-        character after a backslash and the text inside quotes are never
-        separators. `reached` is the index the scan got to, which is what the
-        work it cost is read from. One pass, constant work per character."""
+        does, and return (end, separated, backquoted, reached). `end` is the
+        index just after the `)` that closes the `(`, or None when the scan
+        finds none: the `(` is never closed, a quote is not balanced, or `limit`
+        characters past `start` have been read without meeting the `)`.
+        `separated` is whether an unquoted `;`, `&` or newline lies between the
+        `(` and the `)`; a character after a backslash and the text inside
+        quotes are never separators. `backquoted` is whether a backquote lies
+        between the `(` and the `)`, one inside double quotes included; a
+        backquote right after a backslash and one inside single quotes do not
+        count, and whether the backquotes balance does not matter. A backquote
+        is only noticed, never read: it changes neither the nesting depth, nor
+        the quoting, nor where the scan stops. Both flags are false when `end`
+        is None. `reached` is the index the scan got to, which is what the work
+        it cost is read from. One pass, constant work per character."""
         s = self.s
         n = self.n
         stop = n if limit is None else min(n, start + limit)
         depth = 0
         separated = False
+        backquoted = False
         j = start
         while j < stop:
             ch = s[j]
@@ -870,23 +884,27 @@ class _Parser:
             if ch == "'":
                 j = s.find("'", j + 1)
                 if j == -1:
-                    return None, False, n
+                    return None, False, False, n
             elif ch == '"':
                 j += 1
                 while j < n and s[j] != '"':
+                    if s[j] == "`":
+                        backquoted = True
                     j += 2 if s[j] == "\\" else 1
                 if j >= n:
-                    return None, False, n
+                    return None, False, False, n
+            elif ch == "`":
+                backquoted = True
             elif ch == "(":
                 depth += 1
             elif ch == ")":
                 depth -= 1
                 if depth == 0:
-                    return j + 1, separated, j + 1
+                    return j + 1, separated, backquoted, j + 1
             elif ch in ";&\n":
                 separated = True
             j += 1
-        return None, False, min(j, n)
+        return None, False, False, min(j, n)
 
     def _read_argument_parens(self):
         """Read the `(` at `self.i`, met among the arguments of an anonymous
@@ -898,10 +916,14 @@ class _Parser:
         separator outside the range ends the arguments as usual.
 
         The `(` opens a group instead, exactly as before ranges were read, when
-        the range holds an unquoted `;`, `&` or newline; when the scan finds no
-        matching `)` (the group reading goes on to settle a `(` that is never
-        closed, and it reads the comments and backquotes the scan does not); and
-        when the work cap is spent. Every scan is charged to `paren_budget`, the
+        the range holds an unquoted `;`, `&` or newline, or a backquote (one
+        inside double quotes included; one a backslash escapes and one inside
+        single quotes do not count); when the scan finds no matching `)` (the
+        group reading goes on to settle a `(` that is never closed, and it reads
+        the comments and backquotes the scan does not); and when the work cap is
+        spent. The scan only notices a backquote and never reads it, so a `)`
+        inside one closes the range early; the group reading, which does read
+        it, settles where it ends. Every scan is charged to `paren_budget`, the
         characters it read: that is what keeps the whole parse linear. A range
         that holds a `;` opens a group, and the arguments of an anonymous
         function nested in it meet the next `(`, so a scan toward the end of the
@@ -914,9 +936,11 @@ class _Parser:
         function (`_rescue_argument_groups`, run when input ends). A newline as
         the first direct separator is not rescued."""
         start = self.i
-        end, separated, reached = self._scan_parens(start, self.paren_budget)
+        end, separated, backquoted, reached = self._scan_parens(
+            start, self.paren_budget
+        )
         self.paren_budget = max(0, self.paren_budget - (reached - start))
-        if end is not None and not separated:
+        if end is not None and not separated and not backquoted:
             self._put(self.s[start:end], quoted=True)
             self.i = end
             return
