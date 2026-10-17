@@ -1,0 +1,87 @@
+schema_version: 1
+feature: codex-guard-brace-anon-arg-rescue
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 5aa46eb57ad01ff6a36b07809aac6de057e348ff
+last_input_digest: sha256:b63b5fb3d97a8c324f8b3a1c367289c8b9c47cc7f6c19b27b0c2b2a8242dcbbe
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+answers:
+  requirement.brace-close.timing:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T00:38:04+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - commit_at_brace
+    freeform: null
+    normalized_answer: '`}` を読んだ時点で列の仮の群を救済し（`(` は引数語の文字として読む）、`{` 群を閉じる。その後に `)` が来ても、他の場所と同じく区切りとして読む（外側にサブシェルがあればそれを閉じる）。`#)` のようにコメントに `)` がある形も救える。`{ function { :; } foo(a; python3 -i; } )` のような不自然な形では、zsh が実行しないものを deny する誤拒否がありうる。'
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: commit_at_brace / only_when_no_close_paren。Codex 1 ターン（codex エントリ）で commit_at_brace を推奨: 実測では、再現2形の printf 版、末尾が `} #)` の形、全体をサブシェルで包んだ形はいずれも REACHED を出力した。先読みはコメントを区別せず括弧を数えるため、そこで見つかった `)` を救済の妨げにすると、有効な入力を見逃す（em-workflow/scripts/codex-hook-interactive-guard.py:869） リスク: 末尾に余分な `)` を置いた `{ ...; } )` は、実測では構文エラーになり REACHED を出力しなかった。修正後は、このような実行されない入力も誤拒否する可能性がある worker の暫定案とも一致し、比較的良いと判断して採用。Opus エスカレーションは不要。'
+  requirement.brace-close.pending-words:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T00:38:04+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - mirror_existing_rule
+    freeform: null
+    normalized_answer: 語が残っていない `}` は、どの `{` 群も閉じる。語が残っている `}` は、閉じる `{` 群が匿名関数の本体の中にある（in_anon）ときだけ閉じる。その際、残っている語を群のコマンドとして確定してから閉じる。それ以外の `{` 群では普通の語のままにする（既存の FR5 と同じ）。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: mirror_existing_rule / no_words_only。Codex 1 ターン（codex エントリ）で mirror_existing_rule を推奨: 既存処理は、語が残っていても閉じる対象の `{` が in_anon ならコマンドを確定して閉じる（em-workflow/scripts/codex-hook-interactive-guard.py:612）。提示された匿名関数の例も、printf 版で実際に REACHED を出力したため、この規則を救済後にも適用する リスク: 匿名関数の外の通常の `{` 群でも、同じ printf 版は実際に実行された。この選択では既存の制限を維持するため、その見逃しは残る（tests/test_codex_hook_interactive_guard.py:649） worker の暫定案とも一致し、比較的良いと判断して採用。Opus エスカレーションは不要。'
+  requirement.scope.subshell-analog:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T00:38:04+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - out_of_scope
+    freeform: null
+    normalized_answer: 今回は `{` 群（匿名関数の本体と関数定義の本体を含む）だけを扱う。この形では `)` が仮の群を閉じ、外側の `(` が開いたまま残るので silent のままになる。どちらの群を閉じる `)` なのかが曖昧なため、別の課題にする。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: out_of_scope / in_scope。Codex 1 ターン（codex エントリ）で out_of_scope を推奨: 今回指定された波括弧の修正に範囲を限定する。現在の `)` は直近の `(` 群を閉じるため、この対応を変えるには既存の閉じた引数括弧の扱いも検討する必要がある（em-workflow/scripts/codex-hook-interactive-guard.py:799、tests/test_codex_hook_interactive_guard.py:549） リスク: `( function { :; } foo(a; printf REACHED; )` は実測で REACHED を出力したため、有効な入力の見逃しが残る。曖昧さは現行解析器の括弧の対応付けにあり、この zsh 入力自体は実行できる worker の暫定案とも一致し、比較的良いと判断して採用。Opus エスカレーションは不要。'
+  requirement.tests.doc-markers:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T00:38:04+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - add_marker_tests
+    freeform: null
+    normalized_answer: モジュール docstring と `_Parser` の docstring に「救済した区切りの後の `}` が外側の `{` 群を閉じる」趣旨の文を書き、その文を目印として TestGuardDocumentation に加える。これまでの feature と同じやり方。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: add_marker_tests / cases_only。Codex 1 ターン（codex エントリ）で add_marker_tests を推奨: 既存テストはモジュールと _Parser の説明文に救済規則が記載されていることを確認しているため、新しい規則も同じ仕組みに追加する（tests/test_codex_hook_interactive_guard.py:1838、tests/test_codex_hook_interactive_guard.py:1845） リスク: 文字列一致なので、説明の言い換えでも失敗し、実際の判定誤りは検出できない。再発防止には、別途コマンドの判定を確認するテストが必要になる worker の暫定案とも一致し、比較的良いと判断して採用。Opus エスカレーションは不要。'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T00:38:04+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック判定ロジックの修正、デザインシステム候補ゼロ）'
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:02d4b1afa324c32b89e76cfdf7fb0ff5dc3825e1b1860d039bc83b6353663823
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:7b38fb90462a608b1ab83f94dcdcb65b2549addcb58f26e0a4d142cc095612ed
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:b63b5fb3d97a8c324f8b3a1c367289c8b9c47cc7f6c19b27b0c2b2a8242dcbbe
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-brace-anon-arg-rescue/REQUIREMENTS.md
+  sha256: sha256:8ce05873cbf55c92ce87af663e27baf753313e3e8bbd33614b2b1375fdb0fcb9
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-brace-anon-arg-rescue/SPEC.md
+  sha256: sha256:6d14444abfda1c8090288526b40b3e1985beb5a8af072dab6a7cbff1d6ad3eb9
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

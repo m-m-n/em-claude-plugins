@@ -1,0 +1,32 @@
+feature: codex-guard-brace-anon-arg-rescue
+collected_at: "2026-10-18T02:08:56+09:00"
+session_ids: [01a14ad5-bf73-753e-86fe-19d1ee5e6220]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: NFR1 requires linear time / no recursion / amortized O(1) per closing brace in the parser change
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが bucket 1 (0.51) と bucket 2 (0.49) に割れ、新しい判定ロジックと複数モジュールへの変更を見込んで full とした"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.19, confidence: 0.81}
+        observed_at: "2026-10-18T00:24:27+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.49, confidence: 0.51}
+        observed_at: "2026-10-18T00:27:27+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: -1
+      added_test_cases_approx: 3
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 は findings 0 件、auto-fix 0 ループ、verify 1 回で pass"
+  - "journal.jsonl に implementer 報告の conflict_retries / deviations が残っておらず、retrospect で signals を検証できなかった（前回 feature と同じ）"

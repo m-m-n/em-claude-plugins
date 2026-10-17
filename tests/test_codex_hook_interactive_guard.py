@@ -601,7 +601,7 @@ CASES = [
     ("silent", "外側の閉じない波括弧群が残れば救済しても判定不能", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i #)'"),
     ("silent", "救済した区切りの後のコマンドの入力リダイレクトは従来どおり接続する", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 < /dev/null #)'"),
     ("deny", "パイプの右側の匿名関数の頭部の接続は救済した区切りの後に届かない", "zsh -c 'setopt nobadpattern; echo x | function { :; } foo(a; python3 #)'"),
-    ("silent", "関数定義の本体の中の閉じない引数の ( は救済しても判定不能", "zsh -c 'setopt nobadpattern; f() { function { :; } foo(a; python3 -i #)\n}'"),
+    ("silent", "関数定義の本体の中の引数の ( の救済後のコマンドは本体の } で閉じても skipped なので判定しない", "zsh -c 'setopt nobadpattern; f() { function { :; } foo(a; python3 -i #)\n}'"),
     # A provisional group nested in a provisional group is rescued from the
     # inside out: the separator of the inner one is the first direct separator
     # of an outer one that has none
@@ -614,6 +614,49 @@ CASES = [
     ("silent", "引数の閉じていない ( は判定不能", "zsh -c 'function { python3 -i; } foo('"),
     ("deny", "引数の対の無い ) は区切りとして読む", "zsh -c 'function { :; } foo) python3'"),
     ("silent", "引数の対の無い ) は外側のサブシェルを閉じ、その後の入力リダイレクトが本体を接続する", "zsh -c '( function { python3; } foo) < f'"),
+    # A lone bare `}` read after a rescued separator closes the enclosing `{`
+    # group (a plain brace group, an anonymous body or a function body): the
+    # provisional groups between are rescued when the `}` is read, and the
+    # commands after the separator are judged as commands of the closed group.
+    # TS1 to TS5, TS8 to TS10, TS12 and TS15 are denied; TS6, TS7, TS13 and
+    # TS14 read as the closed group is connected, takes no word, or is skipped;
+    # TS11 and TS16 to TS21 stay undecidable
+    ("deny", "} 救済 TS1 再現1: { で包んだ引数の ( は ; の後の起動を救済して } で閉じる", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i; }'"),
+    ("deny", "} 救済 TS2 再現2: 匿名関数の本体で包んだ引数の ( は ; の後の起動を救済して } で閉じる", "zsh -c 'setopt nobadpattern; function { function { :; } foo(a; python3 -i; }'"),
+    ("deny", "} 救済 TS3 単独の & が区切りでも } で閉じる", "zsh -c 'setopt nobadpattern; { function { :; } foo(a & python3 -i; }'"),
+    ("deny", "} 救済 TS4 コメントの中の ) は救済を妨げない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i; } #)'"),
+    ("deny", "} 救済 TS5 プログラムを渡さない起動も判定する", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3; }'"),
+    ("silent", "} 救済 TS6 閉じた { 群の入力リダイレクトが救済後のコマンドに届く", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3; } < /dev/null'"),
+    ("silent", "} 救済 TS7 閉じた { 群のパイプ接続が救済後のコマンドに届く", "zsh -c 'setopt nobadpattern; echo x | { function { :; } foo(a; python3; }'"),
+    ("deny", "} 救済 TS8 入れ子の仮の群を内側から救済して } で閉じる", "zsh -c 'setopt nobadpattern; { function { :; } foo(function { :; } bar(a; python3 -i; }'"),
+    ("deny", "} 救済 TS9 仮の群の中の入れ子の { 群は普通に閉じ、その後の } が外側を閉じる", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; { python3 -i; }; }'"),
+    ("deny", "} 救済 TS10 語が残る } は閉じる { 群が匿名関数の本体なら語を確定して閉じる", "zsh -c 'setopt nobadpattern; function { function { :; } foo(a; python3 -i }'"),
+    ("silent", "} 救済 TS11 匿名でない { 群で語が残る } は普通の語のまま", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; echo }'"),
+    ("deny", "} 救済 TS12 閉じた匿名本体の後の語は引数で、区切りの先の起動を判定する", "zsh -c 'setopt nobadpattern; function { function { :; } foo(a; :; } arg; python3 -i'"),
+    ("silent", "} 救済 TS13 匿名でない波括弧群の後の語は判定不能", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; :; } arg'"),
+    ("silent", "} 救済 TS14 関数定義の本体の中のコマンドは skipped として判定しない", "zsh -c 'setopt nobadpattern; f() { function { :; } foo(a; python3 -i; }'"),
+    ("deny", "} 救済 TS15 関数定義の本体の後の区切りの先の起動は判定する", "zsh -c 'setopt nobadpattern; f() { function { :; } foo(a; :; }; python3 -i'"),
+    ("silent", "} 救済 TS16 最初の区切りが改行なら救済しない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a\npython3 -i; }'"),
+    ("silent", "} 救済 TS17 最初の区切りが && なら救済しない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a && python3 -i; }'"),
+    ("silent", "} 救済 TS18 引用符の中の } は閉じない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i; \"}\"'"),
+    ("silent", "} 救済 TS19 語の一部の } は閉じない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i; }x'"),
+    ("silent", "} 救済 TS20 リダイレクトの対象の } は閉じない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i; echo > }'"),
+    ("silent", "} 救済 TS21 サブシェル版は範囲外で従来どおり", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; python3 -i; )'"),
+    # The `)` after the close is read as a separator and closes an enclosing
+    # subshell, as anywhere else; zsh reaches the inner command
+    ("deny", "} 救済 外側のサブシェルは } で閉じた後の ) で閉じる", "zsh -c 'setopt nobadpattern; ( { function { :; } foo(a; python3 -i; } )'"),
+    # A chain of provisional groups is rescued only when every group of it
+    # holds the separator condition, and only when the group outside the chain
+    # is a `{` group; a failed `}` changes nothing and the later `;` and `}`
+    # are read as before
+    ("silent", "} 救済 外側の仮の群の最初の区切りが && なら } で救済しない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a && function { :; } bar(b; python3 -i; }'"),
+    ("deny", "} 救済 外側の仮の群の最初の区切りが ; なら内側の仮の群と合わせて } で救済する", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; function { :; } bar(b; python3 -i; }'"),
+    ("silent", "} 救済 内側の仮の群に区切りが無ければ } で救済しない", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; function { :; } bar(b }'"),
+    ("silent", "} 救済 仮の群のすぐ外側が ( 群なら } は閉じない", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; python3 -i; } )'"),
+    ("deny", "} 救済 失敗した } は群の状態を変えず、後の } が閉じる", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i; \"}\"; }'"),
+    # A `}` that closes the group is followed by the reading of any group
+    # closed with a `; }`: an enclosing plain brace group closes in turn
+    ("deny", "} 救済 外側の波括弧群は内側を } で閉じた後の } で閉じる", "zsh -c 'setopt nobadpattern; { { function { :; } foo(a; python3 -i; } }'"),
     # A standalone bare `}` closes an anonymous body, or a `{` group inside
     # one, even with words pending: they are finalized as a command of the
     # group, as a `;` before the `}` would (FR1, FR2, FR3, FR8). A `{` group
@@ -1164,6 +1207,44 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
                 with self.subTest(shape=name, copy=plugin):
                     code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
                     self.assertEqual((code, out, err), (0, "", ""))
+
+    def test_many_closing_braces_after_a_chain_that_cannot_be_rescued_are_answered(self):
+        # TS22: the chain of provisional groups is not rescuable (the first
+        # direct separator of the outermost one is `&&`), and every `; }` after
+        # it asks the rule at the `}` again. The check at a `}` reads values
+        # fixed when each group opened, so it costs constant time (NFR1). A
+        # walk over the chain at each `}` takes about depth times closings
+        # steps (3.6 billion here), far past the time limit, where the linear
+        # reading answers in a fraction of a second. The reading is
+        # undecidable at the end: the outer `{` group is never closed.
+        depth = closings = 10 * self.DEPTH
+        command = "{ function { :; } x(a && " + "function { :; } x(" * depth + "; }" * closings
+        for plugin, path in self.for_each_copy():
+            with self.subTest(copy=plugin):
+                code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                self.assertEqual((code, out, err), (0, "", ""))
+
+    def test_a_deep_chain_that_can_be_rescued_is_rescued_once_at_the_closing_brace(self):
+        # The same nesting with a first direct separator the rescue accepts: the
+        # first `}` rescues every group of the chain and closes the outer `{`
+        # group, each group removed once, and the launch before it is judged.
+        # Every `}` after it finds no open group and costs nothing.
+        depth = closings = 10 * self.DEPTH
+        inputs = {
+            "one closing brace": (
+                "{ function { :; } x(a; " + "function { :; } x(" * depth + "; python3 -i; }"
+            ),
+            "many closing braces": (
+                "{ function { :; } x(a; " + "function { :; } x(" * depth + "; python3 -i" + "; }" * closings
+            ),
+        }
+        for name, command in inputs.items():
+            for plugin, path in self.for_each_copy():
+                with self.subTest(shape=name, copy=plugin):
+                    code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                    self.assertEqual((code, err), (0, ""))
+                    decision = json.loads(out)["hookSpecificOutput"]
+                    self.assertEqual(decision["permissionDecision"], "deny")
 
     def nested_braces_closed_with_words_pending(self, depth):
         """`depth` groups nested in an anonymous body, each closed by a `}`
@@ -1766,6 +1847,15 @@ class TestGuardDocumentation(unittest.TestCase):
         # Step 4 said every group that is never closed gives no output, before a
         # provisional group left open at a `;` or a lone `&` was rescued
         "and a group that is never closed -> no output",
+        # Step 4 said a provisional group is rescued only when it is never
+        # closed, before a lone `}` rescued the chain it ends
+        "When a provisional group is never closed (its `)` sits in a comment, or there is none)",
+    )
+
+    # How the `_Group` description said a provisional group is rescued only
+    # when input ends, before a lone `}` rescued it too
+    STALE_GROUP_SENTENCES = (
+        "may be rescued when input ends, and no other group ever is",
     )
 
     # The same removal in the description of a group's `head` attribute
@@ -1942,6 +2032,23 @@ class TestGuardDocumentation(unittest.TestCase):
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
 
+    # A lone `}` read after a rescued separator closes the enclosing `{` group
+    # (FR5): the sentence is in the module docstring and in the docstring of
+    # `_Parser`
+    BRACE_CLOSE_MARKER = (
+        "A lone `}` read after a rescued separator closes the enclosing `{` group"
+    )
+
+    def test_the_module_docstring_states_that_a_brace_closes_the_group_after_a_rescue(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertIn(self.BRACE_CLOSE_MARKER, module_docstring(path))
+
+    def test_the_parser_description_states_that_a_brace_closes_the_group_after_a_rescue(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertIn(self.BRACE_CLOSE_MARKER, parser_docstring(path))
+
     # What step 4 says about the head's stdin redirect, a `(` among the
     # arguments of an anonymous function, and where the arguments end
     ANONYMOUS_ARGUMENT_MARKERS = (
@@ -1976,6 +2083,18 @@ class TestGuardDocumentation(unittest.TestCase):
         for plugin, path in HOOK_PATHS.items():
             doc = module_docstring(path)
             for stale in self.STALE_DOCSTRING_SENTENCES:
+                with self.subTest(copy=plugin, stale=stale):
+                    self.assertNotIn(stale, doc)
+
+    def test_the_group_description_no_longer_limits_the_rescue_to_the_end_of_input(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            group = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Group"
+            )
+            doc = " ".join((ast.get_docstring(group) or "").split())
+            for stale in self.STALE_GROUP_SENTENCES:
                 with self.subTest(copy=plugin, stale=stale):
                     self.assertNotIn(stale, doc)
 
