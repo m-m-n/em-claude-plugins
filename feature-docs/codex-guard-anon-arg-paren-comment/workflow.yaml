@@ -2,37 +2,59 @@ schema_version: 1
 feature: codex-guard-anon-arg-paren-comment
 created: '2026-10-17'
 base_branch: main
-goal: |
-  # codex-hook-interactive-guard: 匿名関数の引数中の ( 〜 ) に引用されていない ; があり閉じ括弧がコメント内に入る形で、; の後の対話起動を見逃す
+goal: '# codex-hook-interactive-guard: 匿名関数の引数中の ( 〜 ) に引用されていない ; があり閉じ括弧がコメント内に入る形で、; の後の対話起動を見逃す
+
 
   Notion: <notion-url>  種別: バグ
 
+
   ## 現象 (必須)
+
   `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、zsh 匿名関数の引数中の `(` 〜 `)` に引用されていない `;` があり、閉じ括弧がコメントの中に入る形を判定不能（出力なし）として扱う。実際の zsh では `;` の後のコマンドが別コマンドとして実行されるため、`python3 -i` のような対話起動を見逃す（既存の見逃し。feature `codex-guard-anon-stdin-args` の対象外として残した）。
 
+
   ## 再現手順 (必須)
-  1. `zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i #)'` をフックに渡すと出力なし（silent）
+
+  1. `zsh -c ''setopt nobadpattern; function { :; } foo(a; python3 -i #)''` をフックに渡すと出力なし（silent）
+
   2. 同じコマンドを実際の zsh 5.9 で実行すると、`;` の後の `python3 -i` が実行され Python の対話プロンプトが出る（Codex による実測）
 
+
   ## 期待する挙動 (必須)
+
   `;` の後の `python3 -i` を対話起動として deny する。
 
+
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
 
+
   ## 該当箇所 (任意)
+
   - `em-workflow/scripts/codex-hook-interactive-guard.py`（`_skip_parens`、閉じない `(` を判定不能にする箇所）
+
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
   - 記録: `feature-docs/codex-guard-anon-stdin-args/` の SPEC.md（TS19）と `phase-state/batch-audit.yaml`（ブランチ `em-workflow/codex-guard-anon-stdin-args/integration`）
 
+
   ## 実害・発生条件 (任意)
+
   見逃し側。`setopt nobadpattern` のもとで、引数の括弧の中に `;` とコメントを仕込む不自然な形に限られる。
 
+
   ## 追加指示
+
   - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモート両方に残す（自動マージしない）
+
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採る
+
   - その議論の内容を Notion に記録する
+
+  '
 parent_branch: em-workflow/codex-guard-anon-arg-paren-comment/integration
 tier: full
 tier_decision:
@@ -79,8 +101,10 @@ workflow:
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
+  - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 1c491af1713122a20f111fb1af041c04661b73f8
 - id: implement
   status: pending
 - id: review
@@ -91,7 +115,35 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Rescue unclosed anonymous-function argument groups at ; / lone &
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    branch: null
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -101,85 +153,124 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-4
+    - TS-5
+    - TS-7
   FR2:
     title: '& の形の救済'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   FR3:
     title: 改行の形は判定不能のまま
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-6
   FR4:
     title: 救済の契機は ; と単独の & に限る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+    - TS-18
+    - TS-19
+    - TS-20
   FR5:
     title: 本物の未閉鎖群は判定不能のまま
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
+    - TS-10
+    - TS-11
   FR6:
     title: 入力接続と関数定義の除外を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
+    - TS-13
+    - TS-14
   FR7:
     title: docstring の更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-17
   FR8:
     title: 2 つのコピーを同時に直す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-17
   FR9:
     title: 再発を検出するテスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-15
+    - TS-21
   NFR1:
     title: 線形時間
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-16
   NFR2:
     title: 既存の制約の維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-21
   NFR3:
     title: version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-22
 batch:
   review_rework_count: 0
   verify_rework:
