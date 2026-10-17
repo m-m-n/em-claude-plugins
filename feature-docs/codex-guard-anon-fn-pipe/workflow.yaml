@@ -100,7 +100,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 38227a28a3badf7b6412c914b82f3ab8d616c7c6
 tasks:
   task0001:
     title: Pin the piped and head-redirected anonymous function body in CASES
