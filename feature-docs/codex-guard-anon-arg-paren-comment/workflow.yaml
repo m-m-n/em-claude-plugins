@@ -88,7 +88,7 @@ workflow:
   completed_at_commit: 5e511edc97df6ceafa6910434882ce18a85b59d9
   base_commit: 3b8aa877cc5dd7513283e5661d189bd26693e6aa
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -125,8 +125,18 @@ tasks:
     branch: em-workflow/codex-guard-anon-arg-paren-comment/task0001
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: The diff adds provisional-group bookkeeping and an end-of-input rescue cascade to a tokenizer that must stay linear-time (NFR1, deep unclosed-group performance tests)
+    cross_validation: true
 requirements:
   FR1:
     title: ; の形の救済
