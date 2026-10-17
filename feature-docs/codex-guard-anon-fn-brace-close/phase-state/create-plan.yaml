@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-fn-brace-close
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 89016abeec86e64a0dfce8e8d7633c3c57b826ce
+last_input_digest: sha256:bde80472d622d332ff7d5d0688f3c323bbb4310f29c5d90b1ebd459233d507e5
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:bde80472d622d332ff7d5d0688f3c323bbb4310f29c5d90b1ebd459233d507e5
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
