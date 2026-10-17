@@ -92,7 +92,8 @@ workflow:
   completed_at_commit: 704ffc521d09bd0c2ccb9b0c329a55a6427b6fc1
   base_commit: bb27b0798c4ec634056c88b99f6ed65584df1dec
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 839ca0d039cab66bddf9185001de2fbb8c56e070
 - id: verify
   status: pending
   result: null
@@ -125,8 +126,9 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-anon-fn-pipe/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, spec]
   plan:
     floor: [comprehensive, security, spec]
     discretionary: []

@@ -1,0 +1,44 @@
+round: 1
+executed_at: "2026-10-17T16:08:21+09:00"
+scope:
+  review_mode: diff
+  base_commit: bb27b0798c4ec634056c88b99f6ed65584df1dec
+  head_commit: 839ca0d039cab66bddf9185001de2fbb8c56e070
+  changed_files:
+    - test-docs/codex-guard-anon-fn-pipe/task0001.tests.yaml
+    - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "3 観点のレビュアーはいずれも指摘 0 件。変更は tests/test_codex_hook_interactive_guard.py の CASES への 3 行追加と test-docs/codex-guard-anon-fn-pipe/task0001.tests.yaml の新規作成のみ。フックの 2 コピー・plugin.json・marketplace.json は不変で、2 コピーは cmp で同一。追加 3 件は SPEC FR4 と一致し、削除行 0（NFR2）。フックの _open_group / _close_group / リダイレクト処理を読み、3 件の判定が現行コードで成り立つことを確認（FR5 によりフック無変更は妥当）。注入の試みは無し。comprehensive / security / spec はいずれも corroborated。"
+  recommended_action: complete
+  action_rationale: "critical / high を含め指摘 0 件。変更は SPEC の FR4 / FR5 / NFR1-NFR4 を満たす。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-anon-fn-pipe-20261017T070807Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
