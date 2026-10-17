@@ -2,55 +2,33 @@ schema_version: 1
 feature: codex-guard-brace-anon-arg-rescue
 created: '2026-10-18'
 base_branch: main
-goal: '# codex-hook-interactive-guard: 波括弧群で包んだ匿名関数の引数の救済が効かず、; の後の対話起動を見逃す
-
+goal: |
+  # codex-hook-interactive-guard: 波括弧群で包んだ匿名関数の引数の救済が効かず、; の後の対話起動を見逃す
 
   ## 現象 (必須)
-
   `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、波括弧群 `{ ... }` や匿名関数の本体の中に、匿名関数の引数から仮に開いて閉じない `(` があり、その中の最初の区切りが `;` の形を判定不能（出力なし）にする。仮に開いた `foo(` の群の中で末尾の `}` が普通の語として読まれ、救済（`_rescue_argument_groups`）は仮の群を外すだけで `}` を外側の `{` 群で読み直さない。外側の群が未閉鎖扱いのまま残って `_Undecidable("group")` になり、`;` の後の `python3 -i` を見逃す。zsh ではこの `{` 群は閉じており、`;` の後のコマンドが実行される。
-
   feature `codex-guard-anon-arg-paren-comment`（ブランチ `em-workflow/codex-guard-anon-arg-paren-comment/integration`）のレビュー round 1 で medium として deferred にした残件（stable_id `db007e0ea42e58d2`）。変更前も出力なしだったため後退ではない。
-
   ## 再現手順 (必須)
-
-  1. `zsh -c ''setopt nobadpattern; { function { :; } foo(a; python3 -i; }''` をフックに渡すと出力なし（silent）
-
-  2. `zsh -c ''setopt nobadpattern; function { function { :; } foo(a; python3 -i; }''` も出力なし
-
-  3. 到達の確認: `zsh -f -c ''setopt nobadpattern; { function { :; } foo(a; printf REACHED; }''` で REACHED が出力される
-
+  1. `zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i; }'` をフックに渡すと出力なし（silent）
+  2. `zsh -c 'setopt nobadpattern; function { function { :; } foo(a; python3 -i; }'` も出力なし
+  3. 到達の確認: `zsh -f -c 'setopt nobadpattern; { function { :; } foo(a; printf REACHED; }'` で REACHED が出力される
   ## 期待する挙動 (必須)
-
   上の 2 形を deny にする。関数定義の本体の中で救済した形は skipped の規則で silent のまま。線形時間・再帰なし・2 コピーのバイト一致を保つ。
-
   ## 完了の定義 (必須)
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
   ## 該当箇所 (任意)
-
   - `em-workflow/scripts/codex-hook-interactive-guard.py`（`_finish_word` の `}` の扱い、`_rescue_argument_groups`、`if self.frames: raise _Undecidable("group")`）
-
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
-
   - 記録: `feature-docs/codex-guard-anon-arg-paren-comment/reviews/round1.yaml`
-
   ## 実害・発生条件 (任意)
-
   見逃し側。`setopt nobadpattern` のもとで、引数の括弧の中に `;` を仕込み、全体を `{ ...; }` で包む不自然な形に限られる。
-
 
   Notion: <notion-url>
 
-
   ## 追加指示
 
-
   - 実装完了後 integration ブランチを push し gh pr create で base_branch への PR を作る（自動マージしない）。不明点は Codex に相談し比較的良い案を採用、その議論内容を Notion に記録する。
-
-  '
 parent_branch: em-workflow/codex-guard-brace-anon-arg-rescue/integration
 tier: full
 tier_decision:
