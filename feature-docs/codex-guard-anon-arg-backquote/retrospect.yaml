@@ -1,5 +1,5 @@
 feature: codex-guard-anon-arg-backquote
-collected_at: "2026-10-17T22:30:00+09:00"
+collected_at: "2026-10-17T22:27:50+09:00"
 session_ids: [01a14a0a-947f-707b-ac7b-49bbd3223206]
 signals:
   review_critical_high: []
