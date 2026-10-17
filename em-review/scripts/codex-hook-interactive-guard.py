@@ -101,9 +101,11 @@ Decision flow:
      awaited. An unquoted `$'` or `$"` inside such a range makes the whole input
      unknowable -> no output; a `$'` or `$"` inside quotes and a
      backslash-escaped `$` are no trigger.
-     A group opened at such a `(` is provisional. When a provisional group is
-     never closed (its `)` sits in a comment, or there is none) and the first
-     separator read directly in it is a `;` or a lone `&`, its `(` is read as an
+     A group opened at such a `(` is provisional. A provisional group is
+     rescued in two cases: input ends while it is still open (its `)` sits in a
+     comment, or there is none), and a lone bare `}` is read while it is the
+     innermost open group (below). Either way the first separator read directly
+     in it must be a `;` or a lone `&`, and then its `(` is read as an
      argument-word character: the group ends at that separator, what comes
      before it keeps the reading it had, and the commands after that separator
      are judged as following the anonymous function, as commands of the frame
@@ -152,6 +154,29 @@ Decision flow:
      words are pending: the `}` is an ordinary word and the string stays
      undecidable. A `}` that is quoted, escaped or expanded, that is part of a
      larger word, or that is the target of a redirect closes no group.
+     A lone `}` read after a rescued separator closes the enclosing `{` group.
+     When the innermost open group is a provisional group, a standalone bare `}`
+     rescues the chain of provisional groups there (the run of open provisional
+     groups from the innermost outward) and closes the open group just outside
+     the chain, provided all of these hold. The chain meets the condition of the
+     rescue above, judged on the separators the reader read directly in its
+     groups, never on the lookahead that located the ranges: the first direct
+     separator of the innermost group is a `;` or a lone `&`, and an outer group
+     with none of its own takes the separator of the one nested in it. The
+     group just outside the chain is a `{` group (a plain brace group, the body
+     of an anonymous function or the body of a function definition), not a `(`
+     group and not the top level. And no word is pending, or words are pending
+     and that `{` group lies within the body of an anonymous function, as for
+     any other `}`; the pending words are then finalized first, as a command of
+     that group. The `{` group is closed as a `; }` closes it: the commands read
+     in the rescued groups are commands of that group, so a pipe or a stdin
+     redirect attached to the group after its close reaches them, the words after
+     the `}` of an anonymous body are its arguments, a word after the `}` of any
+     other brace group makes the string undecidable, the commands of the body of
+     a function definition are not judged, and a `)` after the `}` is a
+     separator that closes an enclosing subshell. A `}` that does not meet these
+     conditions is an ordinary word and changes no open group, no separator and
+     no command; the string then stays undecidable if a group is left open.
   5. After `|` or `|&` the right side is awaited: a pending pipe survives
      newlines, blank lines, comment-only lines and heredoc bodies, and the
      next non-empty command is the right side. A newline after `&&` or `||`
@@ -251,9 +276,30 @@ NESTED_READ_LIMIT = 1000000
 # group, as before ranges were read.
 PAREN_SCAN_FACTOR = 4
 
+# The first direct separators that rescue a provisional group: a `;` and a lone
+# `&`. Any other first separator (a newline, `&&`, `||`, `|`, `|&`) leaves the
+# group unrescued.
+RESCUE_SEPARATORS = (";", "&")
+
 
 class _Undecidable(Exception):
     pass
+
+
+def _rescue_separator(own, inherited=None):
+    """The separator by which a provisional group is rescued, or None when it is
+    not. This is the one definition of the separator condition: the rescue when
+    input ends (`_rescue_argument_groups`) and the rescue at a lone `}`
+    (`_Parser._close_after_rescue`, with the values `_Parser._mark_provisional`
+    fixes) both apply it, so the two cannot drift apart.
+
+    `own` is the first separator read directly in the group, or None while there
+    is none. A group with none of its own takes `inherited`, the separator of
+    the group nested in it, which was rescued before it. Only `;` and a lone `&`
+    (RESCUE_SEPARATORS) rescue. The innermost group of a chain has nothing to
+    inherit, so it needs a separator of its own."""
+    first = own if own is not None else inherited
+    return first if first in RESCUE_SEPARATORS else None
 
 
 class _Family:
@@ -423,8 +469,10 @@ class _Group:
                function body
     provisional  the group was opened at a `(` among the arguments of an anonymous
                function (`_read_argument_parens`); every other group is genuine.
-               A provisional group that is never closed may be rescued when input
-               ends, and no other group ever is
+               A provisional group may be rescued, when input ends with it still
+               open and when a lone `}` closes the `{` group just outside the
+               chain of provisional groups it ends (`_Parser._close_after_rescue`);
+               no other group ever is
     first_sep  on a provisional group: the first separator the reader met while
                the group was the innermost open group, as the text of that
                separator (`;`, `&`, `&&`, `||`, `|`, `|&` or a newline), or None
@@ -432,11 +480,24 @@ class _Group:
                separator met inside a group nested in this one is not recorded
                here. A redirection (`&>`, `>&`), a quoted `;` or `&` and a
                backslash-escaped one are no separator
+    chain_base on a provisional group: the open group just outside the chain of
+               provisional groups this group ends, that is, the nearest open
+               ancestor that is not provisional, or None when the chain reaches
+               the top level. A `}` rescues the chain only when it is a `{` group
+    outer_blocked  on a provisional group: the part of that chain outside this
+               group cannot be rescued, because an enclosing provisional group has
+               a first separator that does not rescue (`_rescue_separator`) or is
+               itself blocked. Both chain values are fixed once, when the group
+               opens, from the values of its parent alone (`_Parser._mark_provisional`):
+               while this group is open its parent reads no direct separator, so
+               the parent's part cannot change, and a `}` reads them in constant
+               time without walking the groups around it
     """
 
     __slots__ = (
         "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "anon_stdin",
         "head_stdin", "in_anon", "size", "connected", "skipped", "provisional", "first_sep",
+        "chain_base", "outer_blocked",
     )
 
     def __init__(
@@ -459,6 +520,8 @@ class _Group:
         self.skipped = False
         self.provisional = False
         self.first_sep = None
+        self.chain_base = None
+        self.outer_blocked = False
 
 
 class _Parser:
@@ -484,17 +547,28 @@ class _Parser:
 
     A group opened at such a `(` is provisional (`_Group.provisional`), and the
     first separator the reader meets while it is the innermost open group is kept
-    on it (`_Group.first_sep`). When input ends, a provisional group that was
-    never closed is rescued if that first direct separator is a `;` or a lone
-    `&`: its `(` is read as an argument-word character, the group ends at that
-    separator, and the commands after that separator are judged as following the
-    anonymous function (`_rescue_argument_groups`). Provisional groups nested in
-    each other are rescued from the inside out. A newline as the first direct
+    on it (`_Group.first_sep`). A provisional group is rescued if that first
+    direct separator is a `;` or a lone `&`: its `(` is read as an argument-word
+    character, the group ends at that separator, and the commands after that
+    separator are judged as following the anonymous function. The rescue is made
+    in two places, and both apply the one separator condition
+    (`_rescue_separator`). When input ends, a provisional group that was never
+    closed is rescued (`_rescue_argument_groups`). A lone `}` read while a
+    provisional group is the innermost open group rescues the chain of
+    provisional groups there, from the innermost outward, when the chain meets
+    the condition and the open group just outside it is a `{` group
+    (`_close_after_rescue`). A lone `}` read after a rescued separator closes the
+    enclosing `{` group. Provisional groups nested in each other are rescued from
+    the inside out, and an outer one with no separator of its own takes the
+    separator of the inner one as its first. A newline as the first direct
     separator is not rescued. A group that is genuinely unclosed still yields no
     output: a group that is not provisional and is left open, and a provisional
-    group that is not rescued, raise _Undecidable. The rescue visits each open
-    group once and moves no command, so it costs time linear in the number of
-    open groups.
+    group that is not rescued, raise _Undecidable. A `}` that does not qualify is
+    an ordinary word and changes no open group, no separator record and no
+    command. Each provisional group is removed once, and the check at a `}` reads
+    values fixed when the group opened (`_Group.chain_base`,
+    `_Group.outer_blocked`), so it costs constant time and the whole reading
+    stays linear in the length of the string.
     """
 
     def __init__(self, command):
@@ -601,21 +675,38 @@ class _Parser:
         # words after the `}` of an anonymous body are its arguments: none of
         # them opens a group, and a `}` among them still closes an enclosing
         # brace group, as zsh does.
+        #
+        # A lone bare `}` reads as follows (`bare` and the text `}` leave out a
+        # quoted, escaped or expanded one and one joined to other characters; a
+        # redirect target returned above). When the innermost open group is a
+        # `{` group it closes it, with no word pending, or with words pending
+        # when the group lies within an anonymous body (they are finalized as a
+        # command of the group first). When the innermost open group is a
+        # provisional group, the `}` first rescues the chain of provisional
+        # groups it ends, then closes the `{` group just outside the chain, but
+        # only when the chain meets the separator condition and that group is a
+        # `{` group, with the same word rule (`_closes_after_rescue`). In every
+        # other case the `}` is an ordinary word and nothing changes.
         arguments = self._in_arguments()
         if bare and text == "{" and not arguments and (not self.words or self._names_anonymous_function()):
             self._open_group("{")
             return
-        if bare and text == "}" and self.frames and self.frames[-1].kind == "{":
-            if not self.words:
-                self._close_group()
-                return
-            if self.frames[-1].in_anon:
-                # Words are pending and the group lies within an anonymous
-                # body: finalize them as a command of the group, as a `;`
-                # before the `}` would, then close it. Any other brace group
-                # leaves the `}` an ordinary word.
-                self._separator(";")
-                self._close_group()
+        if bare and text == "}" and self.frames:
+            innermost = self.frames[-1]
+            if innermost.kind == "{":
+                if not self.words:
+                    self._close_group()
+                    return
+                if innermost.in_anon:
+                    # Words are pending and the group lies within an anonymous
+                    # body: finalize them as a command of the group, as a `;`
+                    # before the `}` would, then close it. Any other brace
+                    # group leaves the `}` an ordinary word.
+                    self._separator(";")
+                    self._close_group()
+                    return
+            elif self._closes_after_rescue(innermost):
+                self._close_after_rescue(innermost)
                 return
         if self.after_group is not None and self.after_group.kind == "{":
             if arguments:
@@ -634,6 +725,85 @@ class _Parser:
         anonymous body, so they are its arguments."""
         group = self.after_group
         return group is not None and group.kind == "{" and group.anon
+
+    def _closes_after_rescue(self, group):
+        """Whether a lone bare `}` read while `group` is the innermost open group
+        (`group` is not a `{` group) rescues the chain of provisional groups that
+        ends at `group` and closes the group just outside it. All of these hold:
+
+        1. `group` is provisional, and so is every group of the chain; the
+           chain is the run of open provisional groups from `group` outward.
+        2. The chain meets the separator condition `_rescue_argument_groups`
+           applies when input ends (`_rescue_separator`): the first direct
+           separator of `group` is a `;` or a lone `&`, and no enclosing group of
+           the chain has one that does not rescue. A group with none of its own
+           takes the separator of the one nested in it. The condition is judged
+           on the separators the reader read (`_Group.first_sep`), never on the
+           lookahead that located the range.
+        3. The group just outside the chain (`_Group.chain_base`) is a `{` group:
+           a plain brace group, an anonymous body or a function body. A `(` group
+           or the top level is not.
+        4. No word is pending, or words are pending and that `{` group lies
+           within an anonymous body, as for any other `}`.
+
+        Constant time: it reads `group` and its chain base, and the two values
+        `_mark_provisional` fixed when `group` opened. It changes nothing, so a
+        `}` that fails it leaves every group, separator record and command as
+        they were."""
+        if not group.provisional or group.outer_blocked:
+            return False
+        if _rescue_separator(group.first_sep) is None:
+            return False
+        base = group.chain_base
+        if base is None or base.kind != "{":
+            return False
+        return not self.words or base.in_anon
+
+    def _close_after_rescue(self, group):
+        """Rescue the chain of provisional groups that ends at `group`, from the
+        innermost out, and close the `{` group just outside it. `_closes_after_rescue`
+        has held. Each group of the chain is removed from the open groups once; its
+        `(` is read as an argument-word character and the group ends at its first
+        direct separator, exactly as `_rescue_argument_groups` reads it when input
+        ends. Nothing is moved: a provisional group carries no connection and no
+        skip of its own, so the commands read in the rescued groups take both from
+        the groups around them when the string has been read, as the commands of
+        the `{` group do. A redirect or pipe attached to that group therefore
+        reaches them. Words pending are finalized as a command of that group, as a
+        `;` before the `}` would, and the group is then closed as a `; }` closes
+        it. The `}` is consumed."""
+        base = group.chain_base
+        while self.frames[-1] is not base:
+            self.frames.pop()
+        if self.words:
+            self._separator(";")
+        self._close_group()
+
+    def _mark_provisional(self, group):
+        """Mark the group just opened at an argument `(` as provisional and fix,
+        from the values of its parent alone, the two values the check at a `}`
+        reads (`_Group.chain_base`, `_Group.outer_blocked`).
+
+        When the parent is provisional the parent's group is part of the chain:
+        the base is the parent's base, and the part outside this group is
+        blocked when the parent's part is, or when the parent's own first direct
+        separator does not rescue. That separator is final now and stays so as
+        long as this group is open, because the parent reads no direct separator
+        meanwhile. The separator it would inherit from this group is one of
+        RESCUE_SEPARATORS whenever this group's own separator rescues, so which
+        one it is does not matter here. Otherwise the parent (or the top level,
+        None) is the base, and nothing outside this group is blocked."""
+        group.provisional = True
+        parent = group.parent
+        if parent is not None and parent.provisional:
+            group.chain_base = parent.chain_base
+            group.outer_blocked = (
+                parent.outer_blocked
+                or _rescue_separator(parent.first_sep, RESCUE_SEPARATORS[0]) is None
+            )
+        else:
+            group.chain_base = parent
+            group.outer_blocked = False
 
     def _flush(self):
         """End the simple command in progress. Return (made, redirected):
@@ -808,7 +978,11 @@ class _Parser:
     def _rescue_argument_groups(self):
         """When input ends, close the provisional groups that were never closed
         and can be rescued, from the innermost out, and stop at the first open
-        group that cannot be.
+        group that cannot be. A lone `}` rescues the chain of provisional groups
+        it ends under the same separator condition before input ends
+        (`_close_after_rescue`): the condition is `_rescue_separator`, shared by
+        the two rescues, and a provisional group the `}` rescued is no longer
+        open here.
 
         A provisional group is rescued when the first separator read directly in
         it is a `;` or a lone `&`: its `(` is then read as an argument-word
@@ -835,8 +1009,8 @@ class _Parser:
             group = self.frames[-1]
             if not group.provisional:
                 return
-            first = group.first_sep if group.first_sep is not None else separator
-            if first not in (";", "&"):
+            first = _rescue_separator(group.first_sep, separator)
+            if first is None:
                 return
             self.frames.pop()
             separator = first
@@ -948,8 +1122,9 @@ class _Parser:
         never closed and the first separator read directly in it is a `;` or a
         lone `&`, its `(` is read as an argument-word character after all: the
         commands after that separator are judged as following the anonymous
-        function (`_rescue_argument_groups`, run when input ends). A newline as
-        the first direct separator is not rescued."""
+        function (`_rescue_argument_groups`, run when input ends, or
+        `_close_after_rescue`, run at a lone `}` that closes the `{` group around
+        it). A newline as the first direct separator is not rescued."""
         start = self.i
         end, separated, backquoted, reached = self._scan_parens(
             start, self.paren_budget
@@ -966,7 +1141,7 @@ class _Parser:
             return
         self.i += 1
         self._open_group("(")
-        self.frames[-1].provisional = True
+        self._mark_provisional(self.frames[-1])
 
     def _remove_range_quotes(self, start, end):
         """Return the text of the range `self.s[start:end]` (from its `(` through
