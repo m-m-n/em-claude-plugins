@@ -1,0 +1,197 @@
+schema_version: 1
+feature: codex-guard-anon-fn-brace-close
+created: '2026-10-17'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: } の前にセミコロンが無い括弧なし匿名関数 function { : } が -c 文字列全体を判定不能にし、同じ文字列の対話起動を見逃す（回帰）
+
+  Notion: <notion-url>  種別: バグ
+
+  ## 現象 (必須)
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、閉じ波括弧 `}` の直前にセミコロンが無い括弧なし匿名関数（例: `function { : }`）があると、`-c` 文字列全体が判定不能として読み飛ばされ、同じ文字列内の対話起動を見逃す。
+  zsh は IGNORE_CLOSE_BRACES が無効なら、単独の `}` をセミコロン無しでも閉じ括弧として読むので `function { : }` は有効な構文。ガードは `function` の後の `{` で群を開くが、単純コマンドに語が残っている間は `}` を閉じ括弧として扱わない。群が閉じないまま `_Undecidable("group")` が送出され、`_scan` / `main` がこれを捕捉して文字列を丸ごと読み飛ばす。
+  feature `codex-guard-anon-brace-forms` の変更で入った退行（fail-open 方向）。変更前は `{` を普通の語として読んでいたので、前後の対話起動は deny されていた。`function () { : }`、`() { : }`、ただの `{ : }` は変更前から同じく判定不能なので、退行は括弧なし形に限られる。
+
+  ## 再現手順 (必須)
+  1. `zsh -c 'python3 -i; function { : }'` を `{"tool_input": {"command": "..."}}` としてフックの標準入力に渡す
+  2. 何も出力されない（silent）。変更前（`328f1d1c`）では deny が返る
+  3. `zsh -c 'function { python3 -i }'` でも silent
+  4. `function { :; }` のようにセミコロンを入れると deny が返る
+
+  ## 期待する挙動 (必須)
+  匿名関数の本体の中にある単独の `}` は、語が残っていても単純コマンドを確定してから群を閉じる。上の 3 コマンドはいずれも deny になる。
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に `zsh -c 'python3 -i; function { : }'`、`zsh -c 'function { : }; python3 -i'`、`zsh -c 'function { python3 -i }'` を deny として追加
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:454`（群を開く処理）、`:457`（`not self.words` の条件）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-anon-brace-forms/reviews/round1.yaml` の stable_id `155bd6279d2d5a79`（ブランチ `em-workflow/codex-guard-anon-brace-forms/integration`）
+
+  ## 実害・発生条件 (任意)
+  見逃し側（fail-open）。`}` の前にセミコロンを書かない括弧なし匿名関数を同じ `-c` 文字列に含めると、その文字列の対話起動がガードを通り抜け、対話待ちの孤児プロセスが残りうる。
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモート両方に残す（自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採る
+  - その議論の内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-anon-fn-brace-close/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+  at: '2026-10-17T17:48:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (only when no two tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: ed593ffa97c3a5348534fb1b67d1f92e50dc73ed
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped); reduced tier also subtracts the design step'
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 匿名関数の本体を閉じる `}`
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 匿名関数の本体の中に入れ子になった `{` 群
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 確定したコマンドの所属と接続
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 対象外の `}`
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 匿名関数の本体の外の群
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: docstring
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 2 つのコピー
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 退行を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 線形時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 依存と副作用
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: fail-open の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
