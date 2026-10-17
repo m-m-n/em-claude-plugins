@@ -549,6 +549,22 @@ CASES = [
     ("deny", "引数の ( ) の中に ; があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i)'"),
     ("deny", "引数の ( ) の中に & があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a & python3 -i)'"),
     ("deny", "引数の ( ) の中に改行があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a\npython3 -i)'"),
+    # A range that holds a backquote, unquoted or inside double quotes, is read
+    # as a group too, whether or not the backquotes balance: the scan notices a
+    # backquote but never reads it, so a `)` inside one closes the range and
+    # the explicit `-i` of the anonymous body must not go unjudged. A backquote
+    # a backslash escapes, one inside single quotes and one after the range's
+    # closing `)` are no trigger
+    ("deny", "引数の ( ) の中にバッククォートがあれば群として読み本体の -i を拒否する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`case x in x) echo x;; esac`)'"),
+    ("deny", "引数の ( ) の中のダブルクォート内のバッククォートも群として読み本体の -i を拒否する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(\"`echo \"x)\"`\")'"),
+    ("deny", "引数の ( ) の中のダブルクォート内の対のバッククォートも契機になる", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(\"`echo x`\") < /dev/null'"),
+    ("deny", "既知の誤拒否: 引数の ( ) の中の対のバッククォートも契機になり、後の入力リダイレクトが本体を接続しない", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(`echo x`) < /dev/null'"),
+    ("silent", "引数の ( ) の中のダブルクォート内のバックスラッシュで打ち消したバッククォートは群を開かない", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(\"\\`x\\`\") < /dev/null'"),
+    ("silent", "引数の ( ) の中のバックスラッシュで打ち消したバッククォートは群を開かない", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(\\`x\\`) < /dev/null'"),
+    ("silent", "引数の ( ) の中のシングルクォート内のバッククォートは群を開かない", "zsh -c \"setopt nonomatch nobareglobqual; function { python3; } foo('\\`x\\`') < /dev/null\""),
+    ("silent", "引数の ( ) の中の閉じないバッククォートは判定不能", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x)'"),
+    ("silent", "引数の ( ) の中のダブルクォート内の閉じないバッククォートは判定不能", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(\"`echo x\")'"),
+    ("silent", "引数の ( ) の閉じ括弧より後のバッククォートは契機にならない", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(x) < /dev/null; echo `echo y`'"),
     # A group opened at such a `(` is provisional. When it is never closed (the
     # `)` sits in a comment, or there is none) and the first separator read
     # directly in it is a `;` or a lone `&`, it is rescued: the `(` is read as
@@ -1016,6 +1032,7 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
             "ranges that hold a separator, three times as deep": (
                 "function { :; } x(" * (3 * depth) + "; :" + ")" * (3 * depth)
             ),
+            "ranges that hold a backquote": "function { :; } x(`:` " * depth + ")" * depth,
             "unclosed ranges, then a launch": self.unclosed_ranges_then_a_launch(depth),
             "unclosed ranges, then many commands and a launch": self.unclosed_ranges_then_many_commands(depth),
         }
@@ -1582,6 +1599,28 @@ def module_docstring(path):
     return " ".join(doc.split())
 
 
+def parser_docstring(path, method=None):
+    """The docstring of the `_Parser` class, or of its method `method`, with
+    its line breaks and indentation folded into single spaces. None when the
+    method does not exist."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    node = next(
+        node for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "_Parser"
+    )
+    if method is not None:
+        node = next(
+            (
+                member for member in node.body
+                if isinstance(member, ast.FunctionDef) and member.name == method
+            ),
+            None,
+        )
+        if node is None:
+            return None
+    return " ".join((ast.get_docstring(node) or "").split())
+
+
 class TestGuardDocumentation(unittest.TestCase):
     """The judgment procedure in the module docstring follows the parser
     (FR6): the markers below are the sentences that name each behavior."""
@@ -1767,6 +1806,45 @@ class TestGuardDocumentation(unittest.TestCase):
             for marker in markers:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
+
+    # The backquote rule (FR7): a range among the arguments of an anonymous
+    # function that holds a backquote is read as a group, as one that holds an
+    # unquoted `;`, `&` or newline is. One marker per docstring that states it
+    BACKQUOTE_MODULE_MARKER = (
+        "A range that holds a backquote, one inside double quotes included, opens a group too"
+    )
+    BACKQUOTE_PARSER_MARKER = (
+        "or a backquote (one inside double quotes included), or no matching `)` is found"
+    )
+    BACKQUOTE_SCAN_MARKER = (
+        "`backquoted` is whether a backquote lies between the `(` and the `)`, "
+        "one inside double quotes included"
+    )
+    BACKQUOTE_READER_MARKER = "the range holds an unquoted `;`, `&` or newline, or a backquote"
+
+    def test_the_module_docstring_states_the_backquote_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertIn(self.BACKQUOTE_MODULE_MARKER, module_docstring(path))
+
+    def test_the_parser_description_states_the_backquote_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertIn(self.BACKQUOTE_PARSER_MARKER, parser_docstring(path))
+
+    def test_the_range_scan_states_the_backquote_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin, method="_scan_parens"):
+                doc = parser_docstring(path, "_scan_parens")
+                self.assertIsNotNone(doc, "no _scan_parens method in _Parser")
+                self.assertIn(self.BACKQUOTE_SCAN_MARKER, doc or "")
+
+    def test_the_argument_paren_reader_states_the_backquote_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin, method="_read_argument_parens"):
+                doc = parser_docstring(path, "_read_argument_parens")
+                self.assertIsNotNone(doc, "no _read_argument_parens method in _Parser")
+                self.assertIn(self.BACKQUOTE_READER_MARKER, doc or "")
 
     # What step 4 says about the head's stdin redirect, a `(` among the
     # arguments of an anonymous function, and where the arguments end
