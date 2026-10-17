@@ -553,6 +553,43 @@ CASES = [
     ("silent", "引数の閉じていない ( は判定不能", "zsh -c 'function { python3 -i; } foo('"),
     ("deny", "引数の対の無い ) は区切りとして読む", "zsh -c 'function { :; } foo) python3'"),
     ("silent", "引数の対の無い ) は外側のサブシェルを閉じ、その後の入力リダイレクトが本体を接続する", "zsh -c '( function { python3; } foo) < f'"),
+    # A standalone bare `}` closes an anonymous body, or a `{` group inside
+    # one, even with words pending: they are finalized as a command of the
+    # group, as a `;` before the `}` would (FR1, FR2, FR3, FR8). A `{` group
+    # outside every anonymous body does not close then (FR5), and a `}` that
+    # is quoted, escaped, expanded, inside a word or a redirect target closes
+    # nothing (FR4)
+    ("deny", "; のない } の匿名関数の本体の前にある起動", "zsh -c 'python3 -i; function { : }'"),
+    ("deny", "; のない } の匿名関数の本体の後にある起動", "zsh -c 'function { : }; python3 -i'"),
+    ("deny", "; のない } の匿名関数の本体の中の -i", "zsh -c 'function { python3 -i }'"),
+    ("deny", "; のない } の function () の本体の中の -i", "zsh -c 'function () { python3 -i }'"),
+    ("deny", "; のない } の () の本体の中の -i", "zsh -c '() { python3 -i }'"),
+    ("deny", "; のない } の匿名関数の本体と引数", "zsh -c 'function { python3 -i } arg'"),
+    ("deny", "; のない } の匿名関数の本体に入れ子にした波括弧群の後の起動", "zsh -c 'function { { : } }; python3 -i'"),
+    ("deny", "; のない } の匿名関数の本体の中の ( ) をはさんだ波括弧群の中の -i", "zsh -c 'function { ( { python3 -i } ) }'"),
+    ("deny", "匿名関数の本体の中の関数定義の本体は語が残っていても閉じる", "zsh -c 'function { f() { : } }; python3 -i'"),
+    ("deny", "匿名関数の本体の中の function 付きの関数定義の本体は語が残っていても閉じる", "zsh -c 'function { function f() { : } }; python3 -i'"),
+    ("deny", "匿名関数の本体の中の ( ) の中の波括弧群は語が残っていても閉じる", "zsh -c 'function { ( { : } ) }; python3 -i'"),
+    ("deny", "入れ子の匿名関数の本体は語が残っていても閉じる", "zsh -c 'function { function { : } }; python3 -i'"),
+    ("deny", "括弧の中の匿名関数の本体は語が残っていても閉じる", "zsh -c '( function { : } ); python3 -i'"),
+    ("deny", "; のない } の匿名関数の本体の外の波括弧群の中の入れ子の匿名関数", "zsh -c '{ function { : }; python3 -i; }'"),
+    ("silent", "パイプの右側の匿名関数の本体の ; のない } は接続を受け継ぐ", "zsh -c 'echo x | function { python3 }'"),
+    ("silent", "頭部の入力リダイレクトのある匿名関数の本体の ; のない } は接続を受け継ぐ", "zsh -c '< /dev/null function { python3 }'"),
+    ("silent", "パイプの右側の匿名関数の本体の入れ子の ; のない } は接続を受け継ぐ", "zsh -c 'echo x | function { { python3 } }'"),
+    ("silent", "閉じた後の入力リダイレクトは ; のない } の匿名関数の本体を接続する", "zsh -c 'function () { python3 } < /dev/null'"),
+    ("silent", "引数の後の入力リダイレクトは ; のない } の匿名関数の本体を接続する", "zsh -c 'function { python3 } arg < /dev/null'"),
+    ("silent", "引用符で囲んだ } は群を閉じず、語が残る最後の } だけが本体を閉じる", "zsh -c \"echo x | function { echo '}'; python3 }\""),
+    ("silent", "引用符で囲んだ } は群を閉じない", "zsh -c \"function { echo '}'; python3 -i\""),
+    ("silent", "二重引用符で囲んだ } は群を閉じない", "zsh -c 'function { echo \"}\"; python3 -i'"),
+    ("silent", "エスケープした } は群を閉じない", "zsh -c 'function { echo \\}; python3 -i'"),
+    ("silent", "$'..' の } は群を閉じない", "zsh -c \"function { echo \\$'}'; python3 -i\""),
+    ("silent", "語の一部の } は群を閉じない", "zsh -c 'function { echo a}; python3 -i'"),
+    ("silent", "リダイレクト先の } は群を閉じない", "zsh -c 'function { echo x > }; python3 -i'"),
+    ("silent", "最上位の波括弧群は語が残る } で閉じない", "zsh -c '{ : }; python3 -i'"),
+    ("silent", "匿名関数の外の関数定義の本体は語が残る } で閉じない", "zsh -c 'f() { : }; python3 -i'"),
+    ("silent", "匿名関数の外の function 付きの関数定義の本体は語が残る } で閉じない", "zsh -c 'function f() { : }; python3 -i'"),
+    ("silent", "匿名関数の外の ( ) の中の波括弧群は語が残る } で閉じない", "zsh -c '( { : } ); python3 -i'"),
+    ("silent", "匿名関数の引数の後の波括弧群は匿名関数の本体の外", "zsh -c 'function { :; } arg; { : }; python3 -i'"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -938,6 +975,95 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
         for name, command in inputs.items():
             with self.subTest(shape=name):
                 self.assert_every_copy_answers(command)
+
+    def nested_braces_closed_with_words_pending(self, depth):
+        """`depth` groups nested in an anonymous body, each closed by a `}`
+        that has words pending: only a `;` or newline may come between a
+        closed brace group and the next word, so every level but the innermost
+        is closed after a `;`."""
+        return "function {" + " { :;" * depth + " : }" + " ; : }" * depth
+
+    def test_braces_closed_inside_an_anonymous_body_are_answered(self):
+        # Whether a `{` group lies inside an anonymous body is read from a
+        # value fixed when the group opened, so a `}` that closes with words
+        # pending costs constant time (TM-2). A walk over the enclosing groups
+        # at each `}` is quadratic: the depth below is where it overruns the
+        # time limit, and the linear scan answers in a fraction of it. The
+        # first shape is the one the specification gives: its `{` words after
+        # the first follow a pending `:`, so they open no group. The others
+        # nest real groups.
+        depth = 10 * self.DEPTH
+        inputs = {
+            "braces after a pending word": "function {" + " { :" * depth + " }" * depth,
+            "nested groups closed with words pending": self.nested_braces_closed_with_words_pending(depth),
+            "nested groups closed with no word pending": (
+                "function {" + " {" * depth + " :" + " }" * depth + " }"
+            ),
+            "nested groups under parentheses": (
+                "function {" + " ( { :;" * depth + " : }" + " ) ; : }" * depth
+            ),
+            "nested groups closed with words pending, then a launch": (
+                self.nested_braces_closed_with_words_pending(depth) + "; python3 -i"
+            ),
+        }
+        for name, command in inputs.items():
+            with self.subTest(shape=name):
+                self.assert_every_copy_answers(command)
+
+    def test_deeply_nested_braces_closed_with_words_pending_are_denied_when_a_launch_follows(self):
+        depth = 10 * self.DEPTH
+        inputs = {
+            "braces": self.nested_braces_closed_with_words_pending(depth) + "; python3 -i",
+            "braces under parentheses": (
+                "function {" + " ( { :;" * depth + " : }" + " ) ; : }" * depth + "; python3 -i"
+            ),
+            "braces with no word pending": "function {" + " {" * depth + " :" + " }" * depth + " }; python3 -i",
+        }
+        for name, command in inputs.items():
+            for plugin, path in self.for_each_copy():
+                with self.subTest(shape=name, copy=plugin):
+                    code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                    self.assertEqual((code, err), (0, ""))
+                    decision = json.loads(out)["hookSpecificOutput"]
+                    self.assertEqual(decision["permissionDecision"], "deny")
+
+
+class TestBraceCloseEqualsSemicolonBeforeIt(HookCopiesMixin, unittest.TestCase):
+    """A standalone bare `}` that closes an anonymous body, or a `{` group
+    inside one, while words are pending gives the verdict of the same input
+    with `;` inserted immediately before that `}` (FR1, FR2, FR3, TM-1). Each
+    row is (command, the same command with `;` before each `}` the rule
+    closes, the verdict both carry)."""
+
+    PAIRS = [
+        ("zsh -c 'python3 -i; function { : }'", "zsh -c 'python3 -i; function { :;}'", "deny"),
+        ("zsh -c 'function { : }; python3 -i'", "zsh -c 'function { :;}; python3 -i'", "deny"),
+        ("zsh -c 'function { python3 -i }'", "zsh -c 'function { python3 -i;}'", "deny"),
+        ("zsh -c 'function () { python3 -i }'", "zsh -c 'function () { python3 -i;}'", "deny"),
+        ("zsh -c '() { python3 -i }'", "zsh -c '() { python3 -i;}'", "deny"),
+        ("zsh -c 'function { python3 -i } arg'", "zsh -c 'function { python3 -i;} arg'", "deny"),
+        ("zsh -c 'function { { : } }; python3 -i'", "zsh -c 'function { { :;} }; python3 -i'", "deny"),
+        ("zsh -c 'function { ( { python3 -i } ) }'", "zsh -c 'function { ( { python3 -i;} ) }'", "deny"),
+        ("zsh -c 'echo x | function { python3 }'", "zsh -c 'echo x | function { python3;}'", "silent"),
+        ("zsh -c '< /dev/null function { python3 }'", "zsh -c '< /dev/null function { python3;}'", "silent"),
+        ("zsh -c 'echo x | function { { python3 } }'", "zsh -c 'echo x | function { { python3;} }'", "silent"),
+        ("zsh -c 'function { f() { : } }; python3 -i'", "zsh -c 'function { f() { :;} }; python3 -i'", "deny"),
+        ("zsh -c 'function { function { : } }; python3 -i'", "zsh -c 'function { function { :;} }; python3 -i'", "deny"),
+        ("zsh -c 'function () { python3 } < /dev/null'", "zsh -c 'function () { python3;} < /dev/null'", "silent"),
+        ("zsh -c 'function { python3 } arg < /dev/null'", "zsh -c 'function { python3;} arg < /dev/null'", "silent"),
+        ("zsh -c 'echo x |\nfunction { python3 }'", "zsh -c 'echo x |\nfunction { python3;}'", "silent"),
+        ("zsh -c 'function { python3 }\npython3'", "zsh -c 'function { python3;}\npython3'", "deny"),
+        ("zsh -c 'function { python3 };python3 -i'", "zsh -c 'function { python3;};python3 -i'", "deny"),
+    ]
+
+    def test_each_row_carries_the_same_verdict_with_and_without_the_semicolon(self):
+        for plugin, path in self.for_each_copy():
+            for command, with_semicolon, expected in self.PAIRS:
+                with self.subTest(copy=plugin, command=command):
+                    plain = verdict_of(run_hook(path, payload_for(command)))
+                    counterpart = verdict_of(run_hook(path, payload_for(with_semicolon)))
+                    self.assertEqual(counterpart, expected, with_semicolon)
+                    self.assertEqual(plain, counterpart)
 
 
 class TestNestedJudgmentOrder(HookCopiesMixin, unittest.TestCase):
@@ -1409,6 +1535,13 @@ class TestGuardDocumentation(unittest.TestCase):
         "is an argument of the anonymous function",
         "A stdin redirect among or after the arguments connects the body",
         "the pipe connection passes to the body",
+        # A standalone bare `}` closes an anonymous body, or a `{` group inside
+        # one, with words pending (FR1, FR2), and no other group (FR5)
+        "the group is the body of an anonymous function, or it is a `{` group "
+        "that lies inside the body of an anonymous function, at any depth",
+        "finalized first, as a command of that group, exactly as a `;` before the `}` finalizes them",
+        "outside every anonymous function body",
+        "the `}` is an ordinary word and the string stays undecidable",
     )
 
     # Sentences step 7 carried before it judged a literal `-c` string at every
@@ -1440,6 +1573,15 @@ class TestGuardDocumentation(unittest.TestCase):
         "the words after its `}` are arguments",
         "the anonymous body takes it as its `pipe`",
         "the pipe connection comes from the head",
+    )
+
+    # How the `_Group` description marks the group as lying inside an
+    # anonymous body: a value fixed once, when the group opens (NFR1)
+    GROUP_IN_ANON_MARKERS = (
+        "within an anonymous-function body",
+        "fixed once, when the group opens",
+        "inherited from the innermost group open at that moment",
+        "never recomputed",
     )
 
     # The rule of the method that decides the parenless anonymous-function form
@@ -1522,6 +1664,18 @@ class TestGuardDocumentation(unittest.TestCase):
             )
             doc = " ".join((ast.get_docstring(group) or "").split())
             for marker in self.GROUP_ANON_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_group_description_states_the_within_an_anonymous_body_attribute(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            group = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Group"
+            )
+            doc = " ".join((ast.get_docstring(group) or "").split())
+            for marker in self.GROUP_IN_ANON_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
 
