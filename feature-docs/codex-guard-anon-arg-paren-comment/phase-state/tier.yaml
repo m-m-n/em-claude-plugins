@@ -1,0 +1,57 @@
+schema_version: 2
+feature: codex-guard-anon-arg-paren-comment
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-17T19:07:10+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.47
+    confidence: 0.53
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.53
+      '2': 0.47
+      '3': 0.0
+  observed_at: '2026-10-17T19:10:04+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 19
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 両コピーはバイト一致し、再現コマンドへの判定は両方ともfind_deny=None、終了値0、stdout=""、stderr=""で、見逃しは残っている。_scan_parensはコメント内の閉じ括弧まで探索してseparated=Trueを返し、_read_argument_parensが群を開く。その後コメントが読み飛ばされ、parseが_Undecidable("group")を送出する。_skip_parensはこの経路では呼ばれなかった。zsh 5.9ではpython3を表示用関数に置き換え、引数-iで呼ばれることを確認した。必要な変更は、匿名関数引数の括弧処理で後続コマンドの判定が破棄される流れの修正、両コピーの説明更新、testsの552行目にある同一入力の期待値とラベルの変更になる。現在の期待値はsilentなのでdenyの回帰検証にはなっていない。19は既存の判定本体9行×2とテスト1行の合計で、説明更新を含む完成差分の行数は未確定。呼出元・依存数4は各コピーの_read_argument_parensについてparseと_open_group・_put・_scan_parensを数えた値になる。ファイルは変更していない
+decided_at: '2026-10-17T19:10:08+09:00'
