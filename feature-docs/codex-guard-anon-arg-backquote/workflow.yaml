@@ -114,7 +114,8 @@ workflow:
   completed_at_commit: b6e35d9347dabdfb08df599429431565fcd6ae2f
   base_commit: 5dce1493fc39e21a4dae5d4bf1d2d9912773021f
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 13a1b928910e193878d737379ca4460d68e0e024
 - id: verify
   status: pending
   result: null
@@ -151,8 +152,8 @@ tasks:
     branch: em-workflow/codex-guard-anon-arg-backquote/task0001
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -163,6 +164,14 @@ review:
     - perspective: performance
       reason: NFR1 requires the argument-range scan to stay linear time; the diff changes a character-scanning loop
     cross_validation: true
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: 引用されていないバッククォートで群の読みに戻す
