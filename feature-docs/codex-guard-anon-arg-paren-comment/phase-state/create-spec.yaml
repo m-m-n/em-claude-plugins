@@ -3,15 +3,19 @@ feature: codex-guard-anon-arg-paren-comment
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 18a6048423e44d076c64202ab7582b5c18e911ea
-last_input_digest: sha256:8328043abca5f4403340c3a410ab00d6c0a264ffa8536731b19a2885ab49c942
-active_request_id: create-spec-run-0001
+base_revision: cc211a15250658ba903103a112c1b70b6adec003
+last_input_digest: sha256:318ad79c714c42d4e9db57203d4cf7120924997074ade222ba4b7248e6ed38ee
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
   status: dispatched
   input_digest: sha256:8328043abca5f4403340c3a410ab00d6c0a264ffa8536731b19a2885ab49c942
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:318ad79c714c42d4e9db57203d4cf7120924997074ade222ba4b7248e6ed38ee
   output_digest: null
 artifacts: []
 patches: []
