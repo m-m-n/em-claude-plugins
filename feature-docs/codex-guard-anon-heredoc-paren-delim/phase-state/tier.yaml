@@ -1,0 +1,57 @@
+schema_version: 2
+feature: codex-guard-anon-heredoc-paren-delim
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-10-17T22:42:17+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.25
+    confidence: 0.75
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.75
+      '2': 0.25
+      '3': 0.0
+  observed_at: '2026-10-17T22:44:44+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 10
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 現在のmain（66be0fe7）で、指定文字列を実行せずJSONとして両フックの標準入力へ渡したところ、両方がdenyを出力した。終了コードは0、標準エラーは空だった。両コピーはバイト単位で同一だった。em-review側944行では括弧範囲の生テキストを_putへ渡し、582行では完成した語をそのままヒアドキュメントの区切り語として登録している。既存CASESは533件あり、関連する括弧付き引数と引用した区切り語のテストはあるが、指定再現のケースはない。関連する既存3ケースは両コピーで期待どおりsilentだった。CASESを両コピーへ適用する仕組みと、バイト同一性を検証するテストが既にある。呼び出し元・依存数4は、重複コピーを除き、parseと既存補助メソッド_scan_parens、_put、_open_groupを数えた。変更行数と追加数は、既存分岐へ区切り語待機の条件を追加し、CASESへ1件追加する場合の概算で、修正後の挙動は未検証。入出力形式を変更する必要は確認していない。ファイルの作成・変更・削除はしていない。
+decided_at: '2026-10-17T22:45:30+09:00'
