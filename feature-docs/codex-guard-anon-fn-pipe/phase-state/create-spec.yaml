@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-anon-fn-pipe
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: 7f5201d1b9c51c27f09a5bc8fa8ad4c31e843027
+base_revision: 4e4770202ca2a88cc01604ef29c78f88b612f465
 last_input_digest: sha256:a0b32d7f5db78b025679e9f38a607ea52ea7a77c7918d09d27601e0511fea15f
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
   input_digest: sha256:3c4c63437f7afaa637f2790fd21aa199b377e4b69b32a3ec5d8c818862e77137
   output_digest: sha256:8e14fe9ed3e6d488c1d0e786b980d1704567aa73b45a93a609882a558b69e819
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:a0b32d7f5db78b025679e9f38a607ea52ea7a77c7918d09d27601e0511fea15f
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-anon-fn-pipe/REQUIREMENTS.md
+  sha256: sha256:7c624e2baee30b2123ab37bdb73d42cc9574fd3c7cd6da61c6068fbc4a036e7d
+  produced_by: create-spec-run-0002
+- path: feature-docs/codex-guard-anon-fn-pipe/SPEC.md
+  sha256: sha256:914efd9548ae0cd2f2f0c0f42eecca40d47e40165480e41e719d519f0b6c4171
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

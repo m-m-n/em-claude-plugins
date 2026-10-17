@@ -1,0 +1,184 @@
+schema_version: 1
+feature: codex-guard-anon-fn-pipe
+created: '2026-10-17'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: パイプや入力リダイレクトを受けた zsh 匿名関数の本体を未接続と判定し、プログラムなしの python3 を誤って deny する
+
+  Notion タスク: <notion-url> （種別: バグ）
+
+  ## 現象
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、パイプや入力リダイレクトを受けた zsh の匿名関数 `function () { ...; }` の本体を「標準入力に何もつながっていない」と判定し、プログラムを渡さない `python3` を noprogram として deny する。
+  zsh はパイプラインの入力を匿名関数の本体に渡すため、本体の `python3` はプログラムをパイプから読み、対話にならない。誤検知（拒否側）になる。
+  feature `codex-guard-anon-function`（名前のない `function ()` の本体を判定する修正）の review round 1 で comprehensive 観点のレビュアーが報告し、evaluator がコードを読んで確認した（重大度 medium）。この feature の変更で生まれた誤検知で、変更前は本体を判定せず何も出力しなかった。
+
+  ## 再現手順
+  1. コマンド `zsh -c 'printf "print(1)\n" | function () { python3; }'` を `{"tool_input": {"command": "..."}}` として hook の標準入力に渡す
+  2. noprogram を理由とした deny が出力される
+  3. `zsh -c 'function < /dev/null () { python3; }'` でも同じく deny になる
+
+  ## 期待する挙動
+  匿名関数の前に付いたパイプ・入力リダイレクトの接続を本体に引き継ぎ、`zsh -c 'printf "print(1)\n" | function () { python3; }'` は何も出力しない。`... | function () { python3 -i; }` は従来どおり deny する。
+
+  ## 完了の定義
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に silent の `zsh -c 'printf "print(1)\n" | function () { python3; }'` と deny の `zsh -c 'printf "print(1)\n" | function () { python3 -i; }'` を追加
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:441`（`_names_function` の匿名関数分岐）と `_open_group` / `_close_group`。`_open_group("(")` 内の `_flush()` が `[function]` を単純コマンドとして出力し、`pipe_pending` と `self.stdin` をそこへ渡してしまう。空の `()` グループは pipe=False で作られ、`fn_head` も立たないため、続く `{` グループが未接続になる
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-anon-function/reviews/round1.yaml`（stable_id `85d39f52fcef8612`、ブランチ `em-workflow/codex-guard-anon-function/integration`）
+
+  ## 実害・発生条件
+  zsh -c の中でパイプから匿名関数へ入力を流し込み、本体でプログラムなしの `python3` などを起動したときだけ起きる。拒否には理由が付くため、エージェントは書き換えて再試行できる。見逃し側ではない。
+
+  ## 追加指示（起動者から）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的よいと判断した選択肢を採用する
+  - その議論の内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-anon-fn-pipe/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.89
+      '2': 0.11
+      '3': 0.0
+    description_plus_code:
+      '0': 0.02
+      '1': 0.71
+      '2': 0.27
+      '3': 0.0
+  at: '2026-10-17T15:28:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 4e4770202ca2a88cc01604ef29c78f88b612f465
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook test-table regression cases (and at most a parser fix) with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: function () へのパイプが本体につながる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR2:
+    title: パイプを受けた function () 本体の -i は引き続き deny する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR3:
+    title: function と () の間の標準入力リダイレクトが本体につながる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR4:
+    title: CASES への回帰ケース追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+  FR5:
+    title: フックの変更は新ケースが失敗した場合に限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+  NFR1:
+    title: 2 つのフックのコピーをバイト単位で同一に保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+  NFR2:
+    title: 既存の CASES エントリを削除・変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  NFR3:
+    title: テストコードは標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: プラグインの version を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
