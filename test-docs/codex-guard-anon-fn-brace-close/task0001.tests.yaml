@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py: 943/943 passed; python3 -m unittest discover -s tests: Ran 10443 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: same two commands, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "the three CASES entries (python3 -i; function { : } / function { : }; python3 -i / function { python3 -i }) returned silent from both copies before the implementation: json.JSONDecodeError on empty stdout where a deny object was expected"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestBraceCloseEqualsSemicolonBeforeIt.test_each_row_carries_the_same_verdict_with_and_without_the_semicolon
+    red_confirmed: true
+    red_reason: "function () { python3 -i }, () { python3 -i }, function { python3 -i } arg, function { { : } }; python3 -i and function { ( { python3 -i } ) } returned silent before the implementation: JSONDecodeError in the CASES test, AssertionError 'silent' != 'deny' in the equivalence test"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestBraceCloseEqualsSemicolonBeforeIt.test_each_row_carries_the_same_verdict_with_and_without_the_semicolon
+    red_confirmed: true
+    red_reason: "the equivalence rows for the AC-1 and AC-2 inputs failed before the implementation (AssertionError 'silent' != 'deny': the semicolon counterpart was deny, the original silent). The three silent commands of this criterion (echo x | function { python3 }, < /dev/null function { python3 }, echo x | function { { python3 } }) already passed before the implementation; they are guards against a new false deny, not a red"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "the quoted-brace silent case and every pre-existing CASES entry (the top-level { python3 } silent case included) already passed before the implementation; the criterion guards existing behavior against a new false deny, so no red state occurred"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_deeply_nested_braces_closed_with_words_pending_are_denied_when_a_launch_follows
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_braces_closed_inside_an_anonymous_body_are_answered
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput
+    red_confirmed: true
+    red_reason: "the deny test for deeply nested braces closed with words pending failed against the pre-implementation guard (run on a copy of the test pointed at the HEAD version of the guard: JSONDecodeError, silent where deny was expected). The timing test test_braces_closed_inside_an_anonymous_body_are_answered passed before the implementation, since no walk over enclosing groups existed yet; it is a guard against a quadratic implementation, not a red"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+    red_confirmed: true
+    red_reason: "test_the_docstring_describes_the_new_behaviour failed on the four new step 4 markers (FR1, FR2, FR5 closing rules), and test_the_group_description_states_the_within_an_anonymous_body_attribute failed on its four markers, before the docstrings were written: AssertionError marker not found"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+      - tests.test_codex_hook_interactive_guard
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestCopies detects a byte difference between the two copies and TestStaticConstraints detects non-standard-library imports and file, network or process access; no red state occurred for this change (the em-review copy was copied from the em-workflow copy before TestCopies ran). The full-suite command and the no-version-change check are verified by running the command and reading git diff --name-only"

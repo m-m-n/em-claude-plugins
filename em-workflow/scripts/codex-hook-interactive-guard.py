@@ -103,6 +103,18 @@ Decision flow:
      connected, and an explicit `-i` is still denied. The words after the `}` of
      any other brace group, and of a function definition's body, still make the
      string undecidable.
+     A standalone bare `}` closes the innermost group when the simple command in
+     progress holds no word. With words pending it closes that group in two
+     cases only: the group is the body of an anonymous function, or it is a `{`
+     group that lies inside the body of an anonymous function, at any depth, a
+     `(` group between them and the body of a function definition included. The
+     pending words are then finalized first, as a command of that group, exactly
+     as a `;` before the `}` finalizes them, and the group is closed. A `{` group
+     that lies outside every anonymous function body (a top-level `{ ...; }`, the
+     body of a function definition outside one) is not closed by a `}` while
+     words are pending: the `}` is an ordinary word and the string stays
+     undecidable. A `}` that is quoted, escaped or expanded, that is part of a
+     larger word, or that is the target of a redirect closes no group.
   5. After `|` or `|&` the right side is awaited: a pending pipe survives
      newlines, blank lines, comment-only lines and heredoc bodies, and the
      next non-empty command is the right side. A newline after `&&` or `||`
@@ -357,6 +369,14 @@ class _Group:
                redirect between the `()` and the `{` is not part of the head.
                No other group has it; the groups nested in the body are
                connected through the body, by the rule of `connected`
+    in_anon    the group lies within an anonymous-function body: it is that body
+               itself, or the innermost group open when it opened lies within
+               one. The value is fixed once, when the group opens, inherited from
+               the innermost group open at that moment (a `(` group, a `{` group
+               and the body of a function definition alike, at any depth), and
+               never recomputed or derived by walking the enclosing groups, so
+               reading it at a `}` takes constant time. A standalone bare `}`
+               closes a `{` group that has it while words are pending
     size       (commands, groups) counted when the group opened, itself included
     connected  settled once the whole command is read: the group, or a group
                that holds it, has its standard input connected, by a pipe, by a
@@ -368,12 +388,12 @@ class _Group:
 
     __slots__ = (
         "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "anon_stdin",
-        "head_stdin", "size", "connected", "skipped",
+        "head_stdin", "in_anon", "size", "connected", "skipped",
     )
 
     def __init__(
         self, kind, parent, pipe, skip, head, size, anon=False, anon_pipe=False, anon_stdin=False,
-        head_stdin=False,
+        head_stdin=False, in_anon=False,
     ):
         self.kind = kind
         self.parent = parent
@@ -385,6 +405,7 @@ class _Group:
         self.anon_pipe = anon_pipe
         self.anon_stdin = anon_stdin
         self.head_stdin = head_stdin
+        self.in_anon = in_anon
         self.size = size
         self.connected = False
         self.skipped = False
@@ -518,9 +539,18 @@ class _Parser:
         if bare and text == "{" and not arguments and (not self.words or self._names_anonymous_function()):
             self._open_group("{")
             return
-        if bare and text == "}" and not self.words and self.frames and self.frames[-1].kind == "{":
-            self._close_group()
-            return
+        if bare and text == "}" and self.frames and self.frames[-1].kind == "{":
+            if not self.words:
+                self._close_group()
+                return
+            if self.frames[-1].in_anon:
+                # Words are pending and the group lies within an anonymous
+                # body: finalize them as a command of the group, as a `;`
+                # before the `}` would, then close it. Any other brace group
+                # leaves the `}` an ordinary word.
+                self._separator(";")
+                self._close_group()
+                return
         if self.after_group is not None and self.after_group.kind == "{":
             if arguments:
                 # An argument of the anonymous function: no command, and
@@ -664,9 +694,15 @@ class _Parser:
         # group is closed with the same sizes.
         size = (len(self.commands), len(self.groups) + 1)
         pipe = anon_pipe if kind == "{" and anon else self.pipe_pending
+        # Whether the group lies within an anonymous-function body is fixed
+        # here and never read again from the groups around it: an anonymous
+        # body is within one, any other group takes the value of the group it
+        # opens in, and a group opened at top level that is no anonymous body
+        # is not. A `}` reads it in constant time.
+        in_anon = (kind == "{" and anon) or (parent is not None and parent.in_anon)
         group = _Group(
             kind, parent, pipe, self.fn_head, head, size, anon, anon and anon_pipe, anon_stdin,
-            head_stdin,
+            head_stdin, in_anon,
         )
         self.pipe_pending = False
         self.fn_head = False
