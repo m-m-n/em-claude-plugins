@@ -1,0 +1,34 @@
+feature: codex-guard-anon-arg-paren-comment
+collected_at: "2026-10-17T20:50:00+09:00"
+session_ids: [01a149ab-4ddf-7696-a07d-d08a98595bc4]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "The diff adds provisional-group bookkeeping and an end-of-input rescue cascade to a tokenizer that must stay linear-time (NFR1, deep unclosed-group performance tests)"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code score 1.47 (confidence 0.53) with Codex pre-survey: new logic across two byte-identical copies plus tests"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.05, confidence: 0.95}
+        observed_at: "2026-10-17T19:07:10+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.47, confidence: 0.53}
+        observed_at: "2026-10-17T19:10:04+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 19
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 指摘 db007e0ea42e58d2（TM-1: `{ ...; }` で包むと救済が効かない）を deferred にした。後退ではないが TM-1 対策の回避経路として残る"
