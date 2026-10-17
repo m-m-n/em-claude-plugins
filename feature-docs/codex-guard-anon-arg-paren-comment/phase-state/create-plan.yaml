@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-arg-paren-comment
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 2ec9aa07b294ba23d2013069dd38928806c89d78
 last_input_digest: sha256:3a2908ceb936eab3d439b7933507e58c67afdab0596f9253c5436740a4bf211d
@@ -28,7 +28,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: create-plan-run-0001-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:3a2908ceb936eab3d439b7933507e58c67afdab0596f9253c5436740a4bf211d
   base_workflow_blob: 4c573d7eb0b501f4b664886ba7d55d700a4d208c
 progress_fingerprint: null
