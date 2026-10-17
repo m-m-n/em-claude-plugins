@@ -549,7 +549,52 @@ CASES = [
     ("deny", "引数の ( ) の中に ; があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i)'"),
     ("deny", "引数の ( ) の中に & があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a & python3 -i)'"),
     ("deny", "引数の ( ) の中に改行があれば従来どおり群として読む", "zsh -c 'setopt nobadpattern; function { :; } foo(a\npython3 -i)'"),
-    ("silent", "引数の ( ) の中に ; があり閉じ括弧がコメントの中なら従来どおり判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i #)'"),
+    # A group opened at such a `(` is provisional. When it is never closed (the
+    # `)` sits in a comment, or there is none) and the first separator read
+    # directly in it is a `;` or a lone `&`, it is rescued: the `(` is read as
+    # an argument-word character and the commands after that separator are
+    # judged as following the anonymous function. A newline or any other first
+    # separator, and a genuinely unclosed group, stay undecidable
+    ("deny", "引数の ( ) の中に ; があり閉じ括弧がコメントの中なら ; の後を救済して判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i #)'"),
+    ("deny", "引数の ( ) の中に単独の & があり閉じ括弧がコメントの中なら & の後を救済して判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(a & python3 -i #)'"),
+    ("deny", "引数の ( に閉じ括弧が無くても ; の後を救済して判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i'"),
+    ("deny", "語頭の ( の閉じ括弧がコメントの中でも ; の後を救済して判定する", "zsh -c 'setopt nobadpattern; function { :; } (a; python3 -i #)'"),
+    ("deny", "最初の区切りが ; なら後の改行の先も救済して判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(a; b\npython3 -i #)'"),
+    ("deny", "救済した区切りより前の内容も従来の読みのまま判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(python3 -i; : #)'"),
+    ("deny", "引用符で囲んだ ; は最初の区切りでなく、後の ; を救済して判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(a \";\" b; python3 -i #)'"),
+    ("deny", "リダイレクトの >& は区切りでなく、後の ; を救済して判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(a >& b; python3 -i #)'"),
+    ("deny", "救済した区切りの後の入れ子の群の中の起動も判定する", "zsh -c 'setopt nobadpattern; function { :; } foo(a; (python3 -i) #)'"),
+    ("deny", "救済した区切りの後の入れ子の群は匿名関数の頭部の接続を受けない", "zsh -c 'setopt nobadpattern; function { :; } foo(a; (python3) #)'"),
+    ("silent", "救済した区切りの後の入れ子の群の後の入力リダイレクトは群を接続する", "zsh -c 'setopt nobadpattern; function { :; } foo(a; (python3) < /dev/null #)'"),
+    ("silent", "救済した区切りの後の関数定義の本体は判定しない", "zsh -c 'setopt nobadpattern; function { :; } foo(a; f() { python3 -i; } #)'"),
+    ("silent", "引数の ( ) の中の最初の区切りが改行なら閉じ括弧がコメントの中でも判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(a\npython3 -i #)'"),
+    ("silent", "最初の区切りが改行なら後に ; があっても判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(a\nb; python3 -i #)'"),
+    ("silent", "最初の区切りが && なら救済しない", "zsh -c 'setopt nobadpattern; function { :; } foo(a && python3 -i #)'"),
+    ("silent", "最初の区切りが || なら救済しない", "zsh -c 'setopt nobadpattern; function { :; } foo(a || python3 -i #)'"),
+    ("silent", "最初の区切りが | なら救済しない", "zsh -c 'setopt nobadpattern; function { :; } foo(a | python3 -i #)'"),
+    ("silent", "最初の区切りが |& なら救済しない", "zsh -c 'setopt nobadpattern; function { :; } foo(a |& python3 -i #)'"),
+    ("silent", "最初の区切りが && なら引用符で囲んだ ; があっても救済しない", "zsh -c 'setopt nobadpattern; function { :; } foo(a \";\" b && python3 -i #)'"),
+    ("silent", "リダイレクトの &> は区切りでなく救済の契機にならない", "zsh -c 'setopt nobadpattern; function { :; } foo(a &>/dev/null python3 -i #)'"),
+    ("silent", "リダイレクトの >& は区切りでなく救済の契機にならない", "zsh -c 'setopt nobadpattern; function { :; } foo(a >& python3 -i #)'"),
+    ("silent", "引用符で囲んだ ; は救済の契機にならない", "zsh -c 'setopt nobadpattern; function { :; } foo(a \";\" python3 -i #)'"),
+    ("silent", "バックスラッシュの後の ; は救済の契機にならない", "zsh -c 'setopt nobadpattern; function { :; } foo(a \\; python3 -i #)'"),
+    ("silent", "引用符で囲んだ & は救済の契機にならない", "zsh -c 'setopt nobadpattern; function { :; } foo(a \"&\" python3 -i #)'"),
+    ("silent", "バックスラッシュの後の & は救済の契機にならない", "zsh -c 'setopt nobadpattern; function { :; } foo(a \\& python3 -i #)'"),
+    ("silent", "コマンド位置の閉じない ( は判定不能", "zsh -c '(python3 -i #)'"),
+    ("silent", "外側にコマンド位置の閉じない ( があれば救済しても判定不能", "zsh -c 'setopt nobadpattern; (function { :; } foo(a; python3 -i #)'"),
+    ("silent", "外側の閉じない波括弧群が残れば救済しても判定不能", "zsh -c 'setopt nobadpattern; { function { :; } foo(a; python3 -i #)'"),
+    ("silent", "救済した区切りの後のコマンドの入力リダイレクトは従来どおり接続する", "zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 < /dev/null #)'"),
+    ("deny", "パイプの右側の匿名関数の頭部の接続は救済した区切りの後に届かない", "zsh -c 'setopt nobadpattern; echo x | function { :; } foo(a; python3 #)'"),
+    ("silent", "関数定義の本体の中の閉じない引数の ( は救済しても判定不能", "zsh -c 'setopt nobadpattern; f() { function { :; } foo(a; python3 -i #)\n}'"),
+    # A provisional group nested in a provisional group is rescued from the
+    # inside out: the separator of the inner one is the first direct separator
+    # of an outer one that has none
+    ("deny", "入れ子の仮の群は内側の ; を外側の最初の区切りとして救済する", "zsh -c 'setopt nobadpattern; function { :; } foo(function { :; } bar(a; python3 -i #)'"),
+    ("deny", "外側の最初の区切りが ; なら内側の仮の群も救済する", "zsh -c 'setopt nobadpattern; function { :; } foo(x; function { :; } bar(a; python3 -i #)'"),
+    ("silent", "外側の最初の区切りが改行なら内側の仮の群を救済しても判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(x\nfunction { :; } bar(a; python3 -i #)'"),
+    ("silent", "外側の最初の区切りが && なら内側の仮の群を救済しても判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(x && function { :; } bar(a; python3 -i #)'"),
+    ("silent", "内側の最初の区切りが改行なら外側に ; があっても判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(x; function { :; } bar(a\nb; python3 -i #)'"),
+    ("silent", "内側の仮の群に区切りが無ければ外側に ; があっても判定不能", "zsh -c 'setopt nobadpattern; function { :; } foo(x; function { :; } bar(a'"),
     ("silent", "引数の閉じていない ( は判定不能", "zsh -c 'function { python3 -i; } foo('"),
     ("deny", "引数の対の無い ) は区切りとして読む", "zsh -c 'function { :; } foo) python3'"),
     ("silent", "引数の対の無い ) は外側のサブシェルを閉じ、その後の入力リダイレクトが本体を接続する", "zsh -c '( function { python3; } foo) < f'"),
@@ -971,10 +1016,61 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
             "ranges that hold a separator, three times as deep": (
                 "function { :; } x(" * (3 * depth) + "; :" + ")" * (3 * depth)
             ),
+            "unclosed ranges, then a launch": self.unclosed_ranges_then_a_launch(depth),
+            "unclosed ranges, then many commands and a launch": self.unclosed_ranges_then_many_commands(depth),
         }
         for name, command in inputs.items():
             with self.subTest(shape=name):
                 self.assert_every_copy_answers(command)
+
+    def unclosed_ranges_then_a_launch(self, depth):
+        """Provisional groups nested `depth` deep, none closed, the only
+        separator read directly at the innermost one, then a launch whose
+        `#` hides the `)` that would close it (TS-16)."""
+        return "function { :; } x(" * depth + "; python3 -i #"
+
+    def unclosed_ranges_then_many_commands(self, depth):
+        """The same nesting, then the separator and a tail of short commands
+        much longer than the nesting is deep, then the launch. A rescue that
+        moved the commands of the tail one at a time, once per rescued group,
+        would be quadratic here."""
+        return "function { :; } x(" * depth + ";" + " a;" * (10 * depth) + " python3 -i #"
+
+    def test_unclosed_ranges_are_rescued_at_any_depth_and_the_launch_after_them_is_denied(self):
+        # Every group of the nesting is a provisional group that is never
+        # closed, and the first direct separator of the innermost one is a
+        # `;`: the rescue runs from the inside out through all of them, and
+        # the launch after the separator is judged, however many commands
+        # come between (TM-1).
+        depth = self.DEPTH
+        inputs = {
+            "a launch right after the separator": self.unclosed_ranges_then_a_launch(depth),
+            "a wide tail before the launch": self.unclosed_ranges_then_many_commands(depth),
+            "a lone & as the separator": "function { :; } x(" * depth + "& python3 -i #",
+        }
+        for name, command in inputs.items():
+            for plugin, path in self.for_each_copy():
+                with self.subTest(shape=name, copy=plugin):
+                    code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                    self.assertEqual((code, err), (0, ""))
+                    decision = json.loads(out)["hookSpecificOutput"]
+                    self.assertEqual(decision["permissionDecision"], "deny")
+
+    def test_unclosed_ranges_with_a_newline_first_stay_undecidable_at_any_depth(self):
+        depth = self.DEPTH
+        inputs = {
+            "newline as the first separator of the innermost group": (
+                "function { :; } x(" * depth + "\npython3 -i #"
+            ),
+            "newline as the first separator of the outermost group": (
+                "function { :; } x(\n" + "function { :; } x(" * (depth - 1) + "; python3 -i #"
+            ),
+        }
+        for name, command in inputs.items():
+            for plugin, path in self.for_each_copy():
+                with self.subTest(shape=name, copy=plugin):
+                    code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                    self.assertEqual((code, out, err), (0, "", ""))
 
     def nested_braces_closed_with_words_pending(self, depth):
         """`depth` groups nested in an anonymous body, each closed by a `}`
@@ -1552,6 +1648,9 @@ class TestGuardDocumentation(unittest.TestCase):
         # Step 4 limited `{` to command position before a `{` could open a group
         # right after the head of an anonymous function
         "delimit a group only as a standalone word at command position",
+        # Step 4 said every group that is never closed gives no output, before a
+        # provisional group left open at a `;` or a lone `&` was rescued
+        "and a group that is never closed -> no output",
     )
 
     # The same removal in the description of a group's `head` attribute
@@ -1603,6 +1702,69 @@ class TestGuardDocumentation(unittest.TestCase):
         for plugin, path in HOOK_PATHS.items():
             doc = module_docstring(path)
             for marker in self.DOCSTRING_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    # The rescue rule for a group that is opened at an anonymous-function
+    # argument `(` and never closed (FR7): (a) the group is provisional; (b) when
+    # its first direct separator is a `;` or a lone `&`, its `(` is read as an
+    # argument-word character and the commands after the separator are judged as
+    # following the anonymous function; (c) a newline as the first direct
+    # separator is not rescued; (d) a group that is genuinely unclosed still
+    # yields no output
+    RESCUE_PROVISIONAL_MARKER = "A group opened at such a `(` is provisional"
+    RESCUE_MARKERS = (
+        "its `(` is read as an argument-word character",
+        "the commands after that separator are judged as following the anonymous function",
+        "A newline as the first direct separator is not rescued",
+        "A group that is genuinely unclosed still yields no output",
+    )
+
+    def test_the_module_docstring_states_the_rescue_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for marker in (self.RESCUE_PROVISIONAL_MARKER,) + self.RESCUE_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_parser_description_states_the_rescue_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            parser = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Parser"
+            )
+            doc = " ".join((ast.get_docstring(parser) or "").split())
+            for marker in (self.RESCUE_PROVISIONAL_MARKER,) + self.RESCUE_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_argument_paren_reader_states_the_rescue_rule(self):
+        markers = (
+            "The group opened here is provisional",
+            "its `(` is read as an argument-word character",
+            "the commands after that separator are judged as following the anonymous function",
+            "A newline as the first direct separator is not rescued",
+        )
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            parser = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Parser"
+            )
+            method = next(
+                (
+                    node for node in parser.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "_read_argument_parens"
+                ),
+                None,
+            )
+            with self.subTest(copy=plugin, method="_read_argument_parens"):
+                self.assertIsNotNone(method, "no _read_argument_parens method in _Parser")
+            if method is None:
+                continue
+            doc = " ".join((ast.get_docstring(method) or "").split())
+            for marker in markers:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
 
