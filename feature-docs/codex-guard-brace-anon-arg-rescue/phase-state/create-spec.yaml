@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-brace-anon-arg-rescue
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 5aa46eb57ad01ff6a36b07809aac6de057e348ff
-last_input_digest: sha256:7b38fb90462a608b1ab83f94dcdcb65b2549addcb58f26e0a4d142cc095612ed
-active_request_id: create-spec-run-0003
+last_input_digest: sha256:b63b5fb3d97a8c324f8b3a1c367289c8b9c47cc7f6c19b27b0c2b2a8242dcbbe
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -70,10 +70,16 @@ worker_runs:
   input_digest: sha256:7b38fb90462a608b1ab83f94dcdcb65b2549addcb58f26e0a4d142cc095612ed
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:b63b5fb3d97a8c324f8b3a1c367289c8b9c47cc7f6c19b27b0c2b2a8242dcbbe
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-brace-anon-arg-rescue/REQUIREMENTS.md
+  sha256: sha256:8ce05873cbf55c92ce87af663e27baf753313e3e8bbd33614b2b1375fdb0fcb9
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-brace-anon-arg-rescue/SPEC.md
+  sha256: sha256:6d14444abfda1c8090288526b40b3e1985beb5a8af072dab6a7cbff1d6ad3eb9
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
