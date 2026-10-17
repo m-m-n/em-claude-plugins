@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-fn-pipe
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 9d6563152cf92e914cf1da30781e9c79b0e7b370
+last_input_digest: sha256:968880ae512060d83c0352a93560f4ad0793a8ed2945c5a6bb0257e286a6c2f9
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:968880ae512060d83c0352a93560f4ad0793a8ed2945c5a6bb0257e286a6c2f9
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
