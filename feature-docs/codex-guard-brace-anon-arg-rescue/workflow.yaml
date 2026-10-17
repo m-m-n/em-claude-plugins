@@ -84,7 +84,7 @@ workflow:
   base_commit: 7325cd1ae0f4be2f8c27abde18d8ad1c5ea54402
   completed_at_commit: 2e450dbbf0884ca7a8d7fad345e4be42dab954d4
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -119,6 +119,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR1 requires linear time / no recursion / amortized O(1) per closing brace in the parser change
+    cross_validation: true
   residual_critical_high: 0
   needs_rework: false
 requirements:
