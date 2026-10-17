@@ -1,0 +1,23 @@
+schema_version: 1
+feature: codex-guard-anon-heredoc-paren-delim
+records:
+- question_id: requirement.fr1.fix-approach
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-17T22:55:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - quote_removal
+  freeform: null
+  normalized_answer: << / <<- の区切り語を読むときに限り、引数位置の ( 〜 ) 範囲から zsh と同じ規則で引用を除去してから区切り語として登録する。foo('x') は foo(x) になる。単引用符内のバックスラッシュは残し、二重引用符内では \ の後が $ ` " \ 改行のときだけバックスラッシュを除く（既存の通常経路の引用除去と同じ規則）。範囲の前後で既に除去済みの部分に二重適用しない。通常引数・< / <<< の先の範囲の読み方と探索量の上限は変えない。
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: quote_removal / group_reading。Codex 1 ターン（codex エントリ）で quote_removal を推奨: 原因は guard.py:944 の生テキスト投入と :582 の区切り語登録。zsh は区切り語全体に引用除去を行うので foo(''x'') の終端は foo(x)（zsh Src/exec.c gethere / subst.c quotesubst）。group_reading では群を開く前に foo が区切り語として確定し（:721）、foo だけの行がある入力を読み違える。通常経路の引用除去（:1184-1194、_double_quoted :951-967）の規則を範囲にも使うべきで、単引用符内のバックスラッシュと二重引用符内の \q は保持する必要があると指摘。チケットの期待挙動の 2 案のうち zsh の実際の解釈と一致し、本当の区切り語の後の起動も検査できる quote_removal の方が比較的良いと判断し採用。Opus エスカレーションは不要。'
+- question_id: requirement.edge.dollar-quote-in-delimiter-range
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-17T22:55:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - undecidable
+  freeform: null
+  normalized_answer: 区切り語の ( 〜 ) 範囲に引用されていない $' または $" があるときは区切り語を確定できないものとして判定不能（無出力）にする。通常の引用符の中にある $' や、バックスラッシュで逃がした $ は契機にしない。
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: undecidable / plain_quotes。同じ Codex ターンで undecidable を推奨: $''...'' は zsh がエスケープを復号するため、$ を残して通常引用だけ外す plain_quotes ではシェルの区切り語と一致しない。通常経路も $''...'' を生のまま保持しており再利用では解決しない（:1109-1115）。ただし通常引用の中の文字列やエスケープされた $ まで部分文字列検索で保留しないこと、同じ文字列内の実際の起動が検査できなくなる点は受け入れることを指摘。読めないものは無出力にする既存の方針と合い、誤判定を避けられる undecidable の方が比較的良いと判断し採用。Opus エスカレーションは不要。'
