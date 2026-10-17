@@ -2,59 +2,37 @@ schema_version: 1
 feature: codex-guard-anon-arg-paren-comment
 created: '2026-10-17'
 base_branch: main
-goal: '# codex-hook-interactive-guard: 匿名関数の引数中の ( 〜 ) に引用されていない ; があり閉じ括弧がコメント内に入る形で、; の後の対話起動を見逃す
-
+goal: |
+  # codex-hook-interactive-guard: 匿名関数の引数中の ( 〜 ) に引用されていない ; があり閉じ括弧がコメント内に入る形で、; の後の対話起動を見逃す
 
   Notion: <notion-url>  種別: バグ
 
-
   ## 現象 (必須)
-
   `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）が、zsh 匿名関数の引数中の `(` 〜 `)` に引用されていない `;` があり、閉じ括弧がコメントの中に入る形を判定不能（出力なし）として扱う。実際の zsh では `;` の後のコマンドが別コマンドとして実行されるため、`python3 -i` のような対話起動を見逃す（既存の見逃し。feature `codex-guard-anon-stdin-args` の対象外として残した）。
 
-
   ## 再現手順 (必須)
-
-  1. `zsh -c ''setopt nobadpattern; function { :; } foo(a; python3 -i #)''` をフックに渡すと出力なし（silent）
-
+  1. `zsh -c 'setopt nobadpattern; function { :; } foo(a; python3 -i #)'` をフックに渡すと出力なし（silent）
   2. 同じコマンドを実際の zsh 5.9 で実行すると、`;` の後の `python3 -i` が実行され Python の対話プロンプトが出る（Codex による実測）
 
-
   ## 期待する挙動 (必須)
-
   `;` の後の `python3 -i` を対話起動として deny する。
 
-
   ## 完了の定義 (必須)
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
 
-
   ## 該当箇所 (任意)
-
   - `em-workflow/scripts/codex-hook-interactive-guard.py`（`_skip_parens`、閉じない `(` を判定不能にする箇所）
-
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
-
   - 記録: `feature-docs/codex-guard-anon-stdin-args/` の SPEC.md（TS19）と `phase-state/batch-audit.yaml`（ブランチ `em-workflow/codex-guard-anon-stdin-args/integration`）
 
-
   ## 実害・発生条件 (任意)
-
   見逃し側。`setopt nobadpattern` のもとで、引数の括弧の中に `;` とコメントを仕込む不自然な形に限られる。
 
-
   ## 追加指示
-
   - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモート両方に残す（自動マージしない）
-
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採る
-
   - その議論の内容を Notion に記録する
-
-  '
 parent_branch: em-workflow/codex-guard-anon-arg-paren-comment/integration
 tier: full
 tier_decision:
