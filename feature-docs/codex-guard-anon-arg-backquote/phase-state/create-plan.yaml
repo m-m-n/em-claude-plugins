@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-arg-backquote
 phase: create-plan
-status: in_progress
+status: applying_patch
 generation: 1
 base_revision: 43eb6a5a8c88125d9c6223802b13ac4a4bfd17ff
 last_input_digest: sha256:0ea4c0026698ce76eb70ee4793136ace44fbdbe23aad576b18ea4250dcc72875
@@ -10,11 +10,27 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:0ea4c0026698ce76eb70ee4793136ace44fbdbe23aad576b18ea4250dcc72875
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:9716ce807b4b736deec7ea2878dff81867959a4996cba6ae2a9620d59806fb37
+artifacts:
+- path: feature-docs/codex-guard-anon-arg-backquote/IMPLEMENTATION.md
+  digest: sha256:5c545dd646760f82f8123b92c88e093be2939132b39d3dc0fe4dc73ace8f7a6c
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-arg-backquote/VERIFICATION.md
+  digest: sha256:4c0d628f3da369cc3f06b8150a1b9173138bc0b899ace89fcbce0d5bc71f4152
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-arg-backquote/THREAT-MODEL.md
+  digest: sha256:ce322082b53b980b7d87a8e0db8a3c2003f006ab93eca1baf863ab44cf0cb816
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-anon-arg-backquote/tasks/task0001.md
+  digest: sha256:931e0d486b61bea001e17005d6eb31a9b39d32a18c68d50e8675409d4dee094e
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: codex-guard-anon-arg-backquote-create-plan-p0001
+  status: pending
+  base_input_digest: sha256:0ea4c0026698ce76eb70ee4793136ace44fbdbe23aad576b18ea4250dcc72875
+  base_workflow_blob: ac1cd35c30c0dbd092e8d17a7fee7de79d8b6d6f
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
