@@ -102,7 +102,7 @@ workflow:
   summary: 'Full suite (run-destructive-guard.py + unittest discover, 10462 tests) passed; TS-1..TS-19 present and passing on both copies; copies byte-identical; reproduction command silent on both copies; TS-16 docstring rule text confirmed by reading'
   completed_at_commit: 92e8887facd39e1c6ba483c0de545bef0419e054
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Quote-remove heredoc delimiter ranges in anonymous-function arguments
