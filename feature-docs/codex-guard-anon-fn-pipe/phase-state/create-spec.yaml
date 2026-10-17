@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-fn-pipe
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 7f5201d1b9c51c27f09a5bc8fa8ad4c31e843027
+last_input_digest: sha256:3c4c63437f7afaa637f2790fd21aa199b377e4b69b32a3ec5d8c818862e77137
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:3c4c63437f7afaa637f2790fd21aa199b377e4b69b32a3ec5d8c818862e77137
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
