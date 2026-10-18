@@ -148,8 +148,13 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-anon-arg-escaped-backquote/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive
