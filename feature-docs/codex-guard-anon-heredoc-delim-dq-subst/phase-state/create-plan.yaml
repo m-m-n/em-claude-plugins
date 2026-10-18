@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-heredoc-delim-dq-subst
+phase: create-plan
+status: dispatched
+generation: 1
+base_revision: fa0c350ac087e9cc09d944bc5c94873b69f17eb0
+last_input_digest: sha256:e4e000f3a995ba704191d6f13857fc8c293cdd627cf30bb88444f8851ffbb431
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:e4e000f3a995ba704191d6f13857fc8c293cdd627cf30bb88444f8851ffbb431
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
