@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-anon-arg-escaped-backquote
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: cddedb0562369ac309b0c5fc146e054c31ea0394
 last_input_digest: sha256:52839379e2e4c8010ea676cd52a1bee146c2117d2eec4aa94c08cda8c7b0eee5
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -34,8 +34,4 @@ patches:
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'orchestrator note: the dispatch envelope''s write_policy was first written
-  in a dict form with absolute paths (validator expects a list of project-relative
-  targets). It was normalized after return; digest_inputs and workflow_blob were confirmed
-  unchanged against the dispatch-time digest_source, and input_digest / base_input_digest
-  were recomputed from the normalized envelope.'
+last_error: null
