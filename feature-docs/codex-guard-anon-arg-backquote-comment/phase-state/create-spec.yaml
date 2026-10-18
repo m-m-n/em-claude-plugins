@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-anon-arg-backquote-comment
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 9800e9b1e04231d42bc0462bdf1f9eea76de79aa
 last_input_digest: sha256:d0231a4f0c968ac95a7d48e5ea31976400ed35da643b71a117189563c726638b
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -46,10 +46,16 @@ worker_runs:
   input_digest: sha256:d0231a4f0c968ac95a7d48e5ea31976400ed35da643b71a117189563c726638b
   output_digest: sha256:6d7dabe63e416b72da8d3f570d13e62aed108b4d2adde0683dbb74e560778c35
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: null
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-anon-arg-backquote-comment/REQUIREMENTS.md
+  sha256: sha256:989cd157c89ef7a11bd6ebd9a6b0bd9e78e2d150befefdf4f86c396e57f43a6b
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-anon-arg-backquote-comment/SPEC.md
+  sha256: sha256:fbf7726b47f440a0878f957628b6efe3d7ea7c73aaf6ddbbbbe260d86ccbf3ee
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
