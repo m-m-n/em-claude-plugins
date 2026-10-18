@@ -1,0 +1,23 @@
+schema_version: 1
+feature: codex-guard-anon-heredoc-delim-dq-subst
+records:
+- question_id: requirement.shared-quote-routine-scope
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-18T15:38:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - quoted-unit-reader
+  freeform: null
+  normalized_answer: バックスラッシュの対・単引用符・二重引用符の 3 種類を 1 単位ずつ読む共通関数（開始位置と排他的な上限を受け取り、除去後の文字列と次の位置を返す）を作り、parse 本体の \ / ' / " の分岐と _remove_range_quotes の同じ 3 分岐の両方から呼ぶ。二重引用符の中の ` / $( / $(( は _skip_substitution で読み飛ばして原文を残し、戻り位置が上限を越えたら判定不能にする。通常側の dynamic の扱い、空の引用文字列とバックスラッシュ＋改行の区別は維持する。$ の扱い（_dollar、範囲の $' / $" / 引用符の外の $( の規則）は対象外。呼び出しは「読み取り側 → 共通関数 → 反復の _skip_substitution」に限り、再帰と循環呼び出しを持ち込まない。
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: double-quote-only / quoted-unit-reader。Codex 1 ターン（codex エントリ）で quoted-unit-reader を推奨: \ / '' / " の処理は範囲側（guard.py:1290）と語の読み取り側（:1590）で重複しており、3 種類を共有する方が完了の定義（共通処理にまとめて両方から呼ぶ）に合う。二重引用符内の置換は既存処理（:1350）と同じく _skip_substitution で原文を保持し、上限を越えたら判定不能にすべき、通常側の dynamic と空引用・\改行の区別を維持する必要があると指摘。double-quote-only では本体と範囲の \ / '' の重複が残り、architecture 指摘 d81b76f7ebbcf315 の重複解消が半分になるため、quoted-unit-reader の方が比較的良いと判断し採用。Opus エスカレーションは不要。'
+- question_id: requirement.brace-expansion-divergence
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-18T15:38:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - out-of-scope
+  freeform: null
+  normalized_answer: 区切り語の範囲の引用符の外にある ${ ... } の読みは今のまま（中の引用符も除去する）とし、SPEC の対象外に明記する。zsh 5.9 は heredoc の区切り語の ${...} の中でも引用符を除去するため、範囲側の現在の処理は zsh と一致している。
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: out-of-scope / align-with-dollar / undecidable。同じ Codex ターンで out-of-scope を推奨: zsh 5.9 の実測（未実行の関数定義に <<foo(${v:-"x"}) と終端行 foo(${v:-x}) を置くと構文が通り、終端を foo(${v:-"x"}) にすると構文エラー）と zsh Src/exec.c gethere の quotesubst 適用から、区切り語の ${...} 内も引用除去されると確認。範囲側（:1326）の現在の処理は zsh と一致し、align-with-dollar はかえって不一致を作り、undecidable は判定できる入力まで無出力にする。食い違いはむしろ通常の語の読み取り側（_dollar :1483、通常の語の ${ 内の引用符を除去しない）にあり、別の修正として扱うべきと指摘（Codex の実験で通常の語の ${v:-"x"} の区切り語で deny 期待が silent になる例を確認）。zsh の実際の解釈と合う out-of-scope の方が比較的良いと判断し採用。通常の語の読み取り側の食い違いは残件として別タスクに起票する。Opus エスカレーションは不要。'
