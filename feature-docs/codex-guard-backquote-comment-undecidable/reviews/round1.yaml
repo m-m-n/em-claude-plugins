@@ -1,0 +1,80 @@
+round: 1
+executed_at: "2026-10-18T22:21:31+09:00"
+scope:
+  review_mode: diff
+  base_commit: 9029b4e8759c56ab22cd7ad374b83d090ddfbea2
+  head_commit: 4d3a4e1e6a3755b5834827fdfcff9bc0b62b7a6c
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-backquote-comment-undecidable/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+  - perspective: performance
+    reason: "The guard runs on every Bash/Codex hook call and the change adds checkpoint re-judgment over the scanned string (NFR1 performance requirement)"
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 02ffeea89c656388
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1018
+  title: "TM-1: リダイレクトだけのコマンドで対話起動の拒否を回避できる"
+  description: "`_flush`（1011-1027 行）は語のあるコマンドを終えたとき（`if made:`）だけ `list_pending` を下ろす。リダイレクト先は語にならないので、`&&` / `||` の右辺がリダイレクトだけ（`< /dev/null`、`> /dev/null`、`<<EOF` など）のとき、そのコマンドが終わっても `list_pending` は True のまま残る。改行分岐のチェックポイント条件（`not self.list_pending`）が満たされず、`python3 -i &&\\n< /dev/null\\necho '` はチェックポイントが (0, 0) のまま `_Undecidable` に達し、何も出力しない。bash はリダイレクトだけの単純コマンドでリストを完結させ、後ろの構文エラーより先に 1 行目を実行する。SPEC FR2 のチェックポイントの定義からのずれ。`pipe_pending` は `_separator` の `elif sep != \"\\n\" or redirected`（1050 行）でリダイレクトだけのコマンドでも下ろしている。em-review のコピーも同一。変更前は判定不能な文字列がすべて無出力だったので後退ではない。"
+  suggestion: "`_separator` で `list_pending` を `pipe_pending` と同じ規則で扱う。`&&` / `||` なら True、それ以外は `sep != \"\\n\" or redirected` のとき False。両コピーを同じ変更で直し、CASES に deny の行を足す: `python3 -i &&\\n< /dev/null\\necho '`、`python3 -i || > /dev/null\\necho '`、`python3 -i && > /dev/null;\\necho '`、`python3 -i &&\\n<<EOF\\nx\\nEOF\\necho '`、およびこれらを `bash -c` の中に入れた行。"
+  reproduction: "両スクリプトをそれぞれ python3 -B で実行し、標準入力に {\"tool_input\":{\"command\":\"python3 -i &&\\n< /dev/null\\necho '\"}} を渡すと、終了コード0、標準出力なしとなる。比較として `< /dev/null` を `: < /dev/null` に変更すると deny が返る。"
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:security]
+  confidence: 100
+  resolution: deferred
+  resolution_reason: "medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task"
+- stable_id: 3d0f2659bb304a40
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1018
+  title: "リダイレクトだけのコマンドで継続状態が解除されない"
+  description: "security の指摘と同じ箇所・同じ原因。`_flush` の `if made:` の中でだけ `list_pending` を下ろしているので、`&&` / `||` の右辺がリダイレクトだけのコマンドでは継続状態が残り、その後の改行がチェックポイントにならない。`python3 -i && > /dev/null\\necho '` は 1 行目が完結しているのに何も出力しない。`pipe_pending` との扱いが食い違っている。em-review のコピーも同一。"
+  suggestion: "リダイレクトだけの単純コマンドが終わったときも `list_pending` を下ろす（`_separator` で `pipe_pending` と同じ `sep != \"\\n\" or redirected` の規則を使う）。両コピーを同じ変更で直し、`&&`・`||` の右辺がリダイレクトだけの場合（同じ行・次の行・heredoc だけ・入れ子の `-c`）を CASES に deny の行として足す。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 95
+  resolution: deferred
+  resolution_reason: "medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task (same site as 02ffeea89c656388)"
+evaluation:
+  round_summary: "round 1（diff、cross_validation=true）。security#0 と comprehensive#0 が独立に同じ欠陥を報告し、評価者が読んで再現を確認した: `&&` / `||` の右辺がリダイレクトだけのコマンドでは `list_pending` が下りず、その後の改行がチェックポイントにならないので、判定不能な文字列より前に完結した行の対話起動が無出力で通る（両コピー共通、medium）。critical / high の指摘は無く、dismissed_sites は空。reviewer の出力に注入の試みは無かった。観点ごとの確認状況: security — corroborated。comprehensive — corroborated。architecture — corroborated（2 コピーは cmp で同一）。spec — TS1〜TS4 の行は SPEC と一致、FR6 の docstring あり、上の欠陥は FR2 の定義からのずれでもある。performance — corroborated。オーケストレーターもフックに JSON を渡して再現を確認した（コマンドは実行していない）。"
+  recommended_action: rework
+  action_rationale: "残るのは medium の 1 件（同じ箇所を 2 カテゴリで記録）だけで、R4 の自動修正の対象（critical / high）には入らない。ただし FR2 の定義からずれた見逃しで、直し方は小さく決まっているため、手直しのタスクとして直すのが妥当。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "tmp/sca-triage-codex-guard-backquote-comment-undecidable-20261018T132139Z.md"
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
