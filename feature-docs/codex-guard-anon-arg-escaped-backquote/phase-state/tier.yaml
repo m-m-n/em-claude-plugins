@@ -1,0 +1,57 @@
+schema_version: 2
+feature: codex-guard-anon-arg-escaped-backquote
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-10-18T11:30:55+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.15
+    confidence: 0.85
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+  observed_at: '2026-10-18T11:33:53+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: -1
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 14
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 'main（a565954c7b5dfe027184a894d96cd784a105beba）を調査した。レビュー記録 round1.yaml の stable_id dfdc820511d4c859 に基づき、意図された再現コマンドは zsh -c ''setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo \`echo x\``)'' と判断した。バッククォートは計4文字あり、両コピーとも終了コード0・標準出力空になった。解析処理を直接確認すると、最後のバッククォート位置で _Undecidable(''quote'') が発生した。同じ前置きで、説明文どおりの foo(`echo \\`echo x\) は両コピーとも出力なしで、解析は _Undecidable(''group'') になった。ユーザー追記の候補 foo(`echo \`echo x\`) は両コピーとも permissionDecision: deny になった。さらに、バックスラッシュを各2文字にした foo(`echo \\`echo x\\``)、対照の foo(`echo x`)、foo(x) も両コピーとも deny になった。全入力で終了コード0・標準エラー空だった。zshは実行せず、コマンド文字列を含むJSONをPythonフックの標準入力に渡した。両コピーはバイト単位で一致した。現行1465行の引用符外バッククォート処理は s.find で終端を探す一方、_skip_substitution は1274行でバックスラッシュの組を読み飛ばしている。修正対象は既存の _Parser.parse 内の分岐になる。直接呼出元1関数と内部の直接呼出先13メソッドを確認し、同一コピーを重複計上せず14とした。既存CASESは588件あり、関連するバッククォートの検査はあるが、意図された再現コマンドは未登録だった。TestCasesTable と TestCopies の計7テストは成功した。共通CASESへのdeny入力1件追加で両コピーを検査できる。入出力JSON形式の変更は要求されていない。変更行数は未確定のため-1とした。ファイルの作成・変更・削除は行っていない。'
+decided_at: '2026-10-18T11:34:30+09:00'
