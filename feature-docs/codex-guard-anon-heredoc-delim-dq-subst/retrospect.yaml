@@ -1,0 +1,38 @@
+feature: codex-guard-anon-heredoc-delim-dq-subst
+collected_at: "2026-10-18T16:37:00+09:00"
+session_ids: [01a14def-f1d1-767b-a015-0f36a33c2fd0]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが bucket 2（新しいロジック・複数モジュール）を 0.78 で示し、削減なしの full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.42, confidence: 0.57}
+        observed_at: "2026-10-18T15:22:40+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.78, confidence: 0.78}
+        observed_at: "2026-10-18T15:25:32+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 240
+      new_functions_needed: 1
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 5
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で security#0 の medium（区切り語の範囲の二重引用符の中の $(case ...) が判定不能になり、基準版の deny が無出力に変わる）を evaluator が SPEC FR4 / THREAT-MODEL TM-2 の受け入れ済み残余として low に下げた。語の読み取り側にも同じ迂回が基準版からある（echo \"$(case x in x) :;; esac)\"; python3 -i）"
+  - "create-spec の Codex 相談で、通常の語の読み取り側（_dollar）が ${ ... } の中の引用符を除去せず zsh と食い違う（区切り語 ${v:-\"x\"} で deny 期待が silent）ことが判明した。範囲側は zsh と一致しているため対象外とし、別タスクに起票する"
