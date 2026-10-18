@@ -89,7 +89,8 @@ workflow:
   completed_at_commit: a69f9b31f3364db11fc327072529e662d3389f8f
   base_commit: 0e4426d67a8285648c0d831857891f1a8b6c9822
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 32eb4c17d455c8260cb6980c07ae9e5e5c47d2aa
 - id: verify
   status: pending
 - id: retrospect
@@ -126,14 +127,15 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-subshell-anon-arg-semicolon/task0001
 review:
-  status: in_progress
+  status: completed
+  perspectives: [comprehensive, security, architecture, spec, performance]
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary:
       - perspective: performance
         reason: "NFR1/NFR2 require linear time and no recursion in the parser scan; the diff changes the per-character scan loop"
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
   residual_critical_high: 0
   needs_rework: false
 requirements:

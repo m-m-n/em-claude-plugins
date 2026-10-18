@@ -1,0 +1,65 @@
+round: 1
+executed_at: "2026-10-18T20:33:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 0e4426d67a8285648c0d831857891f1a8b6c9822
+  head_commit: 32eb4c17d455c8260cb6980c07ae9e5e5c47d2aa
+  changed_files:
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - test-docs/codex-guard-subshell-anon-arg-semicolon/task0001.tests.yaml
+    - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: "NFR1/NFR2 require linear time and no recursion in the parser scan; the diff changes the per-character scan loop"
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: "5e71ff00fdbe5aff"
+    severity: "medium"
+    category: "security"
+    file: "em-workflow/scripts/codex-hook-interactive-guard.py"
+    line: 1172
+    title: "case 分岐のパターンを終える `)` を `)` 救済が外側のサブシェルの閉じと読み、後の入力リダイレクトで先に書いた起動まで接続済みにしてしまう"
+    description: "`_close_paren` に足した救済（`_closes_paren_after_rescue` / `_close_paren_after_rescue`）は、仮の群が最内の開いた群のときに読んだ `)` を、chain_base の `(` 群を閉じる括弧として読む。その `)` が case のパターン終端でも同じように読む。`( function { python3; } foo(a; case x in x) < /dev/null :;; esac; )` では `x)` で G1 が閉じ、`< /dev/null` が G1 に stdin を立て、匿名関数本体の python3 が接続済みになり silent になる。変更前は deny だった（deny から silent への後退）。zsh では `< /dev/null` は case 分岐内の `:` にしか掛からない。em-review のコピーも同一。仮の群を通らない `( python3; case x in x) < /dev/null :;; esac; )` は変更前から silent（case を追わない既存の限界）。SPEC の前提 A1 が case パターンの `)` では成り立たない。"
+    suggestion: "狭い修正: 仮の群が最内の開いた群のときにコマンド位置で `case` を読んだら、その群に定数時間で読める印を付け、`_closes_paren_after_rescue` は印のある群では救済しない。両コピーを同じ変更で直し、再現形を deny の行として CASES に足す。docstring の手順 4、`_Parser`、`_close_paren`、`_closes_paren_after_rescue` の条件記述も追従する。case のパターン終端を主の読み手で追う広い修正は別 feature で扱う。"
+    reproduction: "両ガードの標準入力に {\"tool_input\":{\"command\":\"zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in x) < /dev/null :;; esac; )'\"}} を渡すと終了コード0・出力なし。変更前（base_commit 0e4426d6）のガードでは deny。"
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:security"]
+    confidence: 90
+    resolution: "unresolved"
+    resolution_reason: "medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only) and not counted in residual_critical_high; reproduced by orchestrator (worktree guards silent, base_commit guard deny); filed as a follow-up task"
+evaluation:
+  round_summary: "ラウンド 1（cross_validation 有効）。5 観点がすべて完了し、未レビューの観点は無い。security#0 の medium 1 件（case パターンの `)` を `)` 救済がサブシェルの閉じと読み、deny が silent に後退する）を reproduced と判定して採用。critical/high の指摘は無く dismissed_sites は空。reviewer の出力に注入の試みは見当たらない。comprehensive — 同じ case の読み違いを確認し security の 1 件に集約; security — corroborated; architecture — corroborated（2 コピーはバイト同一、_rescue_separator を共有）; spec — corroborated（ただし前提 A1 が case パターンの `)` で崩れる）; performance — corroborated（定数時間判定、各群は 1 回だけ除去）。"
+  recommended_action: auto_fix
+  action_rationale: "採用した指摘は medium の 1 件で、原因は今回足した `)` 救済の条件の中に収まる。case を読んだ印で救済を見送る狭い修正で直せる。広い修正は SPEC の範囲外で別 feature。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-subshell-anon-arg-semicolon-20261018T113230Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
