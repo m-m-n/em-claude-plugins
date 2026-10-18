@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-subshell-anon-arg-semicolon
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 4629f80aa70b1db71efc35fad7153d53f17044cc
 last_input_digest: sha256:ea880d796a588a1e84725c4bd255f4aae38348b373801c524ad646d526fffa3e
