@@ -91,6 +91,28 @@ Decision flow:
      whether the backquotes balance does not matter, and a backquote after the
      range's closing `)` is no trigger. The backquote is only noticed, never
      read: it moves neither the nesting depth nor the `)` that closes the range.
+     The group opened for a range that has a matching `)`, holds no unquoted
+     `;`, `&` or newline and holds a backquote has the comment exception: while
+     it is the innermost open group, an unquoted `#` at word start is a word
+     character, not the start of a comment, and the characters after it join the
+     word as in any other word, so a `)` after it still closes the group. The
+     scan that finds the range still gives a backquote and a comment no special
+     reading; the exception belongs to the reading of the group opened after it.
+     A group opened while the innermost open group has the comment exception
+     starts with it, whatever its own opening condition: the value is copied
+     once, when the group opens, and a group that closes takes its value with
+     it, so the value of its parent applies again. Reading a direct separator
+     ends it: a `;`, a lone `&`, `&&`, `|&` or a newline that the reader itself
+     reads while a group with the comment exception is the innermost open group
+     clears it for that group for good, and a `#` at word start is a comment
+     there as before; `|`, `||`, `&>`, `>&`, a quoted separator and a
+     backslash-escaped separator clear nothing, and a separator read inside a
+     nested group never changes an outer group. This is the single exception to
+     the earlier assumption that group reading adds no new reading: a `#` at
+     word start stays a comment outside every group, in a group opened at a `;`,
+     `&` or newline, in a group opened because no matching `)` is found and in a
+     group whose exception was cleared, a `#` inside `$(` is read as before, and
+     a `#` in the middle of a word is a word character as ever.
      A range read as one word that is the delimiter of `<<` or `<<-`, or a part
      of it, has its text quote-removed by the rules the reader applies to any
      word, before the delimiter is registered: outside quotes a backslash is
@@ -283,6 +305,13 @@ PAREN_SCAN_FACTOR = 4
 # `&`. Any other first separator (a newline, `&&`, `||`, `|`, `|&`) leaves the
 # group unrescued.
 RESCUE_SEPARATORS = (";", "&")
+
+# The separators that end the comment exception of a group
+# (`_Group.comment_exception`) when the reader itself reads one while that group
+# is the innermost open group: a `;`, a lone `&`, `&&`, `|&` and a newline. A `|`
+# and `||` are no member, and the redirections `&>` and `>&`, a quoted separator
+# and a backslash-escaped one never reach the reader's separator handling.
+COMMENT_EXCEPTION_ENDERS = (";", "&", "&&", "|&", "\n")
 
 
 class _Undecidable(Exception):
@@ -495,17 +524,39 @@ class _Group:
                while this group is open its parent reads no direct separator, so
                the parent's part cannot change, and a `}` reads them in constant
                time without walking the groups around it
+    comment_exception  the group has the comment exception: while it is the
+               innermost open group, an unquoted `#` at word start is a word
+               character, not the start of a comment, and the characters after
+               it join the word as in any other word. It is fixed when the group
+               opens: `_read_argument_parens` sets it for a range that has a
+               matching `)`, holds no unquoted `;`, `&` or newline and holds a
+               backquote, and a group opened while the innermost open group has
+               it starts with it, whatever its own opening condition (a `(`
+               group, a `{` group or a provisional group alike), the value
+               copied once from the parent at that moment. Every other group
+               starts without it and reads a `#` at word start as a comment.
+               Reading a direct separator ends it: a `;`, a lone `&`, `&&`,
+               `|&` or a newline that the reader itself reads while a group with
+               the comment exception is the innermost open group clears it for
+               that group for good (`_Parser._separator`); `|`, `||`, `&>`, `>&`,
+               a quoted separator and a backslash-escaped separator clear
+               nothing, and a separator read inside a nested group never changes
+               an outer group. When a group closes its value goes with it and
+               the value of its parent applies again. This is the single
+               exception to the earlier assumption that group reading adds no
+               new reading. Only the innermost group is read when a separator or
+               a `#` is read, so the check takes constant time
     """
 
     __slots__ = (
         "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "anon_stdin",
         "head_stdin", "in_anon", "size", "connected", "skipped", "provisional", "first_sep",
-        "chain_base", "outer_blocked",
+        "chain_base", "outer_blocked", "comment_exception",
     )
 
     def __init__(
         self, kind, parent, pipe, skip, head, size, anon=False, anon_pipe=False, anon_stdin=False,
-        head_stdin=False, in_anon=False,
+        head_stdin=False, in_anon=False, comment_exception=False,
     ):
         self.kind = kind
         self.parent = parent
@@ -525,6 +576,7 @@ class _Group:
         self.first_sep = None
         self.chain_base = None
         self.outer_blocked = False
+        self.comment_exception = comment_exception
 
 
 class _Parser:
@@ -572,6 +624,29 @@ class _Parser:
     values fixed when the group opened (`_Group.chain_base`,
     `_Group.outer_blocked`), so it costs constant time and the whole reading
     stays linear in the length of the string.
+
+    The group opened for a range that has a matching `)`, holds no unquoted `;`,
+    `&` or newline and holds a backquote has the comment exception: while it is
+    the innermost open group, an unquoted `#` at word start is a word character,
+    not the start of a comment, and the characters after it join the word as in
+    any other word, so a `)` after it still closes the group. The scan that
+    finds the range still gives a backquote and a comment no special reading;
+    the exception belongs to the reading of the group opened after it. A group
+    opened while the innermost open group has the comment exception starts with
+    it, whatever its own opening condition: the value is copied once, when the
+    group opens, and a group that closes takes its value with it, so the value
+    of its parent applies again. Reading a direct separator ends it: a `;`, a
+    lone `&`, `&&`, `|&` or a newline that the reader itself reads while a group
+    with the comment exception is the innermost open group clears it for that
+    group for good, and a `#` at word start is a comment there as before; `|`,
+    `||`, `&>`, `>&`, a quoted separator and a backslash-escaped separator clear
+    nothing, and a separator read inside a nested group never changes an outer
+    group. This is the single exception to the earlier assumption that group
+    reading adds no new reading: a `#` at word start stays a comment outside
+    every group, in a group opened at a `;`, `&` or newline, in a group opened
+    because no matching `)` is found and in a group whose exception was cleared,
+    a `#` inside `$(` is read as before, and a `#` in the middle of a word is a
+    word character as ever.
     """
 
     def __init__(self, command):
@@ -834,6 +909,11 @@ class _Parser:
             group = self.frames[-1]
             if group.provisional and group.first_sep is None:
                 group.first_sep = sep
+            # A direct separator ends the comment exception of the innermost
+            # group, for good. A separator read inside a nested group reached
+            # that group alone and left this one as it was.
+            if group.comment_exception and sep in COMMENT_EXCEPTION_ENDERS:
+                group.comment_exception = False
         if sep != "\n":
             self.fn_head = False
             self.anon_head = None
@@ -946,9 +1026,15 @@ class _Parser:
         # opens in, and a group opened at top level that is no anonymous body
         # is not. A `}` reads it in constant time.
         in_anon = (kind == "{" and anon) or (parent is not None and parent.in_anon)
+        # The comment exception is fixed here as well, once: a group opened while
+        # the innermost open group has it starts with it, whatever its own
+        # opening condition; the value is copied and never read from the parent
+        # again. `_read_argument_parens` adds the exception its own opening
+        # condition gives.
+        comment_exception = parent is not None and parent.comment_exception
         group = _Group(
             kind, parent, pipe, self.fn_head, head, size, anon, anon and anon_pipe, anon_stdin,
-            head_stdin, in_anon,
+            head_stdin, in_anon, comment_exception,
         )
         self.pipe_pending = False
         self.fn_head = False
@@ -1127,7 +1213,31 @@ class _Parser:
         commands after that separator are judged as following the anonymous
         function (`_rescue_argument_groups`, run when input ends, or
         `_close_after_rescue`, run at a lone `}` that closes the `{` group around
-        it). A newline as the first direct separator is not rescued."""
+        it). A newline as the first direct separator is not rescued.
+
+        The group opened for a range that has a matching `)`, holds no unquoted
+        `;`, `&` or newline and holds a backquote has the comment exception:
+        while it is the innermost open group, an unquoted `#` at word start is a
+        word character, not the start of a comment, and the characters after it
+        join the word as in any other word, so a `)` after it still closes the
+        group. The scan that finds the range still gives a backquote and a
+        comment no special reading; the exception belongs to the reading of the
+        group opened after it. A group opened while the innermost open group has
+        the comment exception starts with it, whatever its own opening
+        condition: the value is copied once, when the group opens, and a group
+        that closes takes its value with it, so the value of its parent applies
+        again. Reading a direct separator ends it: a `;`, a lone `&`, `&&`, `|&`
+        or a newline that the reader itself reads while a group with the comment
+        exception is the innermost open group clears it for that group for good,
+        and a `#` at word start is a comment there as before; `|`, `||`, `&>`,
+        `>&`, a quoted separator and a backslash-escaped separator clear
+        nothing, and a separator read inside a nested group never changes an
+        outer group. This is the single exception to the earlier assumption that
+        group reading adds no new reading: a `#` at word start stays a comment
+        outside every group, in a group opened at a `;`, `&` or newline, in a
+        group opened because no matching `)` is found and in a group whose
+        exception was cleared, a `#` inside `$(` is read as before, and a `#` in
+        the middle of a word is a word character as ever."""
         start = self.i
         end, separated, backquoted, reached = self._scan_parens(
             start, self.paren_budget
@@ -1144,7 +1254,10 @@ class _Parser:
             return
         self.i += 1
         self._open_group("(")
-        self._mark_provisional(self.frames[-1])
+        group = self.frames[-1]
+        self._mark_provisional(group)
+        if end is not None and not separated and backquoted:
+            group.comment_exception = True
 
     def _remove_range_quotes(self, start, end):
         """Return the text of the range `self.s[start:end]` (from its `(` through
@@ -1465,7 +1578,13 @@ class _Parser:
                 self._separator("\n")
                 if self.heredocs:
                     self._read_heredocs()
-            elif ch == "#" and not self.started:
+            elif ch == "#" and not self.started and not (
+                self.frames and self.frames[-1].comment_exception
+            ):
+                # A comment, unless the innermost open group has the comment
+                # exception: then the `#` falls through to the word characters
+                # below. Only the innermost group is read, so it costs constant
+                # time.
                 end = s.find("\n", i)
                 self.i = self.n if end == -1 else end
             elif ch == "\\":

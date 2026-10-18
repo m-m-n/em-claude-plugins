@@ -750,6 +750,18 @@ CASES = [
     ("deny", "範囲の $ の次が引用符でなければ文字のまま残す", "function { :; } << foo($x'y')\nfoo($xy)\npython3 -i"),
     ("deny", "範囲の入れ子の括弧は文字のまま残す", "function { :; } << foo((a)'b')\nfoo((a)b)\npython3 -i"),
     ("deny", "範囲の後ろに続く部分は範囲の引用除去のあとにそのままつなぐ", "function { :; } << foo('x')'y'z\nfoo(x)yz\npython3 -i"),
+    # A group opened at an argument `(` whose range has a matching `)`, holds no
+    # unquoted `;`, `&` or newline and holds a backquote reads an unquoted `#`
+    # at word start as a word character while it is the innermost open group, so
+    # the `)` after the `#` still closes the range and the explicit `-i` of the
+    # anonymous body is denied. A group opened inside it starts with that
+    # reading. A `;` read directly in the group ends it: the `#` after it starts
+    # a comment again, the provisional group is rescued by the `;`, and the
+    # launch after the newline is judged
+    ("deny", "バッククォートを含む引数の ( ) の中の空白の後の # は語の文字で、本体の -i を拒否する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x` #)'"),
+    ("deny", "バッククォートを含む引数の ( ) の中の空白の後の # は語の文字で、閉じた後の改行の先の起動も拒否する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x` #)\npython3 -i'"),
+    ("deny", "バッククォートを含む引数の ( ) の中の入れ子の ( ) も語頭の # を語の文字として読む", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x` (a #))'"),
+    ("deny", "バッククォートを含む引数の ( ) の中の走査が早く止まっても、直接の ; の後の # はコメントで改行の先の起動を拒否する", "zsh -c 'setopt nonomatch nobareglobqual nobadpattern; function { python3 -i; } foo(`case x in x) echo x;; esac`; # '\"'\"' ignored\npython3 -i'"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -2076,6 +2088,62 @@ class TestGuardDocumentation(unittest.TestCase):
         for plugin, path in HOOK_PATHS.items():
             with self.subTest(copy=plugin):
                 self.assertIn(self.BRACE_CLOSE_MARKER, parser_docstring(path))
+
+    # The comment exception (FR2 to FR4, FR8): a group opened because its range
+    # held a backquote reads an unquoted `#` at word start as a word character
+    # while it is the innermost open group. The rule is written in the module
+    # docstring (step 4), the docstring of `_Parser`, the docstring of
+    # `_read_argument_parens` and the description of the `_Group` attribute that
+    # holds it: the opening condition, the word-character reading, the
+    # inheritance at open, the clearing on the five direct separators, and that
+    # it is the single exception to the earlier assumption
+    COMMENT_EXCEPTION_MARKERS = (
+        "has the comment exception: while it is the innermost open group, an "
+        "unquoted `#` at word start is a word character, not the start of a comment",
+        "holds no unquoted `;`, `&` or newline and holds a backquote",
+        "starts with it, whatever its own opening condition",
+        "a `;`, a lone `&`, `&&`, `|&` or a newline that the reader itself reads while "
+        "a group with the comment exception is the innermost open group clears it",
+        "`|`, `||`, `&>`, `>&`, a quoted separator and a backslash-escaped separator "
+        "clear nothing",
+        "the single exception to the earlier assumption that group reading adds no "
+        "new reading",
+    )
+
+    def test_the_module_docstring_states_the_comment_exception(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for marker in self.COMMENT_EXCEPTION_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_parser_description_states_the_comment_exception(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path)
+            for marker in self.COMMENT_EXCEPTION_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_argument_paren_reader_states_the_comment_exception(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_read_argument_parens")
+            with self.subTest(copy=plugin, method="_read_argument_parens"):
+                self.assertIsNotNone(doc, "no _read_argument_parens method in _Parser")
+            for marker in self.COMMENT_EXCEPTION_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc or "")
+
+    def test_the_group_description_states_the_comment_exception_attribute(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            group = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Group"
+            )
+            doc = " ".join((ast.get_docstring(group) or "").split())
+            for marker in ("comment_exception",) + self.COMMENT_EXCEPTION_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
 
     # What step 4 says about the head's stdin redirect, a `(` among the
     # arguments of an anonymous function, and where the arguments end
