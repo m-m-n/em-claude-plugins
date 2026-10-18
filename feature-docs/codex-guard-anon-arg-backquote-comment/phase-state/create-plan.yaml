@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-arg-backquote-comment
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: d6beae53d44c2e1975dd99d70dbdf2cc663e8fac
+last_input_digest: sha256:3b758d551a6f950704499ff0ef4c202585e9ca497511e0e88994dd0fe8a219f6
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:3b758d551a6f950704499ff0ef4c202585e9ca497511e0e88994dd0fe8a219f6
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
