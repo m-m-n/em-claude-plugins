@@ -20,7 +20,10 @@ Decision flow:
      nothing outside, the word holding it is dynamic, and its contents are
      not judged. A chunk that is not closed, or whose close cannot be located
      with certainty -> no output. After the closing quote ordinary reading
-     resumes, so a launch outside the quotes is still judged.
+     resumes, so a launch outside the quotes is still judged. A backtick span
+     outside quotes is one dynamic chunk too: it ends at the first backquote
+     that is not part of a backslash pair (a backslash and the character after
+     it), and a span with no such backquote left -> no output.
   4. A subshell `( ... )` and a brace group `{ ...; }` are groups. `{` and
      `}` delimit a group only as a standalone word: a `{` opens a group at
      command position, and also right after the head of a zsh anonymous
@@ -1429,6 +1432,26 @@ class _Parser:
                 self.after_group.stdin = True
         self.redirect = (op in ("<<", "<<-"), op == "<<-")
 
+    def _closing_backquote(self, start):
+        """Return the index of the backquote that closes the span opened by the
+        unquoted backquote at `start`. The scan goes forward from the character
+        after the opening backquote, and a backslash and the single character
+        after it are one pair that never closes the span, whatever that
+        character is; this is the pair rule of the backtick context of
+        `_skip_substitution`. The first backquote outside a pair closes the
+        span, so one after an even run of backslashes (none included) closes it
+        and one after an odd run does not. Raises _Undecidable when no such
+        backquote is left, a lone backslash at the end of the text included.
+        One pass, constant work per character."""
+        s, n = self.s, self.n
+        j = start + 1
+        while j < n:
+            ch = s[j]
+            if ch == "`":
+                return j
+            j += 2 if ch == "\\" else 1
+        raise _Undecidable("quote")
+
     def parse(self):
         s = self.s
         while self.i < self.n:
@@ -1462,9 +1485,7 @@ class _Parser:
             elif ch == "$":
                 self._dollar()
             elif ch == "`":
-                end = s.find("`", i + 1)
-                if end == -1:
-                    raise _Undecidable("quote")
+                end = self._closing_backquote(i)
                 self._put(s[i:end + 1], quoted=True, dynamic=True)
                 self.i = end + 1
             elif ch == ";":
