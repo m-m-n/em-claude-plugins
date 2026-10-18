@@ -1,0 +1,23 @@
+schema_version: 1
+feature: codex-guard-case-in-substitution
+records:
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-10-20T00:25:00+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - auto_record
+  freeform: null
+  normalized_answer: project.components のコマンドはすべて承認済み（追加記録なし）
+  resolution_note: batch policy create-spec.command-approval auto_record。test_command `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests` は bash_guard.py --list に既に存在。refusal パターンに該当なし。
+- question_id: design-step.decision
+  packet_id: null
+  answered_at: '2026-10-20T00:15:00+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - skip
+  freeform: null
+  normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック解析処理のバグ修正、デザインシステム候補ゼロ）'
+  resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
