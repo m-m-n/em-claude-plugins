@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-arg-backquote-comment
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 9800e9b1e04231d42bc0462bdf1f9eea76de79aa
 last_input_digest: sha256:d0231a4f0c968ac95a7d48e5ea31976400ed35da643b71a117189563c726638b
