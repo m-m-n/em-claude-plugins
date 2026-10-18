@@ -89,7 +89,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: e66d0ca933a9a19f900c0324e882da43a8f8d752
 - id: implement
   status: pending
 - id: review
@@ -98,7 +99,35 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Shared quoted-unit reader for word reading and delimiter ranges
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -110,85 +139,118 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
   FR2:
     title: 共通関数を両方から呼ぶ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-6
+    - TS-7
   FR3:
     title: 二重引用符の中の置換を原文のまま残す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-4
+    - TS-5
   FR4:
     title: 上限を越える読み飛ばしは判定不能
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
   FR5:
     title: 語の読み取りの区別を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-7
   FR6:
     title: 2 つのコピーの同一性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   FR7:
     title: docstring の更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   FR8:
     title: 対象外
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   NFR1:
     title: 処理時間は入力の長さに対して線形（TS-17）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   NFR2:
     title: 再帰と循環呼び出しを持ち込まない（TestNoRecursion）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   NFR3:
     title: 標準ライブラリのみ・書き込みとプロセス起動なし（TestStaticConstraints）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   NFR4:
     title: plugin.json と marketplace.json の version は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
 batch:
   review_rework_count: 0
   verify_rework:

@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-heredoc-delim-dq-subst
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: fa0c350ac087e9cc09d944bc5c94873b69f17eb0
 last_input_digest: sha256:e4e000f3a995ba704191d6f13857fc8c293cdd627cf30bb88444f8851ffbb431
@@ -28,7 +28,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: codex-guard-anon-heredoc-delim-dq-subst-create-plan-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:e4e000f3a995ba704191d6f13857fc8c293cdd627cf30bb88444f8851ffbb431
   base_workflow_blob: 8dbf668a26a42befd072888e7b1fbb0cca377249
 progress_fingerprint: null
