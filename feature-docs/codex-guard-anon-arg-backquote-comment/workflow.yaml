@@ -1,0 +1,202 @@
+schema_version: 1
+feature: codex-guard-anon-arg-backquote-comment
+created: '2026-10-18'
+base_branch: main
+goal: '# codex-hook-interactive-guard: バッククォートで群の読みに戻した匿名関数の引数の範囲で、空白の後の # をコメントと読み、本体の python3 -i を見逃す（回帰）
+
+
+  Notion: <notion-url>
+
+
+  ## 現象 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、zsh 匿名関数の引数中の `(`〜`)` 範囲にバッククォートがあって群の読みに戻ったとき、範囲内の空白の後の `#` がコメント開始と読まれ、閉じ括弧が読み飛ばされる。群が閉じず `_rescue_argument_groups` も救済しないため `_Undecidable(''group'')` になり、匿名関数本体の明示的な `python3 -i` の deny が外れる（無出力）。zsh では語の途中の `(`〜`)` の中の空白と `#` は語の一部でコメントにならない。
+
+  feature `codex-guard-anon-arg-backquote` で表に出た後退。変更前は deny だった。review round 1 の指摘（stable_id `ab990994bd365064`、severity medium、category security）。
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に `zsh -c ''setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x` #)''` を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+
+  2. 終了コード 0・空出力になる（期待は `permissionDecision: deny`）
+
+  ## 期待する挙動 (必須)
+
+  本体の `python3 -i` を deny する。直し方は SPEC の仮定 A2（群の読みに新しい読みを足さない）と FR5（救済の規則を変えない）に触れるため、扱いを SPEC で決めてから両コピーと `CASES` を揃える。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上のコマンドを deny として追加
+
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_read_argument_parens`（943-948 行付近）、`parse` のコメント処理（1181 行付近）
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
+  - 記録: `feature-docs/codex-guard-anon-arg-backquote/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-anon-arg-backquote/integration`）
+
+  ## 実害・発生条件 (任意)
+
+  見逃し側（fail-open）。書かれる見込みの小さい形。
+
+
+  ## 追加指示
+
+
+  - 実装完了後 integration ブランチを push し gh pr create で base_branch への PR を作る（自動マージしない。integration ブランチはローカルとリモートの両方に残す）。不明点は Codex に相談し比較的良い案を採用、その議論内容を Notion に記録する。
+
+  '
+parent_branch: em-workflow/codex-guard-anon-arg-backquote-comment/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.21
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.46
+      '2': 0.54
+      '3': 0.0
+  at: '2026-10-18T13:23:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: b796de2ba303cbcacd301c46826946bf9100aea4
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックスクリプトの修正であるため（design-step 推奨: skipped、デザインシステム候補ゼロ）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 再現コマンドの deny
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 'バッククォート契機の群では # を語の文字として読む'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 入れ子の群への継承
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 直接の区切りで例外を外す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 変えないもの
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 両コピーの同時修正
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 再発を検出する CASES
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: docstring の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Performance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Security
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Compatibility
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
