@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: c50a72ece132f37abd7b8e9f7c3be63456619699
 last_input_digest: sha256:7bc7be6b67d7b725122bdc3a9a096fac92201be8bf6f4108fd31e092e61c1af3
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,13 @@ worker_runs:
   input_digest: sha256:7bc7be6b67d7b725122bdc3a9a096fac92201be8bf6f4108fd31e092e61c1af3
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
-  input_digest: null
+  status: completed
+  input_digest: sha256:5f6a43a6cc28aba02032e5eea46e2383c54743b48f8dda01c644282099047f74
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-anon-arg-escaped-backquote/SPEC.md
+  sha256: sha256:5afceccaefb5f2accf662bd296ab07f953c68a6ed5b9c5d8388aae5a3458609d
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
