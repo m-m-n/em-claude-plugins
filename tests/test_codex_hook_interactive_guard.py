@@ -43,6 +43,17 @@ def json_quoted_nesting(command, depth):
     return command
 
 
+# The command as the hook receives it in `tool_input.command`: the backquote
+# span after `foo(` nests two backslash-escaped backquotes, and the explicit
+# `-i` of the anonymous body must still be denied. The source literal escapes
+# each backslash, so the decoded text holds exactly two backslashes, each
+# directly followed by a backquote, and four backquotes in all.
+ESCAPED_BACKQUOTE_REPRODUCTION = (
+    "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } "
+    "foo(`echo \\`echo x\\``)'"
+)
+
+
 # (expected, label, command)
 CASES = [
     # AC-1: launches with -i (FR6, FR8, FR9)
@@ -565,6 +576,12 @@ CASES = [
     ("silent", "引数の ( ) の中の閉じないバッククォートは判定不能", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x)'"),
     ("silent", "引数の ( ) の中のダブルクォート内の閉じないバッククォートは判定不能", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(\"`echo x\")'"),
     ("silent", "引数の ( ) の閉じ括弧より後のバッククォートは契機にならない", "zsh -c 'setopt nonomatch nobareglobqual; function { python3; } foo(x) < /dev/null; echo `echo y`'"),
+    # A backquote span read outside quotes ends at the first backquote that is
+    # not part of a backslash pair (a backslash and the character after it):
+    # the backquotes a backslash escapes do not close it. The span below nests
+    # two escaped backquotes, so its `)` closes the argument list and the
+    # explicit `-i` of the anonymous body is denied
+    ("deny", "引数の ( ) の中のバッククォートの置換が逃がしたバッククォートを入れ子に持っても置換は最後のバッククォートで閉じ本体の -i を拒否する", ESCAPED_BACKQUOTE_REPRODUCTION),
     # A group opened at such a `(` is provisional. When it is never closed (the
     # `)` sits in a comment, or there is none) and the first separator read
     # directly in it is a `;` or a lone `&`, it is rescued: the `(` is read as
@@ -838,6 +855,17 @@ class TestCasesTable(HookCopiesMixin, unittest.TestCase):
     def test_cases_are_unique(self):
         commands = [command for _, _, command in CASES]
         self.assertEqual(len(commands), len(set(commands)))
+
+    def test_the_escaped_backquote_reproduction_is_one_deny_row(self):
+        rows = [row for row in CASES if row[2] == ESCAPED_BACKQUOTE_REPRODUCTION]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0][0], "deny")
+
+    def test_the_escaped_backquote_reproduction_decodes_to_the_intended_characters(self):
+        command = ESCAPED_BACKQUOTE_REPRODUCTION
+        self.assertEqual(command.count("\\"), 2)
+        self.assertEqual(command.count("`"), 4)
+        self.assertEqual(command.count("\\`"), 2)
 
     def test_the_bash_c_section_comment_says_every_level_is_judged(self):
         lines = [
@@ -2214,6 +2242,105 @@ class TestWorkingDirectoryAndEnvironment(HookCopiesMixin, unittest.TestCase):
                     with self.subTest(command=command, env=name):
                         result = run_hook(path, payload_for(command), env=env)
                         self.assertEqual(verdict_of(result), expected)
+
+
+class TestUnquotedBackquoteClosing(HookCopiesMixin, unittest.TestCase):
+    """Where a backquote span read outside quotes ends. The span closes at the
+    first backquote that is not part of a backslash pair (a backslash and the
+    character after it, whatever it is); with none left the span is unclosed
+    and the input is undecidable, so the hook says nothing.
+
+    The probe sits in the argument list of a zsh anonymous function whose body
+    holds an explicit `-i`. A dynamic chunk among the arguments of `python3`
+    itself is fail-open by design, so the probe stays out of them: where the
+    span ends then decides between deny (the `)` after it closes the argument
+    list and the body is judged) and silent (the span is unclosed).
+    """
+
+    BODY = "setopt nonomatch nobareglobqual; function { python3 -i; } foo("
+    UNDECIDABLE_REFERENCE = "python3 -i `echo"  # a `quote` undecidable command
+    DEEP = TestMalformedAndDeepInput.RESERVED_RUN
+    TIMEOUT = TestMalformedAndDeepInput.TIMEOUT
+
+    def anonymous_function_with(self, span, tail=")"):
+        """A `zsh -c` command that runs the anonymous function with `span` as
+        the start of its argument list, closed by `tail`."""
+        return "zsh -c " + sq(self.BODY + span + tail)
+
+    def assert_verdict(self, command, expected):
+        for plugin, path in self.for_each_copy():
+            with self.subTest(copy=plugin, command=command[:200]):
+                result = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                self.assertEqual(verdict_of(result), expected)
+
+    def assert_unclosed(self, command):
+        """The hook gives `command` the output it gives any `quote` undecidable
+        command: exit status 0, nothing on standard output or standard error."""
+        for plugin, path in self.for_each_copy():
+            with self.subTest(copy=plugin, command=command[:200]):
+                reference = run_hook(path, payload_for(self.UNDECIDABLE_REFERENCE))
+                self.assertEqual(reference, (0, "", ""))
+                result = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                self.assertEqual(result, reference)
+
+    def test_a_backquote_after_an_even_run_of_backslashes_closes_the_span(self):
+        for run in (0, 2, 4, 6):
+            with self.subTest(run=run):
+                span = "`x" + "\\" * run + "`"
+                self.assert_verdict(self.anonymous_function_with(span), "deny")
+
+    def test_a_backquote_after_an_odd_run_of_backslashes_does_not_close_the_span(self):
+        for run in (1, 3, 5):
+            with self.subTest(run=run):
+                span = "`x" + "\\" * run + "`"
+                self.assert_unclosed(self.anonymous_function_with(span))
+
+    def test_a_backquote_after_an_odd_run_is_passed_over_and_a_later_one_closes(self):
+        for run in (1, 3, 5):
+            with self.subTest(run=run):
+                span = "`x" + "\\" * run + "`y`"
+                self.assert_verdict(self.anonymous_function_with(span), "deny")
+
+    def test_the_first_backquote_after_an_even_run_closes_and_a_later_one_opens_a_new_span(self):
+        for run in (0, 2, 4):
+            with self.subTest(run=run):
+                span = "`x" + "\\" * run + "`y`"
+                self.assert_unclosed(self.anonymous_function_with(span))
+
+    def test_a_span_whose_later_backquotes_are_all_escaped_is_unclosed(self):
+        for span in ("`x\\`", "`x\\`y\\`", "`\\`\\`\\`", "`x\\\\\\`"):
+            with self.subTest(span=span):
+                self.assert_unclosed(self.anonymous_function_with(span))
+
+    def test_a_span_that_runs_into_a_lone_backslash_at_the_end_of_the_text_is_unclosed(self):
+        for span in ("`x\\", "`x\\\\\\", "`\\"):
+            with self.subTest(span=span):
+                self.assert_unclosed(self.anonymous_function_with(span, tail=""))
+
+    def test_a_backslash_pair_hides_the_character_after_it_whatever_it_is(self):
+        for span in ("`x\\)y`", "`x\\ y`", "`x\\\\y`", "`x\\'y`", '`x\\"y`'):
+            with self.subTest(span=span):
+                self.assert_verdict(self.anonymous_function_with(span), "deny")
+
+    def test_a_backquote_span_outside_an_argument_list_ends_by_the_same_rule(self):
+        self.assert_verdict("echo `a\\`b`; python3 -i", "deny")
+        self.assert_unclosed("echo `a\\`; python3 -i")
+
+    def test_a_deep_span_of_escaped_backquotes_is_unclosed(self):
+        span = "`" + "\\`" * self.DEEP
+        self.assert_unclosed(self.anonymous_function_with(span))
+
+    def test_a_deep_span_of_backslash_pairs_without_a_closing_backquote_is_unclosed(self):
+        span = "`" + "\\\\" * self.DEEP
+        self.assert_unclosed(self.anonymous_function_with(span))
+
+    def test_a_deep_span_of_backslash_pairs_ending_in_a_lone_backslash_is_unclosed(self):
+        span = "`" + "\\\\" * self.DEEP + "\\"
+        self.assert_unclosed(self.anonymous_function_with(span, tail=""))
+
+    def test_a_deep_span_of_backslash_pairs_closed_by_a_backquote_is_closed(self):
+        span = "`" + "\\\\" * self.DEEP + "`"
+        self.assert_verdict(self.anonymous_function_with(span), "deny")
 
 
 class TestCopies(unittest.TestCase):

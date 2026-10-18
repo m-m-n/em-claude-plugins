@@ -1,0 +1,97 @@
+task_id: task0001
+baseline_failures: []          # the suite as inherited: 943/943 destructive-guard cases and 10468 unittest tests passed (1 skipped);
+                               # run from the primary checkout (main a565954c), whose code differs from the worktree base only under feature-docs/
+final_failures: []             # re-executed in the worktree after the implementation and the record were written: 943/943 destructive-guard cases and 10483 unittest tests passed (1 skipped)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      The CASES row for the reproduction command was added before the guard was
+      touched. In both copies the hook printed nothing where deny was expected,
+      and the test errored with json.decoder.JSONDecodeError: Expecting value:
+      line 1 column 1 (char 0). The test feeds each copy the hook-input JSON on
+      its standard input, so it is the standard-input check of this criterion.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_the_escaped_backquote_reproduction_is_one_deny_row
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_the_escaped_backquote_reproduction_decodes_to_the_intended_characters
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      test_cases_run_against_both_copies errored in both copies before the guard
+      was touched (the reproduction row got no deny, JSONDecodeError). The other
+      two tests check the row itself (one row, expected deny; the decoded command
+      holds two backslashes, four backquotes and two backslash-backquote pairs);
+      they were written together with the row and passed at once, so they are
+      structure guards with no red of their own.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_span_whose_later_backquotes_are_all_escaped_is_unclosed
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_span_that_runs_into_a_lone_backslash_at_the_end_of_the_text_is_unclosed
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_backquote_span_outside_an_argument_list_ends_by_the_same_rule
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_deep_span_of_escaped_backquotes_is_unclosed
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_deep_span_of_backslash_pairs_without_a_closing_backquote_is_unclosed
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_deep_span_of_backslash_pairs_ending_in_a_lone_backslash_is_unclosed
+    red_confirmed: true
+    red_reason: >-
+      Observed failing before the guard was touched, in both copies: the
+      all-escaped-backquotes test, the deep escaped-backquotes test (50000
+      escaped backquotes) and the outside-an-argument-list test. In the first
+      two the hook printed a deny object where the same empty output as the
+      existing unclosed-backquote command was expected (AssertionError: Tuples
+      differ: (0, '{"hookSpecificOutput": ...', '') != (0, '', '')); in the third
+      both directions failed (silent where deny was expected for a span that
+      nests an escaped backquote, deny where silent was expected for a span
+      whose only later backquote is escaped). The cause is the old search, which
+      closed the span at the first escaped backquote. The three tests with
+      a lone trailing backslash or a backslash-pair span with no backquote left
+      already returned silent before the change (the old search found no backquote
+      either); they are regression guards that keep the new search from raising
+      on the end of the text or running long. Each test compares the hook output
+      with that of the existing quote-undecidable command python3 -i `echo.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_backquote_after_an_even_run_of_backslashes_closes_the_span
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_backquote_after_an_odd_run_of_backslashes_does_not_close_the_span
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_backquote_after_an_odd_run_is_passed_over_and_a_later_one_closes
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_the_first_backquote_after_an_even_run_closes_and_a_later_one_opens_a_new_span
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_backslash_pair_hides_the_character_after_it_whatever_it_is
+      - tests.test_codex_hook_interactive_guard.TestUnquotedBackquoteClosing.test_a_deep_span_of_backslash_pairs_closed_by_a_backquote_is_closed
+    red_confirmed: true
+    red_reason: >-
+      The odd-run test and the odd-run-then-a-later-backquote test failed in both
+      copies before the guard was touched (the old search closed the span at the
+      backquote after an odd run: a deny where silent, and a silent where deny,
+      was expected). The even-run test, the first-backquote-closes test, the
+      pair-hides-the-next-character test and the deep closed-span test already
+      passed before the change: the old search also closed at a backquote with an
+      even run before it. They are guards that keep the new search from reading
+      every backslash-preceded backquote as escaped, or the last backquote as the
+      closing one.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      The check passed before the change and was not observed failing at any step:
+      the second copy was written right after the first with cp. The existing
+      TestCopies test detects a difference between the two copies; no red state
+      occurred for this change.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestFailOpen
+    red_confirmed: false
+    red_reason: >-
+      This criterion asks that the existing suite keeps its verdicts. The existing
+      tests (the CASES run, TestNoRecursion, TestMalformedAndDeepInput,
+      TestStaticConstraints and TestFailOpen, which read both copies of the
+      guard) all passed before the change and passed after it; no red state
+      occurred for this change. No existing CASES row was edited or removed (the
+      change to the table is one added row). The command is the project test
+      command, run at the end.
