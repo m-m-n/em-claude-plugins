@@ -1,0 +1,52 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 943/943 passed; python3 -m unittest discover -s tests -> 10502 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and with this record in place: run-destructive-guard.py -> 943/943 passed; python3 -m unittest discover -s tests -> 10512 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (HEAD copy): the table test failed for the two new deny rows (FR5 a, the three-line range input; FR5 b, the double-quoted word) with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because standard output was empty (the case in the substitution was undecidable, so the launch after it was not judged)"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (HEAD copy): 16 further deny rows (TS3, TS4, TS5, TS6 x2, TS7, TS8, TS9, TS10 x2, TS15 and the five TS21 rows) failed in the same table test with JSONDecodeError: Expecting value: line 1 column 1 (char 0), 18 failing deny rows in all with AC-1; each was silent where deny was expected"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "The four silent rows (TS11 contents not judged, TS12 no closing esac, TS13 heredoc in an item body, TS14 zsh brace form) were silent before the change as well, because a case in a substitution was undecidable then; the plan expects this. They guard the reader against over-reading (judging the substitution contents, guessing a close) once case statements are read, and they stay green; no red state occurred for them"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_one_case_statement_with_many_items_is_read_and_the_launch_after_it_is_denied
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_case_statements_nested_deeply_are_read_and_the_launch_after_them_is_denied
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (HEAD copy): both tests failed with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0); the hook answered silent where the test requires one deny object (6000 items; 6000 nested statements)"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure.test_no_method_reachable_from_the_substitution_skip_is_the_skip_or_a_reader
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure.test_the_walk_follows_calls_through_other_methods
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure.test_the_walk_ends_on_a_cycle_that_does_not_lead_back_to_the_start
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader
+    red_confirmed: false
+    red_reason: "A constraint on the call structure that already held before the change (the unchanged skip reached only _is_case_keyword), so the new structural test passed against the unchanged hook; no red state occurred. That the check can fail is shown by the synthetic-source tests (a chain through other methods that leads back to the skip is reported), and by a throwaway mutation of the hook copy in the scratchpad (a helper that calls _remove_range_quotes made the reachable set hit _remove_range_quotes, _read_quoted_unit and _skip_substitution); the mutation was never in the worktree"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_says_a_case_makes_the_chunk_undecidable
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_says_a_case_statement_inside_the_chunk_is_read
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_names_each_form_that_stays_undecidable
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_module_docstring_keeps_the_sentence_about_an_unlocatable_close
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (HEAD copy): the first three tests failed with AssertionError ('a heredoc or a `case` inside it' unexpectedly found in the _skip_substitution docstring; 'a case statement inside the chunk is read' and each of the seven undecidable-form markers not found). test_the_module_docstring_keeps_the_sentence_about_an_unlocatable_close and the existing TestGuardDocumentation passed before and after as guards (the module docstring is unchanged)"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing tests listed here detect the behavior (every existing CASES row keeps its verdict, the two copies stay byte-identical, the standard-library-only constraints hold, no recursion, the shared quoted-unit reader structure); they passed before the change and pass after it, so no red state occurred for this criterion. The no-version-file condition is checked on the task diff (git diff against the base lists no plugin.json and no .claude-plugin/marketplace.json), which no unit test covers"
