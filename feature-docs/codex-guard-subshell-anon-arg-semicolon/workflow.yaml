@@ -92,7 +92,12 @@ workflow:
   status: completed
   completed_at_commit: 32eb4c17d455c8260cb6980c07ae9e5e5c47d2aa
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: a6b7cd421c601934cb47a6e2731cc2a81122a272
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'test_command exit 0 (10496 tests OK, skipped=1; destructive-guard suite all ok); guard module 128 tests OK; copies byte-identical; TS-1..TS-14 spot-checked on both copies; zsh 5.9 REACHED confirmed'
 - id: retrospect
   status: pending
 tasks:
