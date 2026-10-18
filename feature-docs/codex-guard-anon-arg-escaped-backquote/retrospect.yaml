@@ -1,0 +1,31 @@
+feature: codex-guard-anon-arg-escaped-backquote
+collected_at: "2026-10-18T12:31:00+09:00"
+session_ids: [01a14d07-b2a4-73a2-a6ad-85368f7ada20, 01a14d0e-6773-7793-abb1-51884d38f752]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みが bucket 1 (0.85) で、既存分岐への小さな修正と CASES 1 行の追加と見込んで reduced とした"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.03, confidence: 0.97}
+        observed_at: "2026-10-18T11:30:55+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.15, confidence: 0.85}
+        observed_at: "2026-10-18T11:33:53+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: -1
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 は findings 0 件、auto-fix 0 ループ、verify 1 回で pass"
+  - "Notion タスク本文の再現コマンドはバックスラッシュの数が崩れており、事前調査で意図された形を round1.yaml から復元した"
+  - "journal.jsonl に implementer 報告の conflict_retries / deviations が残っておらず、retrospect で signals を検証できなかった（前回 feature と同じ）"
