@@ -6,11 +6,33 @@ generation: 1
 base_revision: a520219a2fee02800f8ac435eaa4428474c91498
 last_input_digest: sha256:bd7fc2497b237c5effda12569b11c7c4f448b1ed86df0dc3f83e904991300f32
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+answers:
+  requirement.fix-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T21:40:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - a_line_checkpoint
+    freeform: null
+    normalized_answer: '(a) を採用する。文字列の解析が _Undecidable で止まったとき、最後のチェックポイント（グループが開いていない最上位の改行で、パイプ・&&・|| の継続が無く、その行のヒアドキュメント本文を読み終えた時点）までに確定したコマンドだけを判定する。フックのコマンド本体と入れ子の -c 文字列の両方に適用する。_Undecidable 以外の想定外の例外は従来どおり文字列ごと飛ばす。コメント例外の範囲は変えない（(b) は採らない）。既知の誤 deny: zsh -c で後ろに構文エラーがあり何も実行されない文字列、および改行境界がシェルの実行単位と一致しない形（例: `if false; then\npython3 -i\necho ''`）。モジュール docstring の「判定不能なら出力なし」の記述をこの規則に合わせて書き直す。'
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: a_line_checkpoint / b_exception_within_scan_range / both。Codex 1 ターン（codex エントリ）で a_line_checkpoint を推奨。実測: 再現例の先頭を printf REACHED に置換すると bash -c は REACHED を出力し終了値 2（構文エラー前に先頭行を実行）、zsh -c は何も出力せず終了値 1。F3（``function { python3 -i; } foo(`echo )` #)``）は現状 deny で、(b) のメモリ上試作では silent になることを確認。さらに ``zsh -c ''setopt nonomatch nobareglobqual; function { printf REACHED; } foo(`case x in x) echo x;; esac` #)''`` は実際に REACHED を出力して正常終了し、(b)/both ではその python3 -i 版を見逃す（実行される処理の見逃し）。(a) のメモリ上試作では CASES 全 615 例の判定を維持し、再現例と `python3 -i\necho ''` は deny、未完のパイプ・&&・||・ヒアドキュメントは silent を維持。線形時間・再帰なしで実装可能（チェックポイントでコマンド数・グループ数を保存）。(a) のリスクは zsh の構文エラー文字列と if ブロック内改行での誤 deny で、見逃し（fail-open）を減らす安全装置として比較的良いと判断し a_line_checkpoint を採用。収束したため 1 ターンで終了、Opus エスカレーションは不要。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T21:40:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック判定ロジックの修正、デザインシステム候補ゼロ）'
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:bd7fc2497b237c5effda12569b11c7c4f448b1ed86df0dc3f83e904991300f32
   output_digest: null
 artifacts: []
