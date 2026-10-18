@@ -1,14 +1,46 @@
 schema_version: 1
 feature: codex-guard-anon-arg-backquote-comment
 phase: create-spec
-status: in_progress
+status: awaiting_answers
 generation: 1
-base_revision: 00b6a07e1a29bc9ebf6f2fad63492e1db12c0d5b
-last_input_digest: null
+base_revision: 9800e9b1e04231d42bc0462bdf1f9eea76de79aa
+last_input_digest: sha256:3e74a71ea5c8280903f7bea3fc92a48382f898c464ad6413cc96698bc5452d5c
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-18T13:35:00+09:00'
+    questions:
+    - question_id: requirement.fix-approach
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.fix-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T13:40:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - hash_is_word_in_backquote_group
+    freeform: null
+    normalized_answer: 'hash_is_word_in_backquote_group を採る。境界の補足（Codex 相談で出た見逃しへの対策）: _scan_parens が end を返し separated が偽・backquoted が真で開いた仮の群では、語頭の引用されていない # を語の文字として読む。この状態は子の群へ継承する。その群で直接の ;・&・&&・|&・改行を読んだ後は、その群の例外を解除して従来どおり # をコメントとして読む。群が閉じた後は親の状態に従う。独自の開始条件を満たさず、有効な親からも継承しない群は従来のコメント処理のまま。FR5 の終端判定・救済条件・接続確定は変えない。仮定 A2 にはこの限定した例外を 1 つ足す。固定するケース: 元の再現例、その後に改行と python3 -i が続く形、入れ子の括弧、走査がバッククォート内の ) で早く止まる例（`case x in x) echo x;; esac`; # '' ignored の後の改行と python3 -i）を deny、閉じないバッククォート・群の外のコメント・既存 CASES の期待値は現状維持。'
+    resolution_note: 'gate: create-spec.requirement-clarification（batch-policies: codex_consultation, record_as_assumption）; Codex に 1 ターン相談（harness: codex）; Codex は hash_is_word_in_backquote_group を推奨し、区切りを直接読んだ後に例外を解除する境界を補うよう指摘（解除が無いと case 文の ) で走査が早く止まる形で新しい見逃しが出る）; 不採用: hash_is_word_in_all_provisional（既存 silent ケースの期待値が変わる）, read_backquote_in_scan（前 SPEC の FR1/FR4 と既存 deny 571/572 行を覆す）, rescue_unseparated_backquote_group（FR5 を変え、後続改行の形を救えない）; Opus escalation: 実行せず; オーケストレーターが写像を判断し、境界の補足を仮定として記録'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-18T13:40:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation（skip）をそのまま採る
+    resolution_note: 'gate: create-spec.design-step; batch-policies の decide_autonomously'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:3e74a71ea5c8280903f7bea3fc92a48382f898c464ad6413cc96698bc5452d5c
+  output_digest: sha256:3b7cf3a26872d42dd3413193e5efd925b715acddbae930c863b594ec66f0adb8
 artifacts: []
 patches: []
 progress_fingerprint: null
