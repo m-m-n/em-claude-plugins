@@ -1,0 +1,33 @@
+schema_version: 1
+feature: codex-guard-subshell-anon-arg-semicolon
+records:
+- question_id: requirement.close-paren-reassociation
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-18T19:29:08+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - eager_close_paren
+  freeform: null
+  normalized_answer: '`)` を読んだ時点で、最内の開いた群が仮の群で、その連鎖が既存の区切り条件（_rescue_separator・outer_blocked・直接の first_sep）を満たし、chain_base が仮でない `(` 群なら、連鎖を内側から救済してその `(` 群を閉じる。判定は群を開いたときに固定した値だけを読み定数時間、各仮の群の除去は 1 回だけ。chain_base が None と `{` 群の場合の読みは変えない。副作用として、zsh が構文エラーにする `( function { :; } foo(a; python3) ) < /dev/null` は silent から deny に変わる（既知の誤 deny として SPEC に明記する）。'
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: eager_close_paren / deferred_end_of_input。Codex 1 ターン（codex エントリ）で eager_close_paren を推奨。zsh 5.9 の実測: (d) `( function { :; } foo(a; printf R4; ); printf R5` は R4R5 を出力し、`)` の後のコマンドまで実行される。入力の終わりでだけ読み替える deferred_end_of_input ではこの形の python3 -i を取りこぼす。(a) `( function { :; } foo(a; printf R1) ) < /dev/null` は zsh では parse error で何も実行されず、eager では deny に変わる（誤 deny、ただし実行されない構文エラー入力に限られる）。見逃しを減らす方が安全装置として比較的良いと判断し eager_close_paren を採用。Opus エスカレーションは不要。'
+- question_id: requirement.pending-words-at-close-paren
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-18T19:29:08+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - finalize_keep_672_intent
+  freeform: null
+  normalized_answer: '読み替える `)` の前に残る語は外側の `(` 群のコマンドとして確定する。既存行 672 は入力の `)` をコメントの中に移した形（`( function { :; } foo(a; python3 -i; } #)`）に直して silent のまま「`}` は閉じない」意図を保ち、元の入力 `( function { :; } foo(a; python3 -i; } )` は deny の行として新しく足す。元の入力は zsh 5.9 では parse error になるため、この deny は既知の誤 deny として行のラベルと SPEC に明記する。'
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: finalize_keep_672_intent / finalize_flip_672 / require_no_pending_words。同じ Codex ターンの zsh 5.9 実測: (c) `( function { :; } foo(a; printf R3 )` は R3 を出力（語が残っていても実行される）ため、require_no_pending_words は見逃しを残すので不採用。(b) 行 672 と同形の `( function { :; } foo(a; printf R2; } )` は parse error。Codex は finalize_flip_672 を推奨したが、672 の deny 化は到達性では正当化できず既知の誤 deny として明示が要ると指摘。flip と keep_intent は元の入力の判定（deny）が同じで、差は「`}` は閉じない」ことを確かめる行が残るかどうかだけ。keep_intent はその検証を保ったうえで元の入力を誤 deny として明示する行を足せるため、比較的良いと判断し Codex の推奨とは別の finalize_keep_672_intent を採用。Opus エスカレーションは不要。'
+- question_id: design-step.recommendation
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-18T19:29:08+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - decide_autonomously
+  freeform: null
+  normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック判定ロジックの修正、デザインシステム候補ゼロ）'
+  resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
