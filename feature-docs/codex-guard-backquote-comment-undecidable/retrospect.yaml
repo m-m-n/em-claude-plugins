@@ -1,0 +1,26 @@
+feature: codex-guard-backquote-comment-undecidable
+collected_at: "2026-10-18T23:00:00+09:00"
+session_ids: [01a14f36-77d1-77d8-8048-cf60575dbd99]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "The guard runs on every Bash/Codex hook call and the change adds checkpoint re-judgment over the scanned string (NFR1 performance requirement)"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが score 1.4（バケット 1: 0.61 / 2: 0.39）で、閾値表により full を採用"
+    bases:
+      - basis: description_only
+        score: {"score": 1.11, "confidence": 0.88, "probabilities": {"0": 0.01, "1": 0.88, "2": 0.11, "3": 0.0}}
+        observed_at: "2026-10-18T21:01:52+09:00"
+      - basis: description_plus_code
+        score: {"score": 1.4, "confidence": 0.61, "probabilities": {"0": 0.0, "1": 0.61, "2": 0.39, "3": 0.0}}
+        observed_at: "2026-10-18T21:05:45+09:00"
+    pre_survey_estimate: {"files_expected": ["em-workflow/scripts/codex-hook-interactive-guard.py", "em-review/scripts/codex-hook-interactive-guard.py", "tests/test_codex_hook_interactive_guard.py"], "changed_lines_approx": -1, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": [], "covering_tests_exist": false, "work_still_required": true, "test_change_kind": "extend_existing_one_to_one", "added_test_cases_approx": 1, "body_change_kind": "new_logic", "change_containment": "multiple_modules", "caller_and_dependency_count": 4, "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の評価者は recommended_action: rework（medium 1 件、FR2 の定義からのずれ）としたが、batch の残存ゲートは critical/high のみを対象とするため deferred として完了した。medium でも SPEC 準拠のずれは rework に回す経路が無い"
