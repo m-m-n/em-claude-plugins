@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-case-in-substitution
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 258d24e0d804c9f0ccb5f77fb48bc2f4792a1d7a
 last_input_digest: sha256:3453c38fb6153eed21305194fe564b47caf58d46cb1a6687a631c8dec6035b88
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   design-step.decision:
@@ -25,10 +25,16 @@ worker_runs:
   input_digest: sha256:3453c38fb6153eed21305194fe564b47caf58d46cb1a6687a631c8dec6035b88
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:877bbaaacd8254ba8fc3597d8dc8a48005b0be23ac0609fdf17799d75bc74969
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-case-in-substitution/REQUIREMENTS.md
+  sha256: sha256:8878f5af89a27e3b5439cd8325b35f3c65f33db2f19780a12691f57ed08d80a5
+  produced_by: create-spec-run-0002
+- path: feature-docs/codex-guard-case-in-substitution/SPEC.md
+  sha256: sha256:a64eff3fcf8a21299ad80890001d289b79e49914f3c03caad6c9dc4e771a1d4d
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
