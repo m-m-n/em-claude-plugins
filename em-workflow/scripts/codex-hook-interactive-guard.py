@@ -14,7 +14,10 @@ Decision flow:
   3. Remove heredoc bodies and split the command into simple commands at
      `;` `&&` `||` `|` `&` and newlines. Quoted text and comments are not
      read as commands. An unbalanced quote or an unterminated heredoc ->
-     no output. The reader takes a command substitution inside double quotes
+     no output. These make the string undecidable: the commands up to the
+     last checkpoint are judged (step 9), and a string with no checkpoint
+     gives no output; the same holds for every other `-> no output` of this
+     step. The reader takes a command substitution inside double quotes
      (`$( ... )`, `$(( ... ))` or a backtick span) as one chunk up to its
      matching close: quotes, backslashes and substitutions inside it close
      nothing outside, the word holding it is dynamic, and its contents are
@@ -34,8 +37,11 @@ Decision flow:
      it. A connected group passes the connection to every command inside it,
      nested groups included, so the commands of a group are judged once the
      redirects after its close are known. A group that is not closed -> no
-     output. The body of a function definition (`name() { ...; }`) is not
-     judged. The guard reads a definition by the words before the `(` alone:
+     output. Like every other `-> no output` of this step, it makes the string
+     undecidable: the commands up to the last checkpoint are judged (step 9),
+     and a string with no checkpoint gives no output. The body of a function
+     definition (`name() { ...; }`) is not judged. The guard reads a
+     definition by the words before the `(` alone:
      only `name()` and `function name()` start a function definition, where
      `name` is one word that is not dynamic and holds no `=`. A word whose
      content, after quote removal, ends in one of the extglob operator
@@ -258,9 +264,17 @@ Decision flow:
      read (an unbalanced quote, an unterminated heredoc, an unclosed group, a
      string for which an unexpected error occurred while it was being read)
      is skipped and passes, and so does a dynamic operand; the walk goes on
-     with the command after the one that holds it. Nested strings are walked
-     with an explicit stack (a work list), never by recursion, so nesting
-     depth costs no call-stack depth. The commands of a nested string are
+     with the command after the one that holds it. That holds for a string
+     with no checkpoint and for a string for which an unexpected error
+     occurred. A string that stops at `_Undecidable` (an unbalanced quote, an
+     unterminated heredoc, an unclosed group) is read as far as its last
+     checkpoint (step 9): the commands up to the last checkpoint are judged,
+     with the connection inherited from the command that holds the string,
+     one level deeper, exactly as the commands of a string read in full; a
+     string with no checkpoint gives no output, so nothing is left to judge
+     and the walk goes on. Nested strings are walked with an explicit stack (a
+     work list), never by recursion, so nesting depth costs no call-stack
+     depth. The commands of a nested string are
      judged before the commands after the command that holds it, and the
      first launch to deny decides: no string after it is read. The
      characters re-read from second-level and deeper strings (the operands of
@@ -269,9 +283,10 @@ Decision flow:
      counted in one running total per hook command, up to 1,000,000
      characters (`NESTED_READ_LIMIT`). First-level strings are not counted
      and are always read; they are the operands of a shell `-c` in the
-     command the hook receives. Once the next second-level or deeper string
-     would pass the limit, it and every later second-level or deeper string
-     pass unread. Passing the limit is never a reason to deny: the commands
+     command the hook receives. A string that proves undecidable counts at its
+     full length, as it is counted before it is read. Once the next
+     second-level or deeper string would pass the limit, it and every later
+     second-level or deeper string pass unread. Passing the limit is never a reason to deny: the commands
      at the top level and in first-level strings are still judged. `-c`
      without an operand -> no output. Other interpreters keep their reading
      of `-c` `-m` `-e`.
@@ -284,10 +299,29 @@ Decision flow:
      have no information short options, so a shell `-h` or `-V` is an
      ordinary flag. `--version` and `--help` are informational for all, and
      so are the long options an interpreter defines for itself.
-  9. Anything undecidable or unexpected -> no output.
+  9. Anything undecidable or unexpected -> no output. The one exception is the
+     part of an undecidable string that the reader finished before it stopped.
+     A checkpoint is a newline that the reader itself reads at the top level,
+     at which all of these hold: no group is open, no pipe is pending, no list
+     continuation is pending (a trailing `&&` or `||` has not left the list
+     open), and the heredoc bodies registered on that line have been read
+     through their terminators. A newline inside quotes, a substitution chunk,
+     an argument range or a heredoc body is never a checkpoint, nor is a
+     backslash-newline pair, and a `;` or `&` is never one, so a launch on the
+     line where the reading stops stays silent. When a string is undecidable,
+     the commands up to the last checkpoint are judged, with connection and
+     skip taken from the groups opened before it exactly as a full read sets
+     them; a string with no checkpoint gives no output. The rule applies to
+     the hook command and to every nested literal shell `-c` string, and an
+     undecidable string counts at its full length toward NESTED_READ_LIMIT. An
+     error other than _Undecidable is handled as before: a nested string is
+     skipped, and the hook command gives no output.
 
 Everything the guard cannot positively identify passes. A misreading costs a
-missed detection, never a stalled review.
+missed detection, never a stalled review. A string the reader cannot read to
+its end is the one place where part of it is still read: the commands up to the
+last checkpoint are judged, and a launch among them is denied; from there on
+nothing is read, and a string with no checkpoint gives no output (step 9).
 
 The guard uses only the standard library and touches no file, network
 connection or child process. The decision depends on the command string
@@ -320,7 +354,8 @@ INFO_LONG = ("--version", "--help")
 # The characters the traversal re-reads from the literal shell `-c` strings of
 # the second level and deeper, per hook command. A string's length is the
 # length of its value as handed to the parser, after the holding level's quote
-# removal. First-level strings are never counted.
+# removal; a string that proves undecidable counts at its full length.
+# First-level strings are never counted.
 NESTED_READ_LIMIT = 1000000
 
 # The work, per character of the string being parsed, the parser may spend
@@ -344,7 +379,13 @@ COMMENT_EXCEPTION_ENDERS = (";", "&", "&&", "|&", "\n")
 
 
 class _Undecidable(Exception):
-    pass
+    """The string cannot be read to its end. `checkpoint_commands` holds the
+    simple commands the reader settled up to its last checkpoint
+    (`_Parser.parse`): the reader sets it when the exception leaves its parse
+    method, and it stays an empty tuple for a string with no checkpoint. Every
+    raise site raises the exception with a reason text only."""
+
+    checkpoint_commands = ()
 
 
 def _rescue_separator(own, inherited=None):
@@ -527,7 +568,9 @@ class _Group:
     connected  settled once the whole command is read: the group, or a group
                that holds it, has its standard input connected, by a pipe, by a
                stdin redirect after its close, or (an anonymous body) by a stdin
-               redirect in its head
+               redirect in its head. A string that stops at `_Undecidable` has
+               it settled the same way for the groups opened before its last
+               checkpoint (`_Parser._settle_groups`)
     skipped    settled likewise: the group, or a group that holds it, is a
                function body
     provisional  the group was opened at a `(` among the arguments of an anonymous
@@ -623,6 +666,37 @@ class _Parser:
     Raises _Undecidable on an unbalanced quote or group, an unclosed command
     substitution inside double quotes, or an unterminated heredoc.
 
+    A string that raises _Undecidable is not lost whole: the reader records
+    checkpoints while it reads. A checkpoint is a newline that the reader itself
+    reads at the top level, at which all of these hold: no group is open, no pipe
+    is pending, no list continuation is pending (a trailing `&&` or `||` has not
+    left the list open), and the heredoc bodies registered on that line have been
+    read through their terminators. A newline inside quotes, a substitution
+    chunk, an argument range or a heredoc body is never a checkpoint, nor is a
+    backslash-newline pair, and a `;` or `&` is never one. When a string is
+    undecidable, the commands up to the last checkpoint are judged, with
+    connection and skip taken from the groups opened before it exactly as a full
+    read sets them; a string with no checkpoint gives no output. The rule applies
+    to the hook command and to every nested literal shell `-c` string, and an
+    undecidable string counts at its full length toward NESTED_READ_LIMIT. An
+    error other than _Undecidable is handled as before: a nested string is
+    skipped, and the hook command gives no output.
+
+    The reader keeps the last checkpoint as two counts, the simple commands and
+    the groups recorded so far, never a copy of a list, so a newline costs
+    constant time. The list continuation is a state of its own: it is set when
+    `&&` or `||` is read and cleared when a simple command with words is
+    finished or a group opens, and a newline that ends an empty command (a blank
+    line or a comment-only line) and a heredoc body leave it as it was. The
+    pending pipe persists in the same way. When _Undecidable leaves `parse`, the
+    method settles `connected` and `skipped` of the groups opened before the last
+    checkpoint with the one rule a full read applies (`_settle_groups`), each
+    group visited once, attaches the first commands, as many as the checkpoint
+    counted, to the exception (`_Undecidable.checkpoint_commands`, an empty tuple
+    when there is no checkpoint) and raises the same exception again. It neither
+    catches nor alters any other exception, and a string read in full returns the
+    commands as before.
+
     Among the arguments of an anonymous function, a `(` is read with its range
     up to the matching `)` as part of one argument word (`_read_argument_parens`),
     unless the range holds an unquoted `;`, `&` or newline, or a backquote (one
@@ -658,12 +732,13 @@ class _Parser:
     takes the separator of the inner one as its first. A newline as the first
     direct separator is not rescued. A group that is genuinely unclosed still
     yields no output: a group that is not provisional and is left open, and a
-    provisional group that is not rescued, raise _Undecidable. A `}` that does
-    not qualify is an ordinary word and changes no open group, no separator
-    record and no command. Each provisional group is removed once, and the check
-    at a `}` or a `)` reads values fixed when the group opened
-    (`_Group.chain_base`, `_Group.outer_blocked`), so it costs constant time and
-    the whole reading stays linear in the length of the string.
+    provisional group that is not rescued, raise _Undecidable, which falls under
+    the checkpoint rule above. A `}` that does not qualify is an ordinary word
+    and changes no open group, no separator record and no command. Each
+    provisional group is removed once, and the check at a `}` or a `)` reads
+    values fixed when the group opened (`_Group.chain_base`,
+    `_Group.outer_blocked`), so it costs constant time and the whole reading
+    stays linear in the length of the string.
 
     The group opened for a range that has a matching `)`, holds no unquoted `;`,
     `&` or newline and holds a backquote has the comment exception: while it is
@@ -709,6 +784,15 @@ class _Parser:
         # Open groups, innermost last, and every group in the order it opened.
         self.frames = []
         self.groups = []
+        # A `&&` or `||` was read and no simple command with words and no group
+        # has followed it: the list is still open, so a newline is no checkpoint.
+        # An empty command (a blank line, a comment-only line) and a heredoc body
+        # leave it as it was.
+        self.list_pending = False
+        # The last checkpoint, as two counts: (simple commands, groups) recorded
+        # when the reader read its newline. Only the counts are kept, never a
+        # copy of a list, so a newline costs constant time.
+        self.checkpoint = (0, 0)
         # The group closed last, while only redirections have followed it (and,
         # for an anonymous body, its arguments, a `(`...`)` range among them
         # included).
@@ -935,6 +1019,7 @@ class _Parser:
             group = self.frames[-1] if self.frames else None
             self.commands.append(_Command(self.words, self.stdin, self.pipe_pending, group))
             self.pipe_pending = False
+            self.list_pending = False
         self._start_words()
         self.stdin = False
         self.redirected = False
@@ -958,6 +1043,8 @@ class _Parser:
         if sep != "\n":
             self.fn_head = False
             self.anon_head = None
+        if sep in ("&&", "||"):
+            self.list_pending = True
         if sep in ("|", "|&"):
             self.pipe_pending = True
         elif sep != "\n" or redirected:
@@ -1056,6 +1143,7 @@ class _Parser:
             anon = self._names_anonymous_function() or not self.words
             anon_stdin = anon and self.stdin
         self._flush()
+        self.list_pending = False
         parent = self.frames[-1] if self.frames else None
         # The sizes as they stand once this group is in the list: an empty
         # group is closed with the same sizes.
@@ -1709,97 +1797,125 @@ class _Parser:
 
     def parse(self):
         s = self.s
-        while self.i < self.n:
-            i = self.i
-            ch = s[i]
-            if ch in " \t":
-                self._finish_word()
-                self.i += 1
-            elif ch == "\n":
-                self.i += 1
-                self._separator("\n")
-                if self.heredocs:
-                    self._read_heredocs()
-            elif ch == "#" and not self.started and not (
-                self.frames and self.frames[-1].comment_exception
-            ):
-                # A comment, unless the innermost open group has the comment
-                # exception: then the `#` falls through to the word characters
-                # below. Only the innermost group is read, so it costs constant
-                # time.
-                end = s.find("\n", i)
-                self.i = self.n if end == -1 else end
-            elif ch in "\\'\"":
-                # A backslash pair, a single-quoted unit and a double-quoted
-                # unit are all read by the one quoted-unit reader.
-                text, self.i, dynamic = self._read_quoted_unit(i, self.n)
-                # A backslash and a newline add nothing and start no word; an
-                # empty quote pair adds nothing either, but it starts one.
-                if ch != "\\" or s[i + 1] != "\n":
-                    self._put(text, quoted=True, dynamic=dynamic)
-            elif ch == "$":
-                self._dollar()
-            elif ch == "`":
-                end = self._closing_backquote(i)
-                self._put(s[i:end + 1], quoted=True, dynamic=True)
-                self.i = end + 1
-            elif ch == ";":
-                self.i += 1
-                self._separator(";")
-            elif ch == "&":
-                if s.startswith("&>", i):
+        try:
+            while self.i < self.n:
+                i = self.i
+                ch = s[i]
+                if ch in " \t":
                     self._finish_word()
-                    self.i += 3 if s.startswith("&>>", i) else 2
-                    self.redirected = True
-                    self.redirect = (False, False)
-                elif s.startswith("&&", i):
-                    self.i += 2
-                    self._separator("&&")
-                else:
                     self.i += 1
-                    self._separator("&")
-            elif ch == "|":
-                if s.startswith("||", i):
-                    self.i += 2
-                    self._separator("||")
-                elif s.startswith("|&", i):
-                    self.i += 2
-                    self._separator("|&")
-                else:
+                elif ch == "\n":
                     self.i += 1
-                    self._separator("|")
-            elif ch == "(":
-                if self._in_arguments():
-                    self._read_argument_parens()
-                else:
+                    self._separator("\n")
+                    if self.heredocs:
+                        self._read_heredocs()
+                    # A checkpoint (FR2): a newline the reader itself reads here, with
+                    # no group open, no pipe pending, no list continuation pending and
+                    # the heredoc bodies of the line read through their terminators (an
+                    # unterminated body raised above). Two counts are all it keeps.
+                    if not self.frames and not self.pipe_pending and not self.list_pending:
+                        self.checkpoint = (len(self.commands), len(self.groups))
+                elif ch == "#" and not self.started and not (
+                    self.frames and self.frames[-1].comment_exception
+                ):
+                    # A comment, unless the innermost open group has the comment
+                    # exception: then the `#` falls through to the word characters
+                    # below. Only the innermost group is read, so it costs constant
+                    # time.
+                    end = s.find("\n", i)
+                    self.i = self.n if end == -1 else end
+                elif ch in "\\'\"":
+                    # A backslash pair, a single-quoted unit and a double-quoted
+                    # unit are all read by the one quoted-unit reader.
+                    text, self.i, dynamic = self._read_quoted_unit(i, self.n)
+                    # A backslash and a newline add nothing and start no word; an
+                    # empty quote pair adds nothing either, but it starts one.
+                    if ch != "\\" or s[i + 1] != "\n":
+                        self._put(text, quoted=True, dynamic=dynamic)
+                elif ch == "$":
+                    self._dollar()
+                elif ch == "`":
+                    end = self._closing_backquote(i)
+                    self._put(s[i:end + 1], quoted=True, dynamic=True)
+                    self.i = end + 1
+                elif ch == ";":
                     self.i += 1
-                    self._open_group("(")
-            elif ch == ")":
-                self.i += 1
-                self._close_paren()
-            elif ch in "<>":
-                self._redirection()
-            else:
-                self._put(ch)
-                self.i += 1
-        # The end of the input ends the command in progress; it is no newline
-        # the input held, so it is no group's first separator.
-        self._flush()
-        if self.heredocs:
-            raise _Undecidable("heredoc")
-        self._rescue_argument_groups()
-        if self.frames:
-            raise _Undecidable("group")
-        # A group opens after the group that holds it, so one pass settles
-        # every group.
-        for group in self.groups:
+                    self._separator(";")
+                elif ch == "&":
+                    if s.startswith("&>", i):
+                        self._finish_word()
+                        self.i += 3 if s.startswith("&>>", i) else 2
+                        self.redirected = True
+                        self.redirect = (False, False)
+                    elif s.startswith("&&", i):
+                        self.i += 2
+                        self._separator("&&")
+                    else:
+                        self.i += 1
+                        self._separator("&")
+                elif ch == "|":
+                    if s.startswith("||", i):
+                        self.i += 2
+                        self._separator("||")
+                    elif s.startswith("|&", i):
+                        self.i += 2
+                        self._separator("|&")
+                    else:
+                        self.i += 1
+                        self._separator("|")
+                elif ch == "(":
+                    if self._in_arguments():
+                        self._read_argument_parens()
+                    else:
+                        self.i += 1
+                        self._open_group("(")
+                elif ch == ")":
+                    self.i += 1
+                    self._close_paren()
+                elif ch in "<>":
+                    self._redirection()
+                else:
+                    self._put(ch)
+                    self.i += 1
+            # The end of the input ends the command in progress; it is no newline
+            # the input held, so it is no group's first separator.
+            self._flush()
+            if self.heredocs:
+                raise _Undecidable("heredoc")
+            self._rescue_argument_groups()
+            if self.frames:
+                raise _Undecidable("group")
+        except _Undecidable as error:
+            # The string cannot be read to its end. The commands up to the last
+            # checkpoint are settled and carried on the exception, which is raised
+            # on as it is: the groups opened before the checkpoint are all closed
+            # (no group was open at it) and every attribute that feeds connection
+            # and skip is final, so each carried command takes the connected and
+            # skipped values a full read would give it. With no checkpoint the
+            # counts are (0, 0) and nothing is carried.
+            commands, groups = self.checkpoint
+            self._settle_groups(groups)
+            error.checkpoint_commands = self.commands[:commands]
+            raise
+        self._settle_groups(len(self.groups))
+        return self.commands
+
+    def _settle_groups(self, count):
+        """Settle `connected` and `skipped` of the first `count` groups, which
+        are the groups opened first. A group opens after the group that holds it,
+        so one pass settles every group, each one visited once. This is the one
+        definition of the rule: a full read settles all its groups with it, and a
+        string that stops at `_Undecidable` settles the groups opened before its
+        last checkpoint, so the two cannot drift apart."""
+        groups = self.groups
+        for k in range(count):
+            group = groups[k]
             parent = group.parent
             group.connected = (
                 group.pipe or group.stdin or group.head_stdin
                 or (parent is not None and parent.connected)
             )
             group.skipped = group.skip or (parent is not None and parent.skipped)
-        return self.commands
 
 
 def parse(command):
@@ -2006,6 +2122,26 @@ def _scan(commands):
     not read, and neither is any later one of those levels. First-level strings
     are always read. Reaching the limit is no verdict: the commands still to be
     judged at level 0 and in first-level strings are judged as before.
+
+    A nested string that cannot be read to its end raises _Undecidable. The
+    commands that exception carries (`checkpoint_commands`: the commands up to
+    the last checkpoint of that string, none when it has no checkpoint) are the
+    commands of that string. They are added to the work list exactly as the
+    commands of a string read in full are: with the connection the holder passes
+    down, at the level one higher. An empty tuple leaves nothing to judge. A
+    checkpoint is a newline that the reader itself reads at the top level, at
+    which all of these hold: no group is open, no pipe is pending, no list
+    continuation is pending (a trailing `&&` or `||` has not left the list
+    open), and the heredoc bodies registered on that line have been read
+    through their terminators. When a string is undecidable, the commands up to
+    the last checkpoint are judged, with connection and skip taken from the
+    groups opened before it exactly as a full read sets them; a string with no
+    checkpoint gives no output. The rule applies to the hook command and to
+    every nested literal shell `-c` string (`find_deny` takes the commands of
+    the hook command the same way), and an undecidable string counts at its full
+    length toward NESTED_READ_LIMIT, as its length is counted before it is
+    parsed. An error other than _Undecidable is handled as before: that string
+    is skipped, and the walk neither returns nor raises.
     """
     pending = [[commands, 0, False, 0]]
     total = 0
@@ -2036,8 +2172,12 @@ def _scan(commands):
             total += len(inner)
         try:
             inner_commands = parse(inner)
-        except _Undecidable:
-            continue
+        except _Undecidable as error:
+            # The string cannot be read to its end: the commands settled up to
+            # its last checkpoint are the commands of this string, judged like
+            # those of a string read in full. None are left when it has no
+            # checkpoint, and the walk goes on with the command after the holder.
+            inner_commands = error.checkpoint_commands
         except Exception:
             # An unexpected error is handled like an unreadable string: this
             # one is skipped and the walk goes on. Never a reason to deny.
@@ -2047,8 +2187,17 @@ def _scan(commands):
 
 
 def find_deny(command):
-    """Return (kind, name) for the first launch to deny, or None."""
-    return _scan(parse(command))
+    """Return (kind, name) for the first launch to deny, or None.
+
+    When the hook command cannot be read to its end (`_Undecidable`), the walk
+    runs over the commands settled up to its last checkpoint, and over none when
+    it has no checkpoint. Any other exception is not handled here: it reaches
+    `main`, which gives no output."""
+    try:
+        commands = parse(command)
+    except _Undecidable as error:
+        commands = error.checkpoint_commands
+    return _scan(commands)
 
 
 def deny_reason(kind, name):
