@@ -2,76 +2,38 @@ schema_version: 1
 feature: codex-guard-backquote-comment-undecidable
 created: '2026-10-18'
 base_branch: main
-goal: '# codex-hook-interactive-guard: バッククォートで早く閉じた匿名関数の引数の群の後ろの判定不能な断片が、先行行の python3
-  -i の deny を消す
-
+goal: |
+  # codex-hook-interactive-guard: バッククォートで早く閉じた匿名関数の引数の群の後ろの判定不能な断片が、先行行の python3 -i の deny を消す
 
   Notion: <notion-url>
 
-
   ## 現象 (必須)
-
-  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、zsh 匿名関数の引数中の
-  `(`〜`)` 範囲がバッククォート内の `)` で早く閉じた群に comment_exception が立つと、範囲内の `#` が語の文字として読まれる。続く閉じない
-  `''` が `_Undecidable("quote")` となり、`_scan` が内側の文字列全体を飛ばすため、先行行の明示的な `python3 -i`
-  の deny が外れる（無出力）。
-
-  feature `codex-guard-anon-arg-backquote-comment` の review round 1 で security 観点が報告した（評価者はコードの読みで再現を確認し、判定不能なら出力なしという既存設計と
-  SPEC FR2・TS4 の範囲内として low に下げ、その feature では直さない判断をした）。
-
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、zsh 匿名関数の引数中の `(`〜`)` 範囲がバッククォート内の `)` で早く閉じた群に comment_exception が立つと、範囲内の `#` が語の文字として読まれる。続く閉じない `'` が `_Undecidable("quote")` となり、`_scan` が内側の文字列全体を飛ばすため、先行行の明示的な `python3 -i` の deny が外れる（無出力）。
+  feature `codex-guard-anon-arg-backquote-comment` の review round 1 で security 観点が報告した（評価者はコードの読みで再現を確認し、判定不能なら出力なしという既存設計と SPEC FR2・TS4 の範囲内として low に下げ、その feature では直さない判断をした）。
   ## 再現手順 (必須)
-
-  1. Python で `inner = "python3 -B -S -i\nfunction { :; } foo(`case x in x) echo x;;
-  esac` # ''\n)"` とし、`"bash -c " + shlex.quote(inner)` を `tool_input.command` に設定した
-  JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
-
+  1. Python で `inner = "python3 -B -S -i\nfunction { :; } foo(`case x in x) echo x;; esac` # '\n)"` とし、`"bash -c " + shlex.quote(inner)` を `tool_input.command` に設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
   2. 終了コード 0・空出力になる（変更前は `permissionDecision: deny`）
-
   ## 期待する挙動 (必須)
-
   先行行の `python3 -i` を deny する。
-
   候補（どちらを採るかは SPEC で決める）:
-
   - (a) 判定不能な箇所より前で読み終えた行の起動を判定する
-
   - (b) comment_exception が効く範囲を `_scan_parens` が見つけた範囲の終わりまでに限る
-
   ## 完了の定義 (必須)
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
   - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上のコマンドを deny として追加
-
   - [ ] 両コピーがバイト単位で同一のまま
-
   ## 該当箇所 (任意)
-
-  - `em-workflow/scripts/codex-hook-interactive-guard.py:1581`（`#` の分岐）、`_scan`（1901-1904
-  行付近）
-
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:1581`（`#` の分岐）、`_scan`（1901-1904 行付近）
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
-
-  - 記録: `feature-docs/codex-guard-anon-arg-backquote-comment/reviews/round1.yaml`（ブランチ
-  `em-workflow/codex-guard-anon-arg-backquote-comment/integration`）
-
+  - 記録: `feature-docs/codex-guard-anon-arg-backquote-comment/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-anon-arg-backquote-comment/integration`）
   ## 実害・発生条件 (任意)
-
   見逃し側（fail-open）。入力は bash / zsh とも構文エラーになる形だが、bash は構文エラーの検出前に先頭行を実行するため対話プロセスが起動する。変更前でも閉じない引用符を後ろに足すだけで同じく無出力になる形があり、判定不能なら出力なしという設計全般の問題でもある。
 
-
   ## 追加指示
-
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration
-  ブランチはローカル・remote とも残す（自動マージしない）。
-
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（自動マージしない）。
   - 不明点は Codex に相談し、比較的良いと判断した案を採用する。
-
   - その議論の内容を Notion に記録する。
-
-  '
 parent_branch: em-workflow/codex-guard-backquote-comment-undecidable/integration
 tier: full
 tier_decision:
@@ -98,8 +60,7 @@ project:
     main:
       language: Python / Markdown
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
-        -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
       format_command: ''
       e2e_test_command: ''
 workflow:
@@ -114,8 +75,7 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step:
-    decide_autonomously -> skipped)'
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
