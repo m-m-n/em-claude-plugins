@@ -1,0 +1,29 @@
+feature: codex-guard-subshell-anon-arg-semicolon
+collected_at: "2026-10-18T20:44:13+09:00"
+session_ids:
+  - 01a14ed1-d17e-70c4-8ab5-5dc46be0328e
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "NFR1/NFR2 require linear time and no recursion in the parser scan; the diff changes the per-character scan loop"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み（description_plus_code）P(1)=0.55, P(2)=0.45 に基づき評価器が full を返した"
+    bases:
+      - basis: description_only
+        score: {"type": "score", "score": 1.13, "confidence": 0.87, "probabilities": {"0": 0.0, "1": 0.87, "2": 0.13, "3": 0.0}}
+        observed_at: "2026-10-18T19:15:11+09:00"
+      - basis: description_plus_code
+        score: {"type": "score", "score": 1.45, "confidence": 0.55, "probabilities": {"0": 0.0, "1": 0.55, "2": 0.45, "3": 0.0}}
+        observed_at: "2026-10-18T19:18:09+09:00"
+    pre_survey_estimate: {"files_expected": ["em-workflow/scripts/codex-hook-interactive-guard.py", "em-review/scripts/codex-hook-interactive-guard.py", "tests/test_codex_hook_interactive_guard.py"], "changed_lines_approx": 95, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": [], "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "test_change_kind": "extend_existing_one_to_one", "added_test_cases_approx": 0, "body_change_kind": "new_logic", "change_containment": "multiple_modules", "caller_and_dependency_count": 6, "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 1 件（stable_id 5e71ff00fdbe5aff、case パターンの `)` を `)` 救済がサブシェルの閉じと読み deny → silent に後退）は unresolved のまま残し、別タスクとして起票済み: <notion-url>"
+  - "create-plan 時点で case パターンの `)` が救済のきっかけになる懸念は挙がっていたが、SPEC の前提 A1 に反映されずレビューで後退として見つかった"
+  - "review の triage filing はタスク一覧の取得失敗（listing_exit_nonzero）でレポートに降格した"
