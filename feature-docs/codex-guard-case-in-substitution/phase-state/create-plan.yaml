@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-case-in-substitution
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 941ac888a663ad4d310b43c728c29cca83d7a996
+last_input_digest: sha256:2c30526d31fdf70c8b1714a6398a718bd4b64dcd00ab21df407afdb4b1112b8e
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:2c30526d31fdf70c8b1714a6398a718bd4b64dcd00ab21df407afdb4b1112b8e
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
