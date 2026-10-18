@@ -750,6 +750,21 @@ CASES = [
     ("deny", "範囲の $ の次が引用符でなければ文字のまま残す", "function { :; } << foo($x'y')\nfoo($xy)\npython3 -i"),
     ("deny", "範囲の入れ子の括弧は文字のまま残す", "function { :; } << foo((a)'b')\nfoo((a)b)\npython3 -i"),
     ("deny", "範囲の後ろに続く部分は範囲の引用除去のあとにそのままつなぐ", "function { :; } << foo('x')'y'z\nfoo(x)yz\npython3 -i"),
+    # A `$( )` or `$(( ))` inside double quotes in the range keeps its original
+    # text, inner quotes included, as zsh registers it: the double-quoted unit
+    # is read through the one reader that word reading uses, and a skip past
+    # the range end or a substitution it cannot read is undecidable
+    ("deny", "範囲の二重引用符の中の $( ) は引用を含め元の文字のまま区切り語になり、閉じた行の後の起動は deny", "zsh -c 'function { :; } << foo(\"$(echo \"x\")\")\nfoo(\"$(echo \"x\")\")\nfoo($(echo \"x\"))\npython3 -i'"),
+    ("silent", "範囲の二重引用符の中の $( ) の引用を除いた行では本文が終わらず、起動は本文の中", "zsh -c 'function { :; } << foo(\"$(echo \"a\")\")\nfoo($(echo a))\npython3 -i\nfoo($(echo \"a\"))'"),
+    ("deny", "範囲の二重引用符の中の $(( )) は元の文字のまま区切り語になる", "zsh -c 'function { :; } << foo(\"$((1+2))\")\nfoo($((1+2)))\npython3 -i'"),
+    ("deny", "範囲の二重引用符の中の入れ子の $( ) は引用を含め元の文字のまま区切り語になる", "zsh -c 'function { :; } << foo(\"$(a \"$(b \"c\")\")\")\nfoo($(a \"$(b \"c\")\"))\npython3 -i'"),
+    ("silent", "範囲の二重引用符の中の置換の読み飛ばしが範囲の終わりを越えれば判定不能", "zsh -c 'function { :; } << foo(\"$(echo \")\")\")\nfoo($(echo ))\npython3 -i'"),
+    ("silent", "範囲の中の単引用符が範囲の終わりまでに閉じなければ判定不能", "function { :; } << foo(\"$(echo $'\"')\" 'x)\nfoo($(echo $')\" x)\npython3 -i"),
+    ("silent", "範囲の二重引用符の中の置換が閉じなければ判定不能", "zsh -c 'function { :; } << foo(\"$(\")\nfoo($()\npython3 -i'"),
+    # Word reading is unchanged by the shared reader: an empty quote pair adds
+    # nothing but starts a word, so the `-i` after it is an operand's argument
+    ("silent", "空の単引用符の対は語を始める", "python3 '' -i"),
+    ("silent", "空の二重引用符の対は語を始める", "python3 \"\" -i"),
     # A group opened at an argument `(` whose range has a matching `)`, holds no
     # unquoted `;`, `&` or newline and holds a backquote reads an unquoted `#`
     # at word start as a word character while it is the innermost open group, so
@@ -1549,6 +1564,65 @@ class TestNoRecursion(unittest.TestCase):
                 )
                 self.assertIn("_scan", called_names(find_deny))
                 self.assertTrue({"_judge", "parse"} <= called_names(functions["_scan"]))
+
+
+def parser_methods(path):
+    """The methods of the `_Parser` class in the guard at `path`, by name."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    parser = next(
+        node for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "_Parser"
+    )
+    return {
+        member.name: member
+        for member in parser.body
+        if isinstance(member, ast.FunctionDef)
+    }
+
+
+def self_calls(method):
+    """The names of the `self.<name>(...)` calls in the body of `method`."""
+    return {
+        call.func.attr
+        for call in ast.walk(method)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and isinstance(call.func.value, ast.Name)
+        and call.func.value.id == "self"
+    }
+
+
+class TestSharedQuotedUnitReader(unittest.TestCase):
+    """A backslash pair, a single-quoted unit and a double-quoted unit are read
+    by one reader, which both word reading and the quote removal of a delimiter
+    range call, and which is the only one that calls the substitution skip
+    (AC-4, AC-5). The reader's name is not fixed, so it is found as the one
+    method that calls `_skip_substitution`."""
+
+    def test_one_method_reads_double_quotes_and_word_reading_and_range_removal_call_it(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                methods = parser_methods(path)
+                readers = sorted(
+                    name for name, node in methods.items()
+                    if "_skip_substitution" in self_calls(node)
+                )
+                self.assertEqual(len(readers), 1, readers)
+                for caller in ("parse", "_remove_range_quotes"):
+                    self.assertIn(readers[0], self_calls(methods[caller]), caller)
+
+    def test_the_substitution_skip_calls_neither_reader_nor_the_shared_reader(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                methods = parser_methods(path)
+                readers = [
+                    name for name, node in methods.items()
+                    if "_skip_substitution" in self_calls(node)
+                ]
+                skipped = self_calls(methods["_skip_substitution"])
+                self.assertEqual(len(readers), 1, readers)
+                for name in readers + ["parse", "_remove_range_quotes"]:
+                    self.assertNotIn(name, skipped)
 
 
 def caught_names(handler):
