@@ -1,0 +1,50 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: 943/943 and 10496 tests OK (skipped=1) before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before the implementation the TS1 row (the reproduction, label starting 判定不能で止まる前に読み終えた行の起動を拒否する) failed for both copies: the hook exited 0 with empty standard output and the test raised JSONDecodeError where it expected a deny object. It passes after the implementation."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before the implementation all six TS2 rows and both TS3 rows (labels starting 既知の誤拒否) failed for both copies (sixteen subtest errors, eight rows over two copies): empty standard output where a deny object was expected (JSONDecodeError). They pass after the implementation."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "The eleven TS4 silent rows passed against the unmodified code, which is silent for every string that stops at an undecidable point, so no red state occurred for them. They pin the four checkpoint conditions and the settlement of connection and skip. Checked by hand against four mutated copies of the guard kept outside the repository (the settlement pass in the exception path removed, the list-continuation condition removed, the open-group condition removed, the pending-pipe condition removed): each mutant failed the expected rows (the connected-group and function-body rows; the && / || / blank-line-after-&& rows; the open-group row; the | and |& rows), and the unmodified implementation passes all eleven."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit
+      - tests.test_codex_hook_interactive_guard.TestFailOpen
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests detect the behavior; no red state occurred for this change. The existing CASES rows (silent rows at lines 111-114, 576-577, 603-631, 656-703 and the rest), TestNestedReadLimit (including test_a_string_that_proves_undecidable_still_counts) and TestFailOpen passed against the unmodified code and still pass; the new edge-case deny row (function { python3 -i; } foo(`echo )` #), pinning the unchanged comment-exception range) also passed before the implementation, because a string that is read in full never raised _Undecidable. These are regression pins, so no failing run existed to observe."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_many_checkpoint_lines_and_deep_closed_groups_before_an_unbalanced_quote_are_denied
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+    red_confirmed: true
+    red_reason: "The new deep-input test (6000 checkpoint lines, 6000 closed groups, a final launch line, then an unbalanced quote; shapes: closed parentheses, closed braces, connected closed parentheses) errored for all three shapes in both copies before the implementation: empty standard output where a deny object was expected (JSONDecodeError). It passes after the implementation within TestMalformedAndDeepInput's 60 second limit. The other classes of this criterion passed before and after; they were not red."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_checkpoint_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_each_module_passage_that_gave_no_output_names_the_checkpoint_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_the_checkpoint_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_scan_description_states_the_checkpoint_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+    red_confirmed: true
+    red_reason: "Before the docstrings were rewritten the four new tests failed for both copies: the checkpoint marker sentences were missing from the module docstring, the _Parser docstring and the _scan docstring (assertIn failures), and the module passages of steps 3, 4, 7, 9 and the paragraph 'Everything the guard cannot positively identify passes' did not name the rule. The existing markers and the stale-sentence tests of the class passed before and after."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestDenyOutput
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestCopies.test_the_two_copies_are_byte_identical and TestDenyOutput detect copy drift and a changed deny output shape or reason; no red state occurred for this change. That no plugin.json and no .claude-plugin/marketplace.json is touched is verified with git diff --stat on the task branch (only the two guard copies, tests/test_codex_hook_interactive_guard.py and this record), not by a test. The two suite commands (python3 -m unittest tests.test_codex_hook_interactive_guard, and python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests) were run after the implementation and exit with status 0."
