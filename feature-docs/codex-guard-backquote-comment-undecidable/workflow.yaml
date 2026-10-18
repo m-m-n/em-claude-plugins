@@ -123,6 +123,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: The guard runs on every Bash/Codex hook call and the change adds checkpoint re-judgment over the scanned string (NFR1 performance requirement)
+    cross_validation: true
 requirements:
   FR1:
     title: 再現手順を deny
