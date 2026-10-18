@@ -1,0 +1,44 @@
+task_id: task0001
+baseline_failures: []          # run inside the task worktree before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py exit 0 (943/943 passed); python3 -m unittest discover -s tests: Ran 10491 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: the project test command, exit 0, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before any change to the guard, tests.test_codex_hook_interactive_guard was run with the rewritten row 661 (TS-1, expected deny) and the new TS-2 row (expected deny). For both copies and both rows, test_cases_run_against_both_copies errored with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because the unmodified guard printed nothing (silent) where a deny object was expected"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before any change to the guard, the TS-3 (words pending before the close paren), TS-4 (launch after the closed subshell) and TS-5 (nested chain) rows, each expected deny, errored on both copies in test_cases_run_against_both_copies with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because the unmodified guard printed nothing (silent)"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "These rows (TS-6 and-and first, TS-7 newline first, TS-8 stdin redirect after the close, TS-9 pipe into the subshell, TS-10 function-definition body, TS-14 quoted close paren) expect silent and passed against both unmodified copies, because the unmodified guard leaves the subshell unclosed in each of them and reads the whole string as undecidable. They are characterization rows that guard against a rescue that is too wide; no red state occurred. A dedicated new module is out of scope, but the existing table test detects a rescue that denies any of them"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before any change to the guard, the TS-12 row (the original row 672 command, expected deny) and the TS-13 row (expected deny) errored on both copies in test_cases_run_against_both_copies with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because the unmodified guard printed nothing. Row 672 itself now holds the TS-11 command (the close paren moved into a comment) and expects silent; it passed before the change as well, so it is a characterization row and only TS-12 and TS-13 were observed red"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing table test detects a changed verdict of any other row (row 560, rows 591-633, the brace rescue rows other than 661 and 672); no red state occurred for this change. In the red run before the guard change none of those rows failed, and after the change every one of them still passes on both copies"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_deep_chain_over_a_subshell_is_rescued_once_at_the_closing_paren
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_many_closing_parens_after_a_chain_that_cannot_be_rescued_are_answered
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+    red_confirmed: true
+    red_reason: "Before any change to the guard, test_a_deep_chain_over_a_subshell_is_rescued_once_at_the_closing_paren (the TS-15 shape, expected deny) errored on both copies with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because the unmodified guard printed nothing. The TS-16 shape (blocked chain, expected no output) and the no-recursion test passed before the change, as the plan expects: TS-16 is the guard against a check that walks the chain at each close paren, and no red state occurred for it"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_that_a_paren_rescues_the_chain_and_closes_the_subshell
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_that_a_paren_rescues_the_chain_and_closes_the_subshell
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: true
+    red_reason: "Before any change to the guard, the two new marker tests failed on both copies with AssertionError: the sentence about a close paren rescuing the chain and closing the open group just outside it was not in the module docstring nor in the _Parser docstring. The byte-identity test and the static-constraint test passed before the change and still pass; the existing documentation tests (marker sets, stale-sentence checks) pass unchanged"
