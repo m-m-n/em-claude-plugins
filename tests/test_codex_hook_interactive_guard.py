@@ -805,6 +805,38 @@ CASES = [
     ("deny", "バッククォートを含む引数の ( ) の中の空白の後の # は語の文字で、閉じた後の改行の先の起動も拒否する", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x` #)\npython3 -i'"),
     ("deny", "バッククォートを含む引数の ( ) の中の入れ子の ( ) も語頭の # を語の文字として読む", "zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x` (a #))'"),
     ("deny", "バッククォートを含む引数の ( ) の中の走査が早く止まっても、直接の ; の後の # はコメントで改行の先の起動を拒否する", "zsh -c 'setopt nonomatch nobareglobqual nobadpattern; function { python3 -i; } foo(`case x in x) echo x;; esac`; # '\"'\"' ignored\npython3 -i'"),
+    # A string the reader cannot finish is judged up to its last checkpoint
+    # instead of not at all. A checkpoint is a newline the reader itself reads at
+    # the top level with no group open, no pipe pending, no list continuation
+    # pending and the heredoc bodies of its line read through their terminators.
+    # The commands before it keep the connection and skip a full read gives
+    # them. A string with no checkpoint, and a launch on the line where the
+    # reading stops, stay silent. The rows labelled 既知の誤拒否 are accepted
+    # false denies
+    ("deny", "判定不能で止まる前に読み終えた行の起動を拒否する (再現手順)", "bash -c 'python3 -B -S -i\nfunction { :; } foo(`case x in x) echo x;; esac` # '\"'\"'\n)'"),
+    ("deny", "最上位で閉じない引用符より前の行の -i を拒否する", "python3 -i\necho '"),
+    ("deny", "最上位で閉じない引用符より前の行のプログラムなしの起動を拒否する", "python3\necho '"),
+    ("deny", "入れ子の -c 文字列で閉じない引用符より前の行の -i を拒否する", "bash -c 'python3 -i\necho '\"'\"''"),
+    ("deny", "チェックポイントより前の閉じた群の中の起動を拒否する", "( python3 -i )\necho '"),
+    ("deny", "チェックポイントより前の行の -c 文字列も判定する", "bash -c 'python3 -i'\necho '"),
+    ("deny", "読み終えた heredoc の後の行の起動を拒否する", "python3 - <<EOF\nprint(1)\nEOF\npython3 -i\necho '"),
+    ("deny", "既知の誤拒否: zsh は後ろの構文エラーで何も実行しない", "zsh -c 'python3 -i\nfunction { :; } foo(`case x in x) echo x;; esac` # '\"'\"'\n)'"),
+    ("deny", "既知の誤拒否: 改行がシェルの実行単位の境界でない if の中の行", "if false; then\npython3 -i\necho '"),
+    ("silent", "同じ行の判定不能な箇所より前の起動は判定しない", "python3 -i; echo '"),
+    ("silent", "| で続く行はチェックポイントにならない", "python3 -i |\necho '"),
+    ("silent", "|& で続く行はチェックポイントにならない", "python3 -i |&\necho '"),
+    ("silent", "&& で続く行はチェックポイントにならない", "python3 -i &&\necho '"),
+    ("silent", "|| で続く行はチェックポイントにならない", "python3 -i ||\necho '"),
+    ("silent", "&& の後の空行を越えても継続のまま", "python3 -i &&\n\necho '"),
+    ("silent", "開いた群の中の行はチェックポイントにならない", "{ python3 -i\necho '"),
+    ("silent", "heredoc の本文が終わらない行はチェックポイントにならない", "python3 -i <<EOF\nprint(1)"),
+    ("silent", "チェックポイントより前の接続された群は接続の読みのまま", "( python3 ) < /dev/null\necho '"),
+    ("silent", "チェックポイントより前の関数定義の本体は判定しない", "f() { python3 -i; }\necho '"),
+    ("silent", "チェックポイントより前のパイプの右側は接続されている", "echo x | python3\necho '"),
+    # The comment exception keeps its range: the `)` inside the backquote span
+    # ends the scan early, the real `)` sits after the `#`, and the `#` is a word
+    # character, so the string is read in full and the body's `-i` is denied
+    ("deny", "コメントの例外の範囲は変えない: バッククォートの中の ) で走査が早く終わり、本当の ) は # の後にある", "function { python3 -i; } foo(`echo )` #)"),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -1112,6 +1144,30 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
         for name, command in inputs.items():
             with self.subTest(shape=name):
                 self.assert_every_copy_answers(command)
+
+    def test_many_checkpoint_lines_and_deep_closed_groups_before_an_unbalanced_quote_are_denied(self):
+        # The checkpoint path (NFR1): every line ends at a checkpoint, the groups
+        # nested DEPTH deep are all closed before the last one, a launch line
+        # comes last, and an unbalanced quote makes the string undecidable
+        # after it. Recording a checkpoint costs constant time and the groups
+        # before it are settled once each, so the answer comes in time; the
+        # deny shows the launch line was judged.
+        depth = self.DEPTH
+        lines = ":\n" * depth
+        inputs = {
+            "closed parentheses": lines + "(" * depth + ":" + ")" * depth + "\npython3 -i\necho '",
+            "closed braces": lines + "{ " * depth + ":" + "; }" * depth + "\npython3 -i\necho '",
+            "connected closed parentheses": (
+                lines + "(" * depth + ":" + ")" * depth + " < /dev/null\npython3 -i\necho '"
+            ),
+        }
+        for name, command in inputs.items():
+            for plugin, path in self.for_each_copy():
+                with self.subTest(shape=name, copy=plugin):
+                    code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                    self.assertEqual((code, err), (0, ""))
+                    decision = json.loads(out)["hookSpecificOutput"]
+                    self.assertEqual(decision["permissionDecision"], "deny")
 
     def test_a_pipe_followed_by_many_empty_lines_is_answered(self):
         depth = self.DEPTH
@@ -2333,6 +2389,79 @@ class TestGuardDocumentation(unittest.TestCase):
             for stale in self.STALE_DOCSTRING_SENTENCES:
                 with self.subTest(copy=plugin, stale=stale):
                     self.assertNotIn(stale, doc)
+
+    # The checkpoint rule (FR2, FR6): when a string turns out undecidable, the
+    # commands up to the last checkpoint are judged and a string with no
+    # checkpoint gives no output. The sentences are written in the module
+    # docstring (step 9), the docstring of `_Parser` and the docstring of `_scan`:
+    # the four conditions, the commands judged, the connection and skip they
+    # take, no output without a checkpoint, the hook command and every nested
+    # literal `-c` string, the full length counted toward the limit, and the
+    # errors other than `_Undecidable` that are handled as before
+    CHECKPOINT_MARKERS = (
+        "A checkpoint is a newline that the reader itself reads at the top level",
+        "no group is open, no pipe is pending, no list continuation is pending",
+        "have been read through their terminators",
+        "the commands up to the last checkpoint are judged",
+        "with connection and skip taken from the groups opened before it",
+        "a string with no checkpoint gives no output",
+        "applies to the hook command and to every nested literal shell `-c` string",
+        "an undecidable string counts at its full length toward NESTED_READ_LIMIT",
+        "An error other than _Undecidable is handled as before",
+    )
+
+    # The passages of the module docstring that said an undecidable string gives
+    # no output: each one names the checkpoint rule (start anchor, end anchor)
+    CHECKPOINT_PASSAGES = (
+        ("3. Remove heredoc bodies", "4. A subshell"),
+        ("4. A subshell", "5. After `|` or `|&`"),
+        ("7. A shell (bash sh zsh dash ksh)", "8. Deny a launch"),
+        ("9. Anything undecidable", "Everything the guard cannot positively identify passes"),
+        ("Everything the guard cannot positively identify passes", "The guard uses only the standard library"),
+    )
+    CHECKPOINT_PASSAGE_MARKERS = (
+        "the commands up to the last checkpoint are judged",
+        "no checkpoint",
+    )
+
+    def test_the_module_docstring_states_the_checkpoint_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for marker in self.CHECKPOINT_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_each_module_passage_that_gave_no_output_names_the_checkpoint_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for start, end in self.CHECKPOINT_PASSAGES:
+                begin = doc.find(start)
+                with self.subTest(copy=plugin, passage=start):
+                    self.assertNotEqual(begin, -1, "the passage is missing")
+                    stop = doc.find(end, begin + len(start))
+                    self.assertNotEqual(stop, -1, "the end of the passage is missing")
+                    passage = doc[begin:stop]
+                    for marker in self.CHECKPOINT_PASSAGE_MARKERS:
+                        self.assertIn(marker, passage)
+
+    def test_the_parser_description_states_the_checkpoint_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path)
+            for marker in self.CHECKPOINT_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_scan_description_states_the_checkpoint_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            scan = next(
+                node for node in tree.body
+                if isinstance(node, ast.FunctionDef) and node.name == "_scan"
+            )
+            doc = " ".join((ast.get_docstring(scan) or "").split())
+            for marker in self.CHECKPOINT_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
 
     def test_the_group_description_no_longer_limits_the_rescue_to_the_end_of_input(self):
         for plugin, path in HOOK_PATHS.items():
