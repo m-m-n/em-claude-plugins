@@ -119,9 +119,16 @@ Decision flow:
      dropped and the next character kept (a backslash and a newline are both
      dropped), and `'` and `"` are dropped; single-quoted text is kept as it
      stands; inside double quotes a backslash is dropped only before `$`, a
-     backquote, `"`, another backslash or a newline. The text of a `$( ... )` and
-     every other character stay as written. The part of the word outside the
-     range was quote-removed when it was read and is not processed again. A range
+     backquote, `"`, another backslash or a newline. A `$( ... )` or a
+     `$(( ... ))` inside double quotes keeps its original text, the quotes inside
+     it included, as zsh registers it; the text of a `$( ... )` outside quotes
+     and every other character stay as written. The quote removal is done by the
+     same reader that reads a backslash pair, a single-quoted unit and a
+     double-quoted unit in any other word, held to the end of the range. A
+     substitution skipped inside double quotes whose close lies beyond the end of
+     the range, or that cannot be read, makes the whole input undecidable -> no
+     output. The part of the word outside the range was quote-removed when it was
+     read and is not processed again. A range
      that opens a group, as above, keeps that reading while a delimiter is
      awaited. An unquoted `$'` or `$"` inside such a range makes the whole input
      unknowable -> no output; a `$'` or `$"` inside quotes and a
@@ -1273,48 +1280,33 @@ class _Parser:
         parentheses, and the text of a `$( ... )`, which is kept as written
         with the quotes inside it. A `$` right before a `'` or a `"` outside
         quotes raises _Undecidable: what zsh reads there is not known.
-        Single-quoted text is kept as it stands, backslashes included, and the
-        closing `'` is dropped. In double quotes a backslash before `$`, a backquote, `"`, `\\`
-        or a newline is dropped (before a newline together with it) and the
-        next character kept, any other backslash stays with the next character,
-        a `$'` or `$"` there is no trigger, and the closing `"` is dropped. A
-        quote the range does not close raises _Undecidable. The part of the word
+        A backslash pair, a single-quoted unit and a double-quoted unit are
+        read by the shared reader `_read_quoted_unit`, held to the end of the
+        range, and it does the quote removal. Single-quoted text is kept as it
+        stands, backslashes included, and the closing `'` is dropped. In double
+        quotes a backslash before `$`, a backquote, `"`, `\\` or a newline is
+        dropped (before a newline together with it) and the next character
+        kept, any other backslash stays with the next character, a `$'` or `$"`
+        there is no trigger, and the closing `"` is dropped. A `$( ... )` or a
+        `$(( ... ))` inside double quotes keeps its original text, the quotes
+        inside it included. A quote the range does not close raises
+        _Undecidable, and so does a substitution inside double quotes whose
+        skip ends beyond the range or cannot be read. The part of the word
         outside the range is not read here: it was quote-removed when it was
         read and is not processed again. Time is linear in the length of the
-        range; a `$( ... )` is skipped once, never rescanned."""
+        range; a `$( ... )` is skipped once, never rescanned. A skip that runs
+        beyond the range ends the whole reading, so it happens at most once."""
         s = self.s
         out = []
         j = start
         while j < end:
             ch = s[j]
-            if ch == "\\":
-                if j + 1 >= end:
-                    raise _Undecidable("trailing backslash")
-                if s[j + 1] != "\n":
-                    out.append(s[j + 1])
-                j += 2
-            elif ch == "'":
-                close = s.find("'", j + 1, end)
-                if close == -1:
-                    raise _Undecidable("quote")
-                out.append(s[j + 1:close])
-                j = close + 1
-            elif ch == '"':
-                j += 1
-                while j < end and s[j] != '"':
-                    if s[j] == "\\" and j + 1 < end:
-                        nxt = s[j + 1]
-                        if nxt in '"\\$`':
-                            out.append(nxt)
-                        elif nxt != "\n":
-                            out.append("\\" + nxt)
-                        j += 2
-                    else:
-                        out.append(s[j])
-                        j += 1
-                if j >= end:
-                    raise _Undecidable("quote")
-                j += 1
+            if ch in "\\'\"":
+                # The same reader that word reading uses, held to the end of
+                # the range. The dynamic indication is of no use here: a
+                # registered delimiter is compared as text only.
+                text, j, _ = self._read_quoted_unit(j, end)
+                out.append(text)
             elif ch == "$" and j + 1 < end and s[j + 1] in "'\"":
                 raise _Undecidable("dollar quote")
             elif ch == "$" and j + 1 < end and s[j + 1] == "(":
@@ -1328,18 +1320,56 @@ class _Parser:
                 j += 1
         return "".join(out)
 
-    def _double_quoted(self):
+    def _read_quoted_unit(self, start, limit):
+        """Read the quoted unit that opens at `start` and return (text, next,
+        dynamic): the text of the unit with its quotes removed, the index just
+        after the unit, and whether the unit holds a substitution or a `$`
+        inside double quotes. This is the one reader of a backslash pair, a
+        single-quoted unit and a double-quoted unit: word reading calls it with
+        the end of the input as `limit`, and the quote removal of a delimiter
+        range (`_remove_range_quotes`) calls it with the end of the range.
+
+        `limit` is exclusive: the unit must end before it, so `next` never lies
+        beyond it. The caller guarantees `start < limit` and that the character
+        at `start` is a backslash, a single quote or a double quote.
+
+        A backslash and the character after it yield that character; a
+        backslash and a newline yield nothing. Single-quoted text is kept as it
+        stands. Inside double quotes a backslash is dropped only before `$`, a
+        backquote, `"`, another backslash or a newline (before a newline
+        together with it) and any other backslash stays with the next
+        character; a `$` or a backquote marks the unit dynamic. At a backquote,
+        a `$(` or a `$((` the substitution is skipped with `_skip_substitution`
+        and its original text is kept as written, the quotes inside it
+        included: they close nothing here and are not removed.
+
+        Raises _Undecidable when the unit does not close before `limit` (a
+        backslash with no character after it before `limit` included), when the
+        skip of a substitution inside double quotes ends beyond `limit`, and
+        when `_skip_substitution` itself raises it. An overrun ends the whole
+        reading, so the skip past `limit` happens at most once per string.
+        This reader calls `_skip_substitution` only; nothing it calls calls it
+        back."""
         s = self.s
-        j = self.i + 1
+        ch = s[start]
+        if ch == "\\":
+            if start + 1 >= limit:
+                raise _Undecidable("trailing backslash")
+            nxt = s[start + 1]
+            return ("" if nxt == "\n" else nxt), start + 2, False
+        if ch == "'":
+            close = s.find("'", start + 1, limit)
+            if close == -1:
+                raise _Undecidable("quote")
+            return s[start + 1:close], close + 1, False
+        j = start + 1
         out = []
         dynamic = False
-        while j < self.n:
+        while j < limit:
             ch = s[j]
             if ch == '"':
-                self._put("".join(out), quoted=True, dynamic=dynamic)
-                self.i = j + 1
-                return
-            if ch == "\\" and j + 1 < self.n:
+                return "".join(out), j + 1, dynamic
+            if ch == "\\" and j + 1 < limit:
                 nxt = s[j + 1]
                 if nxt in '"\\$`':
                     out.append(nxt)
@@ -1347,8 +1377,10 @@ class _Parser:
                     out.append("\\" + nxt)
                 j += 2
                 continue
-            if ch == "`" or s.startswith("$(", j):
+            if ch == "`" or s.startswith("$(", j, limit):
                 end = self._skip_substitution(j)
+                if end > limit:
+                    raise _Undecidable("substitution")
                 out.append(s[j:end])
                 dynamic = True
                 j = end
@@ -1587,20 +1619,14 @@ class _Parser:
                 # time.
                 end = s.find("\n", i)
                 self.i = self.n if end == -1 else end
-            elif ch == "\\":
-                if i + 1 >= self.n:
-                    raise _Undecidable("trailing backslash")
-                self.i += 2
-                if s[i + 1] != "\n":
-                    self._put(s[i + 1], quoted=True)
-            elif ch == "'":
-                end = s.find("'", i + 1)
-                if end == -1:
-                    raise _Undecidable("quote")
-                self._put(s[i + 1:end], quoted=True)
-                self.i = end + 1
-            elif ch == '"':
-                self._double_quoted()
+            elif ch in "\\'\"":
+                # A backslash pair, a single-quoted unit and a double-quoted
+                # unit are all read by the one quoted-unit reader.
+                text, self.i, dynamic = self._read_quoted_unit(i, self.n)
+                # A backslash and a newline add nothing and start no word; an
+                # empty quote pair adds nothing either, but it starts one.
+                if ch != "\\" or s[i + 1] != "\n":
+                    self._put(text, quoted=True, dynamic=dynamic)
             elif ch == "$":
                 self._dollar()
             elif ch == "`":

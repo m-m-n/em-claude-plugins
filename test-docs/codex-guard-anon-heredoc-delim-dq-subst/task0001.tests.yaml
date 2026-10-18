@@ -1,0 +1,43 @@
+task_id: task0001
+baseline_failures: []          # run inside the task worktree before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py exit 0 (943/943 passed); python3 -m unittest discover -s tests: Ran 10488 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: the same two commands, exit 0, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before any guard change, the four CASES rows were run against both unmodified copies with the same run_hook / payload_for calls the table test uses. The miss-side row (expected deny) printed nothing (got silent), because the double-quoted $( ) lost its inner quotes and the registered delimiter foo($(echo x)) never matched a line, so the heredoc stayed unterminated. The false-deny-side row (expected silent) printed a deny object, because the unquoted line foo($(echo a)) ended the heredoc early and the python3 -i after it was read as a command. The nested-substitution row (expected deny) printed nothing (got silent), for the same reason as the miss-side row. The arithmetic row (expected deny) already returned deny from both copies before the change, because a $(( )) in double quotes holds no inner quote to lose; it guards against a fix that stops keeping the original text of $(( )), and no red state occurred for it"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before any guard change, the three CASES rows of this criterion (expected silent) each printed a deny object from both unmodified copies: the skip-beyond-the-range-end input, the range whose single-quoted unit does not close before the range end, and the range whose double-quoted substitution cannot be read (an unclosed $( ). Each row ends with the delimiter line the old reading registered, so the old code closed the heredoc there and read the python3 -i after it as a command. After the change each row is undecidable and both copies print nothing. No pre-existing CASES row had one of these three shapes. The explicit overrun check in the shared reader cannot be told apart from the loop-exit check by any input, because an overrunning skip also leaves the unit unclosed, so the skip-beyond row is red against the old reading but not against a copy without the explicit check"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestCasesTable.test_cases_run_against_both_copies detects a changed word-reading verdict; no red state occurred for this change. The two new characterization rows (python3 '' -i and python3 \"\" -i, expected silent) already returned silent from both copies before any guard change, and the pre-existing rows kept their verdicts: the line continuation (python3, backslash-newline, -i) still denies, the backslash at the very end of the input is still silent, and every delimiter-range row, the $' inside double quotes row and the quotes inside a $( ) outside quotes row pass unchanged. As an extra check, 600,000 random strings gave the same words, dynamic and bare flags, stdin and pipe marks in the old and the new guard, with a difference allowed only for a string that holds a heredoc operator, and 400,000 more strings built around heredoc delimiter ranges differed only when the string held a heredoc operator, a $( and a double quote"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader.test_one_method_reads_double_quotes_and_word_reading_and_range_removal_call_it
+    red_confirmed: true
+    red_reason: "The new test finds the one _Parser method that calls _skip_substitution and asserts that both parse and _remove_range_quotes call it. Run against the unmodified guard it failed: AssertionError: '_double_quoted' not found in {'_skip_parens'} : _remove_range_quotes, because the old range quote removal had its own loop for double quotes"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader.test_the_substitution_skip_calls_neither_reader_nor_the_shared_reader
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_delimiter_ranges_at_scale_are_read_in_time_and_the_launch_after_them_is_denied
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestNoRecursion, the scale test and TestStaticConstraints detect a call cycle, a non-linear reading and a constraint violation; no red state occurred for this change, because the old guard already had the property (_skip_substitution called no reader and nothing recursed) and the new structural test of the skip passed against the unmodified guard too"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_delimiter_range_rules
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_describes_the_new_behaviour
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestGuardDocumentation tests detect the loss of the DELIMITER_RANGE_MARKERS sentences and of the phrase inside double quotes; no red state occurred for this change (the sentences were kept as they were). The three new facts (double-quoted $( ) and $(( )) keep their original text, a substitution skip beyond the range makes the verdict undecidable, the shared reader performs the quote removal) have no executable check, because new docstring markers in the test file are out of scope; they are stated in the module docstring and in the docstring of _remove_range_quotes and need a human reading"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestCopies.test_the_two_copies_are_byte_identical detects a byte difference between the two guard copies; no red state occurred for this change (the em-review copy was copied from the em-workflow copy before the test ran). That the change set leaves em-workflow/.claude-plugin/plugin.json, em-review/.claude-plugin/plugin.json and .claude-plugin/marketplace.json alone is checked by reading the diff of the task branch, and no test covers it"
