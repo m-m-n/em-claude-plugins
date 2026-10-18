@@ -17,6 +17,7 @@ test/README.md.
 
 import ast
 import json
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -53,6 +54,17 @@ ESCAPED_BACKQUOTE_REPRODUCTION = (
     "foo(`echo \\`echo x\\``)'"
 )
 
+
+# The inner text of the first reproduction of the case-in-substitution feature:
+# the delimiter range of an anonymous-function heredoc holds a double-quoted
+# `$(case ...)`, the line that closes the body repeats it without the quotes,
+# and the launch comes on the third line. A shell reads it as the operand of
+# `zsh -c`, so the table row quotes it for a shell.
+CASE_IN_RANGE_INNER = (
+    'function { :; } << foo("$(case x in x) echo foo;; esac)")\n'
+    "foo($(case x in x) echo foo;; esac))\n"
+    "python3 -i"
+)
 
 # (expected, label, command)
 CASES = [
@@ -837,6 +849,39 @@ CASES = [
     # ends the scan early, the real `)` sits after the `#`, and the `#` is a word
     # character, so the string is read in full and the body's `-i` is denied
     ("deny", "コメントの例外の範囲は変えない: バッククォートの中の ) で走査が早く終わり、本当の ) は # の後にある", "function { python3 -i; } foo(`echo )` #)"),
+    # A `case` statement inside a `$( ... )` that opens inside double quotes is
+    # read: the `)` that closes a pattern closes neither the substitution nor a
+    # group opened in it, so the close is found where zsh finds it and the
+    # launch after the substitution in the same string is judged. `esac` closes
+    # a statement only at a pattern position or at a command position of an item
+    # body. The contents of the substitution are never judged, and a form whose
+    # close cannot be located stays undecidable
+    ("deny", "区切り語の範囲の二重引用符の中の置換にある case 文のパターンの ) で置換を閉じず、閉じた行の後の起動を拒否する (再現手順 a)", "zsh -c " + shlex.quote(CASE_IN_RANGE_INNER)),
+    ("deny", "語の二重引用符の中の置換にある case 文のパターンの ) で置換を閉じず、後ろの起動を拒否する (再現手順 b)", "zsh -c " + shlex.quote('echo "$(case x in x) :;; esac)"; python3 -i')),
+    ("deny", "case 文の省略できる先頭の ( を持つパターンを読み、後ろの起動を拒否する", 'echo "$(case x in (x) :;; esac)"; python3 -i'),
+    ("deny", "case 文の | で区切ったパターンと zsh の終端 ;& ;| を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case x in a|b) :;& x) :;| *) :;; esac)"; python3 -i')),
+    ("deny", "case 文の bash の終端 ;;& を読み、後ろの起動を拒否する", "bash -c " + shlex.quote('echo "$(case x in x) :;;& *) :;; esac)"; python3 -i')),
+    ("deny", "終端を省いて ; のあとの esac で終わる最後の項目を読み、後ろの起動を拒否する", 'echo "$(case x in x) :; esac)"; python3 -i'),
+    ("deny", "終端を省いて改行のあとの esac で終わる最後の項目を読み、後ろの起動を拒否する", 'echo "$(case x in x) :\nesac)"; python3 -i'),
+    ("deny", "パターンを閉じた ) の直後の入れ子の case 文を読み、後ろの起動を拒否する", 'echo "$(case x in x) case y in y) :;; esac;; esac)"; python3 -i'),
+    ("deny", "引用符の中の ) を持つパターンと本体のサブシェルを読み、後ろの起動を拒否する", 'echo "$(case x in \')\') (:);; x) :;; esac)"; python3 -i'),
+    ("deny", "項目の本体の入れ子の置換の中の case 文を読み、後ろの起動を拒否する", 'echo "$(case x in x) echo "$(case y in y) :;; esac)";; esac)"; python3 -i'),
+    ("deny", "本体の引数の esac は case 文を閉じず、後ろの起動を拒否する", 'echo "$(case x in x) echo esac;; esac)"; python3 -i'),
+    ("deny", "本体のコメントの中の esac は case 文を閉じず、後ろの起動を拒否する", 'echo "$(case x in x) : # esac\n;; esac)"; python3 -i'),
+    ("silent", "case 文を含む置換の中身は判定しない", 'echo "$(case x in x) python3 -i;; esac)"'),
+    ("silent", "esac で閉じない case 文は判定不能で、後ろの起動を拒否しない", 'echo "$(case x in x) :;;"; python3 -i'),
+    ("silent", "case 文の項目の本体の中の heredoc は判定不能で、後ろの起動を拒否しない", 'echo "$(case x in x) cat <<E\nbody\nE\n;; esac)"; python3 -i'),
+    ("silent", "zsh の case x { ... } の形は判定不能で、後ろの起動を拒否しない", 'echo "$(case x { x) :;; })"; python3 -i'),
+    ("deny", "区切り語の範囲の二重引用符の中で、項目が複数ある case 文を読み、閉じた行の後の起動を拒否する", "zsh -c " + shlex.quote('function { :; } << foo("$(case x in a) :;; x) echo foo;; esac)")\nfoo($(case x in a) :;; x) echo foo;; esac))\npython3 -i')),
+    # Forms zsh accepts are read, not made undecidable (zsh -c, the launch after
+    # the substitution is judged): an empty leading alternative, with and without
+    # the optional leading parenthesis; parentheses in the subject; a numeric
+    # range as the subject; a process substitution as the subject
+    ("deny", "zsh が受け付けるパターンの先頭の空の選択肢 |x を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case x in |x) :;; esac)"; python3 -i')),
+    ("deny", "zsh が受け付ける先頭の ( のあとの空の選択肢 (|x) を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case x in (|x) :;; esac)"; python3 -i')),
+    ("deny", "zsh が受け付ける case 文の対象の語の括弧 x(a|b) を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case x(a|b) in *) :;; esac)"; python3 -i')),
+    ("deny", "zsh が受け付ける case 文の対象の語の数値の範囲 <1-2> を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case <1-2> in *) :;; esac)"; python3 -i')),
+    ("deny", "zsh が受け付ける case 文の対象の語のプロセス置換 <(:) を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case <(:) in *) :;; esac)"; python3 -i')),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -1468,6 +1513,37 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
                     self.assertEqual(decision["permissionDecision"], "deny")
 
 
+class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
+    """A case statement inside a double-quoted command substitution is read in
+    time whatever its shape (NFR1, TM-3): one statement with very many items,
+    and statements nested very deeply, each opened as the first word of the
+    body of the enclosing item. The item count and the depth are the depth the
+    deep-input class uses. The launch after the substitution is judged, so the
+    answer is a deny: unlike the helper of the deep-input class, silence is not
+    an answer here."""
+
+    DEPTH = TestMalformedAndDeepInput.DEPTH
+    TIMEOUT = TestMalformedAndDeepInput.TIMEOUT
+
+    def assert_every_copy_denies(self, command):
+        for plugin, path in self.for_each_copy():
+            with self.subTest(copy=plugin):
+                code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                self.assertEqual((code, err), (0, ""))
+                obj, end = json.JSONDecoder().raw_decode(out)
+                self.assertEqual(out[end:].strip(), "", "standard output holds one object")
+                self.assertEqual(obj["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_one_case_statement_with_many_items_is_read_and_the_launch_after_it_is_denied(self):
+        command = 'echo "$(case x in' + " x) :;;" * self.DEPTH + ' esac)"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_case_statements_nested_deeply_are_read_and_the_launch_after_them_is_denied(self):
+        depth = self.DEPTH
+        statements = "case x in x) " * depth + ":" + "; esac" * depth
+        self.assert_every_copy_denies('echo "$(' + statements + ')"; python3 -i')
+
+
 class TestBraceCloseEqualsSemicolonBeforeIt(HookCopiesMixin, unittest.TestCase):
     """A standalone bare `}` that closes an anonymous body, or a `{` group
     inside one, while words are pending gives the verdict of the same input
@@ -1683,7 +1759,13 @@ class TestNoRecursion(unittest.TestCase):
 
 def parser_methods(path):
     """The methods of the `_Parser` class in the guard at `path`, by name."""
-    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return parser_methods_in(path.read_text(encoding="utf-8"))
+
+
+def parser_methods_in(source):
+    """The methods of the `_Parser` class in the Python text `source`, by
+    name."""
+    tree = ast.parse(source)
     parser = next(
         node for node in tree.body
         if isinstance(node, ast.ClassDef) and node.name == "_Parser"
@@ -1738,6 +1820,63 @@ class TestSharedQuotedUnitReader(unittest.TestCase):
                 self.assertEqual(len(readers), 1, readers)
                 for name in readers + ["parse", "_remove_range_quotes"]:
                     self.assertNotIn(name, skipped)
+
+
+def reachable_self_calls(methods, start):
+    """The names of the `_Parser` methods that can be reached from the method
+    `start` by following `self.<name>(...)` calls, `start` itself included only
+    when a chain of calls leads back to it. A work list, so the walk is
+    iterative and ends on a call cycle."""
+    reached = set()
+    pending = [start]
+    while pending:
+        method = methods.get(pending.pop())
+        if method is None:
+            continue
+        for callee in self_calls(method):
+            if callee not in reached:
+                reached.add(callee)
+                pending.append(callee)
+    return reached
+
+
+class TestSubstitutionSkipCallStructure(unittest.TestCase):
+    """The substitution skip reads `case` statements with its own explicit
+    stack and bounded lookups. Nothing it reaches, directly or through other
+    methods, is the skip again, the shared quoted-unit reader, `parse` or
+    `_remove_range_quotes`: that would be a call cycle (NFR2, TM-3)."""
+
+    FORBIDDEN = ("_skip_substitution", "_read_quoted_unit", "parse", "_remove_range_quotes")
+
+    def test_no_method_reachable_from_the_substitution_skip_is_the_skip_or_a_reader(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                methods = parser_methods(path)
+                reached = reachable_self_calls(methods, "_skip_substitution")
+                for name in self.FORBIDDEN:
+                    self.assertNotIn(name, reached)
+
+    def test_the_walk_follows_calls_through_other_methods(self):
+        source = (
+            "class _Parser:\n"
+            "    def _skip_substitution(self):\n        return self._a()\n"
+            "    def _a(self):\n        return self._b()\n"
+            "    def _b(self):\n        return self._read_quoted_unit()\n"
+            "    def _read_quoted_unit(self):\n        return self._skip_substitution()\n"
+            "    def parse(self):\n        return 1\n"
+        )
+        reached = reachable_self_calls(parser_methods_in(source), "_skip_substitution")
+        self.assertEqual(reached, {"_a", "_b", "_read_quoted_unit", "_skip_substitution"})
+
+    def test_the_walk_ends_on_a_cycle_that_does_not_lead_back_to_the_start(self):
+        source = (
+            "class _Parser:\n"
+            "    def _skip_substitution(self):\n        return self._a()\n"
+            "    def _a(self):\n        return self._b()\n"
+            "    def _b(self):\n        return self._a()\n"
+        )
+        reached = reachable_self_calls(parser_methods_in(source), "_skip_substitution")
+        self.assertEqual(reached, {"_a", "_b"})
 
 
 def caught_names(handler):
@@ -2556,6 +2695,58 @@ class TestGuardDocumentation(unittest.TestCase):
             for stale in ("INFO_LETTERS", "in every family"):
                 with self.subTest(copy=plugin, stale=stale):
                     self.assertNotIn(stale, source)
+
+
+class TestSubstitutionSkipDocumentation(unittest.TestCase):
+    """The docstring of the substitution skip says that a case statement inside
+    the chunk is read and names every form that still makes the chunk
+    undecidable (FR9, D4); the module docstring keeps its sentence about a
+    chunk whose close cannot be located."""
+
+    STALE_SENTENCE = "a heredoc or a `case` inside it"
+    READ_MARKERS = (
+        "a case statement inside the chunk is read",
+        "its pattern's `)` closes neither the chunk nor a group",
+    )
+    UNDECIDABLE_MARKERS = (
+        "no `in` after the subject (zsh's brace form included)",
+        "no closing `esac` before the input ends",
+        "a `)` with no pattern at a pattern position",
+        "a heredoc anywhere in the chunk (item bodies included)",
+        "an unmatched `)` in an item body",
+        "an unquoted `;` or `&` where a pattern must begin",
+        "an unquoted newline, `;` or `&` in a pattern outside its groups",
+    )
+    MODULE_SENTENCE = (
+        "A chunk that is not closed, or whose close cannot be located with "
+        "certainty -> no output"
+    )
+
+    def test_the_docstring_no_longer_says_a_case_makes_the_chunk_undecidable(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                doc = parser_docstring(path, "_skip_substitution")
+                self.assertIsNotNone(doc, "no _skip_substitution method in _Parser")
+                self.assertNotIn(self.STALE_SENTENCE, doc)
+
+    def test_the_docstring_says_a_case_statement_inside_the_chunk_is_read(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            for marker in self.READ_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_docstring_names_each_form_that_stays_undecidable(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            for marker in self.UNDECIDABLE_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_module_docstring_keeps_the_sentence_about_an_unlocatable_close(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertIn(self.MODULE_SENTENCE, module_docstring(path))
 
 
 def verdict_of(result):
