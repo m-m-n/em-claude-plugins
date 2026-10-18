@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: a520219a2fee02800f8ac435eaa4428474c91498
 last_input_digest: sha256:f6a92d552c797d47d524d692bccfc9d391f1eb8e663ee2d73e7590501d24b62d
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -39,7 +39,17 @@ worker_runs:
   status: completed
   input_digest: sha256:f6a92d552c797d47d524d692bccfc9d391f1eb8e663ee2d73e7590501d24b62d
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:3ed142d16fb2d08f85a973f5e258bc3ee6e7e88f60cf22acf04a9ad9433246b3
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-backquote-comment-undecidable/REQUIREMENTS.md
+  sha256: sha256:6d726c2de3a7447f38940b93f0e102af16e2a0374c5afc0e0021b704c9d8d4eb
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-backquote-comment-undecidable/SPEC.md
+  sha256: sha256:934a42c3ab96f80eae7b3b99d1cc501c07798194d641e20caa8ef6c6107128d0
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
