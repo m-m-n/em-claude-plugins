@@ -5,13 +5,28 @@ status: in_progress
 generation: 1
 base_revision: 258d24e0d804c9f0ccb5f77fb48bc2f4792a1d7a
 last_input_digest: sha256:3453c38fb6153eed21305194fe564b47caf58d46cb1a6687a631c8dec6035b88
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  design-step.decision:
+    packet_id: null
+    answered_at: '2026-10-20T00:15:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック解析処理のバグ修正、デザインシステム候補ゼロ）'
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst
+      推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:3453c38fb6153eed21305194fe564b47caf58d46cb1a6687a631c8dec6035b88
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:877bbaaacd8254ba8fc3597d8dc8a48005b0be23ac0609fdf17799d75bc74969
   output_digest: null
 artifacts: []
 patches: []
