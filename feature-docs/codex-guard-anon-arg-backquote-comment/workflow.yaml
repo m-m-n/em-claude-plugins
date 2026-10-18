@@ -111,7 +111,12 @@ workflow:
   status: completed
   completed_at_commit: 0e6b8be86cb2453604dd7b6e1452a79e3570e1a1
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 07cfd041b9cbc5412ba1bb963178668f8b024c8a
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'test_command exit 0 (destructive-guard runner + unittest discover 10488 tests OK, skipped=1); guard suite 122 tests OK; TS-1..TS-13 deny on both copies (TS-4/9/13 equal to base copy); copies byte-identical; no version field change from base commit'
 - id: retrospect
   status: pending
 tasks:
