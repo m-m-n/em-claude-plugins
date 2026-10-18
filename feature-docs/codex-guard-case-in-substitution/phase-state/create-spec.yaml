@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-case-in-substitution
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 258d24e0d804c9f0ccb5f77fb48bc2f4792a1d7a
+last_input_digest: sha256:3453c38fb6153eed21305194fe564b47caf58d46cb1a6687a631c8dec6035b88
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:3453c38fb6153eed21305194fe564b47caf58d46cb1a6687a631c8dec6035b88
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
