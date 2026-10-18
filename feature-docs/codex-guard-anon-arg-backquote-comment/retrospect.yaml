@@ -1,0 +1,37 @@
+feature: codex-guard-anon-arg-backquote-comment
+collected_at: "2026-10-18T15:05:00+09:00"
+session_ids: [01a14d86-7fa8-7045-9d9c-a2efe0c78072]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが bucket 2（新しいロジック・複数モジュール）を 0.54 で示し、削減なしの full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.21, confidence: 0.79}
+        observed_at: "2026-10-18T13:20:30+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.54, confidence: 0.54}
+        observed_at: "2026-10-18T13:22:50+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 50
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 6
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で security#0 の medium（バッククォート内で _scan_parens が早く閉じた群に comment_exception が立ち、# の後ろの閉じない ' が _Undecidable(quote) となって先行行の python3 -i の deny が消える）を evaluator が low に下げた。判定不能箇所より前の起動を判定するか、例外の範囲を _scan_parens の範囲の終わりまでに限るかを別 feature で検討する候補"
