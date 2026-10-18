@@ -1,0 +1,105 @@
+task_id: task0001
+baseline_failures: []          # the suite as inherited, run in this worktree before any edit: the destructive-guard cases all passed and 10483 unittest tests ran, OK (1 skipped)
+final_failures: []             # re-executed in this worktree after the implementation and the record were written: the destructive-guard cases all passed and 10488 unittest tests ran, OK (1 skipped)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      The two CASES rows (the reproduction, and the reproduction followed by a
+      newline and python3 -i) were added before the guard was touched. In both
+      copies the hook printed nothing where deny was expected, and the test
+      errored with json.decoder.JSONDecodeError: Expecting value: line 1 column
+      1 (char 0), once per row per copy. The test feeds each copy the hook-input
+      JSON on its standard input.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      The CASES row for the nested form was added before the guard was touched.
+      In both copies the hook printed nothing where deny was expected
+      (json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)).
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      Row 4 (the scan stopping early at a ) inside the backquote, then a direct
+      ;) already produced deny on the unmodified copies, as the plan states, so
+      the table test had no red for it. It is the guard against an exception that
+      is too broad: a throw-away copy of the new guard with the clearing line
+      switched off printed nothing for row 4 (silent), while the base revision
+      and the finished guard print deny; that mutation run is not a baseline red.
+      The other part of this criterion is the direct invocation of
+      zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo x` | #)'
+      and the same with ||: the base revision copy printed nothing for both
+      (silent where deny was expected, observed), and both copies of the finished
+      guard print deny. Those two checks are direct hook invocations, recorded
+      here as the plan asks and given no test ID.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing table test
+      TestCasesTable.test_cases_run_against_both_copies detects a changed verdict
+      in any pre-existing CASES row on both copies (the rescue rows containing
+      #), the backquote rows with the unclosed-backquote rows among them, and the
+      comment-outside-a-group rows); no red state occurred for this change, since
+      no pre-existing row was edited or removed and all of them kept their
+      verdict. The three direct invocations of this criterion, run against the
+      base revision copy and both copies of the finished guard: foo(`x`#) printed
+      deny on all three (a mid-word # was never a comment); the
+      function { python3; } foo(`echo x` #) < /dev/null form printed nothing on the
+      base revision copy (silent where deny was expected, observed) and deny on
+      both finished copies; foo(`echo x`; #) printed the same deny object on all
+      three.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestCopies.test_the_two_copies_are_byte_identical detects a difference
+      between the two copies; no red state occurred for this change, because the
+      second copy was written with cp right after the first. The change touches
+      only the three files of the plan's Scope and the test record (git diff
+      --stat), with no version field in plugin.json or marketplace.json.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_the_comment_exception
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_the_comment_exception
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_argument_paren_reader_states_the_comment_exception
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_description_states_the_comment_exception_attribute
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_paren_search_is_not_described_as_fully_quote_aware
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_docstring_no_longer_limits_a_literal_c_string_to_the_first_level
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_group_description_no_longer_limits_the_rescue_to_the_end_of_input
+    red_confirmed: true
+    red_reason: >-
+      The four new marker tests failed in both copies before the guard was
+      touched, one failure per missing marker (AssertionError: the marker text
+      not found in the docstring of the module, of _Parser, of
+      _read_argument_parens and of _Group; the _Group test also asserts the
+      attribute name comment_exception). The last three tests are the existing
+      ones that keep the marker sentence "a backquote and a comment get no
+      special reading" and keep STALE_DOCSTRING_SENTENCES and
+      STALE_GROUP_SENTENCES out of the docstrings; they passed before and after
+      the change.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_nested_parens_among_anonymous_function_arguments_are_answered
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_unclosed_ranges_are_rescued_at_any_depth_and_the_launch_after_them_is_denied
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing performance tests
+      (the nested backquote ranges and the rescue-form case), the recursion check
+      and the static constraints check read both copies and detect a parse that
+      is no longer linear, a recursive function and a use of anything outside the
+      standard library; they all passed before the change and after it, so no red
+      state occurred for this change. The project test command (the
+      destructive-guard cases and the whole unittest discover) is the full check
+      and was run at the start and at the end.
