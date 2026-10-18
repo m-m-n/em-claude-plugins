@@ -99,7 +99,12 @@ workflow:
   status: completed
   completed_at_commit: 22eaa051a35c2de2543955b91ade1dafcefd2443
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'test_command passed (destructive-guard 943/943; unittest 10491 tests OK, 1 skipped). TS-1..TS-8 covered by CASES and guard suite; TS-9 change set has no plugin.json / marketplace.json; AC-5 inspection: parse body and _remove_range_quotes both call _read_quoted_unit, _double_quoted removed, _skip_substitution does not call back; copies byte-identical.'
+  completed_at_commit: 9b3357618fd60bf3fb9f0e026defca564c599ec9
 - id: retrospect
   status: pending
 tasks:
