@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-heredoc-delim-dq-subst
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 8d9a02dea8fca0d389166dcf62bdb0e457bab557
 last_input_digest: sha256:0232baf44986d71a4d376356b15999e005f9bafd098328e3fecd7797d068cdce
