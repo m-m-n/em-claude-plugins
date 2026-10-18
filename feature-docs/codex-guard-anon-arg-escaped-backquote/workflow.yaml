@@ -127,7 +127,8 @@ workflow:
   failed_items: []
   completed_at_commit: f9ea6d8e99af7994a9bd7aa20bb7b2fc45f7502e
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 3a9f62832564e0fae96ce13a3873e1794075e17a
 tasks:
   task0001:
     title: Skip backslash pairs in the unquoted-backquote closing search
