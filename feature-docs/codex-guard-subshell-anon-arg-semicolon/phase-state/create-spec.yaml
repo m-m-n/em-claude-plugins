@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 4629f80aa70b1db71efc35fad7153d53f17044cc
 last_input_digest: sha256:ea880d796a588a1e84725c4bd255f4aae38348b373801c524ad646d526fffa3e
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -50,10 +50,16 @@ worker_runs:
   input_digest: sha256:ea880d796a588a1e84725c4bd255f4aae38348b373801c524ad646d526fffa3e
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:f907ed324e2eee2fd4d658c0cf6c4240ae659e1da2ab512801cd53598da7bd12
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-subshell-anon-arg-semicolon/REQUIREMENTS.md
+  sha256: sha256:e14d68301f4da2f0c828b98b9f3bbd77873db408425bf391846d41dbc38862df
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-subshell-anon-arg-semicolon/SPEC.md
+  sha256: sha256:77777bb3fb3876d97ad40d075e6490f6219c0ef34c44f4ec4b9c018044ebaf0c
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
