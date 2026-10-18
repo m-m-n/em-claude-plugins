@@ -1,0 +1,64 @@
+schema_version: 2
+feature: codex-guard-anon-arg-backquote-comment
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.21
+    confidence: 0.79
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.21
+      '3': 0.0
+  observed_at: '2026-10-18T13:20:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.54
+    confidence: 0.54
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.46
+      '2': 0.54
+      '3': 0.0
+  observed_at: '2026-10-18T13:22:50+09:00'
+pre_survey_estimate:
+  files_expected:
+  - feature-docs/codex-guard-anon-arg-backquote/SPEC.md
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 50
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 指定JSONをem-workflowのフックへ標準入力で渡した結果、終了コード0、標準出力・標準エラーとも空でdenyしなかった。入力内のコマンドは実行していない。両コピーはバイト単位で同一。両コピーの1132〜1147行でバッククォートを含む範囲から群を開き、1460〜1470行で空白後の#をコメントとして読み飛ばす。1535〜1537行では救済後も群が残ると_Undecidable('group')になる。CASESは589件で指定コマンドの項目はない。880〜891行の既存テストはCASESを両コピーへ渡す。SPECの46行がFR5、221行がA2の制約を定める。直接呼出元は1、内部依存メソッドは5。変更行数は概算で、ファイル変更は行っていない
+decided_at: '2026-10-18T13:23:00+09:00'
