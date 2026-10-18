@@ -2,34 +2,65 @@ schema_version: 1
 feature: codex-guard-anon-arg-escaped-backquote
 created: '2026-10-18'
 base_branch: main
-goal: |
-  # codex-hook-interactive-guard: 匿名関数の引数中の ( 〜 ) 範囲の入れ子のコマンド置換（\` で打ち消したバッククォート）を群の読みが終端と誤認し、本体の python3 -i を見逃す（回帰）
+goal: '# codex-hook-interactive-guard: 匿名関数の引数中の ( 〜 ) 範囲の入れ子のコマンド置換（\` で打ち消したバッククォート）を群の読みが終端と誤認し、本体の
+  python3 -i を見逃す（回帰）
+
 
   ## 現象 (必須)
-  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、zsh 匿名関数の引数中の `(`〜`)` 範囲に入れ子のコマンド置換（バックスラッシュで打ち消したバッククォート）があると、群の読みが打ち消したバッククォートを終端と誤認する。最後のバッククォートが未閉鎖と判定され `_Undecidable('quote')` になり、匿名関数本体の明示的な `python3 -i` の deny が外れる（無出力）。
-  feature `codex-guard-anon-arg-backquote`（範囲内にバッククォートがあれば群の読みに戻す変更）で表に出た後退。変更前は deny だった。review round 1 の指摘（stable_id `dfdc820511d4c859`、severity medium、category security）。
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、zsh 匿名関数の引数中の
+  `(`〜`)` 範囲に入れ子のコマンド置換（バックスラッシュで打ち消したバッククォート）があると、群の読みが打ち消したバッククォートを終端と誤認する。最後のバッククォートが未閉鎖と判定され
+  `_Undecidable(''quote'')` になり、匿名関数本体の明示的な `python3 -i` の deny が外れる（無出力）。
+
+  feature `codex-guard-anon-arg-backquote`（範囲内にバッククォートがあれば群の読みに戻す変更）で表に出た後退。変更前は deny
+  だった。review round 1 の指摘（stable_id `dfdc820511d4c859`、severity medium、category security）。
+
   ## 再現手順 (必須)
-  1. `tool_input.command` に `zsh -c 'setopt nonomatch nobareglobqual; function { python3 -i; } foo(`echo \\`echo x\)'` を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+
+  1. `tool_input.command` に `zsh -c ''setopt nonomatch nobareglobqual; function {
+  python3 -i; } foo(`echo \\`echo x\)''` を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+
   2. 終了コード 0・空出力になる（期待は `permissionDecision: deny`）
+
   ## 期待する挙動 (必須)
-  引用符の外のバッククォートの終端を探すときも、`_skip_substitution` の b 文脈と同じくバックスラッシュの組を読み飛ばし、本体の `python3 -i` を deny する。
+
+  引用符の外のバッククォートの終端を探すときも、`_skip_substitution` の b 文脈と同じくバックスラッシュの組を読み飛ばし、本体の `python3
+  -i` を deny する。
+
   ## 完了の定義 (必須)
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
   - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上のコマンドを deny として追加
+
   - [ ] 両コピーがバイト単位で同一のまま
+
   ## 該当箇所 (任意)
-  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `parse` の引用符外バッククォート処理（1200-1205 行付近、`s.find("`", i + 1)`）、`_read_argument_parens\`（943-948 行付近）
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `parse` の引用符外バッククォート処理（1200-1205
+  行付近、`s.find("`", i + 1)`）、`_read_argument_parens\`（943-948 行付近）
+
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
   - 記録: `feature-docs/codex-guard-anon-arg-backquote/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-anon-arg-backquote/integration`）
+
   ## 実害・発生条件 (任意)
+
   見逃し側（fail-open）。THREAT-MODEL の明示的な `-i` は拒否する方針を満たさない。書かれる見込みの小さい形。
+
 
   Notion: <notion-url>
 
+
   ## 追加指示
 
-  - 実装完了後 integration ブランチを push し gh pr create で base_branch への PR を作る（自動マージしない。integration ブランチはローカルとリモートの両方に残す）。不明点は Codex に相談し比較的良い案を採用、その議論内容を Notion に記録する。
+
+  - 実装完了後 integration ブランチを push し gh pr create で base_branch への PR を作る（自動マージしない。integration
+  ブランチはローカルとリモートの両方に残す）。不明点は Codex に相談し比較的良い案を採用、その議論内容を Notion に記録する。
+
+  '
 parent_branch: em-workflow/codex-guard-anon-arg-escaped-backquote/integration
 tier: reduced
 tier_decision:
@@ -58,7 +89,8 @@ project:
     main:
       language: Python / Markdown
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
       format_command: ''
       e2e_test_command: ''
 workflow:
@@ -72,7 +104,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI を持たないフックスクリプトの修正であるため（design-step 推奨: skipped、デザインシステム候補ゼロ。tier reduced でも design は削減対象）'
+  skipped_reason: 'UI を持たないフックスクリプトの修正であるため（design-step 推奨: skipped、デザインシステム候補ゼロ。tier
+    reduced でも design は削減対象）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -88,7 +121,29 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Skip backslash pairs in the unquoted-backquote closing search
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -100,43 +155,59 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-4
+    - TS-5
   FR2:
     title: 両コピーへの同一の変更
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
   FR3:
     title: 再発を検出する CASES の行
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   NFR1:
     title: 終端探索は線形時間・再帰なし
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-4
   NFR2:
     title: 標準ライブラリのみ・TestStaticConstraints を満たす
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   NFR3:
     title: 既存の CASES とその他のテストの判定を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
 batch:
   review_rework_count: 0
   verify_rework:
