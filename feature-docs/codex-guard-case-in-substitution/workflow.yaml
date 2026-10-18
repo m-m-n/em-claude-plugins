@@ -1,0 +1,228 @@
+schema_version: 1
+feature: codex-guard-case-in-substitution
+created: '2026-10-20'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: $( ) の中の case 文で判定不能になり、同じ -c 文字列の python3 -i を見逃す（語の読み取り側と匿名関数の引数位置のヒアドキュメント区切り語の範囲の両方）
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）の `_skip_substitution` は、`$( ... )` の中に `case` の予約語があると判定不能（`_Undecidable("case in a substitution")`）にする。判定不能になると入力全体が無出力（silent）になるため、同じ `-c` 文字列にある `python3 -i` の deny が出ない。
+  - 語の読み取り側（二重引用符の中の `$(case ...)`）では以前からこの挙動だった
+  - feature `codex-guard-anon-heredoc-delim-dq-subst` で、匿名関数の引数位置のヒアドキュメント区切り語の範囲も同じ共通処理を通るようになり、区切り語の範囲の二重引用符の中の `$(case ...)` でも判定不能になった。変更前はこの入力で deny が出ていた
+  同 feature の SPEC FR4 と THREAT-MODEL TM-2 は、この判定不能を受け入れ済みの残余として扱っている。review round 1 の security 指摘（medium、評価者が low に下げて carry）。
+  ## 再現手順 (必須)
+  1. `tool_input.command` に `zsh -c ` + shlex.quote(inner) を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）。inner は次の 3 行
+  ```plain text
+  function { :; } << foo("$(case x in x) echo foo;; esac)")
+  foo($(case x in x) echo foo;; esac))
+  python3 -i
+  ```
+  1. 標準出力が空になる（期待は deny）
+  2. 語の読み取り側の例: inner を `echo "$(case x in x) :;; esac)"; python3 -i` にしても標準出力が空になる（期待は deny）
+  ## 期待する挙動 (必須)
+  `_skip_substitution` が `case` のパターンの閉じ括弧 `)` を置換の終わりと取り違えずに読み飛ばし、置換の終わりを正しく見つける。語の読み取り側と区切り語の範囲の両方で、後続の `python3 -i` が deny になる。
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上の 2 入力を追加
+  - [ ] 両コピーがバイト単位で同一のまま
+  ## 該当箇所 (任意)
+  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_skip_substitution`（`case in a substitution` を出す箇所）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-anon-heredoc-delim-dq-subst/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-anon-heredoc-delim-dq-subst/integration`）
+  ## 実害・発生条件 (任意)
+  `$( )` の中に `case` 文を書いた場合だけ。判定不能は silent に倒れるため fail-open。
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・remote とも残す（自動マージしない）。
+  - 不明点は Codex に相談し、比較的良いと判断した案を採用する。
+  - その議論の内容を Notion に記録する。
+parent_branch: em-workflow/codex-guard-case-in-substitution/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.88
+      '2': 0.12
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.52
+      '2': 0.48
+      '3': 0.0
+  at: '2026-10-19T00:04:50+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 41efe6436635931d078bbba2eabc5fdb2a64227d
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 置換の中の case 文を読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS10
+    - TS15
+  FR2:
+    title: パターンの中の読み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+    - TS8
+  FR3:
+    title: 項目の本体の読み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+    - TS8
+    - TS9
+    - TS10
+  FR4:
+    title: 確定できない形は判定不能のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS12
+    - TS13
+    - TS14
+  FR5:
+    title: 再現入力を deny にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS15
+  FR6:
+    title: 変えないもの
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS11
+    - TS17
+  FR7:
+    title: 再発を検出する CASES の行
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 2 つのコピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS17
+  FR9:
+    title: docstring の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 性能
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS16
+  NFR2:
+    title: 呼び出し構造
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS17
+  NFR3:
+    title: 静的な制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS17
+  NFR4:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
