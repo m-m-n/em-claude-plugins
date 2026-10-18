@@ -1,0 +1,12 @@
+schema_version: 2
+feature: codex-guard-anon-heredoc-delim-dq-subst
+tier: full
+bases:
+  - basis: description_only
+    score: {"type": "score", "score": 1.42, "confidence": 0.57, "legend": {"0": "0: Only a wording or rule-text change: no new logic, and no test change.", "1": "1: A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "2: New logic, a change reaching across several modules, or a change to an external contract.", "3": "3: A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.0, "1": 0.61, "2": 0.35, "3": 0.04}}
+    observed_at: "2026-10-18T15:22:40+09:00"
+  - basis: description_plus_code
+    score: {"type": "score", "score": 1.78, "confidence": 0.78, "legend": {"0": "0: Only a wording or rule-text change: no new logic, and no test change.", "1": "1: A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.", "2": "2: New logic, a change reaching across several modules, or a change to an external contract.", "3": "3: A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture."}, "probabilities": {"0": 0.0, "1": 0.22, "2": 0.78, "3": 0.0}}
+    observed_at: "2026-10-18T15:25:32+09:00"
+pre_survey_estimate: {"files_expected": ["em-workflow/scripts/codex-hook-interactive-guard.py", "em-review/scripts/codex-hook-interactive-guard.py", "tests/test_codex_hook_interactive_guard.py"], "changed_lines_approx": 240, "new_functions_needed": 1, "new_files_needed": 0, "new_dependencies_needed": [], "covering_tests_exist": false, "spillover_modules": [], "work_still_required": true, "test_change_kind": "extend_existing_one_to_one", "added_test_cases_approx": 2, "body_change_kind": "new_logic", "change_containment": "multiple_modules", "caller_and_dependency_count": 5, "changes_external_contract": false, "changes_behavior": true, "evidence": "両コピーの_remove_range_quotes、_double_quoted、parse、既存CASESとround1記録を確認。両コピーで再現入力は見逃し側=silent、誤deny側=denyとなり、問題が残っている。両コピーはバイト単位で一致。CASES593件に再現2入力はなく、関連する既存19テストは成功。呼出関係5件は引用除去2処理の直接呼出元2件と依存先3件を数えた。概算は引用処理の共通化とCASES2件追加に基づく。ファイル変更なし"}
+decided_at: "2026-10-18T15:25:40+09:00"
