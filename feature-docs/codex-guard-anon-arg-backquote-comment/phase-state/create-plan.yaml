@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-anon-arg-backquote-comment
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: d6beae53d44c2e1975dd99d70dbdf2cc663e8fac
 last_input_digest: sha256:3b758d551a6f950704499ff0ef4c202585e9ca497511e0e88994dd0fe8a219f6
@@ -28,7 +28,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: codex-guard-anon-arg-backquote-comment-create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:3b758d551a6f950704499ff0ef4c202585e9ca497511e0e88994dd0fe8a219f6
   base_workflow_blob: 87a3409449a828b2237dc86245a40083cf9a2c5e
 progress_fingerprint: null
