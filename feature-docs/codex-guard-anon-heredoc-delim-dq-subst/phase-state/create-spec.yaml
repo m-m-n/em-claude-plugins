@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-anon-heredoc-delim-dq-subst
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 8d9a02dea8fca0d389166dcf62bdb0e457bab557
+last_input_digest: sha256:41c9ff20d6e0eac95d1b1468bcfad71da8e6e311b307e60932347cabca8a29dd
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:41c9ff20d6e0eac95d1b1468bcfad71da8e6e311b307e60932347cabca8a29dd
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
