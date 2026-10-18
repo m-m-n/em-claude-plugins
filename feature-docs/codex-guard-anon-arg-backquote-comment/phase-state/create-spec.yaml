@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-anon-arg-backquote-comment
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 9800e9b1e04231d42bc0462bdf1f9eea76de79aa
-last_input_digest: sha256:3e74a71ea5c8280903f7bea3fc92a48382f898c464ad6413cc96698bc5452d5c
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:d0231a4f0c968ac95a7d48e5ea31976400ed35da643b71a117189563c726638b
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -18,7 +18,7 @@ packets:
 answers:
   requirement.fix-approach:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-18T13:40:00+09:00'
+    answered_at: '2026-10-18T13:33:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -28,7 +28,7 @@ answers:
     resolution_note: 'gate: create-spec.requirement-clarification（batch-policies: codex_consultation, record_as_assumption）; Codex に 1 ターン相談（harness: codex）; Codex は hash_is_word_in_backquote_group を推奨し、区切りを直接読んだ後に例外を解除する境界を補うよう指摘（解除が無いと case 文の ) で走査が早く止まる形で新しい見逃しが出る）; 不採用: hash_is_word_in_all_provisional（既存 silent ケースの期待値が変わる）, read_backquote_in_scan（前 SPEC の FR1/FR4 と既存 deny 571/572 行を覆す）, rescue_unseparated_backquote_group（FR5 を変え、後続改行の形を救えない）; Opus escalation: 実行せず; オーケストレーターが写像を判断し、境界の補足を仮定として記録'
   design-step.recommendation:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-18T13:40:00+09:00'
+    answered_at: '2026-10-18T13:33:00+09:00'
     source: batch-decision-table
     answer_mode: single_select
     selected_option_ids:
@@ -41,6 +41,10 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:3e74a71ea5c8280903f7bea3fc92a48382f898c464ad6413cc96698bc5452d5c
   output_digest: sha256:3b7cf3a26872d42dd3413193e5efd925b715acddbae930c863b594ec66f0adb8
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:d0231a4f0c968ac95a7d48e5ea31976400ed35da643b71a117189563c726638b
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
