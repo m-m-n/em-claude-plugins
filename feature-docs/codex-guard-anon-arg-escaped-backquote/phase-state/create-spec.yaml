@@ -1,0 +1,17 @@
+schema_version: 1
+feature: codex-guard-anon-arg-escaped-backquote
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: c50a72ece132f37abd7b8e9f7c3be63456619699
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
