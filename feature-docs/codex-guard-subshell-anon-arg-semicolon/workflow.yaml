@@ -99,7 +99,7 @@ workflow:
   excluded: []
   summary: 'test_command exit 0 (10496 tests OK, skipped=1; destructive-guard suite all ok); guard module 128 tests OK; copies byte-identical; TS-1..TS-14 spot-checked on both copies; zsh 5.9 REACHED confirmed'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: 'Rescue the provisional chain at `)` when its chain base is a subshell'
