@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-backquote-comment-undecidable
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: a520219a2fee02800f8ac435eaa4428474c91498
+last_input_digest: sha256:bd7fc2497b237c5effda12569b11c7c4f448b1ed86df0dc3f83e904991300f32
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:bd7fc2497b237c5effda12569b11c7c4f448b1ed86df0dc3f83e904991300f32
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
