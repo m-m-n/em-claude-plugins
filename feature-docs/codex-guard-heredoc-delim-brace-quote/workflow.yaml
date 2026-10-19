@@ -112,7 +112,7 @@ workflow:
   base_commit: 43651a1da605788b5671afd84057133c364644b8
   completed_at_commit: cf2c654a8e0ce196f316d17237a8018bc30bba4d
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -148,8 +148,14 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-heredoc-delim-brace-quote/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary:
+    - perspective: performance
+      reason: "NFR2 requires linear-time scanning in the changed parser (_dollar / delimiter reading)"
+    cross_validation: true
   residual_critical_high: 0
   needs_rework: false
 requirements:
