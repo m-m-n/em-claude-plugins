@@ -101,7 +101,7 @@ workflow:
   artifacts:
   - REQUIREMENTS.md
   - SPEC.md
-  status: completed
+  status: needs_update
   completed_at_commit: fbff20aebc6335a2edab3e0bc003df2d295e4e34
 - id: design
   artifacts:
@@ -116,14 +116,14 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: completed
+  status: pending
   completed_at_commit: 40ebde620078798b67b2559d5bc3a3535c7e9cc1
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: a6e53f6c3286764e3d8dc99a4dff3f423e3524ad
   base_commit: 9b275570614d2efe563c7f2eb2c8f9b677befd71
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
 - id: retrospect
@@ -279,7 +279,7 @@ requirements:
     tests:
     - TS-10
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
