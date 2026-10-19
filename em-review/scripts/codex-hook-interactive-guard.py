@@ -119,6 +119,35 @@ Decision flow:
      `&` or newline, in a group opened because no matching `)` is found and in a
      group whose exception was cleared, a `#` inside `$(` is read as before, and
      a `#` in the middle of a word is a word character as ever.
+     The word read as the target of `<<` or `<<-` (the delimiter position) has
+     a reading of its own for `${` and for `$'` and `$"`, and only there. An
+     unquoted `${` in it starts a range that ends at its close, and the range is
+     quote-removed as the close is searched, in one forward scan, before the
+     delimiter is registered. The close is the first `}` that is outside single
+     and double quotes, is not escaped by a backslash, does not lie inside a
+     `$( ... )` or a `$(( ... ))` and does not close a nested `${ ... }` (the
+     nested ones are counted by depth); a backquote there is an ordinary
+     character. The search runs over the whole string, not the line, so a quote
+     may span lines. The quote removal is the one described below: the `${`,
+     the `}`, a nested `${`, `#`, `:-` and every other character stay as
+     written, and the text before and after the range joins the registered
+     delimiter unchanged (`foo${v:-"x"}bar` is registered as `foo${v:-x}bar`).
+     The string is undecidable when the text ends before that close is found,
+     when a quote is still open at the end of the text and when a `$(` has no
+     close. An unquoted `$'` or `$"` makes it undecidable too, inside such a
+     range and outside any `${ ... }` of the delimiter alike, at the start of
+     the word or in the middle of it (`foo$'x'`): what zsh reads there is not
+     reproduced, so no delimiter is registered. A `$'` or `$"` inside double
+     quotes and a backslash-escaped `$` make nothing undecidable. An
+     undecidable string follows the checkpoint rule of step 9: the commands up
+     to the last checkpoint are judged, so a launch on an earlier line is
+     denied and one on the line of the delimiter is not, and a string with no
+     checkpoint gives no output. Nothing else changes: a `${ ... }` in any
+     other word (it closes at the first `}`, and the written characters stay a
+     dynamic word), a `$'` or a `$"` in any other word, the target of `<<<` or
+     `<`, a `${ ... }` inside double quotes in the delimiter, which the
+     double-quoted unit reader reads, and a `$( ... )` written directly in the
+     delimiter word keep their reading.
      A range read as one word that is the delimiter of `<<` or `<<-`, or a part
      of it, has its text quote-removed by the rules the reader applies to any
      word, before the delimiter is registered: outside quotes a backslash is
@@ -1449,10 +1478,11 @@ class _Parser:
         )
         self.paren_budget = max(0, self.paren_budget - (reached - start))
         if end is not None and not separated and not backquoted:
-            if self.redirect is not None and self.redirect[0]:
+            if self._at_delimiter():
                 # The range is part of the delimiter of `<<` or `<<-`: register
                 # the delimiter zsh uses, not the raw text of the range.
-                self._put(self._remove_range_quotes(start, end), quoted=True)
+                text, _ = self._remove_range_quotes(start, end)
+                self._put(text, quoted=True)
             else:
                 self._put(self.s[start:end], quoted=True)
             self.i = end
@@ -1464,39 +1494,65 @@ class _Parser:
         if end is not None and not separated and backquoted:
             group.comment_exception = True
 
-    def _remove_range_quotes(self, start, end):
-        """Return the text of the range `self.s[start:end]` (from its `(` through
-        its `)`) with its quotes removed the way a word's quotes are removed
-        where the reader meets them: it is the delimiter of `<<` or `<<-`, so
-        the text zsh compares the body lines with is what gets registered.
+    def _at_delimiter(self):
+        """Whether the word being read is the delimiter of `<<` or `<<-`: the
+        operator has been read and its target word is not finished yet. This is
+        the delimiter position; the readings that apply only there ask for it."""
+        return self.redirect is not None and self.redirect[0]
 
-        One pass from left to right over the range, three quote states: outside
-        quotes, single-quoted, double-quoted. Outside quotes a backslash is
-        dropped and the next character kept (a backslash and a newline are both
-        dropped), `'` and `"` open their state and are dropped, and every other
-        character is kept: `$` not followed by a quote, `$x`, nested
-        parentheses, and the text of a `$( ... )`, which is kept as written
-        with the quotes inside it. A `$` right before a `'` or a `"` outside
-        quotes raises _Undecidable: what zsh reads there is not known.
+    def _remove_range_quotes(self, start, end, braced=False):
+        """Return (text, next): the text of the range `self.s[start:end]` with
+        its quotes removed the way a word's quotes are removed where the reader
+        meets them, and the index where reading goes on. The range is part of
+        the delimiter of `<<` or `<<-`, so the text zsh compares the body lines
+        with is what gets registered. Two kinds of range are read by the one
+        scan below.
+
+        A parenthesised range (`braced` false) runs from its `(` through its
+        `)`, and `next` is `end`. A braced range (`braced` true) starts at an
+        unquoted `${` at `start` and ends at the `}` that closes it, which this
+        scan finds: `end` is then only the limit of the text (the end of the
+        input), not the end of the range, and `next` is the index just after
+        the closing `}`. The close search runs over the text, not the line, so
+        a quote may span lines. The close is the first unquoted, unescaped `}`
+        at nesting depth zero: an unquoted `${` adds one to the depth and an
+        unquoted `}` takes one off; a `}` inside single or double quotes, a
+        `}` a backslash escapes and a `}` inside a `$( ... )` count for
+        nothing; a backquote is an ordinary character, neither a quote nor a
+        substitution. A braced range raises _Undecidable when the text ends
+        before the depth is back to zero.
+
+        One pass from left to right, three quote states: outside quotes,
+        single-quoted, double-quoted. Outside quotes a backslash is dropped and
+        the next character kept (a backslash and a newline are both dropped),
+        `'` and `"` open their state and are dropped, and every other character
+        is kept: `$` not followed by a quote, `$x`, nested parentheses, the
+        `${` and `}` of a braced range with the `#` and `:-` between them, and
+        the text of a `$( ... )`, which is kept as written with the quotes
+        inside it. A `$` right before a `'` or a `"` outside quotes raises
+        _Undecidable: what zsh reads there is not known.
         A backslash pair, a single-quoted unit and a double-quoted unit are
-        read by the shared reader `_read_quoted_unit`, held to the end of the
-        range, and it does the quote removal. Single-quoted text is kept as it
-        stands, backslashes included, and the closing `'` is dropped. In double
-        quotes a backslash before `$`, a backquote, `"`, `\\` or a newline is
-        dropped (before a newline together with it) and the next character
-        kept, any other backslash stays with the next character, a `$'` or `$"`
-        there is no trigger, and the closing `"` is dropped. A `$( ... )` or a
+        read by the shared reader `_read_quoted_unit`, held to `end`, and it
+        does the quote removal. Single-quoted text is kept as it stands,
+        backslashes included, and the closing `'` is dropped. In double quotes
+        a backslash before `$`, a backquote, `"`, `\\` or a newline is dropped
+        (before a newline together with it) and the next character kept, any
+        other backslash stays with the next character, a `$'` or `$"` there is
+        no trigger, and the closing `"` is dropped. A `$( ... )` or a
         `$(( ... ))` inside double quotes keeps its original text, the quotes
         inside it included. A quote the range does not close raises
         _Undecidable, and so does a substitution inside double quotes whose
-        skip ends beyond the range or cannot be read. The part of the word
-        outside the range is not read here: it was quote-removed when it was
-        read and is not processed again. Time is linear in the length of the
-        range; a `$( ... )` is skipped once, never rescanned. A skip that runs
-        beyond the range ends the whole reading, so it happens at most once."""
+        skip ends beyond `end` or cannot be read, and a `$( ... )` outside
+        quotes that has no close. The part of the word outside the range is not
+        read here: it was quote-removed when it was read and is not processed
+        again. Time is linear in the length of the range whatever its nesting
+        depth: each character is read a bounded number of times, and a
+        `$( ... )` is skipped once, never rescanned. A skip that runs beyond
+        `end` ends the whole reading, so it happens at most once."""
         s = self.s
         out = []
         j = start
+        depth = 0
         while j < end:
             ch = s[j]
             if ch in "\\'\"":
@@ -1513,10 +1569,22 @@ class _Parser:
                     raise _Undecidable("parenthesis")
                 out.append(s[j:close])
                 j = close
+            elif braced and ch == "$" and j + 1 < end and s[j + 1] == "{":
+                depth += 1
+                out.append("${")
+                j += 2
+            elif braced and ch == "}":
+                out.append(ch)
+                j += 1
+                depth -= 1
+                if depth == 0:
+                    return "".join(out), j
             else:
                 out.append(ch)
                 j += 1
-        return "".join(out)
+        if braced:
+            raise _Undecidable("brace")
+        return "".join(out), j
 
     def _read_quoted_unit(self, start, limit):
         """Read the quoted unit that opens at `start` and return (text, next,
@@ -1525,7 +1593,9 @@ class _Parser:
         inside double quotes. This is the one reader of a backslash pair, a
         single-quoted unit and a double-quoted unit: word reading calls it with
         the end of the input as `limit`, and the quote removal of a delimiter
-        range (`_remove_range_quotes`) calls it with the end of the range.
+        range (`_remove_range_quotes`) calls it with the end of the range (the
+        end of the input, for the range of a delimiter's `${`, whose end is
+        found by the same scan).
 
         `limit` is exclusive: the unit must end before it, so `next` never lies
         beyond it. The caller guarantees `start < limit` and that the character
@@ -1854,10 +1924,22 @@ class _Parser:
     def _dollar(self):
         s, i = self.s, self.i
         nxt = s[i + 1] if i + 1 < self.n else ""
+        # At the delimiter position the `${` and the `$'` / `$"` get their own
+        # reading; everywhere else the readings below stay as they were.
+        delimiter = self._at_delimiter()
         if nxt == "(":
             end = self._skip_parens(i + 1)
             self._put(s[i:end], quoted=True, dynamic=True)
             self.i = end
+        elif nxt == "{" and delimiter:
+            # The range from the `${` to its close is quote-removed as it is
+            # found, in one scan; the registered delimiter is the text zsh
+            # compares the body lines with.
+            text, self.i = self._remove_range_quotes(i, self.n, braced=True)
+            self._put(text, quoted=True, dynamic=True)
+        elif nxt in ("'", '"') and delimiter:
+            # What zsh reads here is not known, so no delimiter is registered.
+            raise _Undecidable("dollar quote")
         elif nxt == "{":
             end = s.find("}", i + 2)
             if end == -1:
