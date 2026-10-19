@@ -143,7 +143,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-guard-heredoc-delim-brace-quote/task0001
 review:
