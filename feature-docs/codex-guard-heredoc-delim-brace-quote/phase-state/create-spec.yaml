@@ -6,11 +6,71 @@ generation: 1
 base_revision: 1b2102de4c347ef8555e627e061665e844c693a3
 last_input_digest: sha256:2045723eb729b128aa33964aba1f6cafa9a43993a5716a70ad06107e3683b5cf
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+answers:
+  requirement.brace-quote-forms:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-19T20:12:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - same_as_range
+    freeform: null
+    normalized_answer: 区切り語（<< / <<-）として読む語の ${ ... } の範囲に _remove_range_quotes と同じ規則を当てる。二重引用符・単引用符・バックスラッシュを除去し、$(
+      ) は書かれたまま残し、引用されていない $' と $" は判定不能（出力なし）にする。区切り語でない位置の ${...} の読みは変えない。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢:
+      same_as_range / double_quote_only / undecidable_on_quote。zsh 5.9 実測（オーケストレーターが zsh -f -c ''cat <<D
+      / BODY / C / echo AFTER_RUN'' で終端行を照合）: ${v:-"x"}・${v:-''x''}・${v:-\x} → ${v:-x}、${v:-$''x''} →
+      ${v:-x}、${v:-$(echo "x")} → 書かれたまま、${v:-"a}b"} → ${v:-a}b}、${a:-${b:-"x"}} → ${a:-${b:-x}}、外側の $''x''
+      → x、外側の $"x" → $x。Codex 1 ターンで same_as_range を推奨: _remove_range_quotes は観測された " / '' / \ の除去と $(
+      ) 内の引用の保持に一致する。double_quote_only は '' と \ を取りこぼし、undecidable_on_quote は見逃しを解消しない。未引用の $'' / $" は既存規則どおり判定不能にする（zsh
+      の $''x'' → x を正確に再現しない代わりに fail-closed 側の誤爆も生まない）。比較的良いと判断し採用。Opus エスカレーションは不要。'
+  requirement.brace-quoted-close:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-19T20:12:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_quotes_in_delimiter
+    freeform: null
+    normalized_answer: 区切り語の位置に限り、${ ... } の閉じの } を探すときに引用の中の } を飛ばす（${v:-"a}b"} → ${v:-a}b}）。入れ子の ${...}・エスケープ・$(
+      ) の中の } も区別し、閉じ位置を確定できなければ判定不能にする。区切り語でない位置の } の探し方は変えない。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢:
+      out_of_scope_undecidable / skip_quotes_in_delimiter / skip_quotes_everywhere。zsh 5.9 実測（オーケストレーターが
+      zsh -f -c ''cat <<D / BODY / C / echo AFTER_RUN'' で終端行を照合）: ${v:-"x"}・${v:-''x''}・${v:-\x} → ${v:-x}、${v:-$''x''}
+      → ${v:-x}、${v:-$(echo "x")} → 書かれたまま、${v:-"a}b"} → ${v:-a}b}、${a:-${b:-"x"}} → ${a:-${b:-x}}、外側の
+      $''x'' → x、外側の $"x" → $x。同じ Codex ターンで skip_quotes_in_delimiter を推奨: zsh は引用内の } で ${...} を閉じない。out_of_scope_undecidable
+      は後続の起動の見逃しを残し、skip_quotes_everywhere は普通の引数の読みまで変える。区切り語の位置に限定すれば影響を抑えられるため比較的良いと判断し採用。Opus エスカレーションは不要。'
+  requirement.bare-dollar-quote-delimiter:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-19T20:12:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - undecidable
+    freeform: null
+    normalized_answer: 区切り語の位置にある、${...} の外の引用されていない $' と $" は判定不能（出力なし）にする。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢:
+      out_of_scope / undecidable。zsh 5.9 実測（オーケストレーターが zsh -f -c ''cat <<D / BODY / C / echo AFTER_RUN''
+      で終端行を照合）: ${v:-"x"}・${v:-''x''}・${v:-\x} → ${v:-x}、${v:-$''x''} → ${v:-x}、${v:-$(echo "x")} → 書かれたまま、${v:-"a}b"}
+      → ${v:-a}b}、${a:-${b:-"x"}} → ${a:-${b:-x}}、外側の $''x'' → x、外側の $"x" → $x。同じ Codex ターンで undecidable
+      を推奨: 現状は $''x'' をそのまま登録するため、zsh の終端 x と食い違い、見逃しに加えて誤拒否も起きる（Codex 実験: cat <<$''x'' の本文に $''x''・python3
+      -i・x を置くと本文中の起動を deny する）。判定不能にすれば誤った終端の登録を避けられるため比較的良いと判断し採用。Opus エスカレーションは不要。'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-19T20:12:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック判定ロジックの修正、デザインシステム候補ゼロ）'
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:2045723eb729b128aa33964aba1f6cafa9a43993a5716a70ad06107e3683b5cf
   output_digest: null
 artifacts: []
