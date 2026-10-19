@@ -1,0 +1,13 @@
+schema_version: 1
+feature: codex-guard-case-paren-rescue
+records:
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-10-20T01:04:52+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Apply as-is (editor interprets); editor skip -> residual high routed to R5 batch auto-rework
+  normalized_answer: Apply as-is (editor interprets); editor skip -> residual high routed to R5 batch auto-rework
+  resolution_note: 'gate: review.auto-fix-judgment (round 1, same-site highs 285d9bc33784bb3d / df4afa83e782d56a, prose suggestions requiring edits to both guard copies + tests). options: A) Apply as-is on the em-workflow copy only (breaks FR6/NFR2 byte identity) / B) reclassify as conflict-skip and go straight to rework / C) keep R4 classification (compatible needs-judgment), dispatch editor Apply as-is, accept the editor''s documented `skipped` for multi-file fixes, and route residual highs to R5 batch auto-rework (cap 1). codex_consulted: true -> Codex chose C: reclassifying to conflict has no basis; review-editor.md says to skip when a second file is needed; A creates copy divergence; B''s assumption that changing FR1 ''permanent'' is not a spec change is not guaranteed -- rework-planner may return rework.spec-change and the classification gate decides. chosen: C (judged comparatively better). opus_escalation: not run. outcome: both editors returned skipped (multi-file), loop termination
+    no-progress.'
