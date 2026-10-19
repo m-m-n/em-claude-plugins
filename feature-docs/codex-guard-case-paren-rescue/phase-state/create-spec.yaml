@@ -1,16 +1,59 @@
 schema_version: 1
 feature: codex-guard-case-paren-rescue
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 60d7002b8200e446ae8e93eb34da108dcb6d5697
 last_input_digest: sha256:d090c56e7d7d6adce77c5041c7660cb9caf1cd43ba376f7e0cd8950047c4a229
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-20T00:14:43+09:00'
+    questions:
+    - question_id: requirement.case-command-position
+      status: answered
+    - question_id: requirement.case-mark-chain
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.case-command-position:
+    question_id: requirement.case-command-position
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-20T00:14:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - after_reserved_run
+    freeform: null
+    normalized_answer: 先頭の予約語の並び（!・time・then・do など）を除いた後に _append_word が最初に残す語が、引用・エスケープ・展開の無い case のとき印を付ける。! case と time case も対象にする。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: after_reserved_run / first_word_only。オーケストレーターの zsh 5.9 実測: foo(a; ! case x in x) < /dev/null と foo(a; time case x in x) < /dev/null は HEAD で silent、base 0e4426d6 で deny、実 zsh では MARKER が出る（リダイレクトは python3 に届かない）。analyst の入れ子例 foo(a; case x in function { :; } bar(b; x) は zsh の構文エラーで、HEAD でも deny。 Codex 1 ターンで after_reserved_run を推奨: ! case と time case でも同じ退行を再現できたため、予約語の並びを除いた位置で判定する必要がある。first_word_only はこの 2 形の退行を残す。比較的良いと判断し採用。Opus エスカレーションは不要。'
+  requirement.case-mark-chain:
+    question_id: requirement.case-mark-chain
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-20T00:14:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - inherit_in_chain
+    freeform: null
+    normalized_answer: 印のある仮の群の中で開いた仮の子の群に、開いた時点で親から定数時間で決まる別の値（親の印または親のその値）を固定する。_closes_paren_after_rescue は自分の印かその値があれば救済しない。outer_blocked とは別に持ち、} の救済には影響させない。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。選択肢: inherit_in_chain / innermost_only。オーケストレーターの zsh 5.9 実測: foo(a; ! case x in x) < /dev/null と foo(a; time case x in x) < /dev/null は HEAD で silent、base 0e4426d6 で deny、実 zsh では MARKER が出る（リダイレクトは python3 に届かない）。analyst の入れ子例 foo(a; case x in function { :; } bar(b; x) は zsh の構文エラーで、HEAD でも deny。 同じ Codex ターンで inherit_in_chain を推奨し、zsh 5.9 で有効な入れ子の例を示した: zsh -c ''setopt nobadpattern; ( function { python3; } foo(a; case ${v:-${x:-}; function { :; } bar(b; x} in x) < /dev/null :;; y) :;; esac; )''。実 zsh では MARKER が出る一方、innermost_only では silent のまま、継承では base と同じ deny になることを Codex がメモリ上で確認した。比較的良いと判断し採用。Opus エスカレーションは不要。'
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-20T00:14:43+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step を省略する（batch policy decide_autonomously: UI の無いフック判定ロジックの修正、デザインシステム候補ゼロ）'
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:d090c56e7d7d6adce77c5041c7660cb9caf1cd43ba376f7e0cd8950047c4a229
   output_digest: null
 artifacts: []
