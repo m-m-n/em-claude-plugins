@@ -22,9 +22,24 @@ answers:
     selected_option_ids:
     - change-spec
     freeform: null
-    normalized_answer: 'SPEC を改める: FR1 の case 印を esac で外す（パターン終端の ) を待つ間だけ効く）ように改め、FR4・A1・A3 をその範囲で緩め、予約語の並びはむき出しの予約語だけと明記する。create-spec からやり直す。'
-    resolution_note: 'gate: rework.spec-change (question rework.spec-change.case-mark-esac, packet rework-q0001). route: routed arm -> Classification gate; origin verification passed (285d9bc33784bb3d, df4afa83e782d56a, b374e6b3c3d4b471 all in reviews/round1.yaml); direction 2 tripped in batch because bound-set member 285d9bc33784bb3d has category security -> relaxed route (batched Codex consultation). chosen: change-spec. not chosen: keep-spec (leaves the two high deny->silent regressions unfixed). discussion key points: Codex (1 turn, converged) chose change-spec and classified verdict (b) spec gap: the goal (deny the reproduced form; linear time, no recursion, byte-identical copies) is achievable by fixing the mark lifetime; FR1''s permanent mark and reserved-word handling, FR4/A1''s no-pattern-tracking boundary and A3 need revision, FR3''s ''no rescue while marked'' can stay, FR2 inheritance vs. clearing, FR5 docstrings, FR7/AC6 tests must follow; TS-9/AC5 out-of-scope boundary is kept.
-      main risk: mis-recognising esac or inherited values re-introduces misses. Claude agrees (goal block does not require permanence; findings show the permanence itself causes the regression). codex_consulted: true (harness codex). opus_escalation: not run (mapped on turn 1).'
+    normalized_answer: 'SPEC を改める: FR1 の case 印を esac で外す（パターン終端の ) を待つ間だけ効く）ように改め、FR4・A1・A3
+      をその範囲で緩め、予約語の並びはむき出しの予約語だけと明記する。create-spec からやり直す。'
+    resolution_note: 'gate: rework.spec-change (question rework.spec-change.case-mark-esac,
+      packet rework-q0001). route: routed arm -> Classification gate; origin verification
+      passed (285d9bc33784bb3d, df4afa83e782d56a, b374e6b3c3d4b471 all in reviews/round1.yaml);
+      direction 2 tripped in batch because bound-set member 285d9bc33784bb3d has category
+      security -> relaxed route (batched Codex consultation). chosen: change-spec.
+      not chosen: keep-spec (leaves the two high deny->silent regressions unfixed).
+      discussion key points: Codex (1 turn, converged) chose change-spec and classified
+      verdict (b) spec gap: the goal (deny the reproduced form; linear time, no recursion,
+      byte-identical copies) is achievable by fixing the mark lifetime; FR1''s permanent
+      mark and reserved-word handling, FR4/A1''s no-pattern-tracking boundary and
+      A3 need revision, FR3''s ''no rescue while marked'' can stay, FR2 inheritance
+      vs. clearing, FR5 docstrings, FR7/AC6 tests must follow; TS-9/AC5 out-of-scope
+      boundary is kept. main risk: mis-recognising esac or inherited values re-introduces
+      misses. Claude agrees (goal block does not require permanence; findings show
+      the permanence itself causes the regression). codex_consulted: true (harness
+      codex). opus_escalation: not run (mapped on turn 1).'
 worker_runs:
 - request_id: rework-review-r1-0001
   status: needs_user_input
@@ -37,11 +52,14 @@ stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
 spec_change:
-  reason: review round 1 high findings 285d9bc33784bb3d / df4afa83e782d56a require clearing the case mark at esac, which contradicts SPEC FR1 (permanent mark) and FR4/A1/A3; related medium b374e6b3c3d4b471 (quoted/escaped reserved word before case)
+  reason: review round 1 high findings 285d9bc33784bb3d / df4afa83e782d56a require
+    clearing the case mark at esac, which contradicts SPEC FR1 (permanent mark) and
+    FR4/A1/A3; related medium b374e6b3c3d4b471 (quoted/escaped reserved word before
+    case)
   origin_kind: review
   origin_id: 285d9bc33784bb3d
   recorded_at_commit: c695255f10f6a04b6242894bef33c2447e92b113
-  consumed: false
+  consumed: true
   replan_authorized: true
 classification:
 - classifier: codex
@@ -55,4 +73,6 @@ classification:
   - FR7
   - AC6
   decision: proceed
-  reason: 'spec gap: goal achievable by revising the case-mark lifetime; FR1/FR4/A1/A3 wording diverges (resolved through batch relaxed route after direction-2 security member)'
+  reason: 'spec gap: goal achievable by revising the case-mark lifetime; FR1/FR4/A1/A3
+    wording diverges (resolved through batch relaxed route after direction-2 security
+    member)'
