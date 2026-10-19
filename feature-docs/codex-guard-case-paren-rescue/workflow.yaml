@@ -1,0 +1,191 @@
+schema_version: 1
+feature: codex-guard-case-paren-rescue
+created: '2026-10-20'
+base_branch: main
+goal: '# codex-hook-interactive-guard: `)` 救済が case パターンの `)` をサブシェルの閉じと読み、後の入力リダイレクトで先の対話起動を見逃す（回帰）
+
+
+  Notion タスク: <notion-url> （種別: バグ）
+
+
+  ## 現象 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、feature `codex-guard-subshell-anon-arg-semicolon` が `_close_paren` に足した `)` 救済（`_closes_paren_after_rescue` / `_close_paren_after_rescue`）が、case のパターンを終える `)` も chain_base のサブシェル `(` 群を閉じる括弧として読む。その後の入力リダイレクトがサブシェル全体に掛かったと判定され、先に書いた匿名関数本体の `python3` が接続済み扱いになって silent になる。変更前（base 0e4426d6）は deny だったので、deny から silent への後退になる。
+
+  ## 再現手順 (必須)
+
+  1. フックの標準入力に `{"tool_input":{"command":"zsh -c ''setopt nobadpattern; ( function { python3; } foo(a; case x in x) < /dev/null :;; esac; )''"}}` を渡すと、終了コード 0・出力なし（silent）
+
+  2. 実際の zsh では `< /dev/null` は case 分岐内の `:` にしか掛からない: `printf ''MARKER\n'' | zsh -f -c ''python3() { local v; IFS= read -r v; print -r -- "$v"; }; setopt nobadpattern; ( function { python3; } foo(a; case x in x) < /dev/null :;; esac; )''` で MARKER が出力される
+
+  ## 期待する挙動 (必須)
+
+  上の形を deny にする。線形時間・再帰なし・2 コピーのバイト一致を保つ。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:1172`（`_closes_paren_after_rescue`）
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
+  - レビュー記録: feature-docs/codex-guard-subshell-anon-arg-semicolon/reviews/round1.yaml（stable_id `5e71ff00fdbe5aff`、severity medium）
+
+  - 狭い修正案（レビュー評価者）: 仮の群が最内の開いた群のときにコマンド位置で `case` を読んだら、その群に定数時間で読める印を付け、`_closes_paren_after_rescue` は印のある群では救済しない
+
+  - 元タスク: <notion-url>
+
+  ## 実害・発生条件 (任意)
+
+  見逃し側。`setopt nobadpattern` のもとで、匿名関数の引数の括弧の中に `;` を仕込み、後ろに case 文を置いて全体を `( ...; )` で包む不自然な形に限られる。仮の群を通らない `( python3; case x in x) < /dev/null :;; esac; )` は変更前から silent（主の読み手が case のパターン終端を追わない既存の限界）で、これを塞ぐ広い修正は別に扱う。
+
+
+  ## 追加指示（起動引数）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモートの両方に残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、比較的よいと判断した選択肢を採る
+
+  - その議論の内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/codex-guard-case-paren-rescue/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.64
+      '2': 0.36
+      '3': 0.0
+  at: '2026-10-20T00:07:19+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: fbff20aebc6335a2edab3e0bc003df2d295e4e34
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: コマンド位置の case で仮の群に印を付ける
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 仮の群の連鎖に沿って印を引き継ぐ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 印のある連鎖では ) の救済をしない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 他の読み方は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: docstring を追従させる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 2 つのコピーを同じ変更で直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: CASES に回帰行を足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 線形時間・再帰なし・印の処理は定数時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 2 つのコピーのバイト一致
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
