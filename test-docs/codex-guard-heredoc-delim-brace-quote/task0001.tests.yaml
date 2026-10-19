@@ -1,0 +1,45 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 943/943 passed; python3 -m unittest discover -s tests -> 10512 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and with this record in place: run-destructive-guard.py -> 943/943 passed; python3 -m unittest discover -s tests -> 10513 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (both copies) with the 34 rows added: TS1 and TS3 to TS8 failed with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because standard output was empty where deny was expected (the delimiter was registered with its quotes, so the terminator line did not end the body); TS2 failed with an AssertionError (a deny object printed where silent was expected, the unremoved line ended the body)"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (both copies): TS9, TS10, TS11, TS12 and TS15 failed with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because the range closed at the first } and standard output was empty where deny was expected. TS13, TS14 and TS34 passed before the change (they pin the unchanged reading of a $( ... ) and a backquote inside the range); no red state occurred for those three rows"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (both copies): TS16 and TS17 failed with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0) (silent where deny was expected); TS18, TS19, TS21, TS22 and TS23 failed with an AssertionError (a deny object printed where silent was expected, the unquoted $' or $\" registered a delimiter). TS20, TS24 and TS25 passed before the change and pin current behaviour; no red state occurred for those three rows"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing TestCasesTable.test_cases_run_against_both_copies detects the checkpoint behaviour for TS26 to TS28 (a launch on a line before the undecidable delimiter is deny, a launch on the line of the delimiter is silent); TS26, TS27 and TS28 passed against the unchanged hook as well (the checkpoint rule is pinned by the existing CASES rows and was only re-aimed at the new undecidable forms), so no red state occurred for this change"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing TestCasesTable tests detect the unchanged readings of TS29 to TS33 (a non-delimiter ${ ... }, $' and $\", the <<< targets, a double-quoted ${ ... } in the delimiter) and every earlier CASES row; they passed against the unchanged hook as well, so no red state occurred for those rows. That the table holds one row per TS1 to TS34 with the SPEC.md verdict and label has no executable check that can fail; it was compared by generating the rows from the SPEC.md JSON arrays"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestFailOpen.test_a_very_long_command_still_gets_an_answer
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_delimiter_ranges_at_scale_are_read_in_time_and_the_launch_after_them_is_denied
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing length-cap and timing tests detect a slowdown of the hook on long input; they passed before the change and after it, so no red state occurred for this criterion. The bounded re-reading of the scan (each character of the ${ ... } range read a bounded number of times, a nested $( ... ) skipped once) is a review item of the code of _remove_range_quotes"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing tests listed here detect the byte identity of the two copies, the standard-library-only constraints, the docstring markers (DELIMITER_RANGE_MARKERS, CHECKPOINT_MARKERS, CHECKPOINT_PASSAGES and the others), the shared quoted-unit reader structure and the absence of recursion; they passed before the change and after it, so no red state occurred for this criterion. That the change set is exactly the three files in scope is checked on the task diff against the base revision, and whether the docstring describes the FR1 to FR6 readings is a review item; no unit test covers either"
