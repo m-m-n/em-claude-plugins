@@ -1,0 +1,64 @@
+schema_version: 2
+feature: codex-guard-heredoc-delim-brace-quote
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-10-19T19:55:49+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.36
+    confidence: 0.64
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.64
+      '2': 0.36
+      '3': 0.0
+  observed_at: '2026-10-19T19:58:05+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 15
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: ファイルは変更していない。内側のコマンドは実行せず、指定の文字列をshlex.quoteで包んだJSONを両コピーのpython3実行へ標準入力で渡したところ、双方とも終了コード0、標準出力・標準エラーとも空だった。両コピーはバイト単位で同一だった。_dollarの${...}分岐は引用符を含む文字列をそのまま保持し、_finish_wordが区切り語として登録し、_read_heredocsが本文の行と文字列比較している。既存の引用符除去処理_remove_range_quotesと区切り語を示すself.redirectがある。変更行数と追加件数は、この既存処理の利用と再現例1件のCASES追加を前提とする概算である。関連する既存テストはあるが、この再現例は未登録だった。python3
+    -B -m unittest tests.test_codex_hook_interactive_guard.TestCasesTable tests.test_codex_hook_interactive_guard.TestCopiesは9テストすべて成功した。呼出元・依存数は、登録元のrun_codex_exec.shが2本、テストが1本、読み込むjsonとsysが2モジュールとして数えた。入出力形式は既存のまま、再現例の判定をsilentからdenyへ直す作業が必要である。
+decided_at: '2026-10-19T19:58:30+09:00'
