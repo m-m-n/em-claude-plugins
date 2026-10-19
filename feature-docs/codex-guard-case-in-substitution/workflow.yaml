@@ -136,7 +136,8 @@ workflow:
   failed_items: []
   summary: 'Project test command passed (destructive-guard 943/943; unittest 10512 tests OK, 1 skipped). TS1-TS21 and AC-1..AC-6 satisfied; TS20 diff lists no plugin.json / marketplace.json; both hook copies byte-identical; FR5 (a)/(b) repro piped to both copies returns deny. Build/format commands not configured. Excluded requirements: none.'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 36e668a1383606b05a1fe41c4acdb40e075c2e89
 tasks:
   task0001:
     title: Read case statements inside double-quoted substitutions in codex-hook-interactive-guard
