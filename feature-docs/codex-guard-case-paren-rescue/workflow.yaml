@@ -101,7 +101,7 @@ workflow:
   artifacts:
   - REQUIREMENTS.md
   - SPEC.md
-  status: needs_update
+  status: in_progress
   completed_at_commit: fbff20aebc6335a2edab3e0bc003df2d295e4e34
 - id: design
   artifacts:
