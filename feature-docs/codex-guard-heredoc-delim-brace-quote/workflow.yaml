@@ -121,7 +121,8 @@ workflow:
   failed_items: []
   summary: 'TS1-TS42 pass (project test command exit 0, 10513 tests OK, skipped=1; copies byte-identical; no manifest change; CASES rows only added; stdlib imports only). Manual review: docstring describes delimiter-position ${ ... } reading; scan is single forward pass. Reproduction (TS1) denies on both copies.'
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 2ca0a196f4a3c3b733689b9c514c1a2823d29f30
 tasks:
   task0001:
     title: Delimiter-position ${ ... } reading in codex-hook-interactive-guard
