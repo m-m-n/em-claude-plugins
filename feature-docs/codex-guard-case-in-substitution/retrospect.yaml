@@ -1,0 +1,26 @@
+feature: codex-guard-case-in-substitution
+collected_at: "2026-10-19T09:23:15+09:00"
+session_ids: [01a15189-7a7c-7473-8f3e-f5382376f3e9]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "Parser scan change on every hook invocation; NFR1 bounds scan cost, so check for quadratic rescans"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが score 1.48（バケット 1: 0.52 / 2: 0.48）で、閾値表により full を採用"
+    bases:
+      - basis: description_only
+        score: {"score": 1.12, "confidence": 0.88, "probabilities": {"0": 0.0, "1": 0.88, "2": 0.12, "3": 0.0}}
+        observed_at: "2026-10-19T00:02:21+09:00"
+      - basis: description_plus_code
+        score: {"score": 1.48, "confidence": 0.52, "probabilities": {"0": 0.0, "1": 0.52, "2": 0.48, "3": 0.0}}
+        observed_at: "2026-10-19T00:04:37+09:00"
+    pre_survey_estimate: {"files_expected": ["em-workflow/scripts/codex-hook-interactive-guard.py", "em-review/scripts/codex-hook-interactive-guard.py", "tests/test_codex_hook_interactive_guard.py"], "changed_lines_approx": 120, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": [], "covering_tests_exist": true, "work_still_required": true, "test_change_kind": "new_behavior_tests", "added_test_cases_approx": 2, "body_change_kind": "new_logic", "change_containment": "multiple_modules", "caller_and_dependency_count": 4, "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium 5 件（引数の esac を終端と誤認 ×2、in の前の行継続で見逃す ×2、パターン直後のコメントを本体として解析）が deferred になった。batch の残存ゲートは critical/high のみを対象とするため、fail-open 方向（見逃し）の medium も rework に回らない"
