@@ -1,5 +1,5 @@
 feature: codex-guard-heredoc-delim-brace-quote
-collected_at: "2026-10-19T21:40:00+09:00"
+collected_at: "2026-10-19T21:26:33+09:00"
 session_ids: [01a1541f-ddca-77c3-b4d3-8a9c858831fb]
 signals:
   review_critical_high: []
