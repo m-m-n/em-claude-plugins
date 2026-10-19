@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-case-paren-rescue
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 60d7002b8200e446ae8e93eb34da108dcb6d5697
+last_input_digest: sha256:d090c56e7d7d6adce77c5041c7660cb9caf1cd43ba376f7e0cd8950047c4a229
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:d090c56e7d7d6adce77c5041c7660cb9caf1cd43ba376f7e0cd8950047c4a229
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
