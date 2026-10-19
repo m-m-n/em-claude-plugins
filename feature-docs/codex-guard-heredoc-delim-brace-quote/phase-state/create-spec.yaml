@@ -11,6 +11,7 @@ packets:
     status: answered
 answers:
   requirement.brace-quote-forms:
+    question_id: requirement.brace-quote-forms
     packet_id: create-spec-q0001
     answered_at: '2026-10-19T20:12:00+09:00'
     source: batch-codex-consultation
@@ -28,6 +29,7 @@ answers:
       ) 内の引用の保持に一致する。double_quote_only は '' と \ を取りこぼし、undecidable_on_quote は見逃しを解消しない。未引用の $'' / $" は既存規則どおり判定不能にする（zsh
       の $''x'' → x を正確に再現しない代わりに fail-closed 側の誤爆も生まない）。比較的良いと判断し採用。Opus エスカレーションは不要。'
   requirement.brace-quoted-close:
+    question_id: requirement.brace-quoted-close
     packet_id: create-spec-q0001
     answered_at: '2026-10-19T20:12:00+09:00'
     source: batch-codex-consultation
@@ -44,6 +46,7 @@ answers:
       $''x'' → x、外側の $"x" → $x。同じ Codex ターンで skip_quotes_in_delimiter を推奨: zsh は引用内の } で ${...} を閉じない。out_of_scope_undecidable
       は後続の起動の見逃しを残し、skip_quotes_everywhere は普通の引数の読みまで変える。区切り語の位置に限定すれば影響を抑えられるため比較的良いと判断し採用。Opus エスカレーションは不要。'
   requirement.bare-dollar-quote-delimiter:
+    question_id: requirement.bare-dollar-quote-delimiter
     packet_id: create-spec-q0001
     answered_at: '2026-10-19T20:12:00+09:00'
     source: batch-codex-consultation
@@ -59,6 +62,7 @@ answers:
       を推奨: 現状は $''x'' をそのまま登録するため、zsh の終端 x と食い違い、見逃しに加えて誤拒否も起きる（Codex 実験: cat <<$''x'' の本文に $''x''・python3
       -i・x を置くと本文中の起動を deny する）。判定不能にすれば誤った終端の登録を避けられるため比較的良いと判断し採用。Opus エスカレーションは不要。'
   design.step.recommendation:
+    question_id: design.step.recommendation
     packet_id: create-spec-q0001
     answered_at: '2026-10-19T20:12:00+09:00'
     source: batch-decision-table
