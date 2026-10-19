@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-heredoc-delim-brace-quote
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 1b2102de4c347ef8555e627e061665e844c693a3
 last_input_digest: sha256:880f66dd02e5ca203f769cabf65e1325b9b4fc8fc927b25a2456e785819f34d1
