@@ -1,0 +1,38 @@
+feature: codex-guard-heredoc-delim-brace-quote
+collected_at: "2026-10-19T21:40:00+09:00"
+session_ids: [01a1541f-ddca-77c3-b4d3-8a9c858831fb]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "NFR2 requires linear-time scanning in the changed parser (_dollar / delimiter reading)"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み（description_plus_code）は score 1.36 / confidence 0.64 で、評価器の閾値表により full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.02, confidence: 0.98, probabilities: {'0': 0.0, '1': 0.98, '2': 0.02, '3': 0.0}}
+        observed_at: "2026-10-19T19:55:49+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.36, confidence: 0.64, probabilities: {'0': 0.0, '1': 0.64, '2': 0.36, '3': 0.0}}
+        observed_at: "2026-10-19T19:58:05+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 15
+      new_functions_needed: 0
+      new_files_needed: 0
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査の changed_lines_approx は 15 だったが、実際は 2 コピー各 142 行の変更になった（区切り語の位置の ${ ... } の閉じ探索・$( ) の扱いが要件化されたため）"
+  - "review で medium 2 件（5b8947f11cc2c3b8: case を含む $( ) の読み飛ばし、55234ffc39bfa875: bash -c への zsh 向け引用除去の適用）を deferred にした"
