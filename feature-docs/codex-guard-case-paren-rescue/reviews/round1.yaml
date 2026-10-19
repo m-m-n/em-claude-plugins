@@ -1,0 +1,124 @@
+round: 1
+executed_at: '2026-10-20T01:04:52+09:00'
+scope:
+  review_mode: diff
+  base_commit: 9b275570614d2efe563c7f2eb2c8f9b677befd71
+  head_commit: 48679f6a71f5c3eb22c608fe83d3355c677581eb
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-case-paren-rescue/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 285d9bc33784bb3d
+  severity: high
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1342
+  title: esac 後も残る case 印のせいで、サブシェルを閉じる ) が救済されず対話起動を見逃す
+  description: '`foo(` の後で _read_argument_parens が仮の群 P を開く（chain_base は外側のサブシェル G1）。`case x in esac` の先頭語 case で _append_word（938-939 行）が P.case_mark を立てる。メインの読み取りには esac で印を外す処理がないので印は残る。最後の `)` では _closes_paren_after_rescue（1342 行）が印を見て False を返し、_close_paren が P だけを閉じて G1 が開いたまま残る。入力末尾で _Undecidable(''group'') になり判定対象が 0 件になって silent。変更前は同じ `)` が連鎖を救済して G1 を閉じ、python3 -i が deny されていた。em-review 側のコピーも同一で同じ影響を受ける。'
+  suggestion: case 印は「パターンを終える ) を待っている間」だけ効くようにする。case 文が esac で終わったら、その仮の群の印を外す（in の直後の esac と、;; の後のコマンド位置の esac の両方）。`(x)` 形式のパターンもこの規則で扱える。docstring の「The mark is never cleared」と SPEC FR1 の「印はそのグループについて永続する」を改める。空の case の後・`(x)` パターンの case の後・esac 後の入れ子連鎖の deny 行を両コピーに足し、2 つのコピーはバイト単位で同一に保つ。
+  reproduction: 入力 `zsh -c 'setopt nobadpattern; ( function { python3 -i; } foo(a; case x in esac; )'` を tool_input.command に設定した JSON をフックの標準入力へ渡す。変更後の main は何も出力せず、基準版の find_deny は ('interactive', 'python3') を返すことを確認した。内部では _Undecidable('group') が発生し、判定対象は0件になる。zsh -n -c による構文検査は成功し、python3 -i を `print -r -- REACHED` に置換した安全な実行では REACHED が出力された
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'auto-fix skipped by editor (loop 1): multi-file change required (both copies + tests); routed to batch rework'
+- stable_id: df4afa83e782d56a
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1342
+  title: case 文の終了後も ) の救済を止め、空の case や括弧付きパターンの後の対話起動を見逃す
+  description: 入力 `( function { :; } foo(a; case x in esac; python3 -i; )` では、case が P に印を付け、最後の `)` は印のせいで救済されず P だけを閉じる。G1 が開いたまま残って _Undecidable('group') になり出力は無い。変更前は救済で G1 が閉じ python3 -i が deny されていた。`case x in (x) :;; esac` でも同じ（`(x)` は通常の ( 群として開閉するため印が残る）。esac の後に開いた仮の子の群も継承値を受ける。根本原因は印が esac で外れない設計（SPEC FR1 の「印は永続する」）。em-review 側のコピーも同一。
+  suggestion: case の状態を esac まで追い、case 文が閉じたら印を外す。外す esac は in の直後と ;; の後のコマンド位置。印が効くのはパターン終端の ) を待っている間だけにする。空の case と `(x)` パターンの回帰テスト（deny）を CASES に足し両コピーに流す。docstring と SPEC FR1 の「永続する」も改める。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'auto-fix skipped by editor (loop 2): multi-file change required (both copies + tests); routed to batch rework'
+- stable_id: b374e6b3c3d4b471
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 938
+  title: 引用・エスケープした予約語に続く case にも印を付け、後の対話起動を見逃す
+  description: _append_word の予約語の並びの判定は引用を除いた文字列を見るため、`"time"` や `\!` が並びに含まれたままになり、次のむき出しの case が先頭語と見なされて P に印が付く（938-939 行）。zsh では引用した予約語は通常のコマンドなので case はただの引数。入力 `"time"() { :; }; setopt nobadpattern; ( function { :; } foo(a; "time" case; python3 -i; )` では最後の `)` が P だけを閉じ G1 が開いたまま残り出力は無い。変更前は deny。em-review 側も同一。
+  suggestion: 印を付けるかどうかの判定では、引用・エスケープした予約語を予約語の並びに数えない。関数名の判定に使う run_open とは別に、むき出しの予約語だけで続く並びの状態を持つ。`"time" case` と `\! case` の deny 行を両コピーに足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate; passed to batch rework as related context'
+evaluation:
+  round_summary: 'ラウンド 1（差分モード、相互検証あり）。security と comprehensive の 2 本が、case 印を外す処理が無いことによる deny から silent への退行を同じ箇所（1342 行）で独立に報告した。security の再現手順はコードを読んで追い reproduced と判断した。comprehensive の 2 件も読みで確認した（空の case と括弧付きパターン、引用した予約語の後の case）。根本原因は SPEC FR1 の「印は永続する」という設計が SPEC の目的と食い違っている点にあり、実装は FR1-FR7 に字句どおり従っている。2 つのコピーはバイト単位で同一。注入の試みは無し。security/comprehensive/architecture/spec: corroborated。'
+  recommended_action: auto_fix
+  action_rationale: high の 2 件は同じ箇所の具体的な不具合で修正方針もはっきりしている（esac で case 印を外す）。修正は 2 つのコピーへの同一反映と回帰テスト追加で済む。ただし SPEC FR1 の「永続する」と docstring を改めることになり、仕様変更に当たるなら rework で扱う。medium も同じ修正で直すのがよい。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 2
+  applied_total: 0
+  termination: no-progress
+  aborted_stable_ids:
+  - 285d9bc33784bb3d
+  - df4afa83e782d56a
+residual_critical_high: 2
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-case-paren-rescue-20261019T160409Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

@@ -156,8 +156,8 @@ tasks:
     branch: em-workflow/codex-guard-case-paren-rescue/task0001
 review:
   status: in_progress
-  rounds_completed: 0
-  residual_critical_high: 0
+  rounds_completed: 1
+  residual_critical_high: 2
   needs_rework: false
   plan:
     floor:
@@ -167,6 +167,11 @@ review:
     - spec
     discretionary: []
     cross_validation: true
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
 requirements:
   FR1:
     title: コマンド位置の case で仮の群に印を付ける
