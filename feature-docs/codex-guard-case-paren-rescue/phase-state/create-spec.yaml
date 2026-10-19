@@ -5,7 +5,7 @@ status: dispatching
 generation: 2
 base_revision: bbb6998f1e254bfb7a56ac16fffcc6c1e4da4ad4
 last_input_digest: sha256:edfd6b7ce9c5f913bdf8d00e2f5f118ef2f98bce0b502083819cc254e34a8664
-active_request_id: create-spec-run-0004
+active_request_id: create-spec-run-0005
 packets:
   create-spec-q0001:
     status: answered
@@ -82,8 +82,12 @@ worker_runs:
   input_digest: sha256:33c649ea2676c84b98b8ffae68028a5cd6fb0a5d5b38deae8e303c13d254ac43
   output_digest: null
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:edfd6b7ce9c5f913bdf8d00e2f5f118ef2f98bce0b502083819cc254e34a8664
+  output_digest: sha256:4da699587278052a2799b8588b3aab9ac331a28e07d4a2eeb307dab79379aed0
+- request_id: create-spec-run-0005
+  status: dispatched
+  input_digest: null
   output_digest: null
 artifacts:
 - path: feature-docs/codex-guard-case-paren-rescue/REQUIREMENTS.md
