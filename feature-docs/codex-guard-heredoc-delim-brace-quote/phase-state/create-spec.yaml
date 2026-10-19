@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 1b2102de4c347ef8555e627e061665e844c693a3
 last_input_digest: sha256:880f66dd02e5ca203f769cabf65e1325b9b4fc8fc927b25a2456e785819f34d1
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -78,10 +78,16 @@ worker_runs:
   input_digest: sha256:880f66dd02e5ca203f769cabf65e1325b9b4fc8fc927b25a2456e785819f34d1
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:880f66dd02e5ca203f769cabf65e1325b9b4fc8fc927b25a2456e785819f34d1
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-heredoc-delim-brace-quote/REQUIREMENTS.md
+  sha256: sha256:5d7726065d8a0c42ffc97a363e07d436ae504d0aeca8ffb9fa6d807245d9215b
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-heredoc-delim-brace-quote/SPEC.md
+  sha256: sha256:69ab3e04e8ca2d5c8d31b812332c69a53b069143f4caffe6f16086de7f16e2af
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
