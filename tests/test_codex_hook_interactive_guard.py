@@ -714,6 +714,34 @@ CASES = [
     ("deny", "既知の誤拒否: ) 救済 TS-13 救済で閉じた後の対の無い ) は区切りで、後の入力リダイレクトは救済後のコマンドを接続しない。zsh 5.9 は parse error を出す入力", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; python3) ) < /dev/null'"),
     ("silent", ") 救済 TS-14 引用符の中の ) は契機にならず、群が開いたまま残る", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; python3 -i; \")\"'"),
     ("deny", ") 救済 外側のサブシェルは救済で閉じた後の ) で閉じる", "zsh -c 'setopt nobadpattern; ( ( function { :; } foo(a; python3 -i; ) )'"),
+    # A `case` read at command position while a provisional group is the
+    # innermost open group puts the case mark on that group, and a provisional
+    # group opened inside a provisional group takes the mark's reach along the
+    # chain (the inherited value). A group that has either one never rescues a
+    # chain at a `)`: the `)` is a case-pattern terminator there, and it closes
+    # the provisional group itself instead of the subshell outside the chain, so
+    # a stdin redirect that follows reaches only that group (TS-1 to TS-4 are
+    # denied again; review finding 5e71ff00fdbe5aff). The mark follows the
+    # keyword position: a reserved-word prefix (`!`, `time`) keeps it, and an
+    # argument-position `case` or a quoted one is no keyword. A redirect after
+    # the subshell and a pipe into it still connect the rescued commands. TS-9
+    # is the known miss of the limitation that the main reader does not track
+    # case-pattern terminators in general
+    ("deny", ") 救済 case 印 TS-1 コマンド位置の case が仮の群に印を付け、パターンの ) は外側のサブシェルを閉じない (再現手順)", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in x) < /dev/null :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-2 先頭の ! を除いた位置の case も印を付ける", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; ! case x in x) < /dev/null :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-3 先頭の time を除いた位置の case も印を付ける", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; time case x in x) < /dev/null :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-4 外側の仮の群の印を内側の仮の子の群が連鎖に沿って受け継ぐ", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case ${v:-${x:-}; function { :; } bar(b; x} in x) < /dev/null :;; y) :;; esac; )'"),
+    ("silent", ") 救済 case 印 TS-5 サブシェルの後の入力リダイレクトは救済後のコマンドを接続する", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in x) :;; esac; ) < /dev/null'"),
+    ("silent", ") 救済 case 印 TS-6 サブシェルへのパイプは救済後のコマンドを接続する", "zsh -c 'setopt nobadpattern; echo x | ( function { python3; } foo(a; case x in x) :;; esac; )'"),
+    ("silent", ") 救済 case 印 TS-7 引数の位置の case は印を付けず従来の ) 救済のまま", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; echo case x in x) < /dev/null'"),
+    ("silent", ") 救済 case 印 TS-8 引用符で囲んだ case は印を付けず従来の ) 救済のまま", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; \"case\" x in x) < /dev/null'"),
+    # TS-7 and TS-8 end with the subshell never closed once a mark is wrongly
+    # set (the string is then undecidable and silent either way), so these two
+    # rows close the subshell with its own `)`: a mark on an argument-position
+    # or quoted `case` would let the redirect after it connect the subshell
+    ("deny", ") 救済 case 印 TS-7b 引数の位置の case は印を付けず、パターン側の ) が外側のサブシェルを閉じる", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; echo case x in x) :;; esac; ) < /dev/null'"),
+    ("deny", ") 救済 case 印 TS-8b 引用符で囲んだ case は印を付けず、パターン側の ) が外側のサブシェルを閉じる", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; \"case\" x in x) :;; esac; ) < /dev/null'"),
+    ("silent", "既知の見逃し: ) 救済 case 印 TS-9匿名関数の無い入力は仮の群を開かず、メインの読みは case のパターンの終端を追わない", "zsh -c '( python3; case x in x) < /dev/null :;; esac; )'"),
     # A standalone bare `}` closes an anonymous body, or a `{` group inside
     # one, even with words pending: they are finalized as a command of the
     # group, as a `;` before the `}` would (FR1, FR2, FR3, FR8). A `{` group
@@ -2529,6 +2557,43 @@ class TestGuardDocumentation(unittest.TestCase):
             for marker in ("comment_exception",) + self.COMMENT_EXCEPTION_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
+
+    # The case mark and the inherited value (FR5): a `case` at command position
+    # marks the provisional group that is innermost, a provisional group opened
+    # inside a provisional group takes the inherited value from its parent, and
+    # a group that has either one is not rescued at a `)`. Seven places say so:
+    # step 4 of the module docstring, the docstring of `_Parser`, the field
+    # list of `_Group`, and the docstrings of `_mark_provisional`,
+    # `_append_word`, `_close_paren` and `_closes_paren_after_rescue`
+    CASE_MARK_TERMS = ("case mark", "inherited value")
+    CASE_MARK_PARSER_METHODS = {
+        "_mark_provisional": CASE_MARK_TERMS,
+        "_append_word": ("case mark",),
+        "_close_paren": CASE_MARK_TERMS,
+        "_closes_paren_after_rescue": CASE_MARK_TERMS,
+    }
+
+    def test_the_seven_places_that_describe_the_paren_rescue_state_the_case_mark(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            group = next(
+                node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "_Group"
+            )
+            places = {
+                "module docstring": (module_docstring(path), self.CASE_MARK_TERMS),
+                "_Parser": (parser_docstring(path), self.CASE_MARK_TERMS),
+                "_Group": (
+                    " ".join((ast.get_docstring(group) or "").split()),
+                    self.CASE_MARK_TERMS + ("case_mark", "case_inherited"),
+                ),
+            }
+            for method, terms in self.CASE_MARK_PARSER_METHODS.items():
+                places[method] = (parser_docstring(path, method) or "", terms)
+            for place, (doc, terms) in places.items():
+                for term in terms:
+                    with self.subTest(copy=plugin, place=place, term=term):
+                        self.assertIn(term, doc)
 
     # What step 4 says about the head's stdin redirect, a `(` among the
     # arguments of an anonymous function, and where the arguments end
