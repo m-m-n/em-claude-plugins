@@ -86,7 +86,7 @@ worker_runs:
   input_digest: sha256:edfd6b7ce9c5f913bdf8d00e2f5f118ef2f98bce0b502083819cc254e34a8664
   output_digest: sha256:4da699587278052a2799b8588b3aab9ac331a28e07d4a2eeb307dab79379aed0
 - request_id: create-spec-run-0005
-  status: dispatched
+  status: blocked
   input_digest: sha256:a2f0b7d174a944144105a9a02b4f1e2dbd8b936e0972c30558ab1e7073a86082
   output_digest: null
 artifacts:
@@ -100,4 +100,7 @@ patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'spec-writer create-spec-run-0005 returned blocked: the agent has only
+  Read/Write/Glob/Grep, so it cannot recompute sha256 for the replace_own expect_digest
+  check on REQUIREMENTS.md / SPEC.md nor report written_artifacts digests. Nothing
+  written. Run stopped per Codex consultation (option D).'
