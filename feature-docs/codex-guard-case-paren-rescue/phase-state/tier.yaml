@@ -1,0 +1,64 @@
+schema_version: 2
+feature: codex-guard-case-paren-rescue
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-20T00:04:44+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.36
+    confidence: 0.64
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.64
+      '2': 0.36
+      '3': 0.0
+  observed_at: '2026-10-20T00:07:09+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 50
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEAD 790b3dc7の両コピーで指定JSONを標準入力に渡し、終了コード0・標準出力なし・標準エラーなしを確認した。両コピーはHEADと一致し、バイト一致も確認した。base
+    0e4426d6ではdeny、実際のzshではMARKERが出力された。_Group:657、_finish_word:887、_closes_paren_after_rescue:1216、_close_paren:1274を確認した。判定関数の直接呼び出し元は_close_paren、依存関数は_rescue_separatorで、両コピー合計4件ある。既存CASESには救済処理のテストがあるが、692件中に今回の再現形はない。変更行数は、レビュー記録にある群のcase印による修正と説明更新、既存表への1件追加を対象とした概算になる。ファイルは変更していない
+decided_at: '2026-10-20T00:07:19+09:00'
