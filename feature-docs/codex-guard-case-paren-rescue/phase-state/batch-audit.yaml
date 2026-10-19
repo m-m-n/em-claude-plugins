@@ -73,3 +73,22 @@ records:
     real-zsh 5.9 check: in TS-1..4 and TS-11..19 python3 reads the outer stdin (deny
     correct). chosen: all three analyst assumptions kept as written (judged comparatively
     better). opus_escalation: not run.'
+- question_id: create-spec.spec-writer-blocked
+  packet_id: null
+  answered_at: '2026-10-20T01:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - D
+  freeform: null
+  normalized_answer: stop the run and report the plugin defect
+  resolution_note: 'gate: unlisted (spec-writer blocked on replace_own digest check;
+    no gate_id). options: A) delete both files in a docs commit and re-dispatch with
+    action create / B) re-dispatch replace_own with a note that the orchestrator verified
+    the digest / C) general-purpose agent with Bash following spec-writer.md / D)
+    stop and report. codex_consulted: true -> D: the contract requires the worker
+    itself to re-check the digest immediately before writing and to report sha256
+    in written_artifacts; A still leaves the reporting duty unmet, B contradicts the
+    contract, C departs from the worker named by create-spec-phase.md. chosen: D (judged
+    comparatively better). follow-up: file a task to reconcile spec-writer tools with
+    the sha256 check/report duty. opus_escalation: not run.'
