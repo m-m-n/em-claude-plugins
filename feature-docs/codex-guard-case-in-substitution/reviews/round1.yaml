@@ -1,0 +1,161 @@
+round: 1
+executed_at: '2026-10-19T09:14:19+09:00'
+scope:
+  review_mode: diff
+  base_commit: 68f308307a85ee019c842cd6997221bf1789f5a8
+  head_commit: 29003eae39280d77269133484a09b238172017c7
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-case-in-substitution/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: Parser scan change on every hook invocation; NFR1 bounds scan cost, so check for quadratic rescans
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 7150a137f6075c89
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1852
+  title: 'TM-2: 引数の esac を終端と誤認して正常な処理を拒否する'
+  description: '_at_command_position は直前の語が予約語かどうかだけを見て、その予約語自体がコマンドの位置にあるかを確かめない。そのため echo if esac / echo then esac の引数の esac を _is_esac_keyword が文の終端と判定し、スタックを p に戻す。続くパターン y) の ) で置換を閉じ、置換の中の引用された文字列を命令として判定して deny になる（読みで追跡: 1829〜1834 行が直前の語 if / then を予約語と認めて True を返し、1805〜1807 行で 8 を取り除き、1780〜1786 行の ) でスタックが空になる）。変更前は置換の中の case が判定不能で silent だったので、この誤拒否は今回の変更で新たに生じた。同じ取り違えは拒否漏れにもなる: echo "$(case x in x) echo then esac;; y) echo ''"'';; esac)"; python3 -i #'' では、y) で置換を閉じたあと、二重引用符を ''"'' の中の " で閉じたと読み、残りを単引用符の中の文字列と読むため、シェルが実際に起動する python3 -i を判定しない（読みでの追跡、未実行）。同じ判定を使う _is_case_keyword も echo if case x in y) ... のような引数の case を文の始まりと読み、in と esac が続くと読み切ってしまう（SPEC A3 は取り違えが判定不能で終わる前提）。FR1（esac はパターンの位置か項目の本体のコマンドの位置の単独の語のときだけ閉じる）、THREAT-MODEL.md TM-2、_is_esac_keyword の docstring（引数の esac は閉じない）に反する。em-review 側の同一コードにも影響する。'
+  suggestion: 項目の本体（フェーズ 8）でコマンドの位置を状態として持つ。項目の始まり、; & | ( 改行の直後、コマンドの位置にある予約語の直後だけをコマンドの位置とし、引数の if / then / ! などを根拠にしない。NFR1 の線形性を保つ。echo if esac / echo then esac を引数に持つ入力（silent になる）と、上の拒否漏れの入力（deny になる）を CASES に足し、両コピーに流す。
+  reproduction: tool_input.command に echo "$(case y in x) echo if esac;; y) echo "; python3 -i;";; esac)" を設定した PreToolUse(Bash) の JSON をガードへ渡すと、permissionDecision が deny になる。この入力は bash と zsh の構文検査に成功し、python3 -i は echo の引用された引数にすぎない。_skip_substitution が返す範囲を確認すると、実際の esac) ではなく途中の y) で終了している。安全確認として python3 -i を printf REPL_SENTINEL に置換して実行すると、文字列「; printf REPL_SENTINEL;」だけが出力される。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: 7149917052e797ce
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1852
+  title: 引数の esac を文の終了と誤認する
+  description: _at_command_position は直前の単語が then などの予約語ならコマンドの位置と判断し、その予約語が引数かどうかを見ない。そのため echo then esac の引数の esac で case 文を閉じ、その後のパターンの ) を置換の終端と誤認し、引用文字列に含まれる python3 -i を実行対象として deny にする。読みで追跡して再現を確認した。変更前は判定不能で silent だった入力で、この誤拒否は今回の変更で新たに生じた。em-review 側の同一コードにも影響する。
+  suggestion: 直前の文字列だけで判断せず、項目本体のコマンド開始位置を状態として追跡する。引数に then esac が続く回帰テストを CASES に追加し、両方のコピーに流す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: cf6acb0a89bc138c
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1660
+  title: 'TM-1: in の前の行継続で対話起動の拒否を回避できる'
+  description: case 文の語や in を待つフェーズ（1・3・4・5・7）は 1650〜1692 行の分岐で最初の文字からフェーズを決め、1693 行の \ の処理より先に評価される。フェーズ 3 で行継続の \ を見ると _is_word_at(j, "in", ...) が偽になり、1660 行で _Undecidable("case without in") になる。チェックポイントが無いので出力はなく、後続の python3 -i は拒否されない（読みで追跡）。同じ欠落は case \<改行> x in（フェーズ 2 が行継続を対象の語に含めたあと、空白の後の x をフェーズ 3 で in と比べて判定不能）と、in \<改行>esac)（フェーズ 4 が \ をパターンの始まりと読み、esac をパターンとして読み進めて置換の終わりを見失い判定不能）にもある。変更前も判定不能で silent だったので後退ではないが、bash / zsh が受け付ける形を判定不能にしており、IMPLEMENTATION.md D3（シェルが受け付ける形は読む）と THREAT-MODEL.md TM-1 の対策が満たされていない。em-review 側の同一コードにも影響する。
+  suggestion: フェーズ 1・3・4・5・7 の分岐の先頭で \ と改行の対を読み飛ばし、フェーズを保つ。case と対象の語の間、対象の語と in の間、in と最初のパターンや esac の間の行継続を deny の行として CASES に足し、両コピーに流す。
+  reproduction: Python 式 'echo "$(case x ' + chr(92) + chr(10) + 'in x) :;; esac)"; python3 -i' で command を作る。この文字列を tool_input.command に設定した PreToolUse(Bash) の JSON を、ガードの標準入力へ渡すと、拒否 JSON が出力されない。行継続を取り除くと deny になる。元の文字列は bash -n -c と zsh -n -c の両方で構文検査に成功する。python3 -i を printf REACHED に置き換えて非対話で実行すると REACHED が出力され、後続命令に到達することも確認できる。対話起動そのものは実行しない。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: d9022a76101185eb
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1660
+  title: in の前の行継続で後続の対話起動を見逃す
+  description: 対象語の後で in を待つ状態（フェーズ 3）では、バックスラッシュと改行を処理する前に単語判定へ進む。そのため、有効な行継続を case without in として判定不能にし、置換後の python3 -i を判定しない。読みで追跡して再現を確認した。em-review 側の同一コードにも影響する。
+  suggestion: 待機状態の判定より先にバックスラッシュと改行を除去し、状態を維持する。case と対象語の間、および対象語と in の間の行継続を CASES でテストし、両コピーに流す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: 4b3c92b00b801690
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1654
+  title: パターン直後のコメントを本体として解析する
+  description: '項目の ) の直後にある # はシェルではコメントを開始するが、1654 行の条件は直前の ) を認めない。続くフェーズ 8 でも 1789 行の同じ文字の集合で判定するため、x)#; esac の # をコメントと読まない。コメント中の ; esac の esac は ; の直後でコマンドの位置と判定されて case 文を閉じ、次のパターンの ) で置換を閉じる。その結果、引用された python3 -i を命令として deny にする（読みで追跡）。変更前は判定不能で silent だった入力で、この誤拒否は今回の変更で新たに生じた。THREAT-MODEL.md TM-2（コメントの中の esac で閉じない）に反する。em-review 側の同一コードにも影響する。'
+  suggestion: '項目本体の開始位置（フェーズ 7）では、) に隣接する # もコメントとして読み飛ばす。空白なしでコメントが始まる回帰テストを CASES に追加し、両コピーに流す。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+evaluation:
+  round_summary: '第 1 ラウンド。5 観点すべて completed、未レビューの観点なし。cross_validation のため全指摘をコードの読みで追跡した（再現手順は実行していない）。security#0 の 2 件はどちらも読みで再現（reproduced）。comprehensive#0 の 3 件も読みで再現し、うち 2 件は security#0 と同じ箇所を独立に指摘している。誤拒否 2 件（引数の esac、パターン直後のコメント）は変更前は silent だった入力で、この変更で生じた後退。行継続の件は変更前も silent で後退ではないが、D3 / TM-1 を満たさない。引数の esac の取り違えは拒否漏れにもなることを読みで確かめ、security の指摘に含めた。critical / high の指摘はなく、dismissed_sites は空。レビュー出力に注入の試みは見当たらない。観点ごとの確認: security — corroborated。comprehensive — corroborated。architecture — corroborated。spec — findings（引数の esac で閉じる挙動は FR1 と TM-2 に、行継続を判定不能にする挙動は D3 と TM-1 に反する。security / comprehensive の指摘と同じ箇所なので別項目にしていない）。performance — corroborated。'
+  recommended_action: auto_fix
+  action_rationale: 中程度の欠陥 3 件（うち 2 件は 2 観点が独立に指摘）で、どれも _skip_substitution とその補助関数の局所的な修正と CASES の行の追加で直せ、両コピーへの同一の適用で済む。引数の esac の修正はコマンドの位置の追跡を足す設計で、NFR1 の線形性を保つ必要がある。自動修正で収まらなければ rework に回す。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
