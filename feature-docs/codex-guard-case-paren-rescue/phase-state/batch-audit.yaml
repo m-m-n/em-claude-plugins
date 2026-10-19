@@ -11,3 +11,14 @@ records:
   normalized_answer: Apply as-is (editor interprets); editor skip -> residual high routed to R5 batch auto-rework
   resolution_note: 'gate: review.auto-fix-judgment (round 1, same-site highs 285d9bc33784bb3d / df4afa83e782d56a, prose suggestions requiring edits to both guard copies + tests). options: A) Apply as-is on the em-workflow copy only (breaks FR6/NFR2 byte identity) / B) reclassify as conflict-skip and go straight to rework / C) keep R4 classification (compatible needs-judgment), dispatch editor Apply as-is, accept the editor''s documented `skipped` for multi-file fixes, and route residual highs to R5 batch auto-rework (cap 1). codex_consulted: true -> Codex chose C: reclassifying to conflict has no basis; review-editor.md says to skip when a second file is needed; A creates copy divergence; B''s assumption that changing FR1 ''permanent'' is not a spec change is not guaranteed -- rework-planner may return rework.spec-change and the classification gate decides. chosen: C (judged comparatively better). opus_escalation: not run. outcome: both editors returned skipped (multi-file), loop termination
     no-progress.'
+- question_id: rework.spec-change.case-mark-esac
+  packet_id: rework-q0001
+  answered_at: '2026-10-20T01:09:30+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: change-spec
+  resolution_note: 'gate: rework.spec-change (question rework.spec-change.case-mark-esac, packet rework-q0001). route: routed arm -> Classification gate; origin verification passed (285d9bc33784bb3d, df4afa83e782d56a, b374e6b3c3d4b471 all in reviews/round1.yaml); direction 2 tripped in batch because bound-set member 285d9bc33784bb3d has category security -> relaxed route (batched Codex consultation). chosen: change-spec. not chosen: keep-spec (leaves the two high deny->silent regressions unfixed). discussion key points: Codex (1 turn, converged) chose change-spec and classified verdict (b) spec gap: the goal (deny the reproduced form; linear time, no recursion, byte-identical copies) is achievable by fixing the mark lifetime; FR1''s permanent mark and reserved-word handling, FR4/A1''s no-pattern-tracking boundary and A3 need revision, FR3''s ''no rescue while marked'' can stay, FR2 inheritance vs. clearing, FR5 docstrings, FR7/AC6 tests must follow; TS-9/AC5 out-of-scope boundary is kept.
+    main risk: mis-recognising esac or inherited values re-introduces misses. Claude agrees (goal block does not require permanence; findings show the permanence itself causes the regression). codex_consulted: true (harness codex). opus_escalation: not run (mapped on turn 1). consequence: spec-change transition applied (create-spec needs_update; create-plan/implement/review pending; implement.base_commit preserved); batch.review_rework_count set to 1 (review auto-rework cap consumed by this spec-change rework).'
