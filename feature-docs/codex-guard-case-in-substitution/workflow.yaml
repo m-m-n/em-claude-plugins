@@ -127,7 +127,7 @@ workflow:
   completed_at_commit: 0bf38306b359e759fbea3bb4ab5b59884d5a7221
   base_commit: 68f308307a85ee019c842cd6997221bf1789f5a8
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -162,8 +162,18 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-case-in-substitution/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: Parser scan change on every hook invocation; NFR1 bounds scan cost, so check for quadratic rescans
+    cross_validation: true
 requirements:
   FR1:
     title: 置換の中の case 文を読む
