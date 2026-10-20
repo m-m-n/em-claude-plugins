@@ -54,7 +54,7 @@ acceptance_tests:
   AC-6:
     tests:
       - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_states_never_invents_requirements_or_assumptions
-      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_states_digest_disagreement_yields_blocked
+      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_states_digests_are_left_to_the_orchestrator
       - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_never_returns_question_packet
       - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_documents_write_policy_actions
       - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_documents_targets_vs_allowed_write_roots_split

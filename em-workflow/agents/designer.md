@@ -159,7 +159,8 @@ here — this agent's only output is its returned envelope, never a commit.
 Return the common worker result envelope with `status: completed` and
 `payload.design_summary` (`decisions_count` / `open_items` / `tokens` /
 `mockups`), listing every file this dispatch wrote in `written_artifacts`
-with its digest.
+(paths only — the orchestrator computes the digests; see
+`references/contracts/worker-envelope.md`).
 
 This agent returns neither a `question_packet` nor a `workflow_patch`:
 

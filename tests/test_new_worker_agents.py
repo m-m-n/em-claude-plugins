@@ -340,9 +340,13 @@ class TestSpecWriterSpecifics(unittest.TestCase):
         self.assertIn("requirement", lowered)
         self.assertIn("assumption", lowered)
 
-    def test_states_digest_disagreement_yields_blocked(self):
-        self.assertIn("digest disagreement is always a `blocked` return", self.text)
-        self.assertIn("blocking_reason", self.text)
+    def test_states_digests_are_left_to_the_orchestrator(self):
+        self.assertIn("Do not compute or re-verify digests.", self.text)
+        self.assertIn(
+            "Never return `blocked` because you cannot compute a digest.",
+            self.text,
+        )
+        self.assertIn("`sha256: null`", self.text)
 
     def test_never_returns_question_packet(self):
         self.assertIn("never return a `question_packet`", self.text)
