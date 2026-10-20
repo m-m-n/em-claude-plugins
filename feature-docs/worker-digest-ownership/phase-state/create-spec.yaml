@@ -1,11 +1,11 @@
 schema_version: 1
 feature: worker-digest-ownership
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 29aca2dc0eb23c3b1f6d789d1278699916c6671f
-last_input_digest: sha256:b51138ac571f5cad65b8ebd86b75e87e9b1f701ed105ef798993137eea9a12de
-active_request_id: null
+last_input_digest: sha256:9b204d8fa13dbb6d7dc07fcd7d71a9b134f9bd528dec1a1f7bacb6b4a2d05a62
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -126,6 +126,10 @@ worker_runs:
   status: completed
   input_digest: sha256:b51138ac571f5cad65b8ebd86b75e87e9b1f701ed105ef798993137eea9a12de
   output_digest: sha256:98963949cf263e622605d7f0ef87053797ec15a32105e025b6b400eccfd64551
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:9b204d8fa13dbb6d7dc07fcd7d71a9b134f9bd528dec1a1f7bacb6b4a2d05a62
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
