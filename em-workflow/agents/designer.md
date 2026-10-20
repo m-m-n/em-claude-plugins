@@ -159,8 +159,13 @@ here — this agent's only output is its returned envelope, never a commit.
 Return the common worker result envelope with `status: completed` and
 `payload.design_summary` (`decisions_count` / `open_items` / `tokens` /
 `mockups`), listing every file this dispatch wrote in `written_artifacts`
-(paths only — the orchestrator computes the digests; see
-`references/contracts/worker-envelope.md`).
+(paths only — the orchestrator computes the digests; see the
+"`written_artifacts` reporting" section of
+`${CLAUDE_PLUGIN_ROOT}/references/contracts/worker-envelope.md`). You never
+compute or re-verify a digest and never return `blocked` because you cannot
+compute one: the orchestrator verifies every `expect_digest` before
+dispatch (the "Who verifies `expect_digest`" section of
+`${CLAUDE_PLUGIN_ROOT}/references/contracts/spec-writer-contract.md`).
 
 This agent returns neither a `question_packet` nor a `workflow_patch`:
 
