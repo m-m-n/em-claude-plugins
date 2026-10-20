@@ -50,10 +50,16 @@ worker_runs:
   input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
-  input_digest: null
+  status: completed
+  input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-case-reading-fixes/REQUIREMENTS.md
+  sha256: sha256:7c7904cffab0ea8d48a747642c5d075d17007e07663e6cbdb161705f6766a367
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-case-reading-fixes/SPEC.md
+  sha256: sha256:4432770e503290f7ace0c7b27eb7a35dfe60ad87d2c45652e8ee16a94030c9df
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
