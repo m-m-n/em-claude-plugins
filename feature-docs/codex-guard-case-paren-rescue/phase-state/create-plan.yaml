@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-case-paren-rescue
 phase: create-plan
-status: completed
-generation: 1
-base_revision: ebd5c1bcbe48bafa15a9763945238b217abcd613
-last_input_digest: sha256:a7601ed1126c578f32311b673050a282f7f33780fe02e6ffa273d3c1ce5fd9ad
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 26b7e227d31f4533caf622a7d4e22b90bb7afe8e
+last_input_digest: sha256:1e612f76b01008fddb826e124e750c6091b4be5df323769b3d4131dd0d79bdb3
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -13,6 +13,10 @@ worker_runs:
   status: completed
   input_digest: sha256:a7601ed1126c578f32311b673050a282f7f33780fe02e6ffa273d3c1ce5fd9ad
   output_digest: sha256:d2b24e01f6d7c9a23ab03b4927f8e82b31467eae956f2d07d659d8d2fde3db19
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:1e612f76b01008fddb826e124e750c6091b4be5df323769b3d4131dd0d79bdb3
+  output_digest: null
 artifacts:
 - path: feature-docs/codex-guard-case-paren-rescue/IMPLEMENTATION.md
   sha256: sha256:cc3bfa5342497ccddc62739a47f1575636e3c9756096635651931ae38c686a3f
