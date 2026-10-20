@@ -1,0 +1,126 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []  # re-executed after implementation: python3 -m unittest discover -s tests, Ran 10573 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_passes_on_the_real_repository
+      - tests.test_check_plugin_invariants.TestRealPromptCitationPlacement.test_the_spec_writer_digest_bullet_keeps_its_phrases_and_carries_both_citations
+      - tests.test_check_plugin_invariants.TestRealPromptCitationPlacement.test_the_planner_citations_sit_outside_step_4_and_before_the_gate_vocabulary
+      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_states_digests_are_left_to_the_orchestrator
+      - tests.test_threat_model_planner_agent.TestAC4MitigationCarriageAndVerificationItem.test_step4_does_not_restate_the_append_rules_own_mechanics
+    red_confirmed: true
+    red_reason: >-
+      Against the four agent prompts as they were before this task, the new real-repository
+      check test_passes_on_the_real_repository failed with eight offenders (citation (i) and
+      citation (ii) missing for designer, implementation-planner, rework-planner and spec-
+      writer), and the two TestRealPromptCitationPlacement cases failed against the pre-edit
+      prompts ("`written_artifacts` reporting" not cited in implementation-planner.md;
+      references/contracts/worker-envelope.md absent from the spec-writer digest bullet). The
+      two pre-existing pins listed last (spec-writer's three phrases, step 4 free of
+      expect_digest) were green before and after; they guard the pinned wording and were not
+      themselves observed red.
+  AC-2:
+    tests:
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_real_repository_set_is_non_empty_and_matches_an_independent_reading
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_real_repository_set_excludes_the_read_only_analyst
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_synthetic_tree_strips_annotations_and_derives_fictional_names
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_each_file_writing_tool_qualifies
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_bash_holding_worker_is_dropped_in_every_form
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_worker_without_a_writing_tool_is_dropped
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_missing_agent_file_is_dropped
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_tools_written_as_a_yaml_block_list_are_read
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_result_is_sorted_and_deduplicated
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_only_the_applies_column_is_read
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_no_envelope_document_gives_an_empty_set
+      - tests.test_check_plugin_invariants.TestDigestStanceTargetDerivation.test_worker_name_that_is_not_a_plain_name_is_never_joined_into_a_path
+    red_confirmed: true
+    red_reason: >-
+      Run against the checker as it was before this task, every case failed with AttributeError:
+      module has no attribute 'derive_digest_stance_workers'.
+  AC-3:
+    tests:
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_passes_on_the_real_repository
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_passes_on_the_synthetic_tree
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_is_the_last_result_of_run_all_checks_and_the_first_seven_are_unchanged
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_reads_fixed_paths_and_never_walks_the_repository
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_a_target_prompt_lacks_citation_i
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_a_target_prompt_lacks_citation_ii
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_citation_path_and_section_name_in_different_paragraphs_do_not_count
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_citations_may_share_one_paragraph_and_break_lines_anywhere
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_a_target_prompt_cites_no_contract
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_a_cited_contract_does_not_cite_the_envelope
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_a_cited_contract_does_not_exist
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_the_envelope_owner_sentence_is_removed
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_the_spec_writer_contract_owner_sentence_is_removed
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_an_owner_sentence_outside_its_section_does_not_count
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_an_owner_sentence_broken_across_lines_still_matches
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_fails_when_a_listed_worker_has_no_agent_file
+    red_confirmed: true
+    red_reason: >-
+      Run against the checker as it was before this task, every case failed with AttributeError:
+      module has no attribute 'check_worker_digest_stance'. With the check in place and the four
+      prompts still unedited, test_passes_on_the_real_repository failed naming all four workers.
+  AC-4:
+    tests:
+      - tests.test_check_plugin_invariants.TestWorkerDirectedDigestInstruction.test_each_flagged_example_is_reported
+      - tests.test_check_plugin_invariants.TestWorkerDirectedDigestInstruction.test_each_unflagged_example_is_left_alone
+      - tests.test_check_plugin_invariants.TestWorkerDirectedDigestInstruction.test_line_break_positions_never_change_the_verdict
+      - tests.test_check_plugin_invariants.TestWorkerDirectedDigestInstruction.test_a_flagged_sentence_in_a_target_prompt_fails_the_check
+      - tests.test_check_plugin_invariants.TestWorkerDirectedDigestInstruction.test_the_two_acceptance_examples_inside_a_cited_contract_fail_the_check
+      - tests.test_check_plugin_invariants.TestWorkerDirectedDigestInstruction.test_negated_orchestrator_attributed_and_passive_sentences_pass_the_check
+      - tests.test_check_plugin_invariants.TestWorkerDirectedDigestInstruction.test_a_flagged_sentence_in_a_non_target_document_is_not_this_checks_business
+    red_confirmed: true
+    red_reason: >-
+      Run against the checker as it was before this task, every case failed with AttributeError:
+      module has no attribute 'find_worker_directed_digest_instructions' or
+      'check_worker_digest_stance'.
+  AC-5:
+    tests:
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_no_envelope_document
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_a_tree_with_no_files_at_all
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_no_applicability_section
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_applicability_section_without_a_table
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_table_without_applies_names
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_table_without_an_applies_column
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_only_bash_holding_agents
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_only_write_less_agents
+      - tests.test_check_plugin_invariants.TestEmptyTargetSetFails.test_cli_exits_1_on_an_empty_set
+    red_confirmed: true
+    red_reason: >-
+      Run against the checker as it was before this task, the eight check-level cases failed
+      with AttributeError (no check_worker_digest_stance) and test_cli_exits_1_on_an_empty_set
+      failed with exit 0 != 1 (the CLI had no worker_digest_stance result to fail).
+  AC-6:
+    tests:
+      - tests.test_worker_digest_results.TestDerivedWorkersAcceptPathOnlyWrittenArtifacts.test_derived_worker_set_is_not_empty
+      - tests.test_worker_digest_results.TestDerivedWorkersAcceptPathOnlyWrittenArtifacts.test_every_derived_worker_has_a_valid_completed_fixture
+      - tests.test_worker_digest_results.TestDerivedWorkersAcceptPathOnlyWrittenArtifacts.test_sha256_null_is_accepted
+      - tests.test_worker_digest_results.TestDerivedWorkersAcceptPathOnlyWrittenArtifacts.test_sha256_omitted_is_accepted
+      - tests.test_worker_digest_results.TestDerivedWorkersAcceptPathOnlyWrittenArtifacts.test_an_entry_that_still_carries_a_digest_is_accepted_too
+      - tests.test_worker_digest_results.TestDerivedWorkersAcceptPathOnlyWrittenArtifacts.test_entry_without_a_path_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the checker as it was before this task, the class failed in setUpClass with
+      AttributeError: module has no attribute 'derive_digest_stance_workers'. The validator's
+      acceptance of path-only written_artifacts entries and its rejection of an entry without a
+      path already existed (the validator is not changed by this task), so no red state occurred
+      for that behaviour itself; the red observed is the missing derivation the test depends on.
+  AC-7:
+    tests:
+      - tests.test_check_plugin_invariants.TestCli.test_exit_0_when_all_checks_pass
+      - tests.test_check_plugin_invariants.TestSinglePassTraversal.test_iter_repo_files_invoked_once_when_both_checks_run_together
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+      - tests.test_worker_digest_results.TestThisFileKeepsToTheStandardLibraryAndNoDispatchReference.test_no_dispatch_reference_literal
+      - tests.test_worker_digest_results.TestThisFileKeepsToTheStandardLibraryAndNoDispatchReference.test_imports_are_standard_library_only
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests listed here (the CLI exit-0
+      tree, the single-traversal count, the repository-level run) detect a regression of the
+      existing checker behaviour; no red state occurred for this change, because they stayed
+      green when the helper and the check were added to a passing tree. (They did turn red for
+      one intermediate state: test_checker_exits_cleanly_against_the_repository_root failed
+      while the check existed but the four prompts still lacked the citations; that is the AC-1
+      red, not a red of this criterion.) The two tests in the new file's own self-check class
+      pass on first run: the file contains no dispatch reference literal and imports only the
+      standard library, so they were never observed failing.
