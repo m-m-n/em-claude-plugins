@@ -1,0 +1,83 @@
+schema_version: 2
+feature: codex-guard-case-reading-fixes
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.41
+    confidence: 0.59
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.59
+      '2': 0.41
+      '3': 0.0
+  observed_at: '2026-10-21T08:11:29+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.8
+    confidence: 0.8
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.2
+      '2': 0.8
+      '3': 0.0
+  observed_at: '2026-10-21T08:13:57+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 200
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 9
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence:
+  - 'em-workflow/scripts/codex-hook-interactive-guard.py:1931: 調査した main は 9c5f62ff5519a988d0b105017d553bd082371443
+    で、ローカルの origin/main と一致している'
+  - 'em-workflow/scripts/codex-hook-interactive-guard.py:2173: 欠陥1の指定入力は両コピーで deny
+    となり、期待する無出力と一致しなかった'
+  - 'em-workflow/scripts/codex-hook-interactive-guard.py:1993: 欠陥2の指定入力は両コピーで deny
+    となった。コメント開始条件の直前文字に ) が含まれていない'
+  - 'em-workflow/scripts/codex-hook-interactive-guard.py:1989: 欠陥3の指定入力は両コピーで無出力となった。待機状態の判定が2032行のバックスラッシュ処理より先にある'
+  - 'em-workflow/scripts/codex-hook-interactive-guard.py:2158: then・! を引数に持つ派生入力も誤拒否となり、引用ずれの派生入力では後続の
+    python3 -i を拒否しなかった'
+  - 'em-workflow/scripts/codex-hook-interactive-guard.py:1989: 対象語の前と空の case の esac
+    前の行継続では無出力だった。最初のパターン前の行継続では deny となった'
+  - 'tests/test_codex_hook_interactive_guard.py:70: 指定入力3件と派生入力6件は、いずれも既存 CASES に完全一致する行がなかった'
+  - 'tests/test_codex_hook_interactive_guard.py:1144: CASES の各行を両コピーへ渡す仕組みがある。953行以降の関連22行を実行し、計44回すべて既存の期待値と一致した'
+  - 'tests/test_codex_hook_interactive_guard.py:1648: 多数の項目と深い入れ子の既存テストがある。これらと TestCopies
+    の計5テストは成功した'
+  - 'tests/test_codex_hook_interactive_guard.py:3079: 両コピーのバイト一致を確認する既存テストがあり、現在の両コピーもバイト単位で一致している'
+  - 'em-workflow/scripts/codex-hook-interactive-guard.py:1918: 呼出元 _read_quoted_unit、関連補助関数4個、例外
+    _Undecidable を確認した。両コピーを重複計上せず6件としている'
+  - 'tests/test_codex_hook_interactive_guard.py:1041: 検証では JSON をフックの標準入力へ渡し、対象コマンド自体は実行していない。調査後の
+    git status に変更はなかった'
+decided_at: '2026-10-21T08:14:20+09:00'
