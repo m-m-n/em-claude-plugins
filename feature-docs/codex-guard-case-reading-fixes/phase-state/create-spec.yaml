@@ -4,14 +4,50 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 4ba7d3888c4d0ffb3b1321d600728a509027e8f0
-last_input_digest: sha256:6561ace8fbe4faadeca2fcd5fb7d1b0cb43907bad0ea9210ead03e6cf61c24f2
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-21T08:19:40+09:00'
+    questions:
+    - question_id: requirement.line-continuation-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.line-continuation-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T08:24:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_split
+    freeform: null
+    normalized_answer: 行継続は待ちフェーズの位置に加えて、case / in / esac の直後に付いた形と、キーワードを分断する形も読み飛ばしてキーワードとして読む
+    resolution_note: batch policy create-spec.requirement-clarification codex_consultation（harness
+      codex、1 turn）。Codex は include_split を推奨。両コピーへの JSON 入力で、直後の継続・分断の形が判定不能による拒否漏れ（in\<NL>,
+      esac\<NL>, i\<NL>n, es\<NL>ac）と誤拒否（case\<NL>, ca\<NL>se）になることを確認。オーケストレーターが写像を判断し
+      include_split を採用（拒否漏れを既知の残余として固定するより塞ぐ方が比較的良い）。Opus エスカレーションは不要
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T08:24:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を省略する（analyst 推奨の skip。UI の無いフック解析処理の修正、デザインシステム候補ゼロ）
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst
+      推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:6561ace8fbe4faadeca2fcd5fb7d1b0cb43907bad0ea9210ead03e6cf61c24f2
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
   output_digest: null
 artifacts: []
 patches: []
