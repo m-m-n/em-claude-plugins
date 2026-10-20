@@ -77,13 +77,13 @@ write_policy:
 
 ### Who verifies `expect_digest`
 
-The orchestrator verifies `expect_digest`, not the worker. Immediately
-before dispatch — after the clean-worktree precondition and the
-pre-dispatch snapshot of scope verification
-(`references/phases/create-spec-phase.md`) — the orchestrator computes the
-sha256 of every `targets` path whose action requires `expect_digest` and
-compares it with that `expect_digest`. On a mismatch it does not dispatch;
-it treats the input as stale and returns to the action decision below.
+The orchestrator verifies `expect_digest`, not the worker. It does so
+immediately before every dispatch that carries a `targets` path whose
+action requires `expect_digest` — at each dispatch site listed in
+`references/artifact-digest.md` ("Dispatch sites"): create-spec, the design
+step, create-plan and rework — in the way that document's "Pre-dispatch
+verification" prescribes. On a mismatch it does not dispatch; it treats the
+input as stale and returns to the action decision below.
 
 The worker does not compute digests and does not re-verify
 `expect_digest`. From that verification until the worker's write, the
@@ -133,7 +133,10 @@ key-comparison rule, which applies to YAML targets only.
 ## How the orchestrator chooses each target's action before dispatch
 
 Before dispatching spec-writer, the orchestrator inspects each target
-path's current digest and decides its `action`:
+path's current digest and decides its `action`. The current digest is
+computed as `references/artifact-digest.md` ("Calculation") states, and a
+recorded digest written by the earlier git-blob method is compared as its
+"Legacy records" section states. The decision:
 
 - The path does not exist → `create`.
 - The path exists and its digest matches the immediately preceding

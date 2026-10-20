@@ -1,0 +1,75 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests: Ran 10518 tests, OK (skipped=1), before any edit
+final_failures: []             # re-executed after the implementation and the record; see notes in the task report
+# Test IDs are written in the form the project's test command selects directly:
+#   python3 -m unittest discover -s tests -k <ID>
+# (the discovery top-level directory is tests/, so the module name carries no
+# 'tests.' prefix; tests/test_gate_option_vocabulary.py imports a sibling
+# helper and cannot be imported as 'tests.<module>').
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_digest_contract_alignment.TestPhaseStateValidatorDesignPhase.test_ac1_design_phase_state_is_accepted
+      - test_digest_contract_alignment.TestPhaseStateValidatorDesignPhase.test_ac1_existing_phase_values_are_still_accepted
+      - test_digest_contract_alignment.TestPhaseStateValidatorDesignPhase.test_ac1_unknown_phase_values_are_rejected_naming_the_phase_field
+      - test_digest_contract_alignment.TestPhaseStateValidatorDesignPhase.test_ac1_acceptance_of_design_is_not_vacuous_the_only_difference_is_phase
+      - test_digest_contract_alignment.TestPhaseStateValidatorDesignPhase.test_ac1_gate_registry_attributes_no_gate_to_the_design_phase
+    red_confirmed: true
+    red_reason: "Before PHASE_VALUES gained 'design', test_ac1_design_phase_state_is_accepted and test_ac1_acceptance_of_design_is_not_vacuous_the_only_difference_is_phase failed: the validator exited 1 instead of 0 with the detail {code: phase, message: 'phase must be one of [create-plan, create-spec, review, rework, verify]'}. The rejection (designs, deploy), existing-value and gate-registry tests were already green at that point; they are the non-vacuity companions and regression guards of the accepted case."
+  AC-2:
+    tests:
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac2_file_layout_lists_design_yaml
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac2_file_layout_states_design_yaml_exists_only_when_the_designer_is_dispatched
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac2_file_layout_states_no_file_when_the_step_is_skipped
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac2_phase_field_row_includes_design_and_keeps_the_file_name_rule
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac2_resume_section_states_design_yaml_never_applies_a_patch
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac2_resume_section_names_the_reason_the_designer_returns_no_patch
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac2_resume_table_keeps_every_row_the_statement_does_not_apply_to
+      - test_phase_state_doc.TestResumeDecisionTable.test_every_top_level_status_is_covered
+      - test_phase_state_doc.TestResumeDecisionTable.test_dispatching_splits_on_discarded_stale_active_run
+      - test_phase_state_doc.TestLegacyCompatibility.test_legacy_compatibility_table_covers_upstream_states
+    red_confirmed: true
+    red_reason: "Before phase-state.md was edited the six new design tests failed (design.yaml absent from the File layout, no 'design' in the phase row, no never-becomes-applying_patch statement); the row-labels test and the existing test_phase_state_doc tests were already green and stay green (they pin the unchanged Resume rows and Legacy section; a dedicated byte pin would duplicate them, so none was added)."
+  AC-3:
+    tests:
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac3_input_phase_row_includes_design_and_the_existing_values
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac3_document_contains_no_expect_digest_token
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac3_token_matcher_fires_on_forged_text
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac3_applicability_table_is_unchanged
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac3_applicability_matcher_fires_on_a_forged_extra_worker
+      - test_worker_contract_docs.TestNoRestatedSiblingSsotContent.test_neither_doc_restates_write_policy_internal_actions
+    red_confirmed: true
+    red_reason: "Before worker-envelope.md was edited, test_ac3_input_phase_row_includes_design_and_the_existing_values failed: AssertionError '`design`' not found in the input phase row. The expect_digest-token and Applicability-table tests guard unchanged properties and were green at baseline, with forged-text companions showing their matchers fire; the existing test_worker_contract_docs test already pins the token's absence."
+  AC-4:
+    tests:
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac4_artifacts_row_cites_the_owner_digest_definition_and_legacy_records
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac4_artifacts_row_does_not_restate_the_digest_format
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac4_restatement_matcher_fires_on_forged_text
+      - test_digest_contract_alignment.TestPhaseStateDocDesign.test_ac4_citation_matcher_fires_only_with_path_and_section_together
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac4_reporting_section_cites_the_owner_layer5_recording
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac4_reporting_section_keeps_the_worker_stance_sentence
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac4_reporting_section_does_not_restate_the_digest_format
+      - test_digest_contract_alignment.TestWorkerEnvelopeDocDesign.test_ac4_reporting_section_directs_the_worker_to_no_digest_action
+    red_confirmed: true
+    red_reason: "Before the documents were edited, test_ac4_artifacts_row_cites_the_owner_digest_definition_and_legacy_records and test_ac4_reporting_section_cites_the_owner_layer5_recording failed (the citation matcher found no references/artifact-digest.md plus quoted section name in the artifacts row or in the written_artifacts reporting section). The non-restatement, stance-sentence and no-worker-directive tests guard properties that already held and were green at baseline; each absence matcher has a forged-text companion."
+  AC-5:
+    tests:
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_who_verifies_cites_the_owner_dispatch_sites_and_verification
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_who_verifies_names_all_four_dispatch_sites
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_who_verifies_cites_the_procedure_instead_of_restating_it
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_procedure_matcher_fires_on_forged_text
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_action_choice_cites_the_owner_calculation_and_legacy_records
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_contract_directs_the_worker_to_no_digest_action
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_worker_directed_matcher_fires_on_forged_text
+      - test_digest_contract_alignment.TestSpecWriterContractDigestOwnership.test_ac5_worker_directed_matcher_passes_the_negated_and_orchestrator_forms
+      - test_worker_contracts_create_spec.TestSpecWriterContract.test_orchestrator_owns_expect_digest_verification
+    red_confirmed: true
+    red_reason: "Before spec-writer-contract.md was edited, test_ac5_who_verifies_cites_the_owner_dispatch_sites_and_verification, test_ac5_who_verifies_names_all_four_dispatch_sites ('design step' absent) and test_ac5_action_choice_cites_the_owner_calculation_and_legacy_records failed. test_ac5_who_verifies_cites_the_procedure_instead_of_restating_it was written after the edit; its matcher was then applied to the pre-edit section from git HEAD and fired (True) and does not fire on the edited section. The existing test_worker_contracts_create_spec test pins the heading and both sentences byte-for-byte (including the line break after 'cannot') and stayed green; the worker-directive test is a guard that held at baseline."
+  AC-6:
+    tests:
+      - test_digest_contract_alignment.TestValidatorPinRefreshComment.test_ac6_pin_carries_the_refresh_comment_naming_the_design_phase_value
+      - test_digest_contract_alignment.TestValidatorPinRefreshComment.test_ac6_the_pin_assignment_still_exists
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: "test_ac6_pin_carries_the_refresh_comment_naming_the_design_phase_value failed before the refresh (no 'Refreshed again by worker-digest-ownership/task0003' marker). After PHASE_VALUES was edited and before the pin was refreshed, the existing test_validate_worker_output_py_byte_identical failed (validator digest mismatch); the pin was then refreshed in place with the comment. test_test_validate_worker_output_py_byte_identical stayed green because tests/test_validate_worker_output.py was not edited. The full-suite outcome of this criterion (python3 -m unittest discover -s tests) has no single test ID; it is recorded in final_failures."
