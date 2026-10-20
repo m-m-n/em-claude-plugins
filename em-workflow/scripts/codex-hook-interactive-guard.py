@@ -254,18 +254,59 @@ Decision flow:
      separator of the innermost group is a `;` or a lone `&`, and an outer group
      with none of its own takes the separator of the one nested in it. The group
      just outside the chain is a `(` group, not a `{` group and not the top
-     level. Words pending before the `)` never block the rescue; they become a
-     command of the closed `(` group, exactly as the `)` of an ordinary subshell
-     finalizes the words before it. The rescued groups are never closed, so the
-     commands read in them are judged as commands of the closed `(` group: a
-     pipe into that group and a stdin redirect after its close reach them, and
-     they are not judged when that group, or a group around it, is the body of a
-     function definition. Text after the `)` is outside the closed group, and a
-     later `)` that finds no open `(` group is a separator, as anywhere else. A
-     `)` that does not meet these conditions keeps its reading: it closes the
-     innermost open group when that is a `(` group, and is otherwise a
-     separator. A `)` inside quotes, inside a comment or taken into an argument
-     range never reaches this reading.
+     level. The innermost group's case mark and inherited value are both 0
+     (below). Words pending before the `)` never block the rescue; they
+     become a command of the closed `(` group, exactly as the `)` of an ordinary
+     subshell finalizes the words before it. The rescued groups are never
+     closed, so the commands read in them are judged as commands of the closed
+     `(` group: a pipe into that group and a stdin redirect after its close
+     reach them, and they are not judged when that group, or a group around it,
+     is the body of a function definition. Text after the `)` is outside the
+     closed group, and a later `)` that finds no open `(` group is a separator,
+     as anywhere else. A `)` that does not meet these conditions keeps its
+     reading: it closes the innermost open group when that is a `(` group, and
+     is otherwise a separator. A `)` inside quotes, inside a comment or taken
+     into an argument range never reaches this reading.
+     The case mark and the inherited value turn the `)` rescue off for a
+     chain while either one is 1 or more. The case mark of a provisional group
+     is the number of `case`s counted in it that no `esac` has closed yet; it is
+     never negative. The reader counts a `case` when it appends one to a simple
+     command while that group is the innermost open group, the `case` is at
+     command position and it holds no quote, no escape and no expansion (it is
+     bare): the mark goes up by 1. Command position is the first word of the
+     simple command after the leading run of bare reserved words (`!`, `time`
+     and the others, a bare `-p` right after a bare `time` included); a
+     reserved word that holds a quote or an escape (a quoted `time`, an
+     escaped `!`) is not in the run, the run ends at it, and the `case` after
+     it is not at command position. A bare `esac` lowers the count while that
+     group is the innermost open group, when it is at command position, or when
+     it comes right after the three words `case` (counted as above), any one
+     word and a bare `in` of the same simple command: the own case mark goes
+     down by 1 when it is 1 or more, otherwise the inherited value goes down by
+     1 when that is 1 or more, and nothing changes when both are 0. A quoted,
+     escaped or expanded `case` or `esac`, one in any other position (an
+     argument of another command), an `esac` on the line after `case x` (the
+     newline starts a new simple command) and one in zsh's `case x { ... }` form
+     (no bare `in`) change nothing. A
+     provisional group opened inside a provisional group also takes the
+     inherited value, fixed once when it opens from its parent alone: the
+     parent's case mark plus the parent's inherited value at that moment, and 0
+     when the parent is not provisional, so the count reaches the whole chain
+     below the counting group without any walk over the groups around it. Later
+     changes to the parent's values are not followed; the inherited value
+     changes only through an `esac` read in the group itself, as above. The
+     inherited value is a separate value from the one that blocks the part of a
+     chain outside a group. A provisional group whose case mark or inherited
+     value is 1 or more is not rescued at a `)`: the `)` is read as the
+     terminator of a case pattern, it closes that provisional group itself
+     instead of the `(` group outside the chain, and a stdin redirect after it
+     reaches only that provisional group. A group whose two values are both 0,
+     because it never counted a `case` or because `esac` returned them to 0,
+     reads exactly like a group that was never marked, and a chain of such
+     groups is rescued at a `)` as before. Neither value is read by the rescue
+     at a lone `}` or by the rescue when input ends. The main reader does not
+     track the terminators of case patterns in general, so a `)` that
+     terminates a case pattern outside a provisional group keeps its reading.
   5. After `|` or `|&` the right side is awaited: a pending pipe survives
      newlines, blank lines, comment-only lines and heredoc bodies, and the
      next non-empty command is the right side. A newline after `&&` or `||`
@@ -371,6 +412,15 @@ WRAPPERS = ("env", "nohup", "nice", "exec", "command", "time", "sudo")
 # Reserved words removed in front of the words before a `(`, so a function
 # defined right after `then`, `do`, `!` and the like is still read as one.
 RESERVED_WORDS = ("!", "do", "elif", "else", "if", "then", "time", "until", "while")
+
+# How far the simple command in progress has read the shape `case`, one word,
+# `in`, which lets an `esac` right after it lower the case mark
+# (`_Parser.case_shape`): nothing of it, a `case` that raised the mark, that
+# `case` and the one word after it, and those two and a bare `in`.
+CASE_SHAPE_NONE = 0
+CASE_SHAPE_CASE = 1
+CASE_SHAPE_SUBJECT = 2
+CASE_SHAPE_IN = 3
 
 # A word that ends in one of these is no function name: `f?()` and the like are
 # extglob patterns, not definitions, so the group after the `()` is judged.
@@ -630,6 +680,39 @@ class _Group:
                while this group is open its parent reads no direct separator, so
                the parent's part cannot change, and a `}` or a `)` reads them in
                constant time without walking the groups around it
+    case_mark  on a provisional group: the case mark, the number of `case`s
+               counted in the group that no `esac` has closed yet, never
+               negative. The reader adds 1 when it appends a bare `case` to a
+               simple command at command position while the group is the
+               innermost open group, and takes 1 off when it appends a bare
+               `esac` at command position, or right after a counted `case`, any
+               one word and a bare `in` of the same simple command
+               (`_Parser._append_word`), as long as the mark is 1 or more;
+               otherwise an `esac` lowers `case_inherited` instead.
+               Command position is the first word after the leading run of bare
+               reserved words (`!`, `time` and the others, a bare `-p` right
+               after a bare `time` included); a reserved word that holds a quote
+               or an escape is not in the run. A quoted, escaped or expanded
+               `case` or `esac` and one in any other position change nothing. A
+               `)` is not a rescue for a group whose mark is 1 or more: the `)`
+               is read as the terminator of a case pattern and closes the
+               provisional group itself (`_Parser._closes_paren_after_rescue`).
+               A mark of 0 reads like a group that was never marked. The brace
+               rescue never reads it
+    case_inherited  on a provisional group: the inherited value, a value separate
+               from `outer_blocked` and from `case_mark`, fixed when the group
+               opens, from the values of its parent alone
+               (`_Parser._mark_provisional`): the parent's `case_mark` plus the
+               parent's `case_inherited` at that moment when the parent is
+               provisional, 0 otherwise. It is a snapshot of the parent's two
+               values, so it carries the count down the chain in constant time
+               with no walk over the groups around it, and it does not follow
+               later changes to the parent's values. It goes down by 1 when an
+               `esac` is read in the group itself (at the positions given for
+               `case_mark`) while `case_mark` is 0 and it is 1 or more; it is
+               never negative. A group whose `case_inherited` is 1 or more is
+               treated as one whose `case_mark` is 1 or more at a `)`. The brace
+               rescue never reads it
     comment_exception  the group has the comment exception: while it is the
                innermost open group, an unquoted `#` at word start is a word
                character, not the start of a comment, and the characters after
@@ -657,7 +740,7 @@ class _Group:
     __slots__ = (
         "kind", "parent", "pipe", "stdin", "skip", "head", "anon", "anon_pipe", "anon_stdin",
         "head_stdin", "in_anon", "size", "connected", "skipped", "provisional", "first_sep",
-        "chain_base", "outer_blocked", "comment_exception",
+        "chain_base", "outer_blocked", "case_mark", "case_inherited", "comment_exception",
     )
 
     def __init__(
@@ -682,6 +765,8 @@ class _Group:
         self.first_sep = None
         self.chain_base = None
         self.outer_blocked = False
+        self.case_mark = 0
+        self.case_inherited = 0
         self.comment_exception = comment_exception
 
 
@@ -769,6 +854,34 @@ class _Parser:
     `_Group.outer_blocked`), so it costs constant time and the whole reading
     stays linear in the length of the string.
 
+    The `)` rescue has one exception, the case mark. The case mark
+    (`_Group.case_mark`) of a provisional group is the number of `case`s counted
+    in it that no `esac` has closed yet. When the reader appends a bare `case`
+    to a simple command while a provisional group is the innermost open group,
+    and the `case` is at command position (the first word of the command after
+    the leading run of bare reserved words; a reserved word that holds a quote
+    or an escape is no part of the run), the mark goes up by 1 (`_append_word`).
+    A bare `esac` at command position, or right after a counted `case`, any one
+    word and a bare `in` of the same simple command, takes 1 off the own mark
+    when it is 1 or more, and otherwise 1 off the inherited value when that is 1
+    or more; the state for the run of bare reserved words and for that shape is
+    kept apart from the state `_names_function` and `_names_anonymous_function`
+    read, and a new simple command begins it over (`_start_words`). A provisional
+    group opened inside a provisional group takes the inherited value
+    (`_Group.case_inherited`) once, when it opens, from its parent alone: the
+    parent's case mark plus the parent's inherited value (`_mark_provisional`),
+    so the count runs down the chain without any walk. A group whose case mark
+    or inherited value is 1 or more is not rescued at a `)`
+    (`_closes_paren_after_rescue`): the `)` ends a case pattern there, so it
+    closes that provisional group itself and not the `(` group outside the
+    chain, and a stdin redirect after it reaches only that group. A group whose
+    two values are both 0 is read exactly like one that was never marked. Both
+    values are kept apart from `_Group.outer_blocked`, and the rescue at a lone
+    `}` and the rescue when input ends never read them. Counting costs constant
+    time per appended word, inheriting constant time per opened group and the
+    check constant time per `)`, with no recursion. The main reader does not
+    track the terminators of case patterns in general.
+
     The group opened for a range that has a matching `)`, holds no unquoted `;`,
     `&` or newline and holds a backquote has the comment exception: while it is
     the innermost open group, an unquoted `#` at word start is a word character,
@@ -835,7 +948,14 @@ class _Parser:
 
     def _start_words(self):
         """Begin a simple command with no word. The reserved-run state below
-        is what `_names_anonymous_function` reads; `_append_word` keeps it."""
+        is what `_names_anonymous_function` reads; `_append_word` keeps it.
+
+        The state for the case mark is begun here too, apart from the reserved-run
+        state: the run of bare reserved words that precedes command position,
+        and the shape `case`, one word, `in` that lets an `esac` lower the case
+        mark. A new simple command (after a `;`, a newline, a `)` and the like)
+        starts both over, so an `esac` on a line after `case x` is neither at
+        command position nor right after `in`."""
         self.words = []
         # Every word so far is removed by the leading reserved-run removal.
         self.run_open = True
@@ -845,13 +965,51 @@ class _Parser:
         # The words so far are the removed run and then exactly one bare
         # `function`.
         self.lone_function = False
+        # Every word so far is a bare reserved word, or a bare `-p` right after
+        # a bare `time`: the next word that is not one is at command position.
+        self.bare_run_open = True
+        # The last word appended was a bare `time` of that run.
+        self.bare_after_time = False
+        # How far the shape `case`, one word, `in` has been read.
+        self.case_shape = CASE_SHAPE_NONE
 
     def _append_word(self, word):
         """Append a word to the simple command and keep the reserved-run state
         in step with it. The state follows the removal `_names_function`
         applies: a word of RESERVED_WORDS that is not dynamic, and a
         non-dynamic `-p` right after a removed `time`, stay in the run; the
-        first other word ends it. Constant time per word."""
+        first other word ends it.
+
+        The case mark (`_Group.case_mark`, the number of `case`s that no `esac`
+        has closed yet) is kept in step here, from separate state: the run of
+        bare reserved words (`bare_run_open`, `bare_after_time`) and the shape
+        `case`, one word, `in` (`case_shape`). A word stays in the bare run when
+        it is a word of RESERVED_WORDS or a `-p` right after such a `time`
+        and holds no quote, no escape and no expansion (`bare`); a quoted or
+        escaped `time` or `!` is not counted, and the run ends at it. The first
+        word after the run is at command position. The mark changes only while
+        the innermost open group is a provisional group, and the change lands on
+        that group:
+
+        - A bare `case` at command position raises the mark by 1 and starts the
+          shape.
+        - A bare `esac` lowers it by 1 when it is at command position, or when
+          it comes right after the three words of the shape in the same simple
+          command: a counted `case`, any one word and a bare `in`. If the own
+          mark is 1 or more it goes down by 1; otherwise the inherited value
+          (`_Group.case_inherited`) goes down by 1 when it is 1 or more; if both
+          are 0 nothing changes, so neither value is ever negative.
+        - Any other word advances the shape or ends it: after a counted `case`
+          any word is the one word, after it only a bare `in` goes on, and after
+          the `in` any word other than a lowering `esac` ends it.
+
+        A quoted, escaped or expanded `case` or `esac`, one in any other position
+        (an argument of another command), an `esac` on the line after `case x`
+        (the newline starts a new simple command) and one in zsh's brace form
+        `case x { ... }` (no bare `in`) change nothing. A group whose mark and
+        inherited value are both 0 reads like one that was never marked. A `)`
+        is not a rescue for a group whose mark or inherited value is 1 or more
+        (`_closes_paren_after_rescue`). Constant time per word."""
         if self.run_open:
             if self.after_time and not word.dynamic and word.text == "-p":
                 self.after_time = False
@@ -863,6 +1021,39 @@ class _Parser:
                 self.lone_function = word.text == "function" and word.bare
         else:
             self.lone_function = False
+        at_command_position = False
+        if self.bare_run_open:
+            if self.bare_after_time and word.bare and word.text == "-p":
+                self.bare_after_time = False
+            elif word.bare and word.text in RESERVED_WORDS:
+                self.bare_after_time = word.text == "time"
+            else:
+                self.bare_run_open = False
+                self.bare_after_time = False
+                at_command_position = True
+        group = self.frames[-1] if self.frames else None
+        if group is not None and group.provisional:
+            shape = self.case_shape
+            self.case_shape = CASE_SHAPE_NONE
+            lowers = False
+            if at_command_position:
+                if word.bare and word.text == "case":
+                    group.case_mark += 1
+                    self.case_shape = CASE_SHAPE_CASE
+                else:
+                    lowers = word.bare and word.text == "esac"
+            elif shape == CASE_SHAPE_CASE:
+                self.case_shape = CASE_SHAPE_SUBJECT
+            elif shape == CASE_SHAPE_SUBJECT:
+                if word.bare and word.text == "in":
+                    self.case_shape = CASE_SHAPE_IN
+            elif shape == CASE_SHAPE_IN:
+                lowers = word.bare and word.text == "esac"
+            if lowers:
+                if group.case_mark >= 1:
+                    group.case_mark -= 1
+                elif group.case_inherited >= 1:
+                    group.case_inherited -= 1
         self.words.append(word)
 
     def _reset_word(self):
@@ -1024,7 +1215,23 @@ class _Parser:
         meanwhile. The separator it would inherit from this group is one of
         RESCUE_SEPARATORS whenever this group's own separator rescues, so which
         one it is does not matter here. Otherwise the parent (or the top level,
-        None) is the base, and nothing outside this group is blocked."""
+        None) is the base, and nothing outside this group is blocked.
+
+        The same call fixes a third value, `_Group.case_inherited`, from the
+        same parent and in the same way: the sum of the parent's case mark
+        (`_Group.case_mark`, the number of unfinished `case`s) and the parent's
+        inherited value when the parent is provisional, 0 otherwise, whatever
+        the parent's separators are. It is a snapshot of the parent's two
+        values taken now, read once from the parent alone with no walk over the
+        groups around, and it does not follow later changes to the parent's
+        values; afterwards it changes only when a bare `esac` is read in this
+        group while its own case mark is 0 and the `esac` is at command position
+        (the first word after the leading run of bare reserved words) or right
+        after a counted `case`, any one word and a bare `in` of the same simple
+        command (`_append_word`). It is kept apart from `outer_blocked`: the
+        check at a `}` never reads it, and the check at a `)` turns the rescue
+        off for a group whose inherited value is 1 or more
+        (`_closes_paren_after_rescue`)."""
         group.provisional = True
         parent = group.parent
         if parent is not None and parent.provisional:
@@ -1033,9 +1240,11 @@ class _Parser:
                 parent.outer_blocked
                 or _rescue_separator(parent.first_sep, RESCUE_SEPARATORS[0]) is None
             )
+            group.case_inherited = parent.case_mark + parent.case_inherited
         else:
             group.chain_base = parent
             group.outer_blocked = False
+            group.case_inherited = 0
 
     def _flush(self):
         """End the simple command in progress. Return (made, redirected):
@@ -1217,7 +1426,28 @@ class _Parser:
         """Whether an unquoted `)` read while `group` is the innermost open group
         rescues the chain of provisional groups that ends at `group` and closes
         the `(` group just outside it. The word in progress has been finished.
-        All of these hold:
+
+        The answer is no, before any reasoning below, when the case mark of
+        `group` (`_Group.case_mark`, the number of unfinished `case`s that
+        `_append_word` raises at a bare `case` at command position, the first
+        word after the leading run of bare reserved words, and lowers at a bare
+        `esac` at command position or right after a counted `case`, any one
+        word and a bare `in`) or its inherited value (`_Group.case_inherited`,
+        fixed once when the group opens as the parent's case mark plus the
+        parent's inherited value by `_mark_provisional`, and lowered by that
+        `esac` while the own mark is 0) is 1 or more. Whatever its separators
+        and its base are, a group where
+        either one is 1 or more is not rescued: the `)` is read as the
+        terminator of a case pattern. A group where both are 0, never counted
+        or returned to 0 by `esac`, goes on to the reasoning below like a group
+        that was never marked.
+        `_close_paren` then falls through to its ordinary reading and, the
+        provisional group being the innermost open group and a `(` group,
+        closes that group itself instead of the `(` group outside the chain, so
+        a stdin redirect that follows reaches only that group. The check reads
+        the two values of `group` alone.
+
+        Otherwise all of these hold:
 
         1. `group` is provisional and its `outer_blocked` is false: the chain is
            the run of open provisional groups from `group` outward, and no group
@@ -1236,8 +1466,12 @@ class _Parser:
 
         Unlike the rescue at a `}`, no word condition applies: words pending
         before the `)` never block it. Constant time: it reads `group`, its chain
-        base and the two values `_mark_provisional` fixed when `group` opened. It
-        changes nothing, so a `)` that fails it is read exactly as before."""
+        base and the values `_append_word` and `_mark_provisional` keep on
+        `group` (`case_mark`, `case_inherited`, `outer_blocked`, `first_sep`),
+        and walks no group. It changes nothing, so a `)` that fails it is read
+        exactly as before."""
+        if group.case_mark >= 1 or group.case_inherited >= 1:
+            return False
         if not group.provisional or group.outer_blocked:
             return False
         if _rescue_separator(group.first_sep) is None:
@@ -1280,9 +1514,23 @@ class _Parser:
         - When the innermost open group is a provisional group that rescues the
           chain it ends and the open group just outside the chain is a `(` group,
           the `)` rescues the chain and closes that group
-          (`_closes_paren_after_rescue`, `_close_paren_after_rescue`).
+          (`_closes_paren_after_rescue`, `_close_paren_after_rescue`). A
+          provisional group whose case mark or inherited value is 1 or more
+          (`_Group.case_mark`, the number of `case`s that no `esac` has closed
+          yet, raised by a bare `case` at command position, the first word after
+          the leading run of bare reserved words, and lowered by a bare `esac`
+          at command position or right after a counted `case`, any one word and
+          a bare `in`; and `_Group.case_inherited`, fixed when the group opens
+          as the parent's case mark plus the parent's inherited value and
+          lowered by that `esac` while the own mark is 0) never rescues: its
+          `)` is a case-pattern terminator and takes the next reading. Once
+          `esac` has returned both to 0 the group rescues again.
         - Otherwise, when the innermost open group is a `(` group, the `)` closes
           it; the words before the `)` are finalized as a command of that group.
+          This is the reading of a `)` read while a provisional group with a
+          case mark or inherited value of 1 or more is the innermost open group:
+          the provisional group is that `(` group, so the `)` closes it and not
+          the subshell outside the chain.
         - Otherwise no `(` group is the innermost open group (a `case` pattern,
           or a `{` group is the innermost) and the `)` is a separator."""
         self._finish_word()

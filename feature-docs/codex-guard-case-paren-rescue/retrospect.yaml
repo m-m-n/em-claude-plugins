@@ -1,0 +1,52 @@
+feature: codex-guard-case-paren-rescue
+collected_at: "2026-10-20T21:06:41+09:00"
+session_ids: [01a15933-c79d-72d6-8d0d-d315a6399f0f]
+signals:
+  review_critical_high:
+    - stable_id: 285d9bc33784bb3d
+      category: security
+      file: em-workflow/scripts/codex-hook-interactive-guard.py
+      title: "esac 後も残る case 印のせいで、サブシェルを閉じる ) が救済されず対話起動を見逃す"
+      resolution: "round1: unresolved (auto-fix aborted, multi-file) -> batch rework (spec change); round2 で解消を確認"
+    - stable_id: df4afa83e782d56a
+      category: comprehensive
+      file: em-workflow/scripts/codex-hook-interactive-guard.py
+      title: "case 文の終了後も ) の救済を止め、空の case や括弧付きパターンの後の対話起動を見逃す"
+      resolution: "round1: unresolved (auto-fix aborted, multi-file) -> batch rework (spec change); round2 で解消を確認"
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0001
+      files: [test-docs/codex-guard-case-paren-rescue/task0001.tests.yaml]
+    - task: task0002
+      files: [test-docs/codex-guard-case-paren-rescue/task0002.tests.yaml]
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "事前調査は両コピー + テスト表の約 50 行の変更（新規ロジック・複数モジュール）と見積もり、description_plus_code の最終読みは score 1.36（confidence 0.64）"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.05, confidence: 0.95}
+        observed_at: "2026-10-20T00:04:44+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.36, confidence: 0.64}
+        observed_at: "2026-10-20T00:07:09+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 50
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "round1 の high 2 件は SPEC FR1「case 印は永続する」の設計自体が目的と食い違っていたことが根本原因。仕様段で esac による解除を想定できていなかった"
+  - "round2 の medium 2 件（e644d90472684e0a: 改行形・zsh 波括弧形 / 5f877f764b642e2d: 複数節 case の 2 つ目の )）は SPEC A9 / FR3 の改定が要る設計上の制限として未解決のまま残った"
+  - "task0002 は implementer が merged イベント無しで停止し、batch retry を 1 回消費した"
+  - "両タスクとも test-docs/ の tests.yaml を files に予測していなかった"

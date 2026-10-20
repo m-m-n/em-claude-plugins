@@ -1,0 +1,44 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests, run before any edit: Ran 10513 tests, OK (skipped=1)
+final_failures: []             # same command re-executed after the implementation and after this record was written: Ran 10515 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-1 row (deny) added to CASES before any guard change: test_cases_run_against_both_copies errored for both copies with JSONDecodeError (the guard printed nothing where a deny object was expected), i.e. the pre-fix guard returned silent for the TS-1 command. After the case mark was added, the same test passed. Mutation check: with the mark never set (case_mark = True line replaced by pass) the TS-1 row fails again."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-2 (! case) and TS-3 (time case) rows (deny) added before any guard change: the same test errored for both copies with JSONDecodeError (pre-fix guard silent). They passed once the mark was set on the first word after the reserved-word run. Mutation check with the mark never set fails both rows."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-4 row (deny; marked outer provisional group, inner provisional child) added before any guard change: the same test errored for both copies with JSONDecodeError (pre-fix guard silent). Mutation check: with case_inherited forced to False in _mark_provisional (mark kept), only TS-4 fails, so the row pins the inheritance on its own."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-5 row (silent) added before any guard change: the same test failed for both copies with AssertionError, the pre-fix guard printing a deny object where silence was expected (the case-pattern ) was wrongly rescued, so the redirect after the subshell did not connect the body). TS-6, TS-7 and TS-8 (silent) were already green before the fix: they pin readings that must not change. TS-7 and TS-8 end with the subshell left unclosed once a mark is wrongly set (undecidable, silent either way), so the rows TS-7b and TS-8b (deny; the subshell closed by its own ) before the redirect) were added as discriminators: mutation checks (the mark set on a case in any position; the mark set on a quoted case) make TS-7b and TS-8b fail respectively, while TS-7 and TS-8 stay green under those mutants."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "TS-9 (silent, labelled as a known miss) pins the existing limitation that the main reader does not track case-pattern terminators in general; the guard returned silent for it before the change and still does, so no red state occurred. The paren-rescue and brace-rescue rows already in CASES are unchanged and pass on both copies before and after; the existing test_cases_run_against_both_copies detects any change in their verdicts, and no red state occurred for this change."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_seven_places_that_describe_the_paren_rescue_state_the_case_mark
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_module_docstring_states_that_a_paren_rescues_the_chain_and_closes_the_subshell
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_that_a_paren_rescues_the_chain_and_closes_the_subshell
+    red_confirmed: true
+    red_reason: "The new test (test_the_seven_places_...) was run against the pre-change guard copies (extracted with git show HEAD:<path> and substituted for HOOK_PATHS in a scratch runner): 30 subtest failures, 'case mark' / 'inherited value' / 'case_mark' / 'case_inherited' not found in the module docstring, the _Parser docstring, the _Group docstring and the docstrings of _mark_provisional, _append_word, _close_paren and _closes_paren_after_rescue. Against the changed copies it passes. The two existing PAREN_CLOSE_MARKER tests stay green (their marker sentence is kept verbatim); they were green before and are listed because they guard the same paragraph."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_deep_chain_over_a_subshell_is_rescued_once_at_the_closing_paren
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_many_closing_parens_after_a_chain_that_cannot_be_rescued_are_answered
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests in tests/test_codex_hook_interactive_guard.py detect byte drift between the two copies, recursion, and super-linear reading of deep chains and many closing parens; no red state occurred for this change. Not observed failing: the em-review copy was made identical to the em-workflow copy right after the edit, before the module was run. A scratch run of a case-marked chain of 1000, 4000 and 16000 nested groups denied in 0.03s, 0.06s and 0.19s (linear), and the project test command exits 0."
