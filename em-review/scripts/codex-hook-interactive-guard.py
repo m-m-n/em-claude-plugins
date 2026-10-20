@@ -1224,11 +1224,14 @@ class _Parser:
         the parent's separators are. It is a snapshot of the parent's two
         values taken now, read once from the parent alone with no walk over the
         groups around, and it does not follow later changes to the parent's
-        values; afterwards it changes only when an `esac` at an FR1 position is
-        read in this group while its own case mark is 0 (`_append_word`). It is
-        kept apart from `outer_blocked`: the check at a `}` never reads it, and
-        the check at a `)` turns the rescue off for a group whose inherited
-        value is 1 or more (`_closes_paren_after_rescue`)."""
+        values; afterwards it changes only when a bare `esac` is read in this
+        group while its own case mark is 0 and the `esac` is at command position
+        (the first word after the leading run of bare reserved words) or right
+        after a counted `case`, any one word and a bare `in` of the same simple
+        command (`_append_word`). It is kept apart from `outer_blocked`: the
+        check at a `}` never reads it, and the check at a `)` turns the rescue
+        off for a group whose inherited value is 1 or more
+        (`_closes_paren_after_rescue`)."""
         group.provisional = True
         parent = group.parent
         if parent is not None and parent.provisional:
@@ -1426,10 +1429,14 @@ class _Parser:
 
         The answer is no, before any reasoning below, when the case mark of
         `group` (`_Group.case_mark`, the number of unfinished `case`s that
-        `_append_word` raises at a bare `case` and lowers at a bare `esac`) or
-        its inherited value (`_Group.case_inherited`, fixed by
-        `_mark_provisional` and lowered by that `esac` while the own mark is 0)
-        is 1 or more. Whatever its separators and its base are, a group where
+        `_append_word` raises at a bare `case` at command position, the first
+        word after the leading run of bare reserved words, and lowers at a bare
+        `esac` at command position or right after a counted `case`, any one
+        word and a bare `in`) or its inherited value (`_Group.case_inherited`,
+        fixed once when the group opens as the parent's case mark plus the
+        parent's inherited value by `_mark_provisional`, and lowered by that
+        `esac` while the own mark is 0) is 1 or more. Whatever its separators
+        and its base are, a group where
         either one is 1 or more is not rescued: the `)` is read as the
         terminator of a case pattern. A group where both are 0, never counted
         or returned to 0 by `esac`, goes on to the reasoning below like a group
@@ -1510,9 +1517,14 @@ class _Parser:
           (`_closes_paren_after_rescue`, `_close_paren_after_rescue`). A
           provisional group whose case mark or inherited value is 1 or more
           (`_Group.case_mark`, the number of `case`s that no `esac` has closed
-          yet, and `_Group.case_inherited`) never rescues: its `)` is a
-          case-pattern terminator and takes the next reading. Once `esac` has
-          returned both to 0 the group rescues again.
+          yet, raised by a bare `case` at command position, the first word after
+          the leading run of bare reserved words, and lowered by a bare `esac`
+          at command position or right after a counted `case`, any one word and
+          a bare `in`; and `_Group.case_inherited`, fixed when the group opens
+          as the parent's case mark plus the parent's inherited value and
+          lowered by that `esac` while the own mark is 0) never rescues: its
+          `)` is a case-pattern terminator and takes the next reading. Once
+          `esac` has returned both to 0 the group rescues again.
         - Otherwise, when the innermost open group is a `(` group, the `)` closes
           it; the words before the `)` are finalized as a command of that group.
           This is the reading of a `)` read while a provisional group with a
