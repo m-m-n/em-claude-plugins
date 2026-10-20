@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-redirect-only-list-pending
+phase: create-plan
+status: in_progress
+generation: 1
+base_revision: a6c03e51b5fb586147558937ff0dda14b908f7a6
+last_input_digest: sha256:d9e81cf7c6120abe644c4ad8e3b45014c1e58816b6202eb838419000e2046529
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:d9e81cf7c6120abe644c4ad8e3b45014c1e58816b6202eb838419000e2046529
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
