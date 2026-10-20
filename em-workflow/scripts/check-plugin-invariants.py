@@ -7,7 +7,12 @@ IMPLEMENTATION.md D4: seven independent checks assert properties that only
 hold once the fully integrated repository exists (agent/dispatch parity,
 stale references, gate-ID coverage, `domains` vocabulary parity, the
 forbidden `# Task assignment` heading, fixture branch coverage, and
-`input_digest` reproducibility). No task worktree contains that integrated
+`input_digest` reproducibility). worker-digest-ownership adds two more:
+`dispatch_digest_wiring` (every `write_policy` dispatch site registered in
+references/artifact-digest.md cites that owner document, and no site names
+`git hash-object`) and `worker_digest_stance` (the digest stance of the
+prompts and contracts of the envelope workers that write files and have no
+Bash). No task worktree contains that integrated
 state, which is exactly why every check below is a pure function of an
 explicit root path: the unit tests exercise them against small synthetic
 trees built in temporary directories (tests/test_check_plugin_invariants.py)
@@ -1202,6 +1207,246 @@ def check_worker_digest_stance(root):
 
 
 # ---------------------------------------------------------------------------
+# Check: dispatch digest wiring (worker-digest-ownership task0002, FR3 / FR6 / FR7)
+# ---------------------------------------------------------------------------
+
+# The owner document of the artifact digest protocol (path relative to the
+# plugin directory em-workflow/) and the one citation token every dispatch
+# site carries.
+DIGEST_OWNER_DOCUMENT = "references/artifact-digest.md"
+DIGEST_OWNER_CITATION = "references/artifact-digest.md"
+DIGEST_CALCULATION_HEADING = "Calculation"
+DIGEST_REGISTRY_HEADING = "Dispatch sites"
+# The two owner sections a dispatch site may cover. Every registered worker
+# must be covered for both, across the union of its rows.
+DIGEST_COVERS_NAMES = ("Pre-dispatch verification", "Layer 5 recording")
+DIGEST_REGISTRY_HEADER = ("Document", "Section", "Worker", "Covers")
+# The invocation form the owner's `Calculation` section must name: python3,
+# then a double-quoted path ending in scripts/artifact-digest.py.
+DIGEST_INVOCATION_RE = re.compile(r'python3\s+"[^"\n]*scripts/artifact-digest\.py"')
+# Never named inside a dispatch site's section: the git blob id command is
+# not the means of any artifact digest (it stays in the post-dispatch scope
+# comparison and in the owner's `Legacy records`).
+DIGEST_FORBIDDEN_SITE_TOKEN = "git hash-object"
+
+_MD_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_MD_HEADING_RE = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$")
+_AGENT_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _wiring_markdown_headings(text):
+    """[(line_index, level, title)] for every ATX heading outside a fenced
+    code block."""
+    headings = []
+    fence = None  # (char, length) of the open fence
+    for index, line in enumerate(text.splitlines()):
+        fence_match = _MD_FENCE_RE.match(line)
+        if fence_match:
+            marker = fence_match.group(1)
+            if fence is None:
+                fence = (marker[0], len(marker))
+            elif marker[0] == fence[0] and len(marker) >= fence[1]:
+                fence = None
+            continue
+        if fence is not None:
+            continue
+        heading = _MD_HEADING_RE.match(line)
+        if heading:
+            headings.append((index, len(heading.group(1)), heading.group(2)))
+    return headings
+
+
+def _wiring_markdown_section(text, title):
+    """(status, body): the body of the heading whose text equals `title`,
+    running to the next heading of the same or a higher level. status is
+    "ok", "absent", or "ambiguous" (the title heads more than one section,
+    so no single body can be named)."""
+    headings = _wiring_markdown_headings(text)
+    hits = [i for i, (_idx, _lvl, t) in enumerate(headings) if t == title]
+    if not hits:
+        return "absent", ""
+    if len(hits) > 1:
+        return "ambiguous", ""
+    lines = text.splitlines()
+    start, level, _title = headings[hits[0]]
+    end = len(lines)
+    for next_index, next_level, _next_title in headings[hits[0] + 1 :]:
+        if next_level <= level:
+            end = next_index
+            break
+    return "ok", "\n".join(lines[start + 1 : end])
+
+
+def _parse_dispatch_registry(body):
+    """([(document, section, worker, covers)], [problem]) from the markdown
+    table in the `Dispatch sites` section. A row is well-formed when its
+    Document, Section and Worker cells each hold exactly one backticked
+    token and its Covers cell holds at least one. The header and separator
+    rows are skipped; any other row that is not well-formed is a problem."""
+    rows = []
+    problems = []
+    for line in body.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = _split_table_row(line)
+        if tuple(cells) == DIGEST_REGISTRY_HEADER:
+            continue
+        if _is_table_separator_row(cells):
+            continue
+        tokens = [BACKTICK_SPAN_RE.findall(c) for c in cells]
+        if (
+            len(cells) != 4
+            or any(len(t) != 1 for t in tokens[:3])
+            or not tokens[3]
+        ):
+            problems.append(f"malformed registry row: {line.strip()}")
+            continue
+        rows.append(
+            (
+                tokens[0][0].strip(),
+                tokens[1][0].strip(),
+                tokens[2][0].strip(),
+                [t.strip() for t in tokens[3]],
+            )
+        )
+    return rows, problems
+
+
+def check_dispatch_digest_wiring(root):
+    """Every `write_policy` dispatch site cites the digest owner document.
+
+    A pure function of `root` that reads the owner document and the
+    documents its `Dispatch sites` registry names, and nothing else (it
+    never walks the repository). Flow:
+
+    1. the owner document exists;
+    2. its `Calculation` section names a python3 invocation of a
+       double-quoted path ending in scripts/artifact-digest.py;
+    3. its `Dispatch sites` section holds a registry with at least one row,
+       and every owner section a row can cover exists in the owner;
+    4. for each row, the named document exists under em-workflow/, a heading
+       equal to `Section` exists exactly once, and that section (to the next
+       heading of the same or a higher level, whitespace-normalized) holds
+       the owner path and every owner section name in `Covers` and does not
+       hold `git hash-object`;
+    5. for each worker named in the registry, its agent definition exists and
+       the union of `Covers` over its rows holds both owner section names.
+    """
+    name = "dispatch_digest_wiring"
+    plugin_dir = os.path.join(root, "em-workflow")
+    owner_path = os.path.join(plugin_dir, *DIGEST_OWNER_DOCUMENT.split("/"))
+    owner_label = f"em-workflow/{DIGEST_OWNER_DOCUMENT}"
+
+    if not os.path.isfile(owner_path):
+        return CheckResult(name, False, [f"owner document not found: {owner_label}"])
+    owner_text = read_text(owner_path)
+    if owner_text is None:
+        return CheckResult(name, False, [f"owner document unreadable: {owner_label}"])
+
+    offenders = []
+
+    # 2. the invocation inside `Calculation`.
+    status, calculation = _wiring_markdown_section(owner_text, DIGEST_CALCULATION_HEADING)
+    if status != "ok":
+        offenders.append(
+            f"owner document has no single '{DIGEST_CALCULATION_HEADING}' section ({status})"
+        )
+    elif not DIGEST_INVOCATION_RE.search(calculation):
+        offenders.append(
+            f"owner document '{DIGEST_CALCULATION_HEADING}' section names no "
+            'python3 "<path>/scripts/artifact-digest.py" invocation'
+        )
+
+    # 3. the registry.
+    status, registry_body = _wiring_markdown_section(owner_text, DIGEST_REGISTRY_HEADING)
+    if status != "ok":
+        offenders.append(
+            f"owner document has no single '{DIGEST_REGISTRY_HEADING}' section ({status})"
+        )
+        return CheckResult(name, False, offenders)
+    rows, problems = _parse_dispatch_registry(registry_body)
+    offenders.extend(problems)
+    if not rows:
+        offenders.append(
+            f"owner document '{DIGEST_REGISTRY_HEADING}' registry has no rows"
+        )
+        return CheckResult(name, False, offenders)
+    for covers_name in DIGEST_COVERS_NAMES:
+        covers_status, _body = _wiring_markdown_section(owner_text, covers_name)
+        if covers_status != "ok":
+            offenders.append(
+                f"owner document has no single '{covers_name}' section ({covers_status})"
+            )
+
+    # 4. each registry row's site section.
+    plugin_real = os.path.realpath(plugin_dir)
+    documents = {}  # document token -> text, or None when unusable
+    workers = {}  # worker -> union of Covers over its rows
+    for document, section, worker, covers in rows:
+        label = f"{document} / {section}"
+        workers.setdefault(worker, set()).update(covers)
+
+        unknown = [c for c in covers if c not in DIGEST_COVERS_NAMES]
+        if unknown:
+            offenders.append(f"{label}: Covers names unknown owner section(s) {unknown}")
+
+        if document not in documents:
+            documents[document] = None
+            try:
+                site_path = os.path.realpath(os.path.join(plugin_dir, document))
+            except ValueError:  # e.g. an embedded NUL character
+                site_path = None
+            inside = (
+                site_path is not None
+                and not os.path.isabs(document)
+                and os.path.commonpath([plugin_real, site_path]) == plugin_real
+            )
+            if not inside:
+                offenders.append(f"{label}: document path escapes the plugin directory")
+            elif not os.path.isfile(site_path):
+                offenders.append(f"{label}: document not found under em-workflow/")
+            else:
+                text = read_text(site_path)
+                if text is None:
+                    offenders.append(f"{label}: document unreadable")
+                documents[document] = text
+        text = documents[document]
+        if text is None:
+            continue
+
+        status, site_body = _wiring_markdown_section(text, section)
+        if status != "ok":
+            offenders.append(f"{label}: heading {section!r} is {status} in the document")
+            continue
+        flat = " ".join(site_body.split())
+        if DIGEST_OWNER_CITATION not in flat:
+            offenders.append(f"{label}: missing owner citation {DIGEST_OWNER_CITATION!r}")
+        for covers_name in covers:
+            if covers_name in DIGEST_COVERS_NAMES and covers_name not in flat:
+                offenders.append(f"{label}: missing owner section name {covers_name!r}")
+        if DIGEST_FORBIDDEN_SITE_TOKEN in flat:
+            offenders.append(f"{label}: names {DIGEST_FORBIDDEN_SITE_TOKEN!r}")
+
+    # 5. each registered worker.
+    for worker in sorted(workers):
+        if not _AGENT_NAME_RE.match(worker):
+            offenders.append(f"worker {worker!r}: not a valid agent name")
+            continue
+        agent_path = os.path.join(plugin_dir, "agents", f"{worker}.md")
+        if not os.path.isfile(agent_path):
+            offenders.append(
+                f"worker {worker!r}: agent definition not found: em-workflow/agents/{worker}.md"
+            )
+        for covers_name in DIGEST_COVERS_NAMES:
+            if covers_name not in workers[worker]:
+                offenders.append(
+                    f"worker {worker!r}: no registry row covers {covers_name!r}"
+                )
+
+    return CheckResult(name, not offenders, offenders)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1219,6 +1464,7 @@ def run_all_checks(root):
         check_forbidden_task_assignment_heading(root),
         check_fixture_branch_coverage(root),
         check_digest_reproducibility(),
+        check_dispatch_digest_wiring(root),
         check_worker_digest_stance(root),
     ]
 
