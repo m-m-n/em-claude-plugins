@@ -176,7 +176,7 @@ tasks:
     - FR7
     - NFR1
     - NFR2
-    status: in_progress
+    status: failed
     notes: null
     branch: em-workflow/codex-guard-case-paren-rescue/task0002
 review:
