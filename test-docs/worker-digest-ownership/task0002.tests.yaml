@@ -1,5 +1,11 @@
 task_id: task0002
-baseline_failures: []
+# Re-measured right after adopting the parent side of the conflicted
+# check-plugin-invariants.py and tests/test_check_plugin_invariants.py: the
+# adoption removed this task's own test classes from that file until they were
+# re-implemented, so this record's AC-7 IDs did not resolve in that state.
+baseline_failures:
+  - test_tests_yaml_id_resolution.TestRecordResolution.test_record__test_docs_worker_digest_ownership_task0002_tests_yaml
+# Full suite re-executed after the re-implementation on the updated parent.
 final_failures: []
 acceptance_tests:
   AC-1:

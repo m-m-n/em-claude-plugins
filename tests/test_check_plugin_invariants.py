@@ -46,6 +46,15 @@ task0014's own):
   and "mention_inside_the_policy_file_itself" cases.
 - AC-7: verified by this task's implementer report, not a test (it depends
   on sibling merges already having landed at this worktree's branch point).
+
+worker-digest-ownership task0002 adds `dispatch_digest_wiring` (the eighth
+check, registered before `worker_digest_stance`;
+feature-docs/worker-digest-ownership/tasks/task0002.md AC-7):
+TestDispatchDigestWiring passes it on the real repository and fails it on
+synthetic trees, each starting from a passing tree and breaking one thing.
+`build_passing_repo` gains one call, `add_dispatch_digest_wiring`, which
+writes that check's synthetic files (a fictional `wiring-worker`, so the
+stance helper's fictional workers never collide with it).
 """
 
 import importlib.util
@@ -93,6 +102,34 @@ class TestAllSevenChecksExist(unittest.TestCase):
         ]
         for n in names:
             self.assertTrue(callable(getattr(cpi, n, None)), f"{n} missing or not callable")
+
+
+class TestDispatchDigestWiringCheckExists(unittest.TestCase):
+    """worker-digest-ownership task0002 AC-7: the wiring check is an
+    independently callable function, registered after the existing seven and
+    before worker_digest_stance."""
+
+    def test_check_function_is_callable(self):
+        self.assertTrue(callable(getattr(cpi, "check_dispatch_digest_wiring", None)))
+
+    def test_run_all_checks_registers_it_after_the_existing_seven(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            build_passing_repo(root)
+            names = [r.name for r in cpi.run_all_checks(str(root))]
+        self.assertEqual(names[7:9], ["dispatch_digest_wiring", "worker_digest_stance"])
+        self.assertEqual(
+            names[:7],
+            [
+                "agent_dispatch_parity",
+                "stale_references",
+                "gate_id_coverage",
+                "domains_vocabulary_parity",
+                "forbidden_task_assignment_heading",
+                "fixture_branch_coverage",
+                "digest_reproducibility",
+            ],
+        )
 
 
 class TestAgentDispatchParity(unittest.TestCase):
@@ -751,9 +788,417 @@ def add_stance_worker_files(root):
     )
 
 
+# ---------------------------------------------------------------------------
+# dispatch_digest_wiring (worker-digest-ownership task0002)
+# ---------------------------------------------------------------------------
+
+WIRING_OWNER_SECTIONS = (
+    "Digest definition",
+    "Calculation",
+    "Pre-dispatch verification",
+    "Layer 5 recording",
+    "Legacy records",
+    "Dispatch sites",
+)
+WIRING_SITE_DOCUMENT = "references/phases/create-spec-phase.md"
+WIRING_SITE_SECTION = "20. Wiring site"
+WIRING_WORKER = "wiring-worker"
+WIRING_BOTH = ("Pre-dispatch verification", "Layer 5 recording")
+WIRING_OWNER_PATH = ("em-workflow", "references", "artifact-digest.md")
+WIRING_INVOCATION = (
+    "Run `python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/artifact-digest.py\" 'a.md'`.\n"
+)
+WIRING_SITE_BODY = (
+    "Per `references/artifact-digest.md`, `Pre-dispatch verification` runs\n"
+    "before the dispatch and `Layer 5 recording` runs after layer 4.\n"
+)
+
+
+def wiring_registry(rows):
+    """A `Dispatch sites` table body for [(document, section, worker,
+    covers)] rows, in the format the checker parses."""
+    lines = [
+        "| Document | Section | Worker | Covers |",
+        "|---|---|---|---|",
+    ]
+    for document, section, worker, covers in rows:
+        covers_cell = ", ".join(f"`{c}`" for c in covers)
+        lines.append(f"| `{document}` | `{section}` | `{worker}` | {covers_cell} |")
+    return "\n".join(lines) + "\n"
+
+
+def wiring_owner_text(rows=None, invocation=WIRING_INVOCATION, registry=None):
+    """A minimal owner document: the six level-2 sections, the invocation
+    inside `Calculation`, and a registry (default: one row naming the
+    synthetic site for `wiring-worker`)."""
+    if rows is None:
+        rows = [(WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH)]
+    if registry is None:
+        registry = wiring_registry(rows)
+    parts = ["# Artifact Digest Protocol\n"]
+    for name in WIRING_OWNER_SECTIONS:
+        parts.append(f"\n## {name}\n\n")
+        if name == "Calculation":
+            parts.append(invocation)
+        elif name == "Dispatch sites":
+            parts.append(registry)
+        else:
+            parts.append(f"{name} text.\n")
+    return "".join(parts)
+
+
+def add_dispatch_digest_wiring(root, owner_text=None, site_body=None):
+    """Adds what `dispatch_digest_wiring` needs to a tree that already has
+    the synthetic em-workflow/references/phases/create-spec-phase.md (it
+    appends, never replacing the file's gate-ID and dispatch lines): the
+    owner document, a cited site section, the `wiring-worker` agent file and
+    a dispatch line for it (so agent/dispatch parity still passes)."""
+    write(
+        root.joinpath(*WIRING_OWNER_PATH),
+        wiring_owner_text() if owner_text is None else owner_text,
+    )
+    site = root / "em-workflow" / WIRING_SITE_DOCUMENT
+    body = WIRING_SITE_BODY if site_body is None else site_body
+    existing = site.read_text(encoding="utf-8") if site.exists() else ""
+    write(
+        site,
+        existing
+        + f'Dispatch `Task(subagent_type="em-workflow:{WIRING_WORKER}")`.\n'
+        + f"\n## {WIRING_SITE_SECTION}\n\n{body}",
+    )
+    write(root / "em-workflow" / "agents" / f"{WIRING_WORKER}.md", "# Wiring worker\n")
+
+
+class TestDispatchDigestWiring(unittest.TestCase):
+    """task0002 AC-7 (FR6, TS2, NFR1): passes on the real repository and
+    fails on synthetic trees, each case starting from a passing tree and
+    breaking exactly one thing."""
+
+    def _wired(self, tmp, **kwargs):
+        root = Path(tmp)
+        build_passing_repo(root)
+        if kwargs:
+            add_dispatch_digest_wiring(root, **kwargs)
+        return root
+
+    def _rebuild(self, tmp, owner_text=None, site_body=None):
+        """A tree whose wiring files are written from scratch: the base
+        passing tree minus the helper's own call, then the helper again with
+        the broken input."""
+        root = Path(tmp)
+        build_passing_repo(root)
+        # Rewrite the site document so the helper's appended section is not
+        # doubled: start from the plain base file again.
+        write(
+            root / "em-workflow" / WIRING_SITE_DOCUMENT,
+            "Ask via gate ID `create-spec.feature-identity`.\n"
+            'Dispatch `Task(subagent_type="em-workflow:implementer")`.\n',
+        )
+        add_dispatch_digest_wiring(root, owner_text=owner_text, site_body=site_body)
+        return root
+
+    def _check(self, root):
+        return cpi.check_dispatch_digest_wiring(str(root))
+
+    def _assert_fails_naming(self, result, *needles):
+        self.assertFalse(result.passed, "expected the wiring check to fail")
+        self.assertTrue(result.offenders)
+        joined = "\n".join(result.offenders)
+        for needle in needles:
+            self.assertIn(needle, joined)
+
+    def test_result_name_is_dispatch_digest_wiring(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(self._check(self._wired(tmp)).name, "dispatch_digest_wiring")
+
+    def test_passes_on_a_wired_synthetic_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._wired(tmp))
+            self.assertTrue(result.passed, result.offenders)
+            self.assertEqual(result.offenders, [])
+
+    def test_passes_on_the_real_repository(self):
+        result = cpi.check_dispatch_digest_wiring(str(REPO_ROOT))
+        self.assertTrue(result.passed, result.offenders)
+
+    def test_fails_when_a_site_section_lacks_the_owner_citation(self):
+        body = "`Pre-dispatch verification` and `Layer 5 recording` apply here.\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, site_body=body))
+            self._assert_fails_naming(
+                result, WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, "references/artifact-digest.md"
+            )
+
+    def test_fails_when_a_site_section_misses_a_covers_section_name(self):
+        body = "Per `references/artifact-digest.md`, `Pre-dispatch verification` applies.\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, site_body=body))
+            self._assert_fails_naming(
+                result, WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, "Layer 5 recording"
+            )
+
+    def test_fails_when_the_owner_document_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._wired(tmp)
+            root.joinpath(*WIRING_OWNER_PATH).unlink()
+            self._assert_fails_naming(self._check(root), "artifact-digest.md")
+
+    def test_fails_when_the_owner_has_no_invocation(self):
+        owner = wiring_owner_text(invocation="Run the script.\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "artifact-digest.py")
+
+    def test_fails_when_the_invocation_path_is_not_double_quoted(self):
+        owner = wiring_owner_text(
+            invocation="Run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/artifact-digest.py a.md`.\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "artifact-digest.py")
+
+    def test_fails_when_the_invocation_names_another_script(self):
+        owner = wiring_owner_text(
+            invocation='Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/other-digest.py" \'a.md\'`.\n'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "artifact-digest.py")
+
+    def test_fails_when_the_invocation_sits_outside_the_calculation_section(self):
+        owner = wiring_owner_text(invocation="Run the script.\n").replace(
+            "Legacy records text.\n", WIRING_INVOCATION
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "Calculation")
+
+    def test_fails_when_the_owner_lacks_a_section_the_sites_cite(self):
+        owner = wiring_owner_text().replace("## Layer 5 recording", "## Recording")
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "Layer 5 recording")
+
+    def test_fails_when_the_registry_has_no_rows(self):
+        owner = wiring_owner_text(rows=[])
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "Dispatch sites")
+
+    def test_fails_when_the_dispatch_sites_section_is_absent(self):
+        owner = wiring_owner_text().replace("## Dispatch sites", "## Elsewhere")
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "Dispatch sites")
+
+    def test_a_table_outside_dispatch_sites_is_not_the_registry(self):
+        stray = wiring_registry(
+            [(WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH)]
+        )
+        owner = wiring_owner_text(rows=[]).replace("Legacy records text.\n", stray)
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, owner_text=owner))
+            self._assert_fails_naming(result, "Dispatch sites")
+
+    def test_fails_when_a_registry_heading_is_absent_from_its_document(self):
+        rows = [(WIRING_SITE_DOCUMENT, "99. No such heading", WIRING_WORKER, WIRING_BOTH)]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(rows=rows))
+            )
+            self._assert_fails_naming(result, WIRING_SITE_DOCUMENT, "99. No such heading")
+
+    def test_fails_when_a_registry_document_is_missing(self):
+        rows = [("references/phases/absent.md", WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH)]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(rows=rows))
+            )
+            self._assert_fails_naming(result, "references/phases/absent.md")
+
+    def test_fails_when_a_site_section_names_git_hash_object(self):
+        body = WIRING_SITE_BODY + "Hash with `git hash-object --` first.\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, site_body=body))
+            self._assert_fails_naming(
+                result, WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, "git hash-object"
+            )
+
+    def test_fails_when_a_registry_worker_has_no_layer_5_recording_row(self):
+        rows = [(WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH[:1])]
+        body = "Per `references/artifact-digest.md`, `Pre-dispatch verification` applies.\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(rows=rows), site_body=body)
+            )
+            self._assert_fails_naming(result, WIRING_WORKER, "Layer 5 recording")
+
+    def test_fails_when_a_registry_worker_has_no_pre_dispatch_row(self):
+        rows = [(WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH[1:])]
+        body = "Per `references/artifact-digest.md`, `Layer 5 recording` applies.\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(rows=rows), site_body=body)
+            )
+            self._assert_fails_naming(result, WIRING_WORKER, "Pre-dispatch verification")
+
+    def test_a_worker_may_be_covered_across_two_rows(self):
+        second = "21. Second wiring site"
+        rows = [
+            (WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH[:1]),
+            (WIRING_SITE_DOCUMENT, second, WIRING_WORKER, WIRING_BOTH[1:]),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._rebuild(
+                tmp,
+                owner_text=wiring_owner_text(rows=rows),
+                site_body="Per `references/artifact-digest.md`, `Pre-dispatch verification`.\n",
+            )
+            site = root / "em-workflow" / WIRING_SITE_DOCUMENT
+            site.write_text(
+                site.read_text(encoding="utf-8")
+                + f"\n## {second}\n\nPer `references/artifact-digest.md`, `Layer 5 recording`.\n",
+                encoding="utf-8",
+            )
+            result = self._check(root)
+            self.assertTrue(result.passed, result.offenders)
+
+    def test_fails_when_a_registry_worker_has_no_agent_definition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._wired(tmp)
+            (root / "em-workflow" / "agents" / f"{WIRING_WORKER}.md").unlink()
+            self._assert_fails_naming(self._check(root), WIRING_WORKER)
+
+    def test_fails_when_covers_names_an_unknown_owner_section(self):
+        rows = [(WIRING_SITE_DOCUMENT, WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH + ("Legacy records",))]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(rows=rows))
+            )
+            self._assert_fails_naming(result, "Legacy records")
+
+    def test_fails_on_a_row_that_is_not_four_backticked_cells(self):
+        registry = (
+            "| Document | Section | Worker | Covers |\n|---|---|---|---|\n"
+            f"| {WIRING_SITE_DOCUMENT} | {WIRING_SITE_SECTION} | {WIRING_WORKER} | none |\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(registry=registry))
+            )
+            self.assertFalse(result.passed)
+
+    def test_fails_when_a_registry_document_escapes_the_plugin_directory(self):
+        rows = [("../../outside.md", WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH)]
+        with tempfile.TemporaryDirectory() as tmp:
+            # The repository root is a subdirectory so that the escaping
+            # path lands on a file inside the temporary directory, never
+            # outside it.
+            root = self._rebuild(
+                Path(tmp) / "repo", owner_text=wiring_owner_text(rows=rows)
+            )
+            write(
+                Path(tmp) / "outside.md",
+                f"## {WIRING_SITE_SECTION}\n\n{WIRING_SITE_BODY}",
+            )
+            self._assert_fails_naming(self._check(root), "../../outside.md")
+
+    def test_fails_on_an_absolute_registry_document_path(self):
+        rows = [("/etc/hostname", WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH)]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(rows=rows))
+            )
+            self._assert_fails_naming(result, "/etc/hostname")
+
+    def test_fails_without_raising_on_a_registry_document_path_with_nul(self):
+        rows = [("references/a\x00b.md", WIRING_SITE_SECTION, WIRING_WORKER, WIRING_BOTH)]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(
+                self._rebuild(tmp, owner_text=wiring_owner_text(rows=rows))
+            )
+            self.assertFalse(result.passed)
+
+    def test_citation_in_a_subsection_belongs_to_the_site_section(self):
+        body = "Intro.\n\n### Detail\n\n" + WIRING_SITE_BODY
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, site_body=body))
+            self.assertTrue(result.passed, result.offenders)
+
+    def test_a_citation_in_the_next_same_level_section_does_not_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._rebuild(tmp, site_body="Nothing cited here.\n")
+            site = root / "em-workflow" / WIRING_SITE_DOCUMENT
+            site.write_text(
+                site.read_text(encoding="utf-8") + "\n## 21. Next\n\n" + WIRING_SITE_BODY,
+                encoding="utf-8",
+            )
+            self._assert_fails_naming(self._check(root), WIRING_SITE_SECTION)
+
+    def test_git_hash_object_in_the_next_section_is_not_the_sites(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._rebuild(tmp)
+            site = root / "em-workflow" / WIRING_SITE_DOCUMENT
+            site.write_text(
+                site.read_text(encoding="utf-8") + "\n## 21. Next\n\nUse `git hash-object --`.\n",
+                encoding="utf-8",
+            )
+            result = self._check(root)
+            self.assertTrue(result.passed, result.offenders)
+
+    def test_a_citation_wrapped_across_lines_still_counts(self):
+        body = (
+            "Per `references/artifact-digest.md`, `Pre-dispatch\n"
+            "verification` runs first and `Layer 5\n"
+            "recording` runs after layer 4.\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, site_body=body))
+            self.assertTrue(result.passed, result.offenders)
+
+    def test_a_heading_like_line_inside_a_code_fence_does_not_end_the_section(self):
+        body = (
+            "```\n## fenced, not a heading\n```\n\n" + WIRING_SITE_BODY
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._check(self._rebuild(tmp, site_body=body))
+            self.assertTrue(result.passed, result.offenders)
+
+    def test_fails_when_the_registry_heading_matches_more_than_one_heading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._rebuild(tmp)
+            site = root / "em-workflow" / WIRING_SITE_DOCUMENT
+            site.write_text(
+                site.read_text(encoding="utf-8")
+                + f"\n## {WIRING_SITE_SECTION}\n\n{WIRING_SITE_BODY}",
+                encoding="utf-8",
+            )
+            self._assert_fails_naming(self._check(root), WIRING_SITE_SECTION)
+
+    def test_does_not_walk_the_repository(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._wired(tmp)
+            with patch.object(cpi, "iter_repo_files", wraps=cpi.iter_repo_files) as mock_iter:
+                result = self._check(root)
+            self.assertEqual(mock_iter.call_count, 0)
+            self.assertTrue(result.passed, result.offenders)
+
+    def test_cli_exits_1_and_names_the_check_when_wiring_is_broken(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._rebuild(tmp, site_body="Nothing cited here.\n")
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT_PATH), str(root)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+            self.assertIn("[FAIL] dispatch_digest_wiring", proc.stdout)
+
+
 def build_passing_repo(root):
-    """A synthetic tree satisfying every one of the seven checks at once,
-    for the CLI-level exit-code tests (AC-1)."""
+    """A synthetic tree satisfying every check at once (the original seven,
+    dispatch_digest_wiring and worker_digest_stance), for the CLI-level
+    exit-code tests (AC-1)."""
     write(root / "em-workflow" / "agents" / "implementer.md", "# Implementer\n")
     write(
         root / "em-workflow" / "references" / "phases" / "create-spec-phase.md",
@@ -785,6 +1230,7 @@ def build_passing_repo(root):
         root / "em-workflow" / "references" / "fixtures" / "worker-result" / "a.valid.yaml",
         "ok\n",
     )
+    add_dispatch_digest_wiring(root)
 
 
 class TestCli(unittest.TestCase):
