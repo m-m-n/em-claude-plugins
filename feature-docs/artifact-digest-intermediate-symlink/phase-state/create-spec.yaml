@@ -1,7 +1,7 @@
 schema_version: 1
 feature: artifact-digest-intermediate-symlink
 phase: create-spec
-status: in_progress
+status: completed
 generation: 2
 base_revision: 2442962a4e1f0cf7591a238a24e469dc9d94116a
 last_input_digest: sha256:41a678ada8f46142f3d759b81f44b8562360819d9d0b6332f5fc8f8a27676f84
