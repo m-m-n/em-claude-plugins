@@ -1,0 +1,207 @@
+schema_version: 1
+feature: codex-guard-case-reading-fixes
+created: '2026-10-21'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: $( ) の中の case 文の読み取りが、引数の esac・パターン直後のコメント・行継続を取り違える
+
+  Notion: <notion-url>
+
+
+  ## 現象 (必須)
+
+  feature `codex-guard-case-in-substitution` で `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）の `_skip_substitution` が `$( )` の中の `case` 文を読むようになった。review round 1 で、その読み取りに次の 3 件の欠陥が見つかった（いずれも medium、deferred）。
+
+  1. 引数の `esac` を文の終わりと取り違える（stable\_id `7150a137f6075c89` / `7149917052e797ce`）。`_at_command_position` は直前の語が `if` / `then` などの予約語かだけを見て、その予約語自体がコマンドの位置にあるかを確かめない。`echo then esac` の引数の `esac` で case 文を閉じ、次のパターンの `)` を置換の終わりと読む。誤拒否になるほか、引用の読みがずれて拒否漏れにもなる。`_is_case_keyword` も引数の `case` を文の始まりと読む。変更前は silent だった入力で、今回の変更で生じた後退。
+  2. パターン直後のコメントを本体として読む（stable\_id `4b3c92b00b801690`）。`x)#; esac` の `#` をコメントと読まず、コメント中の `esac` で case 文を閉じる。誤拒否。今回の変更で生じた後退。
+  3. `in` の前などの行継続で判定不能になる（stable\_id `cf6acb0a89bc138c` / `d9022a76101185eb`）。語や `in` を待つフェーズでは、バックスラッシュと改行の処理より先に語を判定するため、bash / zsh が受け付ける行継続を判定不能にし、後続の `python3 -i` を拒否しない。変更前も silent で後退ではない。
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に次を設定した PreToolUse(Bash) の JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+  2. 欠陥 1: `echo "$(case y in x) echo if esac;; y) echo "; python3 -i;";; esac)"` → deny になる（期待は無出力）
+  3. 欠陥 2: `echo "$(case x in x)#; esac` + 改行 + `:;; y) printf '%s' '"; python3 -i; #';; esac)"` → deny になる（期待は無出力）
+  4. 欠陥 3: Python 式 `'echo "$(case x ' + chr(92) + chr(10) + 'in x) :;; esac)"; python3 -i'` で作った文字列 → 無出力になる（期待は deny）
+
+  ## 期待する挙動 (必須)
+
+  - 項目の本体でコマンドの位置を状態として追跡し、引数の `if` / `then` / `!` などをコマンドの位置の根拠にしない。引数の `case` / `esac` で文を開閉しない
+  - 項目の `)` の直後の `#` をコメントとして読み飛ばす
+  - 語や `in` を待つフェーズでも、バックスラッシュと改行の対を先に読み飛ばしてフェーズを保つ（`case` と対象の語の間、対象の語と `in` の間、`in` と最初のパターンや `esac` の間）
+  - 読み取りの線形性（NFR1）を保つ
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上の入力を追加し、両コピーに流す
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:1852`（`_at_command_position`）
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:1654`（項目の本体の開始位置の `#` の扱い）
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:1660`（`case without in`）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-case-in-substitution/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-case-in-substitution/integration`）
+
+  ## 実害・発生条件 (任意)
+
+  `$( )` の中に `case` 文を書き、かつ引数に予約語と `esac` が続く・パターン直後に空白なしのコメント・行継続のいずれかを含む場合だけ。欠陥 1・2 は誤拒否（fail-closed）が主で、欠陥 1 の引用ずれと欠陥 3 は拒否漏れ（fail-open）。
+parent_branch: em-workflow/codex-guard-case-reading-fixes/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.59
+      '2': 0.41
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.2
+      '2': 0.8
+      '3': 0.0
+  at: '2026-10-21T08:14:20+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 6a0ba0455a129e4e34047f6e98c9f6d40564faa1
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 9c5f62ff5519a988d0b105017d553bd082371443
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: コマンドの位置を状態として追跡する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 引数の case / esac で文を開閉しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: パターンの ')' の直後の '#' をコメントとして読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 待ちフェーズで行継続を読み飛ばす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: キーワードに接する行継続と分断する行継続
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 両コピーを同時に直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: docstring を更新する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: CASES に再現と派生の行を足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 線形時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 再帰を使わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
