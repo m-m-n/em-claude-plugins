@@ -130,7 +130,8 @@ workflow:
   completed_at_commit: 8fc21bff2bf9192f025e053484ab3d1d7345646b
   base_commit: 94fe49b9dacf98f6f77ff9db26a0b9f35996a90b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 79e46af91cbb850b47767c6807bc3b219bdf2fa5
 - id: verify
   status: pending
   result: null
@@ -246,8 +247,14 @@ tasks:
     notes: null
     branch: em-workflow/worker-digest-ownership/task0004
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive
