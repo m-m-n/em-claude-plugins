@@ -1,0 +1,258 @@
+schema_version: 1
+feature: codex-guard-redirect-only-list-pending
+created: '2026-10-21'
+base_branch: main
+goal: '# codex-hook-interactive-guard: && / || の右辺がリダイレクトだけのコマンドで list_pending が下りず、判定不能な断片の前の python3 -i の deny を見逃す
+
+
+  Notion タスク: <notion-url> (種別: バグ)
+
+
+  ## 現象 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、`&&` / `||` の右辺がリダイレクトだけのコマンド（`< /dev/null`、`> /dev/null`、`<<EOF`
+  など）のとき、`list_pending` が下りない。`_flush` は語のあるコマンドを終えたとき（`if made:`）だけ `list_pending` を下ろし、リダイレクト先は語にならないため。その後の改行がチェックポイントにならず、判定不能な文字列（閉じない
+  `''` など）に達すると、先行行の明示的な `python3 -i` の deny が外れて無出力になる。
+
+  feature `codex-guard-backquote-comment-undecidable` の review round 1 で security / comprehensive の両観点が報告した（medium、deferred）。変更前は判定不能な文字列がすべて無出力だったので後退ではなく、新しいチェックポイント規則（SPEC
+  FR2）の取りこぼし。
+
+
+  ## 再現手順 (必須)
+
+  1. `{"tool_input":{"command":"python3 -i &&\n< /dev/null\necho ''"}}` をフックの標準入力へ渡す（コマンド自体は実行しない）
+
+  2. 終了コード 0・空出力になる。`< /dev/null` を `: < /dev/null` に変えると deny が返る
+
+  3. `python3 -i && > /dev/null\necho ''` でも同じく空出力になる
+
+
+  ## 期待する挙動 (必須)
+
+  先行行の `python3 -i` を deny する。リダイレクトだけの単純コマンドでリストは完結し、bash は後ろの構文エラーより先に 1 行目を実行するため。
+
+  修正案: `_separator` で `list_pending` を `pipe_pending` と同じ規則で扱う（`&&` / `||` なら True、それ以外は `sep != "\n" or redirected` のとき False）。
+
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に deny の行を追加（`python3 -i &&\n< /dev/null\necho ''`、`python3
+  -i || > /dev/null\necho ''`、`python3 -i && > /dev/null;\necho ''`、`python3 -i &&\n<<EOF\nx\nEOF\necho ''`、およびこれらを `bash
+  -c` の中に入れた行）
+
+  - [ ] 両コピーがバイト単位で同一のまま
+
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:1018`（`_flush` の `list_pending` 解除）、`_separator`（1050 行付近）
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+
+  - 記録: `feature-docs/codex-guard-backquote-comment-undecidable/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-backquote-comment-undecidable/integration`）
+
+
+  ## 実害・発生条件 (任意)
+
+  見逃し側（fail-open）。入力は bash / zsh とも構文エラーになる形だが、bash は構文エラーの検出前に先頭行を実行するため対話プロセスが起動する。
+
+
+  ## 追加指示
+
+  - 実装完了後、integration ブランチを remote へ push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモートとも残す（base_branch
+  への自動マージはしない）。
+
+  - 不明点は Codex に相談し、比較してより良いと判断した選択肢を採る。
+
+  - その議論の内容を Notion に記録する。
+
+  '
+parent_branch: em-workflow/codex-guard-redirect-only-list-pending/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.58
+      '2': 0.42
+      '3': 0.0
+  at: '2026-10-21T00:15:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: e65bca543d1ee6491241f6946a5ad7f16bfb8973
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously
+    -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: _separator での list_pending の解除規則
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS8
+    - TS12
+    - TS13
+  FR2:
+    title: 再現手順の deny
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+  FR3:
+    title: list_pending の説明の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 2 つのコピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: CASES への行の追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS9
+    - TS10
+    - TS11
+    - TS12
+    - TS13
+    - TS14
+    - TS15
+  FR6:
+    title: ) で ( 群を閉じるときの list_pending の解除
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS9
+    - TS10
+    - TS11
+    - TS12
+    - TS13
+    - TS14
+    - TS15
+  NFR1:
+    title: 処理量
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 既存行の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+  NFR5:
+    title: ドキュメント検査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
