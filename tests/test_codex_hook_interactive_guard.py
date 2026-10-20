@@ -766,11 +766,16 @@ CASES = [
     ("deny", ") 救済 case 印 TS-17 子の仮の群のコマンド位置の esac は、自分の印が 0 のとき受け継いだ値を 1 下げて最後の ) の救済を戻す", "zsh -c 'setopt nobadpattern; ( function { python3 -i; } foo(a; case ${v:-${x:-}; function { :; } bar(b; x} in (x) :;; esac; )'"),
     ("deny", ") 救済 case 印 TS-18 引数の位置の esac は印を下げず、x) は外側のサブシェルを閉じない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in (y) echo esac;; x) < /dev/null :;; esac; )'"),
     ("deny", ") 救済 case 印 TS-19 引用符で囲んだ esac は印を下げず、x) は外側のサブシェルを閉じない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in (y) \"esac\";; x) < /dev/null :;; esac; )'"),
-    # TS-4b and TS-17b tell the inherited value as a sum from a boolean: a
-    # grandchild takes the parent's mark plus the parent's inherited value, and
-    # an inherited value of 2 needs two `esac`s to return to 0
+    # TS-4b, TS-17b and TS-17c pin the inherited value beyond TS-4 and TS-17.
+    # TS-4b: a grandchild takes the parent's mark plus the parent's inherited
+    # value, so the count reaches the innermost group of a chain of three.
+    # TS-17b: the inherited value is a sum, so a value of 2 needs two `esac`s to
+    # return to 0 (a flag would clear at the first). TS-17c: an `esac` lowers
+    # the group's own mark first and the inherited value only when the own mark
+    # is 0
     ("deny", ") 救済 case 印 TS-4b 受け継いだ値は親の印と親の受け継いだ値の和で、三段の仮の群の連鎖でも最も内側の ) は救済しない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case ${v:-${x:-}; function { :; } bar(b; function { :; } baz(c; x} in x) < /dev/null :;; y) :;; z) :;; esac; )'"),
     ("deny", ") 救済 case 印 TS-17b 受け継いだ値が 2 のとき esac 1 つでは 1 に下がるだけで、x) は外側のサブシェルを閉じない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case ${v:-${x:-}; case ${w:-${y:-}; function { :; } bar(b; esac; x) < /dev/null :;; y) :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-17c esac は自分の印を先に 1 下げ、自分の印が 1 以上のあいだは受け継いだ値を下げないので、x) は外側のサブシェルを閉じない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case ${v:-${x:-}; function { :; } bar(b; case y in (y) :;; x} in (x) :;; esac; x) < /dev/null :;; esac; )'"),
     # A9 limitations of the narrow fix: the newline between `case x` and
     # `in esac` starts a new simple command, so its `esac` is neither at
     # command position nor right after `case`, one word and `in`; the brace
