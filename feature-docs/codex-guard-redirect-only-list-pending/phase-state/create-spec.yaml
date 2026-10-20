@@ -3,9 +3,9 @@ feature: codex-guard-redirect-only-list-pending
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 1d131cdd8b016754ba659635005fa87f6e979ef0
+base_revision: f0b9e97537c45ac40cbb28c6c52596ea1dfec456
 last_input_digest: sha256:ccc9d7cb511d8d27a5cc9d7b1aa6c6bae2bafb60dae7b42284b37e8c225a6fe9
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -58,10 +58,16 @@ worker_runs:
   input_digest: sha256:0af8141e0f14dde6473d7dd3c586427e366a6a855e93ef6020ad78e494628b65
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:ccc9d7cb511d8d27a5cc9d7b1aa6c6bae2bafb60dae7b42284b37e8c225a6fe9
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-redirect-only-list-pending/REQUIREMENTS.md
+  sha256: 96bad6e436be8de3b7010728c7f3013775a66a78
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-redirect-only-list-pending/SPEC.md
+  sha256: cc2ba6aa00e2268ddc89f01e7eb277b840155f5f
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
