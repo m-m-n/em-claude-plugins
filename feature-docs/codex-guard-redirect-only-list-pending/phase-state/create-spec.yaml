@@ -1,9 +1,9 @@
 schema_version: 1
 feature: codex-guard-redirect-only-list-pending
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: f0b9e97537c45ac40cbb28c6c52596ea1dfec456
+base_revision: 0fb8a0da82668fa54be743d790c0483f98ba3947
 last_input_digest: sha256:ccc9d7cb511d8d27a5cc9d7b1aa6c6bae2bafb60dae7b42284b37e8c225a6fe9
 active_request_id: null
 packets:
