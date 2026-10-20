@@ -1,0 +1,43 @@
+task_id: task0002
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests, run before any edit on the inherited task branch (which already held the earlier attempt 52355ee5): 943/943 passed, Ran 10516 tests, OK (skipped=1)
+final_failures: []             # same command re-executed after the last edit (docstring clarifications and the TS-17c row on top of 52355ee5): 943/943 passed, Ran 10516 tests, OK (skipped=1); re-executed once more after this record was written
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-11, TS-12 and TS-13 rows (deny) run against the pre-change guard copies (git show 0d153ab0:<path> written over both copies, then restored): test_cases_run_against_both_copies errored for both copies on each of the three rows with JSONDecodeError, i.e. the pre-change guard printed nothing (silent) where a deny object was expected, because its mark was never cleared and the final ) was never rescued. With the changed guard the same test passes."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-14 (quoted time) and TS-15 (backslash-escaped !) rows (deny) run against the pre-change guard copies: both errored for both copies with JSONDecodeError (pre-change guard silent), because the old leading run did not check quoting or escaping and so marked the following case. With the changed guard they pass."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS-17 (inherited-value decrement) run against the pre-change guard copies errored for both copies with JSONDecodeError (pre-change guard silent: no decrement existed). TS-16 (nested case) passed on the pre-change guard, because a mark that is never cleared also refuses the final rescue; it pins the count against an over-eager decrement, and no red state occurred for it. Mutation check on the changed guard: with the esac decrement replaced by clearing the mark to 0, TS-16 fails for both copies. The extra rows TS-17b (an inherited value of 2 needs two esacs) and TS-17c (esac lowers the own mark first) are pinned the same way: TS-17b fails under the mutants 'esac clears the inherited value to 0' and 'inherited value kept as a flag'; TS-17c fails under 'esac lowers the inherited value even while the own mark is 1 or more'."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "TS-18 (argument-position esac), TS-19 (quoted esac) and the two A9 rows (case x, newline, in esac; zsh brace form case x { esac) all passed on the pre-change guard, which never lowers the mark, so no red state occurred; they exist to stop the new decrement from being too eager. Mutation checks on the changed guard make each fail for both copies: esac lowering at any bare position fails TS-18 and both A9 rows; esac lowering when not bare fails TS-19; keeping the after-in shape across a new simple command fails the A9 newline row; accepting { as well as in after the subject fails the A9 brace row."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing test_cases_run_against_both_copies detects any change in the verdicts of the pre-existing CASES rows (TS-1 to TS-9, TS-7b, TS-8b and the paren-rescue and brace-rescue rows); no red state occurred for this change. git diff 0d153ab0..HEAD removes no CASES row. The bare-run state (bare_run_open, bare_after_time) and the after-in state (case_shape) are separate attributes from run_open, after_time and lone_function, and the } rescue (_closes_after_rescue, _close_after_rescue) reads neither case_mark nor case_inherited; both were checked by reading the code, no test asserts them."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_seven_places_that_describe_the_paren_rescue_state_the_case_mark
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_no_copy_says_the_case_mark_is_permanent
+    red_confirmed: true
+    red_reason: "Both tests run against the pre-change guard copies: test_the_seven_places_... failed 8 subtests (term 'esac' missing from the module docstring, _Parser, _Group and _append_word, in each copy) and test_no_copy_says_the_case_mark_is_permanent failed 6 subtests ('The mark is never cleared', 'It is never cleared', 'for the rest of its life' present in each copy). Both pass on the changed copies. The remaining clauses (the CASES comment states that esac decrements the mark; each docstring location describes the bare run and the inherited value fixing) have no executable check and were verified by reading."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_deep_chain_over_a_subshell_is_rescued_once_at_the_closing_paren
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_many_closing_parens_after_a_chain_that_cannot_be_rescued_are_answered
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests in tests/test_codex_hook_interactive_guard.py detect byte drift between the two copies, recursion, and super-linear reading of deep chains and many closing parens; no red state occurred for this change. Not observed failing: the em-review copy was made identical to the em-workflow copy (cp) right after each edit. A scratch run of a chain of 1000, 4000 and 16000 nested provisional groups each holding a counted case and its esac denied in 0.04s, 0.12s and 0.44s (linear), and the project test command exits 0."
