@@ -137,6 +137,14 @@ Every synthesized task's plan records its origin as `provenance` (`source`:
 `review` | `verify`; `source_ids`; `review_round` when applicable), per
 `references/rework-task-synthesis.md` Section 11 Invariant 6.
 
+List each written path in `written_artifacts` and nothing else: the
+orchestrator computes every digest (the "`written_artifacts` reporting"
+section of `references/contracts/worker-envelope.md`). You never compute or
+re-verify a digest and never return `blocked` because you cannot compute
+one; the orchestrator verifies every `expect_digest` before dispatch (the
+"Who verifies `expect_digest`" section of
+`references/contracts/spec-writer-contract.md`).
+
 ## Report
 
 Your `report` field is a short factual summary of the tasks synthesized (or
