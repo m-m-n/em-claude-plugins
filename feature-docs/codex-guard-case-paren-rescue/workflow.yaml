@@ -116,8 +116,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
-  completed_at_commit: 40ebde620078798b67b2559d5bc3a3535c7e9cc1
+  status: completed
+  completed_at_commit: a9c5083847b8be38ce49b9cb3d45e05c302603fa
 - id: implement
   status: pending
   completed_at_commit: a6e53f6c3286764e3d8dc99a4dff3f423e3524ad
