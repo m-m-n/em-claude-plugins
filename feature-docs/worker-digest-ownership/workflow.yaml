@@ -139,7 +139,7 @@ workflow:
   failed_items: []
   summary: 'python3 -m unittest discover -s tests: 10789 tests OK (skipped=1); TS1-TS12 automated pass; build/format not configured; manual items 1-3 not executed (agent runtime)'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: artifact digest script
