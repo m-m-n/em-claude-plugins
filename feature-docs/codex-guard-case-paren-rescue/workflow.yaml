@@ -154,6 +154,30 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/codex-guard-case-paren-rescue/task0001
+  task0002:
+    title: Count case marks down at esac and count only bare reserved words
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 1
@@ -174,12 +198,13 @@ review:
   - spec
 requirements:
   FR1:
-    title: 'コマンド位置の case と esac で仮グループの case 印を増減する'
+    title: コマンド位置の case と esac で仮グループの case 印を増減する
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -188,22 +213,34 @@ requirements:
     - TS-6
     - TS-7
     - TS-8
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
   FR2:
-    title: '仮グループの連なりに沿って case 印を継承する'
+    title: 仮グループの連なりに沿って case 印を継承する
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-4
+    - TS-17
   FR3:
-    title: '印のある仮グループでは `)` の救済を行わない'
+    title: 印のある仮グループでは `)` の救済を行わない
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -213,43 +250,54 @@ requirements:
     - TS-6
     - TS-7
     - TS-8
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-16
+    - TS-17
   FR4:
-    title: 'その他の読み方は変えない'
+    title: その他の読み方は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
     - TS-8
     - TS-9
     - TS-10
+    - TS-18
+    - TS-19
   FR5:
-    title: 'docstring を追従させる'
+    title: docstring を追従させる
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-10
   FR6:
-    title: '2 つのコピーを同じ変更で直す'
+    title: 2 つのコピーを同じ変更で直す
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-10
   FR7:
-    title: 'テストを追従させる'
+    title: テストを追従させる
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -260,22 +308,33 @@ requirements:
     - TS-7
     - TS-8
     - TS-9
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
   NFR1:
-    title: '線形時間・再帰なし・印の処理は定数時間'
+    title: 線形時間・再帰なし・印の処理は定数時間
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-10
   NFR2:
-    title: '2 つのコピーのバイト一致'
+    title: 2 つのコピーのバイト一致
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-10
 batch:
