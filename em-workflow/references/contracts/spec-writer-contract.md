@@ -69,11 +69,28 @@ write_policy:
 | action | `expect_digest` | worker behaviour |
 |---|---|---|
 | `create` | always `null` | The file must not already exist. If it does, return `blocked` instead of writing. |
-| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. If the current digest does not match, return `blocked`. |
-| `replace_authorized` | required (the digest as of approval time) | A user-approved overwrite. If the current digest does not match the approved one, return `blocked` (see below — the digest is re-verified even though the overwrite was approved). |
-| `preserve` | required | Read-only: the worker must not write this path, only use its content as input. If the digest does not match, return `blocked`. |
-| `extend_only` | required | The worker may add new keys but must not modify or remove any existing key. If the digest does not match, return `blocked`. |
-| `regenerate` | required | The worker may overwrite this path only if the dispatch also changed its declared `source` file in the same dispatch; if `source` was not changed, the worker must not write this path either. If the digest does not match, return `blocked`. |
+| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. |
+| `replace_authorized` | required (the digest as of approval time) | A user-approved overwrite (see below — the digest is re-verified even though the overwrite was approved). |
+| `preserve` | required | Read-only: the worker must not write this path, only use its content as input. |
+| `extend_only` | required | The worker may add new keys but must not modify or remove any existing key. |
+| `regenerate` | required | The worker may overwrite this path only if the dispatch also changed its declared `source` file in the same dispatch; if `source` was not changed, the worker must not write this path either. |
+
+### Who verifies `expect_digest`
+
+The orchestrator verifies `expect_digest`, not the worker. Immediately
+before dispatch — after the clean-worktree precondition and the
+pre-dispatch snapshot of scope verification
+(`references/phases/create-spec-phase.md`) — the orchestrator computes the
+sha256 of every `targets` path whose action requires `expect_digest` and
+compares it with that `expect_digest`. On a mismatch it does not dispatch;
+it treats the input as stale and returns to the action decision below.
+
+The worker does not compute digests and does not re-verify
+`expect_digest`. From that verification until the worker's write, the
+target is protected by the exclusivity assumption in
+`references/contracts/worker-envelope.md`; the worker treats every target
+as already verified. A worker never returns `blocked` because it cannot
+compute a digest.
 
 **`regenerate` requires no separate user approval.** A regenerated artifact
 is mechanically derived from its `source`; because the change to `source`
@@ -93,9 +110,9 @@ already approved the overwrite.** The approval covers "the content as of
 the moment the approval question was created" — not "whatever the target
 contains at dispatch time". If something else updated the target between
 question creation and dispatch, that later content was never shown to the
-user, so it is not covered by the approval. A digest mismatch under
-`replace_authorized` therefore still returns `blocked`, and the
-orchestrator treats the input as stale and re-requests approval.
+user, so it is not covered by the approval. On a digest mismatch under
+`replace_authorized` the orchestrator therefore does not dispatch; it
+treats the input as stale and re-requests approval.
 
 ### `extend_only` key-comparison rule
 

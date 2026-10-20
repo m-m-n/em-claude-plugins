@@ -161,7 +161,7 @@ consequence for the planner's own `digest_inputs`.
 ## `completed` payload
 
 ```yaml
-written_artifacts: [...]        # IMPLEMENTATION.md, VERIFICATION.md, THREAT-MODEL.md, tasks/taskNNNN.md — each with sha256; TASK.md too at the minimal tier, only when appended
+written_artifacts: [...]        # IMPLEMENTATION.md, VERIFICATION.md, THREAT-MODEL.md, tasks/taskNNNN.md — paths only, sha256 computed by the orchestrator; TASK.md too at the minimal tier, only when appended
 workflow_patch: {...}           # operation: replace_planning — see references/workflow-patch.md
 payload:
   task_index:
