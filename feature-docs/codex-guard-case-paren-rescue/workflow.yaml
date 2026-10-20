@@ -101,8 +101,8 @@ workflow:
   artifacts:
   - REQUIREMENTS.md
   - SPEC.md
-  status: in_progress
-  completed_at_commit: fbff20aebc6335a2edab3e0bc003df2d295e4e34
+  status: completed
+  completed_at_commit: 3e9bec0a59966d3511ea1e43f503572c3425a2fa
 - id: design
   artifacts:
   - DESIGN.md
@@ -174,7 +174,7 @@ review:
   - spec
 requirements:
   FR1:
-    title: コマンド位置の case で仮の群に印を付ける
+    title: 'コマンド位置の case と esac で仮グループの case 印を増減する'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -189,7 +189,7 @@ requirements:
     - TS-7
     - TS-8
   FR2:
-    title: 仮の群の連鎖に沿って印を引き継ぐ
+    title: '仮グループの連なりに沿って case 印を継承する'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -198,7 +198,7 @@ requirements:
     tests:
     - TS-4
   FR3:
-    title: 印のある連鎖では ) の救済をしない
+    title: '印のある仮グループでは `)` の救済を行わない'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -214,7 +214,7 @@ requirements:
     - TS-7
     - TS-8
   FR4:
-    title: 他の読み方は変えない
+    title: 'その他の読み方は変えない'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -226,7 +226,7 @@ requirements:
     - TS-9
     - TS-10
   FR5:
-    title: docstring を追従させる
+    title: 'docstring を追従させる'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -235,7 +235,7 @@ requirements:
     tests:
     - TS-10
   FR6:
-    title: 2 つのコピーを同じ変更で直す
+    title: '2 つのコピーを同じ変更で直す'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -244,7 +244,7 @@ requirements:
     tests:
     - TS-10
   FR7:
-    title: CASES に回帰行を足す
+    title: 'テストを追従させる'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -261,7 +261,7 @@ requirements:
     - TS-8
     - TS-9
   NFR1:
-    title: 線形時間・再帰なし・印の処理は定数時間
+    title: '線形時間・再帰なし・印の処理は定数時間'
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -270,7 +270,7 @@ requirements:
     tests:
     - TS-10
   NFR2:
-    title: 2 つのコピーのバイト一致
+    title: '2 つのコピーのバイト一致'
     status: ok
     tbd_reason: null
     excluded_reason: null
