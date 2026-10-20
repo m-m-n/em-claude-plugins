@@ -1,0 +1,97 @@
+schema_version: 2
+feature: worker-digest-ownership
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.5
+    confidence: 0.47
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.03
+      '1': 0.45
+      '2': 0.5
+      '3': 0.02
+  observed_at: '2026-10-21T10:02:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.87
+    confidence: 0.84
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.03
+      '1': 0.08
+      '2': 0.87
+      '3': 0.02
+  observed_at: '2026-10-21T10:12:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/scripts/validate-worker-output.py
+  - tests/test_phase_protocols.py
+  - tests/test_validate_worker_output.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - design
+  - phase-state
+  - worker-envelope
+  - validate-worker-output
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: true
+  changes_behavior: true
+  evidence:
+  - 'em-workflow/agents/spec-writer.md:6,59: Bash は付与されていないが、digest の計算・再照合を禁止し、計算手段の不足による
+    blocked を禁止し、sha256: null を指定している。元の不整合は現行記述で解消されている'
+  - 'em-workflow/references/contracts/spec-writer-contract.md:71,80: create は expect_digest:
+    null、残る5アクションは照合必須で、すべてオーケストレーターが dispatch 直前に照合する。不一致なら dispatch しない'
+  - 'em-workflow/references/contracts/worker-envelope.md:32,274: 対象の4種類の書き込み worker
+    に共通契約が適用され、written_artifacts の sha256 は null または省略と定義されている。第5層でオーケストレーターが計算・保存する'
+  - 'em-workflow/agents/designer.md:162、em-workflow/references/contracts/planner-contract.md:164、em-workflow/references/contracts/rework-planner-contract.md:6,15:
+    designer と planners に worker 自身の digest 計算を求める現行規則は確認できない'
+  - 'em-workflow/references/phases/create-spec-phase.md:222,617: 第5層の SHA256 計算と事前照合に
+    git hash-object -- を指定している。Git のオブジェクト識別子とファイル本文の SHA256 を区別する手順が記載されていない'
+  - 'em-workflow/skills/develop/SKILL.md:745: design は write_policy の組み立てから dispatch、成果物検証へ進むが、digest
+    の事前照合、第5層の計算・保存手順を明記していない。共通契約側には責務が定義されている'
+  - 'em-workflow/references/contracts/worker-envelope.md:48、em-workflow/references/phase-state.md:114:
+    phase の許容値に design がなく、design の成果物 digest の保存先が定義されていない。em-workflow/scripts/validate-worker-output.py:86,1730
+    も phase: design を拒否するため、設計フェーズまで含む整合が残っている'
+  - 'tests/test_new_worker_agents.py:343、tests/test_worker_contracts_create_spec.py:242:
+    worker の digest 計算禁止、計算不能による blocked 禁止、オーケストレーターによる照合を確認する回帰テストが存在する。tests/test_new_worker_agents.py:26
+    にあるとおり文書の静的検査である'
+  - 'em-workflow/scripts/validate-worker-output.py:1850,1918: written_artifacts は一覧と
+    path を検査し、sha256 の値を検査しないため、sha256: null および省略を拒否しない'
+  - 'em-workflow/skills/design/SKILL.md:7,12: 手動の design コマンドには Bash があり、develop の
+    designer worker とは別の対話手順を定義している'
+  - 'feature-docs/agent-separation/design-input.md:501,614、tests/test_new_worker_agents.py:20:
+    digest 報告・不一致時 blocked の旧記述が残る。ただし worker-envelope.md:8 は設計資料を規則適用の必読先としていない'
+  - 'em-workflow/skills/develop/SKILL.md:750、em-workflow/references/phase-state.md:114:
+    設計フェーズの保存方法を確定する記述がないため、変更行数・追加テスト件数は未算定であり、対応する数値0は修正不要を意味しない'
+decided_at: '2026-10-21T10:12:30+09:00'
