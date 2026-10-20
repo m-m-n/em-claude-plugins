@@ -154,9 +154,9 @@ tasks:
     - FR7
     - NFR1
     - NFR3
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/worker-digest-ownership/task0001
   task0002:
     title: digest owner document, dispatch-site wiring, wiring check
     plan: tasks/task0002.md
@@ -187,9 +187,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/worker-digest-ownership/task0002
   task0003:
     title: design phase value and digest contract alignment
     plan: tasks/task0003.md
@@ -215,9 +215,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/worker-digest-ownership/task0003
   task0004:
     title: worker digest stance and the stance check
     plan: tasks/task0004.md
@@ -241,9 +241,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/worker-digest-ownership/task0004
 review:
   status: pending
   rounds_completed: 0

@@ -83,7 +83,13 @@ PHASE_STATE_STATUS_VALUES = {
     "failed",
 }
 
-PHASE_VALUES = {"create-spec", "create-plan", "review", "verify", "rework"}
+# worker-digest-ownership/task0003: `design` is a registered phase -- the
+# design step records its digests in phase-state/design.yaml
+# (references/phase-state.md). The same vocabulary also backs the gate-ID
+# phase prefix helper, which attributes a phase only to gates a worker
+# contract's "Gate identifiers" section owns; none names a `design.` gate,
+# so the gate registry is unchanged.
+PHASE_VALUES = {"create-spec", "design", "create-plan", "review", "verify", "rework"}
 
 # goal-vs-spec-divergence/task0029: the classification audit record's field
 # vocabularies (references/phase-state.md's `classification` list entry;

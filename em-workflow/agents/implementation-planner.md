@@ -326,6 +326,14 @@ On `status: completed`, the result carries `written_artifacts`
 `tasks_patch` and `requirements_patch` described above, and
 `payload.task_index`.
 
+List each written path in `written_artifacts` and nothing else: the
+orchestrator computes every digest (the "`written_artifacts` reporting"
+section of `${CLAUDE_PLUGIN_ROOT}/references/contracts/worker-envelope.md`).
+This agent never computes or re-verifies a digest and never returns
+`blocked` because it cannot compute one; the orchestrator verifies every
+`expect_digest` before dispatch (the "Who verifies `expect_digest`" section
+of `${CLAUDE_PLUGIN_ROOT}/references/contracts/spec-writer-contract.md`).
+
 This agent never sets `branch`, `notes`, any running/in-progress task
 status, or `completed_at_commit` in anything it returns — those are
 orchestrator-owned (rule R2 governs `completed_at_commit`; the rest reflect
