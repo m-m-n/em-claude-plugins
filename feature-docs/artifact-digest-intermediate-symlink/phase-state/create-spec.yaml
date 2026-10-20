@@ -66,6 +66,17 @@ answers:
       create-spec.design-step: decide_autonomously'
     resolution_note: 'gate: create-spec.design-step; batch-policies.yaml decide_autonomously;
       orchestrator adopted analyst recommendation skip'
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-10-21T08:50:00+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'kind: none (zero candidates)'
+    resolution_note: 'gate: create-spec.design-system; batch-policies.yaml top_candidate_or_none;
+      zero candidates -> none'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
@@ -75,7 +86,17 @@ worker_runs:
   status: completed
   input_digest: sha256:41a678ada8f46142f3d759b81f44b8562360819d9d0b6332f5fc8f8a27676f84
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:41a678ada8f46142f3d759b81f44b8562360819d9d0b6332f5fc8f8a27676f84
+  output_digest: null
+artifacts:
+- path: feature-docs/artifact-digest-intermediate-symlink/REQUIREMENTS.md
+  sha256: sha256:e705c51b7a506d922744557eb71c1c1dec6c6f269982d9d9adee511ba7c45992
+  produced_by: create-spec-run-0003
+- path: feature-docs/artifact-digest-intermediate-symlink/SPEC.md
+  sha256: sha256:f729e83fbd7deae19406f55cd9359a5c3ce9bee04159a0ea59015eebb17af9b6
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
