@@ -239,6 +239,17 @@ class TestSpecWriterContract(unittest.TestCase):
         self.assertIn("regenerate", self.text)
         self.assertIn("source", self.text)
 
+    def test_orchestrator_owns_expect_digest_verification(self):
+        self.assertIn("### Who verifies `expect_digest`", self.text)
+        self.assertIn(
+            "The orchestrator verifies `expect_digest`, not the worker.",
+            self.text,
+        )
+        self.assertIn(
+            "A worker never returns `blocked` because it cannot\ncompute a digest.",
+            self.text,
+        )
+
     # AC-5
     def test_documents_targets_vs_allowed_write_roots_split(self):
         self.assertIn("allowed_write_roots", self.text)

@@ -219,7 +219,7 @@ validation layers, split between the validation script
 | `input_revision`.`input_digest` | Echoed verbatim from the input | Yes |
 | `question_packet` | The question packet (`references/question-packet-schema.md` 5.1); present only when `status: needs_user_input` | Conditional (see status table) |
 | `blocking_reason` | Human-readable reason; present only when required by `status` | Conditional (see status table) |
-| `written_artifacts` | Every path the worker wrote, each paired with its sha256 digest | Yes (may be empty) |
+| `written_artifacts` | Every path the worker wrote (see "`written_artifacts` reporting" below) | Yes (may be empty) |
 | `workflow_patch` | Proposed workflow patch (`references/workflow-patch.md`); worker-specific, may be absent | No |
 | `mode_echo` | Verbatim echo of a mode-selecting input field; see the `mode_echo` rule below | Yes (null unless the worker has a mode input) |
 | `payload` | Worker-specific result payload, defined in the worker's own `references/contracts/*-contract.md`; present only when `status: completed` | Conditional (see status table) |
@@ -270,8 +270,17 @@ input field, as a validation error.
 ## `written_artifacts` reporting
 
 Whenever a worker writes any file, it lists every written path in
-`written_artifacts`, each entry paired with the sha256 digest of the
-content it wrote.
+`written_artifacts`. Each entry is a mapping with a `path` key. The worker
+does not compute digests: an entry's `sha256` is `null` or absent.
+
+The orchestrator computes the sha256 of every listed path itself in layer 5
+(artifact validation), and records it in phase-state's `artifacts`
+(`references/phase-state.md`). A digest the worker did put in an entry is
+never used for validation.
+
+Verifying a write target's expected digest before a write is also the
+orchestrator's job, done before dispatch; that rule is owned by
+`references/contracts/spec-writer-contract.md`.
 
 ## Exclusivity assumption during dispatch (design-input.md 5.11.3)
 
