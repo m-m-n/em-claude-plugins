@@ -1,0 +1,89 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_script.TestDigestValues.test_ac1_empty_file_has_the_published_empty_vector
+      - tests.test_artifact_digest_script.TestDigestValues.test_ac1_abc_file_has_the_published_abc_vector
+      - tests.test_artifact_digest_script.TestDigestValues.test_ac1_digest_is_sha256_prefix_plus_64_lowercase_hex
+      - tests.test_artifact_digest_script.TestDigestValues.test_ac1_two_block_message_matches_the_published_vector
+      - tests.test_artifact_digest_script.TestDigestValues.test_ac1_file_spanning_many_read_chunks_matches_the_vector
+      - tests.test_artifact_digest_script.TestDigestValues.test_ac1_bytes_are_hashed_raw_without_newline_translation
+      - tests.test_artifact_digest_script.TestDigestValues.test_ac1_stderr_is_empty_on_success
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 -- python3 could not open em-workflow/scripts/artifact-digest.py ([Errno 2] No such file or directory), stdout empty"
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_script.TestMultiplePaths.test_ac2_one_element_per_argument_in_argument_order
+      - tests.test_artifact_digest_script.TestMultiplePaths.test_ac2_same_path_twice_yields_two_elements
+      - tests.test_artifact_digest_script.TestMultiplePaths.test_ac2_duplicates_are_kept_between_other_arguments
+      - tests.test_artifact_digest_script.TestMultiplePaths.test_ac2_path_is_the_argument_verbatim_not_normalised
+      - tests.test_artifact_digest_script.TestMultiplePaths.test_ac2_absolute_and_relative_forms_of_one_file_both_echo
+      - tests.test_artifact_digest_script.TestMultiplePaths.test_ac2_each_element_digest_belongs_to_its_own_file
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 -- the script did not exist (python3 [Errno 2] No such file or directory), stdout empty"
+  AC-3:
+    tests:
+      - tests.test_artifact_digest_script.TestHyphenPaths.test_ac3_each_hyphen_name_alone_is_hashed_as_a_file
+      - tests.test_artifact_digest_script.TestHyphenPaths.test_ac3_all_hyphen_names_together_are_hashed_in_order
+      - tests.test_artifact_digest_script.TestHyphenPaths.test_ac3_no_help_or_usage_text_is_produced
+      - tests.test_artifact_digest_script.TestHyphenPaths.test_ac3_absent_option_like_names_are_missing_not_options
+      - tests.test_artifact_digest_script.TestScriptFileProperties.test_script_does_not_parse_options
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 (and 2 != 1 for the absent-option-names case) -- the script did not exist; the static option-parsing check errored in setUpClass with FileNotFoundError reading the script"
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_script.TestNonAsciiPaths.test_ac4_decoded_paths_equal_the_arguments
+      - tests.test_artifact_digest_script.TestNonAsciiPaths.test_ac4_raw_stdout_holds_the_characters_as_unescaped_utf8
+      - tests.test_artifact_digest_script.TestNonAsciiPaths.test_ac4_c_locale_yields_the_same_output
+      - tests.test_artifact_digest_script.TestNonAsciiPaths.test_ac4_ascii_only_interpreter_encodings_yield_the_same_output
+      - tests.test_artifact_digest_script.TestNonAsciiPaths.test_ac4_absolute_path_with_japanese_and_spaces_is_echoed
+      - tests.test_artifact_digest_script.TestNonAsciiPaths.test_ac4_japanese_name_that_is_missing_is_echoed_unescaped
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 -- the script did not exist (python3 [Errno 2] No such file or directory), stdout empty"
+  AC-5:
+    tests:
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_missing_path_yields_null_digest_and_missing_error
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_other_arguments_still_carry_their_digests
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_missing_first_and_last_keep_positions
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_empty_argument_is_reported_missing
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_missing_directory_component_is_missing
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_path_below_a_regular_file_is_missing
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_failure_element_has_exactly_path_sha256_error
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_success_element_has_exactly_path_and_sha256
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_exit_is_zero_when_every_path_has_a_digest
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 1 / 2 != 0 -- the script did not exist (python3 [Errno 2] No such file or directory); the element-shape tests raised JSONDecodeError on the empty stdout"
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_directory_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_symlink_to_a_regular_file_is_not_followed
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_symlink_result_never_carries_the_target_digest
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_dangling_symlink_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_symlink_to_a_directory_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_symlink_loop_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_fifo_is_not_a_regular_file_and_does_not_block
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_symlink_to_a_fifo_does_not_block
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_socket_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_character_device_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_non_regular_entry_does_not_stop_the_other_arguments
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_unreadable_regular_file_is_reported_unreadable
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_unreadable_file_does_not_stop_the_other_arguments
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_driver_control_a_real_regular_file_is_still_hashed
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_fifo_swapped_in_after_inspection_does_not_block
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_symlink_swapped_in_after_inspection_is_not_followed
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_directory_swapped_in_after_inspection_is_not_hashed
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_entry_removed_after_inspection_is_missing
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 1 / 2 != 0 -- the script did not exist (python3 [Errno 2] No such file or directory), stdout empty. The root-only permission case is skipped (with a stated reason) only when running as root; it ran and failed red here as a non-root user. The inspection-swap tests were also checked by mutation: dropping O_NONBLOCK, O_NOFOLLOW or the handle check each turned the matching test red"
+  AC-7:
+    tests:
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_no_argument_exits_2_with_usage_on_stderr
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_no_argument_leaves_stdout_empty
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_script_imports_only_standard_library_modules
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_script_imports_no_process_spawning_facility
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_script_import_set_is_not_empty
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_non_utf8_argument_is_an_internal_failure_exit_2
+    red_confirmed: true
+    red_reason: "AssertionError: b'usage' not found in stderr (python3 [Errno 2] No such file or directory instead); the import and facility checks errored with FileNotFoundError reading the script"
