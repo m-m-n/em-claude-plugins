@@ -123,7 +123,8 @@ workflow:
   completed_at_commit: e5eabc891214aa6ca4ec60f2aeba05ddc81e5fc6
   base_commit: 9b275570614d2efe563c7f2eb2c8f9b677befd71
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 7cf5cd1d4dba4ee7240807503a425a787eb14fd3
 - id: verify
   status: pending
 - id: retrospect
@@ -180,10 +181,10 @@ tasks:
     notes: 'batch retry consumed (implement.failed-task, 1/1): prior implementer stopped without a merged event; retried on kept worktree'
     branch: em-workflow/codex-guard-case-paren-rescue/task0002
 review:
-  status: pending
-  rounds_completed: 1
-  residual_critical_high: 2
-  needs_rework: true
+  status: completed
+  rounds_completed: 2
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
