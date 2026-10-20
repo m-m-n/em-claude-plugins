@@ -714,19 +714,34 @@ CASES = [
     ("deny", "既知の誤拒否: ) 救済 TS-13 救済で閉じた後の対の無い ) は区切りで、後の入力リダイレクトは救済後のコマンドを接続しない。zsh 5.9 は parse error を出す入力", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; python3) ) < /dev/null'"),
     ("silent", ") 救済 TS-14 引用符の中の ) は契機にならず、群が開いたまま残る", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; python3 -i; \")\"'"),
     ("deny", ") 救済 外側のサブシェルは救済で閉じた後の ) で閉じる", "zsh -c 'setopt nobadpattern; ( ( function { :; } foo(a; python3 -i; ) )'"),
-    # A `case` read at command position while a provisional group is the
-    # innermost open group puts the case mark on that group, and a provisional
-    # group opened inside a provisional group takes the mark's reach along the
-    # chain (the inherited value). A group that has either one never rescues a
-    # chain at a `)`: the `)` is a case-pattern terminator there, and it closes
-    # the provisional group itself instead of the subshell outside the chain, so
-    # a stdin redirect that follows reaches only that group (TS-1 to TS-4 are
-    # denied again; review finding 5e71ff00fdbe5aff). The mark follows the
-    # keyword position: a reserved-word prefix (`!`, `time`) keeps it, and an
-    # argument-position `case` or a quoted one is no keyword. A redirect after
-    # the subshell and a pipe into it still connect the rescued commands. TS-9
-    # is the known miss of the limitation that the main reader does not track
-    # case-pattern terminators in general
+    # The case mark of a provisional group is the number of `case`s read in it
+    # that no `esac` has closed yet. A bare `case` read at command position
+    # while the group is the innermost open group raises the mark by 1, and a
+    # bare `esac` lowers it by 1: an `esac` at command position, or one that
+    # comes right after `case`, one word and a bare `in` in the same simple
+    # command. A provisional group opened inside a provisional group takes the
+    # parent's mark plus the parent's inherited value as its own inherited
+    # value, fixed once when it opens; an `esac` that finds the own mark at 0
+    # lowers the inherited value instead. A group whose mark or inherited value
+    # is 1 or more never rescues a chain at a `)`: the `)` is a case-pattern
+    # terminator there, and it closes the provisional group itself instead of
+    # the subshell outside the chain, so a stdin redirect that follows reaches
+    # only that group (TS-1 to TS-4 are denied again; review finding
+    # 5e71ff00fdbe5aff). Once `esac` has returned the mark and the inherited
+    # value to 0 the group reads like one that was never marked, and the `)`
+    # rescues again (TS-11 to TS-13; findings 285d9bc33784bb3d and
+    # df4afa83e782d56a). The mark follows the keyword position: a bare
+    # reserved-word prefix (`!`, `time`) keeps it, while a quoted or escaped
+    # reserved word is not part of the prefix and ends it (TS-14 and TS-15;
+    # finding b374e6b3c3d4b471). An argument-position `case`, a quoted one, an
+    # argument-position `esac` and a quoted `esac` are no keywords (TS-7, TS-8,
+    # TS-18, TS-19), and the mark is a count, so the `esac` of an inner `case`
+    # leaves the outer one counted (TS-16). A redirect after the subshell and a
+    # pipe into it still connect the rescued commands. TS-9 is the known miss
+    # of the limitation that the main reader does not track case-pattern
+    # terminators in general. The two A9 rows pin the forms in which an `esac`
+    # does not lower the mark: the newline between `case x` and `in esac`, and
+    # zsh's brace form `case x { ... }`
     ("deny", ") 救済 case 印 TS-1 コマンド位置の case が仮の群に印を付け、パターンの ) は外側のサブシェルを閉じない (再現手順)", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in x) < /dev/null :;; esac; )'"),
     ("deny", ") 救済 case 印 TS-2 先頭の ! を除いた位置の case も印を付ける", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; ! case x in x) < /dev/null :;; esac; )'"),
     ("deny", ") 救済 case 印 TS-3 先頭の time を除いた位置の case も印を付ける", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; time case x in x) < /dev/null :;; esac; )'"),
@@ -742,6 +757,29 @@ CASES = [
     ("deny", ") 救済 case 印 TS-7b 引数の位置の case は印を付けず、パターン側の ) が外側のサブシェルを閉じる", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; echo case x in x) :;; esac; ) < /dev/null'"),
     ("deny", ") 救済 case 印 TS-8b 引用符で囲んだ case は印を付けず、パターン側の ) が外側のサブシェルを閉じる", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; \"case\" x in x) :;; esac; ) < /dev/null'"),
     ("silent", "既知の見逃し: ) 救済 case 印 TS-9匿名関数の無い入力は仮の群を開かず、メインの読みは case のパターンの終端を追わない", "zsh -c '( python3; case x in x) < /dev/null :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-11 case x in の直後の esac が印を 0 に戻し、最後の ) は連鎖を救済して外側のサブシェルを閉じる", "zsh -c 'setopt nobadpattern; ( function { python3 -i; } foo(a; case x in esac; )'"),
+    ("deny", ") 救済 case 印 TS-12 空の case を esac で閉じた後の起動は、救済で閉じたサブシェルのコマンドとして判定する", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; case x in esac; python3 -i; )'"),
+    ("deny", ") 救済 case 印 TS-13 ;; の後のコマンド位置の esac が印を 0 に戻す", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; case x in (x) :;; esac; python3 -i; )'"),
+    ("deny", ") 救済 case 印 TS-14 引用符で囲んだ time は先頭の予約語に数えず、続く case に印を付けない", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; \"time\" case; python3 -i; )'"),
+    ("deny", ") 救済 case 印 TS-15 バックスラッシュで逃がした ! は先頭の予約語に数えず、続く case に印を付けない", "zsh -c 'setopt nobadpattern; ( function { :; } foo(a; \\! case; python3 -i; )'"),
+    ("deny", ") 救済 case 印 TS-16 入れ子の case は印を数で持ち、内側の esac の後も外側の case が残って z) は救済しない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in (x) case y in (y) :;; esac;; z) < /dev/null :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-17 子の仮の群のコマンド位置の esac は、自分の印が 0 のとき受け継いだ値を 1 下げて最後の ) の救済を戻す", "zsh -c 'setopt nobadpattern; ( function { python3 -i; } foo(a; case ${v:-${x:-}; function { :; } bar(b; x} in (x) :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-18 引数の位置の esac は印を下げず、x) は外側のサブシェルを閉じない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in (y) echo esac;; x) < /dev/null :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-19 引用符で囲んだ esac は印を下げず、x) は外側のサブシェルを閉じない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case x in (y) \"esac\";; x) < /dev/null :;; esac; )'"),
+    # TS-4b and TS-17b tell the inherited value as a sum from a boolean: a
+    # grandchild takes the parent's mark plus the parent's inherited value, and
+    # an inherited value of 2 needs two `esac`s to return to 0
+    ("deny", ") 救済 case 印 TS-4b 受け継いだ値は親の印と親の受け継いだ値の和で、三段の仮の群の連鎖でも最も内側の ) は救済しない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case ${v:-${x:-}; function { :; } bar(b; function { :; } baz(c; x} in x) < /dev/null :;; y) :;; z) :;; esac; )'"),
+    ("deny", ") 救済 case 印 TS-17b 受け継いだ値が 2 のとき esac 1 つでは 1 に下がるだけで、x) は外側のサブシェルを閉じない", "zsh -c 'setopt nobadpattern; ( function { python3; } foo(a; case ${v:-${x:-}; case ${w:-${y:-}; function { :; } bar(b; esac; x) < /dev/null :;; y) :;; esac; )'"),
+    # A9 limitations of the narrow fix: the newline between `case x` and
+    # `in esac` starts a new simple command, so its `esac` is neither at
+    # command position nor right after `case`, one word and `in`; the brace
+    # form `case x { ... }` has no bare `in`. The mark stays at 1 in both, the
+    # final `)` closes the provisional group itself, and the subshell is left
+    # open (undecidable, silent). A mark lowered by either form would rescue the
+    # chain, close the subshell and deny, as TS-11 does
+    ("silent", "既知の見逃し: ) 救済 case 印 A9 case x の次の行の in esac は印を下げず、最後の ) は仮の群を閉じる", "zsh -c 'setopt nobadpattern; ( function { python3 -i; } foo(a; case x\nin esac; )'"),
+    ("silent", "既知の見逃し: ) 救済 case 印 A9 zsh の波括弧形 case x { esac は in が無いので印を下げず、最後の ) は仮の群を閉じる", "zsh -c 'setopt nobadpattern; ( function { python3 -i; } foo(a; case x { esac; )'"),
     # A standalone bare `}` closes an anonymous body, or a `{` group inside
     # one, even with words pending: they are finalized as a command of the
     # group, as a `;` before the `}` would (FR1, FR2, FR3, FR8). A `{` group
@@ -2558,20 +2596,31 @@ class TestGuardDocumentation(unittest.TestCase):
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
 
-    # The case mark and the inherited value (FR5): a `case` at command position
-    # marks the provisional group that is innermost, a provisional group opened
-    # inside a provisional group takes the inherited value from its parent, and
-    # a group that has either one is not rescued at a `)`. Seven places say so:
-    # step 4 of the module docstring, the docstring of `_Parser`, the field
-    # list of `_Group`, and the docstrings of `_mark_provisional`,
-    # `_append_word`, `_close_paren` and `_closes_paren_after_rescue`
+    # The case mark and the inherited value (FR5): the case mark is the number
+    # of unfinished `case`s of a provisional group, a bare `case` at command
+    # position raises it, a bare `esac` at command position or right after
+    # `case`, one word and a bare `in` lowers it, a provisional group opened
+    # inside a provisional group takes the inherited value from its parent and
+    # lowers it by `esac` when its own mark is 0, and a group that has either
+    # one at 1 or more is not rescued at a `)`. Seven places say so: step 4 of
+    # the module docstring, the docstring of `_Parser`, the field list of
+    # `_Group`, and the docstrings of `_mark_provisional`, `_append_word`,
+    # `_close_paren` and `_closes_paren_after_rescue`; the word `esac` is
+    # required in the module docstring, `_Parser`, `_Group` and `_append_word`
     CASE_MARK_TERMS = ("case mark", "inherited value")
     CASE_MARK_PARSER_METHODS = {
         "_mark_provisional": CASE_MARK_TERMS,
-        "_append_word": ("case mark",),
+        "_append_word": ("case mark", "esac"),
         "_close_paren": CASE_MARK_TERMS,
         "_closes_paren_after_rescue": CASE_MARK_TERMS,
     }
+    # Statements that the mark is permanent: the mark is a count that `esac`
+    # lowers, so none of these may remain in either copy
+    CASE_MARK_PERMANENCE_PHRASES = (
+        "The mark is never cleared",
+        "It is never cleared",
+        "for the rest of its life",
+    )
 
     def test_the_seven_places_that_describe_the_paren_rescue_state_the_case_mark(self):
         for plugin, path in HOOK_PATHS.items():
@@ -2581,11 +2630,11 @@ class TestGuardDocumentation(unittest.TestCase):
                 if isinstance(node, ast.ClassDef) and node.name == "_Group"
             )
             places = {
-                "module docstring": (module_docstring(path), self.CASE_MARK_TERMS),
-                "_Parser": (parser_docstring(path), self.CASE_MARK_TERMS),
+                "module docstring": (module_docstring(path), self.CASE_MARK_TERMS + ("esac",)),
+                "_Parser": (parser_docstring(path), self.CASE_MARK_TERMS + ("esac",)),
                 "_Group": (
                     " ".join((ast.get_docstring(group) or "").split()),
-                    self.CASE_MARK_TERMS + ("case_mark", "case_inherited"),
+                    self.CASE_MARK_TERMS + ("case_mark", "case_inherited", "esac"),
                 ),
             }
             for method, terms in self.CASE_MARK_PARSER_METHODS.items():
@@ -2594,6 +2643,13 @@ class TestGuardDocumentation(unittest.TestCase):
                 for term in terms:
                     with self.subTest(copy=plugin, place=place, term=term):
                         self.assertIn(term, doc)
+
+    def test_no_copy_says_the_case_mark_is_permanent(self):
+        for plugin, path in HOOK_PATHS.items():
+            text = " ".join(path.read_text(encoding="utf-8").split())
+            for phrase in self.CASE_MARK_PERMANENCE_PHRASES:
+                with self.subTest(copy=plugin, phrase=phrase):
+                    self.assertNotIn(phrase, text)
 
     # What step 4 says about the head's stdin redirect, a `(` among the
     # arguments of an anonymous function, and where the arguments end
