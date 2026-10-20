@@ -1258,8 +1258,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # and the docstring of `extract_verification_scenario_ids` names both
     # forms. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
     # asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by worker-digest-ownership/task0003: the phase
+    # vocabulary `PHASE_VALUES` gains the `design` phase value (the design
+    # step's phase-state file, phase-state/design.yaml). The vocabulary is
+    # shared by the phase-state and question-packet checks and by the
+    # gate-ID phase prefix helper; no worker contract names a `design.`
+    # gate, so the gate registry is unchanged. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh,
+    # don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "e91c262923e082b91b86ba4bef36b55487e2a2899d5b6c3a796590fcb9985e40"
+        "387f5a59282fb3b8a7d76c128214ea8545afcdc5089614a11e0bb753031e7aae"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
