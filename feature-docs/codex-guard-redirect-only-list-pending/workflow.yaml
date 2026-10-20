@@ -130,7 +130,8 @@ workflow:
   summary: 'test_command pass (destructive-guard 943/943, unittest 10519 tests OK, skipped=1); tests.test_codex_hook_interactive_guard 144 OK; TS1-TS21 and AC1-AC7 satisfied; TS20 version-field diff empty; copies byte-identical; case-table diff adds rows only'
   excluded: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: eaf061495de60d594a21889981533f707c5ee9c6
 tasks:
   task0001:
     title: End the list continuation after redirect-only commands and at a closing paren
