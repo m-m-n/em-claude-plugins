@@ -192,7 +192,8 @@ directly below, because this document is where they take effect:
   the `create-spec.artifact-overwrite` gate (interactive) or follows
   `references/batch-policies.yaml` (batch).
 - The orchestrator verifies each target's `expect_digest` itself before
-  dispatch, per the same contract ("Who verifies `expect_digest`"). On a
+  dispatch, per the same contract ("Who verifies `expect_digest`") and
+  `references/artifact-digest.md` (`Pre-dispatch verification`). On a
   mismatch it does not dispatch. spec-writer does not compute digests, and
   its `written_artifacts` entries carry no digest.
 
@@ -219,10 +220,10 @@ cited here, not re-derived.
   `references/templates/task-document.md`'s mandatory sections — cited
   there, not restated here.
 - Scope verification (below) — applies at every tier.
-- Artifact digests (layer 5): the orchestrator computes the sha256 of every
-  path in `written_artifacts` with `git hash-object --` and records it in
-  phase-state's `artifacts`. A digest the worker put in an entry is not
-  used.
+- Artifact digests (layer 5): once layer 4 passes, the orchestrator records
+  the digest of every path in `written_artifacts` into
+  `phase-state/create-spec.yaml`, per `references/artifact-digest.md`
+  (`Layer 5 recording`). A digest the worker put in an entry is not used.
 
 ## 11. workflow.yaml construction
 
@@ -614,7 +615,7 @@ cannot be recovered by anything the post-dispatch comparison does.
 | HEAD SHA | `git rev-parse HEAD` | Staleness, and the pinned tree baseline the post-dispatch comparison below diffs against |
 | Untracked files | `git status --porcelain -z -uall` | Scope |
 | `extend_only` target key sets | Parse `design-system/tokens.yaml` | Scope |
-| `write_policy.targets` digests | `git hash-object --` on each target whose action requires `expect_digest` | `expect_digest` verification (`references/contracts/spec-writer-contract.md`) |
+| `write_policy.targets` digests | The artifact digest of each target whose action requires `expect_digest`, calculated per `references/artifact-digest.md` (`Calculation`) | `expect_digest` verification (`references/artifact-digest.md`, `Pre-dispatch verification`; `references/contracts/spec-writer-contract.md`) |
 
 **No whole-tree working-tree-content hashing pass runs here, and no
 whole-index blob-ID/mode listing pass runs here either.** The precondition
@@ -627,7 +628,9 @@ lookup and content hashing (`git hash-object --`) happen only in the
 post-dispatch comparison below, and only for the candidate paths that
 comparison has already enumerated — never for the whole tracked set. The
 one pre-dispatch exception is the `write_policy.targets` digest row above,
-which hashes only the enumerated targets. A
+which calculates only the enumerated targets' artifact digests — a
+raw-byte sha256, not a git blob id (`references/artifact-digest.md`,
+`Digest definition`). A
 symlink is stored by git as a blob (the link string itself), so
 `git hash-object` on a changed symlink path also detects a change to what
 the link points at.

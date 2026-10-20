@@ -223,7 +223,12 @@ in the `value_inputs` of `input_digest`, and, when it recomputes
 `input_digest` on the worker's return, re-resolves it the same way. The
 field's place in the input and its mandatory and untrusted status are stated
 in `references/contracts/rework-planner-contract.md`; this document restates
-neither the field's definition nor its resolution rules.
+neither the field's definition nor its resolution rules. Each of these
+dispatches also carries the digest steps of `references/artifact-digest.md`:
+`Pre-dispatch verification` of the `write_policy.targets` immediately before
+the dispatch, and `Layer 5 recording` of `written_artifacts` into
+`phase-state/rework.yaml` once layer 4 passes. Rework's action choice is
+unchanged.
 
 **When rework needs a SPEC.md change**: the synthesizing worker creates no
 task. Instead it returns `status: needs_user_input` with

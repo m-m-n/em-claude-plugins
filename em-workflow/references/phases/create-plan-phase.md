@@ -198,6 +198,10 @@ applied).
   from the worktree's current state the same way, so a change in exemption
   state or plugin layout during the dispatch window makes the result stale.
 
+Before the `Task` dispatch, the orchestrator verifies the planner's
+`write_policy.targets` per `references/artifact-digest.md`
+(`Pre-dispatch verification`).
+
 ## 5. Question loop
 
 Blocking questions raised by the planner fall into these categories: TBD
@@ -232,6 +236,10 @@ verification) and 7 (state-machine postconditions) are **deliberately not
 implemented in the script**; they are the orchestrator's own responsibility
 (Bash), run outside it. A check belonging to a layer neither side
 implements does not happen at all.
+
+Once layer 4 has passed, the orchestrator's layer 5 records the digests of
+the written artifacts per `references/artifact-digest.md`
+(`Layer 5 recording`), into `phase-state/create-plan.yaml`.
 
 ## 9. Planning invariants — the validator-implemented subset, and human review for the rest
 

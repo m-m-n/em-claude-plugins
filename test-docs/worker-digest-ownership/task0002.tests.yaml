@@ -1,0 +1,47 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_docs.TestOwnerDocumentStructure
+      - tests.test_artifact_digest_docs.TestDigestDefinition
+      - tests.test_artifact_digest_docs.TestCalculation
+    red_confirmed: true
+    red_reason: "Before em-workflow/references/artifact-digest.md existed, setUpClass of TestOwnerDocumentStructure, TestDigestDefinition and TestCalculation errored with FileNotFoundError on the owner document path."
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_docs.TestPreDispatchVerification
+      - tests.test_artifact_digest_docs.TestLayer5Recording
+    red_confirmed: true
+    red_reason: "Before the owner document existed, setUpClass of TestPreDispatchVerification and TestLayer5Recording errored with FileNotFoundError on the owner document path."
+  AC-3:
+    tests:
+      - tests.test_artifact_digest_docs.TestLegacyRecords
+    red_confirmed: true
+    red_reason: "Before the owner document existed, setUpClass of TestLegacyRecords errored with FileNotFoundError on the owner document path."
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_docs.TestCreateSpecPhaseWiring
+    red_confirmed: true
+    red_reason: "Against the unedited create-spec-phase.md seven tests failed: the snapshot row and the section 10 Artifact digests item still named git hash-object (so did the sections 9 and 10 combined check), none of the three cited the owner, section 9 had no Pre-dispatch verification citation, and the snapshot paragraph never said the targets digest is not a git blob id. The retention tests (post-dispatch comparison keeps naming git hash-object and the 'Content hashing with `git hash-object --` is applied only to the' sentence) were already green before the change and are guards, not reds."
+  AC-5:
+    tests:
+      - tests.test_artifact_digest_docs.TestDispatchSitesRegistry
+      - tests.test_artifact_digest_docs.TestEverySiteCitesTheOwner
+    red_confirmed: true
+    red_reason: "Before the owner document existed, setUpClass of TestDispatchSitesRegistry and TestEverySiteCitesTheOwner errored with FileNotFoundError, because the Dispatch sites registry they read did not exist. The paired forged-text cases in TestMatchersFireOnForgedText (git hash-object, citation, restatement, slicer, registry parser) prove each absence matcher would fire."
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_docs.TestDesignStepBranchDigestWiring
+    red_confirmed: true
+    red_reason: "Against the unedited develop SKILL.md design step branch, ten tests failed or errored: no replace_own decision against phase-state/design.yaml, no design.artifact-overwrite route for an absent design.yaml, no Pre-dispatch verification step (the designer-dispatch ordering test raised ValueError), no layer 4 plus Layer 5 recording into design.yaml, no both-token-files recording, no skipped statement. The pinned-phrase test and the absence of git hash-object were already green before the change and are retention guards."
+  AC-7:
+    tests:
+      - tests.test_check_plugin_invariants.TestDispatchDigestWiring
+      - tests.test_check_plugin_invariants.TestDispatchDigestWiringCheckExists
+      - tests.test_check_plugin_invariants.TestCli
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant
+      - tests.test_check_plugin_invariants.TestSinglePassTraversal
+    red_confirmed: true
+    red_reason: "Before check_dispatch_digest_wiring existed, the new TestDispatchDigestWiring and TestDispatchDigestWiringCheckExists cases failed or errored with AttributeError (module has no attribute check_dispatch_digest_wiring); every pre-existing case that builds a tree through build_passing_repo (TestCli, TestSinglePassTraversal) and TestRepositoryLevelInvariant were green before and stay green after, as retention guards for the exit-0 tree, the single traversal and the real-repository run."
