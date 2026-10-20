@@ -10,6 +10,10 @@ derived input-resolution cache all live here instead.
 ```text
 feature-docs/{feature}/phase-state/
 ├── create-spec.yaml
+├── design.yaml              # present only when the design step dispatches
+│                             # the designer (no file when the step is
+│                             # `skipped`); written by the develop skill's
+│                             # 「design ステップ分岐」
 ├── create-plan.yaml
 ├── rework.yaml
 ├── batch-audit.yaml         # present only in a `--batch` run that
@@ -111,7 +115,7 @@ Every top-level field:
 |---|---|
 | `schema_version` | Format version. Currently `1`. See "Unknown `schema_version`" below. |
 | `feature` | Feature name, matches `feature-docs/{feature}/`. |
-| `phase` | `create-spec` \| `create-plan` \| `rework` — matches the file name. |
+| `phase` | `create-spec` \| `design` \| `create-plan` \| `rework` — matches the file name. |
 | `status` | Top-level phase status: `initialized` \| `dispatching` \| `awaiting_answers` \| `applying_patch` \| `completed` \| `failed`. |
 | `generation` | Counts phase restarts from scratch (see resolved_input_cache's "new phase run", below). |
 | `base_revision` | HEAD immediately before writing this phase-state. **Informational only** — never compared for staleness (that is `input_digest`'s job). |
@@ -120,7 +124,7 @@ Every top-level field:
 | `packets` | Map keyed by `packet_id`. Each value: `status` (`issued` \| `answered` \| `obsolete`), `issued_at`, `questions[]` (each: `question_id`, `status`). |
 | `answers` | Map keyed by `question_id`. Each value: `packet_id`, `answered_at`, `source`, `answer_mode`, `selected_option_ids`, `freeform`, `normalized_answer`. |
 | `worker_runs` | List. Each entry: `request_id`, `status` (see transitions below), `input_digest`, `output_digest` (digest only — see Size management). |
-| `artifacts` | List. Each entry: `path`, `sha256`, `produced_by` (a `request_id`). |
+| `artifacts` | List. Each entry: `path`, `sha256`, `produced_by` (a `request_id`). `sha256` is the digest `references/artifact-digest.md` "Digest definition" defines — not a git blob id; a value recorded by the earlier git-blob method is handled as `references/artifact-digest.md` "Legacy records" states. |
 | `patches` | List. Each entry: `patch_id`, `status` (`proposed` \| `validated` \| `applied` \| `rejected`), `base_input_digest`, `base_workflow_blob`. |
 | `progress_fingerprint` | Digest summarizing dialogue+worker progress; used for the loop-termination check. |
 | `stale_redispatch_count` | See "Consecutive retry limit". |
@@ -349,6 +353,10 @@ Resume reads state in this order — never from memory:
 
 **When `workflow.yaml`'s step is `completed` but phase-state lags behind,
 `workflow.yaml` wins.**
+
+The designer returns no workflow patch, so `design.yaml`'s `status` never
+becomes `applying_patch`; the table's two `applying_patch` rows do not apply
+to it.
 
 ## Size management
 
