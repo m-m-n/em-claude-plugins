@@ -911,6 +911,29 @@ CASES = [
     ("silent", "&& で続く行はチェックポイントにならない", "python3 -i &&\necho '"),
     ("silent", "|| で続く行はチェックポイントにならない", "python3 -i ||\necho '"),
     ("silent", "&& の後の空行を越えても継続のまま", "python3 -i &&\n\necho '"),
+    # A redirect-only simple command ends the list continuation as it ends a
+    # pending pipe: a separator other than a newline ends it whatever the ended
+    # command held, and a newline ends it when the command it ends held a
+    # redirection. The earlier `-i` is then denied although the last line is
+    # undecidable. A blank line and a comment-only line end nothing
+    ("deny", "&& の後の < だけの行で継続が終わり、前の行の -i を拒否する", "python3 -i &&\n< /dev/null\necho '"),
+    ("deny", "&& の後の > だけの行で継続が終わり、前の行の -i を拒否する", "python3 -i && > /dev/null\necho '"),
+    ("deny", "|| の後の > だけの行で継続が終わり、前の行の -i を拒否する", "python3 -i || > /dev/null\necho '"),
+    ("deny", "&& の後の > だけのコマンドを ; で区切ると継続が終わり、前の行の -i を拒否する", "python3 -i && > /dev/null;\necho '"),
+    ("deny", "&& の後の heredoc だけの行で継続が終わり、前の行の -i を拒否する", "python3 -i &&\n<<EOF\nx\nEOF\necho '"),
+    ("deny", "入れ子の -c 文字列でも && の後の < だけの行で継続が終わり、前の行の -i を拒否する", "bash -c " + shlex.quote("python3 -i &&\n< /dev/null\necho '")),
+    ("deny", "入れ子の -c 文字列でも && の後の > だけの行で継続が終わり、前の行の -i を拒否する", "bash -c " + shlex.quote("python3 -i && > /dev/null\necho '")),
+    ("deny", "入れ子の -c 文字列でも || の後の > だけの行で継続が終わり、前の行の -i を拒否する", "bash -c " + shlex.quote("python3 -i || > /dev/null\necho '")),
+    ("deny", "入れ子の -c 文字列でも && の後の > だけのコマンドを ; で区切ると継続が終わり、前の行の -i を拒否する", "bash -c " + shlex.quote("python3 -i && > /dev/null;\necho '")),
+    ("deny", "入れ子の -c 文字列でも && の後の heredoc だけの行で継続が終わり、前の行の -i を拒否する", "bash -c " + shlex.quote("python3 -i &&\n<<EOF\nx\nEOF\necho '")),
+    ("deny", "( ) の中で && の後の < だけのコマンドを閉じる ) で継続が終わり、前の行の -i を拒否する", "(python3 -i && < /dev/null)\necho '"),
+    ("deny", "( ) の中で || の後の < だけのコマンドを閉じる ) で継続が終わり、前の行の -i を拒否する", "(python3 -i || < /dev/null)\necho '"),
+    ("deny", "救済される引数の ( の中でも、&& の後の < だけのコマンドを閉じる ) で継続が終わり、前の行の -i を拒否する", "(function { :; } foo(a; python3 -i && < /dev/null)\necho '"),
+    ("deny", "( ) を閉じた後の ; で区切っても、閉じる ) で継続が終わり、前の行の -i を拒否する", "(python3 -i && < /dev/null);\necho '"),
+    ("deny", "( ) を閉じた後の & で区切っても、閉じる ) で継続が終わり、前の行の -i を拒否する", "(python3 -i && < /dev/null) &\necho '"),
+    ("silent", "&& の後のコメントだけの行を越えても継続のまま", "python3 -i &&\n# c\necho '"),
+    ("silent", "&& の後に何もなく ) で閉じても継続のまま", "(python3 -i &&)\necho '"),
+    ("silent", "救済される引数の ( の中でも、&& の後に何もなく ) で閉じても継続のまま", "(function { :; } foo(a; python3 -i &&)\necho '"),
     ("silent", "開いた群の中の行はチェックポイントにならない", "{ python3 -i\necho '"),
     ("silent", "heredoc の本文が終わらない行はチェックポイントにならない", "python3 -i <<EOF\nprint(1)"),
     ("silent", "チェックポイントより前の接続された群は接続の読みのまま", "( python3 ) < /dev/null\necho '"),

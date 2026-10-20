@@ -799,17 +799,21 @@ class _Parser:
     The reader keeps the last checkpoint as two counts, the simple commands and
     the groups recorded so far, never a copy of a list, so a newline costs
     constant time. The list continuation is a state of its own: it is set when
-    `&&` or `||` is read and cleared when a simple command with words is
-    finished or a group opens, and a newline that ends an empty command (a blank
-    line or a comment-only line) and a heredoc body leave it as it was. The
-    pending pipe persists in the same way. When _Undecidable leaves `parse`, the
-    method settles `connected` and `skipped` of the groups opened before the last
-    checkpoint with the one rule a full read applies (`_settle_groups`), each
-    group visited once, attaches the first commands, as many as the checkpoint
-    counted, to the exception (`_Undecidable.checkpoint_commands`, an empty tuple
-    when there is no checkpoint) and raises the same exception again. It neither
-    catches nor alters any other exception, and a string read in full returns the
-    commands as before.
+    `&&` or `||` is read. It is cleared when a simple command with words is
+    finished, when a group opens, when a separator other than a newline is
+    read, when a separator ends a simple command that held a redirection (a
+    line of only redirections included), and when a `)` that closes a `(` group
+    ends a simple command that held a redirection. A newline that ends an empty
+    command with no redirection (a blank line or a comment-only line) and a
+    heredoc body leave it as it was. The pending pipe persists in the same way.
+    When _Undecidable leaves `parse`, the method settles `connected` and
+    `skipped` of the groups opened before the last checkpoint with the one rule
+    a full read applies (`_settle_groups`), each group visited once, attaches
+    the first commands, as many as the checkpoint counted, to the exception
+    (`_Undecidable.checkpoint_commands`, an empty tuple when there is no
+    checkpoint) and raises the same exception again. It neither catches nor
+    alters any other exception, and a string read in full returns the commands
+    as before.
 
     Among the arguments of an anonymous function, a `(` is read with its range
     up to the matching `)` as part of one argument word (`_read_argument_parens`),
@@ -926,9 +930,12 @@ class _Parser:
         # Open groups, innermost last, and every group in the order it opened.
         self.frames = []
         self.groups = []
-        # A `&&` or `||` was read and no simple command with words and no group
-        # has followed it: the list is still open, so a newline is no checkpoint.
-        # An empty command (a blank line, a comment-only line) and a heredoc body
+        # A `&&` or `||` was read and nothing has ended it since: the list is
+        # still open, so a newline is no checkpoint. A simple command with words,
+        # a group opening, a separator other than a newline, a separator that
+        # ends a simple command holding a redirection and a `)` that closes a
+        # `(` group after such a command end it. An empty command with no
+        # redirection (a blank line, a comment-only line) and a heredoc body
         # leave it as it was.
         self.list_pending = False
         # The last checkpoint, as two counts: (simple commands, groups) recorded
@@ -1283,6 +1290,12 @@ class _Parser:
             self.anon_head = None
         if sep in ("&&", "||"):
             self.list_pending = True
+        elif sep != "\n" or redirected:
+            # Any other separator ends the list continuation, and so does a
+            # newline that ends a command holding a redirection (a line of only
+            # `< /dev/null` or `<<EOF`). A newline that ends an empty command
+            # with no redirection (a blank line, a comment-only line) leaves it.
+            self.list_pending = False
         if sep in ("|", "|&"):
             self.pipe_pending = True
         elif sep != "\n" or redirected:
@@ -1496,13 +1509,17 @@ class _Parser:
         the `)` of an ordinary subshell finalizes the words before it; no
         separator is recorded on any group, because the chain base is not
         provisional and the `)` is no separator. The group is then closed, so a
-        stdin redirect read next connects it, and the `)` is consumed. Text after
-        the close is read outside the group, and a later `)` with no open `(`
-        group is a separator, as anywhere else."""
+        stdin redirect read next connects it, and the `)` is consumed. The list
+        continuation is cleared when the simple command that the `)` ends held a
+        redirection, and otherwise left as it was. Text after the close is read
+        outside the group, and a later `)` with no open `(` group is a
+        separator, as anywhere else."""
         base = group.chain_base
         while self.frames[-1] is not base:
             self.frames.pop()
-        self._flush()
+        _, redirected = self._flush()
+        if redirected:
+            self.list_pending = False
         self._close_group()
 
     def _close_paren(self):
@@ -1530,14 +1547,18 @@ class _Parser:
           This is the reading of a `)` read while a provisional group with a
           case mark or inherited value of 1 or more is the innermost open group:
           the provisional group is that `(` group, so the `)` closes it and not
-          the subshell outside the chain.
+          the subshell outside the chain. In the rescue reading and in this
+          one, the list continuation is cleared when the simple command the `)`
+          ends held a redirection, and otherwise left as it was.
         - Otherwise no `(` group is the innermost open group (a `case` pattern,
           or a `{` group is the innermost) and the `)` is a separator."""
         self._finish_word()
         if self.frames and self._closes_paren_after_rescue(self.frames[-1]):
             self._close_paren_after_rescue(self.frames[-1])
         elif self.frames and self.frames[-1].kind == "(":
-            self._flush()
+            _, redirected = self._flush()
+            if redirected:
+                self.list_pending = False
             self._close_group()
         else:
             # No subshell is open (a `case` pattern, for one): a separator.
