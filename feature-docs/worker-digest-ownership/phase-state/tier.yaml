@@ -20,7 +20,7 @@ bases:
       '1': 0.45
       '2': 0.5
       '3': 0.02
-  observed_at: '2026-10-21T10:02:00+09:00'
+  observed_at: '2026-10-21T00:13:08+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.08
       '2': 0.87
       '3': 0.02
-  observed_at: '2026-10-21T10:12:00+09:00'
+  observed_at: '2026-10-21T00:18:21+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/references/phases/create-spec-phase.md
@@ -94,4 +94,4 @@ pre_survey_estimate:
     digest 報告・不一致時 blocked の旧記述が残る。ただし worker-envelope.md:8 は設計資料を規則適用の必読先としていない'
   - 'em-workflow/skills/develop/SKILL.md:750、em-workflow/references/phase-state.md:114:
     設計フェーズの保存方法を確定する記述がないため、変更行数・追加テスト件数は未算定であり、対応する数値0は修正不要を意味しない'
-decided_at: '2026-10-21T10:12:30+09:00'
+decided_at: '2026-10-21T00:18:25+09:00'
