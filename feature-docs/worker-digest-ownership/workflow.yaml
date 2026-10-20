@@ -1,0 +1,203 @@
+schema_version: 1
+feature: worker-digest-ownership
+created: '2026-10-21'
+base_branch: main
+goal: |
+  # spec-writer のツールに sha256 を計算する手段が無く、replace_own の digest 照合と written_artifacts の報告ができずに blocked になる
+
+  Notion: <notion-url>  (種別: バグ)
+
+  ## 現象 (必須)
+  create-spec の再入（rework の仕様変更で create-spec が needs_update になった後）で、`em-workflow:spec-writer` に REQUIREMENTS.md と SPEC.md を `write_policy` の `replace_own` で渡すと、spec-writer が `blocked` を返して何も書かない。spec-writer のツールは Read / Write / Glob / Grep だけで、sha256 を計算する手段が無い。契約は、書く直前に worker 自身が現在の digest を計算して `expect_digest` と照合すること、`written_artifacts` に sha256 を添えることを求めているため、どちらも満たせない。
+  blocking_reason（抜粋）: 「This dispatch only gave the worker Read, Write, Glob, Grep and SubagentHandback. There was no Bash or other tool that can compute sha256.」
+
+  ## 再現手順 (必須)
+  1. create-spec を一度完了した feature で、review の rework が仕様変更の遷移（create-spec を needs_update）を取る
+  2. `/em-workflow:develop <feature>` で再開し、create-spec の再入で spec-writer を `replace_own` 付きで dispatch する
+  3. spec-writer が `blocked` を返す（feature codex-guard-case-paren-rescue の create-spec-run-0005 で発生）
+
+  ## 期待する挙動 (必須)
+  `replace_own` / `replace_authorized` / `preserve` / `extend_only` / `regenerate` の digest 照合と、`written_artifacts` の sha256 報告を、spec-writer が契約どおりに行えるようにする。ツール構成か契約の責務分担のどちらかを揃える。
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+  - `em-workflow/agents/spec-writer.md`（frontmatter の tools、`write_policy` 節の digest 照合の記述）
+  - `em-workflow/references/contracts/spec-writer-contract.md`（The six `write_policy` actions）
+  - `em-workflow/references/contracts/worker-envelope.md`（`written_artifacts` reporting）
+  - 同じツール構成の designer にも同じ不整合がある可能性がある
+
+  ## 実害・発生条件 (任意)
+  create-spec の再入（仕様変更の rework、tier 昇格）で必ず止まる。batch 実行では run が停止する。初回の create-spec（`create` で digest 照合が不要）では表に出ない。
+
+  ## 追加指示（起動時）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートの両方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較してより良いと判断した選択肢を採用する
+  - その議論の内容を Notion に記録する
+parent_branch: em-workflow/worker-digest-ownership/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.03
+      '1': 0.45
+      '2': 0.5
+      '3': 0.02
+    description_plus_code:
+      '0': 0.03
+      '1': 0.08
+      '2': 0.87
+      '3': 0.02
+  at: '2026-10-21T00:18:25+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3dead55cc86a994bcd8502504bb2739fcf8b2c99
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない変更（プラグインの文書・スクリプト・テスト）; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 94fe49b9dacf98f6f77ff9db26a0b9f35996a90b
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: worker 側は digest を扱わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS5
+  FR2:
+    title: digest の定義を 1 つに揃える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+  FR3:
+    title: 照合と記録を全 dispatch 箇所で行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+  FR4:
+    title: design ステップの照合・検証・記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+  FR5:
+    title: design phase の値と記録場所
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  FR6:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS5
+    - TS8
+  FR7:
+    title: digest を計算する共通スクリプト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+    - TS6
+    - TS7
+  FR8:
+    title: 旧方式で記録された artifacts の扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+  NFR1:
+    title: 既存テストの維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: SSOT の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 標準ライブラリだけ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
