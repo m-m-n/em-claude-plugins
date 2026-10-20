@@ -166,9 +166,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/artifact-digest-intermediate-symlink/task0001
   task0002:
     title: Document the any-component symlink rule and the exit-2 capability case
     plan: tasks/task0002.md
@@ -184,9 +184,9 @@ tasks:
     - FR7
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/artifact-digest-intermediate-symlink/task0002
 review:
   status: pending
   needs_rework: false
