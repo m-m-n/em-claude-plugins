@@ -1,0 +1,44 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Rows 1 to 5 of Design Change 4 were added to the case table before any parser change. Running tests.test_codex_hook_interactive_guard.TestCasesTable gave 30 subtest errors (15 deny rows x 2 copies); each error was json.JSONDecodeError at json.loads(out) because the hook printed nothing (silent) where a deny was expected, for python3 -i with a following redirect-only command and an undecidable last line. After the separator rule in _separator was added, the same run passed."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Rows 6 to 10 (the five commands as the operand of bash -c, quoted with shlex.quote) failed in the same pre-change run: json.JSONDecodeError on empty output where a deny was expected, in both copies. They passed after the separator rule was added."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Rows 11 to 15 (the closing-paren forms, one of them through the rescue path) failed in the same pre-change run: json.JSONDecodeError on empty output where a deny was expected, in both copies. They passed after the clearing at the closing paren (_close_paren and _close_paren_after_rescue) was added."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "The three new silent rows (comment-only line, (python3 -i &&), and the rescue-path form) and the pre-existing rows python3 -i &&\\necho ', python3 -i ||\\necho ' and python3 -i &&\\n\\necho ' are silent before and after the change, so no red state occurred for this criterion: it pins behaviour that must survive. The pre-change run showed these rows passing (only the 15 deny rows errored), and they pass after the change with every pre-existing row present and unchanged."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+    red_confirmed: false
+    red_reason: "The existing test_cases_are_unique detects a duplicate command in the table; it passes before and after adding the 18 rows (15 deny, 3 silent), so no red state occurred for this change. The presence of the 18 rows was observed through the pre-change run, where exactly the 15 deny rows errored."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_parser_description_states_the_checkpoint_rule
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_the_seven_places_that_describe_the_paren_rescue_state_the_case_mark
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation.test_no_copy_says_the_case_mark_is_permanent
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestGuardDocumentation tests detect the pinned checkpoint sentences, the case-mark wording of _close_paren and the forbidden case-mark permanence phrases; no red state occurred for this change (they pass before and after). The clearing wording itself has no executable check and is checked in review against Design, Change 3."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_a_run_leaves_no_bytecode_cache_in_a_plugin_directory
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_a_pipe_followed_by_many_empty_lines_is_answered
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing copy, static-constraint and scale tests detect a divergence between the copies, a forbidden import or call, and a super-linear read; no red state occurred for this change (they pass before and after). The 'no new state, no walk, no copy' part has no executable check and is checked in review on the diff."
