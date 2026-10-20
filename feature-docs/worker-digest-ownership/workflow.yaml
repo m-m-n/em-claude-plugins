@@ -187,7 +187,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/worker-digest-ownership/task0002
   task0003:
