@@ -132,7 +132,8 @@ workflow:
   failed_items: []
   excluded: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 64b1a2be8a0f30f46ba1f8a8f90c6135e0cfceca
 tasks:
   task0001:
     title: Suppress paren rescue for case-marked provisional group chains
