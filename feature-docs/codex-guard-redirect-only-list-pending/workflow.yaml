@@ -149,7 +149,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-guard-redirect-only-list-pending/task0001
 review:
