@@ -1,7 +1,7 @@
 schema_version: 1
 feature: worker-digest-ownership
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 29aca2dc0eb23c3b1f6d789d1278699916c6671f
 last_input_digest: sha256:0c9e3fb72773d1646833a8b1803ac7ab1a364861b2e53bdecb1d30bf5a3e700e
@@ -121,6 +121,24 @@ answers:
       on analyst assumptions A2-A5 per launch instruction to consult Codex on unclear
       points); codex_consulted: true (harness: codex, 1 turn); opus_escalation: false;
       orchestrator mapped Codex recommendation per question'
+  create-spec.design-step:
+    packet_id: null
+    answered_at: '2026-10-21T00:46:14+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step skipped (analyst recommendation: no UI)'
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-10-21T00:46:14+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'kind: none (zero candidates)'
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
