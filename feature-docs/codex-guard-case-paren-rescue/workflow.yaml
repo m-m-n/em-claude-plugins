@@ -176,7 +176,7 @@ tasks:
     - FR7
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     notes: 'batch retry consumed (implement.failed-task, 1/1): prior implementer stopped without a merged event; retried on kept worktree'
     branch: em-workflow/codex-guard-case-paren-rescue/task0002
 review:
