@@ -3,15 +3,59 @@ feature: codex-guard-redirect-only-list-pending
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 30673639449e13374cf1ff97f0ed454745d98a1b
-last_input_digest: sha256:1a97d09e86e9a84392582fe98cd458cfe7f0f4f8758a2d1ce0d668deec641d12
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: 757ad91b4bee34d059b428bd1218528300490d87
+last_input_digest: sha256:0af8141e0f14dde6473d7dd3c586427e366a6a855e93ef6020ad78e494628b65
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-21T00:27:24+09:00'
+    questions:
+    - question_id: requirement.list-pending-clear-rule
+      status: answered
+    - question_id: requirement.close-paren-redirect-scope
+      status: answered
+answers:
+  requirement.list-pending-clear-rule:
+    question_id: requirement.list-pending-clear-rule
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T00:27:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - same_as_pipe_pending
+    freeform: null
+    normalized_answer: _separator は list_pending を pipe_pending と同じ規則で扱う（&& / || で True、それ以外は sep != 改行 または redirected のとき
+      False）。&& ; や && & の構文エラー形が後ろに判定不能な行を伴うときに deny になる誤拒否は既知として受け入れる。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation、オーケストレーターが analyst の前提 AS1
+      から起こした質問）。選択肢: same_as_pipe_pending / redirect_only。Codex 1 ターン目で same_as_pipe_pending を推奨: redirect_only は (python3
+      -i && < /dev/null);\necho '' と (python3 -i && < /dev/null) &\necho '' を silent のまま残し、bash が実行する python3 -i を見逃す。same_as_pipe_pending
+      は外側の ; / & で解除できる。&& ; / && & の誤拒否は判定不能行なしの全体読みと | ; で既に deny されており、既存 CASES にも既知の誤拒否として明記がある。既存 CASES 717 行の判定は変わらないことを
+      Codex がメモリ上で確認。比較的良いと判断し採用。Opus エスカレーションは不要。'
+  requirement.close-paren-redirect-scope:
+    question_id: requirement.close-paren-redirect-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T00:27:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_close_paren_redirect
+    freeform: null
+    normalized_answer: この feature に含める。`)` が ( 群を閉じるとき（_close_paren の通常の ( 分岐と _close_paren_after_rescue の両方）、閉じる直前の単純コマンドがリダイレクトを持っていたら
+      list_pending と pipe_pending を解除する。リダイレクトの無い (python3 -i &&) は silent のまま。
+    resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation、Codex 1 ターン目が指摘した残りの見逃しからオーケストレーターが起こした質問）。選択肢:
+      include_close_paren_redirect / include_close_paren_always / defer_to_separate_task。Codex 2 ターン目で include_close_paren_redirect
+      を推奨: HEAD で (python3 -i && < /dev/null)\necho '' と (function { :; } foo(a; python3 -i && < /dev/null)\necho '' が silent（bash
+      は 1 行目を実行する）。_close_paren の ( 分岐（1539–1541 行）と _close_paren_after_rescue（1505–1506 行）が _flush の redirected を捨てているのが原因で、同じ根の取りこぼし。always
+      案はリダイレクトの無い (python3 -i &&)\necho '' まで deny に変え範囲を超える。defer は既知の fail-open を残す。既存 CASES の判定変化なし。比較的良いと判断し採用。Opus エスカレーションは不要。'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:1a97d09e86e9a84392582fe98cd458cfe7f0f4f8758a2d1ce0d668deec641d12
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:0af8141e0f14dde6473d7dd3c586427e366a6a855e93ef6020ad78e494628b65
   output_digest: null
 artifacts: []
 patches: []
