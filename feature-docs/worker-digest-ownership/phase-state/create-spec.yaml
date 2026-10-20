@@ -1,22 +1,27 @@
 schema_version: 1
 feature: worker-digest-ownership
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 29aca2dc0eb23c3b1f6d789d1278699916c6671f
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:b51138ac571f5cad65b8ebd86b75e87e9b1f701ed105ef798993137eea9a12de
+active_request_id: create-spec-run-0001
 packets: {}
 answers:
   create-spec.feature-identity:
     packet_id: null
-    answered_at: "2026-10-21T00:19:40+09:00"
+    answered_at: '2026-10-21T00:19:40+09:00'
     source: batch-decision-table
     answer_mode: select
-    selected_option_ids: [derive_from_task_description]
+    selected_option_ids:
+    - derive_from_task_description
     freeform: null
-    normalized_answer: "feature name: worker-digest-ownership"
-worker_runs: []
+    normalized_answer: 'feature name: worker-digest-ownership'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:b51138ac571f5cad65b8ebd86b75e87e9b1f701ed105ef798993137eea9a12de
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
