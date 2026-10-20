@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-case-paren-rescue
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: f2ec3a9f09d305372db0d94fbf72ace65738b523
 last_input_digest: sha256:6d189b7289866df65d6b6b60e6c2d26fcefc33fdd09e08c8b24354ca6ee5488b
-active_request_id: create-spec-run-0006
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -87,7 +87,7 @@ worker_runs:
   input_digest: sha256:a2f0b7d174a944144105a9a02b4f1e2dbd8b936e0972c30558ab1e7073a86082
   output_digest: null
 - request_id: create-spec-run-0006
-  status: dispatched
+  status: completed
   input_digest: sha256:6d189b7289866df65d6b6b60e6c2d26fcefc33fdd09e08c8b24354ca6ee5488b
   output_digest: null
 artifacts:
@@ -97,6 +97,12 @@ artifacts:
 - path: feature-docs/codex-guard-case-paren-rescue/SPEC.md
   sha256: sha256:01a5c93550a180d44e3b56167c26b103bb657f56c48f1406d95cd3f6f17d152f
   produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-case-paren-rescue/REQUIREMENTS.md
+  sha256: sha256:9f4546979430a64e84b554989565bdf0fff0a1512931febe0624767bf996b4d4
+  produced_by: create-spec-run-0006
+- path: feature-docs/codex-guard-case-paren-rescue/SPEC.md
+  sha256: sha256:b7e13d960b3584743b7a5a1f1efff72862d3506673ea323514e0019b59a8677c
+  produced_by: create-spec-run-0006
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
