@@ -1,0 +1,65 @@
+schema_version: 2
+feature: codex-guard-redirect-only-list-pending
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-10-21T00:10:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.42
+    confidence: 0.58
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.58
+      '2': 0.42
+      '3': 0.0
+  observed_at: '2026-10-21T00:14:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 12
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 'HEAD 94fe49b9dacf98f6f77ff9db26a0b9f35996a90b9f35996a90b
+    は未修正。両コピーの _flush（1249行以降）は語がある場合だけ list_pending を解除し、_separator（1267行以降）には対応する解除処理がない。指定4入力と各
+    bash -c 版を両コピーへJSONとして渡した計16実行は、すべて終了コード0・標準出力と標準エラーが空だった。対照の「: < /dev/null」ではdenyが返った。CASESの717件に指定8ケースは存在しない。既存のTestCasesTableとTestCopiesの計9テストは成功し、両コピーはバイト単位で一致した。_separatorの呼び出し元は各コピー4メソッド、直接依存は_flushの1メソッド'
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-21T00:15:00+09:00'
