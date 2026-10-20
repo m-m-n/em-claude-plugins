@@ -7,7 +7,12 @@ IMPLEMENTATION.md D4: seven independent checks assert properties that only
 hold once the fully integrated repository exists (agent/dispatch parity,
 stale references, gate-ID coverage, `domains` vocabulary parity, the
 forbidden `# Task assignment` heading, fixture branch coverage, and
-`input_digest` reproducibility). No task worktree contains that integrated
+`input_digest` reproducibility). worker-digest-ownership adds two more:
+`dispatch_digest_wiring` (every `write_policy` dispatch site registered in
+references/artifact-digest.md cites that owner document, and no site names
+`git hash-object`) and `worker_digest_stance` (the digest stance of the
+prompts and contracts of the envelope workers that write files and have no
+Bash). No task worktree contains that integrated
 state, which is exactly why every check below is a pure function of an
 explicit root path: the unit tests exercise them against small synthetic
 trees built in temporary directories (tests/test_check_plugin_invariants.py)
@@ -722,6 +727,726 @@ def check_digest_reproducibility():
 
 
 # ---------------------------------------------------------------------------
+# Check 8: worker digest stance (worker-digest-ownership task0004)
+# ---------------------------------------------------------------------------
+#
+# An envelope worker that writes files and has no Bash cannot compute a
+# digest, so it must never be told to, and must say in its own prompt that the
+# orchestrator owns every digest. Which workers those are is never listed
+# here: they are derived from worker-envelope.md's Applicability table and
+# from each agent's frontmatter `tools`. Pure function of the root; reads
+# fixed paths only (no tree walk, no iter_repo_files).
+
+STANCE_ENVELOPE_PATH = "em-workflow/references/contracts/worker-envelope.md"
+STANCE_SPEC_WRITER_CONTRACT_PATH = "em-workflow/references/contracts/spec-writer-contract.md"
+STANCE_AGENTS_DIR = "em-workflow/agents"
+STANCE_CONTRACTS_DIR = "em-workflow/references/contracts"
+
+# Path tokens and section names a target agent prompt cites (the two owner
+# sections of the worker-side stance).
+ENVELOPE_CITATION_PATH = "references/contracts/worker-envelope.md"
+ENVELOPE_SECTION_NAME = "`written_artifacts` reporting"
+SPEC_WRITER_CITATION_PATH = "references/contracts/spec-writer-contract.md"
+SPEC_WRITER_SECTION_NAME = "Who verifies `expect_digest`"
+
+# The stance sentence each owner section must keep (whitespace-normalized).
+ENVELOPE_OWNER_SENTENCE = "The worker does not compute digests"
+SPEC_WRITER_OWNER_SENTENCE = "A worker never returns `blocked` because it cannot compute a digest."
+
+FILE_WRITING_TOOLS = frozenset({"write", "edit", "multiedit", "notebookedit"})
+WORKER_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
+CONTRACT_CITATION_RE = re.compile(
+    r"references/contracts/([A-Za-z0-9][A-Za-z0-9_-]*-contract)\.md"
+)
+BACKTICK_NAME_RE = re.compile(r"`([^`]*)`")
+MARKDOWN_HEADING_RE = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*$")
+FENCE_RE = re.compile(r"^\s*(?:```|~~~)")
+LIST_MARKER_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+TABLE_SEPARATOR_CELL_RE = re.compile(r"^:?-+:?$")
+
+
+def _normalize_whitespace(text):
+    return " ".join(text.split())
+
+
+def _markdown_section(text, wanted):
+    """Body of the first heading whose text satisfies `wanted(heading_text)`,
+    up to the next heading of the same or a higher level; None when no such
+    heading exists. Heading-looking lines inside fenced code are ignored."""
+    in_fence = False
+    level = None
+    body = []
+    for line in text.replace("\r\n", "\n").split("\n"):
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            if level is not None:
+                body.append(line)
+            continue
+        match = None if in_fence else MARKDOWN_HEADING_RE.match(line)
+        if match:
+            heading_level = len(match.group(1))
+            if level is not None and heading_level <= level:
+                break
+            if level is None and wanted(match.group(2)):
+                level = heading_level
+                continue
+        if level is not None:
+            body.append(line)
+    return "\n".join(body) if level is not None else None
+
+
+def _split_table_row(line):
+    stripped = line.strip()
+    if stripped.startswith("|"):
+        stripped = stripped[1:]
+    if stripped.endswith("|") and not stripped.endswith("\\|"):
+        stripped = stripped[:-1]
+    return [cell.strip() for cell in re.split(r"(?<!\\)\|", stripped)]
+
+
+def _is_table_separator_row(cells):
+    return bool(cells) and all(TABLE_SEPARATOR_CELL_RE.match(cell) for cell in cells if cell)
+
+
+def _applicability_worker_names(envelope_text):
+    """(names, problems): the first backticked name of every `Applies` cell of
+    the Applicability section's first table, with any annotation ("(new)",
+    "(revised)") dropped."""
+    section = _markdown_section(
+        envelope_text, lambda heading: heading.strip().lower().startswith("applicability")
+    )
+    if section is None:
+        return [], ["worker-envelope.md has no Applicability section"]
+    rows = []
+    for line in section.split("\n"):
+        if line.lstrip().startswith("|"):
+            rows.append(_split_table_row(line))
+        elif rows:
+            break
+    if not rows:
+        return [], ["worker-envelope.md's Applicability section has no table"]
+    header = [re.sub(r"[`*_]", "", cell).strip().lower() for cell in rows[0]]
+    if "applies" not in header:
+        return [], ["worker-envelope.md's Applicability table has no `Applies` column"]
+    column = header.index("applies")
+    names = []
+    problems = []
+    for cells in rows[1:]:
+        if _is_table_separator_row(cells) or column >= len(cells):
+            continue
+        match = BACKTICK_NAME_RE.search(cells[column])
+        if not match:
+            continue
+        # A trailing annotation may sit inside or outside the backticks.
+        name = re.split(r"[\s(]", match.group(1).strip(), maxsplit=1)[0]
+        if WORKER_NAME_RE.fullmatch(name):
+            names.append(name)
+        else:
+            problems.append(
+                f"worker-envelope.md's Applies column names {match.group(1)!r}, "
+                "which is not a plain worker name"
+            )
+    return names, problems
+
+
+def _split_tool_entries(value):
+    entries = []
+    depth = 0
+    current = []
+    for char in value:
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth = max(0, depth - 1)
+        if char == "," and depth == 0:
+            entries.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+    entries.append("".join(current))
+    return [entry.strip().strip("'\"") for entry in entries if entry.strip()]
+
+
+def _frontmatter_tools(agent_text):
+    """The frontmatter `tools` entries (comma list, flow list, or block list),
+    or None when there is no frontmatter or no `tools` key."""
+    lines = agent_text.replace("\r\n", "\n").split("\n")
+    if not lines or lines[0].strip() != "---":
+        return None
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
+        return None
+    frontmatter = lines[1:end]
+    for index, line in enumerate(frontmatter):
+        match = re.match(r"^tools\s*:\s*(.*?)\s*$", line)
+        if not match:
+            continue
+        value = match.group(1)
+        if value:
+            return _split_tool_entries(value.strip("[]"))
+        entries = []
+        for following in frontmatter[index + 1 :]:
+            item = re.match(r"^\s*-\s*(.+?)\s*$", following)
+            if item:
+                entries.append(item.group(1).strip("'\""))
+            elif following.strip():
+                break
+        return entries
+    return None
+
+
+def _tool_name(entry):
+    return entry.split("(", 1)[0].strip().lower()
+
+
+def _derive_digest_stance_targets(root):
+    """(workers, problems). `workers` is the sorted target-worker list;
+    `problems` are human-readable reasons the derivation is incomplete (no
+    envelope document, no Applicability table, an `Applies` name without an
+    agent file, ...)."""
+    envelope_text = read_text(os.path.join(root, *STANCE_ENVELOPE_PATH.split("/")))
+    if envelope_text is None:
+        return [], [f"{STANCE_ENVELOPE_PATH}: not found or unreadable"]
+    names, problems = _applicability_worker_names(envelope_text)
+    workers = set()
+    for name in names:
+        agent_rel = f"{STANCE_AGENTS_DIR}/{name}.md"
+        agent_text = read_text(os.path.join(root, *agent_rel.split("/")))
+        if agent_text is None:
+            problems.append(
+                f"{agent_rel}: not found or unreadable (listed in worker-envelope.md's "
+                "Applies column)"
+            )
+            continue
+        tools = _frontmatter_tools(agent_text)
+        if tools is None:
+            continue
+        tool_names = {_tool_name(entry) for entry in tools}
+        if tool_names & FILE_WRITING_TOOLS and "bash" not in tool_names:
+            workers.add(name)
+    return sorted(workers), problems
+
+
+def derive_digest_stance_workers(root):
+    """Sorted names of the envelope workers (worker-envelope.md's Applicability
+    table, `Applies` column) whose agent frontmatter `tools` holds a
+    file-writing tool and no Bash entry in any form. Nothing is hard-coded."""
+    workers, _problems = _derive_digest_stance_targets(root)
+    return workers
+
+
+# --- citations -------------------------------------------------------------
+
+
+def _paragraphs(text):
+    """Blank-line-delimited blocks with whitespace normalized, so a line break
+    inside a block never matters."""
+    blocks = re.split(r"\n[ \t]*\n", text.replace("\r\n", "\n"))
+    return [_normalize_whitespace(block) for block in blocks if block.strip()]
+
+
+def _paragraph_cites(paragraphs, path_token, section_name):
+    return any(path_token in para and section_name in para for para in paragraphs)
+
+
+# --- worker-directed digest instruction ------------------------------------
+
+_ASCII_WORD_BEFORE = r"(?<![A-Za-z0-9_])"
+_ASCII_WORD_AFTER = r"(?![A-Za-z0-9_])"
+DIGEST_TERM_RE = re.compile(
+    _ASCII_WORD_BEFORE
+    + r"(?:sha-?256(?:sum)?|expect_digest|digests?|hash(?:es|ed|ing)?)"
+    + _ASCII_WORD_AFTER
+    + "|ハッシュ|ダイジェスト",
+    re.IGNORECASE,
+)
+_VERB_BASE = r"(?:re-?)?(?:compute|calculate|hash|verify|compare)"
+_VERB_ANY = (
+    r"(?:re-?)?(?:comput(?:e|es|ed|ing)|calculat(?:e|es|ed|ing)|hash(?:es|ed|ing)?"
+    r"|verif(?:y|ies|ied|ying)|compar(?:e|es|ed|ing))"
+)
+CHECK_VERB_RE = re.compile(
+    _ASCII_WORD_BEFORE + _VERB_ANY + _ASCII_WORD_AFTER + "|計算|照合|比較|検証",
+    re.IGNORECASE,
+)
+NEGATION_RE = re.compile(
+    _ASCII_WORD_BEFORE
+    + r"(?:not|never|no|cannot|without|neither|nor)"
+    + _ASCII_WORD_AFTER
+    + r"|n['’]t"
+    + _ASCII_WORD_AFTER
+    + "|しない|しません|行わない|せず|ならない|禁止|不要",
+    re.IGNORECASE,
+)
+ORCHESTRATOR_RE = re.compile(r"orchestrator|オーケストレーター", re.IGNORECASE)
+IMPERATIVE_RE = re.compile(
+    r"^(?:(?:always|also|then|first|next|finally|simply|just|please|again)\s+)*"
+    + _VERB_BASE
+    + _ASCII_WORD_AFTER,
+    re.IGNORECASE,
+)
+JAPANESE_IMPERATIVE_RE = re.compile(
+    "(?:計算|照合|比較|検証)(?:すること|せよ|しろ|しなさい|してください|して下さい|すべき|する必要がある)"
+)
+CLAUSE_BOUNDARY_RE = re.compile(r",\s*|\s+(?:and\s+then|and|then|or)\s+", re.IGNORECASE)
+SENTENCE_BOUNDARY_RE = re.compile(
+    r"(?<=[.!?])[\"')\]]*\s+|(?<=[。！？])|[;；]\s*"
+)
+ABBREVIATION_RE = re.compile(r"\b(?:e\.g|i\.e|etc|vs|cf)\.", re.IGNORECASE)
+YAML_KEY_PREFIX_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*:\s*")
+
+
+def _prose_segments(text):
+    """Fragments of `text` that never straddle a blank line, heading, list
+    item, table cell, frontmatter line or fenced-code line. Line breaks inside
+    a fragment are joined with spaces, so the verdict never depends on where a
+    paragraph was wrapped."""
+    lines = text.replace("\r\n", "\n").split("\n")
+    segments = []
+    buffer = []
+
+    def flush():
+        if buffer:
+            segments.append(" ".join(buffer))
+            buffer.clear()
+
+    index = 0
+    if lines and lines[0].strip() == "---":
+        end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+        if end is not None:
+            for line in lines[1:end]:
+                value = YAML_KEY_PREFIX_RE.sub("", line.strip())
+                if value:
+                    segments.append(value)
+            index = end + 1
+    in_fence = False
+    for raw in lines[index:]:
+        stripped = raw.strip()
+        if FENCE_RE.match(raw):
+            flush()
+            in_fence = not in_fence
+            continue
+        if not stripped:
+            flush()
+        elif in_fence:
+            flush()
+            segments.append(stripped)
+        elif MARKDOWN_HEADING_RE.match(stripped):
+            flush()
+            segments.append(MARKDOWN_HEADING_RE.match(stripped).group(2))
+        elif stripped.startswith("|"):
+            flush()
+            cells = _split_table_row(stripped)
+            if not _is_table_separator_row(cells):
+                segments.extend(cell for cell in cells if cell)
+        elif LIST_MARKER_RE.match(raw):
+            flush()
+            buffer.append(LIST_MARKER_RE.sub("", raw, count=1).strip())
+        else:
+            buffer.append(stripped)
+    flush()
+    return segments
+
+
+def _sentences(text):
+    sentences = []
+    for segment in _prose_segments(text):
+        cleaned = _normalize_whitespace(segment).replace("**", "").replace("__", "")
+        cleaned = cleaned.replace("`", "")
+        cleaned = ABBREVIATION_RE.sub(lambda m: m.group(0).replace(".", "․"), cleaned)
+        for part in SENTENCE_BOUNDARY_RE.split(cleaned):
+            part = part.replace("․", ".").strip()
+            if part:
+                sentences.append(part)
+    return sentences
+
+
+def _worker_subject_re(worker_names):
+    names = sorted({name for name in worker_names if name}, key=len, reverse=True)
+    name_alternatives = "".join(f"|{re.escape(name)}" for name in names)
+    subject = (
+        r"(?:(?:the|this|that|a|an|each|every|any)\s+(?:worker|agent)|you"
+        + name_alternatives
+        + r")"
+    )
+    return (
+        re.compile(rf"^{subject}(?![A-Za-z0-9_-])", re.IGNORECASE),
+        re.compile(
+            rf"^(?:この|その)?(?:worker|agent|ワーカー|エージェント{name_alternatives})\s*(?:は|が)",
+            re.IGNORECASE,
+        ),
+    )
+
+
+def _is_worker_directed_digest_instruction(sentence, worker_subject_res):
+    if not DIGEST_TERM_RE.search(sentence) or not CHECK_VERB_RE.search(sentence):
+        return False
+    if NEGATION_RE.search(sentence) or ORCHESTRATOR_RE.search(sentence):
+        return False
+    if JAPANESE_IMPERATIVE_RE.search(sentence):
+        return True
+    # Addressed to the worker: a clause (the sentence itself, or what follows
+    # a leading clause that ends in a comma or a coordinator) that opens with
+    # an imperative check verb, or with the worker as its subject.
+    body = sentence.lstrip("\"'“”‘’([ ")
+    starts = [0] + [match.end() for match in CLAUSE_BOUNDARY_RE.finditer(body)]
+    for start in starts:
+        clause = body[start:].lstrip("\"'“”‘’([ ")
+        if IMPERATIVE_RE.match(clause):
+            return True
+        if any(subject_re.match(clause) for subject_re in worker_subject_res):
+            return True
+    return False
+
+
+def find_worker_directed_digest_instructions(text, worker_names=()):
+    """Sentences of `text` that tell the worker to compute, hash, verify or
+    compare a digest. A sentence qualifies when it carries a digest term, a
+    check verb, is addressed to the worker (an imperative clause, or a clause
+    whose subject is the worker, "you", or one of `worker_names`), carries no
+    negation and does not name the orchestrator."""
+    worker_subject_res = _worker_subject_re(worker_names)
+    return [
+        sentence
+        for sentence in _sentences(text)
+        if _is_worker_directed_digest_instruction(sentence, worker_subject_res)
+    ]
+
+
+# --- the check -------------------------------------------------------------
+
+
+def _check_owner_sentence(root, rel_path, heading, sentence, offenders):
+    text = read_text(os.path.join(root, *rel_path.split("/")))
+    if text is None:
+        offenders.append(f"{rel_path}: not found or unreadable (owner of the digest stance)")
+        return
+    section = _markdown_section(text, lambda h: _normalize_whitespace(h) == heading)
+    if section is None:
+        offenders.append(f'{rel_path}: section "{heading}" not found')
+    elif _normalize_whitespace(sentence) not in _normalize_whitespace(section):
+        offenders.append(
+            f'{rel_path}: section "{heading}" lacks the stance sentence "{sentence}"'
+        )
+
+
+def check_worker_digest_stance(root):
+    name = "worker_digest_stance"
+    workers, offenders = _derive_digest_stance_targets(root)
+    if not workers:
+        offenders.append(
+            "no target workers derived: no worker named in the Applies column of "
+            f"{STANCE_ENVELOPE_PATH}'s Applicability table has a file-writing tool "
+            "and no Bash in its agent frontmatter"
+        )
+
+    scanned_contracts = {}
+    for worker in workers:
+        agent_rel = f"{STANCE_AGENTS_DIR}/{worker}.md"
+        prompt = read_text(os.path.join(root, *agent_rel.split("/")))
+        if prompt is None:
+            offenders.append(f"{worker} ({agent_rel}): not found or unreadable")
+            continue
+        paragraphs = _paragraphs(prompt)
+        if not _paragraph_cites(paragraphs, ENVELOPE_CITATION_PATH, ENVELOPE_SECTION_NAME):
+            offenders.append(
+                f'{worker} ({agent_rel}): lacks citation (i): {ENVELOPE_CITATION_PATH} and '
+                f'"{ENVELOPE_SECTION_NAME}" in one paragraph'
+            )
+        if not _paragraph_cites(paragraphs, SPEC_WRITER_CITATION_PATH, SPEC_WRITER_SECTION_NAME):
+            offenders.append(
+                f'{worker} ({agent_rel}): lacks citation (ii): {SPEC_WRITER_CITATION_PATH} and '
+                f'"{SPEC_WRITER_SECTION_NAME}" in one paragraph'
+            )
+
+        cited = sorted(set(CONTRACT_CITATION_RE.findall(prompt)))
+        if not cited:
+            offenders.append(
+                f"{worker} ({agent_rel}): cites no references/contracts/*-contract.md"
+            )
+        for contract in cited:
+            contract_rel = f"{STANCE_CONTRACTS_DIR}/{contract}.md"
+            if contract not in scanned_contracts:
+                scanned_contracts[contract] = read_text(os.path.join(root, *contract_rel.split("/")))
+            contract_text = scanned_contracts[contract]
+            if contract_text is None:
+                offenders.append(
+                    f"{contract_rel}: not found or unreadable (cited by {worker})"
+                )
+            elif ENVELOPE_CITATION_PATH not in contract_text:
+                offenders.append(
+                    f"{contract_rel}: cited by {worker} but does not cite {ENVELOPE_CITATION_PATH}"
+                )
+
+        for sentence in find_worker_directed_digest_instructions(prompt, workers):
+            offenders.append(
+                f"{worker} ({agent_rel}): worker-directed digest instruction: {sentence!r}"
+            )
+
+    for contract, contract_text in sorted(scanned_contracts.items()):
+        if contract_text is None:
+            continue
+        subject_names = set(workers) | {contract, contract.rsplit("-contract", 1)[0]}
+        for sentence in find_worker_directed_digest_instructions(contract_text, subject_names):
+            offenders.append(
+                f"{STANCE_CONTRACTS_DIR}/{contract}.md: worker-directed digest instruction: "
+                f"{sentence!r}"
+            )
+
+    _check_owner_sentence(
+        root, STANCE_ENVELOPE_PATH, ENVELOPE_SECTION_NAME, ENVELOPE_OWNER_SENTENCE, offenders
+    )
+    _check_owner_sentence(
+        root,
+        STANCE_SPEC_WRITER_CONTRACT_PATH,
+        SPEC_WRITER_SECTION_NAME,
+        SPEC_WRITER_OWNER_SENTENCE,
+        offenders,
+    )
+    return CheckResult(name, not offenders, offenders)
+
+
+# ---------------------------------------------------------------------------
+# Check: dispatch digest wiring (worker-digest-ownership task0002, FR3 / FR6 / FR7)
+# ---------------------------------------------------------------------------
+
+# The owner document of the artifact digest protocol (path relative to the
+# plugin directory em-workflow/) and the one citation token every dispatch
+# site carries.
+DIGEST_OWNER_DOCUMENT = "references/artifact-digest.md"
+DIGEST_OWNER_CITATION = "references/artifact-digest.md"
+DIGEST_CALCULATION_HEADING = "Calculation"
+DIGEST_REGISTRY_HEADING = "Dispatch sites"
+# The two owner sections a dispatch site may cover. Every registered worker
+# must be covered for both, across the union of its rows.
+DIGEST_COVERS_NAMES = ("Pre-dispatch verification", "Layer 5 recording")
+DIGEST_REGISTRY_HEADER = ("Document", "Section", "Worker", "Covers")
+# The invocation form the owner's `Calculation` section must name: python3,
+# then a double-quoted path ending in scripts/artifact-digest.py.
+DIGEST_INVOCATION_RE = re.compile(r'python3\s+"[^"\n]*scripts/artifact-digest\.py"')
+# Never named inside a dispatch site's section: the git blob id command is
+# not the means of any artifact digest (it stays in the post-dispatch scope
+# comparison and in the owner's `Legacy records`).
+DIGEST_FORBIDDEN_SITE_TOKEN = "git hash-object"
+
+_MD_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_MD_HEADING_RE = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$")
+_AGENT_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _wiring_markdown_headings(text):
+    """[(line_index, level, title)] for every ATX heading outside a fenced
+    code block."""
+    headings = []
+    fence = None  # (char, length) of the open fence
+    for index, line in enumerate(text.splitlines()):
+        fence_match = _MD_FENCE_RE.match(line)
+        if fence_match:
+            marker = fence_match.group(1)
+            if fence is None:
+                fence = (marker[0], len(marker))
+            elif marker[0] == fence[0] and len(marker) >= fence[1]:
+                fence = None
+            continue
+        if fence is not None:
+            continue
+        heading = _MD_HEADING_RE.match(line)
+        if heading:
+            headings.append((index, len(heading.group(1)), heading.group(2)))
+    return headings
+
+
+def _wiring_markdown_section(text, title):
+    """(status, body): the body of the heading whose text equals `title`,
+    running to the next heading of the same or a higher level. status is
+    "ok", "absent", or "ambiguous" (the title heads more than one section,
+    so no single body can be named)."""
+    headings = _wiring_markdown_headings(text)
+    hits = [i for i, (_idx, _lvl, t) in enumerate(headings) if t == title]
+    if not hits:
+        return "absent", ""
+    if len(hits) > 1:
+        return "ambiguous", ""
+    lines = text.splitlines()
+    start, level, _title = headings[hits[0]]
+    end = len(lines)
+    for next_index, next_level, _next_title in headings[hits[0] + 1 :]:
+        if next_level <= level:
+            end = next_index
+            break
+    return "ok", "\n".join(lines[start + 1 : end])
+
+
+def _parse_dispatch_registry(body):
+    """([(document, section, worker, covers)], [problem]) from the markdown
+    table in the `Dispatch sites` section. A row is well-formed when its
+    Document, Section and Worker cells each hold exactly one backticked
+    token and its Covers cell holds at least one. The header and separator
+    rows are skipped; any other row that is not well-formed is a problem."""
+    rows = []
+    problems = []
+    for line in body.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = _split_table_row(line)
+        if tuple(cells) == DIGEST_REGISTRY_HEADER:
+            continue
+        if _is_table_separator_row(cells):
+            continue
+        tokens = [BACKTICK_SPAN_RE.findall(c) for c in cells]
+        if (
+            len(cells) != 4
+            or any(len(t) != 1 for t in tokens[:3])
+            or not tokens[3]
+        ):
+            problems.append(f"malformed registry row: {line.strip()}")
+            continue
+        rows.append(
+            (
+                tokens[0][0].strip(),
+                tokens[1][0].strip(),
+                tokens[2][0].strip(),
+                [t.strip() for t in tokens[3]],
+            )
+        )
+    return rows, problems
+
+
+def check_dispatch_digest_wiring(root):
+    """Every `write_policy` dispatch site cites the digest owner document.
+
+    A pure function of `root` that reads the owner document and the
+    documents its `Dispatch sites` registry names, and nothing else (it
+    never walks the repository). Flow:
+
+    1. the owner document exists;
+    2. its `Calculation` section names a python3 invocation of a
+       double-quoted path ending in scripts/artifact-digest.py;
+    3. its `Dispatch sites` section holds a registry with at least one row,
+       and every owner section a row can cover exists in the owner;
+    4. for each row, the named document exists under em-workflow/, a heading
+       equal to `Section` exists exactly once, and that section (to the next
+       heading of the same or a higher level, whitespace-normalized) holds
+       the owner path and every owner section name in `Covers` and does not
+       hold `git hash-object`;
+    5. for each worker named in the registry, its agent definition exists and
+       the union of `Covers` over its rows holds both owner section names.
+    """
+    name = "dispatch_digest_wiring"
+    plugin_dir = os.path.join(root, "em-workflow")
+    owner_path = os.path.join(plugin_dir, *DIGEST_OWNER_DOCUMENT.split("/"))
+    owner_label = f"em-workflow/{DIGEST_OWNER_DOCUMENT}"
+
+    if not os.path.isfile(owner_path):
+        return CheckResult(name, False, [f"owner document not found: {owner_label}"])
+    owner_text = read_text(owner_path)
+    if owner_text is None:
+        return CheckResult(name, False, [f"owner document unreadable: {owner_label}"])
+
+    offenders = []
+
+    # 2. the invocation inside `Calculation`.
+    status, calculation = _wiring_markdown_section(owner_text, DIGEST_CALCULATION_HEADING)
+    if status != "ok":
+        offenders.append(
+            f"owner document has no single '{DIGEST_CALCULATION_HEADING}' section ({status})"
+        )
+    elif not DIGEST_INVOCATION_RE.search(calculation):
+        offenders.append(
+            f"owner document '{DIGEST_CALCULATION_HEADING}' section names no "
+            'python3 "<path>/scripts/artifact-digest.py" invocation'
+        )
+
+    # 3. the registry.
+    status, registry_body = _wiring_markdown_section(owner_text, DIGEST_REGISTRY_HEADING)
+    if status != "ok":
+        offenders.append(
+            f"owner document has no single '{DIGEST_REGISTRY_HEADING}' section ({status})"
+        )
+        return CheckResult(name, False, offenders)
+    rows, problems = _parse_dispatch_registry(registry_body)
+    offenders.extend(problems)
+    if not rows:
+        offenders.append(
+            f"owner document '{DIGEST_REGISTRY_HEADING}' registry has no rows"
+        )
+        return CheckResult(name, False, offenders)
+    for covers_name in DIGEST_COVERS_NAMES:
+        covers_status, _body = _wiring_markdown_section(owner_text, covers_name)
+        if covers_status != "ok":
+            offenders.append(
+                f"owner document has no single '{covers_name}' section ({covers_status})"
+            )
+
+    # 4. each registry row's site section.
+    plugin_real = os.path.realpath(plugin_dir)
+    documents = {}  # document token -> text, or None when unusable
+    workers = {}  # worker -> union of Covers over its rows
+    for document, section, worker, covers in rows:
+        label = f"{document} / {section}"
+        workers.setdefault(worker, set()).update(covers)
+
+        unknown = [c for c in covers if c not in DIGEST_COVERS_NAMES]
+        if unknown:
+            offenders.append(f"{label}: Covers names unknown owner section(s) {unknown}")
+
+        if document not in documents:
+            documents[document] = None
+            try:
+                site_path = os.path.realpath(os.path.join(plugin_dir, document))
+            except ValueError:  # e.g. an embedded NUL character
+                site_path = None
+            inside = (
+                site_path is not None
+                and not os.path.isabs(document)
+                and os.path.commonpath([plugin_real, site_path]) == plugin_real
+            )
+            if not inside:
+                offenders.append(f"{label}: document path escapes the plugin directory")
+            elif not os.path.isfile(site_path):
+                offenders.append(f"{label}: document not found under em-workflow/")
+            else:
+                text = read_text(site_path)
+                if text is None:
+                    offenders.append(f"{label}: document unreadable")
+                documents[document] = text
+        text = documents[document]
+        if text is None:
+            continue
+
+        status, site_body = _wiring_markdown_section(text, section)
+        if status != "ok":
+            offenders.append(f"{label}: heading {section!r} is {status} in the document")
+            continue
+        flat = " ".join(site_body.split())
+        if DIGEST_OWNER_CITATION not in flat:
+            offenders.append(f"{label}: missing owner citation {DIGEST_OWNER_CITATION!r}")
+        for covers_name in covers:
+            if covers_name in DIGEST_COVERS_NAMES and covers_name not in flat:
+                offenders.append(f"{label}: missing owner section name {covers_name!r}")
+        if DIGEST_FORBIDDEN_SITE_TOKEN in flat:
+            offenders.append(f"{label}: names {DIGEST_FORBIDDEN_SITE_TOKEN!r}")
+
+    # 5. each registered worker.
+    for worker in sorted(workers):
+        if not _AGENT_NAME_RE.match(worker):
+            offenders.append(f"worker {worker!r}: not a valid agent name")
+            continue
+        agent_path = os.path.join(plugin_dir, "agents", f"{worker}.md")
+        if not os.path.isfile(agent_path):
+            offenders.append(
+                f"worker {worker!r}: agent definition not found: em-workflow/agents/{worker}.md"
+            )
+        for covers_name in DIGEST_COVERS_NAMES:
+            if covers_name not in workers[worker]:
+                offenders.append(
+                    f"worker {worker!r}: no registry row covers {covers_name!r}"
+                )
+
+    return CheckResult(name, not offenders, offenders)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -739,6 +1464,8 @@ def run_all_checks(root):
         check_forbidden_task_assignment_heading(root),
         check_fixture_branch_coverage(root),
         check_digest_reproducibility(),
+        check_dispatch_digest_wiring(root),
+        check_worker_digest_stance(root),
     ]
 
 

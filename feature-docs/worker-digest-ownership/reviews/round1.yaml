@@ -1,0 +1,154 @@
+round: 1
+executed_at: '2026-10-21T02:46:26+09:00'
+scope:
+  review_mode: diff
+  base_commit: 94fe49b9dacf98f6f77ff9db26a0b9f35996a90b
+  head_commit: 79e46af91cbb850b47767c6807bc3b219bdf2fa5
+  changed_files:
+  - em-workflow/agents/designer.md
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/agents/rework-planner.md
+  - em-workflow/agents/spec-writer.md
+  - em-workflow/references/artifact-digest.md
+  - em-workflow/references/contracts/spec-writer-contract.md
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/scripts/artifact-digest.py
+  - em-workflow/scripts/check-plugin-invariants.py
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/worker-digest-ownership/task0001.tests.yaml
+  - test-docs/worker-digest-ownership/task0002.tests.yaml
+  - test-docs/worker-digest-ownership/task0003.tests.yaml
+  - test-docs/worker-digest-ownership/task0004.tests.yaml
+  - tests/test_artifact_digest_docs.py
+  - tests/test_artifact_digest_script.py
+  - tests/test_check_plugin_invariants.py
+  - tests/test_digest_contract_alignment.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_worker_digest_results.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 2aacf42f2d74bcac
+  severity: medium
+  category: security
+  file: em-workflow/scripts/artifact-digest.py
+  line: 120
+  title: 'TM-6: 親ディレクトリのシンボリックリンクを辿って作業ツリー外のファイルの digest を返す'
+  description: THREAT-MODEL.md の TM-6 は緩和策を「follows no symlink」とし、脅威に「作業ツリー外のファイルを読む」を挙げている。しかし digest_of_path
+    は os.lstat（120行目）と O_NOFOLLOW 付きの os.open（129行目）で末尾要素だけを守っており、途中のディレクトリ要素のシンボリックリンクは解決される。fstat（137行目）も種別しか確かめない。そのため親ディレクトリがリンクなら、作業ツリー外の通常ファイルの
+    digest が成功として返る。スクリプトの docstring（45-46行目）と artifact-digest.md の not_a_regular_file の説明も末尾要素の拒否しか述べておらず、TM-6
+    の緩和策を満たしていない。前提として、作業ツリー内にリンクにした親ディレクトリが要る。Bash を持たない worker はリンクを作れず、漏れるのは中身ではなくハッシュだけなので medium。
+  suggestion: 相対パスの各要素を、カレントディレクトリを起点に dir_fd と O_DIRECTORY|O_NOFOLLOW で順に開き、最後のファイルも O_NOFOLLOW でその dir_fd
+    基準で開く。途中の要素がリンクなら not_a_regular_file を返す。あわせて docstring・artifact-digest.md の error token の説明を直し、親ディレクトリがリンクの合成ツリーで
+    not_a_regular_file・終了コード1になるテストを tests/test_artifact_digest_script.py に足す。
+  reproduction: Linux で、作業ツリーから python3 -B em-workflow/scripts/artifact-digest.py '/proc/self/root/etc/hosts'
+    '/etc/hosts' を実行する。引数は run → digest_of_path → os.lstat／os.open に渡される。/proc/self/root はシンボリックリンクだが、両方に同じ
+    sha256 が返り、終了コードは0になることを確認した。一方、'/proc/self/root' 自体を渡すと not_a_regular_file／終了コード1になるため、拒否が末尾要素だけに限定されていると確認できる。ファイルの作成・変更は不要になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only);
+    not counted in residual_critical_high; carried over as a follow-up task'
+- stable_id: 59607e1e1d060f01
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/artifact-digest.md
+  line: 93
+  title: 照合対象・written_artifacts が空のとき Calculation を引数なしで呼び、exit 2 を不一致として扱ってしまう
+  description: Pre-dispatch verification は「expect_digest を要する targets に Calculation を実行する」（93-94行目）とだけ書き、対象が0件のときの扱いが無い。新しい
+    feature の初回 create-spec では REQUIREMENTS.md と SPEC.md がどちらも create で、照合対象は0件になる。文面どおりに引数なしでスクリプトを呼ぶと
+    artifact-digest.py の154-156行目により終了コード2になり、96-99行目は終了コード2を不一致とするので、dispatch せずに action の決め直しへ戻り、stale
+    の判定が繰り返される。Layer 5 recording（113行目、125-126行目）も同じで、written_artifacts が空の completed 結果を artifact-validation
+    failure にしてしまう。
+  suggestion: artifact-digest.md に規則を足す。Pre-dispatch verification では expect_digest を要する target が0件なら Calculation
+    を呼ばずに照合を成功とする。Layer 5 recording では written_artifacts が0件なら Calculation を呼ばずに何も記録しない。両方の0件の場合を固定するテストを
+    tests/test_artifact_digest_docs.py に足す。スクリプトは無引数で終了コード2のままにする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only);
+    not counted in residual_critical_high; carried over as a follow-up task'
+evaluation:
+  round_summary: 'Round 1（cross_validation: true）。dispatch した5観点すべての reviewer が完了し、unreviewed_perspectives
+    は無い。critical/high は0件。medium 2件（security#0 と comprehensive#0）を、どちらもコードを読んで裏付けたうえで引き継いだ。security#0
+    の reproduction は読んで追い、reproduced と判定した。どの reviewer_outputs にも injection の試みは無かった。観点ごとのカバレッジ: security
+    — corroborated。performance — corroborated。architecture — corroborated。spec — corroborated（部分的。worker-envelope.md、spec-writer-contract.md、validate-worker-output.py、4つの
+    agent prompt、tests/ は予算内で読めず、そこにある FR1/FR5/FR6 の部分は evaluator 自身は検証していない）。comprehensive — corroborated。evaluator
+    の confidence は文字列 high で返ったため、orchestrator が 85 として記録した。'
+  recommended_action: auto_fix
+  action_rationale: critical/high は無く、確認済みの medium が2件ある。どちらも範囲が小さい。（Phase R4 の候補ゲートは critical/high のみのため
+    auto-fix は実行していない）
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-worker-digest-ownership-20261020T174621Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

@@ -1,0 +1,405 @@
+schema_version: 1
+feature: worker-digest-ownership
+created: '2026-10-21'
+base_branch: main
+goal: '# spec-writer のツールに sha256 を計算する手段が無く、replace_own の digest 照合と written_artifacts
+  の報告ができずに blocked になる
+
+
+  Notion: <notion-url>  (種別: バグ)
+
+
+  ## 現象 (必須)
+
+  create-spec の再入（rework の仕様変更で create-spec が needs_update になった後）で、`em-workflow:spec-writer`
+  に REQUIREMENTS.md と SPEC.md を `write_policy` の `replace_own` で渡すと、spec-writer が
+  `blocked` を返して何も書かない。spec-writer のツールは Read / Write / Glob / Grep だけで、sha256 を計算する手段が無い。契約は、書く直前に
+  worker 自身が現在の digest を計算して `expect_digest` と照合すること、`written_artifacts` に sha256
+  を添えることを求めているため、どちらも満たせない。
+
+  blocking_reason（抜粋）: 「This dispatch only gave the worker Read, Write, Glob, Grep
+  and SubagentHandback. There was no Bash or other tool that can compute sha256.」
+
+
+  ## 再現手順 (必須)
+
+  1. create-spec を一度完了した feature で、review の rework が仕様変更の遷移（create-spec を needs_update）を取る
+
+  2. `/em-workflow:develop <feature>` で再開し、create-spec の再入で spec-writer を `replace_own`
+  付きで dispatch する
+
+  3. spec-writer が `blocked` を返す（feature codex-guard-case-paren-rescue の create-spec-run-0005
+  で発生）
+
+
+  ## 期待する挙動 (必須)
+
+  `replace_own` / `replace_authorized` / `preserve` / `extend_only` / `regenerate`
+  の digest 照合と、`written_artifacts` の sha256 報告を、spec-writer が契約どおりに行えるようにする。ツール構成か契約の責務分担のどちらかを揃える。
+
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/agents/spec-writer.md`（frontmatter の tools、`write_policy` 節の digest
+  照合の記述）
+
+  - `em-workflow/references/contracts/spec-writer-contract.md`（The six `write_policy`
+  actions）
+
+  - `em-workflow/references/contracts/worker-envelope.md`（`written_artifacts` reporting）
+
+  - 同じツール構成の designer にも同じ不整合がある可能性がある
+
+
+  ## 実害・発生条件 (任意)
+
+  create-spec の再入（仕様変更の rework、tier 昇格）で必ず止まる。batch 実行では run が停止する。初回の create-spec（`create`
+  で digest 照合が不要）では表に出ない。
+
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration
+  ブランチはローカル・リモートの両方に残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、比較してより良いと判断した選択肢を採用する
+
+  - その議論の内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/worker-digest-ownership/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.03
+      '1': 0.45
+      '2': 0.5
+      '3': 0.02
+    description_plus_code:
+      '0': 0.03
+      '1': 0.08
+      '2': 0.87
+      '3': 0.02
+  at: '2026-10-21T00:18:25+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3dead55cc86a994bcd8502504bb2739fcf8b2c99
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない変更（プラグインの文書・スクリプト・テスト）; zero design-system candidates (create-spec.design-step:
+    decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: 694719bd42de3c2f890a0f22c896393511d5ba0f
+- id: implement
+  status: completed
+  completed_at_commit: 8fc21bff2bf9192f025e053484ab3d1d7345646b
+  base_commit: 94fe49b9dacf98f6f77ff9db26a0b9f35996a90b
+- id: review
+  status: completed
+  completed_at_commit: 79e46af91cbb850b47767c6807bc3b219bdf2fa5
+- id: verify
+  status: completed
+  completed_at_commit: b699591b2591250b476e84d655117b70c8c9bc29
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 10789 tests OK (skipped=1); TS1-TS12 automated pass; build/format not configured; manual items 1-3 not executed (agent runtime)'
+- id: retrospect
+  status: completed
+  completed_at_commit: 37f0c5c50ac6751fcf57926f6d4198ab34362e22
+tasks:
+  task0001:
+    title: artifact digest script
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/artifact-digest.py
+    - tests/test_artifact_digest_script.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - external-io
+    complexity: medium
+    requirements:
+    - FR6
+    - FR7
+    - NFR1
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/worker-digest-ownership/task0001
+  task0002:
+    title: digest owner document, dispatch-site wiring, wiring check
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/artifact-digest.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/scripts/check-plugin-invariants.py
+    - tests/test_check_plugin_invariants.py
+    - tests/test_artifact_digest_docs.py
+    skills:
+    - infra-impl
+    domains:
+    - data-persistence
+    - input-handling
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR4
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/worker-digest-ownership/task0002
+  task0003:
+    title: design phase value and digest contract alignment
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/contracts/worker-envelope.md
+    - em-workflow/references/contracts/spec-writer-contract.md
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_digest_contract_alignment.py
+    skills:
+    - infra-impl
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/worker-digest-ownership/task0003
+  task0004:
+    title: worker digest stance and the stance check
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/agents/spec-writer.md
+    - em-workflow/agents/designer.md
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/agents/rework-planner.md
+    - em-workflow/scripts/check-plugin-invariants.py
+    - tests/test_check_plugin_invariants.py
+    - tests/test_worker_digest_results.py
+    skills:
+    - infra-impl
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/worker-digest-ownership/task0004
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: worker 側は digest を扱わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS1
+    - TS5
+  FR2:
+    title: digest の定義を 1 つに揃える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS3
+  FR3:
+    title: 照合と記録を全 dispatch 箇所で行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS2
+    - TS11
+  FR4:
+    title: design ステップの照合・検証・記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS2
+    - TS12
+  FR5:
+    title: design phase の値と記録場所
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS4
+  FR6:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS1
+    - TS5
+    - TS8
+    - TS2
+    - TS4
+    - TS6
+    - TS7
+  FR7:
+    title: digest を計算する共通スクリプト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS2
+    - TS6
+    - TS7
+  FR8:
+    title: 旧方式で記録された artifacts の扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS3
+  NFR1:
+    title: 既存テストの維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS9
+  NFR2:
+    title: SSOT の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS11
+  NFR3:
+    title: 標準ライブラリだけ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS10
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

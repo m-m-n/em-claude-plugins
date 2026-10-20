@@ -742,20 +742,46 @@ design 専用の phase protocol は作らないため、ここが design 側の�
      復元をユーザーに促してターンを終える（要ユーザー介入。再開時にこの
      分岐から再実行する）
    - 上記いずれにも該当しなければ、`designer-contract.md` の対応表どおりに
-     `write_policy`（`targets` / `allowed_write_roots`）を組み立てる
-4. `Task(subagent_type="em-workflow:designer")` を、確定した `design_inputs`
+     `write_policy`（`targets` / `allowed_write_roots`）を組み立てる。
+     DESIGN.md と既存 mockup の `replace_own` は、現在の digest が
+     `phase-state/design.yaml` に記録された直前の design 出力と一致する
+     ときだけ選ぶ（比較は `references/artifact-digest.md` に従い、同文書の
+     `Legacy records` を含む）。`phase-state/design.yaml` が無く、
+     DESIGN.md や mockup が既に実在する場合は、一致を確認できない記録と
+     同じ扱いにして、`design.artifact-overwrite` ゲート（interactive）
+     または `references/batch-policies.yaml` の決定（batch）に送る
+     （`references/phase-state.md` の Legacy feature compatibility と同じ
+     扱い）。`tokens.yaml` / `tokens.html` の action は
+     `designer-contract.md` の対応表の決定のままにする
+4. dispatch の直前（scope verification の事前スナップショット
+   （`references/phases/create-spec-phase.md` の「Scope verification」）の
+   後）に、`references/artifact-digest.md` の `Pre-dispatch verification`
+   に従って、`expect_digest` が必要な各 `write_policy.targets` を照合する。
+   不一致なら dispatch しない。入力を stale として扱い、3 に戻って
+   action を決め直す。一致したら
+   `Task(subagent_type="em-workflow:designer")` を、確定した `design_inputs`
    （requirements_path / spec_path / workflow_path / design_token_template）
    と `write_policy` を渡して dispatch する。designer は完全自律で question
    packet も workflow patch も返さない
-5. 完了後、成果物（DESIGN.md / 更新された `design-system/` 配下 /
-   mockup）を検証し、design step の `status` と `completed_at_commit`
-   （規則 R2）を設定して commit-docs.sh でコミットする
+5. 完了後、scope verification（layer 4。
+   `references/phases/create-spec-phase.md` の「Scope verification」）を行い、
+   通ったら `references/artifact-digest.md` の `Layer 5 recording` に従って、
+   `written_artifacts` の各 path の digest を `phase-state/design.yaml`
+   （`phase: design`。スキーマは `references/phase-state.md`）の
+   `artifacts` に記録する。`tokens.yaml` と `tokens.html` は、
+   両方とも書かれたら両方を記録する。そのうえで成果物（DESIGN.md /
+   更新された `design-system/` 配下 / mockup）を検証し、design step の
+   `status` と `completed_at_commit`（規則 R2）を設定して commit-docs.sh で
+   コミットする
    （`payload.design_summary`: decisions_count / open_items / tokens /
    mockups をレポートに反映。batch:
    `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律により、
    進捗のナラティブと `payload.design_summary` の結果サマリ本文はランニング
    出力に出さない。workflow.yaml への書き込み・commit-docs.sh でのコミット・
    ゲート解決・design step の status 遷移は対話時と変わらない）
+
+`skipped` の design step は designer を dispatch しない。
+`phase-state/design.yaml` も作らない。
 
 ### verify フェーズ
 
