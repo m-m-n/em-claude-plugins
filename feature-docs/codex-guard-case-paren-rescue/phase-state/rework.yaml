@@ -60,7 +60,7 @@ spec_change:
   origin_id: 285d9bc33784bb3d
   recorded_at_commit: c695255f10f6a04b6242894bef33c2447e92b113
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification:
 - classifier: codex
   verdict: spec_gap
