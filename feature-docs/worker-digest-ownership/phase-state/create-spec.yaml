@@ -1,0 +1,25 @@
+schema_version: 1
+feature: worker-digest-ownership
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 29aca2dc0eb23c3b1f6d789d1278699916c6671f
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: "2026-10-21T00:19:40+09:00"
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids: [derive_from_task_description]
+    freeform: null
+    normalized_answer: "feature name: worker-digest-ownership"
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
