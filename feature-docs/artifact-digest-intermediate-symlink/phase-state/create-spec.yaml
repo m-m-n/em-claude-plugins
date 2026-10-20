@@ -2,9 +2,9 @@ schema_version: 1
 feature: artifact-digest-intermediate-symlink
 phase: create-spec
 status: in_progress
-generation: 1
+generation: 2
 base_revision: 2442962a4e1f0cf7591a238a24e469dc9d94116a
-last_input_digest: sha256:c2322ba59b1219fa15a94471c1717dfc8f0c8eb2e61949a0b1c3d8441acc90ea
+last_input_digest: sha256:41a678ada8f46142f3d759b81f44b8562360819d9d0b6332f5fc8f8a27676f84
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -70,6 +70,10 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:c2322ba59b1219fa15a94471c1717dfc8f0c8eb2e61949a0b1c3d8441acc90ea
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:41a678ada8f46142f3d759b81f44b8562360819d9d0b6332f5fc8f8a27676f84
   output_digest: null
 artifacts: []
 patches: []
