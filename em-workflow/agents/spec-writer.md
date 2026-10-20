@@ -57,11 +57,14 @@ under a directory). Do not restate that model here; follow it. In
 particular:
 
 - **Do not compute or re-verify digests.** The orchestrator verifies
-  every `expect_digest` before dispatch (the contract's "Who verifies
-  `expect_digest`"); treat every target as already verified. Never return
-  `blocked` because you cannot compute a digest. In `written_artifacts`,
-  list each written path with `sha256: null` — the orchestrator computes
-  the digests itself.
+  every `expect_digest` before dispatch (the "Who verifies
+  `expect_digest`" section of
+  `references/contracts/spec-writer-contract.md`); treat every target as
+  already verified. Never return `blocked` because you cannot compute a
+  digest. In `written_artifacts`, list each written path with
+  `sha256: null` — the orchestrator computes the digests itself (the
+  "`written_artifacts` reporting" section of
+  `references/contracts/worker-envelope.md`).
 - REQUIREMENTS.md and SPEC.md are always enumerated as explicit `targets`
   entries (their paths are fixed in advance) — never covered by an
   `allowed_write_roots` allowance. A file not enumerated in `targets` may

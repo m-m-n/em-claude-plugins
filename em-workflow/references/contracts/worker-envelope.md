@@ -45,7 +45,7 @@ outside this envelope's scope.
 |---|---|---|
 | `schema_version` | Envelope schema version | Yes |
 | `request_id` | Unique identifier for this dispatch | Yes |
-| `phase` | Owning phase: `create-spec` \| `create-plan` \| `review` \| `verify` \| `rework` | Yes |
+| `phase` | Owning phase: `create-spec` \| `design` \| `create-plan` \| `review` \| `verify` \| `rework` | Yes |
 | `mode` | `interactive` or `batch` | Yes |
 | `project_root` | Absolute path to the main repository | Yes |
 | `integration_worktree` | Absolute path to the feature's integration worktree | Yes |
@@ -275,8 +275,9 @@ does not compute digests: an entry's `sha256` is `null` or absent.
 
 The orchestrator computes the sha256 of every listed path itself in layer 5
 (artifact validation), and records it in phase-state's `artifacts`
-(`references/phase-state.md`). A digest the worker did put in an entry is
-never used for validation.
+(`references/phase-state.md`). How it computes and records these digests is
+owned by `references/artifact-digest.md` ("Layer 5 recording"). A digest the
+worker did put in an entry is never used for validation.
 
 Verifying a write target's expected digest before a write is also the
 orchestrator's job, done before dispatch; that rule is owned by
@@ -308,5 +309,7 @@ this assumption.
   (design-input.md 5.5).
 - Phase-state persistence: `references/phase-state.md` (design-input.md
   5.6).
+- Artifact digest calculation and layer-5 recording:
+  `references/artifact-digest.md`.
 - Machine validation and fixtures: `scripts/validate-worker-output.py`,
   `references/fixtures/` (design-input.md 5.11.1, 10.5).
