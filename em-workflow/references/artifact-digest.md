@@ -70,8 +70,8 @@ Exit codes:
 - `0` — every element has a `sha256` digest;
 - `1` — at least one element has an `error`; every other element is still
   hashed and reported;
-- `2` — no argument was given, or the script failed unexpectedly; standard
-  output carries no array.
+- `2` — no argument was given, an argument was not valid UTF-8, or the script
+  failed unexpectedly; standard output carries no array.
 
 This call is not a `workflow.yaml` command, so the Bash guard hook
 (`hooks/bash_guard.py`) gives no verdict on it and the normal permission flow
