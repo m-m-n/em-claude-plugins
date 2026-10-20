@@ -123,7 +123,12 @@ workflow:
   status: completed
   completed_at_commit: 01e21cc60be5299f6a90ea3769f454daa16b39dd
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 9aae660eead85c8a236518e7760842ebe18d5b43
+  result: pass
+  failed_items: []
+  summary: 'test_command pass (destructive-guard 943/943, unittest 10519 tests OK, skipped=1); tests.test_codex_hook_interactive_guard 144 OK; TS1-TS21 and AC1-AC7 satisfied; TS20 version-field diff empty; copies byte-identical; case-table diff adds rows only'
+  excluded: []
 - id: retrospect
   status: pending
 tasks:
