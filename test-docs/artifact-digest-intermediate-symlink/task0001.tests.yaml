@@ -1,0 +1,74 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_script.TestIntermediateSymlinkIsRefused.test_ac1_directory_link_in_the_middle_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestIntermediateSymlinkIsRefused.test_ac1_the_link_target_digest_is_nowhere_on_stdout
+      - tests.test_artifact_digest_script.TestIntermediateSymlinkIsRefused.test_ac1_control_the_same_file_is_hashed_without_the_link
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 -- the old script returned the outside file's digest for link/a.md (stdout held sha256:248d6a61...06c1, exit 0) instead of not_a_regular_file"
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_script.TestEveryKindOfIntermediateLink.test_ac2_each_case_is_not_a_regular_file_and_leaks_no_digest
+      - tests.test_artifact_digest_script.TestEveryKindOfIntermediateLink.test_ac2_all_cases_in_one_invocation_keep_argument_order
+      - tests.test_artifact_digest_script.TestEveryKindOfIntermediateLink.test_ac2_proc_self_root_alias_of_a_file_is_refused
+    red_confirmed: true
+    red_reason: "subTests failed for the absolute path through the link, sub/link/x/a.md, dangling/a.md, file-link/x and loop-a/x: the old script returned a digest for the link cases and missing for the dangling, file-link and loop cases, never not_a_regular_file; the /proc/self/root/etc/hosts case returned the digest of /etc/hosts for entry 0"
+  AC-3:
+    tests:
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_missing_spellings
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_directory_required_final_component_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_arguments_that_name_a_directory_are_not_regular_files
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_fifo_as_an_intermediate_component_is_missing
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_fifo_as_the_final_component_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_equivalent_spellings_of_a_plain_path_share_one_digest
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_dot_dot_climbs_the_real_directory_structure
+      - tests.test_artifact_digest_script.TestUnchangedResultsWithoutSymlinks.test_ac3_intermediate_directory_without_access_is_unreadable
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_path_below_a_regular_file_is_missing
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_missing_directory_component_is_missing
+      - tests.test_artifact_digest_script.TestMissingEntries.test_ac5_empty_argument_is_reported_missing
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_directory_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_socket_is_not_a_regular_file
+      - tests.test_artifact_digest_script.TestNonRegularEntries.test_ac6_character_device_is_not_a_regular_file
+    red_confirmed: false
+    red_reason: "preservation criterion: every listed result already held for the old script, which resolved the whole path with lstat and open, so these tests passed before the walk existed and no red state occurred; they guard that the walk keeps the old results (missing, not_a_regular_file, unreadable, shared digests, bounded FIFO handling)"
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_script.TestDirectorySwappedDuringTheWalk.test_ac4_control_without_a_swap_the_file_is_hashed
+      - tests.test_artifact_digest_script.TestDirectorySwappedDuringTheWalk.test_ac4_first_directory_swapped_for_a_link_is_not_followed
+      - tests.test_artifact_digest_script.TestDirectorySwappedDuringTheWalk.test_ac4_deeper_directory_swapped_for_a_link_is_not_followed
+      - tests.test_artifact_digest_script.TestDirectorySwappedDuringTheWalk.test_ac4_directory_required_final_swapped_for_a_link_is_refused
+      - tests.test_artifact_digest_script.TestInspectionAfterAFailedDirectoryOpen.test_ac4_component_reported_as_a_directory_afterwards_is_an_error
+      - tests.test_artifact_digest_script.TestInspectionAfterAFailedDirectoryOpen.test_ac4_failing_inspection_is_unreadable
+      - tests.test_artifact_digest_script.TestInspectionAfterAFailedDirectoryOpen.test_ac4_component_gone_by_the_time_it_is_inspected_is_missing
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_driver_control_a_real_regular_file_is_still_hashed
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_fifo_swapped_in_after_inspection_does_not_block
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_symlink_swapped_in_after_inspection_is_not_followed
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_directory_swapped_in_after_inspection_is_not_hashed
+      - tests.test_artifact_digest_script.TestEntrySwappedAfterInspection.test_ac6_entry_removed_after_inspection_is_missing
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 -- with the swap driver stepping in on directory-only dir_fd opens, the old script printed the digest of sub/a.md with exit 0 (driver: dir-opens=0 swaps=0, because the old script made no directory-only open at all) instead of not_a_regular_file; the control test failed on b'dir-opens=1 swaps=0' not found. The existing final-element swap tests (TestEntrySwappedAfterInspection) passed before and after, unmodified"
+  AC-5:
+    tests:
+      - tests.test_artifact_digest_script.TestMissingCapabilitiesStopTheScript.test_ac5_each_withdrawn_capability_exits_2_with_a_named_message
+      - tests.test_artifact_digest_script.TestMissingCapabilitiesStopTheScript.test_ac5_several_withdrawn_capabilities_are_all_named
+      - tests.test_artifact_digest_script.TestMissingCapabilitiesStopTheScript.test_ac5_control_the_in_process_run_hashes_a_regular_file
+      - tests.test_artifact_digest_script.TestMissingCapabilitiesStopTheScript.test_ac5_the_os_module_is_restored_after_each_withdrawal
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 2 in each of the three subTests (no-follow flag, directory-only flag, descriptor-relative open) -- the old script had no start-up check and carried on with exit 0 and a digest on stdout"
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_script.TestDescriptorsAreReleased.test_ac6_no_descriptor_survives_a_mixed_run
+      - tests.test_artifact_digest_script.TestDescriptorsAreReleased.test_ac6_a_digest_only_run_leaves_no_descriptor_open
+    red_confirmed: true
+    red_reason: "test_ac6_no_descriptor_survives_a_mixed_run failed on the old script at its result comparison (Lists differ: the old script returned a digest for the path through the intermediate symlink), not at the descriptor assertion, because the old script opened no directory descriptor that could leak; the descriptor check itself was shown able to fail by mutating the new script (removing the close of the previous directory descriptor, of the last directory descriptor, or of the file descriptor each made both tests fail with leaked descriptors), then restoring it"
+  AC-7:
+    tests:
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_script_imports_only_standard_library_modules
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_script_imports_no_process_spawning_facility
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_no_argument_exits_2_with_usage_on_stderr
+      - tests.test_artifact_digest_script.TestScriptFileProperties.test_docstring_lists_the_three_exit_codes
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing TestUsageAndIsolation tests detect a non-standard-library import or a process-spawning facility in the script, and the full suite run (python3 -m unittest discover -s tests) detects any regression; no red state occurred for this change. The unchanged-existing-tests, byte-identical docstring and OPEN_FLAGS comment, and no-version-edit parts were checked with git diff (no deleted line in tests/test_artifact_digest_script.py, no hunk in the docstring or the OPEN_FLAGS comment, no plugin.json or marketplace.json change), which has no executable test to fail"
