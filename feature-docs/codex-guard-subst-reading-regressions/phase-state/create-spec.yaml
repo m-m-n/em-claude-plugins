@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 3f5b40fcc30fb38d2c9322a7e4c258105c79a723
 last_input_digest: sha256:7c4b113f24f9e859d58c047bcade1750a71833fbf7b56499831be133748a5235
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -49,10 +49,16 @@ worker_runs:
   input_digest: sha256:f88a68c4bddaa6beabd7983a08f40cb23170e8d602c9eac4afc25626c9ab9e6f
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:7c4b113f24f9e859d58c047bcade1750a71833fbf7b56499831be133748a5235
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-subst-reading-regressions/REQUIREMENTS.md
+  sha256: sha256:9352d50a3f76cebe87a8b76ad4fd05dda437d5023de0d2b038bc864dd1a9220d
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-subst-reading-regressions/SPEC.md
+  sha256: sha256:d708bff4c6baa4a4834a4e72894d9a385e1bd66845a379d406747538bc961de7
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
