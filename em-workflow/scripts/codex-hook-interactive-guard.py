@@ -413,6 +413,11 @@ WRAPPERS = ("env", "nohup", "nice", "exec", "command", "time", "sudo")
 # defined right after `then`, `do`, `!` and the like is still read as one.
 RESERVED_WORDS = ("!", "do", "elif", "else", "if", "then", "time", "until", "while")
 
+# The reserved words and symbols that leave the next word of a command list in a
+# command substitution at a command position, when they are read as standalone
+# words at a command position (`_Parser._skip_substitution`).
+COMMAND_POSITION_WORDS = ("then", "do", "else", "elif", "if", "while", "until", "time", "!", "{")
+
 # How far the simple command in progress has read the shape `case`, one word,
 # `in`, which lets an `esac` right after it lower the case mark
 # (`_Parser.case_shape`): nothing of it, a `case` that raised the mark, that
@@ -1938,19 +1943,62 @@ class _Parser:
         an explicit stack, so depth costs no recursion, and the contents of
         the chunk are never judged.
 
-        A `case` at a command position of a command list in the chunk opens a
-        case statement, and a case statement inside the chunk is read: its
-        subject, its patterns (alternatives, the optional leading `(`, nested
-        parentheses) and its item bodies are followed up to the closing
-        `esac`, so its pattern's `)` closes neither the chunk nor a group, and
-        the chunk ends at the `)` that follows the `esac`. An item body is a
-        command list. The item terminators `;;&`, `;;`, `;&` and `;|` end an
-        item and return the statement to a pattern position, where `esac`
-        closes it and any other word, `case` included, starts a pattern.
-        `esac` closes a statement only as a standalone word at a pattern
-        position or at a command position of an item body, so an argument
-        `esac` and one in a comment close nothing. A `case` inside backticks,
-        an arithmetic expansion, double quotes or `${ ... }` is not read.
+        Command position (rule 1). Each command list the reader keeps (the
+        body of a `$(`, the body of a nested subshell `(` and every item body
+        of a case statement) carries one piece of state of constant size:
+        whether the next word is at a command position. It is true when the
+        list opens; after `;`, `&` or `|` (`&&` and `||` included); after a
+        newline; after a subshell `(`; and after a standalone `then`, `do`,
+        `else`, `elif`, `if`, `while`, `until`, `time`, `!` or `{` that was
+        itself read at a command position. It is false after any other word:
+        an ordinary command word, an assignment, a redirection target, a
+        `time` option, a word that holds a substitution, and a reserved word
+        or `!` read at an argument position. A list that goes on after a
+        nested context closes (a substitution, a subshell, quotes, a case
+        statement) goes on inside a word, so its state is false. The
+        characters of the previous word are never looked at backward.
+
+        Opening and closing a case statement (rule 2). A `case` at a command
+        position of a command list in the chunk opens a case statement, and a
+        case statement inside the chunk is read: its subject, its patterns
+        (alternatives, the optional leading `(`, nested parentheses) and its
+        item bodies are followed up to the closing `esac`, so its pattern's
+        `)` closes neither the chunk nor a group, and the chunk ends at the
+        `)` that follows the `esac`. An item body is a command list. The item
+        terminators `;;&`, `;;`, `;&` and `;|` end an item and return the
+        statement to a pattern position, where `esac` closes it and any other
+        word, `case` included, starts a pattern. `case` opens a statement only
+        as a standalone word at a command position. In an item body `esac`
+        closes a statement only as a standalone word at a command position;
+        at a pattern position it closes the statement as a standalone word.
+        A `case` or an `esac` at an argument position, one after a reserved
+        word or `!` that is itself at an argument position included, is an
+        ordinary word and opens or closes nothing, and so is one in a comment.
+        A `case` inside backticks, an arithmetic expansion, double quotes or
+        `${ ... }` is not read.
+
+        Comment after a pattern (rule 3). A `#` directly after the `)` that
+        closes an item's pattern (no blank in between) starts a comment that
+        runs to the end of the line: an `esac`, a `)` or a quote inside it
+        closes nothing, ends no substitution and opens no quote, and after
+        the newline the item body starts at a command position. A `#` after
+        any other `)` keeps its reading.
+
+        Continuation pairs (rule 4). A continuation pair is a backslash
+        directly followed by a newline. Where a case statement waits (before
+        the subject, after the subject while `in` is awaited, at a pattern
+        position, after a pattern's leading `(` and at the start of an item
+        body) a pair is skipped without starting a word and the phase is
+        kept. `case`, `in` and `esac` are decided on the characters with the
+        pairs left out (`_keyword_end`, the pair-stripped keyword decision):
+        pairs between the keyword's characters and pairs directly after it
+        are skipped, before the standalone-word check looks at the next
+        character; a sequence that does not spell the keyword once the pairs
+        are out is not a keyword; a pair inside a word never splits it. A
+        keyword is matched only at the start of a word and looks at its own
+        characters and at the runs of pairs between and after them; a failed
+        match is not retried from inside the same word, the rest of that word
+        is read once as an ordinary word, so the reading stays linear.
 
         Raises _Undecidable when the chunk is not closed, or when its close
         cannot be located with certainty. A chunk with a case statement is
@@ -1970,8 +2018,10 @@ class _Parser:
         an item terminator), 5 after the optional leading `(`, 6 in a pattern,
         7 at the start of an item body, 8 in an item body (a command list). g
         is a parenthesised group inside a subject or a pattern. In the phases
-        1, 3, 4, 5 and 7 the first character decides the phase change before
-        it is read.
+        1, 3, 4, 5 and 7 a continuation pair is skipped and the first other
+        character decides the phase change before it is read; phase 7 hands
+        the first character of the body to phase 8, a command list that opens
+        at a command position.
         """
         s, n = self.s, self.n
         if s[start] == "`":
@@ -1983,30 +2033,64 @@ class _Parser:
         else:
             stack = ["p"]
             j = start + 2
+        # The command position state of the command list on top of the stack
+        # (rule 1): `at_command` is whether the next word is at a command
+        # position, `in_word` whether a word is being read. A list that
+        # resumes after a nested context closes goes on inside a word.
+        at_command, in_word = True, False
         while j < n:
             top = stack[-1]
             ch = s[j]
+            if (
+                top in "p8"
+                and not in_word
+                and ch not in " \t\n;&|()<>"
+                and not (ch == "\\" and s.startswith("\n", j + 1))
+                and not (ch == "#" and s[j - 1] in " \t\n;&|(")
+            ):
+                # A word begins here. A keyword or a reserved word is decided
+                # once, on the characters that start the word; any other word
+                # is read as an ordinary word, which is not looked at again.
+                kind, end = self._read_command_word(j, at_command, top == "8")
+                if kind == "case":
+                    stack.append("1")
+                    j = end
+                    continue
+                if kind == "esac":
+                    stack.pop()
+                    at_command, in_word = False, True
+                    j = end
+                    continue
+                if kind == "reserved":
+                    j = end
+                    continue
+                at_command, in_word = False, True
             if top in "13457":
                 # A case statement that waits for a word or for `in`.
                 if ch in " \t\n":
                     j += 1
-                elif ch == "#" and s[j - 1] in " \t\n;&|(":
+                elif ch == "\\" and s.startswith("\n", j + 1):
+                    j += 2
+                elif ch == "#" and (s[j - 1] in " \t\n;&|(" or (top == "7" and s[j - 1] == ")")):
                     j = s.find("\n", j)
                     if j == -1:
                         raise _Undecidable("substitution")
                 elif top == "3":
-                    if not self._is_word_at(j, "in", " \t\n;&|()<>"):
+                    end = self._keyword_end(j, "in", " \t\n;&|()<>")
+                    if end == -1:
                         raise _Undecidable("case without in")
                     stack[-1] = "4"
-                    j += 2
+                    j = end
                 elif top == "1":
                     if ch in ";&|)":
                         raise _Undecidable("case without a subject")
                     stack[-1] = "2"
                 elif top == "4":
-                    if self._is_word_at(j, "esac", " \t\n;&|)<>"):
+                    end = self._keyword_end(j, "esac", " \t\n;&|)<>")
+                    if end != -1:
                         stack.pop()
-                        j += 4
+                        at_command, in_word = False, True
+                        j = end
                     elif ch in ");&":
                         raise _Undecidable("case pattern")
                     elif ch == "(":
@@ -2018,17 +2102,10 @@ class _Parser:
                     if ch in ");&":
                         raise _Undecidable("case pattern")
                     stack[-1] = "6"
-                elif self._is_word_at(j, "case", " \t\n"):
-                    # Phase 7: a standalone `case` as the first word of the
-                    # body is at a command position and opens a statement.
-                    stack[-1] = "8"
-                    stack.append("1")
-                    j += 4
-                elif self._is_word_at(j, "esac", " \t\n;&|)<>"):
-                    stack.pop()
-                    j += 4
                 else:
+                    # Phase 7: the item body starts at a command position.
                     stack[-1] = "8"
+                    at_command, in_word = True, False
             elif ch == "\\":
                 j += 2
             elif top == "b":
@@ -2037,12 +2114,14 @@ class _Parser:
                     stack.pop()
                     if not stack:
                         return j
+                    at_command, in_word = False, True
             elif ch == "`":
                 stack.append("b")
                 j += 1
             elif ch == '"':
                 if top == "d":
                     stack.pop()
+                    at_command, in_word = False, True
                 else:
                     stack.append("d")
                 j += 1
@@ -2051,6 +2130,7 @@ class _Parser:
                 j += 3
             elif s.startswith("$(", j):
                 stack.append("p")
+                at_command, in_word = True, False
                 j += 2
             elif s.startswith("${", j):
                 stack.append("K" if top in "dK" else "k")
@@ -2059,6 +2139,7 @@ class _Parser:
                 j += 1
             elif ch == "}" and top in "kK":
                 stack.pop()
+                at_command, in_word = False, True
                 j += 1
             elif top == "K":
                 j += 1
@@ -2097,6 +2178,7 @@ class _Parser:
                 elif top == "2":
                     if ch in "<>" and s.startswith("(", j + 1):
                         stack.append("p")
+                        at_command, in_word = True, False
                         j += 2
                     elif ch in " \t\n":
                         stack[-1] = "3"
@@ -2115,6 +2197,7 @@ class _Parser:
                     j += 1
             elif ch == "(":
                 stack.append("p" if top == "8" else top)
+                at_command, in_word = True, False
                 j += 1
             elif ch == ")":
                 if top == "8":
@@ -2123,6 +2206,7 @@ class _Parser:
                 j += 1
                 if not stack:
                     return j
+                at_command, in_word = False, True
             elif top == "a":
                 j += 1
             elif ch == "#" and s[j - 1] in " \t\n;&|(":
@@ -2131,6 +2215,7 @@ class _Parser:
                 if j == -1:
                     raise _Undecidable("substitution")
             elif s.startswith("<<<", j):
+                at_command, in_word = False, False
                 j += 3
             elif s.startswith("<<", j):
                 raise _Undecidable("heredoc in a substitution")
@@ -2138,57 +2223,76 @@ class _Parser:
                 # An item terminator; `;;&` is the longest of them.
                 stack[-1] = "4"
                 j += 3 if s.startswith(";;&", j) else 2
-            elif ch == "c" and self._is_case_keyword(j):
-                stack.append("1")
-                j += 4
-            elif top == "8" and ch == "e" and self._is_esac_keyword(j):
-                stack.pop()
-                j += 4
+            elif ch in " \t":
+                in_word = False
+                j += 1
+            elif ch in "\n;&|":
+                at_command, in_word = True, False
+                j += 1
+            elif ch in "<>":
+                at_command, in_word = False, False
+                j += 1
             else:
                 j += 1
         raise _Undecidable("substitution")
 
-    def _is_word_at(self, j, word, follow):
-        """Whether `word` stands at `j` as a standalone word: the input ends
-        right after it, or the character after it is one of `follow`. Looks at
-        most `len(word) + 1` characters ahead."""
-        end = j + len(word)
-        return self.s.startswith(word, j) and (end >= self.n or self.s[end] in follow)
+    def _keyword_end(self, j, word, follow):
+        """Return the index where reading goes on after the keyword `word`
+        that begins at `j`, or -1 when `word` is not the keyword there. The
+        decision is made on the characters with the continuation pairs (a
+        backslash directly followed by a newline) left out, the pair-stripped
+        rule: the pairs between the keyword's characters and the pairs directly
+        after it are skipped, then the next character must be one of `follow`
+        or the input must end, so the keyword is a standalone word. A sequence
+        that does not spell `word` once the pairs are out (`ca`, a pair, `sex`)
+        is not a keyword. The caller calls it at the start of a word only. It
+        looks at the characters of `word` and at the runs of pairs between and
+        after them, nothing else, and never calls back into the skip."""
+        s, n = self.s, self.n
+        k = j
+        for letter in word:
+            while s.startswith("\\\n", k):
+                k += 2
+            if k >= n or s[k] != letter:
+                return -1
+            k += 1
+        while s.startswith("\\\n", k):
+            k += 2
+        if k < n and s[k] not in follow:
+            return -1
+        return k
 
-    def _at_command_position(self, j):
-        """Whether the word at `j` stands at a command position: after blanks
-        there is the start of the input, one of `;` `&` `|` `(` a newline `{`
-        `!`, or one of the reserved words `then` `do` `else` `elif` `if`
-        `while` `until` `time`. The look backward covers only the run of blanks
-        before `j` and the run of letters before it."""
-        s = self.s
-        k = j - 1
-        while k >= 0 and s[k] in " \t":
-            k -= 1
-        if k < 0 or s[k] in ";&|(\n{!":
-            return True
-        end = k + 1
-        while k >= 0 and s[k].isalpha():
-            k -= 1
-        return s[k + 1:end] in ("then", "do", "else", "elif", "if", "while", "until", "time")
-
-    def _is_case_keyword(self, j):
-        """Whether the `case` at `j` is the keyword that opens a `case`
-        command: a standalone `case` word (the input ends right after it, or a
-        blank or a newline follows) at a command position (`_at_command_position`).
-        The judgment of a `case` in a command list is unchanged. What the skip
-        does after a true answer changed: it reads the statement the keyword
-        opens, so the patterns' `)` close no substitution, and no longer gives
-        up there."""
-        return self._is_word_at(j, "case", " \t\n") and self._at_command_position(j)
-
-    def _is_esac_keyword(self, j):
-        """Whether the `esac` at `j` closes a `case` statement from inside an
-        item body: a standalone `esac` word (the input ends right after it, or
-        a blank, a newline, `;`, `&`, `|`, `)`, `<` or `>` follows) at a command
-        position, judged as `_is_case_keyword` judges a `case`. An `esac` that
-        is an argument, or sits in a comment, is not one."""
-        return self._is_word_at(j, "esac", " \t\n;&|)<>") and self._at_command_position(j)
+    def _read_command_word(self, j, at_command, in_body):
+        """Decide the word that begins at `j` in a command list of the chunk
+        and return (kind, end). `at_command` is the command position state
+        of the list and `in_body` whether the list is an item body. The kind
+        is "case" for a `case` that opens a statement (a standalone `case` at
+        a command position), "esac" for an `esac` that closes one (a
+        standalone `esac` at a command position of an item body), "reserved"
+        for a standalone word of `COMMAND_POSITION_WORDS` read at a command
+        position, which leaves the next word at a command position, and None
+        for every other word (end is `j` then). `end` is where reading goes
+        on. All three keywords are decided by `_keyword_end`, on the
+        characters with the continuation pairs left out, so a word at an
+        argument position is never one of them. The caller calls it once at
+        the start of each word."""
+        if not at_command:
+            return None, j
+        ch = self.s[j]
+        if ch == "c":
+            end = self._keyword_end(j, "case", " \t\n")
+            if end != -1:
+                return "case", end
+        elif ch == "e" and in_body:
+            end = self._keyword_end(j, "esac", " \t\n;&|)<>")
+            if end != -1:
+                return "esac", end
+        for word in COMMAND_POSITION_WORDS:
+            if word[0] == ch:
+                end = self._keyword_end(j, word, " \t\n" if len(word) == 1 else " \t\n;&|()<>")
+                if end != -1:
+                    return "reserved", end
+        return None, j
 
     def _dollar(self):
         s, i = self.s, self.i
