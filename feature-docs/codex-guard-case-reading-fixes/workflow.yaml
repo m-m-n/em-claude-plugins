@@ -165,42 +165,42 @@ requirements:
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS1, TS4, TS5, TS6, TS7, TS23, TS37, TS38, TS39, TS40, TS43, TS48, TS56, TS57, TS58, TS59, TS62]
+    tests: [TS1, TS4, TS5, TS6, TS7, TS37, TS38, TS39, TS40, TS43, TS48, TS56, TS57, TS58, TS59, TS62]
   FR3:
     title: パターンの ')' の直後の '#' をコメントとして読む
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS2, TS8, TS23, TS62]
+    tests: [TS2, TS8, TS62]
   FR4:
     title: 待ちフェーズで行継続を読み飛ばす
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS3, TS9, TS10, TS11, TS20, TS23, TS62]
+    tests: [TS3, TS9, TS10, TS11, TS20, TS62]
   FR5:
     title: キーワードに接する行継続と分断する行継続
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS12, TS13, TS14, TS15, TS16, TS17, TS18, TS19, TS20, TS21, TS23, TS62]
+    tests: [TS12, TS13, TS14, TS15, TS16, TS17, TS18, TS19, TS20, TS21, TS62]
   FR6:
     title: 両コピーを同時に直す
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS24, TS63]
+    tests: [TS63]
   FR7:
     title: docstring を更新する
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS27, TS66]
+    tests: [TS66]
   FR8:
     title: CASES に再現と派生の行を足す
     status: ok
@@ -242,21 +242,21 @@ requirements:
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS25, TS64]
+    tests: [TS64]
   NFR3:
     title: 標準ライブラリだけを使う
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS26, TS65]
+    tests: [TS65]
   NFR4:
     title: version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS29, TS68]
+    tests: [TS68]
 batch:
   review_rework_count: 0
   verify_rework:
