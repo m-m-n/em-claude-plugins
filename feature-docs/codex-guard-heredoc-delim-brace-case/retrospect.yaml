@@ -1,0 +1,38 @@
+feature: codex-guard-heredoc-delim-brace-case
+collected_at: "2026-10-21T21:53:30+09:00"
+session_ids: [01a15e85-a524-7102-a8c2-c4da23f0a03c]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code read: bucket 1 (rule addition plus test addition across a few files) with confidence 0.85, mapped to reduced"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.04, confidence: 0.96, probabilities: {'0': 0.0, '1': 0.96, '2': 0.04, '3': 0.0}}
+        observed_at: "2026-10-21T20:31:57+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.15, confidence: 0.85, probabilities: {'0': 0.0, '1': 0.85, '2': 0.15, '3': 0.0}}
+        observed_at: "2026-10-21T20:34:07+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 30
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 deferred 3 medium findings (8704f40d2d534c76, a1ffc746adbf0058, a1376c6e4c4feed3) in the same parser area; triage branch=report filed none"
