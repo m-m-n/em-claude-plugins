@@ -36,9 +36,13 @@ check) so a check that matches nothing cannot pass silently.
 """
 
 import ast
+import contextlib
+import hashlib
+import io
 import json
 import os
 import re
+import runpy
 import socket
 import stat
 import subprocess
@@ -46,6 +50,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "em-workflow" / "scripts" / "artifact-digest.py"
@@ -869,6 +874,630 @@ class TestScriptFileProperties(unittest.TestCase):
         text = Path(__file__).read_text(encoding="utf-8")
         needle = "subagent_type" + "="
         self.assertNotIn(needle, text)
+
+
+# ======================================================================
+# artifact-digest-intermediate-symlink, task0001: the path walk.
+#
+# The script opens every component of a path argument without following a
+# symlink. Each test below names the task0001 Acceptance Criterion
+# (feature-docs/artifact-digest-intermediate-symlink/tasks/task0001.md) it
+# turns into an executable check. The tests above are not touched.
+# ======================================================================
+
+
+def run_in_process(*argv):
+    """Load the script afresh and run its `main()` inside this interpreter.
+
+    Returns `(exit_code, stdout_bytes, stderr_text)`. Loading happens inside
+    the call, so a change made to the `os` module by the caller before the
+    call is what the script's module-level code and its start-up check see.
+    """
+    stdout = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+    stderr = io.StringIO()
+    old_argv = sys.argv
+    sys.argv = [str(SCRIPT), *argv]
+    try:
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(
+            stderr
+        ):
+            namespace = runpy.run_path(
+                str(SCRIPT), run_name="artifact_digest_in_process"
+            )
+            code = namespace["main"]()
+    finally:
+        sys.argv = old_argv
+    stdout.flush()
+    return code, stdout.buffer.getvalue(), stderr.getvalue()
+
+
+@contextlib.contextmanager
+def without_os_attribute(name):
+    """Remove `os.<name>`; put it back even when the body raises."""
+    saved = getattr(os, name)
+    delattr(os, name)
+    try:
+        yield
+    finally:
+        setattr(os, name, saved)
+
+
+@contextlib.contextmanager
+def without_dir_fd_open():
+    """Withdraw descriptor-relative open support from the `os` module."""
+    saved = os.supports_dir_fd
+    os.supports_dir_fd = set(saved) - {os.open}
+    try:
+        yield
+    finally:
+        os.supports_dir_fd = saved
+
+
+class WalkCase(DigestCase):
+    """DigestCase whose temp root is fully resolved, so an absolute path built
+    from it has no symlink component of its own (assumption A1)."""
+
+    def setUp(self):
+        super().setUp()
+        self.tmp = Path(os.path.realpath(self.tmp))
+
+    def make_dir(self, name):
+        path = self.tmp / name
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def link(self, target, name):
+        path = self.tmp / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        os.symlink(target, path)
+        return path
+
+
+# ---------------------------------------------------------------- AC-1 ----
+
+
+class TestIntermediateSymlinkIsRefused(WalkCase):
+    """AC-1: a symlink in the middle of a relative path is not followed."""
+
+    def test_ac1_directory_link_in_the_middle_is_not_a_regular_file(self):
+        self.write("outside/a.md", TWO_BLOCK_INPUT)
+        self.make_dir("work")
+        self.link("../outside", "work/link")
+        proc = self.digest("link/a.md", cwd=self.tmp / "work")
+        self.assert_array(
+            proc, [failed("link/a.md", "not_a_regular_file")], 1
+        )
+
+    def test_ac1_the_link_target_digest_is_nowhere_on_stdout(self):
+        self.write("outside/a.md", TWO_BLOCK_INPUT)
+        self.make_dir("work")
+        self.link("../outside", "work/link")
+        proc = self.digest("link/a.md", cwd=self.tmp / "work")
+        self.assertEqual(len(decode_array(proc)), 1, proc.stdout)
+        self.assertNotIn(TWO_BLOCK_DIGEST.encode("ascii"), proc.stdout)
+
+    def test_ac1_control_the_same_file_is_hashed_without_the_link(self):
+        # Non-vacuity: the file behind the link really is hashable, so the
+        # refusal above is the link's doing and not a broken fixture.
+        self.write("outside/a.md", TWO_BLOCK_INPUT)
+        self.make_dir("work")
+        self.link("../outside", "work/link")
+        proc = self.digest("../outside/a.md", cwd=self.tmp / "work")
+        self.assert_array(
+            proc, [ok("../outside/a.md", TWO_BLOCK_DIGEST)], 0
+        )
+
+
+# ---------------------------------------------------------------- AC-2 ----
+
+
+class TestEveryKindOfIntermediateLink(WalkCase):
+    """AC-2: directory link, deeper link, dangling, file link and loop."""
+
+    def setUp(self):
+        super().setUp()
+        # Content behind every link: the sentinel digest must never appear.
+        self.write("outside/a.md", TWO_BLOCK_INPUT)
+        self.write("shared/x/a.md", TWO_BLOCK_INPUT)
+        self.write("plain.md", TWO_BLOCK_INPUT)
+        self.write("ok.md", b"abc")
+        self.link("outside", "link")
+        self.link("../shared", "sub/link")
+        self.link("nowhere", "dangling")
+        self.link("plain.md", "file-link")
+        self.link("loop-b", "loop-a")
+        self.link("loop-a", "loop-b")
+
+    def cases(self):
+        return {
+            "absolute path through the link": str(self.tmp / "link" / "a.md"),
+            "link below a directory": "sub/link/x/a.md",
+            "dangling intermediate link": "dangling/a.md",
+            "link to a regular file": "file-link/x",
+            "link in a loop": "loop-a/x",
+        }
+
+    def test_ac2_each_case_is_not_a_regular_file_and_leaks_no_digest(self):
+        for label, argument in self.cases().items():
+            with self.subTest(label):
+                proc = self.digest(argument, "ok.md")
+                self.assert_array(
+                    proc,
+                    [
+                        failed(argument, "not_a_regular_file"),
+                        ok("ok.md", ABC_DIGEST),
+                    ],
+                    1,
+                )
+                self.assertNotIn(TWO_BLOCK_DIGEST.encode("ascii"), proc.stdout)
+
+    def test_ac2_all_cases_in_one_invocation_keep_argument_order(self):
+        arguments = list(self.cases().values())
+        proc = self.digest(*arguments, "ok.md")
+        self.assert_array(
+            proc,
+            [failed(a, "not_a_regular_file") for a in arguments]
+            + [ok("ok.md", ABC_DIGEST)],
+            1,
+        )
+
+    @unittest.skipUnless(
+        os.path.islink("/proc/self") and os.path.exists("/etc/hosts"),
+        "/proc/self is not a symlink here, or /etc/hosts does not exist",
+    )
+    def test_ac2_proc_self_root_alias_of_a_file_is_refused(self):
+        hosts = Path("/etc/hosts").read_bytes()
+        expected = "sha256:" + hashlib.sha256(hosts).hexdigest()
+        proc = self.digest("/proc/self/root/etc/hosts", "/etc/hosts")
+        self.assert_array(
+            proc,
+            [
+                failed("/proc/self/root/etc/hosts", "not_a_regular_file"),
+                ok("/etc/hosts", expected),
+            ],
+            1,
+        )
+
+
+# ---------------------------------------------------------------- AC-3 ----
+
+
+class TestUnchangedResultsWithoutSymlinks(WalkCase):
+    """AC-3: results for paths without a symlink component stay as they are."""
+
+    def test_ac3_missing_spellings(self):
+        self.write("plain.md", b"abc")
+        self.write("a.md", b"abc")
+        for argument in (
+            "plain.md/child.md",
+            "no-such-dir/a.md",
+            "",
+            "a.md/",
+            "a.md/.",
+        ):
+            with self.subTest(argument):
+                proc = self.digest(argument)
+                self.assert_array(proc, [failed(argument, "missing")], 1)
+
+    def test_ac3_directory_required_final_component_is_not_a_regular_file(
+        self,
+    ):
+        self.make_dir("dir")
+        self.link("dir", "link-to-dir")
+        for argument in ("dir/", "link-to-dir/"):
+            with self.subTest(argument):
+                proc = self.digest(argument)
+                self.assert_array(
+                    proc, [failed(argument, "not_a_regular_file")], 1
+                )
+
+    def test_ac3_arguments_that_name_a_directory_are_not_regular_files(self):
+        self.make_dir("dir")
+        for argument in (".", "./", "/", "..", "dir", "dir/.", "dir/.."):
+            with self.subTest(argument):
+                proc = self.digest(argument)
+                self.assert_array(
+                    proc, [failed(argument, "not_a_regular_file")], 1
+                )
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "os.mkfifo is unavailable")
+    def test_ac3_fifo_as_an_intermediate_component_is_missing(self):
+        os.mkfifo(self.tmp / "fifo")
+        for argument in ("fifo/x", "fifo/"):
+            with self.subTest(argument):
+                # digest() has a timeout: a hang fails instead of blocking.
+                proc = self.digest(argument)
+                self.assert_array(proc, [failed(argument, "missing")], 1)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "os.mkfifo is unavailable")
+    def test_ac3_fifo_as_the_final_component_is_not_a_regular_file(self):
+        os.mkfifo(self.tmp / "fifo")
+        self.make_dir("sub")
+        os.mkfifo(self.tmp / "sub" / "fifo")
+        for argument in ("fifo", "sub/fifo", str(self.tmp / "sub" / "fifo")):
+            with self.subTest(argument):
+                proc = self.digest(argument)
+                self.assert_array(
+                    proc, [failed(argument, "not_a_regular_file")], 1
+                )
+
+    def test_ac3_equivalent_spellings_of_a_plain_path_share_one_digest(self):
+        self.write("sub/a.md", b"abc")
+        arguments = [
+            "sub/a.md",
+            "sub/../sub/a.md",
+            "sub//a.md",
+            "./sub/a.md",
+            "sub/./a.md",
+            str(self.tmp / "sub" / "a.md"),
+        ]
+        proc = self.digest(*arguments)
+        self.assert_array(
+            proc, [ok(a, ABC_DIGEST) for a in arguments], 0
+        )
+
+    def test_ac3_dot_dot_climbs_the_real_directory_structure(self):
+        self.write("a.md", b"abc")
+        self.make_dir("sub/deeper")
+        proc = self.digest("../a.md", "deeper/../../a.md", cwd=self.tmp / "sub")
+        self.assert_array(
+            proc,
+            [ok("../a.md", ABC_DIGEST), ok("deeper/../../a.md", ABC_DIGEST)],
+            0,
+        )
+
+    def test_ac3_intermediate_directory_without_access_is_unreadable(self):
+        if IS_ROOT:
+            self.skipTest(
+                "running as root: permission denial cannot be produced"
+            )
+        self.write("locked/a.md", b"abc")
+        self.write("ok.md", b"abc")
+        locked = self.tmp / "locked"
+        locked.chmod(0o000)
+        self.addCleanup(locked.chmod, 0o700)
+        if os.access(locked, os.R_OK | os.X_OK):
+            self.skipTest("this filesystem still permits entering mode-000")
+        proc = self.digest("locked/a.md", "ok.md")
+        self.assert_array(
+            proc,
+            [failed("locked/a.md", "unreadable"), ok("ok.md", ABC_DIGEST)],
+            1,
+        )
+
+
+# ---------------------------------------------------------------- AC-4 ----
+
+# A driver that steps in on every directory-only open made relative to a
+# directory descriptor. Before the real open it replaces the named directory
+# with a symlink to an outside directory that holds a file of the same name.
+# argv: script, outside directory, mode, paths...; mode is `all` (swap at
+# every such open), `none` (a control that swaps nothing) or the 0-based
+# index of the one open to swap. It reports how many such opens it saw and
+# how many it swapped on stderr.
+DIR_SWAP_DRIVER = """\
+import os
+import runpy
+import sys
+
+script, outside, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+real_open = os.open
+state = {"seen": 0, "swapped": 0}
+
+
+def should_swap(index):
+    if mode == "all":
+        return True
+    if mode == "none":
+        return False
+    return index == int(mode)
+
+
+def stepping_in_open(path, flags, mode_bits=0o777, *, dir_fd=None):
+    if dir_fd is not None and flags & os.O_DIRECTORY:
+        index = state["seen"]
+        state["seen"] += 1
+        if should_swap(index):
+            name = os.fsencode(path)
+            os.rename(name, name + b".moved", src_dir_fd=dir_fd,
+                      dst_dir_fd=dir_fd)
+            os.symlink(outside, name, dir_fd=dir_fd)
+            state["swapped"] += 1
+    return real_open(path, flags, mode_bits, dir_fd=dir_fd)
+
+
+os.open = stepping_in_open
+os.supports_dir_fd.add(stepping_in_open)
+sys.argv = [script] + sys.argv[4:]
+try:
+    runpy.run_path(script, run_name="__main__")
+finally:
+    sys.stderr.write(
+        "driver: dir-opens=%d swaps=%d\\n" % (state["seen"], state["swapped"])
+    )
+"""
+
+
+class TestDirectorySwappedDuringTheWalk(WalkCase):
+    """AC-4: a directory replaced by a symlink between the walk's steps."""
+
+    def setUp(self):
+        super().setUp()
+        self.write("work/sub/a.md", b"abc")
+        self.write("work/sub/deep/a.md", b"abc")
+        # The outside directory holds a file of the same name, with content
+        # whose digest must never reach stdout.
+        self.write("outside/a.md", TWO_BLOCK_INPUT)
+        self.work = self.tmp / "work"
+        self.driver = self.write("dir-swap-driver.py", DIR_SWAP_DRIVER.encode())
+
+    def run_swapped(self, mode, *paths):
+        return run_python(
+            [
+                str(self.driver),
+                str(SCRIPT),
+                str(self.tmp / "outside"),
+                mode,
+                *paths,
+            ],
+            cwd=self.work,
+        )
+
+    def test_ac4_control_without_a_swap_the_file_is_hashed(self):
+        proc = self.run_swapped("none", "sub/a.md")
+        self.assert_array(proc, [ok("sub/a.md", ABC_DIGEST)], 0)
+        # Non-vacuity: the driver really saw the directory-only open.
+        self.assertIn(b"dir-opens=1 swaps=0", proc.stderr)
+
+    def test_ac4_first_directory_swapped_for_a_link_is_not_followed(self):
+        proc = self.run_swapped("all", "sub/a.md")
+        self.assert_array(
+            proc, [failed("sub/a.md", "not_a_regular_file")], 1
+        )
+        self.assertNotIn(TWO_BLOCK_DIGEST.encode("ascii"), proc.stdout)
+        self.assertIn(b"swaps=1", proc.stderr)
+
+    def test_ac4_deeper_directory_swapped_for_a_link_is_not_followed(self):
+        proc = self.run_swapped("1", "sub/deep/a.md")
+        self.assert_array(
+            proc, [failed("sub/deep/a.md", "not_a_regular_file")], 1
+        )
+        self.assertNotIn(TWO_BLOCK_DIGEST.encode("ascii"), proc.stdout)
+        self.assertIn(b"dir-opens=2 swaps=1", proc.stderr)
+
+    def test_ac4_directory_required_final_swapped_for_a_link_is_refused(self):
+        proc = self.run_swapped("1", "sub/deep/")
+        self.assert_array(
+            proc, [failed("sub/deep/", "not_a_regular_file")], 1
+        )
+        self.assertIn(b"dir-opens=2 swaps=1", proc.stderr)
+
+
+class TestInspectionAfterAFailedDirectoryOpen(WalkCase):
+    """AC-4 (continued): when the post-failure inspection disagrees with the
+    failed open, or fails itself, the argument gets an error token and never
+    a digest."""
+
+    def run_with_lstat(self, fake, *paths):
+        real_lstat = os.lstat
+
+        def patched(path, *args, dir_fd=None, **kwargs):
+            if dir_fd is not None:
+                return fake(path, dir_fd)
+            return real_lstat(path, *args, dir_fd=dir_fd, **kwargs)
+
+        with mock.patch.object(os, "lstat", patched):
+            return run_in_process(*paths)
+
+    def decode(self, outcome):
+        code, stdout, _stderr = outcome
+        return code, json.loads(stdout.decode("utf-8"))
+
+    def test_ac4_component_reported_as_a_directory_afterwards_is_an_error(
+        self,
+    ):
+        self.write("plain.md", b"abc")
+        directory_stat = os.lstat(self.tmp)
+        target = str(self.tmp / "plain.md" / "child.md")
+        code, array = self.decode(
+            self.run_with_lstat(lambda path, dir_fd: directory_stat, target)
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(len(array), 1)
+        self.assertIsNone(array[0]["sha256"])
+        self.assertIn(
+            array[0]["error"],
+            {"missing", "not_a_regular_file", "unreadable"},
+        )
+
+    def test_ac4_failing_inspection_is_unreadable(self):
+        self.write("plain.md", b"abc")
+
+        def refuse(path, dir_fd):
+            raise PermissionError(13, "Permission denied")
+
+        target = str(self.tmp / "plain.md" / "child.md")
+        code, array = self.decode(self.run_with_lstat(refuse, target))
+        self.assertEqual(code, 1)
+        self.assertEqual(
+            array, [failed(target, "unreadable")]
+        )
+
+    def test_ac4_component_gone_by_the_time_it_is_inspected_is_missing(self):
+        self.write("plain.md", b"abc")
+
+        def vanished(path, dir_fd):
+            raise FileNotFoundError(2, "No such file or directory")
+
+        target = str(self.tmp / "plain.md" / "child.md")
+        code, array = self.decode(self.run_with_lstat(vanished, target))
+        self.assertEqual(code, 1)
+        self.assertEqual(array, [failed(target, "missing")])
+
+
+# ---------------------------------------------------------------- AC-5 ----
+
+
+class TestMissingCapabilitiesStopTheScript(WalkCase):
+    """AC-5: without a capability the walk needs, exit 2, no array, a message
+    on stderr that names what is missing."""
+
+    CAPABILITY_WORDS = ("dir_fd", "O_NOFOLLOW", "O_DIRECTORY")
+
+    def withdrawals(self):
+        return [
+            ("no-follow flag", "O_NOFOLLOW", lambda: without_os_attribute(
+                "O_NOFOLLOW")),
+            ("directory-only flag", "O_DIRECTORY", lambda: without_os_attribute(
+                "O_DIRECTORY")),
+            ("descriptor-relative open", "dir_fd", without_dir_fd_open),
+        ]
+
+    def test_ac5_control_the_in_process_run_hashes_a_regular_file(self):
+        # Non-vacuity: with every capability present the same run succeeds.
+        target = self.write("a.md", b"abc")
+        code, stdout, stderr = run_in_process(str(target))
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(
+            json.loads(stdout.decode("utf-8")),
+            [ok(str(target), ABC_DIGEST)],
+        )
+
+    def test_ac5_each_withdrawn_capability_exits_2_with_a_named_message(self):
+        target = self.write("a.md", b"abc")
+        for label, word, withdraw in self.withdrawals():
+            with self.subTest(label):
+                if label != "descriptor-relative open" and not hasattr(
+                    os, word
+                ):
+                    self.skipTest(f"os.{word} does not exist on this platform")
+                with withdraw():
+                    code, stdout, stderr = run_in_process(str(target))
+                self.assertEqual(code, 2, stderr)
+                self.assertEqual(stdout, b"")
+                self.assertIn(word, stderr)
+                self.assertNotIn("Traceback", stderr)
+                # Only the withdrawn capability is named.
+                for other in self.CAPABILITY_WORDS:
+                    if other != word:
+                        self.assertNotIn(other, stderr)
+
+    def test_ac5_several_withdrawn_capabilities_are_all_named(self):
+        if not (hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")):
+            self.skipTest("the open flags do not exist on this platform")
+        target = self.write("a.md", b"abc")
+        with without_os_attribute("O_NOFOLLOW"), without_os_attribute(
+            "O_DIRECTORY"
+        ), without_dir_fd_open():
+            code, stdout, stderr = run_in_process(str(target))
+        self.assertEqual(code, 2, stderr)
+        self.assertEqual(stdout, b"")
+        for word in self.CAPABILITY_WORDS:
+            self.assertIn(word, stderr)
+
+    def test_ac5_the_os_module_is_restored_after_each_withdrawal(self):
+        before = (
+            getattr(os, "O_NOFOLLOW", None),
+            getattr(os, "O_DIRECTORY", None),
+            os.open in os.supports_dir_fd,
+        )
+        target = self.write("a.md", b"abc")
+        for _label, word, withdraw in self.withdrawals():
+            if word != "dir_fd" and not hasattr(os, word):
+                continue
+            with withdraw():
+                run_in_process(str(target))
+        after = (
+            getattr(os, "O_NOFOLLOW", None),
+            getattr(os, "O_DIRECTORY", None),
+            os.open in os.supports_dir_fd,
+        )
+        self.assertEqual(before, after)
+
+
+# ---------------------------------------------------------------- AC-6 ----
+
+
+class TestDescriptorsAreReleased(WalkCase):
+    """AC-6: every descriptor the run opened is closed again."""
+
+    def run_recording_descriptors(self, *arguments):
+        live = set()
+        opened = []
+        real_open, real_close = os.open, os.close
+
+        def recording_open(path, flags, mode=0o777, *, dir_fd=None):
+            fd = real_open(path, flags, mode, dir_fd=dir_fd)
+            live.add(fd)
+            opened.append(fd)
+            return fd
+
+        def recording_close(fd):
+            real_close(fd)
+            live.discard(fd)
+
+        supports = set(os.supports_dir_fd) | {recording_open}
+        with mock.patch.object(os, "open", recording_open), mock.patch.object(
+            os, "close", recording_close
+        ), mock.patch.object(os, "supports_dir_fd", supports):
+            outcome = run_in_process(*arguments)
+        leaked = set(live)
+        for fd in leaked:  # do not leak into the rest of the suite
+            real_close(fd)
+        return outcome, opened, leaked
+
+    def test_ac6_no_descriptor_survives_a_mixed_run(self):
+        self.write("a.md", b"abc")
+        self.write("outside/a.md", TWO_BLOCK_INPUT)
+        self.make_dir("dir")
+        self.link("dir", "link-to-dir")
+        self.link("outside", "link")
+        arguments = [
+            str(self.tmp / "a.md"),  # a digest
+            str(self.tmp / "no-such-dir" / "a.md"),  # missing
+            str(self.tmp / "link" / "a.md"),  # not_a_regular_file, link
+            str(self.tmp / "a.md") + "/",  # directory required, fails
+            str(self.tmp / "dir") + "/",  # directory required, opens
+            str(self.tmp / "link-to-dir") + "/",  # directory required, link
+            str(self.tmp / "dir" / "missing.md"),  # missing final element
+        ]
+        expected = [
+            ok(arguments[0], ABC_DIGEST),
+            failed(arguments[1], "missing"),
+            failed(arguments[2], "not_a_regular_file"),
+            failed(arguments[3], "missing"),
+            failed(arguments[4], "not_a_regular_file"),
+            failed(arguments[5], "not_a_regular_file"),
+            failed(arguments[6], "missing"),
+        ]
+        if not IS_ROOT:
+            # An `unreadable` argument, where permission denial can be made.
+            self.write("locked/a.md", b"abc")
+            locked_dir = self.tmp / "locked"
+            locked_dir.chmod(0o000)
+            self.addCleanup(locked_dir.chmod, 0o700)
+            if not os.access(locked_dir, os.R_OK | os.X_OK):
+                locked = str(locked_dir / "a.md")
+                arguments.append(locked)
+                expected.append(failed(locked, "unreadable"))
+        (code, stdout, stderr), opened, leaked = (
+            self.run_recording_descriptors(*arguments)
+        )
+        self.assertEqual(code, 1, stderr)
+        self.assertEqual(json.loads(stdout.decode("utf-8")), expected)
+        # Non-vacuity: the walk opened directory descriptors at all.
+        self.assertGreaterEqual(len(opened), len(arguments), opened)
+        self.assertEqual(leaked, set(), f"descriptors left open: {leaked}")
+
+    def test_ac6_a_digest_only_run_leaves_no_descriptor_open(self):
+        self.write("sub/a.md", b"abc")
+        argument = str(self.tmp / "sub" / "a.md")
+        (code, stdout, stderr), opened, leaked = (
+            self.run_recording_descriptors(argument)
+        )
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(leaked, set())
+        self.assertTrue(opened)
 
 
 if __name__ == "__main__":
