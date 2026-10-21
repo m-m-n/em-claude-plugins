@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-heredoc-delim-brace-case
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: cba0177e30acf173dc73352f05b05bf7db261db9
+last_input_digest: sha256:c65af2d5bb267c348b8d6c1bea1b861b4e34e695619773d98afd1b1b7dee7a2a
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:c65af2d5bb267c348b8d6c1bea1b861b4e34e695619773d98afd1b1b7dee7a2a
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
