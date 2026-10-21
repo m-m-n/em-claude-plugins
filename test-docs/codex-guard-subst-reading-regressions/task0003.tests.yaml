@@ -1,0 +1,108 @@
+task_id: task0003
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: 943/943 and Ran 10861 tests, OK (skipped=1), before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, 943/943 and Ran 10867 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the test failed on the new rows TS21 (sh -c
+      string) and TS24 (zsh -c inside bash -c): empty standard output where a deny object was
+      expected (JSONDecodeError), for both copies; and on TS30 (zsh reached through env and a
+      path): a deny object where silence was expected, for both copies. TS31 (bash5.2 through
+      env, silent) already passed before the change; it stays as a pin that a bash string with
+      a version suffix is never re-read and was not observed red.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the test failed on the new rows TS4 (bash
+      repeat x case y in y) and TS18 (bash repeat 1 { case x in x): empty standard output where
+      a deny object was expected (JSONDecodeError), for both copies. TS13, TS14 and TS23 already
+      passed before the change (the pre-change reading is bash's own for coproc); they pin the
+      bash reading and the rule that a bash string is never re-read, and were not observed red.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the test failed on the new row TS3 (zsh coproc
+      echo case x in x): empty standard output where a deny object was expected
+      (JSONDecodeError), for both copies. TS15, TS16 and TS17 already passed before the change
+      (the pre-change reading is zsh's own for repeat and for coproc {); they pin the zsh
+      reading and were not observed red.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts27_a_top_level_coproc_form_followed_by_a_long_run_is_read_twice_in_time
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the CASES test failed on the new rows TS19 and
+      TS20 (top-level coproc and repeat forms) and the TS27 timing test failed: empty standard
+      output where a deny object was expected (JSONDecodeError), for both copies. The earlier
+      feature's top-level coproc and repeat rows (its TS46, TS47, TS50 deny and TS53, TS55
+      silent) are pre-existing CASES rows of the same test; they passed before the change and
+      after it, and were not observed red.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestRereadFallback.test_a_reread_that_raises_an_unexpected_error_falls_back_to_the_first_read
+      - tests.test_codex_hook_interactive_guard.TestRereadFallback.test_a_reread_that_raises_undecidable_falls_back_to_the_first_read
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the two TestRereadFallback tests failed with
+      "1 != 2 : the string is read twice" (the module-level parse built one parser, so there
+      was no re-read to fail), for both copies and for each exception class tried (RuntimeError,
+      KeyError, RecursionError, and _Undecidable). TS22 in CASES already passed before the
+      change (its first line settles python3 -i at a checkpoint, which the pre-change single
+      read already judged); it pins the fallback end to end and was not observed red.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_ts32_a_second_level_string_that_is_read_twice_counts_once_toward_the_limit
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit.test_ts32_one_more_character_in_the_second_string_and_it_is_not_read
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing structural classes
+      (TestNoRecursion, TestSubstitutionSkipCallStructure, TestSharedQuotedUnitReader,
+      TestNestedParseErrorContainment, TestStaticConstraints) detect the structure the
+      criterion keeps (no recursion, one try in _scan, find_deny with one parameter, standard
+      library only); no red state occurred for this change. The two TS32 tests pass without a
+      re-read as well: the pre-change guard reads the first second-level string once and counts
+      it once, so they pin that a string read twice still counts once and could not be made to
+      fail before the implementation. Against a copy whose count was doubled for unknown-kind
+      strings the exact-limit test returned silence instead of the deny, so the test does
+      detect a double count.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+    red_confirmed: true
+    red_reason: >-
+      The coproc entry of RULE_MARKERS in the loop and coproc head rule changed meaning (the
+      word after the NAME is at a command position only with the coproc NAME rule on) and now
+      pins "with the rule on, the word after it is at a command position as well".
+      test_the_docstring_states_the_four_rules_of_the_reading of TestSubstitutionSkipDocumentation
+      failed on that marker for both copies with the pre-change guard standing in for them
+      (marker not found in the docstring of _skip_substitution), and passes after the docstring
+      is rewritten. The other pinned markers and passage anchors, in this class and in
+      TestGuardDocumentation, stay verbatim and passed before and after.
+  AC-8:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable
+      - tests.test_codex_hook_interactive_guard.TestCopies
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing TestCasesTable (unique commands,
+      every row on both copies, so each pre-existing row keeps its verdict) and TestCopies
+      (byte-identical copies, no bytecode cache) detect these behaviors; no red state occurred
+      for this change, which keeps pre-existing behavior. The full test command passes and no
+      plugin version is changed, both of which are build-level outcomes with nothing to fail
+      first.

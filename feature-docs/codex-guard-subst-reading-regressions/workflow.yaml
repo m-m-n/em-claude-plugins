@@ -1,0 +1,368 @@
+schema_version: 1
+feature: codex-guard-subst-reading-regressions
+created: '2026-10-21'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: $( ) の読み取りが for の語一覧のコメント・空括弧内の行継続・シェル固有の coproc/repeat を取り違える
+
+  Notion: <notion-url>
+
+
+  ## 現象 (必須)
+
+  feature `codex-guard-case-reading-fixes`（`$( )` の中の case 文の読み取りの修正）で、`codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）の `_skip_substitution` がコマンドの位置を状態として追跡するようになった。review round 2 で、その読み取りに次の 3 種類の後退が見つかった（いずれも medium、deferred）。どれも基準コミットでは deny だった入力が、置換の読み違いで判定不能（`_Undecidable`）になり、後ろの `python3 -i` を拒否しない（拒否漏れ）。
+
+  1. zsh の `for name (words)` の語一覧を、算術展開と同じ `a` のコンテキストとして積んでいる。`a` ではコメントを読み飛ばさないため、語一覧のコメントにある引用符が引用を開く（stable\_id `90560b3ee3ad0908`）。
+  2. `_empty_parens_end` が空白とタブしか読み飛ばさず、`f(` と `)` の間のバックスラッシュと改行の対を扱わない。関数の頭を認識できず、本体の `case` を引数として読み、パターンの `)` で置換を早く閉じる（stable\_id `3ccce2e39b35b26b`。comprehensive と security の両方が報告）。
+  3. FR11 の coproc の規則（`coproc WORD` の後の語をコマンドの位置にする）は bash の文法で、zsh の coproc は名前を取らない。また `repeat` は zsh だけの予約語。読み取りがシェルの種類を区別しないため、zsh の `coproc echo case x in x` や bash の `repeat x case y in y` で `case` を文の始まりと読み違える（stable\_id `4d83e42f2dca1178` / `d86a2ee0791fc83d`）。
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に次を設定した PreToolUse(Bash) の JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+  2. 欠陥 1: `echo "$(for x (a # "` + 改行 + `) { :; })"; python3 -i` → 無出力になる（期待は deny）
+  3. 欠陥 2: 内側の文字列 `echo "$(f(\` + 改行 + `) { case x in x) printf '%s' '"';; esac; }; f)"; python3 -i` を `bash -c ` + shlex.quote で包んだもの → 無出力になる（期待は deny）
+  4. 欠陥 3: `zsh -c 'echo "$(coproc echo case x in x)"; python3 -i'` → 無出力になる（期待は deny）
+
+  ## 期待する挙動 (必須)
+
+  - 語一覧では語をコマンドの位置で読まない点だけを保ち、`#` のコメントと改行は `p` のコンテキストと同じに読む
+  - `_empty_parens_end` は空白とタブに加えて、バックスラッシュと改行の対も読み飛ばす
+  - coproc の NAME と repeat の予約語を、呼び出し元のシェル（`bash -c` / `zsh -c`）に合わせて扱う。シェルが分からない場合の扱いは SPEC（FR11）で決める（TS47 / TS50 の期待値と衝突しない形）
+  - 読み取りの線形性（NFR1）を保つ
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上の入力を追加し、両コピーに流す
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+
+  - `em-review/scripts/codex-hook-interactive-guard.py:2389`（for の語一覧を `a` で積む箇所）
+  - `em-review/scripts/codex-hook-interactive-guard.py:2476`（`_empty_parens_end`）
+  - `em-review/scripts/codex-hook-interactive-guard.py:2225`（HEAD\_COPROC の後の扱い）
+  - `em-workflow/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-case-reading-fixes/reviews/round2.yaml`（ブランチ `em-workflow/codex-guard-case-reading-fixes/integration`）
+
+  ## 実害・発生条件 (任意)
+
+  `$( )` の中に、コメントを含む zsh の for の語一覧、括弧の間に行継続を挟んだ関数定義、zsh の coproc の後の引数や bash の `repeat` のいずれかを書いた場合だけ。いずれも拒否漏れ（fail-open）で、無人実行が入力待ちで止まりうる。
+parent_branch: em-workflow/codex-guard-subst-reading-regressions/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.72
+      '2': 0.28
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.31
+      '2': 0.6900000000000001
+      '3': 0.0
+  at: '2026-10-21T20:34:33+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: d984d287275ce29723be16e1fa10d0b3bb7c373a
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: f1b5917f530c25655ff4a20d4885aa93f25a970a
+- id: implement
+  status: completed
+  completed_at_commit: 96fa688878a7e684ec3200620d16fc71c7942418
+  base_commit: f201d52d550e1e2b7c2f6ecb621671239bfedba2
+- id: review
+  status: completed
+  completed_at_commit: 597226604a0824adee9184b93d356ec22c26b889
+- id: verify
+  status: completed
+  completed_at_commit: 2f700ef6422b0abdda737bbf9159195d45fe8357
+  result: pass
+  failed_items: []
+  summary: 'test_command passed (run-destructive-guard all ok; unittest 10871 tests OK, skipped=1). Copies byte-identical (TS34). No plugin version change since implement base (TS38). CASES diff adds rows only (TS40). Manual items: docstring review covered by TestSubstitutionSkipDocumentation; FR6 re-read adopted as specified, no SPEC change requested. excluded requirements: none.'
+- id: retrospect
+  status: completed
+  completed_at_commit: eb6a6abe8e4b9aa80baa50008c954f44c5e8d381
+tasks:
+  task0001:
+    title: "zsh for word list read in a context of its own"
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills: [backend-impl]
+    domains: [input-handling]
+    complexity: high
+    requirements: [FR1, FR7, FR8, FR9, NFR1, NFR2, NFR3, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/codex-guard-subst-reading-regressions/task0001
+  task0002:
+    title: "Empty () check skips continuation pairs"
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills: [backend-impl]
+    domains: [input-handling]
+    complexity: medium
+    requirements: [FR2, FR7, FR8, FR9, NFR1, NFR2, NFR3, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/codex-guard-subst-reading-regressions/task0002
+  task0003:
+    title: "Shell kind for coproc and repeat, and one re-read of unknown-kind strings"
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills: [backend-impl]
+    domains: [input-handling]
+    complexity: high
+    requirements: [FR3, FR4, FR5, FR6, FR7, FR8, FR9, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/codex-guard-subst-reading-regressions/task0003
+review:
+  status: completed
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary:
+    - perspective: performance
+      reason: "NFR1 requires linear-time reading and FR6 adds a one-time re-read of unknown-kind strings; check the scanner stays linear"
+    cross_validation: true
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec, performance]
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: for の語一覧は専用の文脈で読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests:
+    - TS1
+    - TS5
+    - TS6
+    - TS7
+    - TS8
+    - TS26
+    - TS28
+  FR2:
+    title: 空の () の判定で行継続の対を読み飛ばす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests:
+    - TS2
+    - TS9
+    - TS10
+    - TS11
+    - TS12
+    - TS25
+    - TS29
+  FR3:
+    title: シェルの種類を読み取りに渡す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0003]
+    tests:
+    - TS3
+    - TS4
+    - TS13
+    - TS14
+    - TS15
+    - TS16
+    - TS17
+    - TS18
+    - TS21
+    - TS23
+    - TS24
+    - TS30
+    - TS31
+  FR4:
+    title: coproc をシェルごとに読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0003]
+    tests:
+    - TS3
+    - TS13
+    - TS14
+    - TS16
+    - TS17
+    - TS23
+    - TS30
+    - TS31
+  FR5:
+    title: repeat をシェルごとに読む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0003]
+    tests:
+    - TS4
+    - TS15
+    - TS18
+  FR6:
+    title: シェルが分からない文字列は、読めなければ 1 回だけ読み直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0003]
+    tests:
+    - TS19
+    - TS20
+    - TS21
+    - TS22
+    - TS23
+    - TS27
+    - TS31
+    - TS32
+    - TS33
+    - TS40
+  FR7:
+    title: 両コピーを同時に直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests:
+    - TS34
+  FR8:
+    title: docstring を更新する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests:
+    - TS35
+  FR9:
+    title: CASES に再現と派生の行を足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS8
+    - TS9
+    - TS10
+    - TS11
+    - TS12
+    - TS13
+    - TS14
+    - TS15
+    - TS16
+    - TS17
+    - TS18
+    - TS19
+    - TS20
+    - TS21
+    - TS22
+    - TS23
+    - TS24
+    - TS25
+    - TS26
+    - TS27
+    - TS28
+    - TS29
+    - TS30
+    - TS31
+    - TS40
+  NFR1:
+    title: 線形時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests:
+    - TS25
+    - TS26
+    - TS27
+    - TS32
+  NFR2:
+    title: 再帰を使わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests:
+    - TS36
+  NFR3:
+    title: 標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests:
+    - TS37
+  NFR4:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests:
+    - TS38
+  NFR5:
+    title: 構造の制約を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0003]
+    tests:
+    - TS39
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
