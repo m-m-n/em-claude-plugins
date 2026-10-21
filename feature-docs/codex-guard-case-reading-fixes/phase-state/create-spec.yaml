@@ -1,10 +1,10 @@
 schema_version: 1
 feature: codex-guard-case-reading-fixes
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 2
 base_revision: df04d93834e454acdacaf27b62787a3f5e211771
-last_input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
+last_input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
 active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
@@ -15,6 +15,12 @@ packets:
       status: answered
     - question_id: design-step.decision
       status: answered
+  create-spec-q0002:
+    status: issued
+    issued_at: '2026-10-21T09:58:00+09:00'
+    questions:
+    - question_id: requirement.loop-head-command-position
+      status: issued
 answers:
   requirement.line-continuation-scope:
     packet_id: create-spec-q0001
@@ -25,10 +31,8 @@ answers:
     - include_split
     freeform: null
     normalized_answer: 行継続は待ちフェーズの位置に加えて、case / in / esac の直後に付いた形と、キーワードを分断する形も読み飛ばしてキーワードとして読む
-    resolution_note: batch policy create-spec.requirement-clarification codex_consultation（harness
-      codex、1 turn）。Codex は include_split を推奨。両コピーへの JSON 入力で、直後の継続・分断の形が判定不能による拒否漏れ（in\<NL>,
-      esac\<NL>, i\<NL>n, es\<NL>ac）と誤拒否（case\<NL>, ca\<NL>se）になることを確認。オーケストレーターが写像を判断し
-      include_split を採用（拒否漏れを既知の残余として固定するより塞ぐ方が比較的良い）。Opus エスカレーションは不要
+    resolution_note: batch policy create-spec.requirement-clarification codex_consultation（harness codex、1 turn）。Codex は include_split を推奨。両コピーへの JSON 入力で、直後の継続・分断の形が判定不能による拒否漏れ（in\<NL>, esac\<NL>, i\<NL>n,
+      es\<NL>ac）と誤拒否（case\<NL>, ca\<NL>se）になることを確認。オーケストレーターが写像を判断し include_split を採用（拒否漏れを既知の残余として固定するより塞ぐ方が比較的良い）。Opus エスカレーションは不要
   design-step.decision:
     packet_id: create-spec-q0001
     answered_at: '2026-10-21T08:24:30+09:00'
@@ -38,8 +42,7 @@ answers:
     - decide_autonomously
     freeform: null
     normalized_answer: design step を省略する（analyst 推奨の skip。UI の無いフック解析処理の修正、デザインシステム候補ゼロ）
-    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst
-      推奨の skip
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
@@ -52,6 +55,10 @@ worker_runs:
 - request_id: create-spec-run-0003
   status: completed
   input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
+  output_digest: null
+- request_id: create-spec-run-0004
+  status: needs_user_input
+  input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
   output_digest: null
 artifacts:
 - path: feature-docs/codex-guard-case-reading-fixes/REQUIREMENTS.md
