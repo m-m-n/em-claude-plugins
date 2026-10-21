@@ -106,7 +106,11 @@ workflow:
   status: completed
   completed_at_commit: 597226604a0824adee9184b93d356ec22c26b889
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 2f700ef6422b0abdda737bbf9159195d45fe8357
+  result: pass
+  failed_items: []
+  summary: 'test_command passed (run-destructive-guard all ok; unittest 10871 tests OK, skipped=1). Copies byte-identical (TS34). No plugin version change since implement base (TS38). CASES diff adds rows only (TS40). Manual items: docstring review covered by TestSubstitutionSkipDocumentation; FR6 re-read adopted as specified, no SPEC change requested. excluded requirements: none.'
 - id: retrospect
   status: pending
 tasks:
