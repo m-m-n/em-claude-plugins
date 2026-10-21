@@ -1,0 +1,44 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 943/943 passed; python3 -m unittest discover -s tests -> 10861 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and with this record in place: run-destructive-guard.py -> 943/943 passed; python3 -m unittest discover -s tests -> 10866 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (both copies) with rows TS1 to TS9 added: TS1, TS2, TS4 and TS7 failed with json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0), because standard output was empty where deny was expected (the pattern's ) ended the paren scan, the quotes of the rest of the substitution were removed, and the terminator line was taken as body); TS3 failed with an AssertionError (a deny object printed where silent was expected, the unquoted line closed the body). TS5 and TS6 passed before the change (they pin the paren-counted reading that already agrees with zsh) and guard the new path; no red state occurred for those two rows"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "TS8 and TS9 as listed passed against the unchanged hook (both copies), so no red state occurred for them: the unchanged reading also ends in silence for TS8 (the heredoc body is never closed) and denies the launch before the delimiter line for TS9. The red state is observed for one extra row added next to TS9 (the delimiter holds a case statement with no esac and a later line equals the delimiter with its quotes removed): the unchanged hook printed a deny object where silent was expected, an AssertionError, because the paren scan registered the quote-removed delimiter and that line closed the body"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing TestCasesTable.test_cases_run_against_both_copies runs every pre-existing CASES row (the ${...} delimiter rows of codex-guard-heredoc-delim-brace-quote and the parenthesised-range rows included) against both copies; no row was removed or edited, and all of them passed before the change and after it, so no red state occurred for this criterion"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing TestSharedQuotedUnitReader (the only _Parser method that calls _skip_substitution is the one reader that parse and _remove_range_quotes call), TestSubstitutionSkipCallStructure (nothing reachable from _skip_substitution is the skip, the reader, parse or _remove_range_quotes) and TestNoRecursion (no recursion, no call cycle) detect a violation of the call structure; they passed before the change and after it with no edit, so no red state occurred for this criterion"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput.test_case_substitutions_in_delimiter_ranges_at_scale_are_read_in_time_and_the_launch_after_them_is_denied
+    red_confirmed: true
+    red_reason: "Run against the unchanged hook (both copies): all three shapes (one long range, many ranges, many longer ranges; each input longer than 100,000 characters) failed with AssertionError: '' == '' : the launch after the last terminator is denied, because no delimiter was registered the way zsh registers it, no terminator line ended its body, and standard output was empty where deny was expected"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestDelimiterSubstitutionDocumentation
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+    red_confirmed: true
+    red_reason: "TestDelimiterSubstitutionDocumentation, run against the unchanged hook (both copies), failed three ways: the _read_quoted_unit docstring still held 'the character at `start` is a backslash, a single quote or a double quote' (AssertionError: unexpectedly found), the _skip_substitution docstring still held '(`$(`, `$((` or a backtick) inside double quotes' (AssertionError: unexpectedly found), and the module docstring and the docstrings of _remove_range_quotes, _read_quoted_unit and _skip_substitution did not contain the common marker or their own reading marker (AssertionError: not found). TestGuardDocumentation and TestSubstitutionSkipDocumentation are the existing documentation tests; they passed before the change and after it with no edit"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing TestCopies.test_the_two_copies_are_byte_identical detects a difference between the two copies, and TestStaticConstraints.test_each_copy_stays_within_the_constraints detects an import outside the standard library; the second copy was made from the first by copying the file right after each edit, so the byte-identity test never saw them differ, and no red state occurred for this change. That the project test command passes as a whole is checked by running it, not by one test"
