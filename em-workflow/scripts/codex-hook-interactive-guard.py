@@ -328,7 +328,24 @@ Decision flow:
      first operand of a shell `-c` found inside a command string is judged
      too, at every level, with the same rules: the string is split into
      simple commands, and each is read and judged exactly as a command at the
-     top level, wrappers and options included. The connection passes down
+     top level, wrappers and options included. Every such string has a kind,
+     bash, zsh or unknown, that decides how its double-quoted command
+     substitutions, the nested ones included, read `coproc` and `repeat`. The
+     kind comes from the basename of the shell command word that directly holds
+     the string, the word left after assignments, option-less wrappers and a
+     path, matched the way the interpreter families are matched (the name itself,
+     or the name followed only by digits and dots): `bash`, `bash5.2` and
+     `/usr/bin/bash` are bash; `zsh`, `zsh5.9` and `/usr/bin/zsh` are zsh; `sh`,
+     `dash`, `ksh` and their suffixed forms are unknown. Only the direct holder
+     decides, so a `zsh -c` string inside a `bash -c` string is zsh, and the hook
+     command itself is of unknown kind. In bash, `coproc` takes a NAME (the word
+     after an ordinary word that follows `coproc` is at a command position) and
+     `repeat` is an ordinary command name; in zsh, `coproc` takes no NAME (that
+     ordinary word is the first word of a simple command and the words after it
+     are arguments) and `repeat` is followed by a count and then a command
+     position; a string of unknown kind is read with both the bash rule for
+     `coproc` and the zsh rule for `repeat` (step 9 for the one re-read).
+     The connection passes down
      through every level, so a command inside a nested string is connected
      when the command that holds the string is. A string the reader cannot
      read (an unbalanced quote, an unterminated heredoc, an unclosed group, a
@@ -385,7 +402,17 @@ Decision flow:
      the hook command and to every nested literal shell `-c` string, and an
      undecidable string counts at its full length toward NESTED_READ_LIMIT. An
      error other than _Undecidable is handled as before: a nested string is
-     skipped, and the hook command gives no output.
+     skipped, and the hook command gives no output. A string of unknown kind
+     (the hook command and the `-c` string of a shell other than bash and zsh)
+     that stops undecidable is read once more, with neither the bash rule for
+     `coproc` nor the zsh rule for `repeat`: `coproc` followed by an ordinary
+     word reads that word as the first word of a simple command, and `repeat` is
+     an ordinary command name. When that re-read reaches the end of the string,
+     its commands are the commands of the string; when it fails, with
+     `_Undecidable` or with any other exception, the first read's `_Undecidable`
+     and the commands that read settled up to its last checkpoint are used. A
+     string of bash or zsh kind is never re-read, a string is read at most twice,
+     and one that is re-read counts once, at its length, toward NESTED_READ_LIMIT.
 
 Everything the guard cannot positively identify passes. A misreading costs a
 missed detection, never a stalled review. A string the reader cannot read to
@@ -428,8 +455,10 @@ COMMAND_POSITION_WORDS = (
 # next word is the name, or an empty `()` follows); the function name was read
 # (an empty `()` may follow); `for` was read (the next word is the name, or a `((` follows); the
 # `for` name was read (a zsh word list may follow); `select` or `repeat` was
-# read (the next word is an ordinary word); `coproc` was read (the next word is
-# at a command position and may be a NAME).
+# read (the next word is an ordinary word; `repeat` starts this state only under
+# the zsh repeat rule, `_Parser.zsh_repeat`); `coproc` was read (the next word is
+# at a command position and, under the coproc NAME rule, `_Parser.coproc_name`,
+# may be a NAME).
 HEAD_NONE = 0
 HEAD_FIRST = 1
 HEAD_FUNCTION = 2
@@ -440,13 +469,36 @@ HEAD_NAME = 6
 HEAD_COPROC = 7
 
 # The head words, standalone and read at a command position, and the head state
-# each one starts.
+# each one starts. `function`, `for`, `select` and `coproc` are head words in
+# every reading. `repeat` is a head word only under the zsh repeat rule
+# (`_Parser.zsh_repeat`); without the rule it is an ordinary command word. What
+# follows `coproc` depends on the coproc NAME rule (`_Parser.coproc_name`): with
+# the rule an ordinary word after `coproc` is a NAME and the word after it is at a
+# command position, without it that word is the first word of a simple command
+# and the words after it are arguments.
 HEAD_AFTER_WORD = {
     "function": HEAD_FUNCTION,
     "for": HEAD_FOR,
     "select": HEAD_NAME,
     "coproc": HEAD_COPROC,
     "repeat": HEAD_NAME,
+}
+
+# The kind of the shell that holds a string, which decides the two rule switches
+# of the parser that reads it (`_Parser`, the module-level `parse`): the shell
+# is bash, is zsh, or is not known. The hook command and the strings of every
+# other shell (`sh`, `dash`, `ksh`) are of unknown kind.
+KIND_BASH = "bash"
+KIND_ZSH = "zsh"
+KIND_UNKNOWN = "unknown"
+
+# The two rule switches each kind reads with: (the coproc NAME rule, the zsh
+# repeat rule). A string of unknown kind is read first with both rules, and when
+# that stops undecidable it is read once more with neither rule.
+KIND_SWITCHES = {
+    KIND_BASH: (True, False),
+    KIND_ZSH: (False, True),
+    KIND_UNKNOWN: (True, True),
 }
 
 # How far the simple command in progress has read the shape `case`, one word,
@@ -944,11 +996,42 @@ class _Parser:
     because no matching `)` is found and in a group whose exception was cleared,
     a `#` inside `$(` is read as before, and a `#` in the middle of a word is a
     word character as ever.
+
+    Two switches, set when the parser is built and fixed for its life, decide how
+    `coproc` and `repeat` are read inside a double-quoted command substitution
+    (`_skip_substitution`): the coproc NAME rule (`coproc_name`) and the zsh
+    repeat rule (`zsh_repeat`). They are parser-wide and never part of a stacked
+    entry, so the substitutions nested in the string and the quote removal of a
+    delimiter range, which use this same parser, read with the same switches. The
+    module-level `parse` builds the parser from the kind of the shell that holds
+    the string:
+
+      bash                   NAME rule on   zsh repeat rule off
+      zsh                    NAME rule off  zsh repeat rule on
+      unknown, first read    NAME rule on   zsh repeat rule on
+      unknown, re-read       NAME rule off  zsh repeat rule off
+
+    With the NAME rule on, the ordinary word after `coproc` is a NAME and the word
+    after it is at a command position (`coproc c {`); with it off, that word is
+    the first word of a simple command and the words after it are arguments
+    (`coproc echo case x in x` opens no case statement). With the zsh repeat rule
+    on, `repeat` read as a standalone, bare word at a command position is a head
+    word (`repeat 1 {`); with it off, `repeat` is an ordinary command word, the
+    first word of a simple command, and the words after it are arguments
+    (`repeat x case y in y` opens no case statement). `select`, `for` and
+    `function` are read the same way in every reading. The module-level `parse`
+    reads a string of unknown kind a second time with both rules off when the
+    first read stops undecidable.
     """
 
-    def __init__(self, command):
+    def __init__(self, command, coproc_name=True, zsh_repeat=True):
         self.s = command
         self.n = len(command)
+        # The two rule switches, fixed for the life of the parser and read by the
+        # substitution skip at the head words `coproc` and `repeat`: the coproc
+        # NAME rule and the zsh repeat rule (see the class description).
+        self.coproc_name = coproc_name
+        self.zsh_repeat = zsh_repeat
         self.i = 0
         self.commands = []
         self._start_words()
@@ -2097,17 +2180,28 @@ class _Parser:
         position, so nothing in it opens a case statement, acts as a closing
         or starts a head, and its `)` gives the enclosing list a command
         position (`for x (a) {`). After `coproc` the next word is at a command
-        position (`coproc {`), and when that word is an ordinary word (a NAME
-        or a command name) the word after it is at a command position as well
-        (`coproc c {`). After the zsh `repeat` the next word, the count, is an
+        position in every reading (`coproc {`, `coproc while`). When that word is
+        an ordinary word (a NAME or a command name), the coproc NAME rule of the
+        reading decides what follows: with the rule on, the word after it is at
+        a command position as well (`coproc c {`); with the rule off, it is the
+        first word of a simple command, so a `name()` may follow it, and the
+        words after it are arguments (`coproc echo case x in x` opens no case
+        statement). After the zsh `repeat` the next word, the count, is an
         ordinary word that is never read as a keyword, and the word after it
-        is at a command position (`repeat 1 {`).
+        is at a command position (`repeat 1 {`); `repeat` starts a head only
+        under the zsh repeat rule of the reading, and without the rule it is an
+        ordinary command word, the first word of a simple command, and the words
+        after it are arguments (`repeat x case y in y` opens no case statement).
+        The kind of the shell that holds the string sets the two rules
+        (`parse`).
 
         Head states (rule 7). The head state of a list is one value out of a
         fixed small set: none; after a first word read at a command position
-        (a possible `name()`); after `function`; after the function name; after
-        `for`; after the `for` name; after `select` or `repeat`; after
-        `coproc`. A head state lasts only until its head completes or the next
+        (a possible `name()`; the ordinary word after `coproc` is one when the
+        coproc NAME rule is off, and `repeat` is one when the zsh repeat rule is
+        off); after `function`; after the function name; after `for`; after the
+        `for` name; after `select`, or after `repeat` under the zsh repeat rule;
+        after `coproc`. A head state lasts only until its head completes or the next
         character rules it out (for `name()`, anything other than blanks
         followed by `(`). A separator (`;`, `&`, `|`, a newline) or the end of
         the list ends any head state still pending, and the position after it
@@ -2225,9 +2319,15 @@ class _Parser:
                         continue
                     at_command, in_word = False, True
                     if was_command:
-                        if named == HEAD_COPROC:
+                        if named == HEAD_COPROC and self.coproc_name:
+                            # The coproc NAME rule: the ordinary word after
+                            # `coproc` is a NAME and the next word is at a
+                            # command position.
                             at_command = True
                         else:
+                            # The first word of a simple command; after
+                            # `coproc` without the NAME rule that word is the
+                            # command and the words after it are arguments.
                             head = HEAD_FIRST
             if top in "13457":
                 # A case statement that waits for a word or for `in`.
@@ -2507,7 +2607,10 @@ class _Parser:
         for a standalone `]]` while a `[[` is open, the head word itself
         (`function`, `for`, `select`, `coproc` or `repeat`) for a standalone
         head word at a command position, and None for every other word (end
-        is `j` then). `end` is where reading goes on. Every word is decided
+        is `j` then). `repeat` is a head word only under the zsh repeat rule
+        (`zsh_repeat`); without the rule it is an ordinary word and the kind is
+        None. `select`, `for` and `function` are head words in every
+        reading. `end` is where reading goes on. Every word is decided
         by `_keyword_end`, on the characters with the continuation pairs left
         out, so a word at an argument position is never one of them, and
         neither is a quoted or escaped one. The caller calls it once at the
@@ -2538,6 +2641,8 @@ class _Parser:
                 if end != -1:
                     return "reserved", end
         for word in HEAD_AFTER_WORD:
+            if word == "repeat" and not self.zsh_repeat:
+                continue
             if word[0] == ch:
                 end = self._keyword_end(j, word, " \t\n;&|()<>")
                 if end != -1:
@@ -2771,8 +2876,57 @@ class _Parser:
             group.skipped = group.skip or (parent is not None and parent.skipped)
 
 
-def parse(command):
-    return _Parser(command).parse()
+def parse(command, kind=KIND_UNKNOWN):
+    """Split `command` into simple commands and return them, or raise
+    `_Undecidable` carrying the commands settled up to the last checkpoint of the
+    string (`_Parser`).
+
+    `kind` is the kind of the shell that holds the string (KIND_BASH, KIND_ZSH or
+    KIND_UNKNOWN, the default: the hook command is of unknown kind). `_scan`
+    passes the kind `_judge` hands back with a literal shell `-c` string. The
+    kind picks the two rule switches the parser is built with (KIND_SWITCHES): the
+    coproc NAME rule and the zsh repeat rule. Both are fixed for the life of that
+    parser.
+
+    One read, or two for a string of unknown kind:
+
+      1. The string is read with the switches of its kind and, for the unknown
+         kind, that first read has both rules on. A string read to its end
+         returns its commands.
+      2. An exception other than `_Undecidable` on the first read leaves this
+         function as it is (no re-read), and so does `_Undecidable` on the first
+         read of a string of bash or zsh kind: a string whose kind is known is
+         never read twice.
+      3. `_Undecidable` on the first read of a string of unknown kind is kept
+         with its checkpoint commands, and the string is read once more by a
+         new parser with both rules off (`coproc` followed by an ordinary word
+         reads that word as the first word of a simple command, and `repeat` is
+         an ordinary command name).
+      4. A re-read that reads to the end returns its commands. A re-read that
+         raises anything, `_Undecidable` or any other exception class, is
+         discarded, and the kept first `_Undecidable` is raised with the
+         commands the first read settled up to its last checkpoint.
+
+    A string is read at most twice, each read in linear time, and this function
+    does not call itself: the re-read is a second parser object. The characters
+    of a string count toward NESTED_READ_LIMIT in `_scan`, before this function
+    runs, so a string that is read twice counts once, at its length."""
+    coproc_name, zsh_repeat = KIND_SWITCHES[kind]
+    try:
+        return _Parser(command, coproc_name, zsh_repeat).parse()
+    except _Undecidable as first:
+        if kind != KIND_UNKNOWN:
+            raise
+        commands = None
+        try:
+            commands = _Parser(command, False, False).parse()
+        except Exception:
+            # Whatever the re-read raised is discarded: the kept first
+            # `_Undecidable` is raised below with its checkpoint commands.
+            pass
+        if commands is None:
+            raise first
+        return commands
 
 
 def _basename(text):
@@ -2784,18 +2938,39 @@ def _is_assignment(word):
     return bool(eq) and name.isidentifier()
 
 
+def _has_name(name, known):
+    """Whether a command word's basename `name` is the known name `known`: the
+    name itself, or the name followed only by digits and dots (FR8). This is the
+    one match `_family_of` and `_shell_kind` share."""
+    if name == known:
+        return True
+    if name.startswith(known):
+        suffix = name[len(known):]
+        return all(ch in DIGITS + "." for ch in suffix)
+    return False
+
+
 def _family_of(name):
     """Return the family whose known name matches a command word's basename
     (FR8: the name itself, or the name plus digits and dots), or None."""
     for family in FAMILIES:
         for known in family.names:
-            if name == known:
+            if _has_name(name, known):
                 return family
-            if name.startswith(known):
-                suffix = name[len(known):]
-                if all(ch in DIGITS + "." for ch in suffix):
-                    return family
     return None
+
+
+def _shell_kind(name):
+    """Return the kind of the shell whose command word has the basename `name`:
+    KIND_BASH or KIND_ZSH when `name` matches `bash` or `zsh` the way
+    `_family_of` matches (the name itself, or the name followed only by digits
+    and dots: `bash5.2` is bash), and KIND_UNKNOWN for every other shell (`sh`,
+    `dash`, `ksh` and their suffixed forms)."""
+    if _has_name(name, "bash"):
+        return KIND_BASH
+    if _has_name(name, "zsh"):
+        return KIND_ZSH
+    return KIND_UNKNOWN
 
 
 def _command_index(words):
@@ -2938,21 +3113,32 @@ def _read_options(family, args):
 
 
 def _judge(words, connected):
-    """Judge one simple command. Return (kind, inner): kind is "interactive",
-    "noprogram" or None; inner is a shell `-c` literal to judge, or None."""
+    """Judge one simple command. Return (verdict, inner, inner_kind): verdict is
+    ("interactive", name), ("noprogram", name) or None; inner is a shell `-c`
+    literal to judge, or None; inner_kind is the kind of the shell that holds
+    `inner` (KIND_BASH, KIND_ZSH or KIND_UNKNOWN), or None when there is no
+    `inner`.
+
+    The kind comes from the basename of the shell command word that directly
+    holds the string: the word left after assignments, the option-less wrappers
+    (`env` and the others) and a path, matched the way `_family_of` matches
+    (`_shell_kind`). Only the direct holder decides, so a `zsh -c` string inside
+    a `bash -c` string is zsh. The caller is `_scan`, which hands the kind to
+    `parse`."""
     index = _command_index(words)
     if index is None:
-        return None, None
+        return None, None, None
     name = _basename(words[index].text)
     family = _family_of(name)
     if family is None:
-        return None, None
+        return None, None, None
     options = _read_options(family, words[index + 1:])
     if options.interactive:
-        return ("interactive", name), None
+        return ("interactive", name), None, None
     if options.code or options.operand or options.informational or connected:
-        return None, options.code_string
-    return ("noprogram", name), None
+        inner = options.code_string
+        return None, inner, (_shell_kind(name) if inner is not None else None)
+    return ("noprogram", name), None, None
 
 
 def _scan(commands):
@@ -2975,6 +3161,17 @@ def _scan(commands):
     not read, and neither is any later one of those levels. First-level strings
     are always read. Reaching the limit is no verdict: the commands still to be
     judged at level 0 and in first-level strings are judged as before.
+
+    Each string is read by its kind, the kind of the shell that directly holds it:
+    `_judge` hands the kind back with the literal `-c` string, and this function
+    passes it to `parse` with the string (the hook command itself is parsed
+    without a kind, so it is of unknown kind). A string of unknown kind that
+    stops undecidable is read once more inside `parse`, with neither the coproc
+    NAME rule nor the zsh repeat rule, and falls back to the first read's
+    checkpoint commands when that re-read fails; this function sees one result
+    either way, and calls `parse` once for each string. The characters of a
+    string count toward the limit here, before `parse` runs, once at the string's
+    length, so a string that is read twice counts once.
 
     A nested string that cannot be read to its end raises _Undecidable. The
     commands that exception carries (`checkpoint_commands`: the commands up to
@@ -3013,7 +3210,7 @@ def _scan(commands):
         connected = inherited or command.stdin or command.after_pipe
         if group is not None and group.connected:
             connected = True
-        verdict, inner = _judge(command.words, connected)
+        verdict, inner, inner_kind = _judge(command.words, connected)
         if verdict:
             return verdict
         if inner is None:
@@ -3024,7 +3221,7 @@ def _scan(commands):
                 continue
             total += len(inner)
         try:
-            inner_commands = parse(inner)
+            inner_commands = parse(inner, inner_kind)
         except _Undecidable as error:
             # The string cannot be read to its end: the commands settled up to
             # its last checkpoint are the commands of this string, judged like
