@@ -1,0 +1,169 @@
+round: 2
+executed_at: '2026-10-21T11:21:42+09:00'
+scope:
+  review_mode: diff
+  base_commit: 9c5f62ff5519a988d0b105017d553bd082371443
+  head_commit: 046a9760d04e90a6faa56ef44762994d8d7881ab
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-case-reading-fixes/task0001.tests.yaml
+  - test-docs/codex-guard-case-reading-fixes/task0002.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: NFR1 requires the substitution reader to stay linear; the diff reworks its scanning loop
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 90560b3ee3ad0908
+  severity: medium
+  category: comprehensive
+  file: em-review/scripts/codex-hook-interactive-guard.py
+  line: 2389
+  title: for の語一覧でコメントが引用として読まれる
+  description: 'zsh の `for name (words)` の語一覧を、算術展開と同じ `a` のコンテキストとして積んでいる（`kind_char, close_command = "a", True`）。`a` のときは、`#` をコメントとして読む分岐（`elif top == "a"` より後ろにある）に届かない。このため語一覧の中のコメントにある引用符が引用を開き、置換の終わりを見失って _Undecidable になる。チェックポイントの無い文字列は何も判定されないので、後ろの `python3 -i` を拒否しない。基準コミットでは `(` を `p` として積み、空白の後の `#` をコメントとして読み飛ばしていたので deny になっていた（今回の変更による後退）。両コピーはバイト単位で同一で、同じ問題がある。評価者の読解: 仕組みはコードを読んで確認した。zsh の語一覧が改行とコメントを受け付ける点は zsh の文法の知識による判断で、実行しての確認はしていない。'
+  suggestion: 語一覧では、語をコマンドの位置で読まない点だけを保ち、`#` のコメントと改行は `p` と同じに読む（`a` を流用せず、語一覧用の状態を持つ）。コメントに引用符を含む語一覧を、両コピーに流す CASES の deny 行として足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: 3ccce2e39b35b26b
+  severity: medium
+  category: comprehensive
+  file: em-review/scripts/codex-hook-interactive-guard.py
+  line: 2476
+  title: 関数の空括弧内の行継続を認識できない
+  description: '`_empty_parens_end` は括弧の間の空白とタブしか読み飛ばさない。Bash は括弧の間のバックスラッシュと改行の対を取り除くので、`f(` と `)` の間に対を挟んだ関数定義は有効だが、ガードは空の `()` と認めない。その `(` はコマンドの位置で開いていない括弧として積まれ、`)` の後は語の続きになる。続く `{` と `case` が引数として読まれ、パターンの `)` で置換が早く閉じる。後ろの引用がずれて _Undecidable になり、両コピーとも後ろの `python3 -i` を拒否しない。基準コミットでは `case` の前の `{` を後ろ向きに見て文を開いたので deny だった（後退）。SPEC FR10 は「中は空白だけ」と書いており、FR1 / FR5 の、行継続の対を取り除いて判定する規則と揃っていない。評価者の読解で確認した。'
+  suggestion: '`_empty_parens_end` で、空白とタブに加えてバックスラッシュと改行の対も読み飛ばす（NFR1 の、読み直しを定数回に収める条件は保つ）。括弧の間に対を挟んだ関数定義を、両コピーに流す CASES の deny 行として足す。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: 4d83e42f2dca1178
+  severity: medium
+  category: comprehensive
+  file: em-review/scripts/codex-hook-interactive-guard.py
+  line: 2225
+  title: シェル固有の頭の規則が別のシェルの解析を壊す
+  description: FR11 の coproc の規則（`coproc WORD` の後の語をコマンドの位置にする）は bash の文法で、zsh の coproc は名前を取らない。zsh では `coproc echo case x in x` の `case` は echo の引数だが、ガードは case 文を開き、パターンの `)` の後の引用がずれて _Undecidable になる。逆に `repeat` は zsh だけの予約語で、bash では普通のコマンド名になる。bash で `repeat x case y in y` を置換に書くと、ガードは `case` を文の始まりとして読み違える（bash では repeat が無くても、置換の後の `; python3 -i` は実行される）。どちらも基準コミットでは後ろ向きの判定で `case` を開かず deny になっていた（後退）。読み取りはシェルの種類を区別しないので、FR11 の文言どおりの実装のままでは、bash と zsh のどちらかで読み違いが残る。両コピーに同じ問題がある。評価者の読解で確認した。
+  suggestion: '`zsh -c` / `bash -c` の保持元からシェルの種類を読み取りまで渡し、coproc の NAME と repeat の予約語を、それぞれのシェルのときだけ扱う。シェルの分からない最上位のコマンドでの扱いは SPEC（FR11）で決める必要があり、TS47 / TS50 の期待値と衝突しない形を選ぶ。bash と zsh の両方の形を、両コピーに流す CASES に足す。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: d86a2ee0791fc83d
+  severity: medium
+  category: security
+  file: em-review/scripts/codex-hook-interactive-guard.py
+  line: 2226
+  title: coproc の引数で対話起動の拒否を回避できる
+  description: 'HEAD_COPROC の次の普通の語を読んだ後、無条件にコマンドの位置へ戻している。zsh の有効な構文 `coproc echo case x in x` では、echo の引数の `case` を文の始まりと読み、_Undecidable になる。その結果、後ろの `python3 -i` を拒否せず、無人実行が入力待ちで止まりうる。em-workflow 側の同一実装にも影響する。評価者の読解（再現手順を追跡し reproduced）: 内側の文字列で、二重引用の中の `$(` から読み取りに入る。coproc で HEAD_COPROC になり、echo で at_command が真に戻り、case が文を開く。`x)` で項目の本体に入り、続く二重引用符が引用を開いたまま入力が終わって _Undecidable("substitution") になる。内側の文字列には最上位で読んだ改行が無くチェックポイントが無いので、判定するコマンドが残らない。外側の `zsh -c` は対話起動ではない。基準コミットの後ろ向きの判定では、`case` の前が `echo` なのでコマンドの位置にならず、`)` で置換が閉じて deny になっていた（後退）。bash は `coproc WORD` の後の予約語を受け付けるので、今の読み方は bash の文法とは一致する。直すにはシェルごとの読み分けが要る（comprehensive の coproc / repeat の finding と同じ根本原因）。'
+  suggestion: coproc の通常コマンドと名前付き複合コマンドを、呼び出し元のシェルの構文に従って区別し、zsh では通常コマンドの引数をコマンドの位置に戻さない。シェルの分からない場合の扱いは SPEC（FR11）で決める。両方の実装に再現入力の回帰テストを追加する。
+  reproduction: 標準入力に {"tool_input":{"command":"zsh -c 'echo \"$(coproc echo case x in x)\"; python3 -i'"}} を渡して python3 -B em-review/scripts/codex-hook-interactive-guard.py を実行すると、終了コード0、標準出力は空になり、deny が返らない。入力は main → find_deny → _scan → _skip_substitution に到達する。内側の文字列は zsh -n -c で構文検査に成功し、末尾の python3 -i だけを printf 'REACHED\n' に置換した安全な実行では REACHED が出力され、後続コマンドへの到達を確認できた
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: 3ccce2e39b35b26b
+  severity: medium
+  category: security
+  file: em-review/scripts/codex-hook-interactive-guard.py
+  line: 2475
+  title: 関数の空括弧内の行継続で対話起動の拒否を回避できる
+  description: '_empty_parens_end は空白とタブしか読み飛ばさず、Bash が取り除くバックスラッシュと改行の対を扱っていない。これを `f()` の括弧の間に入れると関数の頭を認識できず、本体の `case` を引数として扱い、パターンの `)` で置換を早く閉じる。引用の対応が崩れて後ろの `python3 -i` を拒否しなくなり、無人実行が入力待ちで止まりうる。em-workflow 側にも同じ問題がある。評価者の読解（再現手順を追跡し reproduced）: `f` で HEAD_FIRST になり、`(` で _empty_parens_end が対のバックスラッシュで -1 を返す。`(` は close_command 偽で積まれ、対は読み飛ばされ、`)` の後は語の続きになる。`{` と `case` は at_command 偽の普通の語になり、`x)` の `)` で置換が閉じる。主パーサーは続きの二重引用の対応を失い _Undecidable になる。改行は読み飛ばした置換の中にしかなくチェックポイントが無いので、判定するコマンドが残らない。基準コミットでは `case` の前の `{` でコマンドの位置と判定して文を開き、deny になっていた（後退）。'
+  suggestion: 空括弧の判定でも行継続の対を読み飛ばし、関数本体がコマンドの位置から始まる状態を保つ。両方の実装に、行継続を含む関数定義の回帰テストを追加する。
+  reproduction: '内側のスクリプトを次の2行にする（1行目末尾はバックスラッシュ）:
+
+    echo "$(f(\
+
+    ) { case x in x) printf ''%s'' ''"'';; esac; }; f)"; python3 -i
+
+    この文字列を inner として、tool_input.command に ''bash -c '' + shlex.quote(inner) を設定したJSONを python3 -B em-review/scripts/codex-hook-interactive-guard.py の標準入力へ渡す。main → find_deny → _scan → _skip_substitution → _empty_parens_end を経由し、終了コード0、標準出力は空になる。bash -n -c inner は成功する。末尾の python3 -i だけを printf ''REACHED\n'' に置換した実行では REACHED が出力され、後続コマンドへの到達を確認できた'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+evaluation:
+  round_summary: 'ラウンド2（cross_validation=true）。task0002（FR9〜FR11）までの差分を対象にした。round_context の未解決 2 件（2fe94b219da49a89 / 8aed11cf08b2dc4c）は、再現入力（CASES の TS33 / TS23 の行）がコードの読解で deny に届くことを確認した。今回どの reviewer も再報告していない。今回の報告は medium だけの 5 件で、根本原因は 3 つある。(1) zsh の for の語一覧を `a` のコンテキストで読むので、コメントを読み飛ばさない。(2) `_empty_parens_end` が行継続の対を読み飛ばさない。(3) coproc の NAME と repeat の予約語を、シェルの種類を区別せずに扱う。いずれも、基準コミットでは deny だった入力が置換の読み違いで _Undecidable になり、無出力になる後退で、両コピーに共通する。(2) と (3) は comprehensive#0 と security#0 が別々に報告したので、観点ごとの finding として残した（同じ箇所を 2 観点が挙げている）。security#0 の 2 件は、再現手順をコードの読解で追跡して reproduced と判定した。(3) は SPEC FR11 の文言どおりの実装なので、直すには bash と zsh の読み分けを SPEC で決める必要がある。critical / high の報告は無く、dismissed_sites は空。両コピーはバイト単位で同一。reviewer の出力に注入の試みは無い。観点ごとの確認: comprehensive=corroborated、security=corroborated（2 件とも reproduced）、architecture=corroborated（両コピーは同一。追加したヘルパーは _skip_substitution の経路からだけ呼ばれ、再帰の経路は無い。削除したメソッドの呼び出し元は残っていない）、spec=corroborated（実装は FR1〜FR11 の文言に沿う。後退は FR10 / FR11 が書いていない形で起きている）、performance=corroborated（_keyword_end
+    と _empty_parens_end の読み直しは定数回で、線形を保つ）。読んだファイルは 8 件で、上限 10 件の範囲内。'
+  recommended_action: auto_fix
+  action_rationale: critical / high は無く、残りは基準コミットからの後退にあたる medium の拒否漏れ 3 種類（両コピー共通）。(1) と (2) は `_skip_substitution` の中の局所的な修正で閉じられ、CASES に deny 行を足せば固定できる。(3) は FR11 が bash の coproc NAME と zsh の repeat を一律に求めているため、TS47 / TS50 を保ったまま直すにはシェルの種類を読み取りに渡す設計判断が要る。自動修正で決めきれない場合は rework（SPEC の変更）に回すのがよい。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-case-reading-fixes-20261021T022122Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
