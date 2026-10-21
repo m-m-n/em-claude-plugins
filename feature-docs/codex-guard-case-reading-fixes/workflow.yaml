@@ -121,7 +121,7 @@ tasks:
     domains: [input-handling]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, NFR1, NFR2, NFR3, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-guard-case-reading-fixes/task0001
 review:
