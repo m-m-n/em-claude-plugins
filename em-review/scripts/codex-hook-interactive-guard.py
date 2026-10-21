@@ -2065,11 +2065,13 @@ class _Parser:
         Function heads, loop heads and coproc heads (rule 6). In `name()` the
         first word of a simple command (an ordinary word read at a command
         position) is followed, directly or after blanks, by `(`, only blanks
-        and `)`: that `)` ends a function head and the next word is at a
-        command position (`f() {`, `f () {`). Whether the parentheses are
-        empty is decided by looking at the blanks between them once more, a
-        bounded number of times; a `(` that does not form an empty `()` is
-        read as any other `(`. A standalone, unquoted, unescaped `function`
+        and continuation pairs, and `)`: that `)` ends a function head and the
+        next word is at a command position (`f() {`, `f () {`, and the same
+        with a pair between the parentheses). Whether the parentheses are
+        empty is decided by looking at the blanks and the continuation pairs
+        between them once more, a bounded number of times; a `(` that does not
+        form an empty `()` is read as any other `(`. A standalone, unquoted,
+        unescaped `function`
         read at a command position starts a head: the next word is the name,
         an ordinary word that is never read as a keyword or reserved word, the
         word after the name is at a command position, and an empty `()`
@@ -2467,14 +2469,25 @@ class _Parser:
 
     def _empty_parens_end(self, j):
         """Return the index just after the `)` of an empty `()` whose `(` is
-        at `j`, or -1 when the parentheses are not empty: only blanks (spaces
-        and tabs) lie between them. The blanks are read once here and once
-        more by the caller when it reads the `(` as any other `(`, so the
-        check costs constant extra time per character. It calls nothing."""
+        at `j`, or -1 when the parentheses are not empty: only spaces, tabs
+        and continuation pairs (a backslash directly followed by a newline)
+        lie between them. A pair is skipped together with its newline. The
+        parentheses are not empty, and the result is -1, when the input ends
+        inside that run (after a pair, or at a backslash with nothing after
+        it), when a backslash is followed by any character other than a
+        newline, and when any other character stops the run. What the run
+        skips is read once here and once more by the caller when it reads the
+        `(` as any other `(`, so the check costs constant extra time per
+        character. It keeps no state, raises nothing and calls nothing."""
         s, n = self.s, self.n
         k = j + 1
-        while k < n and s[k] in " \t":
-            k += 1
+        while k < n:
+            if s[k] in " \t":
+                k += 1
+            elif s[k] == "\\" and k + 1 < n and s[k + 1] == "\n":
+                k += 2
+            else:
+                break
         if k < n and s[k] == ")":
             return k + 1
         return -1
