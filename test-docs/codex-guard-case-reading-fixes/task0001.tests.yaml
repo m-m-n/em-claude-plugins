@@ -1,0 +1,91 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: 943/943 and Ran 10790 tests, OK (skipped=1), before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, 943/943 and Ran 10797 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test failed on the new rows
+      TS1, TS4 and TS5 (verdict deny where silent was expected: the esac after an argument
+      if, then or ! closed the statement) and on TS6 and TS7 (verdict silent where deny was
+      expected: the quote shifted, or an argument case opened a statement), for both copies.
+      All five pass after the implementation.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test failed on TS2 (deny
+      where silent was expected) and TS8 (silent where deny was expected), for both copies:
+      the comment right after a pattern's closing parenthesis was read as code. Both pass
+      after the implementation.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test failed on TS3 (a pair
+      before in) and TS10 (a pair before the esac of an empty case): silent where deny was
+      expected. TS9 and TS11 were already deny
+      before the change (the SPEC states TS11 is already deny); they stay as regression
+      guards and were not observed red.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test failed on TS12 and
+      TS13 (deny where silent was expected: case with a pair after it or inside it was not
+      read as the keyword) and on TS14, TS15, TS16 and TS17 (silent where deny was expected:
+      in and esac with a pair after them or inside them). TS18 and TS19
+      were already deny and silent before the change (the pair-stripped sequence casex or
+      esacx is no keyword); they stay as regression guards and were not observed red.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts20_continuation_pairs_in_the_waiting_phases_and_inside_the_keywords_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts21_split_words_whose_keyword_match_fails_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts22_a_long_run_of_argument_reserved_words_is_read_in_time
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the TS20 test failed for the
+      waiting-phases shape (DEPTH continuation pairs before the subject word, before in, at
+      the pattern position and after the leading parenthesis): empty standard output where a
+      deny object was expected (JSONDecodeError). It passes after the implementation within
+      the 60 second limit. The inside-the-keywords and both shapes of TS20 and the whole of
+      TS21 and TS22 already returned deny in time before the change; they are regression pins
+      for the linear bound and were not observed red.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+      - tests.test_codex_hook_interactive_guard.TestCopies
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+    red_confirmed: true
+    red_reason: >-
+      The three tests added to TestSubstitutionSkipDocumentation (the docstring states the
+      four rules, the keyword decision states the pair-stripped rule, the backward look at the
+      previous word is gone) failed with sixteen failing subtests against the pre-change
+      guard: none of the rule sentences was in the docstring, no keyword decision method
+      existed and _at_command_position was still there. They pass after the implementation.
+      The seven pre-existing tests of that class and TestCopies, TestNoRecursion,
+      TestSubstitutionSkipCallStructure and TestStaticConstraints passed before and after the
+      change; they were not observed red.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      detects a changed verdict of any pre-existing CASES row against either copy; no red
+      state occurred for this change. Every pre-existing row passed against the unmodified
+      code (baseline run) and passes after the implementation, and no row was removed or
+      re-verdicted. That the change set touches only the three files in scope and no
+      plugin.json or marketplace.json is verified with git diff --stat on the task branch,
+      not by a test. The two suite commands (python3 -m unittest
+      tests.test_codex_hook_interactive_guard, and python3 em-workflow/hooks/tests/run-destructive-guard.py
+      && python3 -m unittest discover -s tests) were run after the implementation and exit
+      with status 0.

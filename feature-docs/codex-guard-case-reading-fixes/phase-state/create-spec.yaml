@@ -1,0 +1,94 @@
+schema_version: 1
+feature: codex-guard-case-reading-fixes
+phase: create-spec
+status: completed
+generation: 2
+base_revision: df04d93834e454acdacaf27b62787a3f5e211771
+last_input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-21T08:19:40+09:00'
+    questions:
+    - question_id: requirement.line-continuation-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-10-21T09:47:58+09:00'
+    questions:
+    - question_id: requirement.loop-head-command-position
+      status: answered
+answers:
+  requirement.line-continuation-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T08:24:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_split
+    freeform: null
+    normalized_answer: 行継続は待ちフェーズの位置に加えて、case / in / esac の直後に付いた形と、キーワードを分断する形も読み飛ばしてキーワードとして読む
+    resolution_note: batch policy create-spec.requirement-clarification codex_consultation（harness codex、1 turn）。Codex は include_split を推奨。両コピーへの JSON 入力で、直後の継続・分断の形が判定不能による拒否漏れ（in\<NL>, esac\<NL>, i\<NL>n,
+      es\<NL>ac）と誤拒否（case\<NL>, ca\<NL>se）になることを確認。オーケストレーターが写像を判断し include_split を採用（拒否漏れを既知の残余として固定するより塞ぐ方が比較的良い）。Opus エスカレーションは不要
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T08:24:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を省略する（analyst 推奨の skip。UI の無いフック解析処理の修正、デザインシステム候補ゼロ）
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
+  requirement.loop-head-command-position:
+    packet_id: create-spec-q0002
+    answered_at: '2026-10-21T09:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_bash_and_zsh_heads
+    freeform: null
+    normalized_answer: ループと coproc の頭（bash の for ((…)) の閉じ・for name / select name・coproc / coproc NAME、zsh の for name (words) の閉じ・repeat word）の後もコマンドの位置にする（FR11 を確定）
+    resolution_note: 'batch policy create-spec.requirement-clarification codex_consultation（harness codex、1 turn）。Codex は include_bash_and_zsh_heads を推奨。task0001 前のコード（2a67e00d^）で 7 形（for ((…)) do / for
+      x do / select x do / coproc { / coproc NAME { / for x (a) { / repeat 1 {）が deny、現行の両コピーでは無出力になることを実行で確認。for/select の名前は通常語として消費し、引数や引用語から頭の状態に入らないようにする必要があるとの注意あり。オーケストレーターが写像を判断し include_bash_and_zsh_heads
+      を採用（同じ根本原因の拒否漏れの後退を残余として固定するより塞ぐ方が比較的良い。worker 推奨とも一致）。Opus エスカレーションは不要。不採用: findings_scope_only, include_bash_heads'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:6561ace8fbe4faadeca2fcd5fb7d1b0cb43907bad0ea9210ead03e6cf61c24f2
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
+  output_digest: null
+- request_id: create-spec-run-0004
+  status: needs_user_input
+  input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
+  output_digest: null
+- request_id: create-spec-run-0005
+  status: completed
+  input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
+  output_digest: null
+- request_id: create-spec-run-0006
+  status: completed
+  input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-case-reading-fixes/REQUIREMENTS.md
+  sha256: sha256:ca79e7d5b2a53b424cf424333d5efc250afef5f3079f48c03ef09d5f5cfec8ef
+  produced_by: create-spec-run-0006
+- path: feature-docs/codex-guard-case-reading-fixes/SPEC.md
+  sha256: sha256:f56e2058824a5e06c0c57d2945aa4af2d6fba3dcbfb0f299ba83468d8aae810f
+  produced_by: create-spec-run-0006
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

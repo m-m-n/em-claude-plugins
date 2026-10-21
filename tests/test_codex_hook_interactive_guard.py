@@ -976,6 +976,84 @@ CASES = [
     ("deny", "zsh が受け付ける case 文の対象の語の括弧 x(a|b) を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case x(a|b) in *) :;; esac)"; python3 -i')),
     ("deny", "zsh が受け付ける case 文の対象の語の数値の範囲 <1-2> を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case <1-2> in *) :;; esac)"; python3 -i')),
     ("deny", "zsh が受け付ける case 文の対象の語のプロセス置換 <(:) を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case <(:) in *) :;; esac)"; python3 -i')),
+    # codex-guard-case-reading-fixes (SPEC.md Test Scenarios TS1 to TS19): the
+    # substitution reader reads a `case` statement correctly when `case` or
+    # `esac` is an argument, when a comment follows a pattern's `)` directly,
+    # and when a line continuation sits in a waiting phase or at a keyword.
+    # In the notation of SPEC.md `<NL>` is a newline and `\<NL>` is a
+    # backslash directly followed by a newline; the literals below hold exactly
+    # those characters (`\n` and `\\\n`).
+    ("silent", "case 読み TS1 引数の if の後の esac は文を閉じず、引用符の中の python3 -i を拒否しない (再現手順 1)", 'echo "$(case y in x) echo if esac;; y) echo "; python3 -i;";; esac)"'),
+    ("silent", "case 読み TS2 パターンの ) の直後の # はコメントで、中の esac と引用符は何も閉じも開きもしない (再現手順 2)", 'echo "$(case x in x)#; esac\n:;; y) printf \'%s\' \'"; python3 -i; #\';; esac)"'),
+    ("deny", "case 読み TS3 in の前の行継続を読み飛ばして置換の閉じを見つけ、後ろの起動を拒否する (再現手順 3)", 'echo "$(case x \\\nin x) :;; esac)"; python3 -i'),
+    ("silent", "case 読み TS4 引数の then の後の esac は文を閉じない", 'echo "$(case y in x) echo then esac;; y) echo "; python3 -i;";; esac)"'),
+    ("silent", "case 読み TS5 引数の ! の後の esac は文を閉じない", 'echo "$(case y in x) echo ! esac;; y) echo "; python3 -i;";; esac)"'),
+    ("deny", "case 読み TS6 引数の then の後の esac が文を閉じないので、引用がずれず後ろの起動を拒否する", 'echo "$(case x in x) echo then esac;; y) echo \'"\';; esac)"; python3 -i #\''),
+    ("deny", "case 読み TS7 項目の本体の外の引数の case は文を開かず、後ろの起動を拒否する", 'echo "$(echo then case x in x)"; python3 -i'),
+    ("deny", "case 読み TS8 パターンの直後のコメントの中の ) は置換を閉じず、後ろの起動を拒否する", 'echo "$(case x in x)#)\n:;; esac)"; python3 -i'),
+    ("deny", "case 読み TS9 対象の語の前の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case \\\nx in x) :;; esac)"; python3 -i'),
+    ("deny", "case 読み TS10 空の case の esac の前の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case x in \\\nesac)"; python3 -i'),
+    ("deny", "case 読み TS11 最初のパターンの前の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case x in \\\nx) :;; esac)"; python3 -i'),
+    ("silent", "case 読み TS12 case の直後の行継続を読み飛ばして case 文を開き、引用符の中の python3 -i を拒否しない", 'echo "$(case\\\n x in x) echo "; python3 -i; ";; esac)"'),
+    ("silent", "case 読み TS13 case を分断する行継続を取り除いて case 文を開き、引用符の中の python3 -i を拒否しない", 'echo "$(ca\\\nse x in x) echo "; python3 -i; ";; esac)"'),
+    ("deny", "case 読み TS14 in の直後の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case x in\\\n x) :;; esac)"; python3 -i'),
+    ("deny", "case 読み TS15 esac の直後の行継続を読み飛ばして文を閉じ、後ろの起動を拒否する", 'echo "$(case x in x) :;; esac\\\n)"; python3 -i'),
+    ("deny", "case 読み TS16 in を分断する行継続を取り除いて in と読み、後ろの起動を拒否する", 'echo "$(case x i\\\nn x) :;; esac)"; python3 -i'),
+    ("deny", "case 読み TS17 esac を分断する行継続を取り除いて esac と読み、後ろの起動を拒否する", 'echo "$(case x in x) :;; es\\\nac)"; python3 -i'),
+    ("deny", "case 読み TS18 対を取り除くと casex になりキーワードではないので x) で置換が閉じ、引用の外の起動を拒否する", 'echo "$(ca\\\nsex in x) echo "; python3 -i; ";; esac)"'),
+    ("silent", "case 読み TS19 対を取り除くと esacx のパターンになり、文を閉じない", 'echo "$(case x in es\\\nacx) echo "; python3 -i; ";; esac)"'),
+    # codex-guard-case-reading-fixes (SPEC.md Test Scenarios TS23 to TS40): the
+    # word after a compound-command closing (the `)` of a command-position `(`
+    # or `((`, the `]]` of a command-position `[[`, a case-closing `esac`, a
+    # command-position `fi`, `done` or `}`) is at a command position, so a
+    # `case` after a `then`, `do` or `{` there opens a statement. After a
+    # closing inside a word, a `]]` that closes no `[[` and a `fi` at an
+    # argument position the following word is an argument. TS32 to TS36 are the
+    # function heads (`name()`, `name ()`, `function name`, `function name()`).
+    ("deny", "case 読み TS23 サブシェルの ) の後の then はコマンドの位置で、case が文を開く (finding 8aed11cf08b2dc4c の再現例)", 'echo "$(if (:) then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS24 [[ の条件式を閉じる ]] の後の then はコマンドの位置", 'echo "$(if [[ x ]] then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS25 サブシェルの ) の後の do はコマンドの位置", 'echo "$(while (false) do case x in x) printf \'%s\' \'"\';; esac; done)"; python3 -i'),
+    ("deny", "case 読み TS26 算術コマンドの )) の後の then はコマンドの位置", 'echo "$(if ((1)) then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS27 コマンドの位置の fi の後の then はコマンドの位置", 'echo "$(if if :; then :; fi then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS28 コマンドの位置の done の後の then はコマンドの位置", 'echo "$(if while false; do :; done then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS29 コマンドの位置の } の後の then はコマンドの位置", 'echo "$(if { :; } then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS30 case 文を閉じる esac の後の then はコマンドの位置", 'echo "$(if case y in y) :;; esac then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS31 zsh の短い形で ]] の後の { はコマンドの位置", 'echo "$(if [[ x ]] { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
+    ("silent", "case 読み TS32 f() の後の { の中の case 文を読み、引用符の中の python3 -i を拒否しない (finding 2fe94b219da49a89 の誤拒否の形)", 'echo "$(f() { case x in x) echo "; python3 -i;";; esac; }; f)"'),
+    ("deny", "case 読み TS33 f() の後の { の中の case 文を読み、置換の後の起動を拒否する (finding 2fe94b219da49a89 の拒否漏れの形)", 'echo "$(f() { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i'),
+    ("deny", "case 読み TS34 空白を挟んだ () の後の { はコマンドの位置", 'echo "$(f () { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i'),
+    ("deny", "case 読み TS35 function name の後の { はコマンドの位置", 'echo "$(function f { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i'),
+    ("deny", "case 読み TS36 function name() の後の { はコマンドの位置", 'echo "$(function f() { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i'),
+    ("deny", "case 読み TS37 語の中の置換の閉じの後の then は引数で、case は文を開かない", 'echo "$(echo "$(:)" then case x in x)"; python3 -i'),
+    ("deny", "case 読み TS38 語の中の ( ) の閉じ (zsh の glob 修飾子) の後の then は引数", 'echo "$(echo x(N) then case x in x)"; python3 -i'),
+    ("deny", "case 読み TS39 [[ を閉じていない ]] の後の then は引数", 'echo "$(echo ]] then case x in x)"; python3 -i'),
+    ("deny", "case 読み TS40 引数の位置の fi の後の then は引数", 'echo "$(echo fi then case x in x)"; python3 -i'),
+    # codex-guard-case-reading-fixes (SPEC.md Test Scenarios TS44 to TS59): the
+    # word after the head of a loop, a coproc or a zsh repeat is at a command
+    # position, the name after `for` is never a keyword, and a head word at an
+    # argument position or quoted starts no head.
+    ("deny", "case 読み TS44 算術の for の )) の後の do はコマンドの位置", 'echo "$(for ((i=0;i<1;i++)) do case x in x) printf \'%s\' \'"\';; esac; done)"; python3 -i'),
+    ("deny", "case 読み TS45 for name の後の do はコマンドの位置", 'echo "$(for x do case x in x) printf \'%s\' \'"\';; esac; done)"; python3 -i'),
+    ("deny", "case 読み TS46 coproc の後の { はコマンドの位置", 'echo "$(coproc { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
+    ("deny", "case 読み TS47 coproc NAME の後の { はコマンドの位置", 'echo "$(coproc c { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
+    ("deny", "case 読み TS48 for の後の名前 case はキーワードではなく、後ろの引数の case も文を開かない", 'echo "$(for case in x; do :; done; echo case x in x)"; python3 -i'),
+    ("deny", "case 読み TS49 zsh の for name (words) の ) の後の { はコマンドの位置", 'echo "$(for x (a) { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
+    ("deny", "case 読み TS50 zsh の repeat word の後の { はコマンドの位置", 'echo "$(repeat 1 { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
+    ("deny", "case 読み TS51 select name の後の do はコマンドの位置", 'echo "$(select x do case x in x) printf \'%s\' \'"\';; esac; done)"; python3 -i'),
+    ("silent", "case 読み TS52 for name の後の case 文の本体の、引用符の中の python3 -i を拒否しない", 'echo "$(for x do case x in x) echo "; python3 -i;";; esac; done)"'),
+    ("silent", "case 読み TS53 coproc の後の case 文の本体の、引用符の中の python3 -i を拒否しない", 'echo "$(coproc { case x in x) echo "; python3 -i;";; esac; })"'),
+    ("silent", "case 読み TS54 zsh の for name (words) の後の case 文の本体の、引用符の中の python3 -i を拒否しない", 'echo "$(for x (a) { case x in x) echo "; python3 -i;";; esac; })"'),
+    ("silent", "case 読み TS55 zsh の repeat word の後の case 文の本体の、引用符の中の python3 -i を拒否しない", 'echo "$(repeat 1 { case x in x) echo "; python3 -i;";; esac; })"'),
+    ("deny", "case 読み TS56 引数の位置の for からは頭の状態に入らず、case は文を開かない", 'echo "$(echo for x do case x in x)"; python3 -i'),
+    ("deny", "case 読み TS57 引用された for からは頭の状態に入らない", 'echo "$("for" x do case x in x)"; python3 -i'),
+    ("deny", "case 読み TS58 引数の位置の coproc からは頭の状態に入らない", 'echo "$(echo coproc { case x in x)"; python3 -i'),
+    ("deny", "case 読み TS59 引数の位置の repeat からは頭の状態に入らない", 'echo "$(echo repeat 1 { case x in x)"; python3 -i'),
+    # codex-guard-case-reading-fixes (VERIFICATION.md TS61): a reserved word, a
+    # closing word or a head word that a continuation pair splits is read as
+    # that word.
+    ("deny", "case 読み TS61 行継続の対で分断された then を then と読み、サブシェルの ) の後の case が文を開く", 'echo "$(if (:) th\\\nen case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS61 行継続の対で分断された fi を fi と読み、その後の then はコマンドの位置", 'echo "$(if if :; then :; f\\\ni then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
+    ("deny", "case 読み TS61 行継続の対で分断された for を for と読み、名前の後の do はコマンドの位置", 'echo "$(f\\\nor x do case x in x) printf \'%s\' \'"\';; esac; done)"; python3 -i'),
     # codex-guard-heredoc-delim-brace-quote: the `${ ... }` of a `<<` / `<<-`
     # delimiter is read the way zsh reads it (SPEC.md Test Scenarios TS1 to TS34).
     # Each command is the scenario's line array joined with newlines; the array
@@ -1649,10 +1727,11 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
     """A case statement inside a double-quoted command substitution is read in
     time whatever its shape (NFR1, TM-3): one statement with very many items,
     and statements nested very deeply, each opened as the first word of the
-    body of the enclosing item. The item count and the depth are the depth the
-    deep-input class uses. The launch after the substitution is judged, so the
-    answer is a deny: unlike the helper of the deep-input class, silence is not
-    an answer here."""
+    body of the enclosing item. Long runs of continuation pairs and of words
+    whose keyword match fails are read in time too (TS20 to TS22). The item
+    count and the depth are the depth the deep-input class uses. The launch
+    after the substitution is judged, so the answer is a deny: unlike the
+    helper of the deep-input class, silence is not an answer here."""
 
     DEPTH = TestMalformedAndDeepInput.DEPTH
     TIMEOUT = TestMalformedAndDeepInput.TIMEOUT
@@ -1674,6 +1753,92 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         depth = self.DEPTH
         statements = "case x in x) " * depth + ":" + "; esac" * depth
         self.assert_every_copy_denies('echo "$(' + statements + ')"; python3 -i')
+
+    # codex-guard-case-reading-fixes (SPEC.md TS20 to TS22, NFR1): long runs of
+    # continuation pairs and long runs of words whose keyword match fails are
+    # read in time too. A continuation pair is a backslash directly followed
+    # by a newline.
+    PAIR = "\\\n"
+
+    def test_ts20_continuation_pairs_in_the_waiting_phases_and_inside_the_keywords_are_read_in_time(self):
+        pairs = self.PAIR * self.DEPTH
+        shapes = {
+            "waiting phases": (
+                "case " + pairs + "x " + pairs + "in " + pairs + "(" + pairs + "x) "
+                + pairs + ":;; " + pairs + "esac"
+            ),
+            "inside the keywords": (
+                "c" + pairs + "ase x i" + pairs + "n x) :;; e" + pairs + "s" + pairs + "a" + pairs + "c"
+            ),
+            "both": (
+                "c" + pairs + "ase " + pairs + "x " + pairs + "i" + pairs + "n "
+                + pairs + "(" + pairs + "x) " + pairs + ":;; "
+                + pairs + "e" + pairs + "s" + pairs + "a" + pairs + "c"
+            ),
+        }
+        for shape, statement in shapes.items():
+            with self.subTest(shape=shape):
+                self.assert_every_copy_denies('echo "$(' + statement + ')"; python3 -i')
+
+    def test_ts21_split_words_whose_keyword_match_fails_are_read_in_time(self):
+        word = "c" + self.PAIR + "a" + self.PAIR + "s" + self.PAIR + "x"
+        shapes = {
+            "arguments": (word + " ") * self.DEPTH,
+            "command position": (word + "; ") * self.DEPTH,
+        }
+        for shape, body in shapes.items():
+            with self.subTest(shape=shape):
+                self.assert_every_copy_denies('echo "$(case x in x) ' + body + ':;; esac)"; python3 -i')
+
+    def test_ts22_a_long_run_of_argument_reserved_words_is_read_in_time(self):
+        body = "echo " + "then " * self.DEPTH
+        self.assert_every_copy_denies('echo "$(case x in x) ' + body + '; esac)"; python3 -i')
+
+    # codex-guard-case-reading-fixes (SPEC.md TS41 to TS43 and TS60, NFR1):
+    # compound closings, function heads and loop heads nested to DEPTH levels,
+    # and a long run of closing words at an argument position, are read in
+    # time and the launch after the substitution is denied.
+    def test_ts41_compound_closings_nested_deeply_are_read_in_time(self):
+        depth = self.DEPTH
+        command = 'echo "$(' + "if (:) then " * depth + "case x in x) :;; esac" + "; fi" * depth + ')"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_ts42_function_heads_nested_deeply_are_read_in_time(self):
+        depth = self.DEPTH
+        command = 'echo "$(' + "f() { " * depth + "case x in x) :;; esac" + "; }" * depth + ')"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_ts43_a_long_run_of_closing_words_at_an_argument_position_is_read_in_time(self):
+        command = 'echo "$(echo ' + "]] fi done then " * self.DEPTH + 'case x in x)"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_ts60_loop_heads_nested_deeply_are_read_in_time(self):
+        depth = self.DEPTH
+        command = 'echo "$(' + "for x do " * depth + "case x in x) :;; esac" + "; done" * depth + ')"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+
+class TestAnonymousFunctionHeadInASubstitution(HookCopiesMixin, unittest.TestCase):
+    """An empty `()` right after `function`, with no name, ends the head of a
+    zsh anonymous function (`function () { ... }`, FR10): the `{` after it is at
+    a command position and the `case` in the body opens a statement."""
+
+    def assert_every_copy(self, command, expected):
+        for plugin, path in self.for_each_copy():
+            with self.subTest(copy=plugin):
+                self.assertEqual(verdict_of(run_hook(path, payload_for(command))), expected)
+
+    def test_a_launch_after_the_substitution_is_denied(self):
+        self.assert_every_copy(
+            'echo "$(function () { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i',
+            "deny",
+        )
+
+    def test_a_quoted_launch_in_the_body_is_not_denied(self):
+        self.assert_every_copy(
+            'echo "$(function () { case x in x) echo "; python3 -i;";; esac; })"',
+            "silent",
+        )
 
 
 class TestBraceCloseEqualsSemicolonBeforeIt(HookCopiesMixin, unittest.TestCase):
@@ -2934,6 +3099,118 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
         for plugin, path in HOOK_PATHS.items():
             with self.subTest(copy=plugin):
                 self.assertIn(self.MODULE_SENTENCE, module_docstring(path))
+
+    # codex-guard-case-reading-fixes (FR7): the docstring states the four rules
+    # of the new reading, and the keyword decision states the pair-stripped rule.
+    RULE_MARKERS = {
+        "command position state": (
+            "carries state of constant size: whether the next word is at a command position",
+            "whether a `[[` read at a command position is still open in it",
+            "The characters of the previous word are never looked at backward",
+        ),
+        "case open and close rule": (
+            "`case` opens a statement only as a standalone word at a command position",
+            "In an item body `esac` closes a statement only as a standalone word at a command position",
+            "A `case` or an `esac` at an argument position, one after a reserved word or `!` that is itself at an argument position included, is an ordinary word and opens or closes nothing",
+        ),
+        "pattern comment rule": (
+            "A `#` directly after the `)` that closes an item's pattern (no blank in between) starts a comment that runs to the end of the line",
+            "after the newline the item body starts at a command position",
+        ),
+        "continuation rule": (
+            "A continuation pair is a backslash directly followed by a newline",
+            "`case`, `in` and `esac` are decided on the characters with the pairs left out",
+            "a sequence that does not spell the keyword once the pairs are out is not a keyword",
+            "a pair inside a word never splits it",
+            "a failed match is not retried from inside the same word",
+            "and so is every other word whose identity changes the reading",
+            "the closing words `fi`, `done`, `}` and `]]`, `[[`, `function` and the head words `for`, `select`, `coproc` and `repeat`",
+        ),
+        "compound closing rule": (
+            "A closing inside a word and a compound-command closing are told apart",
+            "A closing inside a word goes on inside the word",
+            "the `)` that closes a `(` that was not read at a command position (a zsh glob qualifier as in `x(N)`, `<(` and `>(`)",
+            "the `)` that closes a `(` read at a command position (a subshell, and the `((` ... `))` arithmetic command)",
+            "a standalone `]]` while a `[[` read as a standalone word at a command position is open in the same list",
+            "the `esac` that closes a case statement, whether it is read in an item body or at a pattern position",
+            "a standalone, unquoted `fi`, `done` or `}` read at a command position",
+            "A `]]` with no open `[[`, and a `fi`, `done` or `}` at an argument position, are ordinary words",
+            "the word after the target is not at a command position",
+            "the `[[` is tracked only to recognise its `]]`",
+        ),
+        "function head rule": (
+            "that `)` ends a function head and the next word is at a command position",
+            "a `(` that does not form an empty `()` is read as any other `(`",
+            "A standalone, unquoted, unescaped `function` read at a command position starts a head",
+            "an ordinary word that is never read as a keyword or reserved word",
+            "an empty `()` directly after the name or after blanks belongs to the head",
+            "Multi-name zsh definitions and function-name validity are not considered",
+        ),
+        "loop and coproc head rule": (
+            "starts only from a standalone word that is unquoted, unescaped, read at a command position",
+            "the same word at an argument position, quoted or escaped starts no head",
+            "After `for` or `select` the next word is the name, an ordinary word that is never a keyword",
+            "A `((` directly after `for` (blanks allowed) is read as opened at a command position",
+            "a `(` directly after the name (blanks allowed) opens a word list",
+            "no word inside it is at a command position",
+            "After `coproc` the next word is at a command position",
+            "the word after it is at a command position as well",
+            "After the zsh `repeat` the next word, the count, is an ordinary word that is never read as a keyword",
+        ),
+        "head lifetime rule": (
+            "A head state lasts only until its head completes or the next character rules it out",
+            "A separator (`;`, `&`, `|`, a newline) or the end of the list ends any head state still pending",
+        ),
+    }
+    # The sentence of the earlier reading that said every list went on inside
+    # a word after any nested context closed (FR7 asks for it to be replaced).
+    STALE_CLOSING_SENTENCE = (
+        "A list that goes on after a nested context closes (a substitution, a "
+        "subshell, quotes, a case statement) goes on inside a word, so its "
+        "state is false."
+    )
+
+    def test_the_docstring_no_longer_says_every_closing_goes_on_inside_a_word(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                doc = parser_docstring(path, "_skip_substitution") or ""
+                self.assertNotEqual(doc, "")
+                self.assertNotIn(self.STALE_CLOSING_SENTENCE, doc)
+
+    def test_the_docstring_states_the_four_rules_of_the_reading(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            for rule, markers in self.RULE_MARKERS.items():
+                for marker in markers:
+                    with self.subTest(copy=plugin, rule=rule, marker=marker):
+                        self.assertIn(marker, doc)
+
+    def test_the_keyword_decision_states_the_pair_stripped_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_keyword_end") or ""
+            for marker in (
+                "continuation pairs",
+                "the pair-stripped rule",
+                "a standalone word",
+            ):
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_word_reader_states_that_every_word_is_decided_on_the_pair_stripped_sequence(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_read_command_word") or ""
+            for marker in (
+                "Every word is decided by `_keyword_end`, on the characters with the continuation pairs left out",
+                "a quoted or escaped one",
+            ):
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_backward_look_at_the_previous_word_for_a_command_position_is_gone(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                methods = parser_methods(path)
+                self.assertNotIn("_at_command_position", methods)
 
 
 def verdict_of(result):
