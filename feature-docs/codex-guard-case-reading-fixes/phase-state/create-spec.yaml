@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-case-reading-fixes
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: df04d93834e454acdacaf27b62787a3f5e211771
 last_input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
