@@ -96,8 +96,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
-  completed_at_commit: 9e1d340362ba7405a6bb3a7070108a321ec58c5d
+  status: completed
+  completed_at_commit: 3e5dd5437b0f8c24281c50978d342b0ea0d17b59
 - id: implement
   status: pending
   base_commit: 9c5f62ff5519a988d0b105017d553bd082371443
@@ -125,6 +125,20 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/codex-guard-case-reading-fixes/task0001
+  task0002:
+    title: "Command position after compound closings, function heads and loop/coproc heads"
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills: []
+    domains: [input-handling]
+    complexity: high
+    requirements: [FR1, FR2, FR6, FR7, FR8, FR9, FR10, FR11, NFR1, NFR2, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 1
@@ -143,106 +157,106 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS1, TS4, TS5, TS6, TS7, TS22, TS23]
+    tasks: [task0001, task0002]
+    tests: [TS1, TS4, TS5, TS6, TS7, TS22, TS23, TS37, TS38, TS61, TS62]
   FR2:
     title: 引数の case / esac で文を開閉しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS1, TS4, TS5, TS6, TS7, TS23]
+    tasks: [task0001, task0002]
+    tests: [TS1, TS4, TS5, TS6, TS7, TS23, TS37, TS38, TS39, TS40, TS43, TS48, TS56, TS57, TS58, TS59, TS62]
   FR3:
     title: パターンの ')' の直後の '#' をコメントとして読む
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS2, TS8, TS23]
+    tests: [TS2, TS8, TS23, TS62]
   FR4:
     title: 待ちフェーズで行継続を読み飛ばす
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS3, TS9, TS10, TS11, TS20, TS23]
+    tests: [TS3, TS9, TS10, TS11, TS20, TS23, TS62]
   FR5:
     title: キーワードに接する行継続と分断する行継続
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS12, TS13, TS14, TS15, TS16, TS17, TS18, TS19, TS20, TS21, TS23]
+    tests: [TS12, TS13, TS14, TS15, TS16, TS17, TS18, TS19, TS20, TS21, TS23, TS62]
   FR6:
     title: 両コピーを同時に直す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS24]
+    tasks: [task0001, task0002]
+    tests: [TS24, TS63]
   FR7:
     title: docstring を更新する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS27]
+    tasks: [task0001, task0002]
+    tests: [TS27, TS66]
   FR8:
     title: CASES に再現と派生の行を足す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7, TS8, TS9, TS10, TS11, TS12, TS13, TS14, TS15, TS16, TS17, TS18, TS19, TS23]
+    tasks: [task0001, task0002]
+    tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7, TS8, TS9, TS10, TS11, TS12, TS13, TS14, TS15, TS16, TS17, TS18, TS19, TS23, TS24, TS25, TS26, TS27, TS28, TS29, TS30, TS31, TS32, TS33, TS34, TS35, TS36, TS37, TS38, TS39, TS40, TS44, TS45, TS46, TS47, TS48, TS49, TS50, TS51, TS52, TS53, TS54, TS55, TS56, TS57, TS58, TS59, TS62]
   FR9:
     title: 複合コマンドの閉じの後をコマンドの位置にする
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS23, TS24, TS25, TS26, TS27, TS28, TS29, TS30, TS31, TS37, TS38, TS39, TS40, TS41, TS61]
   FR10:
     title: 関数の頭の後をコマンドの位置にする
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS32, TS33, TS34, TS35, TS36, TS42]
   FR11:
     title: ループと coproc の頭の後をコマンドの位置にする
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS44, TS45, TS46, TS47, TS48, TS49, TS50, TS51, TS52, TS53, TS54, TS55, TS56, TS57, TS58, TS59, TS60, TS61]
   NFR1:
     title: 線形時間
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS20, TS21, TS22]
+    tasks: [task0001, task0002]
+    tests: [TS20, TS21, TS22, TS41, TS42, TS43, TS60]
   NFR2:
     title: 再帰を使わない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS25]
+    tasks: [task0001, task0002]
+    tests: [TS25, TS64]
   NFR3:
     title: 標準ライブラリだけを使う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS26]
+    tasks: [task0001, task0002]
+    tests: [TS26, TS65]
   NFR4:
     title: version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS29]
+    tasks: [task0001, task0002]
+    tests: [TS29, TS68]
 batch:
   review_rework_count: 0
   verify_rework:
