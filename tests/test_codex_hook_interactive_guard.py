@@ -1092,6 +1092,29 @@ CASES = [
     ("deny", "区切り語でない $\" は判定不能にしない", "\n".join(["echo $\"x\"; python3 -i"])),
     ("deny", "区切り語の二重引用符の中の ${...} の読みは変えない", "\n".join(["cat <<\"${v:-x}\"","${v:-x}","python3 -i"])),
     ("deny", "${...} の中のバッククォートは文字のまま残す", "\n".join(["cat <<${v:-`echo x`}","${v:-`echo x`}","python3 -i"])),
+    # codex-guard-subst-reading-regressions (VERIFICATION.md TS3, TS4, TS13 to
+    # TS24, TS30, TS31): coproc and repeat are read by the kind of the shell that
+    # directly holds the string (bash, zsh or unknown), and an unknown-kind
+    # string that stops undecidable is read once more with neither shell-specific
+    # rule. `bash -c ` + shlex.quote(s) is the SPEC.md notation wrap_bash(s), and
+    # `zsh -c ` + shlex.quote(s) is wrap_zsh(s); the wrapped rows repeat the
+    # earlier feature's row command (its TS46, TS47, TS50 and TS53) literally.
+    ("deny", "置換読み TS3 zsh の coproc は NAME を取らず、後ろの case は文を開かない（再現手順）", 'zsh -c \'echo "$(coproc echo case x in x)"; python3 -i\''),
+    ("deny", "置換読み TS4 bash の repeat は普通のコマンドで、後ろの case は文を開かない", 'bash -c \'echo "$(repeat x case y in y)"; python3 -i\''),
+    ("deny", "置換読み TS13 bash の coproc NAME の後の { はコマンドの位置", "bash -c " + shlex.quote('echo "$(coproc c { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i')),
+    ("deny", "置換読み TS14 bash では coproc WORD の後の case が文を開く", "bash -c " + shlex.quote('echo "$(coproc echo case x in x) printf \'%s\' \'"\';; esac)"; python3 -i')),
+    ("deny", "置換読み TS15 zsh の repeat word の後の { はコマンドの位置", "zsh -c " + shlex.quote('echo "$(repeat 1 { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i')),
+    ("deny", "置換読み TS16 zsh の coproc の後の { はコマンドの位置", "zsh -c " + shlex.quote('echo "$(coproc { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i')),
+    ("silent", "置換読み TS17 zsh の coproc { の後の case 文の本体の、引用符の中の python3 -i を拒否しない", "zsh -c " + shlex.quote('echo "$(coproc { case x in x) echo "; python3 -i;";; esac; })"')),
+    ("deny", "置換読み TS18 bash の repeat は普通のコマンドで、{ と case は引数", 'bash -c \'echo "$(repeat 1 { case x in x)"; python3 -i\''),
+    ("deny", "置換読み TS19 最上位（シェルが分からない場合）の coproc の形は、初回が判定不能で読み直しで deny", 'echo "$(coproc echo case x in x)"; python3 -i'),
+    ("deny", "置換読み TS20 最上位（シェルが分からない場合）の repeat の形は、初回が判定不能で読み直しで deny", 'echo "$(repeat x case y in y)"; python3 -i'),
+    ("deny", "置換読み TS21 sh の -c 文字列はシェルが分からない場合として読み直す", 'sh -c \'echo "$(coproc echo case x in x)"; python3 -i\''),
+    ("deny", "置換読み TS22 読み直しも失敗したら、初回の確定済みのコマンド（チェックポイントまで）を判定する", 'python3 -i\necho "$(repeat x case y in y'),
+    ("silent", "置換読み TS23 bash と分かっている文字列は読み直さない（case が文を開いて閉じない）", 'bash -c \'echo "$(coproc echo case x in x)"; python3 -i\''),
+    ("deny", "置換読み TS24 外側が bash でも、内側の zsh -c の文字列は zsh として読む", "bash -c " + shlex.quote('zsh -c \'echo "$(coproc echo case x in x)"; python3 -i\'')),
+    ("silent", "置換読み TS30 env とパスを経由した zsh も zsh として読み、coproc NAME の規則を使わない", "env /usr/bin/zsh -c " + shlex.quote('echo "$(coproc echo case x in x) printf \'%s\' \'"\';; esac)"; python3 -i')),
+    ("silent", "置換読み TS31 env を経由した版数つきの bash は bash として読み、読み直さない", "env bash5.2 -c " + shlex.quote('echo "$(coproc echo case x in x)"; python3 -i')),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -1794,6 +1817,16 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         body = "echo " + "then " * self.DEPTH
         self.assert_every_copy_denies('echo "$(case x in x) ' + body + '; esac)"; python3 -i')
 
+    # codex-guard-subst-reading-regressions (VERIFICATION.md TS27, NFR1): a
+    # top-level coproc form followed by DEPTH words. The string is of unknown
+    # kind: the first read follows the `case` the coproc NAME rule opens to the
+    # end of the input and stops undecidable, and the re-read reads the same
+    # string to its end. Both reads are linear, and the launch after the
+    # substitution is denied.
+    def test_ts27_a_top_level_coproc_form_followed_by_a_long_run_is_read_twice_in_time(self):
+        command = 'echo "$(coproc echo case x in x)' + " :" * self.DEPTH + '"; python3 -i'
+        self.assert_every_copy_denies(command)
+
     # codex-guard-case-reading-fixes (SPEC.md TS41 to TS43 and TS60, NFR1):
     # compound closings, function heads and loop heads nested to DEPTH levels,
     # and a long run of closing words at an argument position, are read in
@@ -2328,6 +2361,83 @@ class TestNestedParseErrorContainment(unittest.TestCase):
         self.assertEqual(nested_parse_handler_findings("x = 1\n"), ["no _scan function"])
 
 
+def load_guard(path):
+    """The guard at `path` as a module namespace, compiled from its source text
+    and run in memory. Nothing is imported from the plugin directory, so no
+    bytecode cache is written there (`TestCopies`)."""
+    namespace = {"__name__": "guard_under_test", "__file__": str(path)}
+    exec(compile(path.read_text(encoding="utf-8"), str(path), "exec"), namespace)
+    return namespace
+
+
+class TestRereadFallback(unittest.TestCase):
+    """codex-guard-subst-reading-regressions (VERIFICATION.md TS33, TM-3): when
+    the one re-read of an unknown-kind string raises, whatever the exception
+    class, the module-level `parse` raises the `_Undecidable` of the first read
+    with the commands the first read settled up to its last checkpoint. No known
+    input makes the reader raise an unexpected error, so the failure is forced
+    in memory: the re-read is the second parser the module-level `parse` builds,
+    and its parse method raises."""
+
+    # `python3 -i` is settled at the checkpoint of the first line. Under both
+    # readings the second line is an unclosed substitution, so the first read is
+    # undecidable and the re-read would be too.
+    COMMAND = 'python3 -i\necho "$(repeat x case y in y'
+
+    def parse_with_failing_reread(self, path, make_failure):
+        """Run the module-level `parse` of the guard at `path` on COMMAND with a
+        re-read that raises the exception `make_failure(guard namespace)` makes.
+        Return (the parsers built, the failure, the exception `parse` raised)."""
+        guard = load_guard(path)
+        failure = make_failure(guard)
+        real = guard["_Parser"]
+        parsers = []
+
+        class FailingReread(real):
+            def parse(self):
+                parsers.append(self)
+                if len(parsers) == 2:
+                    raise failure
+                return super().parse()
+
+        guard["_Parser"] = FailingReread
+        with self.assertRaises(guard["_Undecidable"]) as caught:
+            guard["parse"](self.COMMAND)
+        return parsers, failure, caught.exception
+
+    def assert_first_read_checkpoint(self, error):
+        self.assertEqual(
+            [[word.text for word in command.words] for command in error.checkpoint_commands],
+            [["python3", "-i"]],
+        )
+
+    def test_a_reread_that_raises_an_unexpected_error_falls_back_to_the_first_read(self):
+        for plugin, path in HOOK_PATHS.items():
+            for error_class in (RuntimeError, KeyError, RecursionError):
+                with self.subTest(copy=plugin, failure=error_class.__name__):
+                    parsers, failure, error = self.parse_with_failing_reread(
+                        path, lambda guard: error_class("forced")
+                    )
+                    self.assertEqual(len(parsers), 2, "the string is read twice")
+                    self.assertIsNot(error, failure)
+                    self.assert_first_read_checkpoint(error)
+
+    def test_a_reread_that_raises_undecidable_falls_back_to_the_first_read(self):
+        def undecidable_with_other_commands(guard):
+            failure = guard["_Undecidable"]("forced")
+            failure.checkpoint_commands = ("the re-read's own commands",)
+            return failure
+
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, failure, error = self.parse_with_failing_reread(
+                    path, undecidable_with_other_commands
+                )
+                self.assertEqual(len(parsers), 2, "the string is read twice")
+                self.assertIsNot(error, failure)
+                self.assert_first_read_checkpoint(error)
+
+
 class TestNestedReadLimit(HookCopiesMixin, unittest.TestCase):
     """The characters re-read from second-level-and-deeper strings are capped
     at `NESTED_READ_LIMIT` per hook command (TM-2). First-level strings are
@@ -2412,6 +2522,26 @@ class TestNestedReadLimit(HookCopiesMixin, unittest.TestCase):
         over = holding(padded_echo(NESTED_READ_LIMIT + 1))
         self.assert_verdict("deny", holding(over, "python3 -i"))
         self.assert_verdict("deny", holding(over + "; python3 -i"))
+
+    # codex-guard-subst-reading-regressions (VERIFICATION.md TS32, NFR1, A3): a
+    # second-level string that is held by `sh -c` is of unknown kind and is read
+    # twice, because its coproc form stops the first read undecidable; it counts
+    # once, at its length, toward the limit. The second second-level string
+    # carries the launch, and the two lengths add up exactly to the limit, so the
+    # launch is denied only if the first string was counted once.
+    def reread_pair(self, second_length):
+        head = 'echo "$(coproc echo case x in x)"; echo \''
+        first_length = NESTED_READ_LIMIT // 2
+        first = head + "x" * (first_length - len(head) - 1) + "'"
+        self.assertEqual(len(first), first_length)
+        second = padded_launch(second_length)
+        return holding("sh -c " + sq(first) + "; bash -c " + sq(second))
+
+    def test_ts32_a_second_level_string_that_is_read_twice_counts_once_toward_the_limit(self):
+        self.assert_verdict("deny", self.reread_pair(NESTED_READ_LIMIT - NESTED_READ_LIMIT // 2))
+
+    def test_ts32_one_more_character_in_the_second_string_and_it_is_not_read(self):
+        self.assert_verdict("silent", self.reread_pair(NESTED_READ_LIMIT - NESTED_READ_LIMIT // 2 + 1))
 
 
 def module_docstring(path):
@@ -3154,7 +3284,7 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             "a `(` directly after the name (blanks allowed) opens a word list",
             "no word inside it is at a command position",
             "After `coproc` the next word is at a command position",
-            "the word after it is at a command position as well",
+            "with the rule on, the word after it is at a command position as well",
             "After the zsh `repeat` the next word, the count, is an ordinary word that is never read as a keyword",
         ),
         "head lifetime rule": (
