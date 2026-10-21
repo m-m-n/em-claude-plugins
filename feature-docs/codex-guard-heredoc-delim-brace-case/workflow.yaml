@@ -105,9 +105,11 @@ workflow:
   status: completed
   completed_at_commit: 633ca515372e571b2d5e2699971ab2337a4b366d
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  completed_at_commit: 08a79a82a4e02a5698e4e014f64d252e41bf49aa
+  summary: 'test_command passed (943/943 destructive-guard cases; unittest 10866 tests OK, skipped=1); reproduction gives deny on both copies; copies byte-identical; no new non-stdlib import; docstrings describe the braced case-aware reading, the unchanged paren scan, and the undecidable cases'
 - id: retrospect
   status: pending
 tasks:
