@@ -976,6 +976,32 @@ CASES = [
     ("deny", "zsh が受け付ける case 文の対象の語の括弧 x(a|b) を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case x(a|b) in *) :;; esac)"; python3 -i')),
     ("deny", "zsh が受け付ける case 文の対象の語の数値の範囲 <1-2> を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case <1-2> in *) :;; esac)"; python3 -i')),
     ("deny", "zsh が受け付ける case 文の対象の語のプロセス置換 <(:) を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(case <(:) in *) :;; esac)"; python3 -i')),
+    # codex-guard-case-reading-fixes (SPEC.md Test Scenarios TS1 to TS19): the
+    # substitution reader reads a `case` statement correctly when `case` or
+    # `esac` is an argument, when a comment follows a pattern's `)` directly,
+    # and when a line continuation sits in a waiting phase or at a keyword.
+    # In the notation of SPEC.md `<NL>` is a newline and `\<NL>` is a
+    # backslash directly followed by a newline; the literals below hold exactly
+    # those characters (`\n` and `\\\n`).
+    ("silent", "case 読み TS1 引数の if の後の esac は文を閉じず、引用符の中の python3 -i を拒否しない (再現手順 1)", 'echo "$(case y in x) echo if esac;; y) echo "; python3 -i;";; esac)"'),
+    ("silent", "case 読み TS2 パターンの ) の直後の # はコメントで、中の esac と引用符は何も閉じも開きもしない (再現手順 2)", 'echo "$(case x in x)#; esac\n:;; y) printf \'%s\' \'"; python3 -i; #\';; esac)"'),
+    ("deny", "case 読み TS3 in の前の行継続を読み飛ばして置換の閉じを見つけ、後ろの起動を拒否する (再現手順 3)", 'echo "$(case x \\\nin x) :;; esac)"; python3 -i'),
+    ("silent", "case 読み TS4 引数の then の後の esac は文を閉じない", 'echo "$(case y in x) echo then esac;; y) echo "; python3 -i;";; esac)"'),
+    ("silent", "case 読み TS5 引数の ! の後の esac は文を閉じない", 'echo "$(case y in x) echo ! esac;; y) echo "; python3 -i;";; esac)"'),
+    ("deny", "case 読み TS6 引数の then の後の esac が文を閉じないので、引用がずれず後ろの起動を拒否する", 'echo "$(case x in x) echo then esac;; y) echo \'"\';; esac)"; python3 -i #\''),
+    ("deny", "case 読み TS7 項目の本体の外の引数の case は文を開かず、後ろの起動を拒否する", 'echo "$(echo then case x in x)"; python3 -i'),
+    ("deny", "case 読み TS8 パターンの直後のコメントの中の ) は置換を閉じず、後ろの起動を拒否する", 'echo "$(case x in x)#)\n:;; esac)"; python3 -i'),
+    ("deny", "case 読み TS9 対象の語の前の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case \\\nx in x) :;; esac)"; python3 -i'),
+    ("deny", "case 読み TS10 空の case の esac の前の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case x in \\\nesac)"; python3 -i'),
+    ("deny", "case 読み TS11 最初のパターンの前の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case x in \\\nx) :;; esac)"; python3 -i'),
+    ("silent", "case 読み TS12 case の直後の行継続を読み飛ばして case 文を開き、引用符の中の python3 -i を拒否しない", 'echo "$(case\\\n x in x) echo "; python3 -i; ";; esac)"'),
+    ("silent", "case 読み TS13 case を分断する行継続を取り除いて case 文を開き、引用符の中の python3 -i を拒否しない", 'echo "$(ca\\\nse x in x) echo "; python3 -i; ";; esac)"'),
+    ("deny", "case 読み TS14 in の直後の行継続を読み飛ばし、後ろの起動を拒否する", 'echo "$(case x in\\\n x) :;; esac)"; python3 -i'),
+    ("deny", "case 読み TS15 esac の直後の行継続を読み飛ばして文を閉じ、後ろの起動を拒否する", 'echo "$(case x in x) :;; esac\\\n)"; python3 -i'),
+    ("deny", "case 読み TS16 in を分断する行継続を取り除いて in と読み、後ろの起動を拒否する", 'echo "$(case x i\\\nn x) :;; esac)"; python3 -i'),
+    ("deny", "case 読み TS17 esac を分断する行継続を取り除いて esac と読み、後ろの起動を拒否する", 'echo "$(case x in x) :;; es\\\nac)"; python3 -i'),
+    ("deny", "case 読み TS18 対を取り除くと casex になりキーワードではないので x) で置換が閉じ、引用の外の起動を拒否する", 'echo "$(ca\\\nsex in x) echo "; python3 -i; ";; esac)"'),
+    ("silent", "case 読み TS19 対を取り除くと esacx のパターンになり、文を閉じない", 'echo "$(case x in es\\\nacx) echo "; python3 -i; ";; esac)"'),
     # codex-guard-heredoc-delim-brace-quote: the `${ ... }` of a `<<` / `<<-`
     # delimiter is read the way zsh reads it (SPEC.md Test Scenarios TS1 to TS34).
     # Each command is the scenario's line array joined with newlines; the array
@@ -1649,10 +1675,11 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
     """A case statement inside a double-quoted command substitution is read in
     time whatever its shape (NFR1, TM-3): one statement with very many items,
     and statements nested very deeply, each opened as the first word of the
-    body of the enclosing item. The item count and the depth are the depth the
-    deep-input class uses. The launch after the substitution is judged, so the
-    answer is a deny: unlike the helper of the deep-input class, silence is not
-    an answer here."""
+    body of the enclosing item. Long runs of continuation pairs and of words
+    whose keyword match fails are read in time too (TS20 to TS22). The item
+    count and the depth are the depth the deep-input class uses. The launch
+    after the substitution is judged, so the answer is a deny: unlike the
+    helper of the deep-input class, silence is not an answer here."""
 
     DEPTH = TestMalformedAndDeepInput.DEPTH
     TIMEOUT = TestMalformedAndDeepInput.TIMEOUT
@@ -1674,6 +1701,46 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         depth = self.DEPTH
         statements = "case x in x) " * depth + ":" + "; esac" * depth
         self.assert_every_copy_denies('echo "$(' + statements + ')"; python3 -i')
+
+    # codex-guard-case-reading-fixes (SPEC.md TS20 to TS22, NFR1): long runs of
+    # continuation pairs and long runs of words whose keyword match fails are
+    # read in time too. A continuation pair is a backslash directly followed
+    # by a newline.
+    PAIR = "\\\n"
+
+    def test_ts20_continuation_pairs_in_the_waiting_phases_and_inside_the_keywords_are_read_in_time(self):
+        pairs = self.PAIR * self.DEPTH
+        shapes = {
+            "waiting phases": (
+                "case " + pairs + "x " + pairs + "in " + pairs + "(" + pairs + "x) "
+                + pairs + ":;; " + pairs + "esac"
+            ),
+            "inside the keywords": (
+                "c" + pairs + "ase x i" + pairs + "n x) :;; e" + pairs + "s" + pairs + "a" + pairs + "c"
+            ),
+            "both": (
+                "c" + pairs + "ase " + pairs + "x " + pairs + "i" + pairs + "n "
+                + pairs + "(" + pairs + "x) " + pairs + ":;; "
+                + pairs + "e" + pairs + "s" + pairs + "a" + pairs + "c"
+            ),
+        }
+        for shape, statement in shapes.items():
+            with self.subTest(shape=shape):
+                self.assert_every_copy_denies('echo "$(' + statement + ')"; python3 -i')
+
+    def test_ts21_split_words_whose_keyword_match_fails_are_read_in_time(self):
+        word = "c" + self.PAIR + "a" + self.PAIR + "s" + self.PAIR + "x"
+        shapes = {
+            "arguments": (word + " ") * self.DEPTH,
+            "command position": (word + "; ") * self.DEPTH,
+        }
+        for shape, body in shapes.items():
+            with self.subTest(shape=shape):
+                self.assert_every_copy_denies('echo "$(case x in x) ' + body + ':;; esac)"; python3 -i')
+
+    def test_ts22_a_long_run_of_argument_reserved_words_is_read_in_time(self):
+        body = "echo " + "then " * self.DEPTH
+        self.assert_every_copy_denies('echo "$(case x in x) ' + body + '; esac)"; python3 -i')
 
 
 class TestBraceCloseEqualsSemicolonBeforeIt(HookCopiesMixin, unittest.TestCase):
@@ -2934,6 +3001,56 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
         for plugin, path in HOOK_PATHS.items():
             with self.subTest(copy=plugin):
                 self.assertIn(self.MODULE_SENTENCE, module_docstring(path))
+
+    # codex-guard-case-reading-fixes (FR7): the docstring states the four rules
+    # of the new reading, and the keyword decision states the pair-stripped rule.
+    RULE_MARKERS = {
+        "command position state": (
+            "carries one piece of state of constant size: whether the next word is at a command position",
+            "The characters of the previous word are never looked at backward",
+        ),
+        "case open and close rule": (
+            "`case` opens a statement only as a standalone word at a command position",
+            "In an item body `esac` closes a statement only as a standalone word at a command position",
+            "A `case` or an `esac` at an argument position, one after a reserved word or `!` that is itself at an argument position included, is an ordinary word and opens or closes nothing",
+        ),
+        "pattern comment rule": (
+            "A `#` directly after the `)` that closes an item's pattern (no blank in between) starts a comment that runs to the end of the line",
+            "after the newline the item body starts at a command position",
+        ),
+        "continuation rule": (
+            "A continuation pair is a backslash directly followed by a newline",
+            "`case`, `in` and `esac` are decided on the characters with the pairs left out",
+            "a sequence that does not spell the keyword once the pairs are out is not a keyword",
+            "a pair inside a word never splits it",
+            "a failed match is not retried from inside the same word",
+        ),
+    }
+
+    def test_the_docstring_states_the_four_rules_of_the_reading(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            for rule, markers in self.RULE_MARKERS.items():
+                for marker in markers:
+                    with self.subTest(copy=plugin, rule=rule, marker=marker):
+                        self.assertIn(marker, doc)
+
+    def test_the_keyword_decision_states_the_pair_stripped_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_keyword_end") or ""
+            for marker in (
+                "continuation pairs",
+                "the pair-stripped rule",
+                "a standalone word",
+            ):
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_backward_look_at_the_previous_word_for_a_command_position_is_gone(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                methods = parser_methods(path)
+                self.assertNotIn("_at_command_position", methods)
 
 
 def verdict_of(result):
