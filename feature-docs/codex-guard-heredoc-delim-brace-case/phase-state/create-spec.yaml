@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-heredoc-delim-brace-case
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 6901c808176675561c840b44c92beec13f16c8de
 last_input_digest: sha256:7fabdfb3635d2be490071f4460a6bbc7a45acb13f7aa0a4e76bd6c008972fcc6
