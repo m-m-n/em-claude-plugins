@@ -3,15 +3,50 @@ feature: codex-guard-subst-reading-regressions
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 635200f567ce4adaa037125a1ae2f769a06b5c20
-last_input_digest: sha256:7e699e3eac5b626201868f133e343e5a243dfcddaedf48ef3cee7e3502bc74c8
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: b1953681e61bbc1e71c2da80940043eae875290b
+last_input_digest: sha256:f88a68c4bddaa6beabd7983a08f40cb23170e8d602c9eac4afc25626c9ab9e6f
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-21T20:43:55+09:00'
+    questions:
+    - question_id: fr.unknown-shell-coproc-repeat
+      status: answered
+    - question_id: design-step
+      status: answered
+answers:
+  fr.unknown-shell-coproc-repeat:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T20:43:55+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - reparse-fallback
+    freeform: null
+    normalized_answer: シェルが分からない文字列は今の読み方（bash の coproc NAME の規則と zsh の repeat の規則の両方）で読み、判定不能（_Undecidable）になったときだけ、どちらの規則も使わない読み方で 1 回だけ読み直し、最後まで読めたときだけその結果を採用する。読み直しも失敗したら初回の例外と確定済みのコマンドを保つ。読み直しは parse
+      の中で扱い、find_deny(command) の引数と _scan の中で parse を囲む 1 つの try を保つ
+    resolution_note: 'batch policy create-spec.requirement-clarification codex_consultation（harness codex、1 turn）。Codex は reparse-fallback を推奨。両コピーで最上位の echo "$(coproc echo case x in x)"; python3 -i が silent、TS47/TS50
+      が deny であることを実行で確認。union は確認済みの拒否漏れを残し、brace-only は今は正しく読める { 以外の形（coproc c while … / repeat N do … done）に読み違いを持ち込む。reparse-fallback は影響を初回が判定不能になる入力に限り、最大 2 回の読み取りでも線形を保つ。オーケストレーターが写像を判断し reparse-fallback
+      を採用（worker 推奨 brace-only とは異なる）。Opus エスカレーションは不要。不採用: union, brace-only'
+  design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T20:43:55+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を省略する（analyst 推奨の skip。UI の無いフック解析処理の修正、デザインシステム候補ゼロ）
+    resolution_note: batch policy create-spec.design-step decide_autonomously → analyst 推奨の skip
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:7e699e3eac5b626201868f133e343e5a243dfcddaedf48ef3cee7e3502bc74c8
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:f88a68c4bddaa6beabd7983a08f40cb23170e8d602c9eac4afc25626c9ab9e6f
   output_digest: null
 artifacts: []
 patches: []
