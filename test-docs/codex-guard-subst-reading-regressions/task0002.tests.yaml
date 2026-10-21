@@ -1,0 +1,87 @@
+task_id: task0002
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: 943/943 and Ran 10861 tests, OK (skipped=1), before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, 943/943 and Ran 10863 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the CASES row for TS2 added and the guard unchanged, the test errored for both copies
+      (no deny object on standard output where deny was expected: the pair between the
+      parentheses of f(\<NL>) stopped the empty-parentheses check, so the { after it was an
+      argument, the case opened nothing and the quote shifted). It passes after the
+      implementation.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the CASES rows for TS9, TS10 and TS11 added and the guard unchanged, the test errored
+      on TS9 (a pair after f () and on TS11 (blanks mixed with several pairs) for both copies
+      (no deny object where deny was expected). TS10 (function f(\<NL>)) already returned deny before
+      the change: the word after the name of a function head is already at a command position,
+      so the ( was read as a subshell at a command position and its ) gave the { a command
+      position. It stays as a regression guard and was not observed red. All three pass after
+      the implementation.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the CASES row for TS12 added and the guard unchanged, the test failed for both copies
+      (a deny object on standard output where silence was expected: the body of the function
+      whose () holds a pair was not read as a case statement, so the quoted python3 -i was read
+      as a launch). It passes after the implementation.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The TS29 row was silent before any implementation: the unchanged guard never skipped a
+      backslash between the parentheses, so the parentheses of f(\ ) were already not empty and
+      the case statement in the body was already not read. No red state occurred for this
+      change. The row guards the new skipping against reading any backslash as a pair; it would
+      go to deny if the check skipped a backslash that is not directly followed by a newline.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts25_a_long_run_of_pairs_inside_an_empty_function_head_is_read_in_time
+    red_confirmed: true
+    red_reason: >-
+      With the test added and the guard unchanged, it errored for both copies (no deny object
+      where deny was expected: DEPTH pairs inside f( ... ) stopped the empty-parentheses check,
+      so the launch after the substitution was not denied). It passes after the implementation,
+      well inside the class TIMEOUT.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestAnonymousFunctionHeadInASubstitution
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution
+      - tests.test_codex_hook_interactive_guard.TestCopies
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests above detect a changed
+      verdict of any pre-existing CASES row (including f() {, f () {, function f { and
+      function f() {) and of function () {, a duplicated command, a call from the check, a
+      lost pair of copies and a lost pinned documentation sentence; no red state occurred for
+      this change. Every one of them passed against the unmodified code (baseline run) and
+      passes after the implementation. The full project test command was run after the
+      implementation and the record and ended no worse than the baseline.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_four_rules_of_the_reading
+    red_confirmed: false
+    red_reason: >-
+      The new wording of the _empty_parens_end docstring and of the rule 6 empty-parentheses
+      sentences is not pinned by any test (IMPLEMENTATION.md Conventions: this task adds no
+      documentation-marker test); it is checked by review of the docstrings. The existing
+      test_the_docstring_states_the_four_rules_of_the_reading detects the loss of the pinned
+      function head rule sentences that the edit keeps verbatim; no red state occurred for
+      this change. That no plugin.json or marketplace.json version changed is verified with
+      git diff --stat on the task branch, not by a test.

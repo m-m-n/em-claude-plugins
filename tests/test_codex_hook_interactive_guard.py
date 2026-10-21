@@ -1054,6 +1054,17 @@ CASES = [
     ("deny", "case 読み TS61 行継続の対で分断された then を then と読み、サブシェルの ) の後の case が文を開く", 'echo "$(if (:) th\\\nen case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
     ("deny", "case 読み TS61 行継続の対で分断された fi を fi と読み、その後の then はコマンドの位置", 'echo "$(if if :; then :; f\\\ni then case x in x) printf \'%s\' \'"\';; esac; fi)"; python3 -i'),
     ("deny", "case 読み TS61 行継続の対で分断された for を for と読み、名前の後の do はコマンドの位置", 'echo "$(f\\\nor x do case x in x) printf \'%s\' \'"\';; esac; done)"; python3 -i'),
+    # codex-guard-subst-reading-regressions (VERIFICATION.md TS2, TS9 to TS12 and
+    # TS29): the `()` of a function head is empty when only spaces, tabs and
+    # continuation pairs lie between the parentheses, so the `{` after it is at
+    # a command position and the `case` in the body opens a statement. A
+    # backslash followed by anything other than a newline is no pair.
+    ("deny", "置換読み TS2 f(\\<NL>) の対を空白と同じに読み、本体の case 文を読んで、後ろの起動を拒否する (欠陥 2 の再現)", "bash -c " + shlex.quote('echo "$(f(\\\n) { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i')),
+    ("deny", "置換読み TS9 空白を挟んだ ( の後の対を空の () と読み、後ろの起動を拒否する", "bash -c " + shlex.quote('echo "$(f (\\\n) { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i')),
+    ("deny", "置換読み TS10 function name( の後の対を空の () と読み、後ろの起動を拒否する", "bash -c " + shlex.quote('echo "$(function f(\\\n) { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i')),
+    ("deny", "置換読み TS11 空白と複数の対が混ざった空の () を読み、後ろの起動を拒否する", "bash -c " + shlex.quote('echo "$(f( \\\n\\\n ) { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i')),
+    ("silent", "置換読み TS12 対を挟んだ関数の本体の、引用符の中の python3 -i を拒否しない", "bash -c " + shlex.quote('echo "$(f(\\\n) { case x in x) echo "; python3 -i;";; esac; }; f)"')),
+    ("silent", "置換読み TS29 改行でない文字が続くバックスラッシュは対でなく、() は空でないので本体の case 文を読まない", 'echo "$(f(\\ ) { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i'),
     # codex-guard-heredoc-delim-brace-quote: the `${ ... }` of a `<<` / `<<-`
     # delimiter is read the way zsh reads it (SPEC.md Test Scenarios TS1 to TS34).
     # Each command is the scenario's line array joined with newlines; the array
@@ -1807,6 +1818,13 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         depth = self.DEPTH
         command = 'echo "$(' + "f() { " * depth + "case x in x) :;; esac" + "; }" * depth + ')"; python3 -i'
         self.assert_every_copy_denies(command)
+
+    # codex-guard-subst-reading-regressions (VERIFICATION.md TS25, NFR1): DEPTH
+    # continuation pairs inside the `()` of a function head are read in time
+    # and the launch after the substitution is denied.
+    def test_ts25_a_long_run_of_pairs_inside_an_empty_function_head_is_read_in_time(self):
+        inner = 'echo "$(f(' + self.PAIR * self.DEPTH + ') { case x in x) printf \'%s\' \'"\';; esac; }; f)"; python3 -i'
+        self.assert_every_copy_denies("bash -c " + shlex.quote(inner))
 
     def test_ts43_a_long_run_of_closing_words_at_an_argument_position_is_read_in_time(self):
         command = 'echo "$(echo ' + "]] fi done then " * self.DEPTH + 'case x in x)"; python3 -i'
