@@ -1,0 +1,92 @@
+round: 1
+executed_at: "2026-10-21T21:40:44+09:00"
+scope:
+  review_mode: diff
+  base_commit: 9e2487e024c13fb7ceec051f72d1a8dde6515232
+  head_commit: 633ca515372e571b2d5e2699971ab2337a4b366d
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-heredoc-delim-brace-case/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 8704f40d2d534c76
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1897
+  title: "区切り語の ${ } の中の $( ) にある << で判定不能になり、終端行の後の起動を見逃す"
+  description: "今回の変更で、区切り語の `${ ... }` の範囲にある引用されていない `$(` は、`_remove_range_quotes`（1897-1903 行）から `_read_quoted_unit` を経て `_skip_substitution` に渡るようになった。`_skip_substitution` はコマンドリストの中で `<<` を見ると `_Undecidable(\"heredoc in a substitution\")` を投げる（2474-2475 行）。この例外は parse まで伝わり、checkpoint の規則で区切り語の行より後の `python3 -i` が判定されないため、出力なしになる。変更前は `_skip_parens`（`_scan_parens`）が括弧を数えるだけで `<<` を読まずに `$( ... )` を閉じていた。そのため `${v:-$(echo <<EOF)}` が区切り語に登録され、次の行で本文が閉じて deny が返っていた。em-review のコピーはバイト単位で同一なので、同じく該当する。"
+  suggestion: "置換の中のヒアドキュメントを zsh がどう読むかを先に確かめる。そのうえで、`<<` があっても区切り語の終わりを zsh と同じ位置に置けるよう、共有スキップの読みを決める。変更前に deny だったこの入力を、両コピーに流す回帰の行として CASES に加える。"
+  reproduction: "フックの標準入力に次の JSON を渡す: {\"tool_input\":{\"command\":\"zsh -c 'if false; then\\n: <<${v:-$(echo <<EOF)}\\n${v:-$(echo <<EOF)}\\nfi\\npython3 -i'\"}}。入力は _remove_range_quotes → _read_quoted_unit → _skip_substitution に到達し、変更後は標準出力が空になる。基準コミットでは permissionDecision: deny が返る。"
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: ["codex:security"]
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: a1ffc746adbf0058
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1974
+  title: "置換の中の算術命令の左シフト << をヒアドキュメントと誤認し、判定不能になる"
+  description: "`_skip_substitution` が `$( ((1 << 2)) )` を読むと、コマンド位置の `((` は算術の文脈にならず、2 つの `(` としてコマンドリストが積まれる（2428-2451 行）。そのため中の `<<` が 2474-2475 行でヒアドキュメントとみなされ、`_Undecidable` になる。`cat <<${v:-$( ((1 << 2)) )}` の行より前に checkpoint が無いので、出力なしになる。変更前は括弧を数えて区切り語を登録し、終端行の後の `python3 -i` を deny していた。`for ((...))` の `((` も同じように読まれる。両コピーに該当する。"
+  suggestion: "共有スキップで、コマンド位置の `((`（`for` の後を含む）を算術の文脈として読み、中の `<<` をリダイレクトと区別する。この入力を両コピーに流す回帰の行を CASES に加える。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: ["codex:comprehensive"]
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+- stable_id: a1376c6e4c4feed3
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 1902
+  title: "引数の語の中の括弧にある case を文の開始と誤認し、判定不能になる"
+  description: "`_skip_substitution` は、コマンド位置にない `(`（`foo(` のように語の中にある括弧）でも、新しいリストをコマンド位置から始める（2450 行で at_command を真にする）。`$(echo foo(case x))` では `case` が文として開き、件名 `x` の後の `)` で `_Undecidable(\"case without in\")` になる（2392-2394 行）。終端行の後の起動は判定されず、出力なしになる。変更前は括弧を数えて区切り語を登録し、deny していた。両コピーに該当する。"
+  suggestion: "引数の語の中の括弧と、コマンドを読む括弧（サブシェル、`<(`、`>(`）を区別し、引数の語の中では case 文を開かないようにする。この区切り語を両コピーに流す回帰の行を CASES に加える。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: ["codex:comprehensive"]
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+evaluation:
+  round_summary: "round 1（cross_validation 有効）。medium の回帰 3 件を引き継いだ。3 件とも根本の原因は同じで、区切り語の `${ ... }` の中の `$(` を共有の case 対応スキップに回したことにある。このスキップが判定不能とする形（置換の中の `<<`、算術命令の `<<`、語の中の括弧にある case）は、変更前の括弧を数える読みでは正しく区切り語に登録され deny されていた。今回の変更で、これらが出力なしに変わった。security#0 の再現手順は実行せず、コード読みで経路と結果を追って reproduced と判断した。comprehensive#0 の 2 件もコード読みで確かめた。critical / high の所見は無く、dismissed_sites は空。2 つのコピーはバイト単位で同一（cmp で確認）。観点ごとの確認結果: security — corroborated、comprehensive — corroborated、architecture — corroborated、spec — corroborated。読んだファイルは 10 件の上限のうち 8 件。"
+  recommended_action: rework
+  action_rationale: "3 件とも medium で、変更前に deny できていた有効な入力を出力なしにする回帰である。直すには共有スキップの読みを広げる必要があり、範囲を区切った自動修正には収まらないため、作業タスクを作り直して対応するのが妥当と判断した。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-heredoc-delim-brace-case-20261021T124120Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
