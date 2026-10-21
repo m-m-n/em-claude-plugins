@@ -1,0 +1,51 @@
+task_id: task0002
+# Full suite (python3 -m unittest discover -s tests) run before any edit:
+# 10790 tests, OK, 1 skipped, no failure.
+baseline_failures: []
+# Full suite re-executed after the implementation and after this record was
+# written (the record is itself checked by tests.test_tests_yaml_id_resolution).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_docs.TestScriptDocstringIntermediateSymlink.test_ac1_token_line_says_a_symlink_at_any_component_yields_the_token
+      - tests.test_artifact_digest_docs.TestScriptDocstringIntermediateSymlink.test_ac1_entry_kinds_says_no_component_is_followed_as_a_symlink
+      - tests.test_artifact_digest_docs.TestScriptDocstringIntermediateSymlink.test_ac1_token_line_does_not_limit_the_rule_to_the_final_component
+      - tests.test_artifact_digest_docs.TestScriptDocstringIntermediateSymlink.test_ac1_entry_kinds_does_not_limit_the_rule_to_the_final_component
+    red_confirmed: true
+    red_reason: "Against the unedited docstring three of the four failed: the token line (not_a_regular_file ... a socket) gave False for the any-component matcher, the Entry kinds paragraph gave False for it too, and the Entry kinds limit check returned the sentence 'The final path component is never resolved through a symlink and nothing waits on a FIFO or a device.' The token-line limit check was already green before the change (the old token line never named the final component) and is a guard. The forged-text cases in TestIntermediateSymlinkMatchersFireOnForgedText prove the limit matcher fires."
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_docs.TestScriptDocstringIntermediateSymlink.test_ac2_exit_code_2_line_includes_the_missing_capability_case
+      - tests.test_artifact_digest_docs.TestScriptDocstringIntermediateSymlink.test_ac2_exit_code_2_line_prints_no_array
+      - tests.test_artifact_digest_docs.TestOpenFlagsCommentIntermediateSymlink.test_ac2_comment_states_that_no_component_of_the_path_is_followed
+      - tests.test_artifact_digest_docs.TestOpenFlagsCommentIntermediateSymlink.test_ac2_comment_says_intermediate_components_are_opened_as_directories
+      - tests.test_artifact_digest_docs.TestOpenFlagsCommentIntermediateSymlink.test_ac2_comment_still_covers_the_final_element
+      - tests.test_artifact_digest_docs.TestOpenFlagsCommentIntermediateSymlink.test_ac2_comment_does_not_imply_only_the_final_component_is_protected
+    red_confirmed: true
+    red_reason: "Against the unedited script five of the six failed: the exit code 2 line had no 'platform ... lack' wording ('2 no argument (usage on stderr), an argument that is not valid UTF-8, or an unexpected internal failure; stdout carries no array'), and the OPEN_FLAGS comment ('never follow a symlink in the final component ... A flag the platform lacks is simply absent (0)') had no 'no component of the path is followed', no 'intermediate components ... as directories', no 'final element', and it carried the final-component-only wording. The no-array check on the exit code 2 line was already green (the old line already said 'stdout carries no array') and is a guard."
+  AC-3:
+    tests:
+      - tests.test_artifact_digest_docs.TestCalculationIntermediateSymlink.test_ac3_not_a_regular_file_item_names_a_symlink_at_any_component
+      - tests.test_artifact_digest_docs.TestCalculationIntermediateSymlink.test_ac3_exit_code_2_item_includes_the_missing_capability_case
+    red_confirmed: true
+    red_reason: "Against the unedited reference the not_a_regular_file item read '- `not_a_regular_file` — a directory, symlink, FIFO, device or socket;' with no 'or a path any of whose components is a symlink', and the exit code 2 item read '- `2` — no argument was given, an argument was not valid UTF-8, or the script failed unexpectedly; standard output carries no array.' with no platform-capability case."
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_docs.TestCalculationIntermediateSymlink.test_ac4_the_phrase_occurs_in_the_calculation_section
+      - tests.test_artifact_digest_docs.TestCalculationIntermediateSymlink.test_ac4_the_phrase_occurs_nowhere_outside_the_calculation_section
+      - tests.test_artifact_digest_docs.TestCalculationIntermediateSymlink.test_ac4_no_dispatch_site_section_repeats_the_phrase
+    red_confirmed: true
+    red_reason: "Against the unedited reference test_ac4_the_phrase_occurs_in_the_calculation_section failed with '0 not greater than or equal to 1'. The two absence checks (nowhere outside Calculation, no dispatch site section repeats it) were green before the change by construction, because the phrase did not exist yet; they are guards that fail only if the phrase is repeated outside Calculation, and the forged-text case test_outside_section_counter_fires_on_a_repeat_elsewhere proves the counter fires."
+  AC-5:
+    tests:
+      - tests.test_artifact_digest_docs.TestCalculation
+      - tests.test_digest_contract_alignment.TestSpecWriterContractDigestOwnership
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant
+    red_confirmed: false
+    red_reason: "The new test methods of AC-1 to AC-4 are the new assertions (their reds are recorded above). The rest of AC-5 is that existing tests and check-plugin-invariants.py keep passing without modification; a dedicated new module is out of scope, but the existing tests.test_artifact_digest_docs.TestCalculation and tests.test_digest_contract_alignment detect an edit to the Calculation wording or to the contract documents, and tests.test_check_plugin_invariants.TestRepositoryLevelInvariant runs check-plugin-invariants.py on the repository root; no red state occurred for this change, they were green before and after. The diff against the base shows 0 deleted lines in tests/test_artifact_digest_docs.py and no change to tests/test_digest_contract_alignment.py."
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_script.TestScriptFileProperties
+    red_confirmed: false
+    red_reason: "AC-6 is a no-edit constraint (code outside the docstring and the OPEN_FLAGS comment, files outside Scope, plugin version fields), so there is nothing that can fail before the change. A dedicated new module is out of scope, but the existing tests.test_artifact_digest_script reads and runs the real script and detects a behaviour change of it; no red state occurred for this change. It was checked with git diff --stat (three files, all in Scope, no plugin.json or marketplace.json) and an ast.dump comparison of the script before and after with the module docstring dropped (identical)."

@@ -25,6 +25,7 @@ with a forged-text case proving its matcher would fire. Standard library
 only (NFR3).
 """
 
+import ast
 import re
 import unittest
 from pathlib import Path
@@ -33,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PLUGIN_ROOT = REPO_ROOT / "em-workflow"
 
 OWNER_PATH = PLUGIN_ROOT / "references" / "artifact-digest.md"
+SCRIPT_PATH = PLUGIN_ROOT / "scripts" / "artifact-digest.py"
 OWNER_CITATION = "references/artifact-digest.md"
 CREATE_SPEC_PATH = PLUGIN_ROOT / "references" / "phases" / "create-spec-phase.md"
 CREATE_PLAN_PATH = PLUGIN_ROOT / "references" / "phases" / "create-plan-phase.md"
@@ -789,6 +791,335 @@ class TestDesignStepBranchDigestWiring(unittest.TestCase):
             self.section.index("`designer-contract.md` の対応表どおりに"),
         ]
         self.assertEqual(ordering, sorted(ordering))
+
+
+# ---------------------------------------------------------------------------
+# artifact-digest-intermediate-symlink task0002 (FR7, NFR3, TS-7)
+#
+# The script's docstring, the comment attached to `OPEN_FLAGS` and the
+# reference's "Calculation" section say that a symlink at any component of a
+# path yields `not_a_regular_file`, and that exit code 2 also covers a platform
+# that lacks the capabilities the walk needs.
+#
+# The docstring and the comment are read from the script's file text and
+# sliced by line; the reference is sliced by its heading. Nothing here runs
+# the script, so these tests do not depend on the walk behaviour (D1).
+# Existing test methods above stay unchanged (NFR3, IMPLEMENTATION.md
+# "Conventions").
+# ---------------------------------------------------------------------------
+
+ANY_COMPONENT_PHRASE = "any of whose components is a symlink"
+
+# A word that widens a statement beyond the final element: "any / every / no /
+# other / intermediate ... component(s)", or "intermediate" on its own.
+_BROADENING_RE = re.compile(
+    r"\b(?:any|every|each|all|no|other|intermediate)\b(?:\s+\w+){0,2}?"
+    r"\s+(?:of whose\s+)?components?\b|\bintermediate\b",
+    re.IGNORECASE,
+)
+_FINAL_COMPONENT_RE = re.compile(
+    r"\b(?:final|last)\b(?:\s+path)?\s+(?:component|element)\b", re.IGNORECASE
+)
+_SYMLINK_RULE_RE = re.compile(r"symlink|follow|resolv", re.IGNORECASE)
+_NO_FOLLOW_ANY_COMPONENT_RE = re.compile(
+    r"\b(?:any|every|no)\b(?:\s+\w+){0,2}?\s+(?:of whose\s+)?components?\b",
+    re.IGNORECASE,
+)
+
+
+def _script_docstring():
+    return ast.get_docstring(ast.parse(_read(SCRIPT_PATH))) or ""
+
+
+def _indent_of(line):
+    return len(line) - len(line.lstrip(" "))
+
+
+def _docstring_entry(docstring, first_line_pattern):
+    """The one docstring line that matches `first_line_pattern`, with its
+    continuation lines: the following non-blank lines indented deeper than it.
+    Exactly one line must match."""
+    lines = docstring.splitlines()
+    hits = [i for i, line in enumerate(lines) if re.search(first_line_pattern, line)]
+    if len(hits) != 1:
+        raise AssertionError(
+            f"expected exactly one docstring line matching {first_line_pattern!r}, "
+            f"found {len(hits)}"
+        )
+    start = hits[0]
+    collected = [lines[start]]
+    for follower in lines[start + 1:]:
+        if not follower.strip() or _indent_of(follower) <= _indent_of(lines[start]):
+            break
+        collected.append(follower)
+    return "\n".join(collected)
+
+
+def _open_flags_comment(source):
+    """The text of the comment block attached to (directly above) the
+    `OPEN_FLAGS` assignment, whitespace-normalized, without the `#` marks."""
+    lines = source.splitlines()
+    hits = [i for i, line in enumerate(lines) if line.startswith("OPEN_FLAGS")]
+    if len(hits) != 1:
+        raise AssertionError(f"expected one OPEN_FLAGS assignment, found {len(hits)}")
+    block = []
+    idx = hits[0] - 1
+    while idx >= 0 and lines[idx].startswith("#"):
+        block.append(lines[idx].lstrip("#").strip())
+        idx -= 1
+    if not block:
+        raise AssertionError("OPEN_FLAGS has no attached comment")
+    return _norm(" ".join(reversed(block)))
+
+
+def _states_no_follow_for_any_component(text):
+    """True when the text speaks of any / every / no component of the path and
+    of a symlink."""
+    flat = _norm(text)
+    return bool(_NO_FOLLOW_ANY_COMPONENT_RE.search(flat)) and "symlink" in flat
+
+
+def _final_component_limited_sentences(text):
+    """Sentences that bind the no-follow rule to the final (or last) element
+    alone: they name the final or last component or element and a
+    symlink / follow / resolve rule, and carry no widening word."""
+    flagged = []
+    for sentence in re.split(r"(?<=[.!?;])\s+", _norm(text)):
+        if (
+            _FINAL_COMPONENT_RE.search(sentence)
+            and _SYMLINK_RULE_RE.search(sentence)
+            and not _BROADENING_RE.search(sentence)
+        ):
+            flagged.append(sentence)
+    return flagged
+
+
+def _phrase_count(text, phrase):
+    return _norm(text).count(phrase)
+
+
+def _occurrences_outside_section(text, title, phrase, level=2):
+    """How many occurrences of `phrase` in the whole document fall outside the
+    section `title`."""
+    return _phrase_count(text, phrase) - _phrase_count(
+        _section(text, title, level=level), phrase
+    )
+
+
+class TestIntermediateSymlinkMatchersFireOnForgedText(unittest.TestCase):
+    """Every absence assertion below is paired with a forged-text case."""
+
+    def test_final_component_limit_matcher_fires(self):
+        for forged in (
+            "The final path component is never resolved through a symlink.",
+            "Only the last component is checked for a symlink.",
+            "A symlink in the final element is not followed.",
+        ):
+            with self.subTest(forged=forged):
+                self.assertTrue(_final_component_limited_sentences(forged), forged)
+
+    def test_final_component_limit_matcher_passes_widened_wording(self):
+        for sentence in (
+            "No component of the path is followed as a symlink.",
+            "A symlink at any component, the final one included, is not followed.",
+            "This set opens the final element without following a symlink, and "
+            "no component of the path is followed.",
+            "The intermediate components and the final element are opened "
+            "without following a symlink.",
+            "This set opens the final element and never waits on a FIFO.",
+        ):
+            with self.subTest(sentence=sentence):
+                self.assertEqual(_final_component_limited_sentences(sentence), [])
+
+    def test_any_component_matcher_requires_a_component_scope_and_a_symlink(self):
+        self.assertTrue(
+            _states_no_follow_for_any_component(
+                "a path any of whose components is a symlink"
+            )
+        )
+        self.assertTrue(
+            _states_no_follow_for_any_component(
+                "No component of the path is followed as a symlink"
+            )
+        )
+        self.assertFalse(
+            _states_no_follow_for_any_component(
+                "The final path component is never resolved through a symlink"
+            )
+        )
+        self.assertFalse(_states_no_follow_for_any_component("any component"))
+
+    def test_outside_section_counter_fires_on_a_repeat_elsewhere(self):
+        phrase = "any of whose components is a symlink"
+        inside_only = (
+            "## Calculation\nA path any of whose\ncomponents is a symlink.\n"
+            "## Other\nnothing\n"
+        )
+        repeated = inside_only + "## Third\nany of whose components is a symlink\n"
+        self.assertEqual(
+            _occurrences_outside_section(inside_only, "Calculation", phrase), 0
+        )
+        self.assertEqual(
+            _occurrences_outside_section(repeated, "Calculation", phrase), 1
+        )
+
+    def test_docstring_entry_slicer_takes_continuation_lines_only(self):
+        doc = (
+            "Error tokens:\n"
+            "    a_token   first line\n"
+            "              continuation\n"
+            "    b_token   next entry\n"
+        )
+        entry = _docstring_entry(doc, r"^\s+a_token\s")
+        self.assertIn("continuation", entry)
+        self.assertNotIn("b_token", entry)
+        with self.assertRaises(AssertionError):
+            _docstring_entry(doc, r"^\s+missing_token\s")
+
+    def test_open_flags_comment_reader_takes_the_attached_block_only(self):
+        source = (
+            "X = 1\n\n# not attached\n\n# first\n# second\nOPEN_FLAGS = (\n    1\n)\n"
+        )
+        self.assertEqual(_open_flags_comment(source), "first second")
+        with self.assertRaises(AssertionError):
+            _open_flags_comment("OPEN_FLAGS = 0\n")
+
+
+class TestScriptDocstringIntermediateSymlink(unittest.TestCase):
+    """AC-1 and the docstring half of AC-2 (FR7, TS-7)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.docstring = _script_docstring()
+        cls.token_line = _docstring_entry(cls.docstring, r"^\s+not_a_regular_file\s{2,}")
+        cls.entry_kinds = _paragraph(cls.docstring, "Entry kinds:")
+        cls.exit_two = _docstring_entry(cls.docstring, r"^\s+2\s{2,}")
+
+    def test_ac1_token_line_says_a_symlink_at_any_component_yields_the_token(self):
+        flat = _norm(self.token_line)
+        self.assertTrue(_states_no_follow_for_any_component(flat), flat)
+        self.assertIn("not_a_regular_file", flat)
+
+    def test_ac1_token_line_keeps_the_final_element_kinds(self):
+        flat = _norm(self.token_line)
+        for kind in ("directory", "symlink", "FIFO", "device", "socket"):
+            self.assertIn(kind, flat)
+
+    def test_ac1_entry_kinds_says_no_component_is_followed_as_a_symlink(self):
+        flat = _norm(self.entry_kinds)
+        self.assertTrue(_states_no_follow_for_any_component(flat), flat)
+        self.assertIn("not_a_regular_file", flat)
+
+    def test_ac1_token_line_does_not_limit_the_rule_to_the_final_component(self):
+        self.assertEqual(_final_component_limited_sentences(self.token_line), [])
+
+    def test_ac1_entry_kinds_does_not_limit_the_rule_to_the_final_component(self):
+        self.assertEqual(_final_component_limited_sentences(self.entry_kinds), [])
+
+    def test_ac2_exit_code_2_line_includes_the_missing_capability_case(self):
+        flat = _norm(self.exit_two)
+        self.assertRegex(flat, r"\bplatform\b[^.;]*\black")
+        self.assertIn("descriptor-relative open", flat)
+        self.assertIn("no-follow", flat)
+        self.assertIn("directory-only", flat)
+
+    def test_ac2_exit_code_2_line_prints_no_array(self):
+        self.assertIn("no array", _norm(self.exit_two))
+
+    def test_ac2_exit_code_2_line_keeps_the_existing_cases(self):
+        flat = _norm(self.exit_two)
+        self.assertIn("usage on stderr", flat)
+        self.assertIn("not valid UTF-8", flat)
+        self.assertIn("internal failure", flat)
+
+
+class TestOpenFlagsCommentIntermediateSymlink(unittest.TestCase):
+    """The comment half of AC-2 (FR7, TS-7)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.comment = _open_flags_comment(_read(SCRIPT_PATH))
+
+    def test_ac2_comment_states_that_no_component_of_the_path_is_followed(self):
+        self.assertRegex(
+            self.comment, r"(?i)\bno component of the path\b[^.]{0,40}\bfollowed\b"
+        )
+
+    def test_ac2_comment_says_intermediate_components_are_opened_as_directories(self):
+        self.assertRegex(self.comment, r"(?i)\bintermediate components\b")
+        self.assertRegex(self.comment, r"(?i)\bas directories\b")
+
+    def test_ac2_comment_still_covers_the_final_element(self):
+        self.assertIn("final element", self.comment)
+        self.assertRegex(self.comment, r"(?i)without following a symlink")
+
+    def test_ac2_comment_does_not_imply_only_the_final_component_is_protected(self):
+        self.assertEqual(_final_component_limited_sentences(self.comment), [])
+        self.assertNotRegex(
+            self.comment, r"(?i)\bonly (?:the )?(?:final|last)\b"
+        )
+
+    def test_ac2_open_flags_keeps_its_name_as_a_module_constant(self):
+        tree = ast.parse(_read(SCRIPT_PATH))
+        names = {
+            target.id
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name)
+        }
+        self.assertIn("OPEN_FLAGS", names)
+
+
+class TestCalculationIntermediateSymlink(unittest.TestCase):
+    """AC-3 and AC-4 (FR7, TS-7): the reference's "Calculation" section."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(OWNER_PATH)
+        cls.raw = _section(cls.text, "Calculation", level=2)
+        cls.not_a_regular_file = _norm(_bullet(cls.raw, "`not_a_regular_file`"))
+        cls.exit_two = _norm(_bullet(cls.raw, "`2`"))
+
+    def test_ac3_not_a_regular_file_item_names_a_symlink_at_any_component(self):
+        self.assertIn(
+            "or a path any of whose components is a symlink", self.not_a_regular_file
+        )
+
+    def test_ac3_not_a_regular_file_item_keeps_the_final_element_kinds(self):
+        for kind in ("directory", "symlink", "FIFO", "device", "socket"):
+            self.assertIn(kind, self.not_a_regular_file)
+
+    def test_ac3_exit_code_2_item_includes_the_missing_capability_case(self):
+        self.assertRegex(self.exit_two, r"\bplatform\b[^.;]*\black")
+        self.assertIn("descriptor-relative open", self.exit_two)
+        self.assertIn("no-follow", self.exit_two)
+        self.assertIn("directory-only", self.exit_two)
+
+    def test_ac3_exit_code_2_item_keeps_the_existing_cases_and_no_array(self):
+        self.assertIn("no argument was given", self.exit_two)
+        self.assertIn("not valid UTF-8", self.exit_two)
+        self.assertIn("failed unexpectedly", self.exit_two)
+        self.assertIn("standard output carries no array", self.exit_two)
+
+    def test_ac4_the_phrase_occurs_in_the_calculation_section(self):
+        self.assertGreaterEqual(_phrase_count(self.raw, ANY_COMPONENT_PHRASE), 1)
+
+    def test_ac4_the_phrase_occurs_nowhere_outside_the_calculation_section(self):
+        self.assertEqual(
+            _occurrences_outside_section(
+                self.text, "Calculation", ANY_COMPONENT_PHRASE
+            ),
+            0,
+        )
+
+    def test_ac4_no_dispatch_site_section_repeats_the_phrase(self):
+        for (document, section) in _parse_registry(self.text):
+            self.assertNotIn(
+                ANY_COMPONENT_PHRASE,
+                _norm(_site_text(document, section)),
+                f"{document} / {section}",
+            )
 
 
 if __name__ == "__main__":
