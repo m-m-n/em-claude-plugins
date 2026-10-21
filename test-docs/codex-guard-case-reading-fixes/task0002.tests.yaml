@@ -1,0 +1,106 @@
+task_id: task0002
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: 943/943 and Ran 10797 tests, OK (skipped=1), before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, 943/943 and Ran 10806 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test errored on the new rows
+      TS23 to TS31 for both copies (no deny object on standard output where deny was expected:
+      the word after the closing of a command-position ( or ((, [[ ... ]], a case-closing esac
+      or a command-position fi, done or } was read as an argument, so the case after the
+      then, do or { opened nothing and the quote shifted). TS37, TS38, TS39 and TS40 already
+      returned deny before the change (the closing inside a word, the unmatched ]] and the
+      argument fi were never command positions); they stay as regression guards and were not
+      observed red. All thirteen pass after the implementation.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test failed on TS32 (deny
+      where silent was expected: the quoted python3 -i in the body of f() was read as a launch)
+      and errored on TS33, TS34, TS35 and TS36 (no deny object where deny was expected: the {
+      after a function head was an argument, so the case opened nothing), for both copies. All
+      five pass after the implementation.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test errored on TS44, TS45,
+      TS46, TS47, TS49, TS50 and TS51 (no deny object where deny was expected: the do or { after
+      a for or select name, the arithmetic for's )), a coproc, a coproc NAME, the zsh for word
+      list or a repeat count was an argument) and failed on TS52, TS53, TS54 and TS55 (deny
+      where silent was expected: the quoted python3 -i in the body was read as a launch). TS48
+      (for case in x), TS56, TS57, TS58 and TS59 (an argument-position or quoted for, coproc or
+      repeat starts no head) already returned deny before the change; they stay as regression
+      guards and were not observed red. All twelve pass after the implementation.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the test errored on all three TS61
+      rows (no deny object where deny was expected): the (:) closing, the fi closing and the for
+      head gave no command position to the following then or do, whether or not a continuation
+      pair split the th-en, f-i or f-or. All three pass after the implementation.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts41_compound_closings_nested_deeply_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts42_function_heads_nested_deeply_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts43_a_long_run_of_closing_words_at_an_argument_position_is_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts60_loop_heads_nested_deeply_are_read_in_time
+    red_confirmed: false
+    red_reason: >-
+      A dedicated red state does not exist for these linear-bound pins: the pre-change guard
+      already returned deny for the SPEC.md input expressions of TS41, TS42, TS43 and TS60 at
+      DEPTH scale well inside TIMEOUT, and the tests passed against it before any
+      implementation existed. They guard the time bound of
+      the new state (nesting of compound closings, function heads and loop heads, and a long run
+      of closing words at an argument position) and detect a quadratic or timed-out reading in
+      the new code; no red state occurred for this change. Measured on the new reader, the
+      time for runs of 5000 to 40000 heads, closings and blank runs doubles with the size.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_four_rules_of_the_reading
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_says_every_closing_goes_on_inside_a_word
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_word_reader_states_that_every_word_is_decided_on_the_pair_stripped_sequence
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+      - tests.test_codex_hook_interactive_guard.TestCopies
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard standing in for both copies, the extended
+      test_the_docstring_states_the_four_rules_of_the_reading failed on sixty-two subtests (the
+      rewritten constant-size-state sentence, the [[ tracking sentence and every sentence of the
+      compound-closing, function-head, loop-and-coproc-head and head-lifetime rules, and the
+      pair-stripped sentence for the other reserved words, are not in the old docstring), the
+      new test_the_docstring_no_longer_says_every_closing_goes_on_inside_a_word failed (the old
+      docstring still holds the sentence the task replaces) and the new
+      test_the_word_reader_states_that_every_word_is_decided_on_the_pair_stripped_sequence failed
+      on four subtests. They pass after the implementation. The other tests of
+      TestSubstitutionSkipDocumentation and TestCopies, TestNoRecursion,
+      TestSubstitutionSkipCallStructure and TestStaticConstraints passed before and after the
+      change; they were not observed red.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      detects a changed verdict of any pre-existing CASES row against either copy, and the
+      TS20 to TS22 tests in TestCaseStatementsInASubstitution detect a lost linear bound; no red
+      state occurred for this change. Every pre-existing row passed against the unmodified
+      code (baseline run) and passes after the implementation, and no row was removed or
+      re-verdicted. That the change set touches only the three files in scope and no
+      plugin.json or marketplace.json is verified with git diff --stat on the task branch,
+      not by a test. The two suite commands (python3 -m unittest
+      tests.test_codex_hook_interactive_guard, and python3 em-workflow/hooks/tests/run-destructive-guard.py
+      && python3 -m unittest discover -s tests) were run after the implementation and exit
+      with status 0.
