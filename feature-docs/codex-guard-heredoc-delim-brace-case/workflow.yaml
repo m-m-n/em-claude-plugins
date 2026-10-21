@@ -102,7 +102,8 @@ workflow:
   base_commit: 9e2487e024c13fb7ceec051f72d1a8dde6515232
   completed_at_commit: e5ee15f5fa522904f095edc9f0281d16a81ca766
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 633ca515372e571b2d5e2699971ab2337a4b366d
 - id: verify
   status: pending
   result: null
@@ -134,8 +135,11 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-heredoc-delim-brace-case/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
