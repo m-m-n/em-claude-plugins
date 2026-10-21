@@ -1048,6 +1048,16 @@ CASES = [
     ("deny", "case 読み TS57 引用された for からは頭の状態に入らない", 'echo "$("for" x do case x in x)"; python3 -i'),
     ("deny", "case 読み TS58 引数の位置の coproc からは頭の状態に入らない", 'echo "$(echo coproc { case x in x)"; python3 -i'),
     ("deny", "case 読み TS59 引数の位置の repeat からは頭の状態に入らない", 'echo "$(echo repeat 1 { case x in x)"; python3 -i'),
+    # codex-guard-subst-reading-regressions (VERIFICATION.md TS1, TS5 to TS8 and
+    # TS28): the word list of a zsh `for name (words)` is read in a context of
+    # its own: a `#` comment and a newline are read as in a command list, and
+    # no word of the list is at a command position.
+    ("deny", "置換読み TS1 zsh の for の語一覧のコメントの中の二重引用符は引用を開かない (再現手順)", 'echo "$(for x (a # "\n) { :; })"; python3 -i'),
+    ("deny", "置換読み TS5 語一覧のコメントの中の ) は語一覧を閉じない", 'echo "$(for x (a # )\n) { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
+    ("silent", "置換読み TS6 コメントを含む語一覧の後の case 文の本体の、引用符の中の python3 -i を拒否しない", 'echo "$(for x (a # \'\n) { case x in x) echo "; python3 -i;";; esac; })"'),
+    ("deny", "置換読み TS7 語一覧の改行の後の case は文を開かない", 'echo "$(for x (a\ncase) { :; }; echo case x in x)"; python3 -i'),
+    ("deny", "置換読み TS8 語一覧の ( の直後のコメント", 'echo "$(for x (# c\na) { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
+    ("deny", "置換読み TS28 語一覧の中の入れ子の ( ... ) の中の語はコマンドの位置にならず、その ) の後も語一覧として読む", 'echo "$(for x (a(case x in x)) { :; })"; python3 -i'),
     # codex-guard-case-reading-fixes (VERIFICATION.md TS61): a reserved word, a
     # closing word or a head word that a continuation pair splits is read as
     # that word.
@@ -1867,6 +1877,16 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         depth = self.DEPTH
         command = 'echo "$(' + "for x do " * depth + "case x in x) :;; esac" + "; done" * depth + ')"; python3 -i'
         self.assert_every_copy_denies(command)
+
+    # codex-guard-subst-reading-regressions (SPEC.md TS26, NFR1): DEPTH commented
+    # lines in a zsh `for` word list are read in time and the launch after the
+    # substitution is denied. One more line makes the count of `"` in the
+    # comments odd, so a comment that opened a quote would not be balanced.
+    def test_ts26_commented_lines_in_a_for_word_list_are_read_in_time(self):
+        for lines in (self.DEPTH, self.DEPTH + 1):
+            with self.subTest(lines=lines):
+                command = 'echo "$(for x (a' + ' # "\n' * lines + ') { :; })"; python3 -i'
+                self.assert_every_copy_denies(command)
 
 
 class TestAnonymousFunctionHeadInASubstitution(HookCopiesMixin, unittest.TestCase):

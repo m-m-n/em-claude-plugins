@@ -2217,7 +2217,7 @@ class _Parser:
         a pattern outside its groups.
 
         Contexts on the stack: p command list (`$(`, `(`), a arithmetic
-        (`$((`) and the word list of a zsh `for`, d double quotes, b
+        (`$((`) only, w the word list of a zsh `for`, d double quotes, b
         backticks, k and K `${ ... }` outside and inside double quotes. A
         case statement is one entry above the context that holds its `case`,
         and its phase is the character of the entry: 1 before the subject, 2
@@ -2229,7 +2229,26 @@ class _Parser:
         continuation pair is skipped and the first other character decides
         the phase change before it is read; phase 7 hands the first character
         of the body to phase 8, a command list that opens at a command
-        position. A second list `saved` runs beside the stack, one entry for
+        position. The word list w opens at the `(` that follows the name of a
+        zsh `for`, and it is read in a context of its own, not as the
+        arithmetic a. A backslash pair, a quoted unit, a backtick, `$(`, `$((`
+        and `${` in it are followed as in every other context. A `#` whose
+        previous character is a space, a tab, a newline, `;`, `&`, `|` or `(`
+        starts a comment, the same start condition as in a command list. The
+        comment runs to the next newline, and a quote, a `)` or a
+        substitution inside it opens nothing and closes nothing; a comment
+        with no newline before the input ends makes the chunk undecidable.
+        Every other character, the newline included, is part of a word or
+        separates words; no word of the list is at a command position, so
+        nothing in it opens a case statement, acts as a closing word or
+        starts a head, and a newline gives the next word no command
+        position. A `(` read in w opens a nested entry of w (a glob qualifier
+        as in `*(N)`): its `)` is a closing inside a word, reading goes on in
+        the enclosing list and nothing is given a command position. The `)`
+        that closes the outermost entry gives the list that holds the `for`
+        a command position (`for x (a) {`). The context a is the arithmetic
+        part of `$((` only, and its reading is unchanged.
+        A second list `saved` runs beside the stack, one entry for
         each stack entry: the state the list under it had when the entry was
         pushed and whether its close gives that list a command position.
         """
@@ -2474,7 +2493,7 @@ class _Parser:
                     j += 1
             elif ch == "(":
                 kind_char, close_command = ("p" if top == "8" else top), False
-                if top != "a":
+                if top not in "aw":
                     if head in (HEAD_FIRST, HEAD_FUNCTION, HEAD_FUNCTION_NAME):
                         end = self._empty_parens_end(j)
                         if end != -1:
@@ -2489,9 +2508,12 @@ class _Parser:
                     # at one.
                     close_command = at_command or head == HEAD_FOR
                     if head == HEAD_FOR_NAME:
-                        # The zsh word list of a `for`: no word of it is at a
-                        # command position, and its `)` closes a head.
-                        kind_char, close_command = "a", True
+                        # The zsh word list of a `for`: a context of its own
+                        # (w). No word of it is at a command position, and its
+                        # `)` closes a head. A `(` read inside it opens a
+                        # nested entry of the same kind, whose `)` closes
+                        # inside a word.
+                        kind_char, close_command = "w", True
                 stack.append(kind_char)
                 saved.append((at_command, dbl, HEAD_NONE, close_command))
                 at_command, in_word, dbl, head = True, False, False, HEAD_NONE
@@ -2510,6 +2532,16 @@ class _Parser:
                     in_word = True
             elif top == "a":
                 j += 1
+            elif top == "w":
+                # The word list of a zsh `for`: a `#` starts a comment where it
+                # does in a command list; every other character is part of a
+                # word or separates words, the newline included.
+                if ch == "#" and s[j - 1] in " \t\n;&|(":
+                    j = s.find("\n", j)
+                    if j == -1:
+                        raise _Undecidable("substitution")
+                else:
+                    j += 1
             elif ch == "#" and s[j - 1] in " \t\n;&|(":
                 # A comment runs to the end of the line.
                 j = s.find("\n", j)
