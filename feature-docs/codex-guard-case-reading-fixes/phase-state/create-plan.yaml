@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-case-reading-fixes
 phase: create-plan
-status: completed
-generation: 1
-base_revision: 69689bbd121c25afa5d8ae9a119161e006cbea56
-last_input_digest: sha256:d48e3b05278bac784edab7d16d90387a9e80b66e88d5ff5a45ca813ac306410b
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: f0e8e6cec98e3cb8cfdede60a47bdb4bf08e6dac
+last_input_digest: sha256:f170beb5426e5d5f66bcc7fce380bcf475b7a4f30db3b000f7f5b6e678793c83
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -13,6 +13,10 @@ worker_runs:
   status: completed
   input_digest: sha256:d48e3b05278bac784edab7d16d90387a9e80b66e88d5ff5a45ca813ac306410b
   output_digest: sha256:234b93e6297d272cf9a80f5219b1d3c3310229d70d6012853e93df4216d08fa6
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:f170beb5426e5d5f66bcc7fce380bcf475b7a4f30db3b000f7f5b6e678793c83
+  output_digest: null
 artifacts:
 - path: feature-docs/codex-guard-case-reading-fixes/IMPLEMENTATION.md
   sha256: sha256:ade3b409d1ecf6af9b0374a747494d9eaab762fca436431461e632f896e1353d
