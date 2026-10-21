@@ -62,7 +62,8 @@ element carries `path` and `sha256`. A failure element carries `path`,
 `sha256: null` and an `error` token:
 
 - `missing` — no filesystem entry at the path;
-- `not_a_regular_file` — a directory, symlink, FIFO, device or socket;
+- `not_a_regular_file` — a directory, symlink, FIFO, device or socket, or a
+  path any of whose components is a symlink;
 - `unreadable` — a regular file whose reading failed.
 
 Exit codes:
@@ -70,8 +71,10 @@ Exit codes:
 - `0` — every element has a `sha256` digest;
 - `1` — at least one element has an `error`; every other element is still
   hashed and reported;
-- `2` — no argument was given, an argument was not valid UTF-8, or the script
-  failed unexpectedly; standard output carries no array.
+- `2` — no argument was given, an argument was not valid UTF-8, the script
+  failed unexpectedly, or the platform lacks a capability the script needs
+  (descriptor-relative open, the no-follow open flag or the directory-only
+  open flag); standard output carries no array.
 
 This call is not a `workflow.yaml` command, so the Bash guard hook
 (`hooks/bash_guard.py`) gives no verdict on it and the normal permission flow
