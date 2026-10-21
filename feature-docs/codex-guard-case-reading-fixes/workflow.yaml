@@ -111,7 +111,8 @@ workflow:
   failed_items: []
   completed_at_commit: 75320f7bc84f7b6ab93ac60ea87d80da2d062931
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: e8c4317a53a6b88852ce16cf98d4bc58149d5eef
 tasks:
   task0001:
     title: "Fix case-statement reading in the guard's substitution reader"
