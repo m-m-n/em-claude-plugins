@@ -111,7 +111,8 @@ workflow:
   completed_at_commit: 08a79a82a4e02a5698e4e014f64d252e41bf49aa
   summary: 'test_command passed (943/943 destructive-guard cases; unittest 10866 tests OK, skipped=1); reproduction gives deny on both copies; copies byte-identical; no new non-stdlib import; docstrings describe the braced case-aware reading, the unchanged paren scan, and the undecidable cases'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 733cb1f5aeccd425bad59a28271e325ea8b76062
 tasks:
   task0001:
     title: Case-aware skip of $( ) inside a heredoc delimiter's ${ } range
