@@ -153,6 +153,12 @@ tasks:
     branch: em-workflow/codex-guard-subst-reading-regressions/task0003
 review:
   status: pending
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary:
+    - perspective: performance
+      reason: "NFR1 requires linear-time reading and FR6 adds a one-time re-read of unknown-kind strings; check the scanner stays linear"
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
