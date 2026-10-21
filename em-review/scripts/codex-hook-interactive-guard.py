@@ -415,8 +415,39 @@ RESERVED_WORDS = ("!", "do", "elif", "else", "if", "then", "time", "until", "whi
 
 # The reserved words and symbols that leave the next word of a command list in a
 # command substitution at a command position, when they are read as standalone
-# words at a command position (`_Parser._skip_substitution`).
-COMMAND_POSITION_WORDS = ("then", "do", "else", "elif", "if", "while", "until", "time", "!", "{")
+# words at a command position (`_Parser._skip_substitution`): the words that
+# open a command (`then`, `do`, `{` and the like) and the closing words `fi`,
+# `done` and `}`, which close a compound command.
+COMMAND_POSITION_WORDS = (
+    "then", "do", "else", "elif", "if", "while", "until", "time", "!", "{", "fi", "done", "}",
+)
+
+# The head state a command list keeps (`_Parser._skip_substitution`), one value
+# out of this small fixed set: no head; the first word of a simple command was
+# read at a command position (a `name()` may follow); `function` was read (the
+# next word is the name, or an empty `()` follows); the function name was read
+# (an empty `()` may follow); `for` was read (the next word is the name, or a `((` follows); the
+# `for` name was read (a zsh word list may follow); `select` or `repeat` was
+# read (the next word is an ordinary word); `coproc` was read (the next word is
+# at a command position and may be a NAME).
+HEAD_NONE = 0
+HEAD_FIRST = 1
+HEAD_FUNCTION = 2
+HEAD_FUNCTION_NAME = 3
+HEAD_FOR = 4
+HEAD_FOR_NAME = 5
+HEAD_NAME = 6
+HEAD_COPROC = 7
+
+# The head words, standalone and read at a command position, and the head state
+# each one starts.
+HEAD_AFTER_WORD = {
+    "function": HEAD_FUNCTION,
+    "for": HEAD_FOR,
+    "select": HEAD_NAME,
+    "coproc": HEAD_COPROC,
+    "repeat": HEAD_NAME,
+}
 
 # How far the simple command in progress has read the shape `case`, one word,
 # `in`, which lets an `esac` right after it lower the case mark
@@ -1945,18 +1976,22 @@ class _Parser:
 
         Command position (rule 1). Each command list the reader keeps (the
         body of a `$(`, the body of a nested subshell `(` and every item body
-        of a case statement) carries one piece of state of constant size:
-        whether the next word is at a command position. It is true when the
-        list opens; after `;`, `&` or `|` (`&&` and `||` included); after a
-        newline; after a subshell `(`; and after a standalone `then`, `do`,
-        `else`, `elif`, `if`, `while`, `until`, `time`, `!` or `{` that was
-        itself read at a command position. It is false after any other word:
-        an ordinary command word, an assignment, a redirection target, a
-        `time` option, a word that holds a substitution, and a reserved word
-        or `!` read at an argument position. A list that goes on after a
-        nested context closes (a substitution, a subshell, quotes, a case
-        statement) goes on inside a word, so its state is false. The
-        characters of the previous word are never looked at backward.
+        of a case statement) carries state of constant size: whether the next
+        word is at a command position, whether a `[[` read at a command
+        position is still open in it, and one head state (rule 7). A list
+        opened by `(` also records whether that `(` was read at a command
+        position and whether it is a zsh `for` word list. The next word is at
+        a command position when the list opens; after `;`, `&` or `|` (`&&`
+        and `||` included); after a newline; after a subshell `(`; after a
+        standalone `then`, `do`, `else`, `elif`, `if`, `while`, `until`,
+        `time`, `!` or `{` that was itself read at a command position; after
+        a compound-command closing (rule 5); after a function head and after
+        a loop or coproc head (rule 6). It is not at a command position after
+        any other word: an ordinary command word, an assignment, a
+        redirection target, a `time` option, a word that holds a
+        substitution, and a reserved word or `!` read at an argument
+        position. The characters of the previous word are never looked at
+        backward.
 
         Opening and closing a case statement (rule 2). A `case` at a command
         position of a command list in the chunk opens a case statement, and a
@@ -1990,15 +2025,91 @@ class _Parser:
         position, after a pattern's leading `(` and at the start of an item
         body) a pair is skipped without starting a word and the phase is
         kept. `case`, `in` and `esac` are decided on the characters with the
-        pairs left out (`_keyword_end`, the pair-stripped keyword decision):
-        pairs between the keyword's characters and pairs directly after it
-        are skipped, before the standalone-word check looks at the next
-        character; a sequence that does not spell the keyword once the pairs
-        are out is not a keyword; a pair inside a word never splits it. A
-        keyword is matched only at the start of a word and looks at its own
-        characters and at the runs of pairs between and after them; a failed
-        match is not retried from inside the same word, the rest of that word
-        is read once as an ordinary word, so the reading stays linear.
+        pairs left out (`_keyword_end`, the pair-stripped keyword decision),
+        and so is every other word whose identity changes the reading: the
+        reserved words `then`, `do`, `else`, `elif`, `if`, `while`, `until`,
+        `time`, `!` and `{`, the closing words `fi`, `done`, `}` and `]]`,
+        `[[`, `function` and the head words `for`, `select`, `coproc` and
+        `repeat`. Pairs between the characters of such a word and pairs
+        directly after it are skipped, before the standalone-word check looks
+        at the next character; a sequence that does not spell the keyword
+        once the pairs are out is not a keyword; a pair inside a word never
+        splits it. A keyword is matched only at the start of a word and looks
+        at its own characters and at the runs of pairs between and after
+        them; a failed match is not retried from inside the same word, the
+        rest of that word is read once as an ordinary word, so the reading
+        stays linear.
+
+        Compound-command closings (rule 5). A closing inside a word and a
+        compound-command closing are told apart. A closing inside a word goes
+        on inside the word: the list is back in the state it had when the
+        context opened, and the word after it is read as an argument. These
+        are the close of a `$( )` or backquote substitution, the close of a
+        quote, the close of `${ ... }`, and the `)` that closes a `(` that was
+        not read at a command position (a zsh glob qualifier as in `x(N)`,
+        `<(` and `>(`). A compound-command closing gives the next word a
+        command position: the `)` that closes a `(` read at a command position
+        (a subshell, and the `((` ... `))` arithmetic command); a standalone
+        `]]` while a `[[` read as a standalone word at a command position is
+        open in the same list, wherever it stands inside the conditional; the
+        `esac` that closes a case statement, whether it is read in an item
+        body or at a pattern position, which gives the list that holds the
+        statement a command position; and a standalone, unquoted `fi`, `done`
+        or `}` read at a command position. A `]]` with no open `[[`, and a
+        `fi`, `done` or `}` at an argument position, are ordinary words. A
+        redirection after a closing and its target are read as before: the
+        word after the target is not at a command position. The words inside
+        `[[ ... ]]` are read as they were; the `[[` is tracked only to
+        recognise its `]]`.
+
+        Function heads, loop heads and coproc heads (rule 6). In `name()` the
+        first word of a simple command (an ordinary word read at a command
+        position) is followed, directly or after blanks, by `(`, only blanks
+        and `)`: that `)` ends a function head and the next word is at a
+        command position (`f() {`, `f () {`). Whether the parentheses are
+        empty is decided by looking at the blanks between them once more, a
+        bounded number of times; a `(` that does not form an empty `()` is
+        read as any other `(`. A standalone, unquoted, unescaped `function`
+        read at a command position starts a head: the next word is the name,
+        an ordinary word that is never read as a keyword or reserved word, the
+        word after the name is at a command position, and an empty `()`
+        directly after the name or after blanks belongs to the head
+        (`function f {`, `function f() {`); a `(` after the name that forms no
+        empty `()` is a subshell read at a command position. An empty `()`
+        right after `function`, with no name, ends the head of a zsh anonymous
+        function as well (`function () {`). Multi-name zsh definitions and
+        function-name validity are not considered. A loop or
+        coproc head starts only from a standalone word that is unquoted,
+        unescaped, read at a command position and spells the head word once
+        the pairs are removed; the same word at an argument position, quoted
+        or escaped starts no head, and neither does a `function` there. After
+        `for` or `select` the next word is the name, an ordinary word that is
+        never a keyword (`for case in x` opens no case), and the word after
+        the name is at a command position (`for x do`, `select x do`); in
+        `for x in a b; do`, `in` and the words after it are ordinary words up
+        to the separator. A `((` directly after `for` (blanks allowed) is
+        read as opened at a command position, so its `))` gives a command
+        position (`for ((i=0;i<1;i++)) do`). In the zsh form `for name
+        (words)`, which `for` alone has, a `(` directly after the name
+        (blanks allowed) opens a word list: no word inside it is at a command
+        position, so nothing in it opens a case statement, acts as a closing
+        or starts a head, and its `)` gives the enclosing list a command
+        position (`for x (a) {`). After `coproc` the next word is at a command
+        position (`coproc {`), and when that word is an ordinary word (a NAME
+        or a command name) the word after it is at a command position as well
+        (`coproc c {`). After the zsh `repeat` the next word, the count, is an
+        ordinary word that is never read as a keyword, and the word after it
+        is at a command position (`repeat 1 {`).
+
+        Head states (rule 7). The head state of a list is one value out of a
+        fixed small set: none; after a first word read at a command position
+        (a possible `name()`); after `function`; after the function name; after
+        `for`; after the `for` name; after `select` or `repeat`; after
+        `coproc`. A head state lasts only until its head completes or the next
+        character rules it out (for `name()`, anything other than blanks
+        followed by `(`). A separator (`;`, `&`, `|`, a newline) or the end of
+        the list ends any head state still pending, and the position after it
+        follows rule 1.
 
         Raises _Undecidable when the chunk is not closed, or when its close
         cannot be located with certainty. A chunk with a case statement is
@@ -2010,18 +2121,21 @@ class _Parser:
         a pattern outside its groups.
 
         Contexts on the stack: p command list (`$(`, `(`), a arithmetic
-        (`$((`), d double quotes, b backticks, k and K `${ ... }` outside and
-        inside double quotes. A case statement is one entry above the context
-        that holds its `case`, and its phase is the character of the entry:
-        1 before the subject, 2 in the subject, 3 after the subject (waiting
-        for `in`), 4 at a pattern position (right after `in` and right after
-        an item terminator), 5 after the optional leading `(`, 6 in a pattern,
-        7 at the start of an item body, 8 in an item body (a command list). g
-        is a parenthesised group inside a subject or a pattern. In the phases
-        1, 3, 4, 5 and 7 a continuation pair is skipped and the first other
-        character decides the phase change before it is read; phase 7 hands
-        the first character of the body to phase 8, a command list that opens
-        at a command position.
+        (`$((`) and the word list of a zsh `for`, d double quotes, b
+        backticks, k and K `${ ... }` outside and inside double quotes. A
+        case statement is one entry above the context that holds its `case`,
+        and its phase is the character of the entry: 1 before the subject, 2
+        in the subject, 3 after the subject (waiting for `in`), 4 at a pattern
+        position (right after `in` and right after an item terminator), 5
+        after the optional leading `(`, 6 in a pattern, 7 at the start of an
+        item body, 8 in an item body (a command list). g is a parenthesised
+        group inside a subject or a pattern. In the phases 1, 3, 4, 5 and 7 a
+        continuation pair is skipped and the first other character decides
+        the phase change before it is read; phase 7 hands the first character
+        of the body to phase 8, a command list that opens at a command
+        position. A second list `saved` runs beside the stack, one entry for
+        each stack entry: the state the list under it had when the entry was
+        pushed and whether its close gives that list a command position.
         """
         s, n = self.s, self.n
         if s[start] == "`":
@@ -2033,11 +2147,22 @@ class _Parser:
         else:
             stack = ["p"]
             j = start + 2
-        # The command position state of the command list on top of the stack
-        # (rule 1): `at_command` is whether the next word is at a command
-        # position, `in_word` whether a word is being read. A list that
-        # resumes after a nested context closes goes on inside a word.
+        # The state of the command list on top of the stack (rules 1, 5, 6 and
+        # 7): `at_command` is whether the next word is at a command position,
+        # `in_word` whether a word is being read, `dbl` whether a `[[` read at
+        # a command position is still open in the list and `head` its head
+        # state. `saved` holds, for each entry of the stack, the three values
+        # `at_command`, `dbl` and `head` the list under it had when the entry
+        # was pushed, and whether the close of the entry gives that list a
+        # command position. A closing inside a word brings the three values
+        # back and the list goes on inside its word; a compound-command
+        # closing brings `dbl` back and puts the list at a command position.
         at_command, in_word = True, False
+        dbl, head = False, HEAD_NONE
+        # The entries of the contexts the chunk opens with stand for a list
+        # that is inside a word: the `)` that closes the arithmetic part of a
+        # `$((` gives back a list that goes on inside its word.
+        saved = [(False, False, HEAD_NONE, False)] * len(stack)
         while j < n:
             top = stack[-1]
             ch = s[j]
@@ -2048,23 +2173,60 @@ class _Parser:
                 and not (ch == "\\" and s.startswith("\n", j + 1))
                 and not (ch == "#" and s[j - 1] in " \t\n;&|(")
             ):
-                # A word begins here. A keyword or a reserved word is decided
-                # once, on the characters that start the word; any other word
-                # is read as an ordinary word, which is not looked at again.
-                kind, end = self._read_command_word(j, at_command, top == "8")
-                if kind == "case":
-                    stack.append("1")
-                    j = end
-                    continue
-                if kind == "esac":
-                    stack.pop()
+                # A word begins here. A keyword, a reserved word, a closing
+                # word or a head word is decided once, on the characters that
+                # start the word; any other word is read as an ordinary word,
+                # which is not looked at again.
+                named, head = head, HEAD_NONE
+                if named in (HEAD_FUNCTION, HEAD_FOR, HEAD_NAME):
+                    # The name of a function, a loop or a repeat count is an
+                    # ordinary word, never a keyword; the word after it is at
+                    # a command position.
+                    at_command, in_word = True, True
+                    if named == HEAD_FUNCTION:
+                        head = HEAD_FUNCTION_NAME
+                    elif named == HEAD_FOR:
+                        head = HEAD_FOR_NAME
+                else:
+                    was_command = at_command
+                    kind, end = self._read_command_word(j, at_command, top == "8", dbl)
+                    if kind == "case":
+                        stack.append("1")
+                        saved.append((at_command, dbl, HEAD_NONE, False))
+                        j = end
+                        continue
+                    if kind == "esac":
+                        stack.pop()
+                        dbl = saved.pop()[1]
+                        at_command, in_word = True, False
+                        j = end
+                        continue
+                    if kind == "reserved":
+                        j = end
+                        continue
+                    if kind == "dbl_open":
+                        dbl = True
+                        at_command, in_word = False, False
+                        j = end
+                        continue
+                    if kind == "dbl_close":
+                        dbl = False
+                        at_command, in_word = True, False
+                        j = end
+                        continue
+                    if kind is not None:
+                        # A head word: `function`, `for`, `select`, `coproc`
+                        # or `repeat`.
+                        head = HEAD_AFTER_WORD[kind]
+                        at_command, in_word = kind == "coproc", False
+                        j = end
+                        continue
                     at_command, in_word = False, True
-                    j = end
-                    continue
-                if kind == "reserved":
-                    j = end
-                    continue
-                at_command, in_word = False, True
+                    if was_command:
+                        if named == HEAD_COPROC:
+                            at_command = True
+                        else:
+                            head = HEAD_FIRST
             if top in "13457":
                 # A case statement that waits for a word or for `in`.
                 if ch in " \t\n":
@@ -2089,7 +2251,8 @@ class _Parser:
                     end = self._keyword_end(j, "esac", " \t\n;&|)<>")
                     if end != -1:
                         stack.pop()
-                        at_command, in_word = False, True
+                        dbl = saved.pop()[1]
+                        at_command, in_word, head = True, False, HEAD_NONE
                         j = end
                     elif ch in ");&":
                         raise _Undecidable("case pattern")
@@ -2105,41 +2268,50 @@ class _Parser:
                 else:
                     # Phase 7: the item body starts at a command position.
                     stack[-1] = "8"
-                    at_command, in_word = True, False
+                    at_command, in_word, dbl, head = True, False, False, HEAD_NONE
             elif ch == "\\":
                 j += 2
             elif top == "b":
                 j += 1
                 if ch == "`":
                     stack.pop()
+                    frame = saved.pop()
                     if not stack:
                         return j
-                    at_command, in_word = False, True
+                    at_command, dbl, head, _ = frame
+                    in_word = True
             elif ch == "`":
                 stack.append("b")
+                saved.append((at_command, dbl, head, False))
                 j += 1
             elif ch == '"':
                 if top == "d":
                     stack.pop()
-                    at_command, in_word = False, True
+                    at_command, dbl, head, _ = saved.pop()
+                    in_word = True
                 else:
                     stack.append("d")
+                    saved.append((at_command, dbl, head, False))
                 j += 1
             elif s.startswith("$((", j):
                 stack.extend(("p", "a"))
+                saved.extend(((at_command, dbl, head, False),) * 2)
                 j += 3
             elif s.startswith("$(", j):
                 stack.append("p")
-                at_command, in_word = True, False
+                saved.append((at_command, dbl, head, False))
+                at_command, in_word, dbl, head = True, False, False, HEAD_NONE
                 j += 2
             elif s.startswith("${", j):
                 stack.append("K" if top in "dK" else "k")
+                saved.append((at_command, dbl, head, False))
                 j += 2
             elif top == "d":
                 j += 1
             elif ch == "}" and top in "kK":
                 stack.pop()
-                at_command, in_word = False, True
+                at_command, dbl, head, _ = saved.pop()
+                in_word = True
                 j += 1
             elif top == "K":
                 j += 1
@@ -2160,6 +2332,7 @@ class _Parser:
                 # parenthesised group inside either.
                 if ch == "(":
                     stack.append("g")
+                    saved.append((at_command, dbl, head, False))
                     j += 1
                 elif ch == ")":
                     if top == "2":
@@ -2168,6 +2341,7 @@ class _Parser:
                         stack[-1] = "7"
                     else:
                         stack.pop()
+                        saved.pop()
                     j += 1
                 elif s.startswith("<<<", j):
                     j += 3
@@ -2178,7 +2352,8 @@ class _Parser:
                 elif top == "2":
                     if ch in "<>" and s.startswith("(", j + 1):
                         stack.append("p")
-                        at_command, in_word = True, False
+                        saved.append((at_command, dbl, head, False))
+                        at_command, in_word, dbl, head = True, False, False, HEAD_NONE
                         j += 2
                     elif ch in " \t\n":
                         stack[-1] = "3"
@@ -2196,17 +2371,41 @@ class _Parser:
                 else:
                     j += 1
             elif ch == "(":
-                stack.append("p" if top == "8" else top)
-                at_command, in_word = True, False
+                kind_char, close_command = ("p" if top == "8" else top), False
+                if top != "a":
+                    if head in (HEAD_FIRST, HEAD_FUNCTION, HEAD_FUNCTION_NAME):
+                        end = self._empty_parens_end(j)
+                        if end != -1:
+                            # A function head, `name()`, `function name()` or
+                            # the anonymous `function ()`: the next word is at
+                            # a command position.
+                            at_command, in_word, head = True, False, HEAD_NONE
+                            j = end
+                            continue
+                    # Whether this `(` is read at a command position decides
+                    # what its `)` gives; a `((` after `for` counts as read
+                    # at one.
+                    close_command = at_command or head == HEAD_FOR
+                    if head == HEAD_FOR_NAME:
+                        # The zsh word list of a `for`: no word of it is at a
+                        # command position, and its `)` closes a head.
+                        kind_char, close_command = "a", True
+                stack.append(kind_char)
+                saved.append((at_command, dbl, HEAD_NONE, close_command))
+                at_command, in_word, dbl, head = True, False, False, HEAD_NONE
                 j += 1
             elif ch == ")":
                 if top == "8":
                     raise _Undecidable("unmatched parenthesis in a case body")
                 stack.pop()
+                at_command, dbl, head, close_command = saved.pop()
                 j += 1
                 if not stack:
                     return j
-                at_command, in_word = False, True
+                if close_command:
+                    at_command, in_word, head = True, False, HEAD_NONE
+                else:
+                    in_word = True
             elif top == "a":
                 j += 1
             elif ch == "#" and s[j - 1] in " \t\n;&|(":
@@ -2215,7 +2414,7 @@ class _Parser:
                 if j == -1:
                     raise _Undecidable("substitution")
             elif s.startswith("<<<", j):
-                at_command, in_word = False, False
+                at_command, in_word, head = False, False, HEAD_NONE
                 j += 3
             elif s.startswith("<<", j):
                 raise _Undecidable("heredoc in a substitution")
@@ -2227,10 +2426,10 @@ class _Parser:
                 in_word = False
                 j += 1
             elif ch in "\n;&|":
-                at_command, in_word = True, False
+                at_command, in_word, head = True, False, HEAD_NONE
                 j += 1
             elif ch in "<>":
-                at_command, in_word = False, False
+                at_command, in_word, head = False, False, HEAD_NONE
                 j += 1
             else:
                 j += 1
@@ -2245,9 +2444,13 @@ class _Parser:
         after it are skipped, then the next character must be one of `follow`
         or the input must end, so the keyword is a standalone word. A sequence
         that does not spell `word` once the pairs are out (`ca`, a pair, `sex`)
-        is not a keyword. The caller calls it at the start of a word only. It
-        looks at the characters of `word` and at the runs of pairs between and
-        after them, nothing else, and never calls back into the skip."""
+        is not a keyword. The rule is the one for every word whose identity
+        changes the reading: `case`, `in` and `esac`, the reserved words, the
+        closing words `fi`, `done`, `}` and `]]`, `[[`, `function` and the head
+        words `for`, `select`, `coproc` and `repeat`. The caller calls it at the
+        start of a word only. It looks at the characters of `word` and at the
+        runs of pairs between and after them, nothing else, and never calls
+        back into the skip."""
         s, n = self.s, self.n
         k = j
         for letter in word:
@@ -2262,23 +2465,48 @@ class _Parser:
             return -1
         return k
 
-    def _read_command_word(self, j, at_command, in_body):
+    def _empty_parens_end(self, j):
+        """Return the index just after the `)` of an empty `()` whose `(` is
+        at `j`, or -1 when the parentheses are not empty: only blanks (spaces
+        and tabs) lie between them. The blanks are read once here and once
+        more by the caller when it reads the `(` as any other `(`, so the
+        check costs constant extra time per character. It calls nothing."""
+        s, n = self.s, self.n
+        k = j + 1
+        while k < n and s[k] in " \t":
+            k += 1
+        if k < n and s[k] == ")":
+            return k + 1
+        return -1
+
+    def _read_command_word(self, j, at_command, in_body, in_dbl):
         """Decide the word that begins at `j` in a command list of the chunk
         and return (kind, end). `at_command` is the command position state
-        of the list and `in_body` whether the list is an item body. The kind
-        is "case" for a `case` that opens a statement (a standalone `case` at
-        a command position), "esac" for an `esac` that closes one (a
-        standalone `esac` at a command position of an item body), "reserved"
-        for a standalone word of `COMMAND_POSITION_WORDS` read at a command
-        position, which leaves the next word at a command position, and None
-        for every other word (end is `j` then). `end` is where reading goes
-        on. All three keywords are decided by `_keyword_end`, on the
-        characters with the continuation pairs left out, so a word at an
-        argument position is never one of them. The caller calls it once at
-        the start of each word."""
+        of the list, `in_body` whether the list is an item body and `in_dbl`
+        whether a `[[` read at a command position is open in it. The kind is
+        "case" for a `case` that opens a statement (a standalone `case` at a
+        command position), "esac" for an `esac` that closes one (a standalone
+        `esac` at a command position of an item body), "reserved" for a
+        standalone word of `COMMAND_POSITION_WORDS` read at a command
+        position (the reserved words, `!`, `{` and the closing words `fi`,
+        `done` and `}`), which leaves the next word at a command position,
+        "dbl_open" for a standalone `[[` at a command position, "dbl_close"
+        for a standalone `]]` while a `[[` is open, the head word itself
+        (`function`, `for`, `select`, `coproc` or `repeat`) for a standalone
+        head word at a command position, and None for every other word (end
+        is `j` then). `end` is where reading goes on. Every word is decided
+        by `_keyword_end`, on the characters with the continuation pairs left
+        out, so a word at an argument position is never one of them, and
+        neither is a quoted or escaped one. The caller calls it once at the
+        start of each word."""
+        s = self.s
+        ch = s[j]
+        if in_dbl and ch == "]":
+            end = self._keyword_end(j, "]]", " \t\n;&|()<>")
+            if end != -1:
+                return "dbl_close", end
         if not at_command:
             return None, j
-        ch = self.s[j]
         if ch == "c":
             end = self._keyword_end(j, "case", " \t\n")
             if end != -1:
@@ -2287,11 +2515,20 @@ class _Parser:
             end = self._keyword_end(j, "esac", " \t\n;&|)<>")
             if end != -1:
                 return "esac", end
+        elif ch == "[":
+            end = self._keyword_end(j, "[[", " \t\n")
+            if end != -1:
+                return "dbl_open", end
         for word in COMMAND_POSITION_WORDS:
             if word[0] == ch:
-                end = self._keyword_end(j, word, " \t\n" if len(word) == 1 else " \t\n;&|()<>")
+                end = self._keyword_end(j, word, " \t\n" if word in ("!", "{") else " \t\n;&|()<>")
                 if end != -1:
                     return "reserved", end
+        for word in HEAD_AFTER_WORD:
+            if word[0] == ch:
+                end = self._keyword_end(j, word, " \t\n;&|()<>")
+                if end != -1:
+                    return word, end
         return None, j
 
     def _dollar(self):
