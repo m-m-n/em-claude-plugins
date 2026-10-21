@@ -96,6 +96,26 @@ SYMLINK_OPEN_ERRNOS = frozenset(
     if code is not None
 )
 
+# Open flags for every directory the walk steps into, the last directory
+# included when the path ends in `/`: only a directory is accepted, a symlink
+# is never followed, nothing waits on a FIFO or device, and the descriptor
+# never leaks into a child. A flag the platform lacks is simply absent (0)
+# here, so loading the script never fails; run() refuses to start before any
+# argument is processed when a flag the walk depends on is missing.
+DIRECTORY_OPEN_FLAGS = (
+    os.O_RDONLY
+    | getattr(os, "O_DIRECTORY", 0)
+    | getattr(os, "O_NOFOLLOW", 0)
+    | getattr(os, "O_NONBLOCK", 0)
+    | getattr(os, "O_CLOEXEC", 0)
+)
+
+# errno values with which a directory-only, no-follow open refuses a
+# component that is not a directory. A symlink gives ENOTDIR on Linux and
+# ELOOP (EMLINK on FreeBSD) elsewhere, so the kind of the component has to be
+# inspected before the failure becomes an error token.
+DIRECTORY_REFUSED_ERRNOS = frozenset({errno.ENOTDIR}) | SYMLINK_OPEN_ERRNOS
+
 
 def digest_of_descriptor(fd):
     """sha256 of everything readable from `fd`, in bounded chunks."""
@@ -108,31 +128,84 @@ def digest_of_descriptor(fd):
     return "sha256:" + hasher.hexdigest()
 
 
-def digest_of_path(path):
-    """Return `(digest, None)` or `(None, error_token)` for one raw path.
+def close_descriptor(fd):
+    """Close a read-only descriptor; a failing close cannot change a result."""
+    try:
+        os.close(fd)
+    except OSError:
+        pass
 
-    The path is inspected without following a symlink, so a FIFO, device or
-    symlink is rejected before anything is opened. The open itself refuses a
-    symlink and never waits, and the regular-file determination is repeated
-    on the opened handle, which is the one that is read.
+
+def missing_capabilities():
+    """Names of the platform capabilities the path walk needs but lacks.
+
+    Looked up on every call (never cached at import time), so the answer
+    always reflects the `os` module as it is when the script runs.
+    """
+    absent = []
+    if os.open not in getattr(os, "supports_dir_fd", ()):
+        absent.append(
+            "descriptor-relative open (os.open with dir_fd, "
+            "os.supports_dir_fd)"
+        )
+    if not hasattr(os, "O_NOFOLLOW"):
+        absent.append("no-follow open flag (os.O_NOFOLLOW)")
+    if not hasattr(os, "O_DIRECTORY"):
+        absent.append("directory-only open flag (os.O_DIRECTORY)")
+    return absent
+
+
+def failure_token(exc):
+    """The error token for an OSError that is not a symlink refusal."""
+    if exc.errno in NO_ENTRY_ERRNOS:
+        return "missing"
+    return "unreadable"
+
+
+def directory_refusal_token(parent_fd, name):
+    """Error token for a component that a directory-only open refused.
+
+    The component's kind is inspected relative to the same parent descriptor
+    and without following a symlink. A symlink of any kind (to a directory,
+    to a file, dangling, looping) is `not_a_regular_file`; something that
+    exists but is neither a directory nor a symlink, or nothing at all, is
+    `missing`. A directory here means the component was swapped after the
+    open failed, and an inspection that fails itself is mapped like any other
+    failure; neither case may ever produce a digest.
     """
     try:
-        inspected = os.lstat(path)
+        kind = os.lstat(name, dir_fd=parent_fd).st_mode
     except OSError as exc:
-        if exc.errno in NO_ENTRY_ERRNOS:
-            return None, "missing"
-        return None, "unreadable"
+        return failure_token(exc)
+    if stat.S_ISLNK(kind):
+        return "not_a_regular_file"
+    if stat.S_ISDIR(kind):
+        return "unreadable"
+    return "missing"
+
+
+def digest_of_entry(parent_fd, name):
+    """Return `(digest, None)` or `(None, error_token)` for the final
+    component `name` of a path, found in the directory open as `parent_fd`.
+
+    The entry is inspected without following a symlink, so a FIFO, device,
+    socket or symlink is rejected before anything is opened. The open itself
+    refuses a symlink and never waits, and the regular-file determination is
+    repeated on the opened handle, which is the one that is read.
+    """
+    try:
+        inspected = os.lstat(name, dir_fd=parent_fd)
+    except OSError as exc:
+        return None, failure_token(exc)
     if not stat.S_ISREG(inspected.st_mode):
         return None, "not_a_regular_file"
 
     try:
-        fd = os.open(path, OPEN_FLAGS)
+        fd = os.open(name, OPEN_FLAGS, dir_fd=parent_fd)
     except OSError as exc:
         if exc.errno in SYMLINK_OPEN_ERRNOS:
             return None, "not_a_regular_file"
-        if exc.errno in NO_ENTRY_ERRNOS:
-            return None, "missing"
-        return None, "unreadable"
+        return None, failure_token(exc)
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             return None, "not_a_regular_file"
@@ -140,7 +213,61 @@ def digest_of_path(path):
     except OSError:
         return None, "unreadable"
     finally:
-        os.close(fd)
+        close_descriptor(fd)
+
+
+def split_components(raw):
+    """Split a raw path into `(components, directory_required)`.
+
+    Empty components and `.` are dropped. A trailing `/` or a final `.`
+    requires the last remaining component to be a directory. `..` stays a
+    component and is opened like any other directory.
+    """
+    parts = raw.split(b"/")
+    components = [part for part in parts if part not in (b"", b".")]
+    directory_required = parts[-1] in (b"", b".")
+    return components, directory_required
+
+
+def digest_of_path(raw):
+    """Return `(digest, None)` or `(None, error_token)` for one raw path.
+
+    The path is walked one component at a time from `/` (absolute argument)
+    or the current directory (relative argument). Every directory on the way
+    is opened relative to the previous directory's descriptor, directory-only
+    and without following a symlink, so a symlink at any component stops the
+    walk. The path is never resolved as one string. Each argument fails
+    closed: any failure becomes that argument's error token. Every directory
+    descriptor opened here is closed before this function returns.
+    """
+    if not raw:
+        return None, "missing"
+    components, directory_required = split_components(raw)
+
+    try:
+        current = os.open(
+            b"/" if raw.startswith(b"/") else b".", DIRECTORY_OPEN_FLAGS
+        )
+    except OSError as exc:
+        return None, failure_token(exc)
+    try:
+        for position, name in enumerate(components):
+            is_last = position == len(components) - 1
+            if is_last and not directory_required:
+                return digest_of_entry(current, name)
+            try:
+                child = os.open(name, DIRECTORY_OPEN_FLAGS, dir_fd=current)
+            except OSError as exc:
+                if exc.errno in DIRECTORY_REFUSED_ERRNOS:
+                    return None, directory_refusal_token(current, name)
+                return None, failure_token(exc)
+            previous, current = current, child
+            close_descriptor(previous)
+        # Every component was a directory (or none was left): the argument
+        # names a directory, never a regular file.
+        return None, "not_a_regular_file"
+    finally:
+        close_descriptor(current)
 
 
 def build_element(path_text, digest, error):
@@ -151,6 +278,15 @@ def build_element(path_text, digest, error):
 
 def run(argv):
     """Return the exit code; write the array only when it is complete."""
+    absent = missing_capabilities()
+    if absent:
+        sys.stderr.write(
+            "artifact-digest.py: error: this platform lacks a capability "
+            "the path walk needs; no argument was processed\n"
+            + "".join(f"  missing: {name}\n" for name in absent)
+        )
+        return 2
+
     if not argv:
         sys.stderr.write(USAGE)
         return 2
