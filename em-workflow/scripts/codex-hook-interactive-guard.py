@@ -132,21 +132,33 @@ Decision flow:
      the `}`, a nested `${`, `#`, `:-` and every other character stay as
      written, and the text before and after the range joins the registered
      delimiter unchanged (`foo${v:-"x"}bar` is registered as `foo${v:-x}bar`).
+     An unquoted `$(` inside a delimiter's `${ ... }` range (`$((` included) is
+     skipped by the same case-aware skip that reads a substitution inside
+     double quotes: a case statement inside it is read, so its pattern's `)`
+     does not end it, and the substitution is kept as written, with its quotes
+     (`${v:-$(case x in x) echo "x";; esac)}` is registered as it stands).
+     Inside a parenthesised range, and in a `$( ... )` written directly in the
+     delimiter word, the reading is unchanged: the `)` that closes the
+     parenthesis is found by counting parentheses.
      The string is undecidable when the text ends before that close is found,
      when a quote is still open at the end of the text and when a `$(` has no
-     close. An unquoted `$'` or `$"` makes it undecidable too, inside such a
-     range and outside any `${ ... }` of the delimiter alike, at the start of
-     the word or in the middle of it (`foo$'x'`): what zsh reads there is not
-     reproduced, so no delimiter is registered. A `$'` or `$"` inside double
-     quotes and a backslash-escaped `$` make nothing undecidable. An
-     undecidable string follows the checkpoint rule of step 9: the commands up
-     to the last checkpoint are judged, so a launch on an earlier line is
-     denied and one on the line of the delimiter is not, and a string with no
-     checkpoint gives no output. Nothing else changes: a `${ ... }` in any
-     other word (it closes at the first `}`, and the written characters stay a
-     dynamic word), a `$'` or a `$"` in any other word, the target of `<<<` or
-     `<`, a `${ ... }` inside double quotes in the delimiter, which the
-     double-quoted unit reader reads, and a `$( ... )` written directly in the
+     close. The skip of an unquoted `$(` in a delimiter's `${ ... }` range makes
+     it undecidable too when it cannot locate the close with certainty (a case
+     statement with no closing `esac` before the input ends, for one) or ends
+     beyond the end of the text. An unquoted `$'` or `$"` makes it undecidable
+     too, inside such a range and outside any `${ ... }` of the delimiter
+     alike, at the start of the word or in the middle of it (`foo$'x'`): what
+     zsh reads there is not reproduced, so no delimiter is registered. A `$'`
+     or `$"` inside double quotes and a backslash-escaped `$` make nothing
+     undecidable. An undecidable string follows the checkpoint rule of step 9:
+     the commands up to the last checkpoint are judged, so a launch on an
+     earlier line is denied and one on the line of the delimiter is not, and a
+     string with no checkpoint gives no output. Nothing else changes: a
+     `${ ... }` in any other word (it closes at the first `}`, and the written
+     characters stay a dynamic word), a `$'` or a `$"` in any other word, the
+     target of `<<<` or `<`, a `${ ... }` inside double quotes in the
+     delimiter, which the double-quoted unit reader reads, a backquote inside
+     a delimiter's `${ ... }` and a `$( ... )` written directly in the
      delimiter word keep their reading.
      A range read as one word that is the delimiter of `<<` or `<<-`, or a part
      of it, has its text quote-removed by the rules the reader applies to any
@@ -1845,15 +1857,29 @@ class _Parser:
         other backslash stays with the next character, a `$'` or `$"` there is
         no trigger, and the closing `"` is dropped. A `$( ... )` or a
         `$(( ... ))` inside double quotes keeps its original text, the quotes
-        inside it included. A quote the range does not close raises
-        _Undecidable, and so does a substitution inside double quotes whose
-        skip ends beyond `end` or cannot be read, and a `$( ... )` outside
-        quotes that has no close. The part of the word outside the range is not
-        read here: it was quote-removed when it was read and is not processed
-        again. Time is linear in the length of the range whatever its nesting
-        depth: each character is read a bounded number of times, and a
-        `$( ... )` is skipped once, never rescanned. A skip that runs beyond
-        `end` ends the whole reading, so it happens at most once."""
+        inside it included.
+
+        An unquoted `$(` (`$((` included) is read by the kind of range. In a
+        braced range, an unquoted `$(` inside a delimiter's `${ ... }` range is
+        read by the shared reader `_read_quoted_unit`, held to `end`. That
+        reader skips the substitution with the case-aware `_skip_substitution`,
+        so a case statement inside it is read through its `esac`, its
+        pattern's `)` does not end the substitution, and the original text is
+        kept, the quotes inside it included. This method calls the reader only;
+        it never calls `_skip_substitution` itself. In a parenthesised range
+        (`braced` false) an unquoted `$(` keeps the paren scan (`_skip_parens`),
+        which counts parentheses and reads no case statement.
+
+        A quote the range does not close raises _Undecidable, and so does a
+        substitution inside double quotes, or an unquoted `$(` of a braced
+        range, whose skip ends beyond `end` or cannot be read, and an unquoted
+        `$( ... )` of a parenthesised range that has no close. The part of the
+        word outside the range is not read here: it was quote-removed when it
+        was read and is not processed again. Time is linear in the length of
+        the range whatever its nesting depth: each character is read a bounded
+        number of times, and a `$( ... )` is skipped once, never rescanned. A
+        skip that runs beyond `end` ends the whole reading, so it happens at
+        most once."""
         s = self.s
         out = []
         j = start
@@ -1869,11 +1895,18 @@ class _Parser:
             elif ch == "$" and j + 1 < end and s[j + 1] in "'\"":
                 raise _Undecidable("dollar quote")
             elif ch == "$" and j + 1 < end and s[j + 1] == "(":
-                close = self._skip_parens(j + 1)
-                if close > end:
-                    raise _Undecidable("parenthesis")
-                out.append(s[j:close])
-                j = close
+                if braced:
+                    # The case-aware skip of the shared reader, held to the end
+                    # of the range: a case statement in the substitution is
+                    # read, so its pattern's `)` does not end it.
+                    text, j, _ = self._read_quoted_unit(j, end)
+                    out.append(text)
+                else:
+                    close = self._skip_parens(j + 1)
+                    if close > end:
+                        raise _Undecidable("parenthesis")
+                    out.append(s[j:close])
+                    j = close
             elif braced and ch == "$" and j + 1 < end and s[j + 1] == "{":
                 depth += 1
                 out.append("${")
@@ -1896,15 +1929,19 @@ class _Parser:
         dynamic): the text of the unit with its quotes removed, the index just
         after the unit, and whether the unit holds a substitution or a `$`
         inside double quotes. This is the one reader of a backslash pair, a
-        single-quoted unit and a double-quoted unit: word reading calls it with
-        the end of the input as `limit`, and the quote removal of a delimiter
-        range (`_remove_range_quotes`) calls it with the end of the range (the
-        end of the input, for the range of a delimiter's `${`, whose end is
-        found by the same scan).
+        single-quoted unit, a double-quoted unit and the unquoted `$(` of a
+        delimiter's `${ ... }` range: word reading calls it with the end of the
+        input as `limit` (for a backslash, a single quote or a double quote),
+        and the quote removal of a delimiter range (`_remove_range_quotes`)
+        calls it with the end of the range (the end of the input, for the range
+        of a delimiter's `${`, whose end is found by the same scan).
 
         `limit` is exclusive: the unit must end before it, so `next` never lies
-        beyond it. The caller guarantees `start < limit` and that the character
-        at `start` is a backslash, a single quote or a double quote.
+        beyond it. The caller guarantees `start < limit` and that `start` holds
+        one of four starts: a backslash, a single quote, a double quote, or an
+        unquoted `$` directly followed by `(`. Only the braced reading of
+        `_remove_range_quotes` passes a `$(` start; word reading never does,
+        because it hands an unquoted `$` to `_dollar`.
 
         A backslash and the character after it yield that character; a
         backslash and a newline yield nothing. Single-quoted text is kept as it
@@ -1916,15 +1953,28 @@ class _Parser:
         and its original text is kept as written, the quotes inside it
         included: they close nothing here and are not removed.
 
+        An unquoted `$(` inside a delimiter's `${ ... }` range (`$((` included)
+        is skipped with `_skip_substitution`, started at the `$`: the same
+        case-aware skip as a substitution inside double quotes. The unit is the
+        original characters from the `$` through the end of the skip,
+        unchanged, the quotes inside them included, and it is dynamic.
+
         Raises _Undecidable when the unit does not close before `limit` (a
         backslash with no character after it before `limit` included), when the
-        skip of a substitution inside double quotes ends beyond `limit`, and
-        when `_skip_substitution` itself raises it. An overrun ends the whole
-        reading, so the skip past `limit` happens at most once per string.
-        This reader calls `_skip_substitution` only; nothing it calls calls it
-        back."""
+        skip of a substitution, inside double quotes or from an unquoted `$(`
+        start, ends beyond `limit`, and when `_skip_substitution` itself raises
+        it. An overrun ends the whole reading, so the skip past `limit` happens
+        at most once per string. This reader calls `_skip_substitution` only;
+        nothing it calls calls it back."""
         s = self.s
         ch = s[start]
+        if ch == "$":
+            # An unquoted `$(` of a delimiter's `${ ... }` range: skipped as a
+            # substitution inside double quotes is, and kept as written.
+            end = self._skip_substitution(start)
+            if end > limit:
+                raise _Undecidable("substitution")
+            return s[start:end], end, True
         if ch == "\\":
             if start + 1 >= limit:
                 raise _Undecidable("trailing backslash")
@@ -1966,7 +2016,12 @@ class _Parser:
 
     def _skip_substitution(self, start):
         """Return the index just after the command substitution that begins
-        at `start` (`$(`, `$((` or a backtick) inside double quotes.
+        at `start` (`$(`, `$((` or a backtick). Only the shared quoted-unit
+        reader `_read_quoted_unit` calls it, for two kinds of substitution: one
+        inside double quotes, and an unquoted `$(` inside a delimiter's
+        `${ ... }` range (a `$(` or a `$((`, never a backtick), which is
+        reached from `_read_quoted_unit` by the braced reading of
+        `_remove_range_quotes`. The reading below is the same for both.
 
         Quotes, backslash escapes, `${ ... }` and nested substitutions inside
         the chunk are followed, so a `"` or a `)` that belongs to them closes

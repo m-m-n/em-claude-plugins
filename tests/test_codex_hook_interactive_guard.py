@@ -1092,6 +1092,25 @@ CASES = [
     ("deny", "区切り語でない $\" は判定不能にしない", "\n".join(["echo $\"x\"; python3 -i"])),
     ("deny", "区切り語の二重引用符の中の ${...} の読みは変えない", "\n".join(["cat <<\"${v:-x}\"","${v:-x}","python3 -i"])),
     ("deny", "${...} の中のバッククォートは文字のまま残す", "\n".join(["cat <<${v:-`echo x`}","${v:-`echo x`}","python3 -i"])),
+    # codex-guard-heredoc-delim-brace-case (VERIFICATION.md TS1 to TS9): an
+    # unquoted `$( ... )` inside the `${ ... }` of a `<<` / `<<-` delimiter is
+    # skipped by the case-aware substitution skip and kept as written, so a
+    # case statement in it is read through to its `esac`. Each command is the
+    # scenario's line array joined with newlines.
+    ("deny", "区切り語の ${...} の中の case 文を含む $( ) を書かれたまま区切り語にし、終端行の後の起動は deny (再現手順)", "\n".join(["zsh -c 'cat <<${v:-$(case x in x) echo \"x\";; esac)}","${v:-$(case x in x) echo \"x\";; esac)}","python3 -i'"])),
+    ("deny", "最上位の ${...} の中の case 文を含む $( ) の引用を残す", "\n".join(["cat <<${v:-$(case x in x) echo \"x\";; esac)}","${v:-$(case x in x) echo \"x\";; esac)}","python3 -i"])),
+    ("silent", "case 文を含む $( ) の引用を除いた行では本文が閉じない", "\n".join(["cat <<${v:-$(case x in x) echo \"x\";; esac)}","${v:-$(case x in x) echo x;; esac)}","python3 -i","${v:-$(case x in x) echo \"x\";; esac)}"])),
+    ("deny", "case 文の本体の引用の中の } で ${...} を閉じない", "\n".join(["cat <<${v:-$(case x in x) echo \"}\";; esac)}","${v:-$(case x in x) echo \"}\";; esac)}","python3 -i"])),
+    ("deny", "先頭の ( を持つパターンの case 文を読む", "\n".join(["cat <<${v:-$(case x in (x) echo \"x\";; esac)}","${v:-$(case x in (x) echo \"x\";; esac)}","python3 -i"])),
+    ("deny", "${...} の中の $(( )) は書かれたまま区切り語になる", "\n".join(["cat <<${v:-$((1+2))}","${v:-$((1+2))}","python3 -i"])),
+    ("deny", "<<- は先頭タブを除いて case 文を含む $( ) を残した区切り語と比べる", "\n".join(["cat <<-${v:-$(case x in x) echo \"x\";; esac)}","\t${v:-$(case x in x) echo \"x\";; esac)}","python3 -i"])),
+    ("silent", "${...} の中の esac で閉じない case 文は判定不能", "\n".join(["cat <<${v:-$(case x in x) echo \"x\";;}","python3 -i"])),
+    ("deny", "判定不能な case 文を含む区切り語より前の行の起動は deny", "\n".join(["python3 -i","cat <<${v:-$(case x in x) :;;}","x"])),
+    # Not in the scenario list: TS8 passes whichever skip reads the `$( ... )`
+    # (the heredoc body is never closed), so this row adds a line equal to the
+    # delimiter with its quotes removed, which only a reading that registers
+    # that delimiter lets close the body.
+    ("silent", "esac で閉じない case 文を含む ${...} の区切り語は、引用を除いた行があっても判定不能", "\n".join(["cat <<${v:-$(case x in x) echo \"x\";;}","${v:-$(case x in x) echo x;;}","python3 -i"])),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -1491,6 +1510,39 @@ class TestMalformedAndDeepInput(HookCopiesMixin, unittest.TestCase):
             "one long range": self.heredoc_delimiter_ranges(1, 30000),
             "many ranges": self.heredoc_delimiter_ranges(2000, 10),
             "many longer ranges": self.heredoc_delimiter_ranges(100, 300),
+        }
+        for name, command in inputs.items():
+            self.assertGreater(len(command), 100000, name)
+            for plugin, path in self.for_each_copy():
+                with self.subTest(shape=name, copy=plugin):
+                    code, out, err = run_hook(path, payload_for(command), timeout=self.TIMEOUT)
+                    self.assertEqual((code, err), (0, ""))
+                    self.assertNotEqual(out, "", "the launch after the last terminator is denied")
+                    decision = json.loads(out)["hookSpecificOutput"]
+                    self.assertEqual(decision["permissionDecision"], "deny")
+
+    def heredoc_case_substitution_ranges(self, heredocs, items):
+        """`heredocs` heredocs, each with a delimiter `${v:-$( ... )}` whose
+        substitution holds a case statement of `items` items, each item with a
+        double-quoted word, and each heredoc closed by its true terminator line
+        (the delimiter as written, quotes kept), then a launch after the last
+        one. Zsh compares a body line with the delimiter as written, so the
+        launch is a body line unless every delimiter was registered with the
+        quotes of its substitution kept."""
+        delimiter = "${v:-$(case x in " + 'x) echo "x";; ' * items + "esac)}"
+        block = "cat <<" + delimiter + "\n" + delimiter + "\n"
+        return block * heredocs + "python3 -i"
+
+    def test_case_substitutions_in_delimiter_ranges_at_scale_are_read_in_time_and_the_launch_after_them_is_denied(self):
+        # AC-5 (NFR1): every `$( ... )` in a delimiter's `${ ... }` range is
+        # skipped once, and the range reading goes on after it. The input is
+        # read at the top level, so only the time of the reading limits it;
+        # the launch is denied only when every delimiter was registered the way
+        # zsh registers it, so the verdict shows the new path ran.
+        inputs = {
+            "one long range": self.heredoc_case_substitution_ranges(1, 4000),
+            "many ranges": self.heredoc_case_substitution_ranges(1500, 1),
+            "many longer ranges": self.heredoc_case_substitution_ranges(150, 30),
         }
         for name, command in inputs.items():
             self.assertGreater(len(command), 100000, name)
@@ -3211,6 +3263,55 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             with self.subTest(copy=plugin):
                 methods = parser_methods(path)
                 self.assertNotIn("_at_command_position", methods)
+
+
+class TestDelimiterSubstitutionDocumentation(unittest.TestCase):
+    """The four docstrings that touch the unquoted `$(` of a delimiter's
+    `${ ... }` range say how it is read (FR5): by the same case-aware skip that
+    reads a substitution inside double quotes. The sentences that limited the
+    shared reader's start to a quote or a backslash, and the substitution skip
+    to the inside of double quotes, are gone."""
+
+    STALE_READER_SENTENCE = (
+        "the character at `start` is a backslash, a single quote or a double quote"
+    )
+    STALE_SKIP_SENTENCE = "(`$(`, `$((` or a backtick) inside double quotes"
+    # The sentence every one of the four docstrings carries.
+    COMMON_MARKER = "unquoted `$(` inside a delimiter's `${ ... }` range"
+    # What each docstring says about the reading, in its own words.
+    READING_MARKERS = {
+        None: "is skipped by the same case-aware skip",
+        "_remove_range_quotes": "is read by the shared reader `_read_quoted_unit`",
+        "_read_quoted_unit": "is skipped with `_skip_substitution`",
+        "_skip_substitution": "is reached from `_read_quoted_unit`",
+    }
+
+    def docstring_of(self, path, method):
+        if method is None:
+            return module_docstring(path)
+        return parser_docstring(path, method) or ""
+
+    def test_the_shared_reader_docstring_no_longer_limits_its_start_to_a_quote_or_a_backslash(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                doc = parser_docstring(path, "_read_quoted_unit")
+                self.assertIsNotNone(doc, "no _read_quoted_unit method in _Parser")
+                self.assertNotIn(self.STALE_READER_SENTENCE, doc)
+
+    def test_the_substitution_skip_docstring_no_longer_limits_it_to_double_quotes(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                doc = parser_docstring(path, "_skip_substitution")
+                self.assertIsNotNone(doc, "no _skip_substitution method in _Parser")
+                self.assertNotIn(self.STALE_SKIP_SENTENCE, doc)
+
+    def test_each_docstring_names_how_an_unquoted_dollar_paren_in_a_delimiter_brace_range_is_read(self):
+        for plugin, path in HOOK_PATHS.items():
+            for method, reading in self.READING_MARKERS.items():
+                doc = self.docstring_of(path, method)
+                for marker in (self.COMMON_MARKER, reading):
+                    with self.subTest(copy=plugin, docstring=method or "module", marker=marker):
+                        self.assertIn(marker, doc)
 
 
 def verdict_of(result):
