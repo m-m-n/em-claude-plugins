@@ -103,7 +103,8 @@ workflow:
   completed_at_commit: 96fa688878a7e684ec3200620d16fc71c7942418
   base_commit: f201d52d550e1e2b7c2f6ecb621671239bfedba2
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 597226604a0824adee9184b93d356ec22c26b889
 - id: verify
   status: pending
 - id: retrospect
@@ -152,14 +153,15 @@ tasks:
     notes: null
     branch: em-workflow/codex-guard-subst-reading-regressions/task0003
 review:
-  status: pending
+  status: completed
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary:
     - perspective: performance
       reason: "NFR1 requires linear-time reading and FR6 adds a one-time re-read of unknown-kind strings; check the scanner stays linear"
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec, performance]
   residual_critical_high: 0
   needs_rework: false
 requirements:
