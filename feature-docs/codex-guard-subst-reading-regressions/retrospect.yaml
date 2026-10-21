@@ -1,0 +1,86 @@
+feature: codex-guard-subst-reading-regressions
+collected_at: '2026-10-21T22:12:35+09:00'
+session_ids:
+- 01a15e96-60db-731b-a7de-1c232ef8eb8b
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: NFR1 requires linear-time reading and FR6 adds a one-time re-read of unknown-kind strings;
+      check the scanner stays linear
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code read put 0.69 on bucket 2 (new logic in both guard copies plus the
+      test table), mapping to full
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.28
+        confidence: 0.72
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.72
+          '2': 0.28
+          '3': 0.0
+      observed_at: '2026-10-21T20:31:32+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.69
+        confidence: 0.69
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.31
+          '2': 0.6900000000000001
+          '3': 0.0
+      observed_at: '2026-10-21T20:34:21+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/codex-hook-interactive-guard.py
+      - em-review/scripts/codex-hook-interactive-guard.py
+      - tests/test_codex_hook_interactive_guard.py
+      - feature-docs/codex-guard-case-reading-fixes/SPEC.md
+      changed_lines_approx: 120
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 4
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: HEAD 5ddd0de4で3種類とも両コピーに再現した。①forの語一覧をaで積み、コメント処理を通らない。②_empty_parens_endは空白とタブだけを読み飛ばす。③シェル種別を渡さずcoproc/repeatを認識する。4再現入力すべて終了0、標準出力・標準エラーとも空で、内側の解析は_Undecidableになった。対照のpython3
+        -iはdenyだった。両コピーはバイト単位で同一。CASESの791件に4再現入力はなく、関連するTS33/34/47/49/50は両コピーで成功した。FR11にシェル不明時の読み分け規定はない。呼出元は両run_codex_exec.sh、直接依存はjsonとsysで計4。変更行数は概算。ファイル変更も入力コマンドの実行もしていない
+follow_up_drafts: []
+lessons_candidates:
+- all three tasks edited the same two guard copies and the test table in parallel, yet merged with conflict_retries
+  0 and no deviations
+- 'review round 1 left one medium finding deferred (fa91f061156d70be: the # of a zsh glob qualifier *(#qN)
+  inside a for word list is read as a comment, so a trailing python3 -i is missed); the FR1 comment rule
+  in the new ''w'' context introduced it'
+- the hand-written shell reader keeps accumulating per-construct edge cases (third feature in a row on
+  _skip_substitution)
