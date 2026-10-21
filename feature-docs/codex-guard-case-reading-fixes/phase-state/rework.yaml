@@ -41,7 +41,7 @@ spec_change:
   origin_id: 8aed11cf08b2dc4c
   recorded_at_commit: cb08cf4e90ad22078c841f0e266b30fabcea9994
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification:
 - classifier: claude
   verdict: spec_gap
