@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-subst-reading-regressions
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 9e2d474e3ecebeeffe3578b139d681f4aa5da25d
+last_input_digest: sha256:8fa8b6f726abfe09c789831e222776321cc580d7798e5908b7dcc2ede7a52cb2
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:8fa8b6f726abfe09c789831e222776321cc580d7798e5908b7dcc2ede7a52cb2
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
