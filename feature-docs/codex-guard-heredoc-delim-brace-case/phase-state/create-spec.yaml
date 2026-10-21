@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 6901c808176675561c840b44c92beec13f16c8de
 last_input_digest: sha256:7fabdfb3635d2be490071f4460a6bbc7a45acb13f7aa0a4e76bd6c008972fcc6
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -40,10 +40,13 @@ worker_runs:
   input_digest: sha256:32508d6bcc123d0d15fe76c17b391d21f1b6132b911c9f63a70a42b4c3433596
   output_digest: sha256:719202dc5fc97516a6274da9cf8cb7049f762a3c3fc051a0c9797c818a8fcbd2
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:7fabdfb3635d2be490071f4460a6bbc7a45acb13f7aa0a4e76bd6c008972fcc6
-  output_digest: null
-artifacts: []
+  output_digest: sha256:5382866b11efb1c66089d16855aa9a9e64811fb4542bcc5197d53f9a25f8a575
+artifacts:
+- path: feature-docs/codex-guard-heredoc-delim-brace-case/SPEC.md
+  sha256: sha256:df2e68d12ed43b0c6c0fa5827c3a18a52959bb86ee2dfa79b6e2a001553fbd33
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
