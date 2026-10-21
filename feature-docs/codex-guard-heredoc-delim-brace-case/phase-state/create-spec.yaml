@@ -6,13 +6,35 @@ generation: 1
 base_revision: 62b0424154bbb8d98d05a99d6883502c7fdfa65a
 last_input_digest: sha256:fce6d748d941c35d4c9fa0b896fa9bf04f3031b710988f3c903e69db42d287ad
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-21T20:40:27+09:00'
+    questions:
+    - question_id: requirement.skip-call-route
+      status: answered
+answers:
+  requirement.skip-call-route:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-21T20:40:27+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - route_via_shared_reader
+    freeform: null
+    normalized_answer: '共有リーダー経由: _read_quoted_unit の開始文字に引用外の $( を加え、_skip_substitution
+      で読み飛ばして元の文字をそのまま返す。_remove_range_quotes は braced=True の $( だけを渡す。既存の構造テストは変えない。'
+    resolution_note: 'gate: create-spec.requirement-clarification (batch-policies:
+      codex_consultation, record_as_assumption); Codex consulted (codex entry, 1 turn,
+      converged); Codex recommended route_via_shared_reader: parse は引用外の $ を _dollar
+      に渡すため共有リーダーの開始文字拡張は parse の既存経路に影響しない、braced=True 限定で braced=False の読みを保てる、直接呼び出し元
+      1 つ・循環なしで構造テストを維持できる。option not chosen: direct_call_and_update_test（構造テストの制約変更が要る）。Opus
+      escalation: not run. Recorded as assumption.'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:fce6d748d941c35d4c9fa0b896fa9bf04f3031b710988f3c903e69db42d287ad
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:fce6d748d941c35d4c9fa0b896fa9bf04f3031b710988f3c903e69db42d287ad
+  output_digest: sha256:5f47f3e4fc5ff42144e43725c8fd57dcc8b19ca0cecb65c3e1921acb13a9a24d
 artifacts: []
 patches: []
 progress_fingerprint: null
