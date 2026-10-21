@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-subst-reading-regressions
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 3f5b40fcc30fb38d2c9322a7e4c258105c79a723
 last_input_digest: sha256:7c4b113f24f9e859d58c047bcade1750a71833fbf7b56499831be133748a5235
