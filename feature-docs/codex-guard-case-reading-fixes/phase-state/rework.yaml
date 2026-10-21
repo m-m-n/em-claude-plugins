@@ -1,0 +1,53 @@
+schema_version: 1
+feature: codex-guard-case-reading-fixes
+phase: rework
+status: completed
+generation: 1
+base_revision: cb08cf4e90ad22078c841f0e266b30fabcea9994
+last_input_digest: sha256:6c8269b5956036c84c34450c5c36ab1c6a37e2aa6a7a830481f516d3935b74c0
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: '2026-10-21T09:35:05+09:00'
+    questions:
+    - question_id: rework.spec-change.compound-close-command-position
+      status: answered
+answers:
+  rework.spec-change.compound-close-command-position:
+    packet_id: rework-q0001
+    answered_at: '2026-10-21T09:35:05+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - change_spec
+    freeform: null
+    normalized_answer: change_spec
+    resolution_note: 'gate: rework.spec-change (relaxed route: classification gate direction 2 tripped because the bound set holds a security-category finding 8aed11cf08b2dc4c); origin verification: 2fe94b219da49a89 and 8aed11cf08b2dc4c are both members of reviews/round1.yaml; chosen: change_spec; not chosen: keep_spec; key points: Codex recommended change_spec because FR1/A2''s enumeration itself conflicts with the fix the findings need, while FR2 and NFR1 can be kept; keep_spec leaves the confirmed fail-open regressions in place. Codex labelled the classification (a) after observing the CURRENT code misjudge the inputs; the orchestrator reads that as evidence of the gap, not of an unattainable goal, and judges it a spec gap (b) grounded on FR1, FR2, NFR1 and assumption A2. codex_consulted: true (1 turn, codex harness); opus_escalation: false'
+worker_runs:
+- request_id: rework-run-0001
+  status: needs_user_input
+  input_digest: sha256:6c8269b5956036c84c34450c5c36ab1c6a37e2aa6a7a830481f516d3935b74c0
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+spec_change:
+  reason: Review round 1 high findings 2fe94b219da49a89 / 8aed11cf08b2dc4c need FR1/A2 to accept reserved words after a compound-command close and a { after a function head; FR1/A2 currently forbid that reading
+  origin_kind: review
+  origin_id: 8aed11cf08b2dc4c
+  recorded_at_commit: cb08cf4e90ad22078c841f0e266b30fabcea9994
+  consumed: false
+  replan_authorized: true
+classification:
+- classifier: claude
+  verdict: spec_gap
+  evidence_ids:
+  - FR1
+  - FR2
+  - NFR1
+  decision: proceed
+  reason: 'relaxed route (direction 2: security finding in bound set); Codex consulted and recommended change_spec; Codex verdict label (a) was based on the current code and is not adopted'
