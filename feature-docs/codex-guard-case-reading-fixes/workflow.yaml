@@ -82,8 +82,8 @@ workflow:
   artifacts:
   - REQUIREMENTS.md
   - SPEC.md
-  status: in_progress
-  completed_at_commit: 6a0ba0455a129e4e34047f6e98c9f6d40564faa1
+  status: completed
+  completed_at_commit: ea276af40088851d0bb883411d412f0a50d0aefd
 - id: design
   artifacts:
   - DESIGN.md
@@ -194,6 +194,27 @@ requirements:
     excluded_reason: null
     tasks: [task0001]
     tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7, TS8, TS9, TS10, TS11, TS12, TS13, TS14, TS15, TS16, TS17, TS18, TS19, TS23]
+  FR9:
+    title: 複合コマンドの閉じの後をコマンドの位置にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: 関数の頭の後をコマンドの位置にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: ループと coproc の頭の後をコマンドの位置にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
   NFR1:
     title: 線形時間
     status: ok
