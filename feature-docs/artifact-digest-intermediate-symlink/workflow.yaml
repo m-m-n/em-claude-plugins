@@ -184,7 +184,7 @@ tasks:
     - FR7
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/artifact-digest-intermediate-symlink/task0002
 review:
