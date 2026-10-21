@@ -1,0 +1,87 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: every guard case ok and Ran 10861 tests, OK (skipped=1), before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, every guard case ok and Ran 10863 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the test failed on the new row TS1 (empty
+      standard output, JSONDecodeError, where a deny object was expected): the double quote
+      inside the word-list comment opened a quote in the arithmetic context, the chunk was
+      never closed and the python3 -i after it was not judged. The row passes after the
+      implementation.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the test failed on TS5 (empty standard
+      output where a deny object was expected): the `)` inside the word-list comment closed
+      the list. TS7 and TS8 were already deny before the change (the arithmetic context read
+      neither a comment nor a command position, so those two commands came out right by
+      accident); they stay as regression guards against a word-list reading that treats the
+      list as a command list, and were not observed red.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The test passed before the implementation: TS6 expects silent and the old reading was
+      silent as well (the `'` inside the word-list comment opened a quote that never closed,
+      so the chunk was undecidable and nothing was denied). The row is a guard against
+      over-denial by the new reading (the python3 -i sits inside quotes in the case body and
+      must stay unjudged); no state exists in which it is red on this code base, so it
+      stays a regression pin and was not observed red.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts26_commented_lines_in_a_for_word_list_are_read_in_time
+    red_confirmed: true
+    red_reason: >-
+      With the pre-change guard in both copies, the DEPTH-lines shape of SPEC.md TS26 already
+      returned deny in time (an even count of double quotes balances), so that shape was not
+      observed red. The method also runs DEPTH + 1 lines, an odd count of double quotes; for
+      that shape the test failed in both copies (empty standard output, JSONDecodeError)
+      before the implementation. Both shapes pass after it within the 60 second limit.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The test passed before the implementation: TS28 is deny with the old reading as well
+      (the arithmetic context never opened a case statement, and its nested parentheses
+      balanced). The row pins the nested-entry clause of the word-list context (words
+      inside a nested `(`...`)` are at no command position, reading goes on after its `)`)
+      against a reading that would treat the nested parentheses as a command list; it was
+      not observed red.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCopies
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope: the existing tests above detect a changed
+      verdict of any pre-existing CASES row (the earlier `for x (a) {` rows and the
+      arithmetic `for ((` row included), a duplicated command, differing copies, recursion
+      or a forbidden call in the substitution skip, a non-standard-library import and a
+      dropped pinned documentation marker. This criterion asserts that nothing changes; no
+      red state occurred for this change.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope (IMPLEMENTATION.md Conventions: this task adds
+      no documentation-marker test): the existing TestSubstitutionSkipDocumentation detects
+      a dropped pinned marker of the `_skip_substitution` docstring, including the rule 6
+      sentences on `for name (words)`, which stay as written; no red state occurred for
+      this change. That the Contexts on the stack passage lists the word list under `w` and
+      not under `a`, and that no plugin version changed, has no executable check and is
+      verified by review of the docstring passage and of the diff.

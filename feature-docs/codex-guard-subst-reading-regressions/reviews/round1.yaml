@@ -1,0 +1,104 @@
+round: 1
+executed_at: '2026-10-21T22:02:57+09:00'
+scope:
+  review_mode: diff
+  base_commit: f201d52d550e1e2b7c2f6ecb621671239bfedba2
+  head_commit: 597226604a0824adee9184b93d356ec22c26b889
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-subst-reading-regressions/task0001.tests.yaml
+  - test-docs/codex-guard-subst-reading-regressions/task0002.tests.yaml
+  - test-docs/codex-guard-subst-reading-regressions/task0003.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: NFR1 requires linear-time reading and FR6 adds a one-time re-read of unknown-kind strings; check the scanner stays linear
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: failed
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: fa91f061156d70be
+  severity: medium
+  category: comprehensive
+  file: em-review/scripts/codex-hook-interactive-guard.py
+  line: 2539
+  title: 'zsh の for 語一覧の中の glob 修飾子 *(#qN) の # をコメントと読み、後ろの python3 -i を見逃す'
+  description: '語一覧の中で開いた入れ子の w の entry（glob 修飾子）でも、2539 行の条件は直前が `(` の `#` をコメントの始まりと読む。`*(#qN)` の `#` は語の途中にあり、zsh ではコメントにならない。後ろに改行がなければ `_Undecidable` になる。zsh 種別の文字列は読み直さないので、置換の後ろの `python3 -i` は判定されない。基準コミットは語一覧を算術の文脈 a で読んでいて、`#` はただの文字だったので deny だった。読み取りで確認した: `zsh -c ''setopt extendedglob; echo "$(for x (*(#qN)) { :; })"; python3 -i''` は基準コミットで deny、変更後は None。最上位（種別不明）の同じ形でも、読み直しが同じ箇所で失敗するので None になる。em-workflow のコピーはバイト単位で同一なので、同じ挙動になる。p の文脈の `$(ls *(#qN))` は変更前から同じように読み違える。そちらは今回の差分の範囲外。'
+  suggestion: 語一覧の中で開いた入れ子の `(` の entry（stack[-2] が w のもの）では、直前が `(` の `#` を語の文字として読む。コメントは一番外の語一覧の entry でだけ始まるようにする（TS8 の `for x (# c<NL>a)` の読み方は変えない）。CASES に `echo "$(for x (*(#qN)) { :; })"; python3 -i` と、その zsh -c 版を deny の行として足す。2つのコピーは同時に直す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix gate and the residual critical/high completion gate; carried to a follow-up task'
+evaluation:
+  round_summary: '第1ラウンド（cross_validation=true）。critical / high の報告は無く、dismissed_sites は空。security#0（Codex, gpt-6-astra）はハーネス側で失敗した（JSON を返さずに終了）ので security#fallback（Claude）が置き換えた。comprehensive#0 の2件は読み取りで追って判定の変化を確認した。1件目（語一覧の入れ子の glob 修飾子 *(#qN) の # をコメントと読み、python3 -i を見逃す）は今回の差分が入れた後退で medium。2件目（種別不明の文字列で repeat と coproc WORD が併存すると読み直しで None が deny に変わる）は zsh で実行した場合だけの誤拒否で、sh では python3 -i が実際に起動する。FR6 の設計どおりなので evaluator は low に下げた（R3b step 2 により記録から外れる）。観点ごと: comprehensive=corroborated、security=corroborated（TM-1〜TM-3 の対策を確認、読み直しは最大2回で線形）、architecture=corroborated（両コピー同一、parse の後方互換）、spec=corroborated（1件目は FR1 の『p と同じ条件』を文字どおりに実装した結果で SPEC の抜け）、performance=corroborated。注入の試みは無し。'
+  recommended_action: auto_fix
+  action_rationale: critical / high は無い。medium の1件は今回の差分が入れた後退で、直す場所は 2539 行の条件の1か所に限られ、直し方と足す回帰テストの行もはっきりしている。low の1件は FR6 の設計どおりの挙動なので読み直しのロジックは変えない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-subst-reading-regressions-20261021T130230Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

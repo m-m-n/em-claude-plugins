@@ -1,0 +1,43 @@
+schema_version: 1
+feature: codex-guard-subst-reading-regressions
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 9e2d474e3ecebeeffe3578b139d681f4aa5da25d
+last_input_digest: sha256:8fa8b6f726abfe09c789831e222776321cc580d7798e5908b7dcc2ede7a52cb2
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:8fa8b6f726abfe09c789831e222776321cc580d7798e5908b7dcc2ede7a52cb2
+  output_digest: sha256:f91bfacd79e0766927eb2cc3f0159ca18d5b95c2192095b324ae59c97967a855
+artifacts:
+- path: feature-docs/codex-guard-subst-reading-regressions/IMPLEMENTATION.md
+  sha256: sha256:6fc117909f84868d708ecbd407d70483876e73f0e4fc16b9617786ddc4da7873
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-subst-reading-regressions/VERIFICATION.md
+  sha256: sha256:c8893776eed5fa89de1286eea6aeaf3227c7d676ec2f8da04a52d1b1953536cc
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-subst-reading-regressions/THREAT-MODEL.md
+  sha256: sha256:aa49bb5e3e005726f45fdc947cf57cd805be06a428bd4789ec5782f45c887ce3
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-subst-reading-regressions/tasks/task0001.md
+  sha256: sha256:40255a87178de22e9fd9946bd3d2cf93eae9193855ed5b10354b5784eb5df582
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-subst-reading-regressions/tasks/task0002.md
+  sha256: sha256:c97d80d5be4d8ca04735a7bef6aad5af0bb640c20cde325acd990c98091d80dc
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-subst-reading-regressions/tasks/task0003.md
+  sha256: sha256:559397e5cb79e012dea79d49be9f128cd2d0dfd5b956a979a3b06b915bc2be1a
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:8fa8b6f726abfe09c789831e222776321cc580d7798e5908b7dcc2ede7a52cb2
+  base_workflow_blob: 75e63fe1fc9a5c5a8fdf1580cdd25ddedd7fe58d
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
