@@ -146,7 +146,7 @@ workflow:
   summary: 'python3 -m unittest discover -s tests: 10845 tests OK (skipped=1, environment-gated); check-plugin-invariants.py exit 0; SC-4 reproduction gives entry 0 not_a_regular_file and exit 1; TS-10/TS-11 diffs against base_commit show no change to existing tests or plugin versions; build/format/e2e not configured'
   completed_at_commit: dbf4eb4c23a53a3c1a152f0478e9f1a642cc261c
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Walk path components without following symlinks
