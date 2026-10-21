@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-subst-reading-regressions
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 635200f567ce4adaa037125a1ae2f769a06b5c20
+last_input_digest: sha256:7e699e3eac5b626201868f133e343e5a243dfcddaedf48ef3cee7e3502bc74c8
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:7e699e3eac5b626201868f133e343e5a243dfcddaedf48ef3cee7e3502bc74c8
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
