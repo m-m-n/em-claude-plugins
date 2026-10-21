@@ -119,7 +119,7 @@ tasks:
     domains: [input-handling]
     complexity: high
     requirements: [FR1, FR7, FR8, FR9, NFR1, NFR2, NFR3, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-guard-subst-reading-regressions/task0001
   task0002:
