@@ -29,7 +29,9 @@ Output:
   Error tokens:
     missing             no filesystem entry at the path
     not_a_regular_file  the entry is a directory, a symlink (dangling or
-                        not), a FIFO, a device or a socket
+                        not), a FIFO, a device or a socket, or a path any of
+                        whose components is a symlink (a symlink at any
+                        component of the path is not followed)
     unreadable          the entry is a regular file whose reading failed
                         (permission denied, I/O error); an entry whose
                         existence cannot be determined because of a
@@ -40,10 +42,14 @@ Exit codes:
     1   at least one element carries an error; every other element is still
         hashed
     2   no argument (usage on stderr), an argument that is not valid UTF-8,
-        or an unexpected internal failure; stdout carries no array
+        an unexpected internal failure, or a platform that lacks
+        descriptor-relative open, the no-follow open flag or the
+        directory-only open flag; stdout carries no array in every case
 
-Entry kinds: only a regular file is hashed. The final path component is
-never resolved through a symlink and nothing waits on a FIFO or a device.
+Entry kinds: only a regular file is hashed. No component of the path is
+followed as a symlink: a symlink at any component of the path, a directory
+on the way or the file itself, is not followed and the path yields
+`not_a_regular_file`. Nothing waits on a FIFO or a device.
 The regular-file determination is confirmed on the handle actually read, so
 an entry replaced between inspection and reading can neither redirect the
 read through a symlink nor block it. Arguments are handled as raw bytes, so
@@ -71,10 +77,13 @@ USAGE = (
     "  2 usage or internal failure.\n"
 )
 
-# Open flags that make the read safe whatever the entry has become by the
-# time it is opened: never follow a symlink in the final component, never
-# wait on a FIFO or device, never leak the descriptor into a child. A flag
-# the platform lacks is simply absent (0).
+# Open flags for the final element of a path. This set opens the final
+# element without following a symlink, and no component of the path is
+# followed: the intermediate components are opened as directories, also
+# without following a symlink. The flags also never wait on a FIFO or
+# device and never leak the descriptor into a child. A platform that lacks
+# descriptor-relative open, the no-follow open flag or the directory-only
+# open flag is refused with exit code 2 before any argument is processed.
 OPEN_FLAGS = (
     os.O_RDONLY
     | getattr(os, "O_NOFOLLOW", 0)
