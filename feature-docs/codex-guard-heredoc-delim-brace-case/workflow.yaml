@@ -1,0 +1,203 @@
+schema_version: 1
+feature: codex-guard-heredoc-delim-brace-case
+created: '2026-10-21'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 区切り語の位置の ${ ... } の中の $( ) を case 非対応の _skip_parens で読み飛ばし、case を含む置換の引用を除いて python3 -i を見逃す（回帰）
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、ヒアドキュメントの区切り語の位置にある `${ ... }` の中の `$( ... )` を、case 文を読まない `_skip_parens`（`_scan_parens`）で読み飛ばしている。`${v:-$(case x in x) echo "x";; esac)}` では、パターン末尾の `x)` を置換の終端とみなし、続く `echo "x"` の二重引用符を除いてしまう。登録される区切り語が zsh の終端行（引用を含めて書かれたまま）と一致せず、終端行の後の `python3 -i` が本文として読み飛ばされて出力なしになる。
+
+  feature `codex-guard-heredoc-delim-brace-quote` の review round 1（comprehensive 観点、medium、`stable_id: 5b8947f11cc2c3b8`）で見つかった。同 feature の変更前は deny だった（回帰）。SPEC FR1 / AC3（`$( ... )` は中の引用も含めて書かれたまま区切り語になる）からの逸脱。
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に次の文字列を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）:
+
+  `zsh -c 'cat <<${v:-$(case x in x) echo "x";; esac)}` + 改行 + `${v:-$(case x in x) echo "x";; esac)}` + 改行 + `python3 -i'`
+
+  1. 標準出力が空になる（期待は deny）
+
+  ## 期待する挙動 (必須)
+
+  区切り語の位置の `${ ... }` の中の引用されていない `$( ... )` を case 文対応の読み（二重引用符の中の置換と同じ `_skip_substitution`）で読み飛ばし、書かれたまま区切り語に含める。終端行の後の `python3 -i` は deny になる。括弧の範囲（`braced=False`）の読みは変えない。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_remove_range_quotes`（引用の外の `$(` の分岐、`codex-hook-interactive-guard.py:1566` 付近）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容。2 つのコピーはバイト単位で同一に保つ）
+  - 記録: `feature-docs/codex-guard-heredoc-delim-brace-quote/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-heredoc-delim-brace-quote/integration`）
+
+  ## 実害・発生条件 (任意)
+
+  ヒアドキュメントの区切り語の `${ ... }` の中に case 文を含む `$( ... )` を書き、その中に引用符がある場合だけ。fail-open 側。
+
+
+  ## 追加指示（起動引数）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモートの両方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的よいと判断した選択肢を採る
+  - その議論の内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-heredoc-delim-brace-case/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+  at: '2026-10-21T20:34:10+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 57079d85e12b0857ddf7165d26f90e5ae7f83612
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'tier reduced removes the design step; hook parser bug fix with no UI, zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 区切り語の ${ ... } の中の $( ... ) を case 文対応の読みで読み飛ばす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+  FR2:
+    title: 共有リーダー経由で読み飛ばす
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS8
+    - TS9
+  FR3:
+    title: ほかの読みは変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS8
+    - TS9
+  FR5:
+    title: 説明文の更新と 2 コピーの一致
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 線形時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 呼び出し構造
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 既存の制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
