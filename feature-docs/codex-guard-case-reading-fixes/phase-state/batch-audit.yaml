@@ -10,3 +10,13 @@ records:
   freeform: Skip both sites (2fe94b219da49a89, 8aed11cf08b2dc4c); route the residual high findings to batch review rework
   normalized_answer: skip
   resolution_note: 'gate: review.auto-fix-judgment (round 1, needs-judgment, prose suggestions on two byte-identical copies); options: (1) Apply as-is with two independent single-file review-editors in parallel, (2) Skip both and let batch rework fix both copies plus regression tests in one TDD task; chosen: (2); not chosen: (1); key points: independent editors interpreting prose cannot guarantee byte-identical copies and cannot add tests, while rework fixes the single root cause in both copies and adds regression tests together; codex_consulted: true; opus_escalation: false'
+- question_id: rework.spec-change.compound-close-command-position
+  packet_id: rework-q0001
+  answered_at: '2026-10-21T09:35:05+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change_spec
+  freeform: null
+  normalized_answer: change_spec
+  resolution_note: 'gate: rework.spec-change (relaxed route: classification gate direction 2 tripped because the bound set holds a security-category finding 8aed11cf08b2dc4c); origin verification: 2fe94b219da49a89 and 8aed11cf08b2dc4c are both members of reviews/round1.yaml; chosen: change_spec; not chosen: keep_spec; key points: Codex recommended change_spec because FR1/A2''s enumeration itself conflicts with the fix the findings need, while FR2 and NFR1 can be kept; keep_spec leaves the confirmed fail-open regressions in place. Codex labelled the classification (a) after observing the CURRENT code misjudge the inputs; the orchestrator reads that as evidence of the gap, not of an unattainable goal, and judges it a spec gap (b) grounded on FR1, FR2, NFR1 and assumption A2. codex_consulted: true (1 turn, codex harness); opus_escalation: false'
