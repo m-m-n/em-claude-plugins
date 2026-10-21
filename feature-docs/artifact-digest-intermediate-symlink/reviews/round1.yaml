@@ -1,0 +1,50 @@
+round: 1
+executed_at: "2026-10-21T09:16:30+09:00"
+scope:
+  review_mode: diff
+  base_commit: b8f35c95f1938bef97b8173f815975050b11a365
+  head_commit: 688f0cf1bc09ec267bf9dedbb73959fce53d892f
+  changed_files:
+  - em-workflow/references/artifact-digest.md
+  - em-workflow/scripts/artifact-digest.py
+  - test-docs/artifact-digest-intermediate-symlink/task0001.tests.yaml
+  - test-docs/artifact-digest-intermediate-symlink/task0002.tests.yaml
+  - tests/test_artifact_digest_docs.py
+  - tests/test_artifact_digest_script.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "ラウンド 1（diff、cross_validation=true）。5 観点すべての reviewer run が完了し、指摘を返したのは comprehensive#0 の medium 2 件だけだった。evaluator は 2 件とも low に下げた（R3b step 2 の severity ゲートで findings からは除外）。(1) em-workflow/scripts/artifact-digest.py:114 DIRECTORY_OPEN_FLAGS が O_RDONLY でディレクトリを開くため、検索権限だけ（0111 / 0711）の途中ディレクトリを通るリンクを含まないパスが digest から unreadable に変わる（US2 との食い違い。エラー側に倒れ、誤った digest は出ない。直すなら O_PATH / O_SEARCH だが FR1 のフラグ指定から外れる）。(2) tests/test_artifact_digest_script.py:940 realpath 正規化が WalkCase.setUp だけにあり、DigestCase を継承する既存の TestMultiplePaths / TestNonAsciiPaths の絶対パスのテストが、一時ディレクトリの祖先にリンクがある環境（macOS の /var、TMPDIR がリンク経由）で失敗する（NFR3 との関係は人の判断）。critical/high の指摘は無く dismissed_sites は空。reviewer の出力に指示の差し込みは無かった。観点ごと: security / comprehensive / performance / architecture / spec すべて corroborated。"
+  recommended_action: complete
+  action_rationale: "critical/high は 0 件。残る 2 件はどちらも low で、文書化された使い方では起きず、誤ったダイジェストも出ない。直し方が FR1 のフラグ指定や NFR3 の既存テスト無修正に触れるため、自動修正には向かない。直すかどうかは人の判断に任せる。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-artifact-digest-intermediate-symlink-20261021T001604Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
