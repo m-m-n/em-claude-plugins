@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-case-reading-fixes
 phase: create-spec
-status: completed
-generation: 1
-base_revision: 4ba7d3888c4d0ffb3b1321d600728a509027e8f0
+status: dispatching
+generation: 2
+base_revision: df04d93834e454acdacaf27b62787a3f5e211771
 last_input_digest: sha256:a56ef061c6463efd4552387dfe4079e5fea2a64269c8421f006525623ac0ab15
-active_request_id: null
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
