@@ -5,7 +5,7 @@ status: dispatching
 generation: 2
 base_revision: df04d93834e454acdacaf27b62787a3f5e211771
 last_input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
-active_request_id: create-spec-run-0005
+active_request_id: create-spec-run-0006
 packets:
   create-spec-q0001:
     status: answered
@@ -73,8 +73,12 @@ worker_runs:
   input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
   output_digest: null
 - request_id: create-spec-run-0005
-  status: dispatched
+  status: completed
   input_digest: sha256:f83ee245a5efbca3bd80bda18f8fd56e40c4c3e955733420c568ff605964ff0b
+  output_digest: null
+- request_id: create-spec-run-0006
+  status: dispatched
+  input_digest: null
   output_digest: null
 artifacts:
 - path: feature-docs/codex-guard-case-reading-fixes/REQUIREMENTS.md
