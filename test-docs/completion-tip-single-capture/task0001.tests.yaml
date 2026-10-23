@@ -1,0 +1,60 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_completion_tip_single_capture.TestStep3BindsCompletedAtCommitToStepOneCapture.test_span_contains_completed_at_commit_and_completion_tip
+      - tests.test_completion_tip_single_capture.TestStep3BindsCompletedAtCommitToStepOneCapture.test_span_binds_the_written_value_to_the_step_one_capture
+      - tests.test_completion_tip_single_capture.TestStep3BindsCompletedAtCommitToStepOneCapture.test_span_states_the_opening_substitution_is_not_evaluated
+      - tests.test_completion_tip_single_capture.TestStep3BindsCompletedAtCommitToStepOneCapture.test_binding_wording_does_not_repeat_the_write_anchor
+    red_confirmed: true
+    red_reason: "AssertionError: '$COMPLETION_TIP' not found in \"on the worktree just refreshed, the `implement` step's `status = completed` and `completed_at_commit` set above 4. **commit** ...\" (likewise 'captured in step 1' and 'is not evaluated as a separate command' not found); the binding-wording tests failed against the unchanged step 3. test_binding_wording_does_not_repeat_the_write_anchor passed before the edit (anchor count was already 1) and is a guard, not a red."
+  AC-2:
+    tests:
+      - tests.test_completion_tip_single_capture.TestStep3HasNoCommandSubstitutionOfItsOwn.test_span_contains_no_rev_parse
+      - tests.test_completion_tip_single_capture.TestStep3HasNoCommandSubstitutionOfItsOwn.test_span_contains_no_git_command_substitution
+      - tests.test_completion_tip_single_capture.TestStep3HasNoCommandSubstitutionOfItsOwn.test_step3_as_a_whole_contains_no_rev_parse
+      - tests.test_completion_tip_single_capture.TestStep3HasNoCommandSubstitutionOfItsOwn.test_step3_as_a_whole_contains_no_command_substitution
+    red_confirmed: false
+    red_reason: "These are absence guards on the new step 3 wording; the unchanged step 3 already contained no rev-parse and no command substitution, so all four passed before the edit. No red state occurred; they fail only if later wording adds a second capture to step 3. TestValidationDetectsRegressions covers the matcher's own explicit-failure behavior."
+  AC-3:
+    tests:
+      - tests.test_completion_tip_single_capture.TestExit4RetryRewritesFromRecapturedTip.test_one_unit_states_the_exit4_retry_rewrite
+      - tests.test_completion_tip_single_capture.TestExit4RetryRewritesFromRecapturedTip.test_retry_statement_sits_after_the_commit_step
+      - tests.test_completion_tip_single_capture.TestValidationDetectsRegressions.test_ts3_matcher_yields_no_match_on_pre_change_closing_paragraph
+    red_confirmed: true
+    red_reason: "AssertionError: [] is not true : no Step I.3 paragraph states that completed_at_commit is re-written from the re-captured $COMPLETION_TIP on an exit-4 retry; the sits-after test failed on the same missing statement. The negative-proof test passes from the start by design (fixed pre-change sample)."
+  AC-4:
+    tests:
+      - tests.test_completion_tip_single_capture.TestValidationDetectsRegressions.test_ts1_matcher_yields_no_match_on_pre_change_step3
+      - tests.test_completion_tip_single_capture.TestValidationDetectsRegressions.test_pre_change_sample_is_non_vacuous
+      - tests.test_completion_tip_single_capture.TestValidationDetectsRegressions.test_binding_phrases_absent_from_pre_change_sample
+      - tests.test_completion_tip_single_capture.TestValidationDetectsRegressions.test_pre_change_closing_paragraph_is_non_vacuous
+      - tests.test_completion_tip_single_capture.TestValidationDetectsRegressions.test_write_span_fails_explicitly_when_anchor_is_missing
+      - tests.test_completion_tip_single_capture.TestValidationDetectsRegressions.test_write_span_fails_explicitly_when_commit_docs_is_missing
+    red_confirmed: false
+    red_reason: "The negative proof targets a fixed verbatim pre-change sample held in the module, so it passes from the start by design (it proves the TS1 matcher rejects the old wording); no red state exists for this criterion. The module imports only re, unittest and pathlib (inspected)."
+  AC-5:
+    tests:
+      - tests.test_rework_synthesis_contract.TestImplementPhaseReworkPrecondition.test_completed_at_commit_wording_is_unchanged
+      - tests.test_exit4_tip_argument_consistency.TestStepI3PinnedCompletionSentenceByteIdentical.test_pinned_sentence_present_byte_for_byte
+      - tests.test_exit4_tip_argument_consistency.TestStepI3PinnedCompletionSentenceByteIdentical.test_new_sequence_lies_strictly_after_the_pinned_span
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_rework_synthesis_contract.TestImplementPhaseReworkPrecondition.test_completed_at_commit_wording_is_unchanged and tests.test_exit4_tip_argument_consistency.TestStepI3PinnedCompletionSentenceByteIdentical detect any change to the pinned sentence's bytes or position; no red state occurred for this change because the sentence was never altered. tests/test_rework_synthesis_contract.py is unmodified."
+  AC-6:
+    tests:
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteCaptureResolvesBranchRef.test_every_site_captures_from_the_branch_ref
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteRefreshNeverTargetsCapturedValue.test_no_site_refreshes_to_its_own_captured_variable
+      - tests.test_tip_capture_idiom_uniformity.TestPerSiteCapturePrecedesRefresh.test_capture_precedes_refresh_in_every_site
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_four_elements_are_in_strictly_increasing_order
+      - tests.test_completion_tip_single_capture.TestWritePathIsNotRewordedAroundThePinnedSentence.test_section_has_exactly_one_tip_capture_expression
+      - tests.test_completion_tip_single_capture.TestWritePathIsNotRewordedAroundThePinnedSentence.test_section_has_exactly_one_hard_reset
+      - tests.test_completion_tip_single_capture.TestWritePathIsNotRewordedAroundThePinnedSentence.test_no_hard_reset_onto_the_completion_tip
+      - tests.test_completion_tip_single_capture.TestWritePathIsNotRewordedAroundThePinnedSentence.test_first_commit_docs_after_the_anchor_is_step_fours_invocation
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope for the existing per-site idiom checks, but the existing tests.test_tip_capture_idiom_uniformity per-site classes and tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument detect a second capture idiom or a hard reset onto the captured tip in Step I.3; no red state occurred for this change. The new guards in TestWritePathIsNotRewordedAroundThePinnedSentence also passed before the edit (the unchanged section already had exactly one capture and one reset). Both existing modules are unmodified; the full suite (python3 -m unittest discover -s tests) was run after the edit."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "Diff-scope check (git diff --name-only against the parent branch must list only em-workflow/references/implement-phase.md, tests/test_completion_tip_single_capture.py and this record). Searched tests/ by path and basename for commit-docs.sh, plugin.json and marketplace.json: the hits (e.g. tests/test_commit_docs.py) read those files' content, none inspects a task diff, so no existing test covers diff scope and no executable red exists. Verified by running git diff --name-only."
