@@ -2371,9 +2371,10 @@ class _Parser:
         position of a command list in the chunk opens a case statement, and a
         case statement inside the chunk is read: its subject, its patterns
         (alternatives, the optional leading `(`, nested parentheses) and its
-        item bodies are followed up to the closing `esac`, so its pattern's
+        item bodies are followed up to the close of the statement, the closing
+        `esac` or, in the brace form below, the closing `}`, so its pattern's
         `)` closes neither the chunk nor a group, and the chunk ends at the
-        `)` that follows the `esac`. An item body is a command list. The item
+        `)` that follows the close. An item body is a command list. The item
         terminators `;;&`, `;;`, `;&` and `;|` end an item and return the
         statement to a pattern position, where `esac` closes it and any other
         word, `case` included, starts a pattern. `case` opens a statement only
@@ -2385,6 +2386,32 @@ class _Parser:
         ordinary word and opens or closes nothing, and so is one in a comment.
         A `case` inside backticks, an arithmetic expansion, double quotes or
         `${ ... }` is not read.
+
+        The zsh brace form `case x { ... }` is read for every kind of shell
+        that holds the string. A standalone `{` after the subject, decided on
+        the characters with the continuation pairs left out and followed by a
+        space, a tab, a newline or the end of the input, opens the statement
+        in place of `in`, and the statement is at a pattern position; a quoted
+        `{`, an escaped `{` and a `{` that is not a standalone word are no
+        `in`. A brace-form statement closes in one of three ways: (a) a
+        standalone, unquoted, unescaped `}` at a pattern position, decided
+        like a pattern-position `esac`; (b) a standalone `esac` at a pattern
+        position; (c) a standalone `}` read at a command position of the item
+        body list itself while no `{ }` group is open in that body. Each
+        brace-form statement keeps the depth of the `{ }` groups open in its
+        item body: a standalone `{` read at a command position of the item
+        body list itself raises it by one, and so does the standalone `{`
+        right after `function` (a zsh anonymous function reads it as its
+        name), and a standalone `}` read there lowers it by one while it is 1
+        or more and closes the statement otherwise. A quoted or escaped `}` or
+        `esac` starts a pattern at a pattern position and is an ordinary word
+        in a body, and so is a `}` at an argument position. Braces inside
+        quotes, escaped braces and braces inside `${ }`, substitutions,
+        arithmetic, word parentheses, subshells and nested case statements are
+        never counted: none of them is read at a command position of the body
+        list itself, and a nested case statement keeps a form and a depth of
+        its own. In the `in` form a `}` at a pattern position starts a pattern
+        and a `}` in a body closes no statement.
 
         Comment after a pattern (rule 3). A `#` directly after the `)` that
         closes an item's pattern (no blank in between) starts a comment that
@@ -2428,8 +2455,10 @@ class _Parser:
         open in the same list, wherever it stands inside the conditional; the
         `esac` that closes a case statement, whether it is read in an item
         body or at a pattern position, which gives the list that holds the
-        statement a command position; and a standalone, unquoted `fi`, `done`
-        or `}` read at a command position. A `]]` with no open `[[`, and a
+        statement a command position; the `}` that closes a brace-form case
+        statement, which gives the list that holds the statement a command
+        position as `esac` does; and a standalone, unquoted `fi`, `done` or
+        `}` read at a command position. A `]]` with no open `[[`, and a
         `fi`, `done` or `}` at an argument position, are ordinary words. A
         redirection after a closing and its target are read as before: the
         word after the target is not at a command position. The words inside
@@ -2514,9 +2543,9 @@ class _Parser:
         substitution inside double quotes and for the unquoted `$( ... )` of a
         delimiter's `${ ... }` range, which both go through this skip. A `<<`
         inside a case statement (its subject, its patterns, its item bodies and
-        every list nested in them) stays undecidable. `<<<` is a here-string
-        and no heredoc, and in an arithmetic context (rule 9) a `<<` is a
-        shift.
+        every list nested in them) stays undecidable. The brace form
+        `case x { ... }` is no exception. `<<<` is a here-string and no
+        heredoc, and in an arithmetic context (rule 9) a `<<` is a shift.
 
         Arithmetic command (rule 9). A `((` read at a command position (a `((`
         directly after `for` included; two parentheses with a blank between
@@ -2529,8 +2558,11 @@ class _Parser:
         command position). When the matching close is not `))`, or when the
         reading inside it stops undecidable, everything read since the `((` is
         dropped and the reader goes back to that `((` and reads it as two
-        nested subshells, the reading a `(` at a command position has had. A
-        `((` is read again at most once. The characters read again are summed
+        nested subshells, the reading a `(` at a command position has had. The
+        re-read also restores the brace-form state: the form and the depth of
+        the statements open at the `((` are what they were there, and the
+        values of the statements opened after it go with their stack entries.
+        A `((` is read again at most once. The characters read again are summed
         over all the skips of one parser, and the sum may not exceed
         `ARITHMETIC_REREAD_FACTOR` (8) times the length of the string: the skip
         that would exceed it is undecidable. The arithmetic command, the second
@@ -2554,14 +2586,17 @@ class _Parser:
 
         Raises _Undecidable when the chunk is not closed, or when its close
         cannot be located with certainty. A chunk with a case statement is
-        undecidable for these forms: no `in` after the subject (zsh's brace
-        form included), no closing `esac` before the input ends, a `)` with no
+        undecidable for these forms: no `in`, and no standalone `{`, after the
+        subject, no closing `esac` before the input ends, a `)` with no
         pattern at a pattern position, a heredoc anywhere in the chunk (item
         bodies included) once a case statement is open, an unmatched `)` in an
-        item body, an unquoted `;` or `&` where a pattern must begin, and an
-        unquoted newline, `;` or `&` in a pattern outside its groups. Outside a
-        case statement a heredoc operator is undecidable only when an unquoted
-        newline follows it before the close of its list (rule 8).
+        item body, an unquoted `;` or `&` where a pattern must begin, an
+        unquoted newline, `;` or `&` in a pattern outside its groups, an item
+        terminator read while a `{ }` group is open in a brace-form item body,
+        and an `esac` at a command position of a brace-form item body (zsh 5.9
+        reports a parse error). Outside a case statement a heredoc operator is
+        undecidable only when an unquoted newline follows it before the close
+        of its list (rule 8).
 
         Contexts on the stack: p command list (`$(`, `(`), a arithmetic
         (`$((`) and the parentheses nested in an arithmetic command, A an
@@ -2570,8 +2605,9 @@ class _Parser:
         `${ ... }` outside and inside double quotes. A
         case statement is one entry above the context that holds its `case`,
         and its phase is the character of the entry: 1 before the subject, 2
-        in the subject, 3 after the subject (waiting for `in`), 4 at a pattern
-        position (right after `in` and right after an item terminator), 5
+        in the subject, 3 after the subject (waiting for `in` or a standalone
+        `{`), 4 at a pattern position (right after `in`, right after the `{`
+        of the brace form and right after an item terminator), 5
         after the optional leading `(`, 6 in a pattern, 7 at the start of an
         item body, 8 in an item body (a command list). g is a parenthesised
         group inside a subject or a pattern. In the phases 1, 3, 4, 5 and 7 a
@@ -2660,6 +2696,15 @@ class _Parser:
         # is needed to read each again as two subshells, innermost last; and the
         # positions of the `((` that have been read again.
         marks, cases, arith, fallen = [], 0, [], set()
+        # The brace-form state of the case statements open on the stack (rule 2):
+        # one value for each, innermost last, so the list is as long as `cases`.
+        # The value is None for a statement in the `in` form; for a statement in
+        # the brace form it is the depth, the number of `{ }` groups open in its
+        # item body. A value is made when the statement's entry is pushed and
+        # dropped when the entry is popped, so a nested statement has a value of
+        # its own. The value that is read and changed is the innermost one, and
+        # only while the entry of that statement is on top of the stack.
+        braces = []
         while True:
             try:
                 while j < n:
@@ -2712,6 +2757,17 @@ class _Parser:
                             at_command, in_word = True, True
                             if named == HEAD_FUNCTION:
                                 head = HEAD_FUNCTION_NAME
+                                if (
+                                    top == "8"
+                                    and braces[-1] is not None
+                                    and self._keyword_end(j, "{", " \t\n") != -1
+                                ):
+                                    # The `{` of zsh's anonymous function
+                                    # `function { ... }` stands where the name does
+                                    # and is read as the name, but it opens a group
+                                    # all the same: its `}` is read at a command
+                                    # position and must not close the statement.
+                                    braces[-1] += 1
                             elif named == HEAD_FOR:
                                 head = HEAD_FOR_NAME
                         else:
@@ -2721,16 +2777,44 @@ class _Parser:
                                 stack.append("1")
                                 saved.append((at_command, dbl, HEAD_NONE, False))
                                 cases += 1
+                                braces.append(None)
                                 j = end
                                 continue
                             if kind == "esac":
+                                if braces[-1] is not None:
+                                    # An `esac` at a command position of a brace-form
+                                    # item body closes nothing (zsh 5.9 reports a
+                                    # parse error): the close is not certain.
+                                    raise _Undecidable("esac in a brace-form case body")
                                 stack.pop()
                                 dbl = saved.pop()[1]
                                 cases -= 1
+                                braces.pop()
                                 at_command, in_word = True, False
                                 j = end
                                 continue
                             if kind == "reserved":
+                                if top == "8" and braces[-1] is not None:
+                                    # A `{` or a `}` read at a command position of the
+                                    # item body list itself, in a brace-form statement
+                                    # (a list nested in the body is another entry of
+                                    # the stack and never gets here): a `{` opens a
+                                    # group, a `}` closes the innermost open group and,
+                                    # with none open, closes the statement. The words
+                                    # are told apart by their first character: `{` and
+                                    # `}` are the only reserved words that start with
+                                    # one.
+                                    if ch == "{":
+                                        braces[-1] += 1
+                                    elif ch == "}":
+                                        if braces[-1] > 0:
+                                            braces[-1] -= 1
+                                        else:
+                                            stack.pop()
+                                            dbl = saved.pop()[1]
+                                            cases -= 1
+                                            braces.pop()
+                                            at_command, in_word = True, False
                                 j = end
                                 continue
                             if kind == "dbl_open":
@@ -2763,7 +2847,8 @@ class _Parser:
                                     # command and the words after it are arguments.
                                     head = HEAD_FIRST
                     if top in "13457":
-                        # A case statement that waits for a word or for `in`.
+                        # A case statement that waits for a word, for `in` or, after
+                        # the subject, for the `{` of zsh's brace form.
                         if ch in " \t\n":
                             j += 1
                         elif ch == "\\" and s.startswith("\n", j + 1):
@@ -2775,7 +2860,16 @@ class _Parser:
                         elif top == "3":
                             end = self._keyword_end(j, "in", " \t\n;&|()<>")
                             if end == -1:
-                                raise _Undecidable("case without in")
+                                # No `in`: a standalone `{` (decided on the
+                                # characters with the continuation pairs left out,
+                                # followed by a blank or the end of the input) opens
+                                # zsh's brace form in its place, with no group open.
+                                # A quoted or escaped `{` and a `{` that is not a
+                                # standalone word are no `in` either.
+                                end = self._keyword_end(j, "{", " \t\n")
+                                if end == -1:
+                                    raise _Undecidable("case without in")
+                                braces[-1] = 0
                             stack[-1] = "4"
                             j = end
                         elif top == "1":
@@ -2784,10 +2878,16 @@ class _Parser:
                             stack[-1] = "2"
                         elif top == "4":
                             end = self._keyword_end(j, "esac", " \t\n;&|)<>")
+                            if end == -1 and braces[-1] is not None:
+                                # In the brace form a standalone, unquoted `}` at a
+                                # pattern position closes the statement as `esac`
+                                # does; in the `in` form it starts a pattern.
+                                end = self._keyword_end(j, "}", " \t\n;&|)<>")
                             if end != -1:
                                 stack.pop()
                                 dbl = saved.pop()[1]
                                 cases -= 1
+                                braces.pop()
                                 at_command, in_word, head = True, False, HEAD_NONE
                                 j = end
                             elif ch in ");&":
@@ -3020,7 +3120,12 @@ class _Parser:
                         at_command, in_word, head = False, False, HEAD_NONE
                         j += 2
                     elif top == "8" and ch == ";" and s.startswith((";;", ";&", ";|"), j):
-                        # An item terminator; `;;&` is the longest of them.
+                        # An item terminator; `;;&` is the longest of them. In the
+                        # brace form it ends an item only with no `{ }` group open
+                        # in the body: inside a group it is a syntax error, and the
+                        # close of the statement is not certain.
+                        if braces[-1]:
+                            raise _Undecidable("item terminator in a brace group")
                         stack[-1] = "4"
                         j += 3 if s.startswith(";;&", j) else 2
                     elif ch in " \t":
@@ -3048,6 +3153,13 @@ class _Parser:
                     raise
                 fallen.add(opened)
                 del stack[index:], saved[index:], marks[held:]
+                # The brace-form state of rule 2 goes back to its value at the `((`:
+                # the values of the statements opened after it go with their stack
+                # entries (`cases` is the count at the `((`), and the statements
+                # open at the `((` lie under the arithmetic command on the stack,
+                # where nothing reads or changes their values, so they still hold
+                # what they held there.
+                del braces[cases:]
                 j = opened
 
     def _keyword_end(self, j, word, follow):

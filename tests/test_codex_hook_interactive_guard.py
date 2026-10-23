@@ -1048,7 +1048,76 @@ CASES = [
     ("silent", "case 文を含む置換の中身は判定しない", 'echo "$(case x in x) python3 -i;; esac)"'),
     ("silent", "esac で閉じない case 文は判定不能で、後ろの起動を拒否しない", 'echo "$(case x in x) :;;"; python3 -i'),
     ("silent", "case 文の項目の本体の中の heredoc は判定不能で、後ろの起動を拒否しない", 'echo "$(case x in x) cat <<E\nbody\nE\n;; esac)"; python3 -i'),
-    ("silent", "zsh の case x { ... } の形は判定不能で、後ろの起動を拒否しない", 'echo "$(case x { x) :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case TS-4 zsh の case x { ... } の形を読み、後ろの起動を拒否する", 'echo "$(case x { x) :;; })"; python3 -i'),
+    # codex-guard-escaped-hash-brace-case-heredoc (VERIFICATION.md TS-3, TS-12 to
+    # TS-25 and the boundary rows of FR8): zsh's brace form `case x { ... }` is
+    # read, whatever the kind of shell. A standalone `{` after the subject opens
+    # it. It closes at a standalone, unquoted `}` at a pattern position, at a
+    # standalone `esac` at a pattern position, or at a standalone `}` at a
+    # command position of the item body when no `{ }` group is open there. TS-3
+    # and TS-12 are wrapped in `zsh -c` as SPEC.md states them; the other rows
+    # are not (SPEC.md A3, A5). Quoted or escaped braces, forms whose close is
+    # not certain and heredocs stay undecidable (silent)
+    ("deny", "波括弧形式の case TS-3 for の語一覧のプロセス置換の中の case x { ... } を読み、後ろの起動を拒否する", "zsh -c " + shlex.quote('echo "$(for x (<(case x { x) :;; })) { :; })"; python3 -i')),
+    ("deny", "波括弧形式の case TS-12 パターンの位置の esac でも閉じる", "zsh -c " + shlex.quote('echo "$(case x { x) :;; esac)"; python3 -i')),
+    ("deny", "波括弧形式の case TS-13 項目の本体のコマンド位置の深さ 0 の } で閉じる", 'echo "$(case x { x) :; })"; python3 -i'),
+    ("deny", "波括弧形式の case { の直後が改行でも in の代わりに読む", 'echo "$(case x {\nx) :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case { の直後が行継続とその後の空白でも in の代わりに読む", 'echo "$(case x {\\\n x) :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case { の直後がタブでも in の代わりに読む", 'echo "$(case x {\tx) :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case パターンの位置の引用符で囲んだ } は閉じず、パターンを始める", 'echo "$(case x { "}") :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case パターンの位置のエスケープした } は閉じず、パターンを始める", 'echo "$(case x { \\}) :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case はシェルの種類に関わらず読む (bash -c)", "bash -c " + shlex.quote('echo "$(case x { x) :;; })"; python3 -i')),
+    ("deny", "波括弧形式の case の ; のあとの } で閉じた後の case はコマンドの位置で、case 文を開く", 'echo "$(case x { x) :; } case y in y) :;; esac)"; python3 -i'),
+    ("deny", "波括弧形式の case のパターンの位置の } で閉じた後の case はコマンドの位置で、case 文を開く", 'echo "$(case x { x) :;; } case y in y) :;; esac)"; python3 -i'),
+    ("silent", "波括弧形式の case TS-23 引用符で囲んだ { は in の代わりにならず判定不能", 'echo "$(case x "{" x) :;; })"; python3 -i'),
+    ("silent", "波括弧形式の case エスケープした { は in の代わりにならず判定不能", 'echo "$(case x \\{ x) :;; })"; python3 -i'),
+    ("silent", "波括弧形式の case 単独の語でない { は in の代わりにならず判定不能", 'echo "$(case x {x x) :;; })"; python3 -i'),
+    ("silent", "波括弧形式の case { の直後が ; のときは単独の語でなく判定不能", 'echo "$(case x {; x) :;; })"; python3 -i'),
+    # The body of a brace-form item: a `{ }` group opened and closed there is no
+    # close (TS-14), nor is a quoted or escaped brace (TS-15), a `}` at an
+    # argument position (TS-16), a brace in `${ }` or a subshell, or a brace of a
+    # nested case statement, which keeps a form and a depth of its own (TS-17,
+    # TS-18)
+    ("deny", "波括弧形式の case TS-14 項目の本体の { } 群は閉じではない", 'echo "$(case x { x) { :; };; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体の入れ子の { } 群の中の ; を挟んでも深さが戻れば閉じる", 'echo "$(case x { x) { { :; }; };; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体の { } 群を閉じた後の ; のあとの } で閉じる", 'echo "$(case x { x) { :; }; })"; python3 -i'),
+    ("deny", "波括弧形式の case TS-15 引用符で囲んだ括弧とエスケープした括弧は数えない", 'echo "$(case x { x) echo "}" \'{\' \\{;; })"; python3 -i'),
+    ("deny", "波括弧形式の case TS-16 引数の位置の } は閉じない", 'echo "$(case x { x) echo };; })"; python3 -i'),
+    ("deny", "波括弧形式の case 引数の位置の { は深さを上げない", 'echo "$(case x { x) echo {;; })"; python3 -i'),
+    ("deny", "波括弧形式の case TS-17 波括弧形式の中の in 形式", 'echo "$(case x { x) case y in y) :;; esac;; })"; python3 -i'),
+    ("deny", "波括弧形式の case TS-18 in 形式の中の波括弧形式", 'echo "$(case x in x) case y { y) :;; };; esac)"; python3 -i'),
+    ("deny", "波括弧形式の case 入れ子の波括弧形式は自分の閉じを持つ", 'echo "$(case x { x) case y { y) :;; };; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体の { } 群の中の波括弧形式の閉じは外側の深さを変えない", 'echo "$(case x { x) { case y { y) :;; }; };; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体の中の in 形式の項目の本体の対にならない } は外側を閉じない", 'echo "$(case x { x) case y in y) :; };; esac;; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体の function { } の { は深さを上げ、その } で閉じない", 'echo "$(case x { x) function { :; };; y) echo \'"\';; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体の ${ } の中の } は数えない",'echo "$(case x { x) echo ${x:-};; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体のサブシェルの中の { } は数えない", 'echo "$(case x { x) ( { :; } );; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体のサブシェルの中の対にならない } は閉じない", 'echo "$(case x { x) ( } ); :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体のサブシェルの中の対にならない { は深さを上げない", 'echo "$(case x { x) ( { : ); :;; })"; python3 -i'),
+    ("deny", "波括弧形式の case 項目の本体の置換の中のコマンド位置の } は閉じない", 'echo "$(case x { x) echo "$(: ; })";; })"; python3 -i'),
+    ("deny", "in 形式の case のパターンの位置の } はパターンで、閉じない", 'echo "$(case x in } ) :;; esac)"; python3 -i'),
+    ("deny", "in 形式の case の本体のコマンド位置の } は閉じない", 'echo "$(case x in x) :; }; esac)"; python3 -i'),
+    # Forms whose close is not certain: a heredoc in a brace-form statement
+    # (TS-19, rule 8), no close (TS-20), an `esac` at a command position of the
+    # item body (TS-21), an item terminator while a `{ }` group is open (TS-22,
+    # and the other terminators), and the contents of the substitution, which
+    # are never judged (TS-24)
+    ("silent", "波括弧形式の case TS-19 波括弧形式の項目の本体の中の heredoc は判定不能", 'echo "$(case x { x) cat <<E\nbody\nE\n;; })"; python3 -i'),
+    ("silent", "波括弧形式の case TS-20 閉じない波括弧形式は判定不能", 'echo "$(case x { x) :;;"; python3 -i'),
+    ("silent", "波括弧形式の case TS-21 波括弧形式の項目の本体のコマンド位置の esac は判定不能", 'echo "$(case x { x) :; esac)"; python3 -i'),
+    ("silent", "波括弧形式の case TS-22 { } 群が開いたままの項目の終端 ;; は判定不能", 'echo "$(case x { x) { :;; })"; python3 -i'),
+    ("silent", "波括弧形式の case { } 群が開いたままの項目の終端 ;& は判定不能", 'echo "$(case x { x) { :;& })"; python3 -i'),
+    ("silent", "波括弧形式の case { } 群が開いたままの項目の終端 ;| は判定不能", 'echo "$(case x { x) { :;| })"; python3 -i'),
+    ("silent", "波括弧形式の case { } 群が開いたままの項目の終端 ;;& は判定不能", 'echo "$(case x { x) { :;;& })"; python3 -i'),
+    ("silent", "波括弧形式の case 項目の本体の引数の位置の esac は閉じず、閉じない波括弧形式は判定不能", 'echo "$(case x { x) echo esac;;"; python3 -i'),
+    ("silent", "波括弧形式の case TS-24 置換の中身は判定しない", 'echo "$(case x { x) python3 -i;; })"'),
+    # Rule 9: the re-read of an arithmetic command restores the brace-form
+    # state. The `((` of TS-25 fails as arithmetic at the `)` that is not
+    # directly followed by `)` and is read again as two subshells; the second
+    # row holds a brace-form statement that is opened and closed inside the
+    # first reading
+    ("deny", "波括弧形式の case TS-25 算術コマンドの読み直しを挟んでも { } 群の深さが戻り、閉じる", 'echo "$(case x { x) { ((echo a) ); };; })"; python3 -i'),
+    ("deny", "波括弧形式の case 算術コマンドの最初の読みで開いて閉じた波括弧形式は、読み直しの後に外側の深さを変えない", 'echo "$(case x { x) { (( $(case y { y) :;; }) ) ); }; })"; python3 -i'),
     ("deny", "区切り語の範囲の二重引用符の中で、項目が複数ある case 文を読み、閉じた行の後の起動を拒否する", "zsh -c " + shlex.quote('function { :; } << foo("$(case x in a) :;; x) echo foo;; esac)")\nfoo($(case x in a) :;; x) echo foo;; esac))\npython3 -i')),
     # Forms zsh accepts are read, not made undecidable (zsh -c, the launch after
     # the substitution is judged): an empty leading alternative, with and without
@@ -2008,6 +2077,31 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         depth = self.DEPTH
         statements = "case x in x) " * depth + ":" + "; esac" * depth
         self.assert_every_copy_denies('echo "$(' + statements + ')"; python3 -i')
+
+    # codex-guard-escaped-hash-brace-case-heredoc (NFR1, FR9): the zsh brace
+    # form `case x { ... }` is read in time too. One statement with DEPTH
+    # items, statements nested DEPTH deep (each opened as the first word of the
+    # enclosing item body, closed by the pattern-position `}` or by the
+    # depth-0 body `}`), and DEPTH `{ }` groups nested in one item body. The
+    # launch after the substitution is denied.
+    def test_one_brace_form_case_statement_with_many_items_is_read_and_the_launch_after_it_is_denied(self):
+        command = 'echo "$(case x {' + " x) :;;" * self.DEPTH + ' })"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_brace_form_case_statements_nested_deeply_are_read_and_the_launch_after_them_is_denied(self):
+        depth = self.DEPTH
+        shapes = {
+            "closed at a pattern position": "case x { x) " * depth + ":" + ";; }" * depth,
+            "closed by the body": "case x { x) " * depth + ":" + "; }" * depth,
+        }
+        for shape, statements in shapes.items():
+            with self.subTest(shape=shape):
+                self.assert_every_copy_denies('echo "$(' + statements + ')"; python3 -i')
+
+    def test_brace_groups_nested_deeply_in_one_brace_form_item_body_are_read_and_the_launch_after_them_is_denied(self):
+        depth = self.DEPTH
+        statement = "case x { x) " + "{ " * depth + ":" + "; }" * depth + "; }"
+        self.assert_every_copy_denies('echo "$(' + statement + ')"; python3 -i')
 
     # codex-guard-case-reading-fixes (SPEC.md TS20 to TS22, NFR1): long runs of
     # continuation pairs and long runs of words whose keyword match fails are
@@ -3901,14 +3995,59 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
         "its pattern's `)` closes neither the chunk nor a group",
     )
     UNDECIDABLE_MARKERS = (
-        "no `in` after the subject (zsh's brace form included)",
+        "no `in`, and no standalone `{`, after the subject",
         "no closing `esac` before the input ends",
         "a `)` with no pattern at a pattern position",
         "a heredoc anywhere in the chunk (item bodies included)",
         "an unmatched `)` in an item body",
         "an unquoted `;` or `&` where a pattern must begin",
         "an unquoted newline, `;` or `&` in a pattern outside its groups",
+        "an item terminator read while a `{ }` group is open in a brace-form item body",
+        "an `esac` at a command position of a brace-form item body",
     )
+    # codex-guard-escaped-hash-brace-case-heredoc (FR7): the stale form that
+    # listed zsh's brace form among the forms with no `in` stays out.
+    STALE_BRACE_FORM_SENTENCE = "no `in` after the subject (zsh's brace form included)"
+    # The rule 2 description of the brace form `case x { ... }`: how it opens,
+    # the three closings, the depth of the `{ }` groups of an item body, the
+    # readings of quoted and escaped braces, and that the shell kind does not
+    # matter. The rule 5, rule 8 and rule 9 paragraphs and the phase list say
+    # their part.
+    BRACE_FORM_MARKERS = {
+        "rule 2 opening": (
+            "The zsh brace form `case x { ... }` is read for every kind of shell that holds the string",
+            "standalone `{` after the subject, decided on the characters with the continuation pairs left out and followed by a space, a tab, a newline or the end of the input, opens the statement in place of `in`",
+            "a quoted `{`, an escaped `{` and a `{` that is not a standalone word are no `in`",
+        ),
+        "rule 2 closings": (
+            "brace-form statement closes in one of three ways",
+            "(a) a standalone, unquoted, unescaped `}` at a pattern position",
+            "(b) a standalone `esac` at a pattern position",
+            "(c) a standalone `}` read at a command position of the item body list itself while no `{ }` group is open in that body",
+            "In the `in` form a `}` at a pattern position starts a pattern",
+        ),
+        "rule 2 depth": (
+            "Each brace-form statement keeps the depth of the `{ }` groups open in its item body",
+            "a standalone `{` read at a command position of the item body list itself raises it by one",
+            "and so does the standalone `{` right after `function` (a zsh anonymous function reads it as its name)",
+            "a standalone `}` read there lowers it by one while it is 1 or more",
+            "A quoted or escaped `}` or `esac` starts a pattern at a pattern position and is an ordinary word in a body",
+            "a nested case statement keeps a form and a depth of its own",
+        ),
+        "rule 5 closing": (
+            "the `}` that closes a brace-form case statement, which gives the list that holds the statement a command position as `esac` does",
+        ),
+        "rule 8 heredoc": (
+            "A `<<` inside a case statement (its subject, its patterns, its item bodies and every list nested in them) stays undecidable",
+            "The brace form `case x { ... }` is no exception",
+        ),
+        "rule 9 re-read": (
+            "The re-read also restores the brace-form state: the form and the depth of the statements open at the `((` are what they were there, and the values of the statements opened after it go with their stack entries",
+        ),
+        "phase list": (
+            "3 after the subject (waiting for `in` or a standalone `{`)",
+        ),
+    }
     MODULE_SENTENCE = (
         "A chunk that is not closed, or whose close cannot be located with "
         "certainty -> no output"
@@ -3934,6 +4073,17 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             for marker in self.UNDECIDABLE_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
+            with self.subTest(copy=plugin, stale=self.STALE_BRACE_FORM_SENTENCE):
+                self.assertNotIn(self.STALE_BRACE_FORM_SENTENCE, doc)
+
+    def test_the_docstring_describes_the_brace_form_of_a_case_statement(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for part, markers in self.BRACE_FORM_MARKERS.items():
+                for marker in markers:
+                    with self.subTest(copy=plugin, part=part, marker=marker):
+                        self.assertIn(marker, doc)
 
     def test_the_module_docstring_keeps_the_sentence_about_an_unlocatable_close(self):
         for plugin, path in HOOK_PATHS.items():
