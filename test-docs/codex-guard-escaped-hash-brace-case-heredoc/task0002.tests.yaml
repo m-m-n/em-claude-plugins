@@ -1,0 +1,75 @@
+task_id: task0002
+baseline_failures: []  # run in the worktree before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py (943/943 passed), python3 -m unittest discover -s tests (Ran 10965 tests, OK, skipped=1)
+final_failures: []  # re-executed after implementation and after this record was written: python3 em-workflow/hooks/tests/run-destructive-guard.py (943/943 passed), python3 -m unittest discover -s tests (Ran 10970 tests, OK, skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      The CASES rows "波括弧形式の case TS-3 ..." (new, deny) and "波括弧形式の case TS-4 ..." (the
+      pre-existing brace-form row, changed from silent to deny) were run against the hook before the
+      change: both failed on both copies, because `case x {` raised "case without in" and the launch
+      after the substitution was not denied.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Before the change the deny rows (TS-12 pattern-position esac, TS-13 depth-0 body brace, the `{`
+      followed by a newline, by a continuation pair and a blank and by a tab, the quoted and the
+      escaped `}` at a pattern position, bash -c) all failed on both copies (silent, "case without
+      in"). The silent rows (TS-23 quoted `{`, the escaped `{`, the `{` that is not a standalone word,
+      `{;`) already passed before the change: they guard against overshooting and were not observed red.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Before the change TS-14, TS-15, TS-16, TS-17 and TS-18 and the rows for a subshell, a `${ }`, a
+      substitution and an argument-position brace inside a brace-form item body all failed on both
+      copies (silent). After the change the row for the `{` of `function { ... }` also failed until the
+      depth counted it (the `}` of the anonymous function closed the statement, so the rest of the
+      string was read with a wrong quote balance and stayed silent).
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      TS-19, TS-20, TS-21, TS-22, TS-24, the other item terminators at depth 1 and the pre-existing heredoc
+      rows are silent rows that already passed before the change (the brace form was undecidable as
+      "case without in"); they guard against the new reading overshooting, so no failing state existed.
+      The existing TestCasesTable test is the check that would turn red if the reading judged them.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      Before the change TS-25 and the row whose first reading of a command-position `((` opens and
+      closes a brace-form statement inside a `$(` before it is read again as two subshells both failed
+      on both copies (silent).
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_names_each_form_that_stays_undecidable
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_describes_the_brace_form_of_a_case_statement
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_does_not_say_a_heredoc_is_always_undecidable
+    red_confirmed: true
+    red_reason: >-
+      The two marker tests were run against the docstring of the hook as it was before the change (read
+      from git HEAD): the new first form, the two brace-form undecidable forms and every brace-form
+      marker were missing, and the stale "(zsh's brace form included)" sentence was present, so both
+      failed (21 sub-test failures). The third test is a pre-existing pin that keeps the heredoc
+      sentence from forming the stale phrase; it passed before and after.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_one_brace_form_case_statement_with_many_items_is_read_and_the_launch_after_it_is_denied
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_brace_form_case_statements_nested_deeply_are_read_and_the_launch_after_them_is_denied
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_brace_groups_nested_deeply_in_one_brace_form_item_body_are_read_and_the_launch_after_them_is_denied
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      The three new scale tests were run against the hook as it was before the change (read from git
+      HEAD): all failed (silent instead of one deny object). The byte-identity test and the table test
+      are pre-existing checks that passed before the change and still pass; the diff touches neither
+      plugin.json nor marketplace.json (checked with git diff --stat).
