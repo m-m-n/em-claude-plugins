@@ -108,7 +108,12 @@ workflow:
   status: completed
   completed_at_commit: d2d07729e1023de65b677fb68458681d8833d063
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'test_command exit 0 (destructive-guard 943/943, unittest 10925 OK skipped=1); TS-1..TS-14 in CASES; copies byte-identical; imports stdlib only; diff excludes plugin.json/marketplace.json; manual repro on both copies: repro2 deny, repro3 silent; docstring/comments describe word-start process substitution as p with in-word close'
+  completed_at_commit: f1f5d733a3f65d43c76dd0267425bd8979d58f4e
 - id: retrospect
   status: pending
 tasks:
