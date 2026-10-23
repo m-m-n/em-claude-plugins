@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-escaped-hash-brace-case-heredoc
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 0bb9e3172164b4cc946fb018f8ebbd900f81a52f
 last_input_digest: sha256:8dd573c39cc8fd53f648d5794247f315aa12a36fcd63d47eb6861d10b14b860a
