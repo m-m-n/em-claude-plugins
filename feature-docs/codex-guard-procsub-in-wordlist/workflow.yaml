@@ -138,6 +138,14 @@ tasks:
     notes: null
 review:
   status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
