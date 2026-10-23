@@ -1424,6 +1424,19 @@ CASES = [
     # `)` of a pattern with a continuation pair between them (rule 3).
     ("deny", "置換の # の判定 < の直後の # は今のまま語の文字で、後ろの起動を拒否する", 'echo "$(cat <#x)"; python3 -i'),
     ("deny", "置換の # の判定 パターンの ) と # の間に継続行があっても # はコメントで、コメントの中の ) で閉じず、後ろの起動を拒否する", 'echo "$(case x in x)\\\n# )\n:;; esac)"; python3 -i'),
+    # The newline that ends a comment is never part of a continuation pair
+    # (review round 1, task0003): a backslash inside a comment is comment text,
+    # so the `#` at the start of the next line starts a comment again. The `'`
+    # of `don't` shows it: read as code it opens a quote that never closes, and
+    # the launch after the substitution would go unjudged. TS-30 to TS-34 are
+    # the form at each site that reads a comment; TS-35 is the line after the
+    # comment read as a comment that holds the `)` and the launch.
+    ("deny", "置換の # の判定 TS-30 バックスラッシュで終わるコメントの次の行頭の # もコメントで、コメントの中の ' は引用を開かず、後ろの起動を拒否する", 'echo "$(: a #b\\\n# don\'t\n)"; python3 -i'),
+    ("deny", "置換の # の判定 TS-31 項目本体で、バックスラッシュで終わるコメントの次の行頭の # もコメントで、後ろの起動を拒否する", 'echo "$(case x in x) : a #b\\\n# don\'t\n;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 TS-32 パターンの位置 (フェーズ 4) で、バックスラッシュで終わるコメントの次の行頭の # もコメントで、後ろの起動を拒否する", 'echo "$(case x in #b\\\n# don\'t\nx) :;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 TS-33 パターンの ) の直後 (フェーズ 7、規則 3) で、バックスラッシュで終わるコメントの次の行頭の # もコメントで、後ろの起動を拒否する", 'echo "$(case x in x)#b\\\n# don\'t\n:;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 TS-34 語一覧の最も外側の項目で、バックスラッシュで終わるコメントの次の行頭の # もコメントで、後ろの起動を拒否する", 'echo "$(for x (a #b\\\n# don\'t\n) { :; })"; python3 -i'),
+    ("silent", "置換の # の判定 TS-35 バックスラッシュで終わるコメントの次の行はコメントで、その中の ) と後ろの起動は置換を閉じず、後ろの起動を拒否しない", 'zsh -c \'echo "$(: a #b\\\n# )"; python3 -i; echo "\n)"\''),
     # codex-guard-delim-brace-quote-per-shell (SPEC.md Test Scenarios TS1 to
     # TS32), built from DELIMITER_PER_SHELL_ROWS by the construction rule of
     # SPEC.md. The shell that directly holds a nested `-c` string decides how
@@ -2279,6 +2292,19 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         # Each run of three backslashes escapes its blank, so every `#` is a
         # word character.
         command = 'echo "$(:' + " \\\\\\ #" * self.DEPTH + ')"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    # codex-guard-escaped-hash-brace-case-heredoc (VERIFICATION.md TS-36, NFR1,
+    # TM-4): the comment-end position costs one assignment per comment and one
+    # comparison per newline the look crosses. DEPTH repetitions of a comment
+    # that ends in a backslash, each followed by a line that begins with `#`,
+    # stand in one substitution; the `'` in the last repetition shows that
+    # every one of those lines is read as a comment (read as code it would open
+    # a quote that never closes). The launch after the substitution is denied.
+    def test_ts36_depth_comments_ending_in_a_backslash_each_followed_by_a_hash_line_are_read_in_time(self):
+        comment = "#b" + "\\\n" + "# x\n"
+        last = "#b" + "\\\n" + "# don't\n"
+        command = 'echo "$(: ' + comment * (self.DEPTH - 1) + last + ')"; python3 -i'
         self.assert_every_copy_denies(command)
 
 
@@ -4413,6 +4439,54 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
                 decision = doc.find(self.HASH_DECISION_MARKERS[0])
                 rule_4 = doc.find("Continuation pairs (rule 4)")
                 self.assertTrue(0 <= rule_3 < decision < rule_4, (rule_3, decision, rule_4))
+
+    # codex-guard-escaped-hash-brace-case-heredoc (FR7, FR8, task0003): the
+    # decision reads the one comment-end position kept while reading, and the
+    # newline that ends a comment is never part of a continuation pair. The two
+    # sentences of the earlier reading that said the decision keeps no state
+    # stay absent from the skip's docstring, and "It keeps no state" from the
+    # helper's as well.
+    COMMENT_END_MARKERS = (
+        "The decision reads one value kept while reading, the comment-end position",
+        "the index of the newline that ended the last comment the reader read",
+        "Every branch that reads a comment records it in the same step",
+        "The newline that ends a comment is never part of a continuation pair",
+        "a newline at the comment-end position is an unescaped newline in the look, whatever run of backslashes stands in front of it",
+        "The re-read also restores the brace-form state",
+        "The comment-end position of the `#` decision goes back to its value at the `((` as well",
+    )
+    STALE_NO_STATE_SENTENCES = (
+        "It keeps no state",
+        "The decision carries no state through the reading",
+    )
+
+    def test_the_docstring_states_the_comment_end_position_and_the_newline_that_ends_a_comment(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for marker in self.COMMENT_END_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_docstring_no_longer_says_the_comment_start_decision_keeps_no_state(self):
+        for plugin, path in HOOK_PATHS.items():
+            for method in ("_skip_substitution", "_hash_starts_comment"):
+                doc = parser_docstring(path, method) or ""
+                self.assertNotEqual(doc, "")
+                for stale in self.STALE_NO_STATE_SENTENCES:
+                    with self.subTest(copy=plugin, method=method, stale=stale):
+                        self.assertNotIn(stale, doc)
+
+    def test_the_comment_start_helper_states_that_the_comment_end_newline_is_no_continuation_pair(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_hash_starts_comment") or ""
+            self.assertNotEqual(doc, "")
+            for marker in (
+                "The newline that ends a comment is never part of a continuation pair",
+                "the comment-end position",
+            ):
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
 
     def test_the_keyword_decision_states_the_pair_stripped_rule(self):
         for plugin, path in HOOK_PATHS.items():
