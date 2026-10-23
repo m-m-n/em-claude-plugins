@@ -119,7 +119,8 @@ workflow:
   failed_items: []
   completed_at_commit: acca9886b56c617ebf16e6cb41670189f467aeca
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 361cfd1d67f5255790f25d3d1675ccb59672884c
 tasks:
   task0001:
     title: Pin completed_at_commit to the step-1 COMPLETION_TIP capture in Step I.3
