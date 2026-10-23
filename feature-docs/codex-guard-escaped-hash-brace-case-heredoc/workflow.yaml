@@ -111,9 +111,17 @@ workflow:
   status: completed
   completed_at_commit: eea0db96421898803b74050c9ee04f51f8807d63
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  completed_at_commit: 24503912c87431c0a0852029f8be735015c05f32
+  result: pass
   failed_items: []
+  summary: |
+    Test command (approved, verbatim): 943/943 destructive-guard cases passed; unittest discover ran 10983 tests, OK (skipped=1).
+    TS-1..TS-36 are CASES rows / module tests run against both copies and pass. TS-27: cmp reports the two copies byte-identical.
+    TS-29: no plugin.json / marketplace.json changes since implement.base_commit.
+    Reproductions 2-4 fed directly to both hook copies: all deny.
+    Manual (SPEC A3, informational): zsh -n -c 'case x { x) :; }' -> rc=0 (accepted).
+    Excluded requirements: none.
 - id: retrospect
   status: pending
 tasks:
