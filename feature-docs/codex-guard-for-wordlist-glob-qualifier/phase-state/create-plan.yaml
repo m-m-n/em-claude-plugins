@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-for-wordlist-glob-qualifier
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 55a4109185a97b3e7d7da5faaa0818efbb926936
+last_input_digest: sha256:efebd47f2247dcd3a79c6342faee4a5715f66b530d2718571a2f5ef1e23d55db
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:efebd47f2247dcd3a79c6342faee4a5715f66b530d2718571a2f5ef1e23d55db
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
