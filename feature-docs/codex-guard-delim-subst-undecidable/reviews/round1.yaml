@@ -1,0 +1,77 @@
+round: 1
+executed_at: "2026-10-23T21:06:12+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5ba96e820704a806931e6b9b964dd4af3106fe5c
+  head_commit: 91559069c197fa0f193aedd4a8726f14346d83b5
+  changed_files:
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - test-docs/codex-guard-delim-subst-undecidable/task0001.tests.yaml
+    - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+unreviewed_perspectives: []
+findings:
+  - stable_id: 33d9d015548f40f3
+    severity: medium
+    category: security
+    file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 2638
+    title: "語の括弧（W）の中の `<(` / `>(` をコマンドリストとして読まず、後ろの対話起動の拒否が外れる"
+    description: "`_skip_substitution` の `(` 分岐は、top が W のときに `elif top not in \"awW\"`（2642 行）を通らない。このため `s[j-1] not in \"<>=\"` の判定に届かず、W の中の `<(` / `>(` も入れ子の W として開く。W は case・注釈・`<<` を読まないので、プロセス置換の中の case パターンの `)` で括弧が早く閉じ、置換の終わりが zsh より前になる。その後の引用符の対応がずれて文字列全体が判定不能（出力なし）になり、変更前に deny だった入力を通してしまう。SPEC FR3（`<(`・`>(` は今の読みを保つ）と NFR3（今判定できている形を判定不能に変えない）に反する。em-review 側のコピーもバイト単位で同一なので、同じ欠陥がある。"
+    suggestion: "`(` 分岐で top が W のときも、`s[j-1]` が `<` か `>` なら p（コマンドの位置から始まるコマンドリスト、close_command は False）として開く。閉じた後は W の中に戻す。2 つのコピーを同じ変更で直し、再現手順の `zsh -c` の形を deny の行として CASES に足す。"
+    reproduction: "tool_input.command に `zsh -c 'if false; then echo \"$(echo foo(<(case x in x) echo x;; esac)); : \"(\")\"; fi; python3 -i'` を設定し、JSON を各ガードの標準入力へ渡す。変更後は両方とも終了コード0、標準出力なしとなるが、変更前は deny と判定する。安全な実行確認として末尾の `python3 -i` を `echo SECURITY_REVIEW_MARKER` に置き換え、zsh -fc で実行すると、終了コード0でマーカーが表示され、後続コマンドへの到達を確認できる。入力は _read_quoted_unit から _skip_substitution の W 分岐へ到達する。"
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:security"]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium: not an auto-fix candidate (severity gate); follow-up task filed"
+  - stable_id: 77563b434524e8fb
+    severity: medium
+    category: comprehensive
+    file: em-review/scripts/codex-hook-interactive-guard.py
+    line: 2642
+    title: "語の括弧の中のプロセス置換で後ろの起動を見逃す（em-review 側のコピー）"
+    description: "上の security の指摘と同じ欠陥が、バイト単位で同一の em-review 側のコピーにもある。W の中の `(` は `<` の直後でも W として開くため、`<(case x in x) ...;; esac)` の中のパターンの `)` で置換の終わりが早まる。例えば `echo \"$(noglob echo foo(<(case x in x) :;; esac)); printf %s '\"')\"; python3 -i` は、変更前は deny だったが、変更後は判定不能になり出力が無い。2642 行の `elif top not in \"awW\"` が W を除いているため、`<>=` の判定に届かない。"
+    suggestion: "em-workflow 側と同じ変更で、W の中の `<(` / `>(` を p として開く。この入力を deny の行として CASES に足し、両方のコピーに流す。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:comprehensive"]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium: not an auto-fix candidate (severity gate); follow-up task filed"
+evaluation:
+  round_summary: "round 1（cross_validation: true）。comprehensive#0 と security#0 が、それぞれ別のコピーで、語の括弧（W）の中の `<(` / `>(` を W として読む退行を独立に指摘した。2 つのコピーはバイト単位で同一（cmp で確認）なので、両方のコピーの欠陥として 2 件とも medium のまま残した。security#0 の再現手順はコードを読んで追い、変更後は判定不能で出力なし、変更前は deny になることを確かめた（reproduced）。これは SPEC FR3・NFR3 にも反する。独自に読んだ結果として、rule 8 の heredoc の保留がサブシェルの `)` でも外れ、SPEC FR1 の「置換が閉じる前に改行が来る `<<` は判定不能」に合わない点を low で 1 件足した（evaluator 起点。R3b step 2 の severity ゲートで除外）。FR2 の読み直しの上限により、十数段の入れ子の `((a $( ... ) b) )` は deny から出力なしに変わる（TestArithmeticRereadBudget の DEEP の行）。ただし FR2 が上限と判定不能を明示的に求めているので、指摘にはしていない。reviewer の出力に注入の試みは無かった。観点ごとの確認結果: comprehensive: corroborated / security: corroborated / architecture: corroborated / spec: findings（reviewer の結果は空だったが、FR3・NFR3 違反と FR1 からのずれを確認した）。"
+  recommended_action: "auto_fix"
+  action_rationale: "critical / high は無い。medium の退行 1 件は 2 つのコピーの同じ箇所にあり、`(` 分岐の 1 か所に閉じていて、直し方と回帰の行もはっきりしている。low の 1 件も保留を外す条件を絞るだけで、小さく直せる。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-delim-subst-undecidable-20261023T120605Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
