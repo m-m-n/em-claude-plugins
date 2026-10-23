@@ -2287,10 +2287,12 @@ class _Parser:
         position. The word list w opens at the `(` that follows the name of a
         zsh `for`, and it is read in a context of its own, not as the
         arithmetic a. A backslash pair, a quoted unit, a backtick, `$(`, `$((`
-        and `${` in it are followed as in every other context. A `#` whose
-        previous character is a space, a tab, a newline, `;`, `&`, `|` or `(`
-        starts a comment, the same start condition as in a command list. The
-        comment runs to the next newline, and a quote, a `)` or a
+        and `${` in it are followed as in every other context. In the word
+        list a `#` starts a comment only in the outermost entry: there a `#`
+        whose previous character is a space, a tab, a newline, `;`, `&`, `|`
+        or `(` starts a comment, the same start condition as in a command
+        list. In a nested entry every `#` is a word character and starts no
+        comment. The comment runs to the next newline, and a quote, a `)` or a
         substitution inside it opens nothing and closes nothing; a comment
         with no newline before the input ends makes the chunk undecidable.
         Every other character, the newline included, is part of a word or
@@ -2588,10 +2590,13 @@ class _Parser:
             elif top == "a":
                 j += 1
             elif top == "w":
-                # The word list of a zsh `for`: a `#` starts a comment where it
-                # does in a command list; every other character is part of a
-                # word or separates words, the newline included.
-                if ch == "#" and s[j - 1] in " \t\n;&|(":
+                # The word list of a zsh `for`: in the outermost entry a `#`
+                # starts a comment where it does in a command list; in a
+                # nested entry (a glob qualifier as in `*(#qN)`, the entry
+                # directly beneath this one is also w) every `#` is a word
+                # character. Every other character is part of a word or
+                # separates words, the newline included.
+                if ch == "#" and stack[-2] != "w" and s[j - 1] in " \t\n;&|(":
                     j = s.find("\n", j)
                     if j == -1:
                         raise _Undecidable("substitution")
