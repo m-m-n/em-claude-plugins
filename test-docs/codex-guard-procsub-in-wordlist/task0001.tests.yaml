@@ -1,0 +1,77 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: 943/943 and Ran 10923 tests, OK (skipped=1), before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, 943/943 and Ran 10925 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the rows 語一覧プロセス置換 TS-1 to TS-5 and TS-14 added to CASES and the two guard
+      copies as they were (run with HOOK_PATHS pointed at the pre-change copies), the test errored
+      on TS-1, TS-3, TS-4, TS-5 and TS-14 for both copies (empty standard output, JSONDecodeError,
+      where a deny object was expected: the # after a blank inside the process substitution was
+      read as a word character, so the " after it opened a quote and the chunk was undecidable) and
+      failed on TS-2 for both copies (a deny object where silent was expected: the ) inside the
+      comment closed the word list early). They pass after the implementation.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The rows 語一覧プロセス置換 TS-6 to TS-13 are boundary rows for a reading that is too wide.
+      The behavior they pin (a ( that is not a <(, >( or =( at the start of a word of the outermost
+      entry stays a nested entry of w, with # as a word character) is the existing reading, so
+      they passed before the implementation and pass after it. No red state exists for them; they
+      fail only if the new branch reads a ( as a process substitution where it must not.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The existing rows (置換読み TS1, TS5, TS6, TS7, TS8, TS28, TS-1, TS-2 and TS-7 among them)
+      are unchanged and passed before the change; they are the regression guard for the word list
+      reading and no red state exists on this code base. Not observed red.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion.test_no_function_calls_itself_and_no_functions_form_a_cycle
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure.test_no_method_reachable_from_the_substitution_skip_is_the_skip_or_a_reader
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts26_commented_lines_in_a_for_word_list_are_read_in_time
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope; the existing TestNoRecursion and
+      TestSubstitutionSkipCallStructure detect a recursive or cyclic reading, and the existing
+      timing test detects a non-linear reading of a long word list. The word-start state is two
+      booleans moved on one character at a time, with no recursion and no look at the characters
+      behind, so no red state occurred for this change.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope; the existing byte-identity test passed before the
+      change and passes after it. The second copy was made with cp from the first, so no state
+      with differing copies was run; not observed red.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_how_a_process_substitution_in_a_for_word_list_is_read
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_where_a_hash_starts_a_comment_in_a_for_word_list
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_four_rules_of_the_reading
+    red_confirmed: true
+    red_reason: >-
+      With the new test added and the docstrings unchanged, it failed for both copies on all six
+      markers (none of the six sentences about the process substitution in the word list was in
+      the docstring of _skip_substitution). It passes after the docstring was written. The two
+      existing tests (WORD_LIST_HASH_MARKERS and RULE_MARKERS) passed before and after. The
+      comments of the ( branch and the w branch are not checked by a test.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: >-
+      The outcome is the project's whole test command passing, and standard-library-only unittest
+      code with the plugin.json and marketplace.json files untouched. The suite was green at the
+      baseline (no failures), so there is no red state of the aggregate; the reds that matter are
+      those of AC-1 and AC-6. The version files are not covered by a test of this module; git
+      status of the task branch shows no change to them.
