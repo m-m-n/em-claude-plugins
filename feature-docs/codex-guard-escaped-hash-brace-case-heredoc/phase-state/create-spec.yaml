@@ -4,7 +4,7 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 0bb9e3172164b4cc946fb018f8ebbd900f81a52f
-last_input_digest: sha256:d19f848eae418285c1f8d80f42041b77e100c1e856e3b89b9fa7c9c7d1259170
+last_input_digest: sha256:8dd573c39cc8fd53f648d5794247f315aa12a36fcd63d47eb6861d10b14b860a
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -34,11 +34,25 @@ answers:
       error、引用した ''esac'' パターンは受理。パターン待ちの位置と項目本体の位置を区別する。置換の中身は判定せず閉じ位置だけを読む契約を保つ。既存行 1051 を deny、1050・1293・1298〜1300・1305
       は silent のまま。不採用: read_both（ヒアドキュメントの区切り語と終端行の管理の追加で範囲超過、誤拒否・見逃しの余地増）、inspect_after_undecidable（再開位置が確定せず、silent
       の契約に反する）。Opus escalation: not run. Recorded as assumption.'
+  design-step.recommendation:
+    packet_id: null
+    answered_at: '2026-10-24T01:42:25+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step (skipped) をそのまま採用し design ステップを飛ばす
+    resolution_note: 'gate: create-spec.design-step (batch-policies: select decide_autonomously)'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:d19f848eae418285c1f8d80f42041b77e100c1e856e3b89b9fa7c9c7d1259170
   output_digest: sha256:7c2584751521644a1f95b12268bf64ae7dc12efbb5feed2239f05275ad3b2f03
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:8dd573c39cc8fd53f648d5794247f315aa12a36fcd63d47eb6861d10b14b860a
+  output_digest: sha256:76cc3cf6f59b38a2229069d3c38e917f72edf6219ac6f7ab54eafafb3f06f785
 artifacts: []
 patches: []
 progress_fingerprint: null
