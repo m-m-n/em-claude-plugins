@@ -132,7 +132,8 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/codex-guard-delim-brace-quote-per-shell/task0001
     notes: null
 review:
   status: pending
