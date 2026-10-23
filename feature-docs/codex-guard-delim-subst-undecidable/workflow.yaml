@@ -2,82 +2,54 @@ schema_version: 1
 feature: codex-guard-delim-subst-undecidable
 created: '2026-10-23'
 base_branch: main
-goal: '# codex-hook-interactive-guard: 区切り語の ${ } の中の $( ) を case 対応スキップに回した結果、置換内の <<・算術の <<・語の中の (case で判定不能になり python3 -i を見逃す（回帰）
-
+goal: |
+  # codex-hook-interactive-guard: 区切り語の ${ } の中の $( ) を case 対応スキップに回した結果、置換内の <<・算術の <<・語の中の (case で判定不能になり python3 -i を見逃す（回帰）
 
   種別: バグ
-
   Notion: <notion-url>
-
 
   ## 現象 (必須)
 
-
   `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、ヒアドキュメントの区切り語の位置にある `${ ... }` の中の引用されていない `$( ... )` を、feature `codex-guard-heredoc-delim-brace-case` で case 対応の `_skip_substitution`（共有リーダー `_read_quoted_unit` 経由）に回した。このスキップが判定不能（`_Undecidable`）とする次の 3 つの形は、変更前の括弧を数える読み（`_skip_parens`）では区切り語に登録されて deny になっていたが、変更後は checkpoint が無いため出力なしになる（回帰、fail-open 側）。
 
-
   1. 置換の中の `<<`（ヒアドキュメント）: `${v:-$(echo <<EOF)}` で `_Undecidable("heredoc in a substitution")` になる（review round 1、`stable_id: 8704f40d2d534c76`、security）
-
   2. 置換の中の算術命令の左シフト: `${v:-$( ((1 << 2)) )}` で、コマンド位置の `((` を算術の文脈として読まず、中の `<<` をヒアドキュメントとみなす。`for ((...))` も同じ（`stable_id: a1ffc746adbf0058`、comprehensive）
-
   3. 引数の語の中の括弧にある case: `$(echo foo(case x))` で、語の中の `(` から新しいリストをコマンド位置で始め、`case` を文として開いて `_Undecidable("case without in")` になる（`stable_id: a1376c6e4c4feed3`、comprehensive）
-
 
   ## 再現手順 (必須)
 
-
   1. `tool_input.command` に次の文字列を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）:
 
-
-  `zsh -c ''if false; then` + 改行 + `: <<${v:-$(echo <<EOF)}` + 改行 + `${v:-$(echo <<EOF)}` + 改行 + `fi` + 改行 + `python3 -i''`
-
+  `zsh -c 'if false; then` + 改行 + `: <<${v:-$(echo <<EOF)}` + 改行 + `${v:-$(echo <<EOF)}` + 改行 + `fi` + 改行 + `python3 -i'`
 
   2. 標準出力が空になる（期待は deny。基準コミット `9e2487e0` では deny）
 
-
   2 と 3 の形も、区切り語の `${ ... }` に `$( ((1 << 2)) )` / `$(echo foo(case x))` を置いた同じ構成で再現する。
-
 
   ## 期待する挙動 (必須)
 
-
   区切り語の `${ ... }` の中の `$( ... )` に上の 3 つの形があっても、区切り語の終わりを zsh と同じ位置に置き、終端行の後の `python3 -i` を deny する。置換の中のヒアドキュメントを zsh がどう読むかを先に確かめて、共有スキップの読みを決める。コマンド位置の `((`（`for` の後を含む）は算術の文脈として読む。引数の語の中の括弧と、コマンドを読む括弧（サブシェル、`<(`、`>(`）を区別する。
-
 
   ## 完了の定義 (必須)
 
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある（3 つの形を両コピーに流す CASES の行）
-
 
   ## 該当箇所 (任意)
 
-
   - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_remove_range_quotes`（1897-1903 行付近）、`_skip_substitution`（2392-2394 行・2428-2451 行・2474-2475 行付近）
-
   - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容。2 つのコピーはバイト単位で同一に保つ）
-
   - 記録: `feature-docs/codex-guard-heredoc-delim-brace-case/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-heredoc-delim-brace-case/integration`）
-
 
   ## 実害・発生条件 (任意)
 
-
   ヒアドキュメントの区切り語の `${ ... }` の中の `$( ... )` に、上の 3 つの形のいずれかを書いた場合だけ。fail-open 側。
-
 
   ## 追加指示（起動時）
 
-
   - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
-
   - 不明点は Codex に相談し、比較的良いと判断された選択肢を採用する
-
   - その議論内容を Notion に記録する
-
-  '
 parent_branch: em-workflow/codex-guard-delim-subst-undecidable/integration
 tier: full
 tier_decision:
