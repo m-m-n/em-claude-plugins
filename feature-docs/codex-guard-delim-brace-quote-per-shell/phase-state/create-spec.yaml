@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-delim-brace-quote-per-shell
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 629cebc27c489466b396b8946e2b352c19e6161f
 last_input_digest: sha256:14b7b0d4f11a7be843fbb4a9d3c78aa81b8ce019548f7a3bc3b8e22a11a44ba4

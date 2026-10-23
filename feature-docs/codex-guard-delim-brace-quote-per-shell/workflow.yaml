@@ -1,0 +1,212 @@
+schema_version: 1
+feature: codex-guard-delim-brace-quote-per-shell
+created: '2026-10-23'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 区切り語の ${ ... } の zsh 向け引用除去が bash -c の文字列にも当たり、終端行の後の python3 -i を見逃す
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）は入れ子の `shell -c` の文字列を、シェルの種類によらず zsh の読みで読む。feature `codex-guard-heredoc-delim-brace-quote` で、区切り語の位置の `${ ... }` の中の引用を zsh と同じく除くようにした結果、`bash -c` の文字列でも区切り語 `${v:-"x"}` を `${v:-x}` として登録するようになった。bash が終端行を `${v:-"x"}` と書かれたまま比べる場合、終端行の後の `python3 -i` が本文として読み飛ばされて出力なしになる。
+
+  同 feature の review round 1（security 観点、medium、`stable_id: 55234ffc39bfa875`）で見つかった。変更前は deny だった。SPEC は zsh の読みだけを定めていて bash を扱っていない。
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に次の文字列を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）:
+
+  `bash -c 'false && cat <<${v:-"x"}` + 改行 + `${v:-"x"}` + 改行 + `python3 -i'`
+
+  1. 標準出力が空になる（期待は deny）
+
+  ## 期待する挙動 (必須)
+
+  bash / sh の `-c` 文字列では、区切り語の読みをそのシェルの規則に合わせる（またはその読みが確定できなければ、終端行の後の起動を見逃さない側に倒す）。終端行の後の `python3 -i` は deny になる。シェルの種類を `_Parser` に渡す設計変更を含むため、まず bash が `${ ... }` の中の引用を区切り語に残すかを確認し、方針を決める。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_dollar`（区切り語の位置の `${` の分岐、`codex-hook-interactive-guard.py:1934` 付近）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-heredoc-delim-brace-quote/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-heredoc-delim-brace-quote/integration`）
+  - 関連タスク: 「codex-hook-interactive-guard: 二段目以降の bash -c の文字列を判定対象にするか決める」
+
+  ## 実害・発生条件 (任意)
+
+  `bash -c` / `sh -c` の文字列で、ヒアドキュメントの区切り語の `${ ... }` の中に引用符を書いた場合だけ。fail-open 側。
+
+  ## 追加指示（起動引数）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモートの両方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的よいと判断した選択肢を採る
+  - その議論の内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-delim-brace-quote-per-shell/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.7
+      '2': 0.3
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.58
+      '2': 0.42
+      '3': 0.0
+  at: '2026-10-23T22:58:21+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 01a53a9c0e8892187a9f486298d37e9ce7880ab4
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: -c 文字列の種類ごとの区切り語の読み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: bash の読み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: sh / ksh の 2 通りの読み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 区切り語の位置にない読みは変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: NESTED_READ_LIMIT の数え方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 2 つのコピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 線形時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 既存の構造テストの保持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: docstring の整合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 既存ケースの保持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
