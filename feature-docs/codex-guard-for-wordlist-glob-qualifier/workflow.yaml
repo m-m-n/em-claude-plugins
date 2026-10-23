@@ -1,0 +1,157 @@
+schema_version: 1
+feature: codex-guard-for-wordlist-glob-qualifier
+created: '2026-10-23'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: zsh の for 語一覧の中の glob 修飾子 *(#qN) の # をコメントと読み、後ろの python3 -i を見逃す
+
+  種別: バグ
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+
+  feature `codex-guard-subst-reading-regressions` の review round 1 で deferred になった指摘（stable_id `fa91f061156d70be`、medium）。
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）は、zsh の `for name (words)` の語一覧の中で開いた入れ子の `(`（glob 修飾子）でも、直前が `(` の `#` をコメントの始まりと読む。`*(#qN)` の `#` は語の途中にあり、zsh ではコメントにならない。後ろに改行がなければ判定不能（`_Undecidable`）になり、置換の後ろの `python3 -i` を拒否しない（拒否漏れ）。
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に次を設定した PreToolUse(Bash) の JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+  2. `zsh -c 'setopt extendedglob; echo "$(for x (*(#qN)) { :; })"; python3 -i'` → 無出力になる（基準コミット `f201d52d` では deny）
+  3. 最上位（シェル不明）の `echo "$(for x (*(#qN)) { :; })"; python3 -i` も無出力になる
+
+  ## 期待する挙動 (必須)
+
+  - 語一覧の中で開いた入れ子の `(` の entry（`stack[-2]` が `w` のもの）では、直前が `(` の `#` を語の文字として読む
+  - コメントは一番外の語一覧の entry でだけ始まる（TS8 の `for x (# c<改行>a)` の読み方は変えない）
+  - 読み取りの線形性を保つ
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に上の入力（zsh -c 版と最上位版）を deny の行として追加し、両コピーに流す
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+
+  - `em-review/scripts/codex-hook-interactive-guard.py:2539`
+  - `em-workflow/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-subst-reading-regressions/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-subst-reading-regressions/integration`）
+
+  ## 実害・発生条件 (任意)
+
+  `$( )` の中の zsh の for の語一覧に `#` で始まる glob 修飾子（`*(#qN)` 等）を書き、同じ置換の中で後ろに改行が無い場合だけ。拒否漏れ（fail-open）で、無人実行が入力待ちで止まりうる。p の文脈の `$(ls *(#qN))` は変更前から同じように読み違える（今回の差分の範囲外）。
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作成する。integration ブランチはローカル・リモート双方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-for-wordlist-glob-qualifier/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.77
+      '2': 0.23
+      '3': 0.0
+  at: '2026-10-23T18:40:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 7155687a8f60d670fd30f3556f4c02dc6311f5bb
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Hook parser bug fix with no UI; zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: '語一覧の入れ子の ( の直後の # を語の文字として読む'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: コメントは一番外の語一覧の entry でだけ始まる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 両コピーを同じに直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 読み取りの線形性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
