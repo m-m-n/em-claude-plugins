@@ -111,7 +111,7 @@ workflow:
   summary: 'Project test command passed (destructive-guard suite + unittest discover: 10965 tests OK, 1 skipped). TS35 copies byte-identical; TS37 no pre-existing CASES row removed; TS38 stdlib imports only; TS39 no plugin.json/marketplace.json diff; manual reproduction (TS1 command) returns exactly one deny on both copies.'
   completed_at_commit: 3528b92896a9b877c45ccea6b9ede42b81c45913
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Per-shell reading of delimiter ${ ... } ranges in nested -c strings
