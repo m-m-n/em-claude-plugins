@@ -66,6 +66,89 @@ CASE_IN_RANGE_INNER = (
     "python3 -i"
 )
 
+def delimiter_command(wrap, lines):
+    """The command of a codex-guard-delim-brace-quote-per-shell row (SPEC.md
+    Test Scenarios, "command の作り方"): the lines joined by newlines make the
+    string S, and each holder of `wrap` (outermost first) is applied from the
+    innermost one outward as `holder + " -c " + shlex.quote(S)`."""
+    text = "\n".join(lines)
+    for holder in reversed(wrap):
+        text = holder + " -c " + shlex.quote(text)
+    return text
+
+
+# codex-guard-delim-brace-quote-per-shell (SPEC.md Test Scenarios TS1 to TS32):
+# the `${ ... }` ranges of a heredoc delimiter in a nested `-c` string are read
+# by the shell that directly holds the string. Each entry is (id, expected,
+# label, wrap, lines); `delimiter_command` builds the command by the rule of
+# SPEC.md. The labels are SPEC.md's.
+DELIMITER_PER_SHELL_ROWS = (
+    ("TS1", "deny", "bash -c の区切り語の ${...} を書かれたまま登録し、終端行の後の起動は deny (再現手順)", [],
+     ["bash -c 'false && cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i'"]),
+    ("TS2", "silent", "bash -c では引用を除いた ${...} の行で本文が閉じない", ["bash"],
+     ["cat <<${v:-\"x\"}", "${v:-x}", "python3 -i", "${v:-\"x\"}"]),
+    ("TS3", "deny", "bash -c の ${...} の単引用符を残す", ["bash"],
+     ["cat <<${v:-'x'}", "${v:-'x'}", "python3 -i"]),
+    ("TS4", "deny", "bash -c の ${...} のバックスラッシュを残す", ["bash"],
+     ["cat <<${v:-\\x}", "${v:-\\x}", "python3 -i"]),
+    ("TS5", "deny", "bash -c の ${...} の二重引用符の中の } で閉じず、書かれたまま登録する", ["bash"],
+     ["cat <<${v:-\"a}b\"}", "${v:-\"a}b\"}", "python3 -i"]),
+    ("TS6", "deny", "bash -c の入れ子の ${...} を書かれたまま登録する", ["bash"],
+     ["cat <<${a:-${b:-\"x\"}}", "${a:-${b:-\"x\"}}", "python3 -i"]),
+    ("TS7", "deny", "bash -c の ${...} の中の $( ) は書かれたまま", ["bash"],
+     ["cat <<${v:-$(echo \"x\")}", "${v:-$(echo \"x\")}", "python3 -i"]),
+    ("TS8", "deny", "bash -c の ${...} の引用の外のバックスラッシュ＋改行は取り除く", ["bash"],
+     ["cat <<${v:-\\", "x}", "${v:-x}", "python3 -i"]),
+    ("TS9", "deny", "bash -c の ${...} の二重引用符の中のバックスラッシュ＋改行は取り除き、引用は残す", ["bash"],
+     ["cat <<${v:-\"a\\", "b\"}", "${v:-\"ab\"}", "python3 -i"]),
+    ("TS10", "deny", "bash -c で ${...} の前に引用があれば語全体の引用を除く", ["bash"],
+     ["cat <<'P'${v:-\"x\"}", "P${v:-x}", "python3 -i"]),
+    ("TS11", "deny", "bash -c で ${...} の後ろに引用があれば語全体の引用を除く", ["bash"],
+     ["cat <<${v:-\"x\"}\"\"", "${v:-x}", "python3 -i"]),
+    ("TS12", "silent", "bash -c で ${...} の後ろに引用があれば書かれたままの範囲の行では本文が閉じない", ["bash"],
+     ["cat <<${v:-\"x\"}\"\"", "${v:-\"x\"}", "python3 -i", "${v:-x}"]),
+    ("TS13", "deny", "bash -c で ${...} の前の二重引用符があれば範囲の単引用符も除く", ["bash"],
+     ["cat <<\"P\"${v:-'x'}", "P${v:-x}", "python3 -i"]),
+    ("TS14", "silent", "bash -c でも ${...} の中の引用されていない $' は判定不能", ["bash"],
+     ["cat <<${v:-$'x'}", "${v:-'x'}", "python3 -i"]),
+    ("TS15", "deny", "bash -c の <<- は先頭タブを除いて書かれたままの ${...} と比べる", ["bash"],
+     ["cat <<-${v:-\"x\"}", "\t${v:-\"x\"}", "python3 -i"]),
+    ("TS16", "deny", "env を経由した版数つきの bash も bash の読み", ["env bash5.2"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i"]),
+    ("TS17", "deny", "bash --posix も bash の読み", ["bash --posix"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i"]),
+    ("TS18", "deny", "sh -c は bash の読みの終端行の後の起動を deny（今の読みは判定不能）", ["sh"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i"]),
+    ("TS19", "deny", "sh -c は今の読みの終端行の後の起動を deny（bash の読みは判定不能）", ["sh"],
+     ["cat <<${v:-\"x\"}", "${v:-x}", "python3 -i"]),
+    ("TS20", "deny", "sh -c は書かれたままの終端行の後で引用を除いた行の前の起動を deny", ["sh"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i", "${v:-x}"]),
+    ("TS21", "deny", "sh -c は引用を除いた終端行の後で書かれたままの行の前の起動を deny", ["sh"],
+     ["cat <<${v:-\"x\"}", "${v:-x}", "python3 -i", "${v:-\"x\"}"]),
+    ("TS22", "silent", "sh -c の両方の読みで本文の中にある起動は deny しない", ["sh"],
+     ["cat <<${v:-\"x\"}", "python3 -i", "${v:-x}", "${v:-\"x\"}"]),
+    ("TS23", "deny", "パス付きの sh も 2 通りの読み", ["/bin/sh"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i", "${v:-x}"]),
+    ("TS24", "silent", "dash -c は今の読みだけで、書かれたままの行では本文が閉じない", ["dash"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i", "${v:-x}"]),
+    ("TS25", "deny", "dash -c は引用を除いた終端行の後の起動を deny", ["dash"],
+     ["cat <<${v:-\"x\"}", "${v:-x}", "python3 -i"]),
+    ("TS26", "deny", "ksh -c も 2 通りの読みで、書かれたままの終端行の後の起動を deny", ["ksh"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i", "${v:-x}"]),
+    ("TS27", "deny", "ksh -c も 2 通りの読みで、引用を除いた終端行の後の起動を deny", ["ksh"],
+     ["cat <<${v:-\"x\"}", "${v:-x}", "python3 -i", "${v:-\"x\"}"]),
+    ("TS28", "silent", "zsh -c の区切り語の読みは変えない", ["zsh"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i", "${v:-x}"]),
+    ("TS29", "silent", "フックが受け取るコマンドそのものの区切り語の読みは変えない", [],
+     ["cat <<${v:-'x'}", "${v:-'x'}", "python3 -i", "${v:-x}"]),
+    ("TS30", "deny", "zsh -c の中の bash -c の文字列は bash の読み", ["zsh", "bash"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i"]),
+    ("TS31", "silent", "bash -c の中の zsh -c の文字列は zsh の読み", ["bash", "zsh"],
+     ["cat <<${v:-\"x\"}", "${v:-\"x\"}", "python3 -i", "${v:-x}"]),
+    ("TS32", "deny", "bash -c の ${...} の外のバックスラッシュ＋改行は取り除き、引用に数えない", ["bash"],
+     ["cat <<P\\", "${v:-\"x\"}", "P${v:-\"x\"}", "python3 -i"]),
+)
+
 # (expected, label, command)
 CASES = [
     # AC-1: launches with -i (FR6, FR8, FR9)
@@ -1222,6 +1305,15 @@ CASES = [
     ("silent", "算術コマンドでない空白を挟んだ ( ( の << は heredoc で、本文の改行は判定不能のまま", 'echo "$( ( (cat <<EOF\nbody\nEOF\n) ) )"; python3 -i'),
     ("deny", "語の括弧 二重引用符の中の *(#qN) の # は語の文字で、後ろの起動を拒否する", 'echo "$(echo *(#qN))"; python3 -i'),
     ("deny", "語の括弧 入れ子の括弧は同じ文脈の入れ子で、中の ; は語の文字", 'echo "$(echo foo(a(b;c)d))"; python3 -i'),
+    # codex-guard-delim-brace-quote-per-shell (SPEC.md Test Scenarios TS1 to
+    # TS32), built from DELIMITER_PER_SHELL_ROWS by the construction rule of
+    # SPEC.md. The shell that directly holds a nested `-c` string decides how
+    # the `${ ... }` ranges of its heredoc delimiter are registered: bash by the
+    # written form, sh and ksh by both readings, every other reading as before.
+    *[
+        (expected, label, delimiter_command(wrap, lines))
+        for _, expected, label, wrap, lines in DELIMITER_PER_SHELL_ROWS
+    ],
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -2701,6 +2793,374 @@ class TestNestedReadLimit(HookCopiesMixin, unittest.TestCase):
         self.assert_verdict("silent", self.reread_pair(NESTED_READ_LIMIT - NESTED_READ_LIMIT // 2 + 1))
 
 
+class TestDelimiterRows(unittest.TestCase):
+    """codex-guard-delim-brace-quote-per-shell (task0001 AC-1 to AC-4, FR6): the
+    rows of SPEC.md's Test Scenarios are in CASES, each one built by the
+    construction rule of SPEC.md and carrying its expected verdict. CASES runs
+    against both copies in `TestCasesTable`."""
+
+    def test_there_is_one_row_for_each_of_ts1_to_ts32(self):
+        self.assertEqual(
+            [row[0] for row in DELIMITER_PER_SHELL_ROWS], ["TS%d" % n for n in range(1, 33)]
+        )
+
+    def test_each_row_is_in_cases_with_its_verdict_and_label(self):
+        for row_id, expected, label, wrap, lines in DELIMITER_PER_SHELL_ROWS:
+            with self.subTest(row=row_id):
+                self.assertIn((expected, label, delimiter_command(wrap, lines)), CASES)
+
+    def test_the_construction_rule_gives_the_commands_written_out_by_hand(self):
+        # TS1 has no holder: the command is the lines joined by newlines. TS2 has
+        # one holder, TS30 two: the inner string is quoted for the outer shell.
+        by_id = {row[0]: row for row in DELIMITER_PER_SHELL_ROWS}
+        expected = {
+            "TS1": "bash -c 'false && cat <<${v:-\"x\"}\n${v:-\"x\"}\npython3 -i'",
+            "TS2": "bash -c 'cat <<${v:-\"x\"}\n${v:-x}\npython3 -i\n${v:-\"x\"}'",
+            "TS30": "zsh -c 'bash -c '\"'\"'cat <<${v:-\"x\"}\n${v:-\"x\"}\npython3 -i'\"'\"''",
+        }
+        for row_id, command in expected.items():
+            with self.subTest(row=row_id):
+                _, _, _, wrap, lines = by_id[row_id]
+                self.assertEqual(delimiter_command(wrap, lines), command)
+
+    def test_the_expected_verdicts_are_the_ones_of_the_specification(self):
+        silent = {"TS2", "TS12", "TS14", "TS22", "TS24", "TS28", "TS29", "TS31"}
+        for row_id, expected, _, _, _ in DELIMITER_PER_SHELL_ROWS:
+            with self.subTest(row=row_id):
+                self.assertEqual(expected, "silent" if row_id in silent else "deny")
+
+
+class TestDelimiterReadingDriver(unittest.TestCase):
+    """codex-guard-delim-brace-quote-per-shell (task0001 AC-5, FR3, TM-2): the
+    module-level `parse` reads a string held by `sh` under both delimiter
+    readings, the bash form first, and combines them: no outcome of one reading
+    suppresses the commands of the other. No known input makes the reader raise
+    an unexpected error, so a reading's failure is forced in memory: the
+    module's `_Parser` is replaced by a subclass whose parse method reads the
+    string, as the real one does, and then raises when its delimiter rule is the
+    one under test. The parsers it builds are counted."""
+
+    # Both readings read this to its end. The bash form closes the heredoc at the
+    # second heredoc line and reads `${v:-x}` as a command; the quote-removal form
+    # closes it at the last line.
+    DIFFERING = 'python3 -i\ncat <<${v:-"x"}\n${v:-"x"}\n${v:-x}'
+    BASH_FORM_COMMANDS = [["python3", "-i"], ["cat"], ["${v:-x}"]]
+    QUOTE_REMOVAL_COMMANDS = [["python3", "-i"], ["cat"]]
+    # Both forms of the delimiter are the same text.
+    COINCIDING = "python3 -i\ncat <<EOF\nEOF"
+    # Unreadable under every reading: a substitution inside double quotes that is
+    # never closed.
+    UNREADABLE = 'echo "$('
+
+    @staticmethod
+    def words(commands):
+        return [[word.text for word in command.words] for command in commands]
+
+    def run_driver(self, path, command, failing=None, kind="KIND_UNKNOWN", reading="DELIMITER_BOTH"):
+        """Run the module-level `parse` of the guard at `path` on `command` for
+        the kind and the delimiter reading named. `failing` maps a delimiter rule
+        (the name of a module-level value, such as DELIMITER_BASH_FORM) to a
+        function that, given the guard namespace, makes the exception the parsers
+        of that reading raise after they have read the string. Return (the
+        parsers built, the result or None, the exception raised or None)."""
+        guard = self.guard = load_guard(path)
+        real = guard["_Parser"]
+        parsers = []
+        failures = {guard[name]: make for name, make in (failing or {}).items()}
+
+        class Recording(real):
+            def parse(self):
+                parsers.append(self)
+                commands = super().parse()
+                make = failures.get(self.delimiter_rule)
+                if make is not None:
+                    raise make(guard)
+                return commands
+
+        guard["_Parser"] = Recording
+        try:
+            return parsers, guard["parse"](command, guard[kind], guard[reading]), None
+        except Exception as error:
+            return parsers, None, error
+
+    def rules_of(self, path, parsers):
+        guard = load_guard(path)
+        names = {
+            guard["DELIMITER_BASH_FORM"]: "bash form",
+            guard["DELIMITER_QUOTE_REMOVAL"]: "quote removal",
+        }
+        return [names[parser.delimiter_rule] for parser in parsers]
+
+    def test_each_reading_adds_its_commands_and_the_bash_form_comes_first(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(path, self.DIFFERING)
+                self.assertIsNone(error)
+                self.assertEqual(
+                    self.words(result), self.BASH_FORM_COMMANDS + self.QUOTE_REMOVAL_COMMANDS
+                )
+                self.assertEqual(self.rules_of(path, parsers), ["bash form", "quote removal"])
+
+    def test_an_undecidable_bash_form_reading_leaves_the_quote_removal_commands(self):
+        undecidable = lambda guard: guard["_Undecidable"]("forced")
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(
+                    path, self.DIFFERING, failing={"DELIMITER_BASH_FORM": undecidable}
+                )
+                self.assertIsNone(result)
+                self.assertIsInstance(error, self.guard["_Undecidable"])
+                self.assertEqual(self.words(error.checkpoint_commands), self.QUOTE_REMOVAL_COMMANDS)
+                # The unknown kind re-reads the stopped reading once; the quote
+                # removal reading read to its end after it.
+                self.assertEqual(
+                    self.rules_of(path, parsers), ["bash form", "bash form", "quote removal"]
+                )
+
+    def test_an_undecidable_quote_removal_reading_leaves_the_bash_form_commands(self):
+        undecidable = lambda guard: guard["_Undecidable"]("forced")
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(
+                    path, self.DIFFERING, failing={"DELIMITER_QUOTE_REMOVAL": undecidable}
+                )
+                self.assertIsNone(result)
+                self.assertIsInstance(error, self.guard["_Undecidable"])
+                self.assertEqual(self.words(error.checkpoint_commands), self.BASH_FORM_COMMANDS)
+                self.assertEqual(
+                    self.rules_of(path, parsers), ["bash form", "quote removal", "quote removal"]
+                )
+
+    def test_a_bash_form_reading_that_fails_with_another_exception_leaves_the_quote_removal_commands(self):
+        for error_class in (RuntimeError, KeyError, RecursionError):
+            failing = {"DELIMITER_BASH_FORM": lambda guard, cls=error_class: cls("forced")}
+            for plugin, path in HOOK_PATHS.items():
+                with self.subTest(copy=plugin, failure=error_class.__name__):
+                    parsers, result, error = self.run_driver(path, self.DIFFERING, failing=failing)
+                    self.assertIsNone(error)
+                    self.assertEqual(self.words(result), self.QUOTE_REMOVAL_COMMANDS)
+
+    def test_a_quote_removal_reading_that_fails_with_another_exception_leaves_the_bash_form_commands(self):
+        for error_class in (RuntimeError, KeyError, RecursionError):
+            failing = {"DELIMITER_QUOTE_REMOVAL": lambda guard, cls=error_class: cls("forced")}
+            for plugin, path in HOOK_PATHS.items():
+                with self.subTest(copy=plugin, failure=error_class.__name__):
+                    parsers, result, error = self.run_driver(path, self.DIFFERING, failing=failing)
+                    self.assertIsNone(error)
+                    self.assertEqual(self.words(result), self.BASH_FORM_COMMANDS)
+
+    def test_when_both_readings_fail_with_another_exception_that_of_the_bash_form_leaves(self):
+        failing = {
+            "DELIMITER_BASH_FORM": lambda guard: RuntimeError("bash form"),
+            "DELIMITER_QUOTE_REMOVAL": lambda guard: KeyError("quote removal"),
+        }
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(path, self.DIFFERING, failing=failing)
+                self.assertIsNone(result)
+                self.assertIsInstance(error, RuntimeError)
+                self.assertEqual(error.args, ("bash form",))
+                self.assertEqual(self.rules_of(path, parsers), ["bash form", "quote removal"])
+
+    def test_a_failed_reading_next_to_an_undecidable_one_leaves_an_undecidable_with_no_commands(self):
+        failing = {
+            "DELIMITER_BASH_FORM": lambda guard: RuntimeError("forced"),
+            "DELIMITER_QUOTE_REMOVAL": lambda guard: guard["_Undecidable"]("forced"),
+        }
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(path, self.DIFFERING, failing=failing)
+                self.assertIsNone(result)
+                self.assertIsInstance(error, self.guard["_Undecidable"])
+                self.assertEqual(list(error.checkpoint_commands), [])
+
+    def test_a_string_whose_two_forms_coincide_builds_the_parsers_of_one_reading(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(path, self.COINCIDING)
+                self.assertIsNone(error)
+                self.assertEqual(self.words(result), [["python3", "-i"], ["cat"]])
+                self.assertEqual(self.rules_of(path, parsers), ["bash form"])
+
+    def test_an_unreadable_string_with_no_differing_delimiter_builds_the_parsers_of_one_reading(self):
+        # The unknown kind reads the string twice within the one reading.
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(path, self.UNREADABLE)
+                self.assertIsNone(result)
+                self.assertIsInstance(error, self.guard["_Undecidable"])
+                self.assertEqual(self.rules_of(path, parsers), ["bash form", "bash form"])
+
+    def test_a_string_whose_forms_differ_builds_the_parsers_of_both_readings(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, _, error = self.run_driver(path, self.DIFFERING)
+                self.assertIsNone(error)
+                self.assertEqual(sorted(set(self.rules_of(path, parsers))), ["bash form", "quote removal"])
+
+    def test_a_forced_reading_that_recorded_no_differing_word_does_not_run_the_other(self):
+        # The skip condition is read from the parsers' records, not from the
+        # string: a reading that stopped before it saw a differing word leaves
+        # nothing that the other reading could add.
+        stops_early = lambda guard: guard["_Undecidable"]("forced")
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                parsers, result, error = self.run_driver(
+                    path, self.COINCIDING, failing={"DELIMITER_BASH_FORM": stops_early}
+                )
+                self.assertIsInstance(error, self.guard["_Undecidable"])
+                self.assertEqual(set(self.rules_of(path, parsers)), {"bash form"})
+
+    def test_a_single_reading_builds_the_parsers_of_that_reading_only(self):
+        for plugin, path in HOOK_PATHS.items():
+            for reading, name in (
+                ("DELIMITER_BASH_FORM", "bash form"),
+                ("DELIMITER_QUOTE_REMOVAL", "quote removal"),
+            ):
+                with self.subTest(copy=plugin, reading=reading):
+                    parsers, _, error = self.run_driver(path, self.DIFFERING, reading=reading)
+                    self.assertIsNone(error)
+                    self.assertEqual(set(self.rules_of(path, parsers)), {name})
+
+    def test_the_default_reading_is_quote_removal_and_reads_a_string_of_unknown_kind_twice(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                guard = load_guard(path)
+                parsers = []
+                real = guard["_Parser"]
+
+                class Recording(real):
+                    def parse(self):
+                        parsers.append(self)
+                        return super().parse()
+
+                guard["_Parser"] = Recording
+                with self.assertRaises(guard["_Undecidable"]):
+                    guard["parse"](self.UNREADABLE)
+                self.assertEqual(len(parsers), 2)
+                self.assertEqual(
+                    {parser.delimiter_rule for parser in parsers}, {guard["DELIMITER_QUOTE_REMOVAL"]}
+                )
+
+    def test_a_parser_records_a_differing_delimiter_word_under_either_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            guard = load_guard(path)
+            for rule in ("DELIMITER_BASH_FORM", "DELIMITER_QUOTE_REMOVAL"):
+                with self.subTest(copy=plugin, rule=rule, string="differing"):
+                    parser = guard["_Parser"](self.DIFFERING, True, True, guard[rule])
+                    self.assertFalse(parser.differs)
+                    parser.parse()
+                    self.assertTrue(parser.differs)
+                with self.subTest(copy=plugin, rule=rule, string="coinciding"):
+                    parser = guard["_Parser"](self.COINCIDING, True, True, guard[rule])
+                    parser.parse()
+                    self.assertFalse(parser.differs)
+
+    def test_a_parser_without_a_delimiter_rule_reads_the_quote_removal_form(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                guard = load_guard(path)
+                parser = guard["_Parser"](self.DIFFERING)
+                self.assertEqual(parser.delimiter_rule, guard["DELIMITER_QUOTE_REMOVAL"])
+                self.assertEqual(self.words(parser.parse()), self.QUOTE_REMOVAL_COMMANDS)
+
+
+class TestDelimiterReadingNestedReadLimit(HookCopiesMixin, unittest.TestCase):
+    """codex-guard-delim-brace-quote-per-shell (task0001 AC-6, FR5, NFR2, TM-3):
+    a string held by `sh` is read under both delimiter readings and counts once
+    toward `NESTED_READ_LIMIT`, at its length, before the readings run. A nested
+    string counts each time the walk reaches it, so one that both readings reach
+    counts twice. The strings are built so that every length is plain
+    arithmetic, as in `TestNestedReadLimit`."""
+
+    TIMEOUT = 60
+    # The delimiter of this heredoc differs between the readings: the bash form
+    # closes it at the first body line, quote removal at a line `${v:-x}`.
+    DIFFERING_HEREDOC = 'cat <<${v:-"x"}\n${v:-"x"}\n'
+    COINCIDING_HEREDOC = "cat <<EOF\nEOF"
+
+    def verdict(self, path, command):
+        return verdict_of(run_hook(path, payload_for(command), timeout=self.TIMEOUT))
+
+    def assert_verdict(self, expected, command):
+        for plugin, path in self.for_each_copy():
+            with self.subTest(copy=plugin):
+                self.assertEqual(self.verdict(path, command), expected)
+
+    def sh_pair(self, holder_string, later_string):
+        """A first-level string that runs `holder_string` under `sh -c`, and then
+        `later_string` under `bash -c`; both are second-level strings."""
+        return holding("sh -c " + sq(holder_string) + "; bash -c " + sq(later_string))
+
+    # A second-level string held by `sh`, read under both readings, counts once
+    # at its length: the launch it holds is denied when its length is exactly the
+    # limit, and one more character leaves it unread.
+    def holder_with_launch(self, length):
+        head = self.DIFFERING_HEREDOC
+        return head + padded_launch(length - len(head))
+
+    def test_a_second_level_string_read_under_both_readings_counts_once_at_its_length(self):
+        holder = self.holder_with_launch(NESTED_READ_LIMIT)
+        self.assertEqual(len(holder), NESTED_READ_LIMIT)
+        self.assert_verdict("deny", holding("sh -c " + sq(holder)))
+
+    def test_one_more_character_and_that_string_is_not_read(self):
+        holder = self.holder_with_launch(NESTED_READ_LIMIT + 1)
+        self.assertEqual(len(holder), NESTED_READ_LIMIT + 1)
+        self.assert_verdict("silent", holding("sh -c " + sq(holder)))
+
+    # The third-level string sits on the holder's first line, before its heredoc,
+    # so both readings reach it: the quote-removal reading stops undecidable at
+    # the heredoc, after the checkpoint of that first line. The second
+    # second-level string of the first-level string carries the launch; the
+    # lengths add up to the limit exactly when the walk counts the third-level
+    # string as many times as it reaches it.
+    THIRD = padded_echo(1000)
+
+    def holder_with_third_level(self, heredoc):
+        return "bash -c " + sq(self.THIRD) + "\n" + heredoc
+
+    def test_a_third_level_string_that_both_readings_reach_counts_each_time(self):
+        holder = self.holder_with_third_level(self.DIFFERING_HEREDOC)
+        room = NESTED_READ_LIMIT - len(holder) - 2 * len(self.THIRD)
+        self.assert_verdict("deny", self.sh_pair(holder, padded_launch(room)))
+        self.assert_verdict("silent", self.sh_pair(holder, padded_launch(room + 1)))
+
+    def test_a_third_level_string_that_both_readings_reach_does_not_count_once(self):
+        # With the count of a single reach the launch string below would be read.
+        holder = self.holder_with_third_level(self.DIFFERING_HEREDOC)
+        room = NESTED_READ_LIMIT - len(holder) - len(self.THIRD)
+        self.assert_verdict("silent", self.sh_pair(holder, padded_launch(room)))
+
+    def test_a_third_level_string_counts_once_when_the_two_readings_coincide(self):
+        holder = self.holder_with_third_level(self.COINCIDING_HEREDOC)
+        room = NESTED_READ_LIMIT - len(holder) - len(self.THIRD)
+        self.assert_verdict("deny", self.sh_pair(holder, padded_launch(room)))
+        self.assert_verdict("silent", self.sh_pair(holder, padded_launch(room + 1)))
+
+    # TM-3: a first-level string held by `sh`, far longer than 100,000
+    # characters, holds many heredocs whose delimiters differ between the
+    # readings. Each reading is linear and a string gets a constant number of
+    # reads, so it is answered within the timeout of the other limit tests.
+    UNIT = 'cat <<${v:-"x"}\n${v:-"x"}\n${v:-x}\n'
+
+    def big_string(self, last):
+        units = 100000 // len(self.UNIT) + 1000
+        text = self.UNIT * units + last
+        self.assertGreater(len(text), 100000)
+        return text
+
+    def test_a_long_string_with_many_differing_heredocs_is_answered_in_time_and_denied(self):
+        # The bash form closes the last heredoc at its second line and reads the
+        # launch after it; quote removal never closes it.
+        text = self.big_string('cat <<${v:-"x"}\n${v:-"x"}\npython3 -i')
+        self.assert_verdict("deny", "sh -c " + sq(text))
+
+    def test_the_same_long_string_stays_silent_when_the_launch_is_inside_the_last_body(self):
+        text = self.big_string('cat <<${v:-"x"}\npython3 -i')
+        self.assert_verdict("silent", "sh -c " + sq(text))
+
+
 class TestArithmeticRereadBudget(HookCopiesMixin, unittest.TestCase):
     """codex-guard-delim-subst-undecidable (VERIFICATION.md TS17, NFR1, TM-2): a
     command-position `((` that does not close with `))` is read again once as two
@@ -3744,6 +4204,80 @@ class TestDelimiterSubstitutionDocumentation(unittest.TestCase):
                         self.assertIn(marker, doc)
 
 
+class TestDelimiterReadingDocumentation(unittest.TestCase):
+    """codex-guard-delim-brace-quote-per-shell (task0001 AC-7, NFR4): the module
+    docstring states what decides the delimiter reading and what the readings
+    are, and the docstrings of the parser and of the module-level `parse` state
+    the delimiter rule and the combination."""
+
+    MODULE_MARKERS = {
+        "the delimiter reading per holder": (
+            "The delimiter reading is decided by the shell that directly holds the string",
+            "bash reads the bash form only",
+            "zsh and dash read the quote-removal form only",
+            "sh and ksh read both",
+            "the hook command itself reads the quote-removal form only",
+        ),
+        "the condition of the bash form": (
+            "when the delimiter word holds at least one `${ ... }` range and no quote unit "
+            "outside its ranges",
+            "a backslash-newline pair is no unit",
+        ),
+        "the dual reading denies when either reading denies": (
+            "the dual reading denies when either reading denies",
+            "no outcome of one reading suppresses the commands of the other",
+        ),
+        "the string counts once": (
+            "A string read under both readings counts once, at its length, toward NESTED_READ_LIMIT",
+            "a nested string counts each time the walk reaches it",
+        ),
+    }
+    PARSER_MARKERS = (
+        "delimiter rule",
+        "bash form",
+        "quote removal",
+    )
+    PARSE_MARKERS = (
+        "the delimiter reading",
+        "reading A",
+        "reading B",
+        "skipped only when every parser built for reading A",
+    )
+
+    def test_the_module_docstring_states_the_delimiter_reading(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = module_docstring(path)
+            for statement, markers in self.MODULE_MARKERS.items():
+                for marker in markers:
+                    with self.subTest(copy=plugin, statement=statement, marker=marker):
+                        self.assertIn(marker, doc)
+
+    def test_the_module_docstring_no_longer_reads_the_range_as_always_quote_removed(self):
+        stale = "a reading of its own for `${` and for `$'` and `$\"`, and only there. An unquoted `${` in it starts a range that ends at its close, and the range is quote-removed as the close is searched, in one forward scan, before the delimiter is registered."
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertNotIn(stale, module_docstring(path))
+
+    def test_the_parser_description_states_the_delimiter_rule(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path)
+            for marker in self.PARSER_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_description_of_parse_states_the_readings_and_their_combination(self):
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            parse = next(
+                node for node in tree.body
+                if isinstance(node, ast.FunctionDef) and node.name == "parse"
+            )
+            doc = " ".join((ast.get_docstring(parse) or "").split())
+            for marker in self.PARSE_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+
 def verdict_of(result):
     """Reduce a (code, stdout, stderr) result to deny, silent or error."""
     code, out, err = result
@@ -4017,6 +4551,20 @@ class TestStaticConstraints(unittest.TestCase):
         for plugin, path in HOOK_PATHS.items():
             with self.subTest(copy=plugin):
                 self.assertEqual(constraint_violations(path.read_text(encoding="utf-8")), [])
+
+    def test_the_test_module_imports_only_the_standard_library(self):
+        tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+        stdlib = stdlib_module_names()
+        for node in ast.walk(tree):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                self.assertFalse(node.level, "a relative import")
+                names = [node.module or ""]
+            for name in names:
+                with self.subTest(module=name):
+                    self.assertIn(name.split(".")[0], stdlib)
 
     def test_the_checker_flags_a_module_outside_the_standard_library(self):
         self.assertTrue(constraint_violations("import requests\n"))
