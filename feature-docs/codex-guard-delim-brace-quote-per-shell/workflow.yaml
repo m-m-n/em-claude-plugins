@@ -101,7 +101,7 @@ workflow:
   base_commit: cd03a6ee7810df7abab315da27cf1da50981b0d4
   completed_at_commit: bdcbd65f9b0e989d6f551d744a59616122b12aab
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -138,6 +138,16 @@ tasks:
     notes: 'batch retry consumed (implement.failed-task, 1/1). First attempt failed: cross-repo-write-guard denied writes to the task worktree because the orchestrator session cwd had moved into the integration worktree; cwd restored to the project root before retry.'
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR2 requires linear-time parsing; the diff adds per-shell rescans of ${ ... } delimiter ranges in a hook parser that reads attacker-shaped command strings
+    cross_validation: true
   rounds_completed: 0
   perspectives: {}
   residual_critical_high: 0
