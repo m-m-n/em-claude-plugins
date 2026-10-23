@@ -98,7 +98,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 3c4b9d0a53a9476b54412f20baae8c34d7456a60
 - id: implement
   status: pending
   base_commit: 5ba96e820704a806931e6b9b964dd4af3106fe5c
@@ -110,7 +111,20 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: 'Shared substitution skip: same-line heredoc, command-position arithmetic, word parentheses'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, NFR1, NFR2, NFR3, NFR4]
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -120,71 +134,71 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS1, TS2, TS3, TS12, TS14, TS15, TS16]
   FR2:
     title: コマンドの位置の (( は算術、)) で閉じなければサブシェル
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS4, TS5, TS6, TS11, TS17]
   FR3:
     title: 引数の語の中の括弧は語の文脈
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS7, TS8, TS9, TS10, TS13]
   FR4:
     title: 両コピーの同一性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS18]
   FR5:
     title: 回帰テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS19, TS20]
   FR6:
     title: docstring の追従
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS19, TS22]
   NFR1:
     title: 線形時間を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS17, TS19]
   NFR2:
     title: _skip_substitution の呼び出し構造の制約を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS19]
   NFR3:
     title: 判定できている形を新たに判定不能に変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS10, TS11, TS14, TS15, TS20]
   NFR4:
     title: plugin の version は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS21]
 batch:
   review_rework_count: 0
   verify_rework:
