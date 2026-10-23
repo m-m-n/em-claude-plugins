@@ -1,11 +1,11 @@
 schema_version: 1
 feature: worker-self-write-digest
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 32070b74a3a5ab16181b027b4826d87b1d1d5e3c
-last_input_digest: sha256:2de4c841d46fa13799835d6f9226b803b95d250db680e5563485577d4233a584
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:1545e9216aeddbf8bcbe2ae6f2265ce6122228163d9b7224d03bf80b3137897e
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -26,7 +26,7 @@ packets:
 answers:
   mechanism.self-write:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-24T08:58:00+09:00'
+    answered_at: '2026-10-24T08:54:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -40,7 +40,7 @@ answers:
     record_as_assumption: true
   testing.regression-form:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-24T08:58:00+09:00'
+    answered_at: '2026-10-24T08:54:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -53,7 +53,7 @@ answers:
     record_as_assumption: true
   scope.resume-reconcile:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-24T08:58:00+09:00'
+    answered_at: '2026-10-24T08:54:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -66,7 +66,7 @@ answers:
     record_as_assumption: true
   scope.workers:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-24T08:58:00+09:00'
+    answered_at: '2026-10-24T08:54:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -79,7 +79,7 @@ answers:
     record_as_assumption: true
   scope.task-md:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-24T08:58:00+09:00'
+    answered_at: '2026-10-24T08:54:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -91,7 +91,7 @@ answers:
     record_as_assumption: true
   design-step.decision:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-24T08:58:00+09:00'
+    answered_at: '2026-10-24T08:54:00+09:00'
     source: batch-decision-table
     answer_mode: single_select
     selected_option_ids:
@@ -105,6 +105,9 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:2de4c841d46fa13799835d6f9226b803b95d250db680e5563485577d4233a584
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:1545e9216aeddbf8bcbe2ae6f2265ce6122228163d9b7224d03bf80b3137897e
 artifacts: []
 patches: []
 progress_fingerprint: null
