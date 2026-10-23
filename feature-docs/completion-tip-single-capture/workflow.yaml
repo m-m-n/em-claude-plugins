@@ -111,7 +111,7 @@ workflow:
   base_commit: d8e6e403851563cfd9b632423bac76851780189b
   completed_at_commit: 49aab3d2e6d85f08b1be2d2acdf92dc3fc400b15
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -140,8 +140,15 @@ tasks:
     status: merged
     branch: em-workflow/completion-tip-single-capture/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: Step I.3 step 3 writes completed_at_commit from $COMPLETION_TIP
