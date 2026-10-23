@@ -1,0 +1,17 @@
+schema_version: 1
+feature: artifact-digest-empty-targets
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 13feabaa7c4df9f22f0987da11e40317e68b8c58
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
