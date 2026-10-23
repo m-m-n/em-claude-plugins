@@ -1,0 +1,20 @@
+schema_version: 1
+feature: worker-self-write-digest
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 32070b74a3a5ab16181b027b4826d87b1d1d5e3c
+last_input_digest: sha256:2de4c841d46fa13799835d6f9226b803b95d250db680e5563485577d4233a584
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:2de4c841d46fa13799835d6f9226b803b95d250db680e5563485577d4233a584
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
