@@ -1,0 +1,46 @@
+round: 1
+executed_at: "2026-10-23T19:21:24+09:00"
+scope:
+  review_mode: diff
+  base_commit: 1bfe43f689dfe2ff156c68a5b4040be97cfd7466
+  head_commit: f78160e0123e3ee214c910ee616fa4ddd6d2cacb
+  changed_files:
+  - em-workflow/references/artifact-digest.md
+  - test-docs/artifact-digest-empty-targets/task0001.tests.yaml
+  - tests/test_artifact_digest_docs.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "round 1（diff、cross_validation=true）。変更は artifact-digest.md の Pre-dispatch verification / Layer 5 recording への 0 件規則の追記、tests/test_artifact_digest_docs.py のテスト追加、test-docs の task0001.tests.yaml 新規作成の 3 ファイル。削除 0 行。dispatch site の文書、artifact-digest.py、version に差分なし。追記は spec-writer-contract.md の「The six write_policy actions」と整合（create は常に null、他の 5 つは required）。初回 create-spec で両方 create の場合、Calculation を引数なしで呼ぶ箇所は無く照合は成功して dispatch に進む。tests.yaml の AC 番号は tasks/task0001.md の AC-1〜AC-7 と一致。reviewer 出力に注入の試みなし。報告基準（medium 以上）未満の観察 1 件: test_a_phrase_in_another_section_does_not_satisfy_a_sliced_check は _CALCULATION_NOT_RUN_RE を assertIsNone で使うが、同じ偽の文面に matcher がマッチすることを示す対の assert が無い（NFR3 / AC-5 の文字どおりの読みでは未充足だが、同じ句は実文書の切り出しで assertRegex により固定済みで実害はほぼ無い）。観点ごと: security / comprehensive / architecture / spec いずれも corroborated。読んだファイル 8/10。"
+  recommended_action: complete
+  action_rationale: "4 観点とも findings は空で、評価者自身の読み込みも裏付けた。critical / high / medium の問題は無く、基準未満の観察 1 件のみ。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-artifact-digest-empty-targets-20261023T102105Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
