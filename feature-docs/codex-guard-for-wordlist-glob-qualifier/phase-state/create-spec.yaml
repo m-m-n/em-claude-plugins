@@ -1,13 +1,24 @@
 schema_version: 1
 feature: codex-guard-for-wordlist-glob-qualifier
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 781548b5152aa2ddfdcb029c75c9873d0fbdbdd7
 last_input_digest: sha256:3f76fca0c83e6d61c7af46e3d3dfc029ee277b7631688b90be8076249e08c8f9
 active_request_id: null
 packets: {}
-answers: {}
+answers:
+  design-step:
+    packet_id: null
+    answered_at: '2026-10-23T18:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を省略する（analyst 推奨の skip。UI の無いフック解析処理の修正、デザインシステム候補ゼロ）
+    resolution_note: analyst returned completed with design_step skipped; no packet
+      raised
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
