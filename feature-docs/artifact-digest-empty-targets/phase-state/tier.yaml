@@ -1,0 +1,68 @@
+schema_version: 2
+feature: artifact-digest-empty-targets
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.95
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-10-23T18:33:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.96
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-10-23T18:38:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/artifact-digest.md
+  - tests/test_artifact_digest_docs.py
+  changed_lines_approx: 30
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/references/artifact-digest.md:96,116 に0件時の規則がなく、:101,128 は終了コード2を失敗扱いする。em-workflow/scripts/artifact-digest.py:299-301
+    の無引数実行は終了コード2で再現した。tests/test_artifact_digest_docs.py:390-479 は両方の0件を検証しておらず、既存103件は成功した。呼出元・依存数は同文書:167-172
+    の4文書と計算スクリプト1本を計上し、新規関数数は実装側を対象とした。変更行数は概算。
+decided_at: '2026-10-23T18:39:00+09:00'

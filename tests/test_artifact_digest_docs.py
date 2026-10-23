@@ -1122,5 +1122,221 @@ class TestCalculationIntermediateSymlink(unittest.TestCase):
             )
 
 
+# ---------------------------------------------------------------------------
+# artifact-digest-empty-targets task0001 (FR1, FR2, FR4, NFR3)
+#
+# `Pre-dispatch verification` says what happens when zero targets require an
+# `expect_digest`; `Layer 5 recording` says what happens when
+# `written_artifacts` has zero entries. In both cases `Calculation` is not run,
+# because a call with no argument exits with code 2 and the owner's procedure
+# reads that as a mismatch or a failure.
+#
+# Each section is cut out by its heading and whitespace-normalized; the tests
+# check that key phrases are present and where they sit relative to the
+# `Calculation` step, never a whole sentence or a line position. Existing test
+# methods above stay unchanged.
+# ---------------------------------------------------------------------------
+
+# "zero ... require `expect_digest`": the count is keyed on the requirement the
+# write-policy model assigns to an action, not on the value of a field.
+_ZERO_TARGETS_RE = r"\bzero\b.{0,60}\brequires?\s+`expect_digest`"
+# "`written_artifacts` ... zero entries".
+_ZERO_ARTIFACTS_RE = r"`written_artifacts`.{0,40}\bzero entries\b"
+_CALCULATION_NOT_RUN_RE = r"`Calculation` is not run"
+_VERIFICATION_SUCCEEDS_RE = r"\bverification succeeds\b"
+_NOT_A_MISMATCH_RE = r"\bnot a mismatch\b"
+_NOTHING_RECORDED_RE = r"\bnothing is recorded\b"
+# The existing step each zero-count rule must come ahead of.
+_VERIFY_CALCULATION_STEP_RE = r"runs `Calculation` over"
+_RECORD_CALCULATION_STEP_RE = r"one `Calculation` call over every `written_artifacts` path"
+# How far after the zero-count phrase its consequences must appear.
+_RULE_WINDOW = 400
+
+
+def _precedes(flat, first_pattern, second_pattern):
+    """True when both patterns match and the first match starts before the
+    second one."""
+    first = re.search(first_pattern, flat)
+    second = re.search(second_pattern, flat)
+    return bool(first and second and first.start() < second.start())
+
+
+def _follows_within(flat, anchor_pattern, later_pattern, window=_RULE_WINDOW):
+    """True when `later_pattern` matches within `window` characters after the
+    start of the first match of `anchor_pattern`."""
+    anchor = re.search(anchor_pattern, flat)
+    if not anchor:
+        return False
+    return bool(
+        re.search(later_pattern, flat[anchor.start():anchor.start() + window])
+    )
+
+
+class TestEmptyTargetsMatchersFireOnForgedText(unittest.TestCase):
+    """The matchers below fire on crafted text and stay quiet on text that
+    does not state the rule."""
+
+    def test_zero_targets_matcher_requires_the_expect_digest_requirement(self):
+        for forged in (
+            "When zero targets require `expect_digest`, nothing is checked.",
+            "When zero `write_policy.targets` entries require `expect_digest`, "
+            "nothing is checked.",
+        ):
+            with self.subTest(forged=forged):
+                self.assertTrue(re.search(_ZERO_TARGETS_RE, _norm(forged)), forged)
+
+    def test_zero_targets_matcher_ignores_wording_about_null_values(self):
+        for forged in (
+            "When every `expect_digest` is null, nothing is checked.",
+            "When no target carries a non-null `expect_digest`, nothing is checked.",
+            "A target whose action requires `expect_digest` is checked.",
+        ):
+            with self.subTest(forged=forged):
+                self.assertIsNone(re.search(_ZERO_TARGETS_RE, _norm(forged)), forged)
+
+    def test_zero_artifacts_matcher_is_tied_to_written_artifacts(self):
+        self.assertTrue(
+            re.search(
+                _ZERO_ARTIFACTS_RE,
+                "when the result's `written_artifacts` has zero entries,",
+            )
+        )
+        self.assertIsNone(
+            re.search(_ZERO_ARTIFACTS_RE, "when the result has zero entries,")
+        )
+
+    def test_precedes_helper_checks_order_and_presence(self):
+        self.assertTrue(_precedes("a then b", r"a", r"b"))
+        self.assertFalse(_precedes("b then a", r"a", r"b"))
+        self.assertFalse(_precedes("only a", r"a", r"b"))
+        self.assertFalse(_precedes("only b", r"a", r"b"))
+
+    def test_follows_within_helper_bounds_the_window(self):
+        self.assertTrue(_follows_within("a" + " " * 5 + "b", r"a", r"b", window=10))
+        self.assertFalse(_follows_within("a" + " " * 50 + "b", r"a", r"b", window=10))
+        self.assertFalse(_follows_within("b only", r"a", r"b", window=10))
+
+    def test_a_phrase_in_another_section_does_not_satisfy_a_sliced_check(self):
+        forged = (
+            "## Pre-dispatch verification\n\nNothing about zero here.\n\n"
+            "## Layer 5 recording\n\nWhen zero targets require `expect_digest`,\n"
+            "`Calculation` is not run.\n"
+        )
+        sliced = _norm(_section(forged, "Pre-dispatch verification", level=2))
+        self.assertIsNone(re.search(_ZERO_TARGETS_RE, sliced))
+        self.assertIsNone(re.search(_CALCULATION_NOT_RUN_RE, sliced))
+
+
+class TestPreDispatchZeroTargets(unittest.TestCase):
+    """AC-1 (FR1, TM-1): the zero-target rule of `Pre-dispatch verification`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _norm(
+            _section(_read(OWNER_PATH), "Pre-dispatch verification", level=2)
+        )
+
+    def test_ac1_zero_count_phrase_is_tied_to_the_expect_digest_requirement(self):
+        self.assertRegex(self.section, _ZERO_TARGETS_RE)
+
+    def test_ac1_states_that_calculation_is_not_run(self):
+        self.assertRegex(self.section, _CALCULATION_NOT_RUN_RE)
+
+    def test_ac1_states_that_the_verification_succeeds_and_is_not_a_mismatch(self):
+        self.assertRegex(self.section, _VERIFICATION_SUCCEEDS_RE)
+        self.assertRegex(self.section, _NOT_A_MISMATCH_RE)
+
+    def test_ac1_the_consequences_sit_with_the_zero_count_phrase(self):
+        for consequence in (
+            _CALCULATION_NOT_RUN_RE,
+            _VERIFICATION_SUCCEEDS_RE,
+            _NOT_A_MISMATCH_RE,
+        ):
+            with self.subTest(consequence=consequence):
+                self.assertTrue(
+                    _follows_within(self.section, _ZERO_TARGETS_RE, consequence),
+                    consequence,
+                )
+
+    def test_ac1_the_dispatch_proceeds_in_the_zero_case(self):
+        self.assertTrue(
+            _follows_within(
+                self.section, _ZERO_TARGETS_RE, r"\bdispatch proceeds\b"
+            )
+        )
+
+    def test_ac1_the_zero_rule_comes_ahead_of_the_calculation_step(self):
+        self.assertTrue(
+            _precedes(self.section, _ZERO_TARGETS_RE, _VERIFY_CALCULATION_STEP_RE),
+            self.section,
+        )
+
+    def test_ac1_an_empty_list_and_an_all_create_list_both_count_as_zero(self):
+        self.assertRegex(self.section, r"empty `targets` list")
+        self.assertRegex(self.section, r"no entry requires `expect_digest`")
+        self.assertRegex(self.section, r"all `create`")
+
+    def test_ac1_one_or_more_targets_keep_the_existing_procedure(self):
+        self.assertRegex(
+            self.section,
+            r"one or more targets require `expect_digest`.{0,120}unchanged",
+        )
+
+    def test_ac1_the_existing_mismatch_conditions_are_kept(self):
+        self.assertRegex(self.section, r"`sha256` differs from its `expect_digest`")
+        self.assertRegex(self.section, r"carries an `error`")
+        self.assertRegex(self.section, r"quoting rule keeps out of a command")
+        self.assertRegex(self.section, r"exit code of `2`")
+
+
+class TestLayer5ZeroArtifacts(unittest.TestCase):
+    """AC-2 (FR2, TM-2): the zero-artifact rule of `Layer 5 recording`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _norm(_section(_read(OWNER_PATH), "Layer 5 recording", level=2))
+
+    def test_ac2_zero_count_phrase_is_tied_to_written_artifacts(self):
+        self.assertRegex(self.section, _ZERO_ARTIFACTS_RE)
+
+    def test_ac2_states_that_calculation_is_not_run(self):
+        self.assertRegex(self.section, _CALCULATION_NOT_RUN_RE)
+
+    def test_ac2_states_that_nothing_is_recorded(self):
+        self.assertRegex(self.section, _NOTHING_RECORDED_RE)
+
+    def test_ac2_the_consequences_sit_with_the_zero_count_phrase(self):
+        for consequence in (_CALCULATION_NOT_RUN_RE, _NOTHING_RECORDED_RE):
+            with self.subTest(consequence=consequence):
+                self.assertTrue(
+                    _follows_within(self.section, _ZERO_ARTIFACTS_RE, consequence),
+                    consequence,
+                )
+
+    def test_ac2_an_empty_completed_result_is_left_to_another_layers_rules(self):
+        self.assertRegex(self.section, r"empty `completed` result is acceptable")
+        self.assertRegex(self.section, r"not decided here")
+        self.assertRegex(self.section, r"rules of the layer that handles")
+        self.assertTrue(
+            _follows_within(
+                self.section, _ZERO_ARTIFACTS_RE, r"not decided here", window=600
+            )
+        )
+
+    def test_ac2_the_zero_rule_comes_ahead_of_the_calculation_step(self):
+        self.assertTrue(
+            _precedes(self.section, _ZERO_ARTIFACTS_RE, _RECORD_CALCULATION_STEP_RE),
+            self.section,
+        )
+
+    def test_ac2_one_or_more_entries_keep_the_existing_procedure(self):
+        self.assertRegex(
+            self.section, r"one or more entries.{0,160}unchanged"
+        )
+        self.assertRegex(self.section, _RECORD_CALCULATION_STEP_RE)
+        self.assertRegex(self.section, r"error element\b.{0,120}fails layer 5")
+        self.assertRegex(self.section, r"an exit code of `2`")
+
+
 if __name__ == "__main__":
     unittest.main()

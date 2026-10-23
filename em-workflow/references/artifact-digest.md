@@ -93,6 +93,16 @@ Targets: every `write_policy.targets` entry whose action requires
 same calculation, run at action-decision time ("How the orchestrator chooses
 each target's action before dispatch" in the same contract).
 
+Zero targets: the orchestrator counts the targets first, by the requirement
+that `references/contracts/spec-writer-contract.md` ("The six `write_policy`
+actions") assigns to each action. When zero targets require `expect_digest`,
+`Calculation` is not run, the verification succeeds (it is not a mismatch),
+and the dispatch proceeds. The zero case covers an empty `targets` list and
+a `targets` list in which no entry requires `expect_digest`, for example one
+whose entries are all `create`. When one or more targets require
+`expect_digest`, the procedure below and every mismatch condition apply
+unchanged.
+
 The orchestrator runs `Calculation` over those targets and compares each
 element's `sha256` with that target's `expect_digest`.
 
@@ -112,6 +122,13 @@ change made in that window.
 
 When: after layer 4 (scope verification) passes for the dispatch's
 `completed` result.
+
+Zero artifacts: when the result's `written_artifacts` has zero entries,
+`Calculation` is not run and nothing is recorded. Whether an empty
+`completed` result is acceptable is not decided here; the rules of the layer
+that handles that result decide it. When the result has one or more entries,
+the procedure below and every artifact-validation failure condition apply
+unchanged.
 
 How: one `Calculation` call over every `written_artifacts` path. The
 orchestrator records one `{path, sha256, produced_by}` entry per path into

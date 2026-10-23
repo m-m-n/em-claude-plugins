@@ -1,0 +1,41 @@
+schema_version: 1
+feature: artifact-digest-empty-targets
+records:
+- question_id: create-spec.zero-target-pre-dispatch-verification
+  packet_id: null
+  answered_at: '2026-10-23T18:44:25+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'A: expect_digest を要する target が 0 件なので Calculation を呼ばずに照合成功として spec-writer
+    を dispatch する'
+  normalized_answer: zero expect_digest targets -> skip Calculation, verification
+    succeeds
+  resolution_note: 'gate: create-spec spec-writer pre-dispatch verification (artifact-digest.md
+    Pre-dispatch verification, no gate_id; this feature fixes exactly this gap). Options:
+    A) skip Calculation and succeed (task expected behavior); B) follow current text
+    literally, exit 2 -> mismatch -> stuck; C) calculate on the absent SPEC.md ->
+    error element -> mismatch. Choice: A. codex_consulted: true (Codex chose A: create
+    targets carry expect_digest null and are out of scope per spec-writer-contract.md:71
+    / artifact-digest.md:90; B/C cannot progress; create still blocks on an existing
+    file). Opus escalation: not run. Risk noted by Codex: the current text has no
+    explicit skip rule, so this is a run-local interpretation recorded here, not in
+    SPEC.md.'
+- question_id: create-plan.zero-target-pre-dispatch-verification
+  packet_id: null
+  answered_at: '2026-10-23T19:05:00+09:00'
+  source: batch-prior-resolution
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'A: implementation-planner の write_policy.targets は全て create（expect_digest null）で、照合対象が 0 件。Calculation を呼ばずに照合成功として dispatch する'
+  normalized_answer: zero expect_digest targets -> skip Calculation, verification succeeds
+  resolution_note: 'gate: create-plan planner pre-dispatch verification (artifact-digest.md Pre-dispatch verification, no gate_id). Same situation and same options as create-spec.zero-target-pre-dispatch-verification above; that record''s Codex-backed choice A is reused unchanged. codex_consulted: false (reuse of the earlier consultation for the identical case). Opus escalation: not run.'
+- question_id: create-plan.return-digest-self-inclusion
+  packet_id: null
+  answered_at: '2026-10-23T19:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'A: 返却時の input_digest 再計算で、dispatch 時に存在せず create で許可され written_artifacts に列挙された planner 自身の新規成果物 4 件だけを除外して比較し、stale ではないと判定する'
+  normalized_answer: exclude worker's own newly created written_artifacts from return-time recomputation -> not stale
+  resolution_note: 'gate: create-plan return-time staleness check (worker-envelope.md Rule R1, no gate_id). The recomputed digest differed only because IMPLEMENTATION.md / VERIFICATION.md / THREAT-MODEL.md / tasks/task0001.md (planner-contract.md digest_inputs "existing outputs") now exist; workflow_blob, value_inputs, answers_digest, write_policy_digest and all other digest_inputs were identical, and validate-worker-output.py --dry-run-apply passed. Options: A) exclude only the worker''s own newly created written_artifacts and proceed; B) treat as stale and re-dispatch (create would now block -> loop risk); C) other. Choice: A. codex_consulted: true (Codex chose A, limited to files absent at dispatch, permitted by create, and listed in written_artifacts; not to be generalized to pre-existing inputs or re-plans). Opus escalation: not run. Risk: Rule R1 does not state this exclusion explicitly; recorded here as a run-local interpretation.'
