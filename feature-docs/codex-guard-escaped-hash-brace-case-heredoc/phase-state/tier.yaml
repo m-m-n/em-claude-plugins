@@ -1,0 +1,75 @@
+schema_version: 2
+feature: codex-guard-escaped-hash-brace-case-heredoc
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.34
+    confidence: 0.66
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.66
+      '2': 0.34
+      '3': 0.0
+  observed_at: '2026-10-24T01:24:37+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.48
+    confidence: 0.52
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.52
+      '2': 0.48
+      '3': 0.0
+  observed_at: '2026-10-24T01:28:58+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 120
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 7
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: '調査対象は main で、調査前後の git status に変更はなかった。対象コマンド自体は実行せず、両コピーを python3 -B
+    で起動し、JSONを標準入力へ渡した。手順2の zsh -c ''echo "$(for x (<(: \ #x)) { :; })"; python3 -i''、手順3の
+    zsh -c ''echo "$(: \ #x)"; python3 -i''、手順4の zsh -c ''echo "$(for x (<(case x
+    { x) :;; })) { :; })"; python3 -i'' は、それぞれ両コピーで stdout=""、stderr=""、終了コード0だった。追加確認した、語一覧内と素の置換内の各々に
+    a＋バックスラッシュ＋改行＋#x を含む2入力、および cat <<E の本文と終端行を含む2入力も同じ結果だった。比較用の python3 -i は両コピーで
+    permissionDecision="deny" を出力した。両コピーはバイト単位で同一だった。
+
+    現行の _skip_substitution は2336行目から始まり、3004行目では s[j - 1] によってコメント開始を判定する。2778行目には
+    case without in、2695行目には heredoc in a substitution を理由とする例外がある。語一覧の開始位置を状態で管理すると説明する文章と、直前文字によるコメント判定が併存している。
+
+    既存CASESは905例で、再現3入力の完全一致はなかった。類似する波括弧形式のcaseとcase内ヒアドキュメントの例は silent を期待している。共通表を両コピーへ流す仕組み、コピーの同一性検査、説明文の一致検査が既にある。追加7例は今回確認した再現3入力と派生4入力に対応する概算。変更120行は両コピーの既存分岐・説明と共通テストの更新を対象とする暫定概算で、caseとヒアドキュメントの対応方式は未確定。既存関数内と既存テストファイルを更新する想定では、新関数・新ファイル・新依存を追加する必要はない。直接の呼出元メソッドは
+    _read_quoted_unit の1個、直接呼び出すメソッドは _empty_parens_end、_keyword_end、_read_command_word
+    の3個で、合計4個と数えた。入力JSONと出力JSONの形式を変える必要は確認されず、修正対象は拒否判定の動作になる。ファイルは変更・作成・削除していない。'
+decided_at: '2026-10-24T01:29:10+09:00'
