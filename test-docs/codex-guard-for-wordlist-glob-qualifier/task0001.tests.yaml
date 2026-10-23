@@ -1,0 +1,71 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests: 943/943 and Ran 10876 tests, OK (skipped=1), before any edit
+final_failures: []             # actually re-executed after the implementation and this record: same command, 943/943 and Ran 10878 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+    red_confirmed: true
+    red_reason: >-
+      With the two reproduction rows (a) and (b) added to CASES and the guard unchanged,
+      test_cases_run_against_both_copies errored on both rows for both copies (empty standard
+      output, JSONDecodeError, where a deny object was expected): the # right after the nested
+      ( of *(#qN) started a comment that ran to the end of the input, so the chunk was
+      undecidable and the python3 -i after the substitution was not judged. They pass after the
+      implementation. test_cases_are_unique passed before and after (the two commands are
+      distinct); it is a pin on the table and was not observed red.
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: >-
+      With the row for a nested entry holding a blank-preceded # (a(b #c)) added and the guard
+      unchanged, the test errored for both copies (empty standard output where a deny object
+      was expected): the # after the blank started a comment with no newline before the end of
+      the input, so the chunk was undecidable. It passes after the implementation.
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: >-
+      The existing rows TS1, TS5, TS6, TS7, TS8 and TS28 are unchanged and passed before the
+      change; they are the regression guard for the outermost entry's comment reading and no
+      state exists in which they are red on this code base. Not observed red.
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts26_commented_lines_in_a_for_word_list_are_read_in_time
+    red_confirmed: false
+    red_reason: >-
+      The existing timing test is unchanged and passed before the change; the added decision is
+      one constant-time look at the entry beneath the top of the stack, so it passes after the
+      change as well. A dedicated new module is out of scope; the existing test detects a
+      non-linear reading of commented word-list lines, and no red state occurred for this
+      change.
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      The existing byte-identity test passed before the change and passes after it. It was not
+      run between the edit of the first copy and the copy to the second, so it was not observed
+      red; a dedicated new module is out of scope.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_where_a_hash_starts_a_comment_in_a_for_word_list
+    red_confirmed: true
+    red_reason: >-
+      With the new test added and the docstrings unchanged, it failed for both copies on the
+      two markers ("In the word list a `#` starts a comment only in the outermost entry" and
+      "In a nested entry every `#` is a word character" not found) and on the stale sentence
+      ("A `#` whose previous character is a space ... the same start condition as in a command
+      list." unexpectedly found). It passes after the docstrings were updated; the existing
+      documentation tests keep passing.
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the module held failing tests: test_cases_run_against_both_copies
+      (three new rows, both copies) and the new docstring test (both copies), observed by
+      running those tests. The whole module passes after the implementation (Ran 170 tests, OK).
