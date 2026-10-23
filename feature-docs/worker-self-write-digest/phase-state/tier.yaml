@@ -1,0 +1,72 @@
+schema_version: 2
+feature: worker-self-write-digest
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.56
+    confidence: 0.55
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.44
+      '2': 0.55
+      '3': 0.01
+  observed_at: '2026-10-24T08:50:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.9
+    confidence: 0.9
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.1
+      '2': 0.9
+      '3': 0.0
+  observed_at: '2026-10-24T09:05:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/references/contracts/designer-contract.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - tests/test_worker_contract_docs.py
+  - tests/test_worker_contracts_planning.py
+  changed_lines_approx: 100
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/validate-worker-output.py
+  work_still_required: true
+  evidence: worker-envelope.md:175-186 は返却後の現入力からの再計算と不一致時の stale 判定を規定し、許可された自己更新を区別していない。designer-contract.md:63-69,165-168、planner-contract.md:44-50,142-144、rework-planner-contract.md:89-90,129-133
+    では読み書き対象が重複する。既存テストは R1 の文言、正規化、一般的な stale 拒否を検証しており、自己更新を受理する回帰テストは確認できなかった（test_worker_contract_docs.py:823、test_check_plugin_invariants.py:652、test_validate_worker_output.py:533）。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 4
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 5
+  changes_external_contract: true
+  changes_behavior: true
+decided_at: '2026-10-24T09:06:00+09:00'
