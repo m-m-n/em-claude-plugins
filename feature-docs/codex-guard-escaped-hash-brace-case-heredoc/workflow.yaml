@@ -1,0 +1,219 @@
+schema_version: 1
+feature: codex-guard-escaped-hash-brace-case-heredoc
+created: '2026-10-24'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: コマンド列の読みで、エスケープした空白の後の # と波括弧形式の case・ヒアドキュメントが判定不能になり、語一覧のプロセス置換の中でも python3 -i を見逃す
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+
+  feature `codex-guard-procsub-in-wordlist` の review round 1 で出た指摘（security 2 件・architecture 1 件。評価で low に下げられ、記録上は findings に残っていない）。
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）のコマンド列 p の読みでは、次の形が判定不能（`_Undecidable`）になり、後ろの対話コマンドを検査しない。同 feature で zsh の `for name (words)` の語一覧の語の先頭のプロセス置換を p として読むようにしたため、語一覧の中でもこの形が起きるようになった。素の `$(...)` では変更前から同じ。
+
+  - `#` のコメント判定が直前 1 文字（`s[j - 1]`）だけを見るため、エスケープした空白（`\ `）や継続行の後の `#` もコメントの始まりと読む。改行が無いと判定不能になる
+  - zsh の波括弧形式の `case x { ... }` は `case without in`、ヒアドキュメントは `heredoc in a substitution` として判定不能になる
+
+  あわせて、w 分岐のコメントと docstring の「The start of a word is a state kept while reading and never looked up backward」が、`#` の判定まで状態で決めているように読める（実際は直前 1 文字）。
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に次を設定した PreToolUse(Bash) の JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+  2. `zsh -c 'echo "$(for x (<(: \ #x)) { :; })"; python3 -i'` → 無出力（同 feature の変更前は deny）
+  3. `zsh -c 'echo "$(: \ #x)"; python3 -i'` → 無出力（変更前から同じ）
+  4. `zsh -c 'echo "$(for x (<(case x { x) :;; })) { :; })"; python3 -i'` → 無出力（同 feature の変更前は deny）
+
+  ## 期待する挙動 (必須)
+
+  - p の中で、エスケープした空白や継続行の後の `#` を語の文字として読み、後ろの `python3 -i` を deny する
+  - 波括弧形式の case とヒアドキュメントの扱いは、読めるようにするか、判定不能のときも後ろの対話コマンドを検査するかを決める
+  - docstring とコメントを実際の `#` の判定に合わせる
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に再現入力を追加し、両コピーに流す
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:2633`（語一覧のプロセス置換で積む p）、`:2663`〜`:2669`（`#` の判定）、`:2394`（語の始まりの判定）、`:2469`（case without in）、`:2677`（heredoc in a substitution）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-procsub-in-wordlist/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-procsub-in-wordlist/integration`）の `evaluation.round_summary`
+
+  ## 実害・発生条件 (任意)
+
+  `$( )` の中のプロセス置換やコマンド列に、エスケープした空白の後の `#`、波括弧形式の case、ヒアドキュメントを書いた場合だけ。拒否漏れ（fail-open）で無人実行が入力待ちで止まりうる。
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断された選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-escaped-hash-brace-case-heredoc/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.66
+      '2': 0.34
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.52
+      '2': 0.48
+      '3': 0.0
+  at: '2026-10-24T01:29:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 9ede45b3c56013ed688b3e79c5a142aab779b92d
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'hook parser bug fix with no UI, zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 5c200f6281623d3948db1a3c6bdb7650ec8b18a3
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 'エスケープした文字と継続行の後の # の判定'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 波括弧形式の case の開始
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 波括弧形式の case の閉じ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 波括弧形式の case の項目本体の { } 群の深さ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 算術コマンドの読み直しでの状態の復元
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: ヒアドキュメントは今のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: docstring とコメントの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: テストの追加と更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: 両コピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 線形の読み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 既存の判定の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 置換の中身は判定しない契約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version を触らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
