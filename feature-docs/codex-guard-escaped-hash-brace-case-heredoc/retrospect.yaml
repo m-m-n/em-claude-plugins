@@ -1,0 +1,40 @@
+feature: codex-guard-escaped-hash-brace-case-heredoc
+collected_at: "2026-10-24T07:10:00+09:00"
+session_ids: [01a16acb-3417-7468-977d-2a201ac75053]
+signals:
+  review_critical_high:
+    - stable_id: "07510aa3f756ccef"
+      category: security
+      file: em-workflow/scripts/codex-hook-interactive-guard.py
+      title: "コメントがバックスラッシュで終わる行の次の行頭の # を語の文字と読み、基底では拒否していた起動を見逃す（回帰）"
+      resolution: "rework (task0003, review round 1 auto-rework); round 1 record: unresolved"
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "NFR1 requires linear-time reading; the diff adds per-character state to the substitution scanner"
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code score 1.48 (bucket 1: 0.52 / bucket 2: 0.48) を評価器の閾値表で full と判定"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.34, confidence: 0.66}
+        observed_at: "2026-10-24T01:24:37+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.48, confidence: 0.52}
+        observed_at: "2026-10-24T01:28:58+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 120
+      added_test_cases_approx: 7
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の high（07510aa3f756ccef）は evaluator のみが根拠の指摘だったため batch auto-fix の対象外となり、rework タスク（task0003）で解消した"
+  - "medium の残件 3 件（2c1d28dc62936d1a / a20206a8e4ee3391 / e7001c69deb02603）はいずれも波括弧形式の本体の深さ計数に関するもので、別タスクとして起票済み"
