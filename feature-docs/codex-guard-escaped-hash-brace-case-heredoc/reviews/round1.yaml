@@ -1,0 +1,86 @@
+round: 1
+executed_at: "2026-10-24T04:12:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5c200f6281623d3948db1a3c6bdb7650ec8b18a3
+  head_commit: a036a0d9c9d3a9b696d1fd43f7285585a33e9126
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-escaped-hash-brace-case-heredoc/task0001.tests.yaml
+  - test-docs/codex-guard-escaped-hash-brace-case-heredoc/task0002.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+  - perspective: performance
+    reason: "NFR1 requires linear-time reading; the diff adds per-character state to the substitution scanner"
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 07510aa3f756ccef
+  severity: high
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 3279
+  title: "コメントがバックスラッシュで終わる行の次の行頭の # を語の文字と読み、基底では拒否していた起動を見逃す（回帰）"
+  description: |-
+    `_hash_starts_comment`（3250-3282 行、em-review のコピーも同一）は、`#` の直前の改行の前のバックスラッシュの並びが奇数なら、その改行を継続行として飛ばしてさらに前を見る（3279-3281 行）。しかしその改行がコメントを終える改行のとき、バックスラッシュはコメントの中の文字なので、改行は普通の改行になる。bash・zsh・dash ともコメントの中のバックスラッシュと改行は継続行にならない。この読み自身もコメントを `j = s.find("\n", j)` で最初の改行までとして扱っている。このため `: a #b` + バックスラッシュ + 改行の次の行頭の `#` は、本当はコメントの始まりなのに語の文字と判定され、その行の `'`・`"`・`)`・`$(` などがコードとして読まれる。基底（5c200f62）は `s[j-1]` が改行ならコメントと読んでいたので、この形を正しく読めていた。例として `echo "$(: a #b` + バックスラッシュ + 改行 + `# don't` + 改行 + `)"; python3 -i` がある。基底では deny だったが、変更後は `don't` の `'` が閉じない単引用符を開いて _Undecidable("quote") で silent になり、後ろの `python3 -i` を拒否しない（fail-open。この機能が塞ごうとしている TM-1 と同じ種類の見逃し）。行に `)` があると、置換の閉じ位置を早い位置に確定してしまう。判定する場所はすべてこの関数を共有しているので、同じ読み違いが p/8 の語の始まりの判定（2787 行）、一般のコメント分岐（3155 行）、case の待ちの段 1・3・4・5・7（2897 行）、パターン（3048 行）、語一覧 w の最も外側の項目（3149 行）で起きる。既存と追加の CASES にはこの形が無い（追加された『エスケープしたバックスラッシュの後の改行』の行は偶数の並びだけを扱っている）。
+  suggestion: |-
+    直前のコメントを終えた改行の位置（各コメント分岐の `s.find("\n", j)` の結果）を読みの状態として 1 つ持つ。`_hash_starts_comment` で k がその位置の改行に着いたら、バックスラッシュの並びに関わらずエスケープされていない改行として True を返す。仕事の増分は 1 文字あたり定数なので NFR1 は保たれる。位置は絶対値なので、算術の読み直しの後もそのまま使える。docstring の『It keeps no state』『The decision carries no state through the reading』の文と、それを固定する文言テストも合わせて直す。CASES に deny の行を足す。`echo "$(: a #b\\\n# don't\n)"; python3 -i` と、項目本体・パターン位置（段 4）・段 7（規則 3）・語一覧 w の最も外側の項目での同じ形。両コピーはバイト単位で同一に保つ。
+  reproduction: |-
+    入力は次の文字を順に並べた 1 つのコマンド文字列: `echo "$(: a #b`、バックスラッシュ 1 個、改行、`# don't`、改行、`)"; python3 -i`。(1) 3505 行の二重引用符の読み（_read_quoted_unit）が 2319 行で `$(` を _skip_substitution に渡す。(2) `: a ` の後の `#b` は直前が空白なのでコメントになり、3161 行で j は直後の改行に移る。(3) 改行で at_command が真になる（3189 行）。(4) 行頭の `#` で 2787 行が _hash_starts_comment(j) を呼ぶ。k=j-1 は改行で、その前のバックスラッシュの並びは 1 個（奇数）なので 3279 行で継続行として扱い、k -= 2 で `b` に着いて False を返す。`#` は語の始まりになる。(5) ` don` の後の `'` は 2999-3002 行で閉じの `'` を探すが、残り（`t`、改行、`)"; python3 -i`）に無いので _Undecidable("quote") になる。arith は空なのでそのまま上がり、判定不能で出力なし（silent）になる。基底では (4) の `#` は `s[j-1]` が改行なのでコメントになり、`)` で置換が閉じて `; python3 -i` を deny していた。シェル（bash・zsh・dash）では `#b` と行頭の `# don't` はどちらもコメントで、`python3 -i` は実行される。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: ["claude:evaluator"]
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: "batch: evaluator-only source is skipped in auto-fix (review.auto-fix-judgment untrusted-origin rule); orchestrator reproduced it (base deny, head silent); routed to batch review rework"
+- stable_id: 2c1d28dc62936d1a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 2838
+  title: "波括弧形式の case の本体で、zsh の always の後の { を深さに数えず、always 群の } で文を早く閉じる"
+  description: |-
+    波括弧形式の深さは、この読みのコマンド位置で読んだ単独の `{`（2838-2849 行）と、`function {` の `{`（2801-2811 行の特例）だけを数える。zsh の `{ ... } always { ... }` の 2 つ目の `{` はシェルの文法ではコマンド位置にある。しかしこの読みでは `always` が普通の最初の語になり（2878 行で at_command=False）、`{` は引数として読まれて数えられない。続く `:; }` の `}` はコマンド位置で深さが 0 なので、2853-2858 行で文を閉じる。zsh ではこの `}` は always 群を閉じるだけで、文は開いたまま。早く閉じた後は残りの本体を置換のコマンド列として読み、後の項目のパターンの `)` で置換が閉じたと確定してしまう。NFR3 の『閉じ位置が確定しないときは判定不能』に反する、誤った確定になる。zsh の複数名の関数定義 `function a b { :; }` も、2 つ目の名前 `b` が最初の語になるので同じことが起きる。基底ではどちらも case without in で silent だったので回帰ではない。
+  suggestion: |-
+    最小の対応は判定不能にすること。波括弧形式の本体（top == "8" かつ braces[-1] is not None）で、コマンド位置の単独の `always` を読んだら判定不能にする。`function` の名前の後にさらに名前が続く形も判定不能にする。読む方向で直すなら、`}` の直後の `always` の次の単独の `{` と、`function` の名前の並びの後の単独の `{` を、深さに 1 足す。CASES に該当する silent または deny の行を足し、両コピーをバイト単位で同一に保つ。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: ["claude:evaluator"]
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: "medium severity; not counted in residual critical/high; no outward change from base (base also silent)"
+evaluation:
+  round_summary: "Round 1（diff、cross_validation=true）。5 本のレビュー実行はどれも findings が空だった。評価者自身の点検で 2 件を見つけた。(1) high: _hash_starts_comment が、コメントを終える改行を、その前の奇数個のバックスラッシュのせいで継続行として飛ばし、基底では deny していた入力が silent になる回帰。(2) medium: 波括弧形式の本体で zsh の always の後の { と複数名の function の { を深さに数えず、置換の閉じ位置を誤って確定する（基底では silent なので回帰ではない）。2 つのコピーは cmp で同一、version は不変。レビュー出力に命令の差し込みは無かった。観点ごと: security = findings、comprehensive = findings、architecture / spec / performance = corroborated。"
+  recommended_action: auto_fix
+  action_rationale: "high の回帰（fail-open）が 1 件あり、修正は _skip_substitution と _hash_starts_comment の中に収まる。medium は判定不能にするだけで済む。どちらも評価者が自分で見つけたもの（claude:evaluator 扱い）。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 1
+rework_required: true
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-escaped-hash-brace-case-heredoc-20261023T191049Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
