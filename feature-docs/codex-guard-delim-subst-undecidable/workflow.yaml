@@ -1,0 +1,223 @@
+schema_version: 1
+feature: codex-guard-delim-subst-undecidable
+created: '2026-10-23'
+base_branch: main
+goal: '# codex-hook-interactive-guard: 区切り語の ${ } の中の $( ) を case 対応スキップに回した結果、置換内の <<・算術の <<・語の中の (case で判定不能になり python3 -i を見逃す（回帰）
+
+
+  種別: バグ
+
+  Notion: <notion-url>
+
+
+  ## 現象 (必須)
+
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）で、ヒアドキュメントの区切り語の位置にある `${ ... }` の中の引用されていない `$( ... )` を、feature `codex-guard-heredoc-delim-brace-case` で case 対応の `_skip_substitution`（共有リーダー `_read_quoted_unit` 経由）に回した。このスキップが判定不能（`_Undecidable`）とする次の 3 つの形は、変更前の括弧を数える読み（`_skip_parens`）では区切り語に登録されて deny になっていたが、変更後は checkpoint が無いため出力なしになる（回帰、fail-open 側）。
+
+
+  1. 置換の中の `<<`（ヒアドキュメント）: `${v:-$(echo <<EOF)}` で `_Undecidable("heredoc in a substitution")` になる（review round 1、`stable_id: 8704f40d2d534c76`、security）
+
+  2. 置換の中の算術命令の左シフト: `${v:-$( ((1 << 2)) )}` で、コマンド位置の `((` を算術の文脈として読まず、中の `<<` をヒアドキュメントとみなす。`for ((...))` も同じ（`stable_id: a1ffc746adbf0058`、comprehensive）
+
+  3. 引数の語の中の括弧にある case: `$(echo foo(case x))` で、語の中の `(` から新しいリストをコマンド位置で始め、`case` を文として開いて `_Undecidable("case without in")` になる（`stable_id: a1376c6e4c4feed3`、comprehensive）
+
+
+  ## 再現手順 (必須)
+
+
+  1. `tool_input.command` に次の文字列を設定した JSON をフックの標準入力へ渡す（コマンド自体は実行しない）:
+
+
+  `zsh -c ''if false; then` + 改行 + `: <<${v:-$(echo <<EOF)}` + 改行 + `${v:-$(echo <<EOF)}` + 改行 + `fi` + 改行 + `python3 -i''`
+
+
+  2. 標準出力が空になる（期待は deny。基準コミット `9e2487e0` では deny）
+
+
+  2 と 3 の形も、区切り語の `${ ... }` に `$( ((1 << 2)) )` / `$(echo foo(case x))` を置いた同じ構成で再現する。
+
+
+  ## 期待する挙動 (必須)
+
+
+  区切り語の `${ ... }` の中の `$( ... )` に上の 3 つの形があっても、区切り語の終わりを zsh と同じ位置に置き、終端行の後の `python3 -i` を deny する。置換の中のヒアドキュメントを zsh がどう読むかを先に確かめて、共有スキップの読みを決める。コマンド位置の `((`（`for` の後を含む）は算術の文脈として読む。引数の語の中の括弧と、コマンドを読む括弧（サブシェル、`<(`、`>(`）を区別する。
+
+
+  ## 完了の定義 (必須)
+
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある（3 つの形を両コピーに流す CASES の行）
+
+
+  ## 該当箇所 (任意)
+
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py` の `_remove_range_quotes`（1897-1903 行付近）、`_skip_substitution`（2392-2394 行・2428-2451 行・2474-2475 行付近）
+
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容。2 つのコピーはバイト単位で同一に保つ）
+
+  - 記録: `feature-docs/codex-guard-heredoc-delim-brace-case/reviews/round1.yaml`（ブランチ `em-workflow/codex-guard-heredoc-delim-brace-case/integration`）
+
+
+  ## 実害・発生条件 (任意)
+
+
+  ヒアドキュメントの区切り語の `${ ... }` の中の `$( ... )` に、上の 3 つの形のいずれかを書いた場合だけ。fail-open 側。
+
+
+  ## 追加指示（起動時）
+
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、比較的良いと判断された選択肢を採用する
+
+  - その議論内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/codex-guard-delim-subst-undecidable/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.67
+      '2': 0.33
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.59
+      '2': 0.41
+      '3': 0.0
+  at: '2026-10-23T19:47:40+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 1467f84bc6f0b6af00ed23009c2d758e35e93d07
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'hook parser bug fix with no UI, zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 5ba96e820704a806931e6b9b964dd4af3106fe5c
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 置換内の同じ行で閉じる << の読み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: コマンドの位置の (( は算術、)) で閉じなければサブシェル
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 引数の語の中の括弧は語の文脈
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 両コピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: docstring の追従
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 線形時間を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: _skip_substitution の呼び出し構造の制約を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 判定できている形を新たに判定不能に変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: plugin の version は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
