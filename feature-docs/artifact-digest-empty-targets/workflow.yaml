@@ -1,0 +1,155 @@
+schema_version: 1
+feature: artifact-digest-empty-targets
+created: '2026-10-23'
+base_branch: main
+goal: |
+  # artifact-digest.md の照合・記録で対象が 0 件のとき Calculation を引数なしで呼び、終了コード 2 を不一致として扱ってしまう
+
+  Notion タスク: <notion-url> （種別: バグ）
+
+  ## 現象
+  `em-workflow/references/artifact-digest.md` の Pre-dispatch verification は「expect_digest を要する targets に Calculation を実行する」とだけ書き、対象が 0 件のときの扱いが無い。文面どおりに引数なしで `artifact-digest.py` を呼ぶと終了コード 2 になり、終了コード 2 は不一致として扱われるので、dispatch せずに action の決め直しへ戻る。決め直しても同じ write_policy になるため、stale の判定が繰り返される。Layer 5 recording も同じで、`written_artifacts` が空の completed 結果を artifact-validation failure にしてしまう。
+
+  ## 再現手順
+  1. 新しい feature の初回 create-spec で、REQUIREMENTS.md と SPEC.md がどちらも `create` の write_policy になる（expect_digest の照合対象が 0 件）
+  2. artifact-digest.md の手順どおり Calculation を対象なしで呼ぶ: `python3 -B em-workflow/scripts/artifact-digest.py`
+  3. 終了コード 2 になり JSON 配列が出ない。artifact-digest.md 96-99 行目の規則で不一致と判定される
+
+  ## 期待する挙動
+  - Pre-dispatch verification: expect_digest を要する target が 0 件なら Calculation を呼ばずに照合を成功とする
+  - Layer 5 recording: `written_artifacts` が 0 件なら Calculation を呼ばずに何も記録しない（空の completed 結果を別の層で拒否するかどうかは、その層の規則に任せる）
+  - スクリプトは無引数で終了コード 2 のままにする
+
+  ## 完了の定義
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（両方の 0 件の場合を `tests/test_artifact_digest_docs.py` で固定する）
+
+  ## 該当箇所
+  - `em-workflow/references/artifact-digest.md:93-99`（Pre-dispatch verification）、`:113`、`:125-126`（Layer 5 recording）
+  - `em-workflow/scripts/artifact-digest.py:154-156`（無引数で終了コード 2）
+  - review 記録: `feature-docs/worker-digest-ownership/reviews/round1.yaml`（stable_id `59607e1e1d060f01`）
+
+  ## 実害・発生条件
+  feature worker-digest-ownership（integration ブランチ `em-workflow/worker-digest-ownership/integration`）の変更が取り込まれた後、新しい feature の初回 create-spec といういちばん多い経路で起きうる。
+parent_branch: em-workflow/artifact-digest-empty-targets/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.95
+      '2': 0.04
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.96
+      '2': 0.03
+      '3': 0.0
+  at: '2026-10-23T18:39:00+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3679791a3afef37326e7de98d5a5acd34ee3a245
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない変更、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Pre-dispatch verification の対象 0 件
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Layer 5 recording の対象 0 件
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: スクリプトの無引数時の終了コード維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 0 件の場合を固定するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 既存の固定文言を壊さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 所有文書だけを変える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストは標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
