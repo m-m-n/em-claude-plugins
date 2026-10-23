@@ -136,7 +136,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-guard-escaped-hash-brace-case-heredoc/task0001
   task0002:
     title: Read zsh's brace-form case statement in the substitution reader
