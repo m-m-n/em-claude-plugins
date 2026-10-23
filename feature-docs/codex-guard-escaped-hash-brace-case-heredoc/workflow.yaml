@@ -113,7 +113,57 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: 'Decide the # comment start on the unescaped previous character in the substitution reader'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: em-workflow/codex-guard-escaped-hash-brace-case-heredoc/task0001
+  task0002:
+    title: Read zsh's brace-form case statement in the substitution reader
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: em-workflow/codex-guard-escaped-hash-brace-case-heredoc/task0002
 review:
   status: pending
   rounds_completed: 0
@@ -123,92 +173,181 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
   FR2:
     title: 波括弧形式の case の開始
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-3
+    - TS-4
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-23
   FR3:
     title: 波括弧形式の case の閉じ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-3
+    - TS-4
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-23
   FR4:
     title: 波括弧形式の case の項目本体の { } 群の深さ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-4
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-23
   FR5:
     title: 算術コマンドの読み直しでの状態の復元
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-25
   FR6:
     title: ヒアドキュメントは今のまま
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-4
+    - TS-11
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-24
   FR7:
     title: docstring とコメントの更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-26
   FR8:
     title: テストの追加と更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-4
+    - TS-11
+    - TS-24
+    - TS-26
+    - TS-27
   FR9:
     title: 両コピーの同一性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-27
   NFR1:
     title: 線形の読み
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-28
   NFR2:
     title: 既存の判定の維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-4
+    - TS-11
+    - TS-24
+    - TS-27
   NFR3:
     title: 置換の中身は判定しない契約
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-6
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-23
+    - TS-24
   NFR4:
     title: version を触らない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-29
 batch:
   review_rework_count: 0
   verify_rework:
