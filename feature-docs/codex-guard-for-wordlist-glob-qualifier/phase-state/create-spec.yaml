@@ -1,0 +1,42 @@
+schema_version: 1
+feature: codex-guard-for-wordlist-glob-qualifier
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 781548b5152aa2ddfdcb029c75c9873d0fbdbdd7
+last_input_digest: sha256:3f76fca0c83e6d61c7af46e3d3dfc029ee277b7631688b90be8076249e08c8f9
+active_request_id: null
+packets: {}
+answers:
+  design-step:
+    packet_id: null
+    answered_at: '2026-10-23T18:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を省略する（analyst 推奨の skip。UI の無いフック解析処理の修正、デザインシステム候補ゼロ）
+    resolution_note: analyst returned completed with design_step skipped; no packet
+      raised
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:ca42c237e329f8db485f506ca8edac9459b19fc9f52e6c9d66cd2f3b2f052822
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:3f76fca0c83e6d61c7af46e3d3dfc029ee277b7631688b90be8076249e08c8f9
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-for-wordlist-glob-qualifier/REQUIREMENTS.md
+  sha256: sha256:257b0d8b9efaf2ed9470f3f7e82f5f4d0168338962d45ad2dc80659ac587f590
+  produced_by: create-spec-run-0002
+- path: feature-docs/codex-guard-for-wordlist-glob-qualifier/SPEC.md
+  sha256: sha256:2e29ae1e19e2e2aedfdd4ed50653888a97a09ab99eba257a6b2b2cf425dee388
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

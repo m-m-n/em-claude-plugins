@@ -1,0 +1,64 @@
+schema_version: 2
+feature: codex-guard-for-wordlist-glob-qualifier
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-23T18:37:01+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.23
+    confidence: 0.77
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.77
+      '2': 0.23
+      '3': 0.0
+  observed_at: '2026-10-23T18:40:02+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 20
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEAD 03e6a639で両コピーへ再現2入力のJSONを標準入力で渡し、いずれも終了0・標準出力なし・標準エラーなしを確認した。対照のpython3
+    -iと既存TS8はdenyだった。両コピーはバイト同一。2594行のコメント判定に入れ子のwの区別がなく、既存テストに#qNはなかった。CASESは両コピーで実行される。呼出元1メソッドと直接補助メソッド3個を片コピーで計数した。入力形式・出力形式の変更は不要と判断した。変更行数は条件・説明の修正とCASES2行追加を想定した未実装の概算。ファイルは変更していない
+decided_at: '2026-10-23T18:40:30+09:00'
