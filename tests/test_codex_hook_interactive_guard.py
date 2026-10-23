@@ -1058,6 +1058,13 @@ CASES = [
     ("deny", "置換読み TS7 語一覧の改行の後の case は文を開かない", 'echo "$(for x (a\ncase) { :; }; echo case x in x)"; python3 -i'),
     ("deny", "置換読み TS8 語一覧の ( の直後のコメント", 'echo "$(for x (# c\na) { case x in x) printf \'%s\' \'"\';; esac; })"; python3 -i'),
     ("deny", "置換読み TS28 語一覧の中の入れ子の ( ... ) の中の語はコマンドの位置にならず、その ) の後も語一覧として読む", 'echo "$(for x (a(case x in x)) { :; })"; python3 -i'),
+    # codex-guard-for-wordlist-glob-qualifier (VERIFICATION.md TS-1, TS-2 and
+    # TS-7): a `#` inside a nested `(` of the word list (a glob qualifier such
+    # as `*(#qN)`) is a word character, not the start of a comment, so the
+    # substitution closes where it should and the launch after it is denied.
+    ("deny", "置換読み TS-1 語一覧の入れ子の ( の直後の # (glob 修飾子 *(#qN)) はコメントを始めず、置換の後の起動を拒否する (再現手順 zsh -c)", 'zsh -c \'setopt extendedglob; echo "$(for x (*(#qN)) { :; })"; python3 -i\''),
+    ("deny", "置換読み TS-2 語一覧の入れ子の ( の直後の # (glob 修飾子 *(#qN)) はコメントを始めず、置換の後の起動を拒否する (再現手順 最上位)", 'echo "$(for x (*(#qN)) { :; })"; python3 -i'),
+    ("deny", "置換読み TS-7 語一覧の入れ子の ( ... ) の中で空白の後にある # も語の文字で、改行が無くても置換の後の起動を拒否する", 'echo "$(for x (a(b #c)) { :; })"; python3 -i'),
     # codex-guard-case-reading-fixes (VERIFICATION.md TS61): a reserved word, a
     # closing word or a head word that a continuation pair splits is read as
     # that word.
@@ -3404,6 +3411,32 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
                 for marker in markers:
                     with self.subTest(copy=plugin, rule=rule, marker=marker):
                         self.assertIn(marker, doc)
+
+    # codex-guard-for-wordlist-glob-qualifier (FR1, FR2): the docstring says
+    # where a `#` starts a comment in the word list of a zsh `for`: only in the
+    # outermost entry; in a nested entry (a glob qualifier as in `*(#qN)`) a
+    # `#` is a word character.
+    WORD_LIST_HASH_MARKERS = (
+        "In the word list a `#` starts a comment only in the outermost entry",
+        "In a nested entry every `#` is a word character",
+    )
+    # The sentence of the earlier reading that gave every entry of the word
+    # list the comment start of a command list.
+    STALE_WORD_LIST_HASH_SENTENCE = (
+        "A `#` whose previous character is a space, a tab, a newline, `;`, "
+        "`&`, `|` or `(` starts a comment, the same start condition as in a "
+        "command list."
+    )
+
+    def test_the_docstring_states_where_a_hash_starts_a_comment_in_a_for_word_list(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for marker in self.WORD_LIST_HASH_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+            with self.subTest(copy=plugin, stale=True):
+                self.assertNotIn(self.STALE_WORD_LIST_HASH_SENTENCE, doc)
 
     def test_the_keyword_decision_states_the_pair_stripped_rule(self):
         for plugin, path in HOOK_PATHS.items():
