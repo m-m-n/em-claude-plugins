@@ -1,0 +1,23 @@
+schema_version: 1
+feature: artifact-digest-empty-targets
+records:
+- question_id: create-spec.zero-target-pre-dispatch-verification
+  packet_id: null
+  answered_at: '2026-10-23T18:44:25+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'A: expect_digest を要する target が 0 件なので Calculation を呼ばずに照合成功として spec-writer
+    を dispatch する'
+  normalized_answer: zero expect_digest targets -> skip Calculation, verification
+    succeeds
+  resolution_note: 'gate: create-spec spec-writer pre-dispatch verification (artifact-digest.md
+    Pre-dispatch verification, no gate_id; this feature fixes exactly this gap). Options:
+    A) skip Calculation and succeed (task expected behavior); B) follow current text
+    literally, exit 2 -> mismatch -> stuck; C) calculate on the absent SPEC.md ->
+    error element -> mismatch. Choice: A. codex_consulted: true (Codex chose A: create
+    targets carry expect_digest null and are out of scope per spec-writer-contract.md:71
+    / artifact-digest.md:90; B/C cannot progress; create still blocks on an existing
+    file). Opus escalation: not run. Risk noted by Codex: the current text has no
+    explicit skip rule, so this is a run-local interpretation recorded here, not in
+    SPEC.md.'
