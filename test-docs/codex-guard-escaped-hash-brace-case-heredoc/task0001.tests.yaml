@@ -1,0 +1,55 @@
+task_id: task0001
+# Run before any edit, in the task worktree: python3 em-workflow/hooks/tests/run-destructive-guard.py
+# (943/943 passed) and python3 -m unittest discover -s tests (10965 tests, OK,
+# 1 skipped, no failure).
+baseline_failures: []
+# The project test command re-executed in full after the implementation and
+# after this record was written (the record is itself checked by
+# tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against copies of the unmodified guard (both copies as of HEAD, swapped into HOOK_PATHS of the loaded test module), test_cases_run_against_both_copies errored for the TS-1 and TS-2 rows on both copies with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the guard printed nothing for a command it must deny, because the # after an escaped blank was read as a comment that runs to the end of the input and made the chunk undecidable."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' for the deny rows TS-5 (a continuation pair after a word character), the two-pairs row after a word character and the row with a continuation pair between an escaped blank and the #: the # after a pair was decided on the newline of the pair. The silent rows (TS-6, the two-pairs row after a blank, the row with a pair and no closing newline, the row with an escaped backslash before a newline) already passed before the change and pin the readings that must not overshoot."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' for the deny rows TS-7 (escaped ;), the escaped tab, the escaped &, the escaped | and the escaped ( before the #, and for the row with three backslashes (an odd run) before the blank. The silent row whose blank follows an escaped backslash (an even run, no newline after the #) already passed before the change: it pins that an even run leaves the blank unescaped."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' for TS-8 (item body), TS-9 (pattern), TS-10 (outermost entry of w) and for the continuation-pair rows of the item body, the pattern and the outermost entry of w. The row with the # inside a parenthesised group of a pattern already passed before the change: a # in a group g is read as a word character before the pattern's # clause is reached, so that row pins the reading and is not a red. The waiting phases 1, 3, 4, 5 and 7 give the same verdict before and after for every input (the # there follows a blank, a separator, a ( or the pattern's ) with pairs left out), so no row of theirs can fail before the change; the pre-existing rows of those phases and the rule 3 row with a continuation pair between the ) and the # (already green before) keep passing."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies detects a changed verdict of any CASES row, the TS-11 row (# after >), the new # after < row and every pre-existing row with a # after ), < or >, under rule 3, in nested entries of w and in the word parenthesis W; no red state occurred for this change, because the readings outside the comment-start decision are the ones the guard already had (TS-11 and the # after < pass before and after). git diff of the test module removes no CASES row."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_describes_the_comment_start_decision
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_comment_start_decision_sits_between_rule_3_and_rule_4
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_says_the_start_of_a_word_is_never_looked_up_backward
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_how_a_process_substitution_in_a_for_word_list_is_read
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_where_a_hash_starts_a_comment_in_a_for_word_list
+    red_confirmed: true
+    red_reason: "Against the unmodified guard (before the docstring edit) the first four tests failed on both copies: test_the_docstring_describes_the_comment_start_decision failed for each of its eight markers, the between-rule-3-and-rule-4 test failed because the paragraph was absent, the never-looked-up-backward test failed because the stale sentence was still there, and test_the_docstring_states_how_a_process_substitution_in_a_for_word_list_is_read failed for the two new word-list markers with 'AssertionError: ... not found in ...'. The word-list # test (WORD_LIST_HASH_MARKERS and the stale comment-start sentence) already passed before the change and keeps the two pinned sentences it owns. The comment bullet of this criterion (the comments at the word-list state update, the w branch and each # site describe the decision made) has no executable check that can be made to fail; it was checked by reading the diff."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts28_depth_escaped_blanks_before_a_hash_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts28_depth_continuation_pairs_between_a_word_character_and_a_hash_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts28_a_backslash_run_of_depth_length_before_a_blank_and_a_hash_is_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts28_many_backslash_runs_each_before_a_blank_and_a_hash_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+    red_confirmed: true
+    red_reason: "Against the unmodified guard the four TS-28 scale tests errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' on both copies for every shape except the even backslash run (an even run leaves the blank unescaped, so the # was a comment ended by the newline and the old guard denied too): DEPTH escaped blanks before a #, the three continuation-pair shapes, the odd backslash run of DEPTH+1 and DEPTH runs of three backslashes. All are denied within the deep-input class timeout after the change. TestCopies.test_the_two_copies_are_byte_identical, TestSubstitutionSkipCallStructure and TestNoRecursion are existing tests that pass before and after (guards for byte identity, no recursion and no call back into the skip or a reader; no red state). That the diff touches neither plugin.json nor marketplace.json is checked with git diff --name-only (no executable test in the suite can fail for it)."
