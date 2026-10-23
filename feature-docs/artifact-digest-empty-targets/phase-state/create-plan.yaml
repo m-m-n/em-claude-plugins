@@ -1,0 +1,21 @@
+schema_version: 1
+feature: artifact-digest-empty-targets
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 3f49631600e3efb345bb03e123743f1b7e5fe964
+last_input_digest: sha256:9e4aaac1b36cb501c9626cb9abea1affa48070effcdd2cafb51ee4989e239d82
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:9e4aaac1b36cb501c9626cb9abea1affa48070effcdd2cafb51ee4989e239d82
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
