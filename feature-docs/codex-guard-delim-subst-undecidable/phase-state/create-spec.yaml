@@ -1,10 +1,10 @@
 schema_version: 1
 feature: codex-guard-delim-subst-undecidable
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 8994a61cde570c7f041cc695d0412d39e88c3be3
-last_input_digest: sha256:79517b6e9d39e749af8575c6f902e26a24a95a36f492dcad33a9049aeabed61d
+last_input_digest: sha256:e236879489315ca79a3b3968083941c8c2e5f3ca34cfb2e71377f43b4718c6e0
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -89,6 +89,10 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:79517b6e9d39e749af8575c6f902e26a24a95a36f492dcad33a9049aeabed61d
   output_digest: sha256:a99e515297e222f9068ac6adcbd1d41a61c194026620242aa8f8fdfef765fd9b
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:e236879489315ca79a3b3968083941c8c2e5f3ca34cfb2e71377f43b4718c6e0
+  output_digest: sha256:3a29deef8596204eb1c3f7767019585497db7fd2ada3fb35a683dd1c748db38f
 artifacts: []
 patches: []
 progress_fingerprint: null
