@@ -1,0 +1,63 @@
+schema_version: 2
+feature: codex-guard-procsub-in-wordlist
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.11
+    confidence: 0.89
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.89
+      '2': 0.11
+      '3': 0.0
+  observed_at: '2026-10-23T21:01:20+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.32
+    confidence: 0.68
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.68
+      '2': 0.32
+      '3': 0.0
+  observed_at: '2026-10-23T21:01:20+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - tests/test_codex_hook_interactive_guard.py
+  changed_lines_approx: 20
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEAD ccc4a894で両コピーはバイト一致し、作業ツリーに変更はない。em-workflow/scripts/codex-hook-interactive-guard.py:2552とem-review/scripts/codex-hook-interactive-guard.py:2552はw内の括弧をwとして積み、双方の:2599にはstack[-2]条件が残る。JSONを標準入力に渡す確認では、両コピーとも期待denyの入力がsilent、期待silentの入力がdenyになった。tests/test_codex_hook_interactive_guard.py:69のCASES全832件に再現2入力はなく、:1055以降には関連する語一覧のテスト、:1292には両コピー用の実行器、:3658にはバイト一致検査がある。各コピーの呼出元は_read_quoted_unitの1関数、内部呼出先は3関数。行数は既存関数の分岐変更とテスト2件追加についての概数。ファイル変更は行っていない
+decided_at: '2026-10-23T21:01:20+09:00'

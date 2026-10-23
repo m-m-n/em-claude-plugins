@@ -2373,11 +2373,29 @@ class _Parser:
         starts a head, and a newline gives the next word no command
         position. A `(` read in w opens a nested entry of w (a glob qualifier
         as in `*(N)`): its `)` is a closing inside a word, reading goes on in
-        the enclosing list and nothing is given a command position. The `)`
-        that closes the outermost entry gives the list that holds the `for`
-        a command position (`for x (a) {`). The context a is the arithmetic
-        part of `$((` and the parentheses nested in an arithmetic command, and
-        its reading is unchanged.
+        the enclosing list and nothing is given a command position. The one
+        exception is a process substitution at the start of a word of the
+        outermost entry: an unquoted, unescaped `<(`, `>(` or `=(` there opens
+        a command list p instead of a nested entry, so a comment, a quote, a
+        substitution or a case statement in it is read as in any command list
+        and a `#` after a blank in it starts a comment. The `)` that closes
+        that p is a closing inside a word: reading goes back to w and the
+        characters after it are the rest of the same word. The start of a word
+        is a state kept while reading and never looked up backward: it is the
+        position right after the `(` that opens the outermost entry and right
+        after an unquoted, unescaped space, tab, newline, `;`, `&` or `|` (the
+        newline that ends a comment included). An escaped character (an
+        escaped space included) is a word character, and so are a quote, a
+        substitution, a nested entry and any other character of a word. A
+        continuation pair neither starts a word nor separates words, so it
+        keeps the state. A `<(`, `>(` or `=(` in the middle of a word or
+        inside a nested entry is read as any other `(` of w (`a=(`, `<->(`,
+        `a(<(b))`, one whose `<`, `>` or `=` is escaped or quoted), a nested
+        entry in which every `#` is a word character. The `)` that closes the
+        outermost entry gives the list that holds the `for` a command position
+        (`for x (a) {`). The context a is the arithmetic part of `$((` and the
+        parentheses nested in an arithmetic command, and its reading is
+        unchanged.
         A second list `saved` runs beside the stack, one entry for
         each stack entry: the state the list under it had when the entry was
         pushed and whether its close gives that list a command position.
@@ -2404,6 +2422,12 @@ class _Parser:
         # closing brings `dbl` back and puts the list at a command position.
         at_command, in_word = True, False
         dbl, head = False, HEAD_NONE
+        # The state of the outermost entry of a word list w (the `(` branch and
+        # the w branch below): there `in_word` is false at the start of a word,
+        # and `procsub` is true while the character just read is an unquoted,
+        # unescaped `<`, `>` or `=` that was read at the start of a word, so a
+        # `(` right after it opens a process substitution.
+        procsub = False
         # The entries of the contexts the chunk opens with stand for a list
         # that is inside a word: the `)` that closes the arithmetic part of a
         # `$((` gives back a list that goes on inside its word.
@@ -2419,6 +2443,30 @@ class _Parser:
                 while j < n:
                     top = stack[-1]
                     ch = s[j]
+                    # The outermost entry of w keeps, while it reads, whether the next
+                    # character starts a word and whether it follows an unquoted,
+                    # unescaped `<`, `>` or `=` read at the start of a word; the state
+                    # is moved on here, before the character is read, and is never
+                    # rebuilt by looking at the characters behind. A space, a tab, a
+                    # newline (the one that ends a comment included), `;`, `&` and `|`
+                    # separate words, and a word starts right after the `(` that opens
+                    # the entry. Every other character is in a word: an escaped
+                    # character (an escaped space included), the opening of a quote or
+                    # of a substitution, a nested entry and a plain word character; so
+                    # is the return from a nested context (`in_word` is set when it
+                    # closes). A continuation pair, a backslash directly followed by a
+                    # newline, neither starts a word nor separates words, so it keeps
+                    # the state as it was.
+                    opens_process = False
+                    if top == "w" and stack[-2] != "w":
+                        opens_process = procsub
+                        if ch == "\\" and s.startswith("\n", j + 1):
+                            pass
+                        elif ch in " \t\n;&|":
+                            in_word, procsub = False, False
+                        else:
+                            procsub = ch in "<>=" and not in_word
+                            in_word = True
                     if ch == "\n" and marks and top not in "dK":
                         # An unquoted newline while a list has a pending heredoc
                         # operator: the body would start here and is never read.
@@ -2675,6 +2723,18 @@ class _Parser:
                                 # A parenthesis in a word, not a process substitution
                                 # or `=(` (rule 10): nothing in it is a command.
                                 kind_char = "W"
+                        elif opens_process:
+                            # An unquoted, unescaped `<(`, `>(` or `=(` read at the
+                            # start of a word of the outermost entry of w (`opens_process`
+                            # is set only there) is a process substitution: it opens a
+                            # command list p, read as in any command list, so a `#`
+                            # after a blank in it starts a comment. Its `)` is a closing
+                            # inside a word (`close_command` stays False): reading goes
+                            # back to w and the characters after it are the rest of the
+                            # same word. Any other `(` of w, one in the middle of a
+                            # word, in a nested entry or after an escaped or quoted `<`,
+                            # `>` or `=` included, opens a nested entry of w above.
+                            kind_char = "p"
                         stack.append(kind_char)
                         saved.append((at_command, dbl, HEAD_NONE, close_command))
                         at_command, in_word, dbl, head = True, False, False, HEAD_NONE
@@ -2708,7 +2768,11 @@ class _Parser:
                         # nested entry (a glob qualifier as in `*(#qN)`, the entry
                         # directly beneath this one is also w) every `#` is a word
                         # character. Every other character is part of a word or
-                        # separates words, the newline included.
+                        # separates words, the newline included. Where a word starts
+                        # in the outermost entry is the state `in_word` moved on at
+                        # the top of the loop (an escaped space is a word character, a
+                        # continuation pair separates no word); a process substitution
+                        # at the start of a word is opened in the `(` branch.
                         if ch == "#" and stack[-2] != "w" and s[j - 1] in " \t\n;&|(":
                             j = s.find("\n", j)
                             if j == -1:
