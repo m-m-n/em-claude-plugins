@@ -104,7 +104,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 707ce013630d81db62afbe4e4858e5e2d3b0f7e7
 - id: implement
   status: pending
 - id: review
@@ -115,7 +116,26 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Pin completed_at_commit to the step-1 COMPLETION_TIP capture in Step I.3
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_completion_tip_single_capture.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -125,7 +145,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS1
     - TS2
@@ -134,7 +155,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS3
   FR3:
@@ -142,15 +164,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS5
+    - TS6
   FR4:
     title: Regression test for the single value source
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS4
   NFR1:
@@ -158,23 +183,29 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS6
   NFR2:
     title: Existing tests stay green without edits
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS5
+    - TS6
   NFR3:
     title: Plugin version is not touched
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS7
 batch:
   review_rework_count: 0
   verify_rework:
