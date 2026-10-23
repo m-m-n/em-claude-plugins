@@ -1,0 +1,56 @@
+task_id: task0003
+# Run before any edit, in the task worktree: python3 em-workflow/hooks/tests/run-destructive-guard.py
+# (943/943 passed) and python3 -m unittest discover -s tests (10978 tests, OK,
+# 1 skipped, no failure).
+baseline_failures: []
+# The project test command re-executed in full after the implementation and
+# after this record was written (the record is itself checked by
+# tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before the guard was edited, the command of the TS-30 row was run through both unmodified copies with the test module's run_hook and payload_for: the guard printed nothing (silent) where the row expects deny, so test_cases_run_against_both_copies fails on that row with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)'. The # at the start of the line after a comment that ends in a backslash was read as a word character, so the ' of don't opened a quote that never closed and the chunk was undecidable."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before the guard was edited, the commands of the TS-31 (item body), TS-32 (pattern position, phase 4), TS-33 (phase 7, rule 3) and TS-34 (outermost entry of w) rows, run through both unmodified copies with the test module's run_hook, printed nothing (silent) where the rows expect deny, so test_cases_run_against_both_copies fails on each of them with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': at every site the # after a backslash-ended comment was read as a word character and the ' of don't left a quote open."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Before the guard was edited, the command of the TS-35 row, run through both unmodified copies with the test module's run_hook, produced a deny object where the row expects silent, so test_cases_run_against_both_copies fails on that row with an assertion that the verdict was deny: the second # was a word character, the ) in the line closed the substitution early and the python3 -i after it was judged."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies detects a changed verdict of TS-5 (deny), TS-6 (silent) and of every pre-existing CASES row, on both copies; no red state occurred for this change, because the continuation pairs outside comments keep the reading they had (the new comment-end position only classifies the newline that ends a comment). git diff of the test module removes no CASES row."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestArithmeticRereadBudget
+      - tests.test_codex_hook_interactive_guard.TestRereadFallback
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies detects a changed verdict of TS-25 and of every pre-existing row with an arithmetic-command re-read, and TestArithmeticRereadBudget and TestRereadFallback exercise the re-read itself; no red state occurred for this change. No input was found whose verdict depends on the restore: a differential run of more than a million generated strings over `((`, `$(`, `#`, backslash-newline, quotes, case and for words between the guard and a copy of it that does not restore the position gave the same verdict for every string, so the restore is not covered by a row that fails without it."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_comment_end_position_and_the_newline_that_ends_a_comment
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_says_the_comment_start_decision_keeps_no_state
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_comment_start_helper_states_that_the_comment_end_newline_is_no_continuation_pair
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+    red_confirmed: true
+    red_reason: "Against the guard before the docstring edit, the three new tests failed on both copies (20 failures in the class): the comment-end marker test for its markers that did not exist yet, the no-state test because both 'The decision carries no state through the reading' (in _skip_substitution) and 'It keeps no state' (in _hash_starts_comment) were still there, and the helper test because the sentence on the newline that ends a comment was absent, each with 'AssertionError: ... not found in ...' or 'unexpectedly found in'. The class's pre-existing tests (including HASH_DECISION_MARKERS, the rule-9 re-read marker and the between-rule-3-and-rule-4 order) passed before and after. The comment bullet of this criterion (the comments at each comment branch describe the recording) has no executable check that can be made to fail; it was checked by reading the diff."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts36_depth_comments_ending_in_a_backslash_each_followed_by_a_hash_line_are_read_in_time
+    red_confirmed: true
+    red_reason: "Against the guard before the edit, the new scale test errored on both copies with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the guard printed nothing for DEPTH comments ending in a backslash, each followed by a line that begins with #, because the ' of the last line (don't) opened a quote that never closed. After the change the input is denied within the deep-input class timeout."
+  AC-8:
+    tests:
+      - tests.test_codex_hook_interactive_guard
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical detects a difference between the two copies and the module as a whole is the command named by the criterion; no red state occurred for this change (the copies were edited together and the module passed in full). That the diff touches neither plugin.json nor marketplace.json is checked with git diff --name-only (no executable test in the suite can fail for it)."
