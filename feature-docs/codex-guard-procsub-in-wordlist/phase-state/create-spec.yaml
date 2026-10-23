@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-procsub-in-wordlist
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: de04807ce8b0db30c381a50cc32be459065a0e51
 last_input_digest: sha256:5aebc5da05d8b4abb92160bfc5088a65f268bda116eea217267a55d28de22b37
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers:
   requirement.word-start-definition:
