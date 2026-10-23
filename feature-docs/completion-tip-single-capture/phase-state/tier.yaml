@@ -1,0 +1,62 @@
+schema_version: 2
+feature: completion-tip-single-capture
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.86
+    confidence: 0.86
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.14
+      '1': 0.86
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-23T13:37:02+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 0.99
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.98
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-23T13:39:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - tests/test_exit4_tip_argument_consistency.py
+  changed_lines_approx: 25
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEAD 03e6a639でも未修正。現在の該当箇所は1092行ではなく、em-workflow/references/implement-phase.md:1431以降。1434行の固定文は独立したrev-parseを含み、1440行でCOMPLETION_TIPを捕捉する一方、1444行の手順3は固定文を参照している。1450行の同一捕捉由来という主張を手順3の代入指示から確認できない。feature-docs/exit4-tip-argument/SPEC.md:53は同じ捕捉値の使用と再試行時の同時再導出を要求し、55行は固定文とtest_rework_synthesis_contract.pyの維持を要求している。必要な修正は固定文の外側にある手順3でcompleted_at_commitへ$COMPLETION_TIPの値を設定すると明記すること。tests/test_exit4_tip_argument_consistency.py:300は項目名の存在だけを検査し、311行の順序検査も代入値を検査していない。tests/test_rework_synthesis_contract.py:294は固定文を検査する。両テストとtest_tip_capture_idiom_uniformity.pyの計109件は現状で成功した。既存テストを拡張し、手順3の値の対応と現行の欠陥文面の拒否を検証する想定で、変更行数と検証事例数は概算。関連するリポジトリ内の利用元・依存先として、em-workflow/skills/develop/SKILL.md:712の手順書実行とimplement-phase.md:1446のcommit-docs.sh呼び出しを数えた。変更されるのは実行役への値の設定指示であり、既存の引数形式を変える必要はない。plugin-dev/skills/plugin-dev/references/update.md:8は版番号を手動変更しない方針を記載している。ファイル変更は行っていない
+decided_at: '2026-10-23T13:39:47+09:00'
