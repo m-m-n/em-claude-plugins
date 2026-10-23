@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 8994a61cde570c7f041cc695d0412d39e88c3be3
-last_input_digest: sha256:e236879489315ca79a3b3968083941c8c2e5f3ca34cfb2e71377f43b4718c6e0
+last_input_digest: sha256:2350f0dd802994f0de8af913fcc4ccd86a512910c1eb3b3bc40d603f1d1133ae
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -93,7 +93,17 @@ worker_runs:
   status: completed
   input_digest: sha256:e236879489315ca79a3b3968083941c8c2e5f3ca34cfb2e71377f43b4718c6e0
   output_digest: sha256:3a29deef8596204eb1c3f7767019585497db7fd2ada3fb35a683dd1c748db38f
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:2350f0dd802994f0de8af913fcc4ccd86a512910c1eb3b3bc40d603f1d1133ae
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-delim-subst-undecidable/REQUIREMENTS.md
+  sha256: sha256:d8e163ac901db1071267ff78d026b2ef52060f81d883d5af106a58fdd9e33c17
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-delim-subst-undecidable/SPEC.md
+  sha256: sha256:1ef34be2a92c81c6f7380db54b40e24e41e11064c26be748f37885f663f7ef2e
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
