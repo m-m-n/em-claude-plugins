@@ -108,7 +108,7 @@ workflow:
   completed_at_commit: 2ceea86e9eebccbd7dcae3a771c33b4407e499f0
   base_commit: 5c200f6281623d3948db1a3c6bdb7650ec8b18a3
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -167,8 +167,18 @@ tasks:
     status: merged
     branch: em-workflow/codex-guard-escaped-hash-brace-case-heredoc/task0002
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR1 requires linear-time reading; the diff adds per-character state to the substitution scanner
+    cross_validation: true
 requirements:
   FR1:
     title: 'エスケープした文字と継続行の後の # の判定'
