@@ -123,7 +123,8 @@ workflow:
     Manual (SPEC A3, informational): zsh -n -c 'case x { x) :; }' -> rc=0 (accepted).
     Excluded requirements: none.
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 72b6d36000fe374a0b4c0f3b28d1db4c8ca7473f
 tasks:
   task0001:
     title: 'Decide the # comment start on the unescaped previous character in the substitution reader'
