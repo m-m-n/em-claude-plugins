@@ -136,7 +136,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/completion-tip-single-capture/task0001
 review:
   status: pending
