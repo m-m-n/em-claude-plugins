@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 7da5e0dcd5d239a2543ca8924b8e9212bc1ea1f7
 last_input_digest: sha256:72a535668075903398ee69dee8fed885010a5958824ca05b78fc3d0e3c1cbe21
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,11 +14,13 @@ worker_runs:
   input_digest: sha256:72a535668075903398ee69dee8fed885010a5958824ca05b78fc3d0e3c1cbe21
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
-  input_digest: null
+  status: completed
+  input_digest: sha256:367a4c29bc305df7062967632f7f8b09ad4aebe25ad67d1230f5f81793c2f675
   output_digest: null
-  worker: spec-writer
-artifacts: []
+artifacts:
+- path: feature-docs/completion-tip-single-capture/SPEC.md
+  sha256: sha256:fda65f8ca544b61549620876e620f0f208c3b1ddfdda338a340ec7e0b18ad604
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
