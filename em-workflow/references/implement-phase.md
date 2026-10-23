@@ -1441,16 +1441,23 @@ commit:
 2. **refresh** the integration worktree to the branch —
    `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
 3. **write**, on the worktree just refreshed, the `implement` step's
-   `status = completed` and `completed_at_commit` set above
+   `status = completed` and `completed_at_commit` set above — the
+   `completed_at_commit` value written is the value of `$COMPLETION_TIP`
+   captured in step 1, and the command substitution in this section's
+   opening sentence is not evaluated as a separate command; its value is
+   the one step 1 captured
 4. **commit** that write with the captured tip as the third argument —
    `commit-docs.sh {integration_worktree} "docs({feature}): implement phase
    completed" "$COMPLETION_TIP"` (the third argument is `expected_base_tip`;
    exit-4 recovery: Branch & Worktree Model above)
 
 `$COMPLETION_TIP` and the `completed_at_commit` value above are both
-derived from the same step-1 capture, so they denote the SAME commit. On
-an exit-4 retry, both values are re-derived together from a fresh
-capture, so this invariant continues to hold across retries.
+derived from the same step-1 capture (step 3 binds them), so they denote
+the SAME commit. On an exit-4 retry (the Branch & Worktree Model's exit-4
+recovery), `completed_at_commit` is re-written with the freshly
+re-captured `$COMPLETION_TIP` — the same value passed as
+`commit-docs.sh`'s third argument on that retry — so the two values still
+name the same commit across retries.
 
 There is no other way to complete this phase — a non-merged task always
 resolves via retry, route-back-to-planning, or abort (I.2.c). Report overall
