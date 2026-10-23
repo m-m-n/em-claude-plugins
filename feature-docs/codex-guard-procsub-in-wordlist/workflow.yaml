@@ -115,7 +115,8 @@ workflow:
   summary: 'test_command exit 0 (destructive-guard 943/943, unittest 10925 OK skipped=1); TS-1..TS-14 in CASES; copies byte-identical; imports stdlib only; diff excludes plugin.json/marketplace.json; manual repro on both copies: repro2 deny, repro3 silent; docstring/comments describe word-start process substitution as p with in-word close'
   completed_at_commit: f1f5d733a3f65d43c76dd0267425bd8979d58f4e
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 48badf68ccc8b01c49184d367f46cc241d6259d1
 tasks:
   task0001:
     title: 語一覧の語の先頭のプロセス置換をコマンド列として読む
