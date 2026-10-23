@@ -119,9 +119,9 @@ tasks:
     domains: [input-handling]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, NFR1]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-guard-for-wordlist-glob-qualifier/task0001
 review:
   status: pending
   rounds_completed: 0
