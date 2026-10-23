@@ -64,10 +64,16 @@ worker_runs:
   input_digest: sha256:1a43900534a5e51f424bffde83f6101e0760e21eeb60c6b5277f2d5eb6523fe9
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:5aebc5da05d8b4abb92160bfc5088a65f268bda116eea217267a55d28de22b37
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/codex-guard-procsub-in-wordlist/REQUIREMENTS.md
+  sha256: sha256:7c1df18d120c2f1d5c3ad3497715f787bb26be7d4630a90942b446d97c1e098a
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-procsub-in-wordlist/SPEC.md
+  sha256: sha256:0658e8dc42fdd6fa08166c334ce303b743b8f014e2a6d5162836d5c8ff6d979b
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
