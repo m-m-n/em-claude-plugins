@@ -1,14 +1,44 @@
 schema_version: 1
 feature: codex-guard-escaped-hash-brace-case-heredoc
 phase: create-spec
-status: initialized
+status: in_progress
 generation: 1
 base_revision: 0bb9e3172164b4cc946fb018f8ebbd900f81a52f
-last_input_digest: null
+last_input_digest: sha256:d19f848eae418285c1f8d80f42041b77e100c1e856e3b89b9fa7c9c7d1259170
 active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-24T01:36:22+09:00'
+    questions:
+    - question_id: requirement.brace-case-heredoc-handling
+      status: answered
+answers:
+  requirement.brace-case-heredoc-handling:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T01:36:22+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - read_brace_case_keep_heredoc
+    freeform: null
+    normalized_answer: 波括弧形式の case を置換読みで読む（{ を in の代わり、単独の } を閉じとし、項目本体の中の { } 群の深さを追う。zsh 5.9 実測に合わせ、パターン待ちの位置の
+      esac も閉じとして受理する）。ヒアドキュメントは今の rule 8 のまま判定不能で silent。再現手順 4 は deny。既存行 1051 だけ deny に変え、1050・1293・1298-1300・1305
+      は silent のまま。
+    resolution_note: 'gate: create-spec.requirement-clarification (batch-policies: codex_consultation,
+      record_as_assumption); Codex consulted (codex entry, 1 turn, 1 question, converged); Codex recommended
+      read_brace_case_keep_heredoc. 理由: 既存の case の状態管理の拡張で再現手順 4 を deny にでき、変更範囲と誤拒否・読み違えの余地を抑えられる。判定不能時は確定済みのコマンドだけを検査する設計と
+      silent の契約を保てる。注意: case の入れ子と本体内の波括弧群を区別し、引用・エスケープ・展開内の括弧を群の深さに数えない。追加の状態を算術コマンドの読み直しの復元処理にも含める。A3
+      の「波括弧形式では esac は閉じ語ではない」はそのまま採用しない: Codex の zsh 5.9 実測で case x { x) echo matched;; esac は受理、case
+      x { x) echo matched; esac は parse error、case x in x) ...;; } も受理、case esac { esac) ...;; } は parse
+      error、引用した ''esac'' パターンは受理。パターン待ちの位置と項目本体の位置を区別する。置換の中身は判定せず閉じ位置だけを読む契約を保つ。既存行 1051 を deny、1050・1293・1298〜1300・1305
+      は silent のまま。不採用: read_both（ヒアドキュメントの区切り語と終端行の管理の追加で範囲超過、誤拒否・見逃しの余地増）、inspect_after_undecidable（再開位置が確定せず、silent
+      の契約に反する）。Opus escalation: not run. Recorded as assumption.'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:d19f848eae418285c1f8d80f42041b77e100c1e856e3b89b9fa7c9c7d1259170
+  output_digest: sha256:7c2584751521644a1f95b12268bf64ae7dc12efbb5feed2239f05275ad3b2f03
 artifacts: []
 patches: []
 progress_fingerprint: null
