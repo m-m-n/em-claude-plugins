@@ -1,0 +1,66 @@
+schema_version: 1
+feature: codex-guard-delim-brace-quote-per-shell
+records:
+- question_id: requirement.bash-delimiter-reading
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-23T23:13:58+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - keep_written_form
+  freeform: 区切り語の ${ ... } の範囲の外に引用（' " \）が無いときに限り、範囲を書かれたまま登録する（範囲の中のバックスラッシュ＋改行は単引用符の中を除いて取り除く）。範囲の外に引用があるときは語全体の引用を除く今の読みのまま。
+  normalized_answer: bash の種類の -c 文字列では、区切り語の語に ${ ... } の範囲の外の引用（' " \）が 1 つも無いとき、範囲を
+    "・'・\ を含めて書かれたまま区切り語にする（単引用符の外のバックスラッシュ＋改行だけは取り除く）。範囲の外に引用が 1 つでもあるときは、今と同じく語全体の引用を除いた形を登録する。閉じの探し方（前の
+    SPEC の FR2）と範囲の中の引用されていない $' / $" の判定不能（FR3）は変えない。
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。オーケストレーター実測（bash
+    5.3.9 / dash（/bin/sh）/ zsh 5.9、cat <<WORD・BODY・終端行・echo AFTER を各シェルに渡して終端行が閉じるかを照合）:
+    bash は ${v:-"x"}・${v:-''x''}・${v:-\x}・${v:-"a}b"}・${a:-${b:-"x"}}・${v:-$(echo
+    "x")} のいずれも書かれたままの形だけが閉じ、引用を除いた形では閉じない（bash --posix も同じ）。ただし区切り語の ${...} の外に引用がある
+    ''P''${v:-"x"}・"P"${v:-''x''}・${v:-"x"}"" では語全体の引用が除かれ P${v:-x}・${v:-x} が終端になる。${v:-$''x''}
+    は ${v:-''x''} が終端。dash は同じ各形で引用を除いた形だけが閉じる（zsh と同じ）。ksh / mksh は未導入で未実測。 Codex
+    2 ターン。1 ターン目: keep_written_form が最も近いが、引用外のバックスラッシュ＋改行は除く必要がある（Codex 実測 ${v:-\<改行>x}
+    → ${v:-x}）。2 ターン目: 二重引用符の中のバックスラッシュ＋改行も除かれる、範囲の外に引用があると語全体で引用除去が働く（''P''${v:-"x"}
+    → P${v:-x}）。オーケストレーターが追実測して確認。keep_written_form に補足を付けて採用（select_or_freeform の選択＋補足）。比較的良いと判断。Opus
+    エスカレーションは不要。'
+- question_id: requirement.sh-delimiter-reading
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-23T23:13:58+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids: []
+  freeform: sh -c の文字列は、区切り語の位置の ${ ... } を bash の読み（requirement.bash-delimiter-reading
+    の回答）と zsh / dash の読み（今の引用除去）の 2 通りで文字列全体をそれぞれ読み、どちらかの読みが deny ならその deny を出す。
+  normalized_answer: sh -c の文字列では、区切り語の位置の ${ ... } を bash の読みで読んだ場合と、今の読み（引用除去）で読んだ場合の
+    2 通りで文字列全体を独立に読み、どちらか一方でも deny になれば deny を出す。2 通りの読みが区切り語の文字列として一致する文字列では 2 回目を読まない。各読みには今の読み直し（両スイッチを切った再読）とチェックポイントの規則をそれぞれ当て、片方が判定不能でも他方の
+    deny を優先する。区切り語ごとの組み合わせは作らず、文字列全体で 1 つの規則を当てる 2 回の読みに限る。
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。オーケストレーター実測（bash
+    5.3.9 / dash（/bin/sh）/ zsh 5.9、cat <<WORD・BODY・終端行・echo AFTER を各シェルに渡して終端行が閉じるかを照合）:
+    bash は ${v:-"x"}・${v:-''x''}・${v:-\x}・${v:-"a}b"}・${a:-${b:-"x"}}・${v:-$(echo
+    "x")} のいずれも書かれたままの形だけが閉じ、引用を除いた形では閉じない（bash --posix も同じ）。ただし区切り語の ${...} の外に引用がある
+    ''P''${v:-"x"}・"P"${v:-''x''}・${v:-"x"}"" では語全体の引用が除かれ P${v:-x}・${v:-x} が終端になる。${v:-$''x''}
+    は ${v:-''x''} が終端。dash は同じ各形で引用を除いた形だけが閉じる（zsh と同じ）。ksh / mksh は未導入で未実測。 Codex
+    2 ターン。挙げられた 3 案（undecidable_when_readings_differ / zsh_reading / bash_reading）はどれも、sh
+    の実体が dash か bash かで終端行の後の起動の見逃しを残すため、Codex は「none fits」とし、2 通りの読みで独立に解析しどちらかが
+    deny なら拒否する案を推奨。1 つの実シェルは文字列全体に 1 つの規則を当てるので、全体を 2 回読めば足り、線形時間のまま。判定不能はこのフックでは出力なし（見逃し側）で、タスクの期待（見逃さない側に倒す）に合わない。既存の
+    option_id には写らないが、select_or_freeform の自由記述として、起動引数の「Codex に相談し比較的良いと判断した選択肢を採る」指示に従い採用。Opus
+    エスカレーションは実行していない（既存選択肢から選ぶ仕組みのため、比較的良い案を選べない）。'
+- question_id: requirement.other-shell-delimiter-reading
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-23T23:13:58+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids: []
+  freeform: dash -c は今の読み（引用除去）のまま。ksh -c と、そのほか unknown の種類になる入れ子のシェルの -c は sh と同じ
+    2 通りの読み。
+  normalized_answer: dash（とその接尾辞つきの名前）の -c 文字列は実測どおり今の読み（引用除去）だけで読み、変えない。sh・ksh など、それ以外で
+    unknown の種類になる入れ子のシェルの -c 文字列は、sh の回答と同じ 2 通りの読みで読む。フックが受け取るコマンドそのもの（入れ子でない文字列）は今の読みのまま変えない。
+  resolution_note: 'gate create-spec.requirement-clarification（batch policy codex_consultation）。オーケストレーター実測（bash
+    5.3.9 / dash（/bin/sh）/ zsh 5.9、cat <<WORD・BODY・終端行・echo AFTER を各シェルに渡して終端行が閉じるかを照合）:
+    bash は ${v:-"x"}・${v:-''x''}・${v:-\x}・${v:-"a}b"}・${a:-${b:-"x"}}・${v:-$(echo
+    "x")} のいずれも書かれたままの形だけが閉じ、引用を除いた形では閉じない（bash --posix も同じ）。ただし区切り語の ${...} の外に引用がある
+    ''P''${v:-"x"}・"P"${v:-''x''}・${v:-"x"}"" では語全体の引用が除かれ P${v:-x}・${v:-x} が終端になる。${v:-$''x''}
+    は ${v:-''x''} が終端。dash は同じ各形で引用を除いた形だけが閉じる（zsh と同じ）。ksh / mksh は未導入で未実測。 Codex
+    2 ターン。1 ターン目は dash_zsh_reading_ksh_undecidable、2 ターン目は「dash は実測済みの引用除去形だけ、ksh
+    は 2 通りの読み」を推奨（dash に bash の読みを加えると本文中の起動を誤拒否し得る、ksh は未実測なので判定不能より 2 読みが見逃しを減らす）。dash_zsh_reading_ksh_undecidable
+    の dash 部分に一致し、ksh 部分は sh の回答と同じ 2 読みに置き換えた自由記述として採用。2 読みで足りるのは対象シェルがどちらかの規則に従う場合に限る点は仮定として残す。比較的良いと判断。Opus
+    エスカレーションは実行していない。'
