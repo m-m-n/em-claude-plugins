@@ -134,7 +134,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/artifact-digest-empty-targets/task0001
     notes: null
 review:
   status: pending
