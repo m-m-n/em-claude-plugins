@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-escaped-hash-brace-case-heredoc
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 5c8150b134c07812afe8be18693ba51f980dea3e
+last_input_digest: sha256:b9f15bd2c1148af1110ef9518406844bbae9082d1449d5a9f6fe44e57f26540b
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:b9f15bd2c1148af1110ef9518406844bbae9082d1449d5a9f6fe44e57f26540b
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
