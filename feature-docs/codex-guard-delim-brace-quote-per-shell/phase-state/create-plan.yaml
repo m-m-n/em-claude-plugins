@@ -1,0 +1,21 @@
+schema_version: 1
+feature: codex-guard-delim-brace-quote-per-shell
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 21b22141ec03b1fb78aa5b200a1f969a152522ac
+last_input_digest: sha256:1d8fd5dba587501ae102e27e91c424922e966bee32698b95703245f4227edc70
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:1d8fd5dba587501ae102e27e91c424922e966bee32698b95703245f4227edc70
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
