@@ -1,0 +1,111 @@
+schema_version: 1
+feature: codex-guard-delim-subst-undecidable
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 8994a61cde570c7f041cc695d0412d39e88c3be3
+last_input_digest: sha256:2350f0dd802994f0de8af913fcc4ccd86a512910c1eb3b3bc40d603f1d1133ae
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-23T20:00:43+09:00'
+    questions:
+    - question_id: requirement.heredoc-in-substitution
+      status: answered
+    - question_id: requirement.double-paren-fallback
+      status: answered
+    - question_id: requirement.word-paren-reading
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.heredoc-in-substitution:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-23T20:00:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - shared_same_line
+    freeform: null
+    normalized_answer: '共有スキップで同じ行の閉じを読む: case 文の外の << で、置換の閉じ ) までに引用されていない改行が無いものは閉じの位置を変えずに読み進める。<<
+      の後に置換の中で改行が来るものと、case 文の中の << は判定不能のまま。二重引用符側の 1 行の "$(cat <<EOF)" も同じ読み。'
+    resolution_note: 'gate: create-spec.requirement-clarification (batch-policies: codex_consultation,
+      record_as_assumption); Codex consulted (codex entry, 1 turn, 3 questions batched, converged); Codex
+      recommended shared_same_line. Codex は zsh 実測 1〜4 と一致し本文読みを追加せず直せる、区切り語側も共有読みなので括弧数えに戻すより case の読みを保てる、と判断。注意:
+      改行検出で << ごとの再走査をせず線形時間を保つ、呼び出し構造と再帰禁止を保つ、heredoc を常に判定不能とする docstring 固定テストを直す。不採用: delimiter_fallback（case
+      のパターンの ) で閉じる読みに戻る）、shared_model_body（コード増分最大）。 zsh 5.9 実測（feature-docs/.../phase-state 外の記録は SPEC
+      に転記）: 区切り語 ${v:-$(echo <<EOF)} は同じ行の ) で閉じ、全文が区切り語になる（終端行 EOF では後続が本文に吸われる）。$( ((1 << 2)) )・for
+      ((..<<..))・$(echo foo(case x))・$(echo foo(a;b)) も全文が区切り語。$( ((echo a) ) ) は zsh がサブシェルとして読み直す。*(e:true<改行>:N)
+      も受理。 Opus escalation: not run. Recorded as assumption.'
+  requirement.double-paren-fallback:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-23T20:00:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - arith_or_subshell
+    freeform: null
+    normalized_answer: '閉じで算術かサブシェルかを決める: コマンドの位置の ((（for の後を含む）は )) で閉じれば算術の文脈、そうでなければ今の入れ子のサブシェルの読みを保つ。読み直しは
+      1 つの (( につき 1 回、総量を制限して線形時間を保ち、上限超過は判定不能。'
+    resolution_note: 'gate: create-spec.requirement-clarification (batch-policies: codex_consultation,
+      record_as_assumption); Codex consulted (codex entry, 1 turn, 3 questions batched, converged); Codex
+      recommended arith_or_subshell. Codex は算術（実測 5・6）とサブシェルへの読み直し（実測 8）を両立でき、arith_undecidable は今 deny
+      の echo "$( ((echo a) ) )"; python3 -i を出力なしに変えて危険、arith_always は実測 8 を読めない、と判断。注意: 入れ子で再走査が重なると二次時間になり得るので総文字数を制限し明示スタックで処理する。
+      zsh 5.9 実測（feature-docs/.../phase-state 外の記録は SPEC に転記）: 区切り語 ${v:-$(echo <<EOF)} は同じ行の ) で閉じ、全文が区切り語になる（終端行
+      EOF では後続が本文に吸われる）。$( ((1 << 2)) )・for ((..<<..))・$(echo foo(case x))・$(echo foo(a;b)) も全文が区切り語。$(
+      ((echo a) ) ) は zsh がサブシェルとして読み直す。*(e:true<改行>:N) も受理。 Opus escalation: not run. Recorded as assumption.'
+  requirement.word-paren-reading:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-23T20:00:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - word_ctx_all_chars
+    freeform: null
+    normalized_answer: '語の文脈で読み、区切り文字も語の文字: コマンドの位置でない (（語の途中・引数の位置の語頭）は語の括弧の文脈で開き、中の語はコマンドの位置にならない（case・閉じの語・head
+      は効かない）。# は語の文字。引用・\ の組・$( )・${ }・バッククォートは追う。入れ子の ( は同じ文脈。;・&・改行も語の文字として読む。コマンドの位置の (、<(、>(、=( はコマンドを読む括弧のまま。'
+    resolution_note: 'gate: create-spec.requirement-clarification (batch-policies: codex_consultation,
+      record_as_assumption); Codex consulted (codex entry, 1 turn, 3 questions batched, converged); Codex
+      recommended word_ctx_all_chars. Codex は word_ctx_separators_undecidable だと今 deny の echo "$(echo
+      foo(a;b))"; python3 -i を出力なしに変える危険があると指摘。オーケストレーターが実測で確認: その形は現状 deny、zsh は区切り語の ${v:-$(echo foo(a;b))}
+      を全文として受理し、*(e:true<改行>:N) も受理する（語の括弧は対応する ) まで語の一部 = F8 と整合）。worker 推奨と異なるが Codex 案の方が fail-open
+      を増やさず zsh に近いと判断して採用。不採用: mid_word_only（語頭の ( が残り課題文の区別要求を満たさない）。注意: 既存の w 文脈（# を注釈扱い）を流用しない。 zsh
+      5.9 実測（feature-docs/.../phase-state 外の記録は SPEC に転記）: 区切り語 ${v:-$(echo <<EOF)} は同じ行の ) で閉じ、全文が区切り語になる（終端行
+      EOF では後続が本文に吸われる）。$( ((1 << 2)) )・for ((..<<..))・$(echo foo(case x))・$(echo foo(a;b)) も全文が区切り語。$(
+      ((echo a) ) ) は zsh がサブシェルとして読み直す。*(e:true<改行>:N) も受理。 Opus escalation: not run. Recorded as assumption.'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-23T20:00:43+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation (skip) をそのまま採用し design ステップを飛ばす
+    resolution_note: 'gate: create-spec.design-step (batch-policies: select decide_autonomously)'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:79517b6e9d39e749af8575c6f902e26a24a95a36f492dcad33a9049aeabed61d
+  output_digest: sha256:a99e515297e222f9068ac6adcbd1d41a61c194026620242aa8f8fdfef765fd9b
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:e236879489315ca79a3b3968083941c8c2e5f3ca34cfb2e71377f43b4718c6e0
+  output_digest: sha256:3a29deef8596204eb1c3f7767019585497db7fd2ada3fb35a683dd1c748db38f
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:2350f0dd802994f0de8af913fcc4ccd86a512910c1eb3b3bc40d603f1d1133ae
+  output_digest: null
+artifacts:
+- path: feature-docs/codex-guard-delim-subst-undecidable/REQUIREMENTS.md
+  sha256: sha256:d8e163ac901db1071267ff78d026b2ef52060f81d883d5af106a58fdd9e33c17
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-delim-subst-undecidable/SPEC.md
+  sha256: sha256:1ef34be2a92c81c6f7380db54b40e24e41e11064c26be748f37885f663f7ef2e
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
