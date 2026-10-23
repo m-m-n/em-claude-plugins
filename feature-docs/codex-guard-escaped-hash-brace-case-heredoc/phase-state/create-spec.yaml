@@ -53,7 +53,17 @@ worker_runs:
   status: completed
   input_digest: sha256:8dd573c39cc8fd53f648d5794247f315aa12a36fcd63d47eb6861d10b14b860a
   output_digest: sha256:76cc3cf6f59b38a2229069d3c38e917f72edf6219ac6f7ab54eafafb3f06f785
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:156d34477fe4dff2d7af06fc9632df126021d6d674df476c223c26fce1822352
+  output_digest: sha256:7e4e13316e5867b3f206aea383405ad977c9d449811003fae0aa81aee12121e8
+artifacts:
+- path: feature-docs/codex-guard-escaped-hash-brace-case-heredoc/REQUIREMENTS.md
+  sha256: sha256:605ce2f964020d6863aa1ce4f9ed31e626d647924ae74a54f4c5fb2c8cebe1d9
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-guard-escaped-hash-brace-case-heredoc/SPEC.md
+  sha256: sha256:2ad20851ba8d9fe5b5431a93a302004aa07ca3686812c8a84a0973ee8902e135
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
