@@ -101,7 +101,8 @@ workflow:
   base_commit: cd03a6ee7810df7abab315da27cf1da50981b0d4
   completed_at_commit: bdcbd65f9b0e989d6f551d744a59616122b12aab
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 9ae72101958f29112f9d101384ddbc5706558785
 - id: verify
   status: pending
 - id: retrospect
@@ -137,7 +138,7 @@ tasks:
     branch: em-workflow/codex-guard-delim-brace-quote-per-shell/task0001
     notes: 'batch retry consumed (implement.failed-task, 1/1). First attempt failed: cross-repo-write-guard denied writes to the task worktree because the orchestrator session cwd had moved into the integration worktree; cwd restored to the project root before retry.'
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -148,8 +149,13 @@ review:
     - perspective: performance
       reason: NFR2 requires linear-time parsing; the diff adds per-shell rescans of ${ ... } delimiter ranges in a hook parser that reads attacker-shaped command strings
     cross_validation: true
-  rounds_completed: 0
-  perspectives: {}
+  rounds_completed: 1
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
+    performance: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
