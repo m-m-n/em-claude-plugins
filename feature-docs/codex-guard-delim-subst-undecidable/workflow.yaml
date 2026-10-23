@@ -130,6 +130,10 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 置換内の同じ行で閉じる << の読み
