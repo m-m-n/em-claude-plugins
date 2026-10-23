@@ -2393,6 +2393,36 @@ class _Parser:
         the newline the item body starts at a command position. A `#` after
         any other `)` keeps its reading.
 
+        Where a comment starts (the `#` decision). At a site where a comment
+        can start, a `#` starts a comment exactly when its effective previous
+        character is a space, a tab, a newline, `;`, `&`, `|` or `(`, and that
+        character is not escaped. Otherwise the `#` is a word character. The
+        effective previous character is the character right before the `#`
+        once every continuation pair directly in front of the `#` is left out,
+        a run of several pairs included: in `: a`, a pair, `#x` it is the `a`,
+        so the `#` is a word character, and in `: `, a pair, `#x` it is the
+        space, so the `#` starts a comment. A character is escaped when it is
+        the second character of a backslash pair, that is, when the run of
+        backslashes directly in front of it has odd length: the `#` after an
+        escaped blank, tab, `;`, `&`, `|` or `(` is a word character, and the
+        `#` after a blank that follows an even run of backslashes (an escaped
+        backslash, say) starts a comment. A `#` whose effective previous
+        character is `)`, `<`, `>` or any other character stays a word
+        character; the one exception is rule 3: in phase 7 a `)` that closes
+        the pattern still lets the `#` start a comment. The sites are the
+        start of a word and the comment branch of the command lists p and 8,
+        a pattern, the outermost entry of the word list w and the waiting
+        phases 1, 3, 4, 5 and 7, and all of them use this one decision. A `#`
+        never starts a comment in a nested entry of w, a word parenthesis W,
+        double quotes, backticks, `${ ... }` and the arithmetic contexts. The
+        decision carries no state through the reading. It is computed from the
+        characters directly in front of the `#`: the look crosses only the
+        continuation pairs directly in front of the `#` and the run of
+        backslashes in front of the character it ends on, and every other
+        character stops it, so the work summed over the skip stays within a
+        constant times the length of the string. This bounded look is the only
+        place where the characters in front of a `#` are looked at.
+
         Continuation pairs (rule 4). A continuation pair is a backslash
         directly followed by a newline. Where a case statement waits (before
         the subject, after the subject while `in` is awaited, at a pattern
@@ -2582,10 +2612,10 @@ class _Parser:
         zsh `for`, and it is read in a context of its own, not as the
         arithmetic a. A backslash pair, a quoted unit, a backtick, `$(`, `$((`
         and `${` in it are followed as in every other context. In the word
-        list a `#` starts a comment only in the outermost entry: there a `#`
-        whose previous character is a space, a tab, a newline, `;`, `&`, `|`
-        or `(` starts a comment, the same start condition as in a command
-        list. In a nested entry every `#` is a word character and starts no
+        list a `#` starts a comment only in the outermost entry: there the
+        comment-start decision above applies, as it does in a command list, so
+        the effective previous character decides, not the previous character
+        alone. In a nested entry every `#` is a word character and starts no
         comment. The comment runs to the next newline, and a quote, a `)` or a
         substitution inside it opens nothing and closes nothing; a comment
         with no newline before the input ends makes the chunk undecidable.
@@ -2603,7 +2633,9 @@ class _Parser:
         and a `#` after a blank in it starts a comment. The `)` that closes
         that p is a closing inside a word: reading goes back to w and the
         characters after it are the rest of the same word. The start of a word
-        is a state kept while reading and never looked up backward: it is the
+        is a state kept while reading, moved on before each character is read.
+        The only look at the characters behind is the comment-start decision
+        above, and it leaves this state as it is. A word starts at the
         position right after the `(` that opens the outermost entry and right
         after an unquoted, unescaped space, tab, newline, `;`, `&` or `|` (the
         newline that ends a comment included). An escaped character (an
@@ -2678,7 +2710,12 @@ class _Parser:
                     # is the return from a nested context (`in_word` is set when it
                     # closes). A continuation pair, a backslash directly followed by a
                     # newline, neither starts a word nor separates words, so it keeps
-                    # the state as it was.
+                    # the state as it was. A `#` is not decided from this state: the
+                    # w branch below asks the comment-start decision
+                    # (`_hash_starts_comment`), which looks at the characters directly
+                    # in front of the `#` and gives the same answer, since it leaves a
+                    # continuation pair out and treats an escaped character as a word
+                    # character.
                     opens_process = False
                     if top == "w" and stack[-2] != "w":
                         opens_process = procsub
@@ -2693,12 +2730,16 @@ class _Parser:
                         # An unquoted newline while a list has a pending heredoc
                         # operator: the body would start here and is never read.
                         raise _Undecidable("heredoc in a substitution")
+                    # The word-start test of the lists p and 8. A `#` that starts a
+                    # comment (the comment-start decision, `_hash_starts_comment`)
+                    # begins no word: the general comment branch below asks the same
+                    # question about the same `#` in the same step, so the two agree.
                     if (
                         top in "p8"
                         and not in_word
                         and ch not in " \t\n;&|()<>"
                         and not (ch == "\\" and s.startswith("\n", j + 1))
-                        and not (ch == "#" and s[j - 1] in " \t\n;&|(")
+                        and not (ch == "#" and self._hash_starts_comment(j))
                     ):
                         # A word begins here. A keyword, a reserved word, a closing
                         # word or a head word is decided once, on the characters that
@@ -2768,7 +2809,11 @@ class _Parser:
                             j += 1
                         elif ch == "\\" and s.startswith("\n", j + 1):
                             j += 2
-                        elif ch == "#" and (s[j - 1] in " \t\n;&|(" or (top == "7" and s[j - 1] == ")")):
+                        elif ch == "#" and self._hash_starts_comment(j, ")" if top == "7" else ""):
+                            # The comment-start decision of every site. In phase 7 the
+                            # `)` that closes the pattern also lets a `#` start a
+                            # comment (rule 3), with continuation pairs left out as
+                            # everywhere else.
                             j = s.find("\n", j)
                             if j == -1:
                                 raise _Undecidable("substitution")
@@ -2900,7 +2945,10 @@ class _Parser:
                                 j += 1
                         elif ch in "\n;&":
                             raise _Undecidable("case pattern")
-                        elif ch == "#" and s[j - 1] in " \t\n;&|(":
+                        elif ch == "#" and self._hash_starts_comment(j):
+                            # A comment in a pattern starts by the comment-start
+                            # decision of every site; a `#` in a group g was read as a
+                            # word character above and never gets here.
                             j = s.find("\n", j)
                             if j == -1:
                                 raise _Undecidable("substitution")
@@ -2986,8 +3034,11 @@ class _Parser:
                         j += 1
                     elif top == "w":
                         # The word list of a zsh `for`: in the outermost entry a `#`
-                        # starts a comment where it does in a command list; in a
-                        # nested entry (a glob qualifier as in `*(#qN)`, the entry
+                        # starts a comment by the comment-start decision of a command
+                        # list (`_hash_starts_comment`: the effective previous
+                        # character, with continuation pairs left out, is a blank, a
+                        # tab, a newline, `;`, `&`, `|` or `(` and is not escaped); in
+                        # a nested entry (a glob qualifier as in `*(#qN)`, the entry
                         # directly beneath this one is also w) every `#` is a word
                         # character. Every other character is part of a word or
                         # separates words, the newline included. Where a word starts
@@ -2995,14 +3046,18 @@ class _Parser:
                         # the top of the loop (an escaped space is a word character, a
                         # continuation pair separates no word); a process substitution
                         # at the start of a word is opened in the `(` branch.
-                        if ch == "#" and stack[-2] != "w" and s[j - 1] in " \t\n;&|(":
+                        if ch == "#" and stack[-2] != "w" and self._hash_starts_comment(j):
                             j = s.find("\n", j)
                             if j == -1:
                                 raise _Undecidable("substitution")
                         else:
                             j += 1
-                    elif ch == "#" and s[j - 1] in " \t\n;&|(":
-                        # A comment runs to the end of the line.
+                    elif ch == "#" and self._hash_starts_comment(j):
+                        # A comment runs to the end of the line. It starts by the
+                        # comment-start decision, the one the word-start test above
+                        # used for this same `#`: a `#` after a word character, an
+                        # escaped blank or a continuation pair that follows a word
+                        # character is a word character and gets here as none.
                         j = s.find("\n", j)
                         if j == -1:
                             raise _Undecidable("substitution")
@@ -3079,6 +3134,40 @@ class _Parser:
         if k < n and s[k] not in follow:
             return -1
         return k
+
+    def _hash_starts_comment(self, j, closer=""):
+        """Return whether the `#` at `j` starts a comment: the one
+        comment-start decision of the substitution skip, used at every site
+        where a comment can start. The effective previous character is the
+        character right before the `#` once every continuation pair directly
+        in front of it is left out, a run of several pairs included. The `#`
+        starts a comment exactly when that character is a space, a tab, a
+        newline, `;`, `&`, `|` or `(` (or one of the characters of `closer`,
+        the `)` of a pattern in phase 7) and is not escaped; any other
+        effective previous character, `)`, `<` and `>` included, makes the `#`
+        a word character. A character is escaped when the run of backslashes
+        directly in front of it has odd length. A newline whose run is odd is
+        a continuation pair and is left out together with its backslash; a
+        newline whose run is even is an ordinary newline. The look crosses
+        only the continuation pairs directly in front of the `#` and the run
+        of backslashes in front of the character it ends on, every other
+        character stops it, and a `#` further on is such a character, so the
+        looks of two `#` never overlap and the work summed over a skip stays
+        within a constant times the length of the string. It keeps no state,
+        raises nothing and calls no other method."""
+        s = self.s
+        follow = " \t\n;&|(" + closer
+        k = j - 1
+        while k >= 0 and s[k] in follow:
+            b = k - 1
+            while b >= 0 and s[b] == "\\":
+                b -= 1
+            if (k - 1 - b) % 2 == 0:
+                return True
+            if s[k] != "\n":
+                return False
+            k -= 2
+        return False
 
     def _empty_parens_end(self, j):
         """Return the index just after the `)` of an empty `()` whose `(` is
