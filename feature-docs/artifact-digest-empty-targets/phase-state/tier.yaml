@@ -20,7 +20,7 @@ bases:
       '1': 0.95
       '2': 0.04
       '3': 0.0
-  observed_at: '2026-10-23T18:38:00+09:00'
+  observed_at: '2026-10-23T18:33:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.96
       '2': 0.03
       '3': 0.0
-  observed_at: '2026-10-23T18:44:00+09:00'
+  observed_at: '2026-10-23T18:38:00+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/references/artifact-digest.md
@@ -65,4 +65,4 @@ pre_survey_estimate:
   evidence: em-workflow/references/artifact-digest.md:96,116 に0件時の規則がなく、:101,128 は終了コード2を失敗扱いする。em-workflow/scripts/artifact-digest.py:299-301
     の無引数実行は終了コード2で再現した。tests/test_artifact_digest_docs.py:390-479 は両方の0件を検証しておらず、既存103件は成功した。呼出元・依存数は同文書:167-172
     の4文書と計算スクリプト1本を計上し、新規関数数は実装側を対象とした。変更行数は概算。
-decided_at: '2026-10-23T18:44:30+09:00'
+decided_at: '2026-10-23T18:39:00+09:00'
