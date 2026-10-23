@@ -544,6 +544,16 @@ NESTED_READ_LIMIT = 1000000
 # group, as before ranges were read.
 PAREN_SCAN_FACTOR = 4
 
+# The work, per character of the string being parsed, the substitution skip
+# (`_Parser._skip_substitution`) may spend reading text a second time: when a
+# command-position `((` read as an arithmetic command does not close with `))`,
+# the reader goes back to that `((` and reads it as two nested subshells, once
+# per `((`. The characters read again, summed over all the skips of one parser,
+# may not exceed this many times the length of the string; the skip that would
+# exceed it stops undecidable. The total work stays within a constant times the
+# length of the string.
+ARITHMETIC_REREAD_FACTOR = 8
+
 # The first direct separators that rescue a provisional group: a `;` and a lone
 # `&`. Any other first separator (a newline, `&&`, `||`, `|`, `|&`) leaves the
 # group unrescued.
@@ -1052,6 +1062,10 @@ class _Parser:
         # The characters the parser may still spend locating `(`...`)` ranges
         # among the arguments of anonymous functions.
         self.paren_budget = PAREN_SCAN_FACTOR * self.n
+        # The characters the substitution skip may still read a second time,
+        # when a command-position `((` read as an arithmetic command is read
+        # again as two nested subshells.
+        self.arith_budget = ARITHMETIC_REREAD_FACTOR * self.n
         # Set between a redirection operator and its target word:
         # (is_heredoc, strips_leading_tabs).
         self.redirect = None
@@ -2262,18 +2276,76 @@ class _Parser:
         the list ends any head state still pending, and the position after it
         follows rule 1.
 
+        Heredoc operator (rule 8). Outside a case statement an unquoted `<<`
+        that is not `<<<` does not make the chunk undecidable. The command
+        list it stands in is marked as having a pending heredoc operator, and
+        the word after the operator (the `<<-` form included) is read as an
+        ordinary word at an argument position. No heredoc body is read. While
+        any open list is marked, an unquoted newline in any context (a word
+        parenthesis included, quoted text excluded) makes the chunk
+        undecidable, because the body would start there. When the `)` that
+        closes a marked list is reached, the mark is dropped and the list
+        closes where it would without the operator, so `$(cat <<EOF)` closes at
+        its `)`. The mark is one stack index and the newline check one test of
+        the character being read, both made in the single forward pass: no `<<`
+        looks ahead, so the reading stays linear. The rule is the same for a
+        substitution inside double quotes and for the unquoted `$( ... )` of a
+        delimiter's `${ ... }` range, which both go through this skip. A `<<`
+        inside a case statement (its subject, its patterns, its item bodies and
+        every list nested in them) stays undecidable. `<<<` is a here-string
+        and no heredoc, and in an arithmetic context (rule 9) a `<<` is a
+        shift.
+
+        Arithmetic command (rule 9). A `((` read at a command position (a `((`
+        directly after `for` included; two parentheses with a blank between
+        them are not this form) opens an arithmetic command, the context A. In
+        it a `<<` is a left shift and no heredoc, nested parentheses are
+        counted (the context a), and quotes and nested expansions are followed
+        as everywhere else. A `)` that closes the command must be directly
+        followed by a second `)`: the two close it, and the list that holds it
+        is at a command position afterwards (the close of a `(` read at a
+        command position). When the matching close is not `))`, or when the
+        reading inside it stops undecidable, everything read since the `((` is
+        dropped and the reader goes back to that `((` and reads it as two
+        nested subshells, the reading a `(` at a command position has had. A
+        `((` is read again at most once. The characters read again are summed
+        over all the skips of one parser, and the sum may not exceed
+        `ARITHMETIC_REREAD_FACTOR` (8) times the length of the string: the skip
+        that would exceed it is undecidable. The arithmetic command, the second
+        reading and the budget use the explicit stack and one list of the `((`
+        that are open; nothing recurses, and the total work stays within a
+        constant times the length of the string.
+
+        Parenthesis in a word (rule 10). A `(` that is not read at a command
+        position, in the middle of a word or at the start of a word at an
+        argument position, opens a word parenthesis, the context W. The
+        readings that stay: a `(` directly after `<`, `>` or `=` (`<(`, `>(`
+        and `=(`), a function head `name()`, and the word list of `for name
+        (words)`. The words of W never reach a command position, so a `case`,
+        a closing word or a head means nothing in it. A `#` is a word character
+        and starts no comment; `;`, `&`, `|` and a newline are word characters,
+        neither separators nor undecidable (rule 8 apart); quotes, backslash
+        pairs, `$( )`, `$(( ))`, `${ }` and backquotes are followed as in the
+        other contexts. A `(` in W opens a nested W and a `)` closes the
+        innermost one. When the outermost W closes, the list that holds it goes
+        on in the state it had before the `(`, inside the same word.
+
         Raises _Undecidable when the chunk is not closed, or when its close
         cannot be located with certainty. A chunk with a case statement is
         undecidable for these forms: no `in` after the subject (zsh's brace
         form included), no closing `esac` before the input ends, a `)` with no
         pattern at a pattern position, a heredoc anywhere in the chunk (item
-        bodies included), an unmatched `)` in an item body, an unquoted `;` or
-        `&` where a pattern must begin, and an unquoted newline, `;` or `&` in
-        a pattern outside its groups.
+        bodies included) once a case statement is open, an unmatched `)` in an
+        item body, an unquoted `;` or `&` where a pattern must begin, and an
+        unquoted newline, `;` or `&` in a pattern outside its groups. Outside a
+        case statement a heredoc operator is undecidable only when an unquoted
+        newline follows it before the close of its list (rule 8).
 
         Contexts on the stack: p command list (`$(`, `(`), a arithmetic
-        (`$((`) only, w the word list of a zsh `for`, d double quotes, b
-        backticks, k and K `${ ... }` outside and inside double quotes. A
+        (`$((`) and the parentheses nested in an arithmetic command, A an
+        arithmetic command (rule 9), W a parenthesis in a word (rule 10), w the
+        word list of a zsh `for`, d double quotes, b backticks, k and K
+        `${ ... }` outside and inside double quotes. A
         case statement is one entry above the context that holds its `case`,
         and its phase is the character of the entry: 1 before the subject, 2
         in the subject, 3 after the subject (waiting for `in`), 4 at a pattern
@@ -2302,7 +2374,8 @@ class _Parser:
         the enclosing list and nothing is given a command position. The `)`
         that closes the outermost entry gives the list that holds the `for`
         a command position (`for x (a) {`). The context a is the arithmetic
-        part of `$((` only, and its reading is unchanged.
+        part of `$((` and the parentheses nested in an arithmetic command, and
+        its reading is unchanged.
         A second list `saved` runs beside the stack, one entry for
         each stack entry: the state the list under it had when the entry was
         pushed and whether its close gives that list a command position.
@@ -2333,296 +2406,358 @@ class _Parser:
         # that is inside a word: the `)` that closes the arithmetic part of a
         # `$((` gives back a list that goes on inside its word.
         saved = [(False, False, HEAD_NONE, False)] * len(stack)
-        while j < n:
-            top = stack[-1]
-            ch = s[j]
-            if (
-                top in "p8"
-                and not in_word
-                and ch not in " \t\n;&|()<>"
-                and not (ch == "\\" and s.startswith("\n", j + 1))
-                and not (ch == "#" and s[j - 1] in " \t\n;&|(")
-            ):
-                # A word begins here. A keyword, a reserved word, a closing
-                # word or a head word is decided once, on the characters that
-                # start the word; any other word is read as an ordinary word,
-                # which is not looked at again.
-                named, head = head, HEAD_NONE
-                if named in (HEAD_FUNCTION, HEAD_FOR, HEAD_NAME):
-                    # The name of a function, a loop or a repeat count is an
-                    # ordinary word, never a keyword; the word after it is at
-                    # a command position.
-                    at_command, in_word = True, True
-                    if named == HEAD_FUNCTION:
-                        head = HEAD_FUNCTION_NAME
-                    elif named == HEAD_FOR:
-                        head = HEAD_FOR_NAME
-                else:
-                    was_command = at_command
-                    kind, end = self._read_command_word(j, at_command, top == "8", dbl)
-                    if kind == "case":
-                        stack.append("1")
-                        saved.append((at_command, dbl, HEAD_NONE, False))
-                        j = end
-                        continue
-                    if kind == "esac":
-                        stack.pop()
-                        dbl = saved.pop()[1]
-                        at_command, in_word = True, False
-                        j = end
-                        continue
-                    if kind == "reserved":
-                        j = end
-                        continue
-                    if kind == "dbl_open":
-                        dbl = True
-                        at_command, in_word = False, False
-                        j = end
-                        continue
-                    if kind == "dbl_close":
-                        dbl = False
-                        at_command, in_word = True, False
-                        j = end
-                        continue
-                    if kind is not None:
-                        # A head word: `function`, `for`, `select`, `coproc`
-                        # or `repeat`.
-                        head = HEAD_AFTER_WORD[kind]
-                        at_command, in_word = kind == "coproc", False
-                        j = end
-                        continue
-                    at_command, in_word = False, True
-                    if was_command:
-                        if named == HEAD_COPROC and self.coproc_name:
-                            # The coproc NAME rule: the ordinary word after
-                            # `coproc` is a NAME and the next word is at a
-                            # command position.
-                            at_command = True
+        # The lists with a pending heredoc operator (rule 8), as stack indices,
+        # innermost last; the number of case statements open on the stack; the
+        # command-position `((` open as an arithmetic command (rule 9), with what
+        # is needed to read each again as two subshells, innermost last; and the
+        # positions of the `((` that have been read again.
+        marks, cases, arith, fallen = [], 0, [], set()
+        while True:
+            try:
+                while j < n:
+                    top = stack[-1]
+                    ch = s[j]
+                    if ch == "\n" and marks and top not in "dK":
+                        # An unquoted newline while a list has a pending heredoc
+                        # operator: the body would start here and is never read.
+                        raise _Undecidable("heredoc in a substitution")
+                    if (
+                        top in "p8"
+                        and not in_word
+                        and ch not in " \t\n;&|()<>"
+                        and not (ch == "\\" and s.startswith("\n", j + 1))
+                        and not (ch == "#" and s[j - 1] in " \t\n;&|(")
+                    ):
+                        # A word begins here. A keyword, a reserved word, a closing
+                        # word or a head word is decided once, on the characters that
+                        # start the word; any other word is read as an ordinary word,
+                        # which is not looked at again.
+                        named, head = head, HEAD_NONE
+                        if named in (HEAD_FUNCTION, HEAD_FOR, HEAD_NAME):
+                            # The name of a function, a loop or a repeat count is an
+                            # ordinary word, never a keyword; the word after it is at
+                            # a command position.
+                            at_command, in_word = True, True
+                            if named == HEAD_FUNCTION:
+                                head = HEAD_FUNCTION_NAME
+                            elif named == HEAD_FOR:
+                                head = HEAD_FOR_NAME
                         else:
-                            # The first word of a simple command; after
-                            # `coproc` without the NAME rule that word is the
-                            # command and the words after it are arguments.
-                            head = HEAD_FIRST
-            if top in "13457":
-                # A case statement that waits for a word or for `in`.
-                if ch in " \t\n":
-                    j += 1
-                elif ch == "\\" and s.startswith("\n", j + 1):
-                    j += 2
-                elif ch == "#" and (s[j - 1] in " \t\n;&|(" or (top == "7" and s[j - 1] == ")")):
-                    j = s.find("\n", j)
-                    if j == -1:
-                        raise _Undecidable("substitution")
-                elif top == "3":
-                    end = self._keyword_end(j, "in", " \t\n;&|()<>")
-                    if end == -1:
-                        raise _Undecidable("case without in")
-                    stack[-1] = "4"
-                    j = end
-                elif top == "1":
-                    if ch in ";&|)":
-                        raise _Undecidable("case without a subject")
-                    stack[-1] = "2"
-                elif top == "4":
-                    end = self._keyword_end(j, "esac", " \t\n;&|)<>")
-                    if end != -1:
-                        stack.pop()
-                        dbl = saved.pop()[1]
-                        at_command, in_word, head = True, False, HEAD_NONE
-                        j = end
-                    elif ch in ");&":
-                        raise _Undecidable("case pattern")
-                    elif ch == "(":
-                        stack[-1] = "5"
+                            was_command = at_command
+                            kind, end = self._read_command_word(j, at_command, top == "8", dbl)
+                            if kind == "case":
+                                stack.append("1")
+                                saved.append((at_command, dbl, HEAD_NONE, False))
+                                cases += 1
+                                j = end
+                                continue
+                            if kind == "esac":
+                                stack.pop()
+                                dbl = saved.pop()[1]
+                                cases -= 1
+                                at_command, in_word = True, False
+                                j = end
+                                continue
+                            if kind == "reserved":
+                                j = end
+                                continue
+                            if kind == "dbl_open":
+                                dbl = True
+                                at_command, in_word = False, False
+                                j = end
+                                continue
+                            if kind == "dbl_close":
+                                dbl = False
+                                at_command, in_word = True, False
+                                j = end
+                                continue
+                            if kind is not None:
+                                # A head word: `function`, `for`, `select`, `coproc`
+                                # or `repeat`.
+                                head = HEAD_AFTER_WORD[kind]
+                                at_command, in_word = kind == "coproc", False
+                                j = end
+                                continue
+                            at_command, in_word = False, True
+                            if was_command:
+                                if named == HEAD_COPROC and self.coproc_name:
+                                    # The coproc NAME rule: the ordinary word after
+                                    # `coproc` is a NAME and the next word is at a
+                                    # command position.
+                                    at_command = True
+                                else:
+                                    # The first word of a simple command; after
+                                    # `coproc` without the NAME rule that word is the
+                                    # command and the words after it are arguments.
+                                    head = HEAD_FIRST
+                    if top in "13457":
+                        # A case statement that waits for a word or for `in`.
+                        if ch in " \t\n":
+                            j += 1
+                        elif ch == "\\" and s.startswith("\n", j + 1):
+                            j += 2
+                        elif ch == "#" and (s[j - 1] in " \t\n;&|(" or (top == "7" and s[j - 1] == ")")):
+                            j = s.find("\n", j)
+                            if j == -1:
+                                raise _Undecidable("substitution")
+                        elif top == "3":
+                            end = self._keyword_end(j, "in", " \t\n;&|()<>")
+                            if end == -1:
+                                raise _Undecidable("case without in")
+                            stack[-1] = "4"
+                            j = end
+                        elif top == "1":
+                            if ch in ";&|)":
+                                raise _Undecidable("case without a subject")
+                            stack[-1] = "2"
+                        elif top == "4":
+                            end = self._keyword_end(j, "esac", " \t\n;&|)<>")
+                            if end != -1:
+                                stack.pop()
+                                dbl = saved.pop()[1]
+                                cases -= 1
+                                at_command, in_word, head = True, False, HEAD_NONE
+                                j = end
+                            elif ch in ");&":
+                                raise _Undecidable("case pattern")
+                            elif ch == "(":
+                                stack[-1] = "5"
+                                j += 1
+                            else:
+                                stack[-1] = "6"
+                        elif top == "5":
+                            if ch in ");&":
+                                raise _Undecidable("case pattern")
+                            stack[-1] = "6"
+                        else:
+                            # Phase 7: the item body starts at a command position.
+                            stack[-1] = "8"
+                            at_command, in_word, dbl, head = True, False, False, HEAD_NONE
+                    elif ch == "\\":
+                        j += 2
+                    elif top == "b":
                         j += 1
-                    else:
-                        stack[-1] = "6"
-                elif top == "5":
-                    if ch in ");&":
-                        raise _Undecidable("case pattern")
-                    stack[-1] = "6"
-                else:
-                    # Phase 7: the item body starts at a command position.
-                    stack[-1] = "8"
-                    at_command, in_word, dbl, head = True, False, False, HEAD_NONE
-            elif ch == "\\":
-                j += 2
-            elif top == "b":
-                j += 1
-                if ch == "`":
-                    stack.pop()
-                    frame = saved.pop()
-                    if not stack:
-                        return j
-                    at_command, dbl, head, _ = frame
-                    in_word = True
-            elif ch == "`":
-                stack.append("b")
-                saved.append((at_command, dbl, head, False))
-                j += 1
-            elif ch == '"':
-                if top == "d":
-                    stack.pop()
-                    at_command, dbl, head, _ = saved.pop()
-                    in_word = True
-                else:
-                    stack.append("d")
-                    saved.append((at_command, dbl, head, False))
-                j += 1
-            elif s.startswith("$((", j):
-                stack.extend(("p", "a"))
-                saved.extend(((at_command, dbl, head, False),) * 2)
-                j += 3
-            elif s.startswith("$(", j):
-                stack.append("p")
-                saved.append((at_command, dbl, head, False))
-                at_command, in_word, dbl, head = True, False, False, HEAD_NONE
-                j += 2
-            elif s.startswith("${", j):
-                stack.append("K" if top in "dK" else "k")
-                saved.append((at_command, dbl, head, False))
-                j += 2
-            elif top == "d":
-                j += 1
-            elif ch == "}" and top in "kK":
-                stack.pop()
-                at_command, dbl, head, _ = saved.pop()
-                in_word = True
-                j += 1
-            elif top == "K":
-                j += 1
-            elif ch == "'":
-                j = s.find("'", j + 1)
-                if j == -1:
-                    raise _Undecidable("quote")
-                j += 1
-            elif s.startswith("$'", j):
-                j += 2
-                while j < n and s[j] != "'":
-                    j += 2 if s[j] == "\\" else 1
-                j += 1
-            elif top == "k":
-                j += 1
-            elif top in "26g":
-                # The subject of a case statement, a pattern, or a
-                # parenthesised group inside either.
-                if ch == "(":
-                    stack.append("g")
-                    saved.append((at_command, dbl, head, False))
-                    j += 1
-                elif ch == ")":
-                    if top == "2":
-                        raise _Undecidable("case without in")
-                    if top == "6":
-                        stack[-1] = "7"
-                    else:
-                        stack.pop()
-                        saved.pop()
-                    j += 1
-                elif s.startswith("<<<", j):
-                    j += 3
-                elif s.startswith("<<", j):
-                    raise _Undecidable("heredoc in a substitution")
-                elif top == "g":
-                    j += 1
-                elif top == "2":
-                    if ch in "<>" and s.startswith("(", j + 1):
+                        if ch == "`":
+                            stack.pop()
+                            frame = saved.pop()
+                            if not stack:
+                                return j
+                            at_command, dbl, head, _ = frame
+                            in_word = True
+                    elif ch == "`":
+                        stack.append("b")
+                        saved.append((at_command, dbl, head, False))
+                        j += 1
+                    elif ch == '"':
+                        if top == "d":
+                            stack.pop()
+                            at_command, dbl, head, _ = saved.pop()
+                            in_word = True
+                        else:
+                            stack.append("d")
+                            saved.append((at_command, dbl, head, False))
+                        j += 1
+                    elif s.startswith("$((", j):
+                        stack.extend(("p", "a"))
+                        saved.extend(((at_command, dbl, head, False),) * 2)
+                        j += 3
+                    elif s.startswith("$(", j):
                         stack.append("p")
                         saved.append((at_command, dbl, head, False))
                         at_command, in_word, dbl, head = True, False, False, HEAD_NONE
                         j += 2
-                    elif ch in " \t\n":
-                        stack[-1] = "3"
+                    elif s.startswith("${", j):
+                        stack.append("K" if top in "dK" else "k")
+                        saved.append((at_command, dbl, head, False))
+                        j += 2
+                    elif top == "d":
                         j += 1
-                    elif ch in ";&|":
-                        raise _Undecidable("case without in")
+                    elif ch == "}" and top in "kK":
+                        stack.pop()
+                        at_command, dbl, head, _ = saved.pop()
+                        in_word = True
+                        j += 1
+                    elif top == "K":
+                        j += 1
+                    elif ch == "'":
+                        j = s.find("'", j + 1)
+                        if j == -1:
+                            raise _Undecidable("quote")
+                        j += 1
+                    elif s.startswith("$'", j):
+                        j += 2
+                        while j < n and s[j] != "'":
+                            j += 2 if s[j] == "\\" else 1
+                        j += 1
+                    elif top == "k":
+                        j += 1
+                    elif top in "26g":
+                        # The subject of a case statement, a pattern, or a
+                        # parenthesised group inside either.
+                        if ch == "(":
+                            stack.append("g")
+                            saved.append((at_command, dbl, head, False))
+                            j += 1
+                        elif ch == ")":
+                            if top == "2":
+                                raise _Undecidable("case without in")
+                            if top == "6":
+                                stack[-1] = "7"
+                            else:
+                                stack.pop()
+                                saved.pop()
+                            j += 1
+                        elif s.startswith("<<<", j):
+                            j += 3
+                        elif s.startswith("<<", j):
+                            raise _Undecidable("heredoc in a substitution")
+                        elif top == "g":
+                            j += 1
+                        elif top == "2":
+                            if ch in "<>" and s.startswith("(", j + 1):
+                                stack.append("p")
+                                saved.append((at_command, dbl, head, False))
+                                at_command, in_word, dbl, head = True, False, False, HEAD_NONE
+                                j += 2
+                            elif ch in " \t\n":
+                                stack[-1] = "3"
+                                j += 1
+                            elif ch in ";&|":
+                                raise _Undecidable("case without in")
+                            else:
+                                j += 1
+                        elif ch in "\n;&":
+                            raise _Undecidable("case pattern")
+                        elif ch == "#" and s[j - 1] in " \t\n;&|(":
+                            j = s.find("\n", j)
+                            if j == -1:
+                                raise _Undecidable("substitution")
+                        else:
+                            j += 1
+                    elif ch == "(":
+                        kind_char, close_command, width = ("p" if top == "8" else top), False, 1
+                        if top == "A":
+                            # A parenthesis inside an arithmetic command is counted.
+                            kind_char = "a"
+                        elif top not in "awW":
+                            if head in (HEAD_FIRST, HEAD_FUNCTION, HEAD_FUNCTION_NAME):
+                                end = self._empty_parens_end(j)
+                                if end != -1:
+                                    # A function head, `name()`, `function name()` or
+                                    # the anonymous `function ()`: the next word is at
+                                    # a command position.
+                                    at_command, in_word, head = True, False, HEAD_NONE
+                                    j = end
+                                    continue
+                            # Whether this `(` is read at a command position decides
+                            # what its `)` gives; a `((` after `for` counts as read
+                            # at one.
+                            close_command = at_command or head == HEAD_FOR
+                            if head == HEAD_FOR_NAME:
+                                # The zsh word list of a `for`: a context of its own
+                                # (w). No word of it is at a command position, and its
+                                # `)` closes a head. A `(` read inside it opens a
+                                # nested entry of the same kind, whose `)` closes
+                                # inside a word.
+                                kind_char, close_command = "w", True
+                            elif close_command:
+                                if s.startswith("((", j) and j not in fallen:
+                                    # An arithmetic command, until its `))` shows
+                                    # otherwise (rule 9): what a second reading from
+                                    # this `((` needs is kept.
+                                    arith.append(
+                                        (len(stack), j, at_command, in_word, dbl, head, cases, len(marks))
+                                    )
+                                    kind_char, width = "A", 2
+                            elif s[j - 1] not in "<>=":
+                                # A parenthesis in a word, not a process substitution
+                                # or `=(` (rule 10): nothing in it is a command.
+                                kind_char = "W"
+                        stack.append(kind_char)
+                        saved.append((at_command, dbl, HEAD_NONE, close_command))
+                        at_command, in_word, dbl, head = True, False, False, HEAD_NONE
+                        j += width
+                    elif ch == ")":
+                        if top == "8":
+                            raise _Undecidable("unmatched parenthesis in a case body")
+                        if top == "A":
+                            # The close of an arithmetic command is `))`; anything
+                            # else sends the reader back to its `((`.
+                            if not s.startswith("))", j):
+                                raise _Undecidable("arithmetic command")
+                            arith.pop()
+                            j += 1
+                        stack.pop()
+                        at_command, dbl, head, close_command = saved.pop()
+                        if marks and marks[-1] == len(stack):
+                            marks.pop()
+                        j += 1
+                        if not stack:
+                            return j
+                        if close_command:
+                            at_command, in_word, head = True, False, HEAD_NONE
+                        else:
+                            in_word = True
+                    elif top in "aAW":
+                        j += 1
+                    elif top == "w":
+                        # The word list of a zsh `for`: a `#` starts a comment where it
+                        # does in a command list; every other character is part of a
+                        # word or separates words, the newline included.
+                        if ch == "#" and s[j - 1] in " \t\n;&|(":
+                            j = s.find("\n", j)
+                            if j == -1:
+                                raise _Undecidable("substitution")
+                        else:
+                            j += 1
+                    elif ch == "#" and s[j - 1] in " \t\n;&|(":
+                        # A comment runs to the end of the line.
+                        j = s.find("\n", j)
+                        if j == -1:
+                            raise _Undecidable("substitution")
+                    elif s.startswith("<<<", j):
+                        at_command, in_word, head = False, False, HEAD_NONE
+                        j += 3
+                    elif s.startswith("<<", j):
+                        if cases:
+                            raise _Undecidable("heredoc in a substitution")
+                        # A heredoc operator outside a case statement (rule 8): its
+                        # list is marked, no body is read, and the word after the
+                        # operator is an ordinary word.
+                        if not marks or marks[-1] != len(stack) - 1:
+                            marks.append(len(stack) - 1)
+                        at_command, in_word, head = False, False, HEAD_NONE
+                        j += 2
+                    elif top == "8" and ch == ";" and s.startswith((";;", ";&", ";|"), j):
+                        # An item terminator; `;;&` is the longest of them.
+                        stack[-1] = "4"
+                        j += 3 if s.startswith(";;&", j) else 2
+                    elif ch in " \t":
+                        in_word = False
+                        j += 1
+                    elif ch in "\n;&|":
+                        at_command, in_word, head = True, False, HEAD_NONE
+                        j += 1
+                    elif ch in "<>":
+                        at_command, in_word, head = False, False, HEAD_NONE
+                        j += 1
                     else:
                         j += 1
-                elif ch in "\n;&":
-                    raise _Undecidable("case pattern")
-                elif ch == "#" and s[j - 1] in " \t\n;&|(":
-                    j = s.find("\n", j)
-                    if j == -1:
-                        raise _Undecidable("substitution")
-                else:
-                    j += 1
-            elif ch == "(":
-                kind_char, close_command = ("p" if top == "8" else top), False
-                if top not in "aw":
-                    if head in (HEAD_FIRST, HEAD_FUNCTION, HEAD_FUNCTION_NAME):
-                        end = self._empty_parens_end(j)
-                        if end != -1:
-                            # A function head, `name()`, `function name()` or
-                            # the anonymous `function ()`: the next word is at
-                            # a command position.
-                            at_command, in_word, head = True, False, HEAD_NONE
-                            j = end
-                            continue
-                    # Whether this `(` is read at a command position decides
-                    # what its `)` gives; a `((` after `for` counts as read
-                    # at one.
-                    close_command = at_command or head == HEAD_FOR
-                    if head == HEAD_FOR_NAME:
-                        # The zsh word list of a `for`: a context of its own
-                        # (w). No word of it is at a command position, and its
-                        # `)` closes a head. A `(` read inside it opens a
-                        # nested entry of the same kind, whose `)` closes
-                        # inside a word.
-                        kind_char, close_command = "w", True
-                stack.append(kind_char)
-                saved.append((at_command, dbl, HEAD_NONE, close_command))
-                at_command, in_word, dbl, head = True, False, False, HEAD_NONE
-                j += 1
-            elif ch == ")":
-                if top == "8":
-                    raise _Undecidable("unmatched parenthesis in a case body")
-                stack.pop()
-                at_command, dbl, head, close_command = saved.pop()
-                j += 1
-                if not stack:
-                    return j
-                if close_command:
-                    at_command, in_word, head = True, False, HEAD_NONE
-                else:
-                    in_word = True
-            elif top == "a":
-                j += 1
-            elif top == "w":
-                # The word list of a zsh `for`: a `#` starts a comment where it
-                # does in a command list; every other character is part of a
-                # word or separates words, the newline included.
-                if ch == "#" and s[j - 1] in " \t\n;&|(":
-                    j = s.find("\n", j)
-                    if j == -1:
-                        raise _Undecidable("substitution")
-                else:
-                    j += 1
-            elif ch == "#" and s[j - 1] in " \t\n;&|(":
-                # A comment runs to the end of the line.
-                j = s.find("\n", j)
-                if j == -1:
-                    raise _Undecidable("substitution")
-            elif s.startswith("<<<", j):
-                at_command, in_word, head = False, False, HEAD_NONE
-                j += 3
-            elif s.startswith("<<", j):
-                raise _Undecidable("heredoc in a substitution")
-            elif top == "8" and ch == ";" and s.startswith((";;", ";&", ";|"), j):
-                # An item terminator; `;;&` is the longest of them.
-                stack[-1] = "4"
-                j += 3 if s.startswith(";;&", j) else 2
-            elif ch in " \t":
-                in_word = False
-                j += 1
-            elif ch in "\n;&|":
-                at_command, in_word, head = True, False, HEAD_NONE
-                j += 1
-            elif ch in "<>":
-                at_command, in_word, head = False, False, HEAD_NONE
-                j += 1
-            else:
-                j += 1
-        raise _Undecidable("substitution")
+                raise _Undecidable("substitution")
+            except _Undecidable:
+                # An arithmetic command that cannot be read to its `))` is read
+                # again, once, from its `((` as two nested subshells; with none
+                # open the chunk is undecidable.
+                if not arith:
+                    raise
+                index, opened, at_command, in_word, dbl, head, cases, held = arith.pop()
+                # A scan that found no end left `j` at -1: it had read to the end.
+                self.arith_budget -= (n if j < opened else min(j, n)) - opened
+                if self.arith_budget < 0:
+                    raise
+                fallen.add(opened)
+                del stack[index:], saved[index:], marks[held:]
+                j = opened
 
     def _keyword_end(self, j, word, follow):
         """Return the index where reading goes on after the keyword `word`

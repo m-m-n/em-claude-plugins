@@ -1,0 +1,58 @@
+task_id: task0001
+# Run before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py
+# (943/943 passed) and python3 -m unittest discover -s tests (10921 tests, OK,
+# 1 skipped, no failure).
+baseline_failures: []
+# The project test command re-executed in full after the implementation and
+# after this record was written (the record is itself checked by
+# tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard (both copies, run from a scratch tree holding the new test module and HEAD's scripts) the TS1, TS2 and TS12 rows each errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the guard printed nothing for a command it must deny, because the shared substitution skip raised undecidable at the same-line '<<'. The silent rows TS3 and TS15 and the existing heredoc-in-a-case-item row (TS14) already passed before the change, for the wrong reason (undecidable); the matching-terminator variant TS2 returning deny after the change shows TS3 is silent because the terminator does not match, not because the reading gave up. Extra rows for '<<-', for a mark dropped when a nested substitution closes, and for a '<<' in a case subject or in a substitution nested in a case item body were checked the same way."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard the TS4 row (delimiter '${v:-$( ((1 << 2)) )}') and the TS6 row (delimiter '${v:-$(for ((i=0;i<1<<2;i++)) do :; done)}') each errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the '<<' inside the command-position '((' was read as a heredoc operator and the skip raised undecidable. The extra rows for a standalone '(( 1 << 2 ))' and for one in a case item body failed the same way. TS5 (silent, short terminator) and TS11 (deny, '((echo a) )' re-read as nested subshells) already passed before the change; TS11 is the regression row and TS4 returning deny after the change shows TS5 is silent because the terminator is short."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard the TS7 row (delimiter '${v:-$(echo foo(case x))}') and the TS13 row (same-line '*(#qN)' form) errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the '(' after 'foo' opened a command list in which 'case x' was read as a case statement, and the '#' after the '(' started a comment. The extra row 'echo \"$(echo *(#qN))\"' failed the same way. TS9 (foo(a;b)) and TS10 already passed before the change: the old command-list reading closes at the same ')' for that text; TS9 is kept as the scenario row and TS10 as the regression row. TS8 (silent, short terminator) passed before for the wrong reason; TS7 returning deny after the change shows it is silent because the terminator is short. TS13 uses the same-line form: under zsh 5.9 (zsh -f, echo AFTER in place of python3 -i) the line-split delimiter 'cat <<${v:-$(echo *(e:true' / ':N))}' is not closed by a terminator split the same way (the body took every later line, 'echo AFTER' printed as body text), while the same-line '*(#qN)' delimiter closed on its terminator line and AFTER ran."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical detects divergence of the two scripts; no red state occurred for this change because both copies were edited together (the em-review copy is a copy of the em-workflow copy). The second half of the criterion, that the diff touches only the three files in Scope (no plugin.json, no marketplace file), has no executable check in the suite: it was checked with git diff --name-only, which lists only the two scripts, the test module and the test record."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_hold_both_a_deny_and_a_silent_case
+    red_confirmed: true
+    red_reason: "Every TS1 to TS15 row is in CASES (TS14 is the existing row, kept unchanged) and runs against both copies through test_cases_run_against_both_copies; against the unmodified guard that test errored on the deny rows named under AC-1 to AC-3 (24 errored sub-tests across the two copies for the 12 rows that were red). No existing row was removed or re-verdicted (git diff of the test module only adds lines in CASES). The project test command passes after the change."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_three_readings
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_does_not_say_a_heredoc_is_always_undecidable
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_names_each_form_that_stays_undecidable
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_the_docstring_states_the_three_readings failed for every marker of the three new rules (for example \"AssertionError: 'Outside a case statement an unquoted `<<` that is not `<<<` does not make the chunk undecidable' not found in 'Return the index just after the command substitution that begins at ...'\"), and test_the_docstring_does_not_say_a_heredoc_is_always_undecidable failed because the old docstring listed 'a heredoc anywhere in the chunk (item bodies included), an unmatched `)`' with no case-statement qualifier. test_the_docstring_names_each_form_that_stays_undecidable pins 'a heredoc anywhere in the chunk (item bodies included)', which is kept, so it passes before and after (a guard)."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestArithmeticRereadBudget.test_a_chain_that_would_exceed_the_budget_is_undecidable_in_time_without_an_error
+      - tests.test_codex_hook_interactive_guard.TestArithmeticRereadBudget.test_each_arithmetic_command_is_read_again_once
+      - tests.test_codex_hook_interactive_guard.TestArithmeticRereadBudget.test_the_budget_runs_out_across_the_skips_of_one_parser
+      - tests.test_codex_hook_interactive_guard.TestArithmeticRereadBudget.test_each_copy_defines_the_factor_once_with_a_value_the_docstring_states
+      - tests.test_codex_hook_interactive_guard.TestArithmeticRereadBudget.test_a_chain_within_the_budget_is_read_and_the_launch_after_it_is_denied
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestMalformedAndDeepInput
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_a_chain_that_would_exceed_the_budget_is_undecidable_in_time_without_an_error failed with \"AssertionError: 'deny' != 'silent'\" (the old reading takes the nested '((' as plain subshells and reads the 3000-level chain to its end), and the tests that read ARITHMETIC_REREAD_FACTOR or arith_budget (test_each_copy_defines_the_factor_once_with_a_value_the_docstring_states, test_each_arithmetic_command_is_read_again_once, test_the_budget_runs_out_across_the_skips_of_one_parser) failed or errored because the old guard has neither. With the cap removed (factor set to 10**9 in a scratch copy) the 1000-level chain is read in full in 1.6 s and returns deny, so the silent verdict of the 3000-level chain comes from the cap. TestNoRecursion, TestSharedQuotedUnitReader, TestSubstitutionSkipCallStructure and the large-input classes TestMalformedAndDeepInput and TestCaseStatementsInASubstitution already passed before the change and still pass (guards)."
