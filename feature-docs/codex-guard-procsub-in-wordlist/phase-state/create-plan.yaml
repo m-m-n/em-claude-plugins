@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-procsub-in-wordlist
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: b05bd5aca5795a53d9b8a72a7aed7862b325943e
 last_input_digest: sha256:b7cc2495895985de023406796f53dea78102dcab94e06b35994315748c728603
@@ -10,11 +10,27 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:b7cc2495895985de023406796f53dea78102dcab94e06b35994315748c728603
   output_digest: null
-artifacts: []
-patches: []
+artifacts:
+- path: feature-docs/codex-guard-procsub-in-wordlist/IMPLEMENTATION.md
+  sha256: sha256:be86d35286723f403954a97ec18ae5efb44a3aac81e80b882341670a75eae97f
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-procsub-in-wordlist/VERIFICATION.md
+  sha256: sha256:96c250f7fb8c741519f9b350a0901319e3526bd35719db05c4cb2356e9180273
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-procsub-in-wordlist/THREAT-MODEL.md
+  sha256: sha256:41ea0fe4c4dd7f705cd45f8053ba109d55f820b4c4e16cf19d4f2817479cca91
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-procsub-in-wordlist/tasks/task0001.md
+  sha256: sha256:6167d31c6b59e5107fab2633df99da5a9e1bec0eb325568ed2e74418d0c8c7f7
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:b7cc2495895985de023406796f53dea78102dcab94e06b35994315748c728603
+  base_workflow_blob: bc83425bf025ab6468accd07c3b0e23a0d4e38bc
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
