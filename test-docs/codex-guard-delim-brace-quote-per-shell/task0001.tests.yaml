@@ -1,0 +1,84 @@
+task_id: task0001
+# Run before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py
+# (943/943 passed) and python3 -m unittest discover -s tests (10933 tests, OK,
+# 1 skipped, no failure).
+baseline_failures: []
+# The project test command re-executed in full after the implementation and
+# after this record was written (the record is itself checked by
+# tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestDelimiterRows.test_there_is_one_row_for_each_of_ts1_to_ts32
+      - tests.test_codex_hook_interactive_guard.TestDelimiterRows.test_each_row_is_in_cases_with_its_verdict_and_label
+      - tests.test_codex_hook_interactive_guard.TestDelimiterRows.test_the_construction_rule_gives_the_commands_written_out_by_hand
+      - tests.test_codex_hook_interactive_guard.TestDelimiterRows.test_the_expected_verdicts_are_the_ones_of_the_specification
+    red_confirmed: true
+    red_reason: "Against the unmodified guard (both copies, with the new CASES rows in the test module) test_cases_run_against_both_copies errored for the deny rows TS1, TS3, TS4, TS5, TS6, TS9, TS15, TS16, TS17 and TS32 with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' (the guard printed nothing for a command it must deny: the quote-removed delimiter never matched the written terminator line, so the body swallowed the launch), and failed for the silent row TS2 with \"AssertionError: '{\\\"hookSpecificOutput\\\": {\\\"hookEventName\\\": ... != ''\" (the guard denied: the quote-removed line closed a body that bash leaves open). TS7, TS8, TS14 and TS10 to TS13 already passed before the change and pin the readings the task must keep (TS7 and TS8 reach the same terminator in both forms; TS14 stays undecidable; TS10 to TS13 register the quote-removed form). The TestDelimiterRows tests check the table itself (row ids, verdicts, the construction rule) and passed before the change; they guard the rows, they are not the red."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies runs the new rows TS10 to TS13 against both copies and detects a bash-held string that registers the written form although a quote unit sits before or after the range; no red state occurred for this change, because the quote-removal reading of the unmodified guard already gives exactly the specified result for these four rows (they are regression rows that pin the condition of the bash form from the side where it must not apply). As a mutation check, not a red: with the condition 'no quote unit outside the ranges' removed from a scratch copy of the implemented guard, all four rows gave the opposite verdict (TS10, TS11 and TS13 silent instead of deny, TS12 deny instead of silent), so the rows do guard the condition."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies errored for TS18, TS20, TS23 and TS26 with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the single quote-removal reading of an sh or ksh string never closes the body at the written terminator line, so the launch after it stayed silent. TS19, TS21, TS22 and TS27 already passed before the change (TS19, TS21 and TS27 deny through the quote-removal reading, TS22 is silent in both readings) and pin that the dual reading keeps the old reading's verdicts."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestNestedParseErrorContainment
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+      - tests.test_codex_hook_interactive_guard.TestRereadFallback
+      - tests.test_codex_hook_interactive_guard.TestNestedReadLimit
+      - tests.test_codex_hook_interactive_guard.TestSharedQuotedUnitReader
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies errored for TS30 (a bash -c string inside a zsh -c string must be read as bash) with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)'. TS24, TS25, TS28, TS29 and TS31 already passed before the change and pin that dash, zsh and the hook command itself keep quote removal and that only the direct holder decides. The classes TestNestedParseErrorContainment, TestNoRecursion, TestRereadFallback, TestNestedReadLimit, TestSharedQuotedUnitReader and TestSubstitutionSkipCallStructure are existing tests that pass unchanged before and after (guards, no red state). Every CASES row that existed before the task is still present with its verdict: git diff of the test module removes no line."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_each_reading_adds_its_commands_and_the_bash_form_comes_first
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_an_undecidable_bash_form_reading_leaves_the_quote_removal_commands
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_an_undecidable_quote_removal_reading_leaves_the_bash_form_commands
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_bash_form_reading_that_fails_with_another_exception_leaves_the_quote_removal_commands
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_quote_removal_reading_that_fails_with_another_exception_leaves_the_bash_form_commands
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_when_both_readings_fail_with_another_exception_that_of_the_bash_form_leaves
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_failed_reading_next_to_an_undecidable_one_leaves_an_undecidable_with_no_commands
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_string_whose_two_forms_coincide_builds_the_parsers_of_one_reading
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_string_whose_forms_differ_builds_the_parsers_of_both_readings
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_an_unreadable_string_with_no_differing_delimiter_builds_the_parsers_of_one_reading
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_forced_reading_that_recorded_no_differing_word_does_not_run_the_other
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_single_reading_builds_the_parsers_of_that_reading_only
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_the_default_reading_is_quote_removal_and_reads_a_string_of_unknown_kind_twice
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_parser_records_a_differing_delimiter_word_under_either_rule
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDriver.test_a_parser_without_a_delimiter_rule_reads_the_quote_removal_form
+    red_confirmed: true
+    red_reason: "Against the unmodified guard every test of TestDelimiterReadingDriver failed or errored before the driver existed: the ones that name the delimiter values errored with \"KeyError: 'DELIMITER_BASH_FORM'\" (or 'DELIMITER_QUOTE_REMOVAL'), the ones that go through run_driver reported \"AssertionError: KeyError('DELIMITER_BOTH') is not None\", and the ones that read the parser's switch errored with \"AttributeError: '_Parser' object has no attribute 'delimiter_rule'\". The failure is the missing behaviour (no delimiter rule, no dual reading), not a typo in the test. The forced failures are made in memory by a subclass of the module's _Parser swapped into the loaded module namespace; its parse method reads the string and then raises when its delimiter rule is the one under test, so the parser's differing-word record is set before the failure."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingNestedReadLimit.test_a_second_level_string_read_under_both_readings_counts_once_at_its_length
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingNestedReadLimit.test_one_more_character_and_that_string_is_not_read
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingNestedReadLimit.test_a_third_level_string_that_both_readings_reach_counts_each_time
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingNestedReadLimit.test_a_third_level_string_that_both_readings_reach_does_not_count_once
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingNestedReadLimit.test_a_third_level_string_counts_once_when_the_two_readings_coincide
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingNestedReadLimit.test_a_long_string_with_many_differing_heredocs_is_answered_in_time_and_denied
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingNestedReadLimit.test_the_same_long_string_stays_silent_when_the_launch_is_inside_the_last_body
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_a_second_level_string_read_under_both_readings_counts_once_at_its_length failed with \"AssertionError: 'silent' != 'deny'\" (the single quote-removal reading never closes the body, so the launch at exactly the limit stayed silent), test_a_third_level_string_that_both_readings_reach_counts_each_time failed with \"AssertionError: 'deny' != 'silent'\" (the third-level string counted once, so the launch string one character over the doubled budget was still read), test_a_third_level_string_that_both_readings_reach_does_not_count_once failed with \"AssertionError: 'deny' != 'silent'\" for the same reason, and test_a_long_string_with_many_differing_heredocs_is_answered_in_time_and_denied failed with \"AssertionError: 'silent' != 'deny'\" (the string of about 134,000 characters held by sh stayed silent). test_one_more_character_and_that_string_is_not_read, test_a_third_level_string_counts_once_when_the_two_readings_coincide and test_the_same_long_string_stays_silent_when_the_launch_is_inside_the_last_body already passed before the change: they are the other side of the boundaries (the skip must keep the single count; the control string must stay silent) and pin that the added reading does not move them."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDocumentation.test_the_module_docstring_states_the_delimiter_reading
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDocumentation.test_the_module_docstring_no_longer_reads_the_range_as_always_quote_removed
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDocumentation.test_the_parser_description_states_the_delimiter_rule
+      - tests.test_codex_hook_interactive_guard.TestDelimiterReadingDocumentation.test_the_description_of_parse_states_the_readings_and_their_combination
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_the_test_module_imports_only_the_standard_library
+      - tests.test_codex_hook_interactive_guard.TestGuardDocumentation
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation
+      - tests.test_codex_hook_interactive_guard.TestDelimiterSubstitutionDocumentation
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_the_module_docstring_states_the_delimiter_reading failed for every marker of the four statements, for example \"AssertionError: 'The delimiter reading is decided by the shell that directly holds the string' not found in 'Codex PreToolUse(Bash) guard against launching an interpreter or shell in interactive mode. ...'\"; test_the_module_docstring_no_longer_reads_the_range_as_always_quote_removed, test_the_parser_description_states_the_delimiter_rule and test_the_description_of_parse_states_the_readings_and_their_combination failed the same way. test_the_two_copies_are_byte_identical, the static-constraint checks (TestStaticConstraints.test_each_copy_stays_within_the_constraints and the new test_the_test_module_imports_only_the_standard_library) and the existing documentation classes TestGuardDocumentation, TestSubstitutionSkipDocumentation and TestDelimiterSubstitutionDocumentation passed before the change and pass unchanged after it (guards, no red state). The criterion that the diff changes no plugin.json and no marketplace.json has no executable check in the suite: it was checked with git diff --name-only, which lists the two scripts, the test module and this record only. Both project test commands succeed after the change."

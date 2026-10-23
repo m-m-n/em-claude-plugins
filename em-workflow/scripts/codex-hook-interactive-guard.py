@@ -122,16 +122,50 @@ Decision flow:
      The word read as the target of `<<` or `<<-` (the delimiter position) has
      a reading of its own for `${` and for `$'` and `$"`, and only there. An
      unquoted `${` in it starts a range that ends at its close, and the range is
-     quote-removed as the close is searched, in one forward scan, before the
-     delimiter is registered. The close is the first `}` that is outside single
-     and double quotes, is not escaped by a backslash, does not lie inside a
-     `$( ... )` or a `$(( ... ))` and does not close a nested `${ ... }` (the
-     nested ones are counted by depth); a backquote there is an ordinary
-     character. The search runs over the whole string, not the line, so a quote
-     may span lines. The quote removal is the one described below: the `${`,
+     read, as the close is searched, in one forward scan, into both forms of the
+     delimiter word (below) before the delimiter is registered. The close is the
+     first `}` that is outside single and double quotes, is not escaped by a
+     backslash, does not lie inside a `$( ... )` or a `$(( ... ))` and does not
+     close a nested `${ ... }` (the nested ones are counted by depth); a
+     backquote there is an ordinary character. The search runs over the whole
+     string, not the line, so a quote may span lines. The quote removal is the one described below: the `${`,
      the `}`, a nested `${`, `#`, `:-` and every other character stay as
      written, and the text before and after the range joins the registered
      delimiter unchanged (`foo${v:-"x"}bar` is registered as `foo${v:-x}bar`).
+     That is the quote-removal form of the delimiter word. The word has a
+     second form, the bash form, and it differs from the quote-removal form only
+     when the delimiter word holds at least one `${ ... }` range and no quote
+     unit outside its ranges: each range then contributes its original
+     characters, with `"`, `'` and the backslash kept as written, minus the
+     backslash-newline pairs outside single quotes (the ones inside double
+     quotes are dropped too), and all other text of the word is the same as in
+     the quote-removal form. When the word holds no range, or holds a quote unit
+     outside its ranges, the bash form is the quote-removal form. A quote unit
+     outside the ranges is a `'`, `"` or backslash unit that the word reader
+     reads for the delimiter word, a quote unit inside a parenthesised argument
+     range of the word included; a backslash-newline pair is no unit, and
+     neither is a `$( ... )` or backquote span written directly in the word,
+     nor the quotes inside it (`$(echo "P")${v:-"x"}` is registered as it stands
+     in the bash form, `'P'${v:-"x"}` as `P${v:-x}` in both forms, and `P` with
+     a backslash-newline pair before `${v:-"x"}` as `P${v:-"x"}`). Inside a
+     range the bash form keeps a single-quoted unit as written, a backslash pair
+     as its two characters (a backslash and a newline add nothing), a
+     double-quoted unit as written minus its backslash-newline pairs, and a
+     substitution as the skip below returns it, the same text as the
+     quote-removal form. Both forms come from the one scan that finds the close,
+     so the close search and every undecidable case below are the same for
+     both, and an unquoted `$'` or `$"` in a range stays undecidable under the
+     bash form.
+     The delimiter reading is decided by the shell that directly holds the
+     string: bash reads the bash form only, zsh and dash read the quote-removal
+     form only, sh and ksh read both, and the hook command itself reads the
+     quote-removal form only. The holder is matched the way the kind is matched
+     (step 7): bash covers the bare name, a digits-and-dots suffix, a path, an
+     option-less wrapper and `--posix`, and the suffixed and path forms of the
+     other names count too. Only the direct holder decides, so a `zsh -c` string
+     inside a `bash -c` string reads the quote-removal form. A string of sh or
+     ksh is read under the bash form first and then under the quote-removal
+     form (step 9).
      An unquoted `$(` inside a delimiter's `${ ... }` range (`$((` included) is
      skipped by the same case-aware skip that reads a substitution inside
      double quotes: a case statement inside it is read, so its pattern's `)`
@@ -357,6 +391,14 @@ Decision flow:
      are arguments) and `repeat` is followed by a count and then a command
      position; a string of unknown kind is read with both the bash rule for
      `coproc` and the zsh rule for `repeat` (step 9 for the one re-read).
+     Beside the kind, every such string has a delimiter reading, decided by the
+     same direct holder and matched the same way (step 4 for the readings and
+     their forms): `bash` and its suffixed and path forms read the bash form
+     only, `zsh` and `dash` read the quote-removal form only, `sh` and `ksh`
+     read both, and the hook command itself reads the quote-removal form only.
+     The kind keeps deciding `coproc` and `repeat`, so the two axes differ for
+     some shells: `dash` is of unknown kind with the quote-removal form only,
+     and `sh` is of unknown kind with both readings.
      The connection passes down
      through every level, so a command inside a nested string is connected
      when the command that holds the string is. A string the reader cannot
@@ -423,8 +465,33 @@ Decision flow:
      its commands are the commands of the string; when it fails, with
      `_Undecidable` or with any other exception, the first read's `_Undecidable`
      and the commands that read settled up to its last checkpoint are used. A
-     string of bash or zsh kind is never re-read, a string is read at most twice,
-     and one that is re-read counts once, at its length, toward NESTED_READ_LIMIT.
+     string of bash or zsh kind is never re-read, and a string is read at most
+     twice under one delimiter reading.
+     A string whose delimiter reading is both (the `-c` string of `sh` and `ksh`,
+     step 4) is read under each reading on its own: reading A is the bash form
+     and reading B is the quote-removal form, each applies one rule to the whole
+     string (there is no combination per delimiter), and each runs the reading
+     above, the re-read and the checkpoint rule included, so the string is read
+     at most four times, each read in linear time. Reading B is skipped only when
+     every parser built for reading A ended by returning or by raising
+     `_Undecidable`, and none of them recorded a delimiter word whose two forms
+     differ: B would read the string as A did. The rule of the two readings is
+     that the dual reading denies when either reading denies. A reading read to
+     its end adds its commands; a
+     reading that stopped undecidable adds the commands up to its last
+     checkpoint, so a reading that cannot be read does not hide a launch the
+     other reading finds; a reading that raised any other exception adds
+     nothing, and it does not discard what the other reading added. So no
+     outcome of one reading suppresses the commands of the other. The result is
+     the commands of reading A and then those of reading B; when either reading
+     stopped undecidable it is the checkpoint rule's result for the string, and
+     when both raised another exception the exception of reading A leaves,
+     exactly as an unexpected error leaves today. A string read under both
+     readings counts once, at its length, toward NESTED_READ_LIMIT, as one that
+     is re-read does: it is counted before it is read, so the extra reads cost
+     no budget. A nested string inside it is another matter: a nested string
+     counts each time the walk reaches it in the commands of both readings, so
+     one that both readings reach counts twice.
 
 Everything the guard cannot positively identify passes. A misreading costs a
 missed detection, never a stalled review. A string the reader cannot read to
@@ -499,7 +566,9 @@ HEAD_AFTER_WORD = {
 # The kind of the shell that holds a string, which decides the two rule switches
 # of the parser that reads it (`_Parser`, the module-level `parse`): the shell
 # is bash, is zsh, or is not known. The hook command and the strings of every
-# other shell (`sh`, `dash`, `ksh`) are of unknown kind.
+# other shell (`sh`, `dash`, `ksh`) are of unknown kind. The same holder decides
+# a second, separate value, the delimiter reading (below): `dash` is of unknown
+# kind with quote removal only, `sh` is of unknown kind with both readings.
 KIND_BASH = "bash"
 KIND_ZSH = "zsh"
 KIND_UNKNOWN = "unknown"
@@ -512,6 +581,22 @@ KIND_SWITCHES = {
     KIND_ZSH: (False, True),
     KIND_UNKNOWN: (True, True),
 }
+
+# The delimiter reading of a string: how the `${ ... }` ranges of the word read
+# as the target of `<<` or `<<-` are registered. It is a second axis beside the
+# kind, decided by the same direct holder (`_delimiter_reading`) and handed to
+# the parse driver with the kind: the bash form (each range registered as it is
+# written), quote removal (each range registered with its quotes removed, the
+# reading before the bash form existed), or both (a string held by `sh` or
+# `ksh`, whose rule is not known: it is read under the bash form first and then
+# under quote removal, and denied when either reading denies). A parser is built
+# for one of the first two (`_Parser.delimiter_rule`); "both" is a driver value
+# only. The default everywhere is quote removal, so the hook command itself, a
+# string held by `zsh` or `dash`, and every caller that names no reading read
+# as they always did.
+DELIMITER_BASH_FORM = "bash form"
+DELIMITER_QUOTE_REMOVAL = "quote removal"
+DELIMITER_BOTH = "both"
 
 # How far the simple command in progress has read the shape `case`, one word,
 # `in`, which lets an `esac` right after it lower the case mark
@@ -1044,9 +1129,42 @@ class _Parser:
     `function` are read the same way in every reading. The module-level `parse`
     reads a string of unknown kind a second time with both rules off when the
     first read stops undecidable.
+
+    A third switch, the delimiter rule (`delimiter_rule`), is set the same way
+    and fixed for the parser's life: it decides which form of a heredoc delimiter
+    word is registered. A delimiter word has two forms (`_finish_word`). The
+    quote-removal form is the text registered before the bash form existed. The
+    bash form differs from it only when the word holds at least one `${ ... }`
+    range and no quote unit outside its ranges, and then each range contributes
+    its original characters (`_remove_range_quotes`). A parser built with the
+    bash form registers the bash form; a parser built with quote removal, the
+    default, registers the quote-removal form. Either parser records that the
+    word "differs" (`differs`) when its two forms are unequal; the module-level
+    `parse` reads that record to decide whether a string held by `sh` or `ksh`
+    needs its second reading. The delimiter rule never changes how anything
+    other than a delimiter word is read, and never changes the kind switches:
+
+      bash form              the `${ ... }` ranges of a delimiter are registered
+                             as written, when the word has no quote unit outside
+                             its ranges
+      quote removal          the ranges are registered with their quotes removed
+
+    The word in progress keeps three things for it besides its text: the same
+    word with the bash form of each `${ ... }` range (`bash_buf`), whether it
+    holds such a range (`has_range`), and whether a quote unit outside its ranges
+    was read (`outside_quote`). A quote unit is a `'`, `"` or backslash unit read
+    for the word, one inside a parenthesised argument range included; a
+    backslash-newline pair is no unit, and neither is a `$( ... )` or backquote
+    span written directly in the word nor the quotes inside it.
     """
 
-    def __init__(self, command, coproc_name=True, zsh_repeat=True):
+    def __init__(
+        self,
+        command,
+        coproc_name=True,
+        zsh_repeat=True,
+        delimiter_rule=DELIMITER_QUOTE_REMOVAL,
+    ):
         self.s = command
         self.n = len(command)
         # The two rule switches, fixed for the life of the parser and read by the
@@ -1054,6 +1172,14 @@ class _Parser:
         # NAME rule and the zsh repeat rule (see the class description).
         self.coproc_name = coproc_name
         self.zsh_repeat = zsh_repeat
+        # The third switch, fixed for the life of the parser and read where a
+        # heredoc delimiter is registered (`_finish_word`): DELIMITER_BASH_FORM
+        # registers the bash form of the delimiter word, DELIMITER_QUOTE_REMOVAL
+        # (the default) registers the quote-removal form.
+        self.delimiter_rule = delimiter_rule
+        # A delimiter word was registered whose bash form and quote-removal form
+        # are unequal. The module-level `parse` reads it after the parse.
+        self.differs = False
         self.i = 0
         self.commands = []
         self._start_words()
@@ -1210,6 +1336,14 @@ class _Parser:
 
     def _reset_word(self):
         self.buf = []
+        # The same pieces with the bash form of each `${ ... }` range of a
+        # delimiter word in place of its quote-removed text; every other piece
+        # is the same text. Whether the word holds such a range, and whether a
+        # quote unit outside the ranges was read, decide which form the word
+        # registers if it is a heredoc delimiter (`_finish_word`).
+        self.bash_buf = []
+        self.has_range = False
+        self.outside_quote = False
         self.started = False
         self.dynamic = False
         # Every character so far is an unquoted digit (a file descriptor).
@@ -1217,8 +1351,12 @@ class _Parser:
         # No quote, escape or expansion so far: `{` and `}` can be group words.
         self.bare = True
 
-    def _put(self, text, quoted=False, dynamic=False):
+    def _put(self, text, quoted=False, dynamic=False, bash_text=None):
+        """Add a piece to the word in progress. `bash_text` is the piece's text in
+        the bash form of a delimiter word, when it differs from `text`: a
+        `${ ... }` range of a delimiter (`_dollar`)."""
         self.buf.append(text)
+        self.bash_buf.append(text if bash_text is None else bash_text)
         self.started = True
         if dynamic:
             self.dynamic = True
@@ -1233,14 +1371,25 @@ class _Parser:
         text = "".join(self.buf)
         dynamic = self.dynamic
         bare = self.bare
+        bash_buf, has_range, outside_quote = self.bash_buf, self.has_range, self.outside_quote
         self._reset_word()
         if self.redirect is not None:
             is_heredoc, strips_tabs = self.redirect
             self.redirect = None
             if is_heredoc:
-                if not text:
+                # A delimiter word has two forms. The quote-removal form is `text`.
+                # The bash form is the word with each `${ ... }` range as written,
+                # when the word holds at least one such range and no quote unit
+                # outside its ranges; in every other word it is `text`. The parser
+                # registers the form of its delimiter rule, and records that the
+                # word differs when the two forms are unequal.
+                bash_text = "".join(bash_buf) if has_range and not outside_quote else text
+                if bash_text != text:
+                    self.differs = True
+                registered = bash_text if self.delimiter_rule == DELIMITER_BASH_FORM else text
+                if not registered:
                     raise _Undecidable("heredoc delimiter")
-                self.heredocs.append((text, strips_tabs))
+                self.heredocs.append((registered, strips_tabs))
             return
         # `{` and `}` delimit a brace group only as a standalone word. A `{`
         # opens one at command position, and right after the one `function` of
@@ -1837,7 +1986,10 @@ class _Parser:
         anonymous body, so a stdin redirect after the range connects the body. A
         separator outside the range ends the arguments as usual. While the
         target of `<<` or `<<-` is being read, the text of the range is
-        quote-removed before it joins the word (`_remove_range_quotes`).
+        quote-removed before it joins the word (`_remove_range_quotes`), and a
+        quote unit the range held marks the word as holding a quote unit outside
+        its `${ ... }` ranges, so the bash form of the word is its quote-removal
+        form (`_finish_word`). The text added is the same in both forms.
 
         The `(` opens a group instead, exactly as before ranges were read, when
         the range holds an unquoted `;`, `&` or newline, or a backquote (one
@@ -1894,9 +2046,15 @@ class _Parser:
         if end is not None and not separated and not backquoted:
             if self._at_delimiter():
                 # The range is part of the delimiter of `<<` or `<<-`: register
-                # the delimiter zsh uses, not the raw text of the range.
-                text, _ = self._remove_range_quotes(start, end)
+                # the delimiter zsh uses, not the raw text of the range. A quote
+                # unit the range held is a quote unit outside the `${ ... }`
+                # ranges of the word, so the bash form of the word is its
+                # quote-removal form (`_finish_word`); the text added is the
+                # same in both forms.
+                text, _, _, quoted = self._remove_range_quotes(start, end)
                 self._put(text, quoted=True)
+                if quoted:
+                    self.outside_quote = True
             else:
                 self._put(self.s[start:end], quoted=True)
             self.i = end
@@ -1915,12 +2073,32 @@ class _Parser:
         return self.redirect is not None and self.redirect[0]
 
     def _remove_range_quotes(self, start, end, braced=False):
-        """Return (text, next): the text of the range `self.s[start:end]` with
-        its quotes removed the way a word's quotes are removed where the reader
-        meets them, and the index where reading goes on. The range is part of
-        the delimiter of `<<` or `<<-`, so the text zsh compares the body lines
-        with is what gets registered. Two kinds of range are read by the one
+        """Return (text, next, bash_text, quoted): the text of the range
+        `self.s[start:end]` with its quotes removed the way a word's quotes are
+        removed where the reader meets them, the index where reading goes on,
+        the bash form of the range, and whether the range read a quote unit. The
+        range is part of the delimiter of `<<` or `<<-`, so the text a shell
+        compares the body lines with is what gets registered: the quote-removal
+        form (`text`) or the bash form (`bash_text`), by the delimiter rule of
+        the parser (`_finish_word`). Two kinds of range are read by the one
         scan below.
+
+        The bash form of a braced range is its original characters, `"`, `'`
+        and backslash included, except that a backslash-newline pair is dropped
+        wherever the shared reader drops it: outside quotes, and inside double
+        quotes. A single-quoted unit keeps its original characters; a backslash
+        and the character after it keep both characters (a backslash and a
+        newline add nothing); a double-quoted unit keeps its original characters
+        minus the backslash-newline pairs; an unquoted `$(` keeps the text the
+        shared reader returns, as the quote-removal form does. Both forms come
+        from the same forward scan, which finds the close of the range, so the
+        close search and every undecidable case below are the same for both. For
+        a parenthesised range the bash form is `text`: its quote units make the
+        word's bash form its quote-removal form (`quoted`), so the bash form of
+        the range itself is never read. `quoted` is true when the range read a
+        quote unit (a `'`, `"` or backslash unit; a backslash-newline pair is
+        none); the word reader marks the word with it when the range is a
+        parenthesised one.
 
         A parenthesised range (`braced` false) runs from its `(` through its
         `)`, and `next` is `end`. A braced range (`braced` true) starts at an
@@ -1978,7 +2156,10 @@ class _Parser:
         skip that runs beyond `end` ends the whole reading, so it happens at
         most once."""
         s = self.s
+        # The quote-removal text and the bash form, built piece by piece in step.
         out = []
+        raw = []
+        quoted = False
         j = start
         depth = 0
         while j < end:
@@ -1986,42 +2167,55 @@ class _Parser:
             if ch in "\\'\"":
                 # The same reader that word reading uses, held to the end of
                 # the range. The dynamic indication is of no use here: a
-                # registered delimiter is compared as text only.
-                text, j, _ = self._read_quoted_unit(j, end)
+                # registered delimiter is compared as text only. The reader also
+                # yields the original characters of the unit, minus the
+                # backslash-newline pairs it drops: the bash form of the unit.
+                unit = j
+                text, j, _, original = self._read_quoted_unit(j, end, original=True)
                 out.append(text)
+                raw.append(original)
+                if ch != "\\" or s[unit + 1] != "\n":
+                    quoted = True
             elif ch == "$" and j + 1 < end and s[j + 1] in "'\"":
                 raise _Undecidable("dollar quote")
             elif ch == "$" and j + 1 < end and s[j + 1] == "(":
                 if braced:
                     # The case-aware skip of the shared reader, held to the end
                     # of the range: a case statement in the substitution is
-                    # read, so its pattern's `)` does not end it.
-                    text, j, _ = self._read_quoted_unit(j, end)
+                    # read, so its pattern's `)` does not end it. The text it
+                    # returns is kept in both forms.
+                    text, j, _, original = self._read_quoted_unit(j, end, original=True)
                     out.append(text)
+                    raw.append(original)
                 else:
                     close = self._skip_parens(j + 1)
                     if close > end:
                         raise _Undecidable("parenthesis")
                     out.append(s[j:close])
+                    raw.append(s[j:close])
                     j = close
             elif braced and ch == "$" and j + 1 < end and s[j + 1] == "{":
                 depth += 1
                 out.append("${")
+                raw.append("${")
                 j += 2
             elif braced and ch == "}":
                 out.append(ch)
+                raw.append(ch)
                 j += 1
                 depth -= 1
                 if depth == 0:
-                    return "".join(out), j
+                    return "".join(out), j, "".join(raw), quoted
             else:
                 out.append(ch)
+                raw.append(ch)
                 j += 1
         if braced:
             raise _Undecidable("brace")
-        return "".join(out), j
+        text = "".join(out)
+        return text, j, text, quoted
 
-    def _read_quoted_unit(self, start, limit):
+    def _read_quoted_unit(self, start, limit, original=False):
         """Read the quoted unit that opens at `start` and return (text, next,
         dynamic): the text of the unit with its quotes removed, the index just
         after the unit, and whether the unit holds a substitution or a `$`
@@ -2032,6 +2226,18 @@ class _Parser:
         and the quote removal of a delimiter range (`_remove_range_quotes`)
         calls it with the end of the range (the end of the input, for the range
         of a delimiter's `${`, whose end is found by the same scan).
+
+        With `original` true the reader returns a fourth item, the original
+        characters of the unit, quotes included, minus the backslash-newline
+        pairs it drops: the bash form of the unit. It is derived here because
+        the pairs it drops inside double quotes are told apart from the ones
+        inside a substitution only by this reader's own scan. Without `original`
+        the three items above are returned, unchanged for every caller. A
+        single-quoted unit keeps all its characters; a backslash pair keeps both
+        characters, except a backslash and a newline, which give nothing; a
+        double-quoted unit keeps every character as written, a substitution
+        inside it included, except a backslash and a newline directly inside the
+        quotes.
 
         `limit` is exclusive: the unit must end before it, so `next` never lies
         beyond it. The caller guarantees `start < limit` and that `start` holds
@@ -2071,23 +2277,33 @@ class _Parser:
             end = self._skip_substitution(start)
             if end > limit:
                 raise _Undecidable("substitution")
+            if original:
+                return s[start:end], end, True, s[start:end]
             return s[start:end], end, True
         if ch == "\\":
             if start + 1 >= limit:
                 raise _Undecidable("trailing backslash")
             nxt = s[start + 1]
+            if original:
+                return ("" if nxt == "\n" else nxt), start + 2, False, ("" if nxt == "\n" else "\\" + nxt)
             return ("" if nxt == "\n" else nxt), start + 2, False
         if ch == "'":
             close = s.find("'", start + 1, limit)
             if close == -1:
                 raise _Undecidable("quote")
+            if original:
+                return s[start + 1:close], close + 1, False, s[start:close + 1]
             return s[start + 1:close], close + 1, False
         j = start + 1
         out = []
+        # The original characters of the unit, kept only when asked for.
+        raw = [] if original else None
         dynamic = False
         while j < limit:
             ch = s[j]
             if ch == '"':
+                if original:
+                    return "".join(out), j + 1, dynamic, '"' + "".join(raw) + '"'
                 return "".join(out), j + 1, dynamic
             if ch == "\\" and j + 1 < limit:
                 nxt = s[j + 1]
@@ -2095,6 +2311,8 @@ class _Parser:
                     out.append(nxt)
                 elif nxt != "\n":
                     out.append("\\" + nxt)
+                if original and nxt != "\n":
+                    raw.append("\\" + nxt)
                 j += 2
                 continue
             if ch == "`" or s.startswith("$(", j, limit):
@@ -2102,12 +2320,16 @@ class _Parser:
                 if end > limit:
                     raise _Undecidable("substitution")
                 out.append(s[j:end])
+                if original:
+                    raw.append(s[j:end])
                 dynamic = True
                 j = end
                 continue
             if ch in "$`":
                 dynamic = True
             out.append(ch)
+            if original:
+                raw.append(ch)
             j += 1
         raise _Undecidable("quote")
 
@@ -2951,11 +3173,14 @@ class _Parser:
             self._put(s[i:end], quoted=True, dynamic=True)
             self.i = end
         elif nxt == "{" and delimiter:
-            # The range from the `${` to its close is quote-removed as it is
-            # found, in one scan; the registered delimiter is the text zsh
-            # compares the body lines with.
-            text, self.i = self._remove_range_quotes(i, self.n, braced=True)
-            self._put(text, quoted=True, dynamic=True)
+            # The range from the `${` to its close is read as it is found, in
+            # one scan, into both forms of the delimiter word: the quote-removed
+            # text, which adds to the word as it always did, and the bash form,
+            # the range's original characters, which adds to the word's bash
+            # form (`bash_buf`). `_finish_word` registers one of the two.
+            text, self.i, bash_text, _ =self._remove_range_quotes(i, self.n, braced=True)
+            self._put(text, quoted=True, dynamic=True, bash_text=bash_text)
+            self.has_range = True
         elif nxt in ("'", '"') and delimiter:
             # What zsh reads here is not known, so no delimiter is registered.
             raise _Undecidable("dollar quote")
@@ -3081,6 +3306,9 @@ class _Parser:
                     # empty quote pair adds nothing either, but it starts one.
                     if ch != "\\" or s[i + 1] != "\n":
                         self._put(text, quoted=True, dynamic=dynamic)
+                        # A quote unit read for the word, outside any `${ ... }`
+                        # range of a delimiter (those are read by `_dollar`).
+                        self.outside_quote = True
                 elif ch == "$":
                     self._dollar()
                 elif ch == "`":
@@ -3167,7 +3395,77 @@ class _Parser:
             group.skipped = group.skip or (parent is not None and parent.skipped)
 
 
-def parse(command, kind=KIND_UNKNOWN):
+class _Reading:
+    """The outcome of one reading of a string under one delimiter rule
+    (`_read_string`).
+
+    commands  the commands the reading adds: the commands of a string read to its
+              end, the commands up to the last checkpoint of a string that
+              stopped `_Undecidable`, and none for a reading that raised any
+              other exception
+    error     None for a string read to its end, otherwise the exception the
+              reading ends with: the `_Undecidable` it stopped at (the first
+              read's, when a re-read of a string of unknown kind failed), or the
+              other exception it raised
+    differs   some parser of the reading recorded a delimiter word whose bash
+              form and quote-removal form are unequal (`_Parser.differs`)
+    failed    some parser of the reading ended in an exception other than
+              `_Undecidable`, a re-read that failed included
+    """
+
+    __slots__ = ("commands", "error", "differs", "failed")
+
+    def __init__(self, commands, error, differs, failed):
+        self.commands = commands
+        self.error = error
+        self.differs = differs
+        self.failed = failed
+
+
+def _read_string(command, kind, delimiter_rule):
+    """Read `command` once under one delimiter rule (DELIMITER_BASH_FORM or
+    DELIMITER_QUOTE_REMOVAL) and return a `_Reading`. This is the single-reading
+    procedure: the string is read with the switches of its kind and, for the
+    unknown kind, that first read has both rules on. A string read to its end
+    gives its commands. A string of bash or zsh kind that stops `_Undecidable`
+    gives the commands up to its last checkpoint. An exception other than
+    `_Undecidable` on the first read of any kind ends the reading as a failure
+    that adds no commands (the string is not read again). A string of unknown
+    kind that stops `_Undecidable` on the first read is read once more by a new
+    parser with both rules off; a re-read that reaches the end gives its
+    commands, and a re-read that raises anything is discarded and gives the first
+    read's checkpoint commands. The parsers are built through the module's
+    `_Parser` name, looked up when this runs. It does not call itself: the
+    re-read is a second parser object."""
+    coproc_name, zsh_repeat = KIND_SWITCHES[kind]
+    parser = None
+    try:
+        parser = _Parser(command, coproc_name, zsh_repeat, delimiter_rule)
+        return _Reading(parser.parse(), None, parser.differs, False)
+    except _Undecidable as first:
+        differs = parser is not None and parser.differs
+        if kind != KIND_UNKNOWN:
+            return _Reading(first.checkpoint_commands, first, differs, False)
+        retry = None
+        try:
+            retry = _Parser(command, False, False, delimiter_rule)
+            commands = retry.parse()
+        except Exception as failure:
+            # Whatever the re-read raised is discarded: the first read's
+            # `_Undecidable` is the outcome, with its checkpoint commands. The
+            # re-read is still a parser that ended in an exception, and its
+            # record of a differing delimiter word counts.
+            if retry is not None and retry.differs:
+                differs = True
+            return _Reading(
+                first.checkpoint_commands, first, differs, not isinstance(failure, _Undecidable)
+            )
+        return _Reading(commands, None, differs or retry.differs, False)
+    except Exception as failure:
+        return _Reading((), failure, parser is not None and parser.differs, True)
+
+
+def parse(command, kind=KIND_UNKNOWN, delimiter=DELIMITER_QUOTE_REMOVAL):
     """Split `command` into simple commands and return them, or raise
     `_Undecidable` carrying the commands settled up to the last checkpoint of the
     string (`_Parser`).
@@ -3179,7 +3477,16 @@ def parse(command, kind=KIND_UNKNOWN):
     coproc NAME rule and the zsh repeat rule. Both are fixed for the life of that
     parser.
 
-    One read, or two for a string of unknown kind:
+    `delimiter` is the delimiter reading of the string (DELIMITER_BASH_FORM,
+    DELIMITER_QUOTE_REMOVAL, the default, or DELIMITER_BOTH): how the `${ ... }`
+    ranges of a heredoc delimiter are registered. `_judge` hands it back with the
+    kind, decided by the same direct holder (`_delimiter_reading`). The default
+    reads as the guard read before the delimiter reading existed, so
+    `parse(command)` and `parse(command, kind)` are unchanged.
+
+    One reading. For the bash form and for quote removal the string is read once
+    under that delimiter rule by the single-reading procedure (`_read_string`),
+    which reads a string of unknown kind a second time:
 
       1. The string is read with the switches of its kind and, for the unknown
          kind, that first read has both rules on. A string read to its end
@@ -3198,26 +3505,52 @@ def parse(command, kind=KIND_UNKNOWN):
          discarded, and the kept first `_Undecidable` is raised with the
          commands the first read settled up to its last checkpoint.
 
-    A string is read at most twice, each read in linear time, and this function
-    does not call itself: the re-read is a second parser object. The characters
-    of a string count toward NESTED_READ_LIMIT in `_scan`, before this function
-    runs, so a string that is read twice counts once, at its length."""
-    coproc_name, zsh_repeat = KIND_SWITCHES[kind]
-    try:
-        return _Parser(command, coproc_name, zsh_repeat).parse()
-    except _Undecidable as first:
-        if kind != KIND_UNKNOWN:
-            raise
-        commands = None
-        try:
-            commands = _Parser(command, False, False).parse()
-        except Exception:
-            # Whatever the re-read raised is discarded: the kept first
-            # `_Undecidable` is raised below with its checkpoint commands.
-            pass
-        if commands is None:
-            raise first
-        return commands
+    Two readings. A string held by `sh` or `ksh` (DELIMITER_BOTH) is read
+    independently under both rules, because the shell behind the name is not
+    known. Reading A is the bash form and reading B is quote removal; each runs
+    the procedure above on the whole string, with one rule for all of it (there
+    are no per-delimiter combinations).
+
+      1. Reading A runs first. Reading B is skipped only when every parser built
+         for reading A ended by returning or by raising `_Undecidable`, and none
+         of them recorded a differing delimiter word: then B would read the
+         string exactly as A did.
+      2. What each reading adds: a reading read to its end adds its commands, a
+         reading that stopped `_Undecidable` adds its commands up to its last
+         checkpoint, and a reading that raised any other exception adds nothing
+         and does not discard what the other reading added. So no outcome of one
+         reading suppresses the commands of the other.
+      3. The result is the commands of reading A and then those of reading B.
+         When either reading stopped `_Undecidable` it is raised as an
+         `_Undecidable` that carries these commands; otherwise it is returned.
+         When both readings raised another exception, the exception of reading A
+         leaves this function, exactly as an unexpected error leaves it today.
+
+    A string is read at most twice by each reading, each read in linear time, and
+    this function does not call itself: a re-read and a second reading are other
+    parser objects. The characters of a string count toward NESTED_READ_LIMIT in
+    `_scan`, before this function runs, so a string that is read more than once
+    counts once, at its length."""
+    if delimiter != DELIMITER_BOTH:
+        reading = _read_string(command, kind, delimiter)
+        if reading.error is not None:
+            raise reading.error
+        return reading.commands
+    first = _read_string(command, kind, DELIMITER_BASH_FORM)
+    if not first.differs and not first.failed:
+        # Reading B would read the string exactly as A did.
+        if first.error is not None:
+            raise first.error
+        return first.commands
+    second = _read_string(command, kind, DELIMITER_QUOTE_REMOVAL)
+    commands = list(first.commands) + list(second.commands)
+    if isinstance(first.error, _Undecidable) or isinstance(second.error, _Undecidable):
+        stopped = _Undecidable("delimiter readings")
+        stopped.checkpoint_commands = commands
+        raise stopped
+    if first.error is not None and second.error is not None:
+        raise first.error
+    return commands
 
 
 def _basename(text):
@@ -3262,6 +3595,23 @@ def _shell_kind(name):
     if _has_name(name, "zsh"):
         return KIND_ZSH
     return KIND_UNKNOWN
+
+
+def _delimiter_reading(name):
+    """Return the delimiter reading of the shell whose command word has the
+    basename `name`, matched the way `_shell_kind` matches (the name itself, or
+    the name followed only by digits and dots): DELIMITER_BASH_FORM for `bash`,
+    DELIMITER_BOTH for `sh` and `ksh`, whose rule is not known, and
+    DELIMITER_QUOTE_REMOVAL for `zsh` and `dash`. The delimiter reading is a
+    second axis beside the kind: `dash` is of unknown kind and reads quote
+    removal only, while `sh` is of unknown kind and reads both. Only the direct
+    holder decides; the hook command itself is parsed without a reading and so
+    reads quote removal."""
+    if _has_name(name, "bash"):
+        return DELIMITER_BASH_FORM
+    if _has_name(name, "sh") or _has_name(name, "ksh"):
+        return DELIMITER_BOTH
+    return DELIMITER_QUOTE_REMOVAL
 
 
 def _command_index(words):
@@ -3404,32 +3754,36 @@ def _read_options(family, args):
 
 
 def _judge(words, connected):
-    """Judge one simple command. Return (verdict, inner, inner_kind): verdict is
-    ("interactive", name), ("noprogram", name) or None; inner is a shell `-c`
-    literal to judge, or None; inner_kind is the kind of the shell that holds
-    `inner` (KIND_BASH, KIND_ZSH or KIND_UNKNOWN), or None when there is no
-    `inner`.
+    """Judge one simple command. Return (verdict, inner, inner_kind,
+    inner_delimiter): verdict is ("interactive", name), ("noprogram", name) or
+    None; inner is a shell `-c` literal to judge, or None; inner_kind is the kind
+    of the shell that holds `inner` (KIND_BASH, KIND_ZSH or KIND_UNKNOWN), and
+    inner_delimiter is its delimiter reading (DELIMITER_BASH_FORM,
+    DELIMITER_QUOTE_REMOVAL or DELIMITER_BOTH); both are None exactly when there
+    is no `inner`.
 
-    The kind comes from the basename of the shell command word that directly
-    holds the string: the word left after assignments, the option-less wrappers
-    (`env` and the others) and a path, matched the way `_family_of` matches
-    (`_shell_kind`). Only the direct holder decides, so a `zsh -c` string inside
-    a `bash -c` string is zsh. The caller is `_scan`, which hands the kind to
-    `parse`."""
+    The kind and the delimiter reading come from the basename of the shell
+    command word that directly holds the string: the word left after
+    assignments, the option-less wrappers (`env` and the others) and a path,
+    matched the way `_family_of` matches (`_shell_kind`, `_delimiter_reading`).
+    Only the direct holder decides, so a `zsh -c` string inside a `bash -c`
+    string is zsh. The caller is `_scan`, which hands both to `parse`."""
     index = _command_index(words)
     if index is None:
-        return None, None, None
+        return None, None, None, None
     name = _basename(words[index].text)
     family = _family_of(name)
     if family is None:
-        return None, None, None
+        return None, None, None, None
     options = _read_options(family, words[index + 1:])
     if options.interactive:
-        return ("interactive", name), None, None
+        return ("interactive", name), None, None, None
     if options.code or options.operand or options.informational or connected:
         inner = options.code_string
-        return None, inner, (_shell_kind(name) if inner is not None else None)
-    return ("noprogram", name), None, None
+        if inner is None:
+            return None, None, None, None
+        return None, inner, _shell_kind(name), _delimiter_reading(name)
+    return ("noprogram", name), None, None, None
 
 
 def _scan(commands):
@@ -3453,16 +3807,21 @@ def _scan(commands):
     are always read. Reaching the limit is no verdict: the commands still to be
     judged at level 0 and in first-level strings are judged as before.
 
-    Each string is read by its kind, the kind of the shell that directly holds it:
-    `_judge` hands the kind back with the literal `-c` string, and this function
-    passes it to `parse` with the string (the hook command itself is parsed
-    without a kind, so it is of unknown kind). A string of unknown kind that
-    stops undecidable is read once more inside `parse`, with neither the coproc
-    NAME rule nor the zsh repeat rule, and falls back to the first read's
-    checkpoint commands when that re-read fails; this function sees one result
-    either way, and calls `parse` once for each string. The characters of a
-    string count toward the limit here, before `parse` runs, once at the string's
-    length, so a string that is read twice counts once.
+    Each string is read by its kind and its delimiter reading, those of the shell
+    that directly holds it: `_judge` hands both back with the literal `-c`
+    string, and this function passes them to `parse` with the string (the hook
+    command itself is parsed without either, so it is of unknown kind and reads
+    the quote-removal form). A string of unknown kind that stops undecidable is
+    read once more inside `parse`, with neither the coproc NAME rule nor the zsh
+    repeat rule, and falls back to the first read's checkpoint commands when that
+    re-read fails. A string held by `sh` or `ksh` is read under both delimiter
+    readings inside `parse`, the bash form first; the dual reading denies when
+    either reading denies, because `parse` hands back the commands of both
+    readings. This function sees one result either way, and calls `parse` once
+    for each string. The characters of a string count toward the limit here,
+    before `parse` runs, once at the string's length, so a string that is read
+    more than once counts once. A nested string found in the commands of both
+    readings is reached, and counted, once for each reading.
 
     A nested string that cannot be read to its end raises _Undecidable. The
     commands that exception carries (`checkpoint_commands`: the commands up to
@@ -3501,7 +3860,7 @@ def _scan(commands):
         connected = inherited or command.stdin or command.after_pipe
         if group is not None and group.connected:
             connected = True
-        verdict, inner, inner_kind = _judge(command.words, connected)
+        verdict, inner, inner_kind, inner_delimiter = _judge(command.words, connected)
         if verdict:
             return verdict
         if inner is None:
@@ -3512,7 +3871,7 @@ def _scan(commands):
                 continue
             total += len(inner)
         try:
-            inner_commands = parse(inner, inner_kind)
+            inner_commands = parse(inner, inner_kind, inner_delimiter)
         except _Undecidable as error:
             # The string cannot be read to its end: the commands settled up to
             # its last checkpoint are the commands of this string, judged like
