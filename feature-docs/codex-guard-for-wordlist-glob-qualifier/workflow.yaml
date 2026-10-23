@@ -111,7 +111,8 @@ workflow:
   failed_items: []
   completed_at_commit: a5b04ef0d1b3b07c9ac016a6e9350ff0831a7e87
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: bb52544a9f03aa10f1f3943c343ce79a840f9fd3
 tasks:
   task0001:
     title: "Read # in nested zsh for word-list entries as a word character"

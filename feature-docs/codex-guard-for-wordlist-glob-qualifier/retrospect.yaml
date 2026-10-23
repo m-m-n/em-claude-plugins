@@ -1,0 +1,52 @@
+feature: codex-guard-for-wordlist-glob-qualifier
+collected_at: "2026-10-23T19:46:00+09:00"
+session_ids:
+  - 01a1685b-e0bf-714d-891f-e2c1e553bbdb
+  - 01a1685c-5a0c-77a2-9acb-bef93b2007ed
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読み（score 1.23, confidence 0.77）を評価器が閾値表に照らして full と判定した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.05
+          confidence: 0.95
+          probabilities: {'0': 0.0, '1': 0.95, '2': 0.05, '3': 0.0}
+        observed_at: "2026-10-23T18:37:01+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.23
+          confidence: 0.77
+          probabilities: {'0': 0.0, '1': 0.77, '2': 0.23, '3': 0.0}
+        observed_at: "2026-10-23T18:40:02+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 20
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 2 件（stable_id 19818dabfb7f0481、security / comprehensive）は SPEC 前提 A1/A2 が語一覧の入れ子の ( をすべて glob 修飾子とみなし、プロセス置換 <( >( =( を考えていなかったことが原因。evaluator は rework を推奨したが、medium のため deferred で完了した"
