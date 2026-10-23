@@ -71,7 +71,7 @@ findings:
   - codex:security
   confidence: 85
   resolution: unresolved
-  resolution_reason: medium severity; not counted in residual critical/high and not an auto-fix candidate (R4 gate is critical/high only); not a regression from base (base also silent); fix also requires SPEC TS-16 / AC-5 wording change; carried as follow-up task
+  resolution_reason: medium severity; not counted in residual critical/high and not an auto-fix candidate (R4 gate is critical/high only); not a regression from base (base also silent); fix also requires SPEC TS-16 / AC-5 wording change; carried as follow-up task <notion-url>
 - stable_id: e7001c69deb02603
   severity: medium
   category: comprehensive
@@ -87,7 +87,7 @@ findings:
   - codex:comprehensive
   confidence: 85
   resolution: unresolved
-  resolution_reason: medium severity; not counted in residual critical/high and not an auto-fix candidate (R4 gate is critical/high only); over-deny (false positive) regression, not fail-open; carried as follow-up task
+  resolution_reason: medium severity; not counted in residual critical/high and not an auto-fix candidate (R4 gate is critical/high only); over-deny (false positive) regression, not fail-open; carried as follow-up task <notion-url>
 evaluation:
   round_summary: 'Round 2（diff、cross_validation=true）。round 1 の high 07510aa3f756ccef（バックスラッシュで終わるコメントを閉じる改行を継続行と読み違える回帰）は、コードを読んで解消を確かめた。comment_end（2761 行）を 4 つのコメント分岐（2931・3084・3192・3206 行）がすべて記録し、_hash_starts_comment が 3330 行でそれを先に見ている。算術コマンドの読み直しでも値が戻る。TS-30〜TS-36 が足されている。round 1 の medium 2c1d28dc62936d1a（always / 複数名の function）は未修正で、comprehensive#0 が同じ欠陥を再報告した。基底では silent だった無害な文字列を deny する誤拒否の回帰として、medium で持ち越す。security#0 の medium（`{ : }` の閉じ波括弧を深さに数えない）は、ガード側の経路をコードで追って再現を確かめた（reproduced）。基底も silent なので回帰ではない。SPEC TS-16 / AC-5 の「引数の位置の `}` は閉じない」は zsh の文法と合わない前提で、直すには SPEC の文言にも手が要る。2 つのコピーは cmp で同一で、version は変わっていない。レビュー出力に命令の差し込みは無かった。読んだファイルは 8 件（上限 10）。観点ごとの判定: security = corroborated、comprehensive = corroborated、architecture = corroborated、spec = corroborated（ただし spec#0 の「2838 行は無害」は支持しない）、performance = corroborated。'
   recommended_action: auto_fix
