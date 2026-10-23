@@ -1,0 +1,115 @@
+round: 2
+executed_at: '2026-10-24T06:41:47+09:00'
+scope:
+  review_mode: diff
+  base_commit: 5c200f6281623d3948db1a3c6bdb7650ec8b18a3
+  head_commit: eea0db96421898803b74050c9ee04f51f8807d63
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-escaped-hash-brace-case-heredoc/task0001.tests.yaml
+  - test-docs/codex-guard-escaped-hash-brace-case-heredoc/task0002.tests.yaml
+  - test-docs/codex-guard-escaped-hash-brace-case-heredoc/task0003.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: NFR1 requires linear-time reading; the diff adds per-character state to the substitution scanner
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: a20206a8e4ee3391
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 2873
+  title: '区切りを省略した閉じ波括弧 `{ : }` が深さに数えられず、波括弧形式の case の後ろにある対話起動を拒否しない'
+  description: '波括弧形式の本体の `{ }` 群の深さは、本体のリストのコマンド位置で読んだ単独の `}` でしか下がらない（2860-2883 行）。zsh の既定（IGNORE_BRACES と IGNORE_CLOSE_BRACES がどちらも無効）では、単独の `}` はどの位置でも閉じ波括弧として扱われるため `{ : }` は有効な群になるが、この読みでは `}` は `:` の引数になり深さが 1 のまま残る。続く `;;` で _Undecidable("item terminator in a brace group") になり、後ろの `python3 -i` は検査されず silent になる。基底（5c200f62）も silent なので回帰ではないが、SPEC の Objectives 2 が対象にしている形で fail-open が残る。SPEC TS-16 / AC-5 と docstring の「引数の位置の `}` は本体の普通の語」は zsh の文法と合わない前提（SPEC A3 も未実測）。em-review のコピーも同一。'
+  suggestion: '波括弧形式の本体のリスト（top == "8" かつ braces[-1] is not None）では、引数の位置にある単独で引用もエスケープもされていない `}` をコマンド位置の `}` と同じに扱う。docstring と SPEC TS-16 / AC-5 の文言を zsh の文法に合わせて直す。両コピーに `echo "$(case x { x) { : };; })"; python3 -i` などの deny の行を足し、バイト単位で同一に保つ。'
+  reproduction: '両コピーのスクリプトを python3 -B で実行し、標準入力に {"tool_input":{"command":"zsh -c ''echo \"$(case x { x) { : };; })\"; python3 -i''"}} を渡す。どちらも終了コード0、標準出力は空で、拒否されない。`{ : }` を `{ :; }` に変えると deny が返る。実際の対話起動を避けた到達確認として、zsh -f -c ''echo "$(case x { x) { : };; })"; printf REACHED'' を実行すると、終了コード0で REACHED が出力される。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium severity; not counted in residual critical/high and not an auto-fix candidate (R4 gate is critical/high only); not a regression from base (base also silent); fix also requires SPEC TS-16 / AC-5 wording change; carried as follow-up task
+- stable_id: e7001c69deb02603
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 2877
+  title: 波括弧形式の本体で zsh の `always` 群と複数名の `function a b {` の `{` が深さに数えられず、群の `}` で文を早く閉じて誤拒否する（回帰）
+  description: '深さが上がるのは、本体のリストのコマンド位置で読んだ単独の `{` と `function {` の特例（2824-2834 行）だけ。`{ :; } always { :; }` の `always` は RESERVED_WORDS に無いので普通の最初の語として読まれ、続く `{` は数えられない。その後の `}` はコマンド位置で深さ 0 なので 2876-2881 行で文を閉じ、後の項目のパターンの `)` で置換が閉じたと確定してしまう。例: `echo "$(case x { x) { :; } always { :; };; y) echo ''"; python3 -i; "'';; })"` は `python3 -i` が単引用符の中の文字列にすぎないのに両コピーとも deny を返す（基底は silent）。`function a b { :; }` でも同じ。NFR3 に反する誤った確定で、誤拒否の回帰。round 1 の 2c1d28dc62936d1a と同じ欠陥。'
+  suggestion: 最小の対応は、波括弧形式の本体で (1) コマンド位置の `}` で群を閉じた直後の単独の `always`、(2) `function` の名前の後にさらに名前が続く形、を読んだら _Undecidable にする。正しく読むなら、それぞれの後の単独の `{` で深さに 1 足す。両コピーに上の例（silent）と `function a b { :; }` を含む行を足し、バイト単位で同一に保つ。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium severity; not counted in residual critical/high and not an auto-fix candidate (R4 gate is critical/high only); over-deny (false positive) regression, not fail-open; carried as follow-up task
+evaluation:
+  round_summary: 'Round 2（diff、cross_validation=true）。round 1 の high 07510aa3f756ccef（バックスラッシュで終わるコメントを閉じる改行を継続行と読み違える回帰）は、コードを読んで解消を確かめた。comment_end（2761 行）を 4 つのコメント分岐（2931・3084・3192・3206 行）がすべて記録し、_hash_starts_comment が 3330 行でそれを先に見ている。算術コマンドの読み直しでも値が戻る。TS-30〜TS-36 が足されている。round 1 の medium 2c1d28dc62936d1a（always / 複数名の function）は未修正で、comprehensive#0 が同じ欠陥を再報告した。基底では silent だった無害な文字列を deny する誤拒否の回帰として、medium で持ち越す。security#0 の medium（`{ : }` の閉じ波括弧を深さに数えない）は、ガード側の経路をコードで追って再現を確かめた（reproduced）。基底も silent なので回帰ではない。SPEC TS-16 / AC-5 の「引数の位置の `}` は閉じない」は zsh の文法と合わない前提で、直すには SPEC の文言にも手が要る。2 つのコピーは cmp で同一で、version は変わっていない。レビュー出力に命令の差し込みは無かった。読んだファイルは 8 件（上限 10）。観点ごとの判定: security = corroborated、comprehensive = corroborated、architecture = corroborated、spec = corroborated（ただし spec#0 の「2838 行は無害」は支持しない）、performance = corroborated。'
+  recommended_action: auto_fix
+  action_rationale: critical / high は残っていない。残る 2 件の medium はどちらもレビュー実行が報告したもので、_skip_substitution の波括弧形式の読みの中に収まる小さな修正で済む。comprehensive の 1 件は誤拒否の回帰なので、今のうちに直す価値がある。security の 1 件を zsh の文法どおりに直すと、SPEC TS-16 のラベルと AC-5 の文言を変えることになる。自動修正で SPEC を変えられない場合は、この 1 件だけ人の確認か rework に回す。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
