@@ -21,3 +21,12 @@ records:
     file). Opus escalation: not run. Risk noted by Codex: the current text has no
     explicit skip rule, so this is a run-local interpretation recorded here, not in
     SPEC.md.'
+- question_id: create-plan.zero-target-pre-dispatch-verification
+  packet_id: null
+  answered_at: '2026-10-23T19:05:00+09:00'
+  source: batch-prior-resolution
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'A: implementation-planner の write_policy.targets は全て create（expect_digest null）で、照合対象が 0 件。Calculation を呼ばずに照合成功として dispatch する'
+  normalized_answer: zero expect_digest targets -> skip Calculation, verification succeeds
+  resolution_note: 'gate: create-plan planner pre-dispatch verification (artifact-digest.md Pre-dispatch verification, no gate_id). Same situation and same options as create-spec.zero-target-pre-dispatch-verification above; that record''s Codex-backed choice A is reused unchanged. codex_consulted: false (reuse of the earlier consultation for the identical case). Opus escalation: not run.'
