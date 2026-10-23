@@ -1,14 +1,18 @@
 schema_version: 1
 feature: codex-guard-procsub-in-wordlist
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: de04807ce8b0db30c381a50cc32be459065a0e51
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:ec98d9fc9f969ce98aac370998eeaf0f6b0ed4c1b828aaeaf762073e815792ac
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:ec98d9fc9f969ce98aac370998eeaf0f6b0ed4c1b828aaeaf762073e815792ac
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
