@@ -1,0 +1,81 @@
+feature: codex-guard-delim-subst-undecidable
+collected_at: '2026-10-23T21:18:16+09:00'
+session_ids:
+- 01a168b1-9999-7598-953d-7c0f8767984e
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読み（score 1.41, confidence 0.59）を評価器が閾値表に照らして
+      full と判定した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.33
+        confidence: 0.67
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.67
+          '2': 0.33
+          '3': 0.0
+      observed_at: '2026-10-23T19:44:55+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.41
+        confidence: 0.59
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.59
+          '2': 0.41
+          '3': 0.0
+      observed_at: '2026-10-23T19:47:36+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/codex-hook-interactive-guard.py
+      - em-review/scripts/codex-hook-interactive-guard.py
+      - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 100
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 4
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: main（5ba96e82）で両コピーのバイト一致を確認した。python3 -BでJSONを標準入力に渡した結果、指定3形とfor算術形は両コピーとも終了コード0、標準出力・標準エラーが空だった。対照のpython3
+        -iは両方denyだった。既存CASESは829行あり両コピーに適用されるが、対象3形の行はなかった。_skip_substitutionの直接の呼び出し元は1メソッド、呼び出す内部メソッドは3つだった。変更行数と追加数は既存処理に基づく暫定概算で、実装方法は未確定。入力のzshは実行せず、実際の区切り位置は未検証。ファイル変更はなく、調査前後とも作業ツリーはクリーンだった。
+follow_up_drafts: []
+lessons_candidates:
+- review round 1 の medium 2 件（stable_id 33d9d015548f40f3 security / 77563b434524e8fb
+  comprehensive）は、語の括弧（W）の中の <( / >( をコマンドリストとして読まないことが原因。直前の feature codex-guard-for-wordlist-glob-qualifier
+  の medium（19818dabfb7f0481）と同じく、語の中の括弧とプロセス置換の区別漏れが続けて出ている。medium のため unresolved
+  のまま完了した

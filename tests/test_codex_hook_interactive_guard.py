@@ -1162,6 +1162,45 @@ CASES = [
     ("deny", "置換読み TS24 外側が bash でも、内側の zsh -c の文字列は zsh として読む", "bash -c " + shlex.quote('zsh -c \'echo "$(coproc echo case x in x)"; python3 -i\'')),
     ("silent", "置換読み TS30 env とパスを経由した zsh も zsh として読み、coproc NAME の規則を使わない", "env /usr/bin/zsh -c " + shlex.quote('echo "$(coproc echo case x in x) printf \'%s\' \'"\';; esac)"; python3 -i')),
     ("silent", "置換読み TS31 env を経由した版数つきの bash は bash として読み、読み直さない", "env bash5.2 -c " + shlex.quote('echo "$(coproc echo case x in x)"; python3 -i')),
+    # codex-guard-delim-subst-undecidable (SPEC.md Test Scenarios TS1 to TS15;
+    # TS14 is the existing row "case 文の項目の本体の中の heredoc は判定不能..."
+    # above). The shared substitution skip reads a same-line `<<` outside a case
+    # statement, a command-position `((` and a parenthesis in an argument word to
+    # the `)` zsh closes the substitution at, so a heredoc delimiter `${ ... }`
+    # holding one of them ends where zsh ends it and the launch after the
+    # terminator line is judged. The silent rows name a body that does not close
+    # (terminator mismatch) or a reading that stays undecidable. TS13 is the
+    # same-line `*(#qN)` form: under zsh 5.9 a delimiter split across two lines
+    # (`*(e:true` / `:N))}`) is not closed by a terminator split the same way, so
+    # the body takes every later line and the line-split form launches nothing.
+    ("deny", "区切り語の置換の中の同じ行の << TS1 再現手順: if の中のコロンコマンドの区切り語を読み、終端行の後の起動を拒否する", "\n".join(["zsh -c 'if false; then", ": <<${v:-$(echo <<EOF)}", "${v:-$(echo <<EOF)}", "fi", "python3 -i'"])),
+    ("deny", "区切り語の置換の中の同じ行の << TS2 区切り語全体を終端行と比べ、後ろの起動を拒否する", "\n".join(["cat <<${v:-$(echo <<EOF)}", "${v:-$(echo <<EOF)}", "python3 -i"])),
+    ("silent", "区切り語の置換の中の同じ行の << TS3 終端行が EOF だけでは本文が閉じない", "\n".join(["cat <<${v:-$(echo <<EOF)}", "EOF", "python3 -i"])),
+    ("deny", "区切り語の置換の中の算術コマンド TS4 コマンドの位置の (( )) の << は左シフトで、後ろの起動を拒否する", "\n".join(["cat <<${v:-$( ((1 << 2)) )}", "${v:-$( ((1 << 2)) )}", "python3 -i"])),
+    ("silent", "区切り語の置換の中の算術コマンド TS5 短い終端行では本文が閉じない", "\n".join(["cat <<${v:-$( ((1 << 2)) )}", "2)) )}", "python3 -i"])),
+    ("deny", "区切り語の置換の中の算術コマンド TS6 for の後の (( )) の << は左シフトで、後ろの起動を拒否する", "\n".join(["cat <<${v:-$(for ((i=0;i<1<<2;i++)) do :; done)}", "${v:-$(for ((i=0;i<1<<2;i++)) do :; done)}", "python3 -i"])),
+    ("deny", "区切り語の置換の中の語の括弧 TS7 foo(case x) は語の中の括弧で、後ろの起動を拒否する", "\n".join(["cat <<${v:-$(echo foo(case x))}", "${v:-$(echo foo(case x))}", "python3 -i"])),
+    ("silent", "区切り語の置換の中の語の括弧 TS8 短い終端行では本文が閉じない", "\n".join(["cat <<${v:-$(echo foo(case x))}", "x))}", "python3 -i"])),
+    ("deny", "区切り語の置換の中の語の括弧 TS9 foo(a;b) の ; は語の文字で、後ろの起動を拒否する", "\n".join(["cat <<${v:-$(echo foo(a;b))}", "${v:-$(echo foo(a;b))}", "python3 -i"])),
+    ("deny", "語の括弧 TS10 回帰: 二重引用符の中の foo(a;b) は今のまま deny", 'echo "$(echo foo(a;b))"; python3 -i'),
+    ("deny", "算術コマンドの読み直し TS11 回帰: (( の対応する閉じが )) でなければ入れ子のサブシェルとして読み、deny のまま", 'echo "$( ((echo a) ) )"; python3 -i'),
+    ("deny", "置換の中の同じ行の << TS12 二重引用符の中の置換で閉じる << は判定でき、後ろの起動を拒否する", 'echo "$(cat <<EOF)"; python3 -i'),
+    ("deny", "区切り語の置換の中の語の括弧 TS13 同じ行に収まる *(#qN) の形: # は語の文字で、後ろの起動を拒否する", "\n".join(["cat <<${v:-$(echo *(#qN))}", "${v:-$(echo *(#qN))}", "python3 -i"])),
+    ("silent", "置換の中の << TS15 << の後、置換の中で改行が来る形は判定不能で、後ろの起動を拒否しない", 'echo "$(cat <<EOF\nbody\nEOF\n)"; python3 -i'),
+    # The edges of the same readings that the scenarios above do not name.
+    ("deny", "置換の中の同じ行の << <<- の形も同じ行で閉じれば判定でき、後ろの起動を拒否する", 'echo "$(cat <<-EOF)"; python3 -i'),
+    ("deny", "置換の中の同じ行の << 入れ子の置換が閉じれば << の保留は外れ、外側の改行は判定不能にしない", 'echo "$(echo $(cat <<EOF)\necho foo)"; python3 -i'),
+    ("deny", "置換の中の同じ行の << <<< は heredoc ではなく、後ろの起動を拒否する", 'echo "$(cat <<<x)"; python3 -i'),
+    ("silent", "置換の中の << case 文の対象の語の << は判定不能のまま", 'echo "$(case <<x in x) :;; esac)"; python3 -i'),
+    ("silent", "置換の中の << case 文の項目の本体の入れ子の置換の << も判定不能のまま", 'echo "$(case x in x) echo $(cat <<EOF);; esac)"; python3 -i'),
+    ("silent", "置換の中の << 保留した << の後の語の括弧の中の改行は判定不能", 'echo "$(cat <<EOF foo(a\nb))"; python3 -i'),
+    ("deny", "算術コマンド 単独の (( )) の << は左シフトで、後ろの起動を拒否する", 'echo "$( (( 1 << 2 )) )"; python3 -i'),
+    ("deny", "算術コマンド case 文の項目の本体のコマンドの位置の (( )) も算術として読み、後ろの起動を拒否する", 'echo "$(case x in x) ((1 << 2));; esac)"; python3 -i'),
+    ("deny", "算術コマンドの読み直し 入れ子のサブシェル 2 段として読み直した中の続きも読み、deny のまま", 'echo "$( ((echo a); echo b) )"; python3 -i'),
+    ("deny", "算術コマンドでない空白を挟んだ ( ( は入れ子のサブシェルのまま読み、deny のまま", 'echo "$( ( (echo a) ) )"; python3 -i'),
+    ("silent", "算術コマンドでない空白を挟んだ ( ( の << は heredoc で、本文の改行は判定不能のまま", 'echo "$( ( (cat <<EOF\nbody\nEOF\n) ) )"; python3 -i'),
+    ("deny", "語の括弧 二重引用符の中の *(#qN) の # は語の文字で、後ろの起動を拒否する", 'echo "$(echo *(#qN))"; python3 -i'),
+    ("deny", "語の括弧 入れ子の括弧は同じ文脈の入れ子で、中の ; は語の文字", 'echo "$(echo foo(a(b;c)d))"; python3 -i'),
 ]
 
 DENY_REASON_MARKERS = ("python3 -c", "python3 - <<EOF", "スクリプトファイル")
@@ -2641,6 +2680,99 @@ class TestNestedReadLimit(HookCopiesMixin, unittest.TestCase):
         self.assert_verdict("silent", self.reread_pair(NESTED_READ_LIMIT - NESTED_READ_LIMIT // 2 + 1))
 
 
+class TestArithmeticRereadBudget(HookCopiesMixin, unittest.TestCase):
+    """codex-guard-delim-subst-undecidable (VERIFICATION.md TS17, NFR1, TM-2): a
+    command-position `((` that does not close with `))` is read again once as two
+    nested subshells, and the characters read again, summed over the skips of one
+    parser, are capped by a named limit: `ARITHMETIC_REREAD_FACTOR` times the
+    length of the string. The input is generated and large, so it is not a row of
+    CASES. `nested(depth)` holds `depth` arithmetic commands, each with a
+    substitution that holds the next one and none closed by `))`: the second
+    reading of each covers all the ones inside it, so without the cap the
+    characters read again grow with the square of the depth."""
+
+    TIMEOUT = 60
+    # Deep enough that, uncapped, the second readings take far longer than the
+    # budget of the hook, and the cap is reached long before the innermost
+    # command is back in the work.
+    DEEP = 3000
+
+    @staticmethod
+    def nested(depth):
+        text = "x"
+        for _ in range(depth):
+            text = "((a $( " + text + ") b) )"
+        return text
+
+    def command(self, depth):
+        return 'echo "$( ' + self.nested(depth) + ' )"; python3 -i'
+
+    def assert_verdict(self, expected, command):
+        for plugin, path in self.for_each_copy():
+            self.assertEqual(
+                verdict_of(run_hook(path, payload_for(command), timeout=self.TIMEOUT)), expected
+            )
+
+    def test_each_copy_defines_the_factor_once_with_a_value_the_docstring_states(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+                assigns = [
+                    node for node in tree.body
+                    if isinstance(node, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == "ARITHMETIC_REREAD_FACTOR" for t in node.targets)
+                ]
+                self.assertEqual(len(assigns), 1, "one assignment at module level")
+                value = assigns[0].value
+                self.assertIsInstance(value, ast.Constant)
+                self.assertIs(type(value.value), int)
+                self.assertGreater(value.value, 0)
+                doc = parser_docstring(path, "_skip_substitution") or ""
+                self.assertIn(
+                    "`ARITHMETIC_REREAD_FACTOR` (%d) times the length of the string" % value.value, doc
+                )
+
+    def test_a_chain_within_the_budget_is_read_and_the_launch_after_it_is_denied(self):
+        for depth in (1, 2, 3):
+            with self.subTest(depth=depth):
+                self.assert_verdict("deny", self.command(depth))
+
+    def test_a_chain_that_would_exceed_the_budget_is_undecidable_in_time_without_an_error(self):
+        # `verdict_of` reports "error" for a non-zero status or any standard error
+        # output, so a recursion error or a crash fails here as well as a timeout.
+        self.assert_verdict("silent", self.command(self.DEEP))
+
+    def test_each_arithmetic_command_is_read_again_once(self):
+        # Two nested ones, none closed by `))`: the inner one's second reading
+        # runs first, then the outer one's, which reads the inner text again but
+        # as two subshells, so the characters read again are exactly the span of
+        # each from its `((` to the `)` that was not followed by a second `)`.
+        command = '"$( ' + self.nested(2) + ' )"'
+        inner = "((a $( x) b"
+        outer = "((a $( " + self.nested(1) + ") b"
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                guard = load_guard(path)
+                parser = guard["_Parser"](command)
+                end = parser._skip_substitution(command.index("$("))
+                self.assertEqual(end, len(command) - 1)
+                spent = guard["ARITHMETIC_REREAD_FACTOR"] * len(command) - parser.arith_budget
+                self.assertEqual(spent, len(inner) + len(outer))
+
+    def test_the_budget_runs_out_across_the_skips_of_one_parser(self):
+        # Separate substitutions each use some of the one budget of the string.
+        guard = load_guard(next(iter(HOOK_PATHS.values())))
+        unit = '"$( ((a) ) )" '
+        command = unit * 4
+        parser = guard["_Parser"](command)
+        for k in range(4):
+            parser._skip_substitution(command.index("$(", k * len(unit)))
+        self.assertEqual(
+            guard["ARITHMETIC_REREAD_FACTOR"] * len(command) - parser.arith_budget,
+            4 * len("((a"),
+        )
+
+
 def module_docstring(path):
     """The module docstring with its line breaks and indentation folded into
     single spaces, so a sentence is found wherever the text wraps."""
@@ -3396,6 +3528,59 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
         "subshell, quotes, a case statement) goes on inside a word, so its "
         "state is false."
     )
+
+    # codex-guard-delim-subst-undecidable (FR6): the docstring describes the three
+    # readings added for a heredoc operator, an arithmetic command and a
+    # parenthesis in a word. The sentence "a heredoc anywhere in the chunk (item
+    # bodies included)" of UNDECIDABLE_MARKERS stays, for the heredocs inside a case
+    # statement.
+    NEW_READING_MARKERS = {
+        "heredoc operator rule": (
+            "Outside a case statement an unquoted `<<` that is not `<<<` does not make the chunk undecidable",
+            "the word after the operator (the `<<-` form included) is read as an ordinary word at an argument position",
+            "While any open list is marked, an unquoted newline in any context (a word parenthesis included, quoted text excluded) makes the chunk undecidable",
+            "the mark is dropped and the list closes where it would without the operator",
+            "no `<<` looks ahead, so the reading stays linear",
+            "A `<<` inside a case statement (its subject, its patterns, its item bodies and every list nested in them) stays undecidable",
+            "a heredoc anywhere in the chunk (item bodies included) once a case statement is open",
+        ),
+        "arithmetic command rule": (
+            "A `((` read at a command position (a `((` directly after `for` included; two parentheses with a blank between them are not this form) opens an arithmetic command",
+            "In it a `<<` is a left shift and no heredoc",
+            "A `)` that closes the command must be directly followed by a second `)`",
+            "everything read since the `((` is dropped and the reader goes back to that `((` and reads it as two nested subshells",
+            "A `((` is read again at most once",
+            "the sum may not exceed `ARITHMETIC_REREAD_FACTOR` (8) times the length of the string",
+            "nothing recurses",
+        ),
+        "word parenthesis rule": (
+            "opens a word parenthesis, the context W",
+            "a `(` directly after `<`, `>` or `=` (`<(`, `>(` and `=(`)",
+            "A `#` is a word character and starts no comment",
+            "`;`, `&`, `|` and a newline are word characters, neither separators nor undecidable",
+            "When the outermost W closes, the list that holds it goes on in the state it had before the `(`, inside the same word",
+        ),
+    }
+
+    def test_the_docstring_states_the_three_readings(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            for rule, markers in self.NEW_READING_MARKERS.items():
+                for marker in markers:
+                    with self.subTest(copy=plugin, rule=rule, marker=marker):
+                        self.assertIn(marker, doc)
+
+    def test_the_docstring_does_not_say_a_heredoc_is_always_undecidable(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            for stale in (
+                "a heredoc is always undecidable",
+                "every heredoc is undecidable",
+                "a heredoc in a substitution is undecidable",
+                "a heredoc anywhere in the chunk (item bodies included), an unmatched",
+            ):
+                with self.subTest(copy=plugin, stale=stale):
+                    self.assertNotIn(stale, doc)
 
     def test_the_docstring_no_longer_says_every_closing_goes_on_inside_a_word(self):
         for plugin, path in HOOK_PATHS.items():
