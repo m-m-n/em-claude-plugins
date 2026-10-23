@@ -1,20 +1,118 @@
 schema_version: 1
 feature: worker-self-write-digest
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 32070b74a3a5ab16181b027b4826d87b1d1d5e3c
 last_input_digest: sha256:2de4c841d46fa13799835d6f9226b803b95d250db680e5563485577d4233a584
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-24T08:52:00+09:00'
+    questions:
+    - question_id: mechanism.self-write
+      status: answered
+    - question_id: testing.regression-form
+      status: answered
+    - question_id: scope.resume-reconcile
+      status: answered
+    - question_id: scope.workers
+      status: answered
+    - question_id: scope.task-md
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  mechanism.self-write:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - substitute_dispatch_digest
+    freeform: null
+    normalized_answer: substitute_dispatch_digest
+    resolution_note: 'gate create-spec.requirement-clarification -> codex_consultation
+      (1 turn, harness codex). Codex: keeps aggregate comparison, smaller change than
+      per_path; exclude_write_targets loses re-plan drift detection (planner-contract.md:140).
+      Must preserve key absence for created paths.'
+    record_as_assumption: true
+  testing.regression-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - script_function
+    freeform: null
+    normalized_answer: script_function
+    resolution_note: 'codex_consultation: script function wired into real call path
+      detects the false stale directly; tests cover designer/planner/rework-planner
+      self-writes and keep rejecting non-self-write changes.'
+    record_as_assumption: true
+  scope.resume-reconcile:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_resume
+    freeform: null
+    normalized_answer: include_resume
+    resolution_note: 'codex_consultation: resume also compares last_input_digest (phase-state.md:339,
+      create-plan-phase.md:324); keep recorded-artifact-digest check so changes before
+      resume are not hidden; define how dispatch-time map and self-write set are persisted.'
+    record_as_assumption: true
+  scope.workers:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - envelope_generic
+    freeform: null
+    normalized_answer: envelope_generic
+    resolution_note: 'codex_consultation: envelope applies to 5 workers and separates
+      common R1 from per-worker inputs; conditional general rule fits; contracts cite
+      it and name overlapping paths.'
+    record_as_assumption: true
+  scope.task-md:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - out_of_scope
+    freeform: null
+    normalized_answer: out_of_scope
+    resolution_note: 'codex_consultation: TASK.md not in planner digest_inputs, so
+      not affected; adding it is a separate change.'
+    record_as_assumption: true
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T08:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: skip
+    resolution_note: 'gate create-spec.design-step -> batch policy decide_autonomously:
+      accept analyst design_step_recommendation (skip: no UI).'
+    record_as_assumption: false
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:2de4c841d46fa13799835d6f9226b803b95d250db680e5563485577d4233a584
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:2de4c841d46fa13799835d6f9226b803b95d250db680e5563485577d4233a584
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+consultation_notes: 'Codex notes: self-write identification must use observed change
+  set + per-action permission, not written_artifacts alone nor plain path intersection;
+  allowed_write_roots does not permit updating existing files; preserve targets never
+  excluded; worker+external change on same permitted path indistinguishable (exclusivity
+  not lock-enforced) - record as known limit; hashing stays orchestrator-side.'
