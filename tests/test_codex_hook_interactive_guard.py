@@ -1065,6 +1065,27 @@ CASES = [
     ("deny", "置換読み TS-1 語一覧の入れ子の ( の直後の # (glob 修飾子 *(#qN)) はコメントを始めず、置換の後の起動を拒否する (再現手順 zsh -c)", 'zsh -c \'setopt extendedglob; echo "$(for x (*(#qN)) { :; })"; python3 -i\''),
     ("deny", "置換読み TS-2 語一覧の入れ子の ( の直後の # (glob 修飾子 *(#qN)) はコメントを始めず、置換の後の起動を拒否する (再現手順 最上位)", 'echo "$(for x (*(#qN)) { :; })"; python3 -i'),
     ("deny", "置換読み TS-7 語一覧の入れ子の ( ... ) の中で空白の後にある # も語の文字で、改行が無くても置換の後の起動を拒否する", 'echo "$(for x (a(b #c)) { :; })"; python3 -i'),
+    # codex-guard-procsub-in-wordlist (SPEC.md Test Scenarios TS-1 to TS-14): in
+    # the outermost entry of the word list of a zsh `for`, an unquoted,
+    # unescaped `<(`, `>(` or `=(` at the start of a word is a process
+    # substitution, read as a command list whose `)` closes inside the word;
+    # any other `(` of the list stays a nested entry, where a `#` is a word
+    # character. The commands are the SPEC.md Python string literals, so `\n` is
+    # a newline and `\\` is one backslash.
+    ("deny", "語一覧プロセス置換 TS-1 項目を開く ( の直後の <( は p で、中の空白の後の # がコメントを始めるので、後ろの起動を拒否する (拒否漏れの再現)", 'zsh -c \'echo "$(for x (<(: # "\n)) { :; })"; python3 -i\''),
+    ("silent", "語一覧プロセス置換 TS-2 <( の中のコメントの ) は閉じず、後ろの引用符の中の python3 -i を拒否しない (誤拒否の再現)", 'zsh -c \'echo "$(for x (<(printf x # )))"; python3 -i; echo "\n)) { :; })"\''),
+    ("deny", "語一覧プロセス置換 TS-3 >( も語の先頭で p を開く", 'echo "$(for x (>(: # "\n)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-4 =( も語の先頭で p を開く", 'echo "$(for x (=(: # "\n)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-5 空白の後の語の先頭の <( は p", 'echo "$(for x (a <(: # "\n)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-6 エスケープした < の後の ( は入れ子の w で、# は語の文字", 'echo "$(for x (\\<(b #c)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-7 語の途中の =( は入れ子の w で、# は語の文字", 'echo "$(for x (a=(b #c)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-8 数値範囲 glob <-> の後の ( は glob 修飾子で、>( は語の途中", 'echo "$(for x (<->(#qN)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-9 入れ子の項目の中の <( は入れ子の w のまま", 'echo "$(for x (a(<(b #c))) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-10 引用符で囲んだ < の後の ( は入れ子の w", 'echo "$(for x ("<"(b #c)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-11 入れ子の項目の中の =( は入れ子の w のままで、# は語の文字", 'echo "$(for x (a(=(: #c))) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-12 エスケープした空白は語の文字なので =( は語の途中", 'echo "$(for x (a\\ =(b #c)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-13 語の途中の継続行は語を区切らないので =( は語の途中", 'echo "$(for x (a\\\n=(b #c)) { :; })"; python3 -i'),
+    ("deny", "語一覧プロセス置換 TS-14 空白の後の継続行は語の先頭の状態を保つので <( は p", 'echo "$(for x (a \\\n<(: # "\n)) { :; })"; python3 -i'),
     # codex-guard-case-reading-fixes (VERIFICATION.md TS61): a reserved word, a
     # closing word or a head word that a continuation pair splits is read as
     # that word.
@@ -3437,6 +3458,29 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
                     self.assertIn(marker, doc)
             with self.subTest(copy=plugin, stale=True):
                 self.assertNotIn(self.STALE_WORD_LIST_HASH_SENTENCE, doc)
+
+    # codex-guard-procsub-in-wordlist (FR4): the docstring says that an
+    # unquoted, unescaped `<(`, `>(` or `=(` at the start of a word of the
+    # outermost entry of the word list opens a command list p, that the `)` of
+    # that p is a closing inside a word, and how the start of a word is decided
+    # (an escaped space is a word character, a continuation pair separates no
+    # word). Every other `(` of the word list stays a nested entry.
+    WORD_LIST_PROCESS_SUBSTITUTION_MARKERS = (
+        "an unquoted, unescaped `<(`, `>(` or `=(` there opens a command list p instead of a nested entry",
+        "The `)` that closes that p is a closing inside a word",
+        "The start of a word is a state kept while reading and never looked up backward",
+        "An escaped character (an escaped space included) is a word character",
+        "A continuation pair neither starts a word nor separates words, so it keeps the state",
+        "in the middle of a word or inside a nested entry is read as any other `(` of w",
+    )
+
+    def test_the_docstring_states_how_a_process_substitution_in_a_for_word_list_is_read(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for marker in self.WORD_LIST_PROCESS_SUBSTITUTION_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
 
     def test_the_keyword_decision_states_the_pair_stripped_rule(self):
         for plugin, path in HOOK_PATHS.items():
