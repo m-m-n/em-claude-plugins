@@ -17,7 +17,7 @@ Notation in the commands below: shell text, where `\` is one backslash and `<new
 
 ### Test Scenarios from SPEC.md
 
-Every hook scenario is a CASES row, or a test in the module, that runs against both copies. TS-28 and TS-29 are added here for NFR1 and NFR4, which SPEC.md's scenario list does not number.
+Every hook scenario is a CASES row, or a test in the module, that runs against both copies. TS-28 and TS-29 are added here for NFR1 and NFR4, which SPEC.md's scenario list does not number. TS-30 to TS-36 are added by the review round 1 rework (task0003): a `#` at the start of the line after a comment that ends in a backslash.
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -50,6 +50,13 @@ Every hook scenario is a CASES row, or a test in the module, that runs against b
 | TS-27 | `python3 -m unittest tests.test_codex_hook_interactive_guard` passes, and `cmp em-workflow/scripts/codex-hook-interactive-guard.py em-review/scripts/codex-hook-interactive-guard.py` reports no difference | pass | Integration |
 | TS-28 | NFR1 scale tests in `TestCaseStatementsInASubstitution`, each denied within the class timeout on both copies. The inputs are long runs of escaped blanks before `#`, long runs of continuation pairs between a word character and `#`, long backslash runs of both parities before a blank and `#`, one brace-form statement with DEPTH items, brace-form statements nested DEPTH deep, and DEPTH nested `{ }` groups in one brace-form body | pass | Integration |
 | TS-29 | NFR4: `git diff --name-only` from workflow.yaml `implement.base_commit` to the integration HEAD lists neither `em-workflow/.claude-plugin/plugin.json`, `em-review/.claude-plugin/plugin.json` nor `.claude-plugin/marketplace.json` | pass | Integration |
+| TS-30 | A comment ending in a backslash, then `#` at the start of the next line: `echo "$(: a #b\<newline># don't<newline>)"; python3 -i` | deny | Unit |
+| TS-31 | The same form in an item body: `echo "$(case x in x) : a #b\<newline># don't<newline>;; esac)"; python3 -i` | deny | Unit |
+| TS-32 | The same form at the pattern position (phase 4): `echo "$(case x in #b\<newline># don't<newline>x) :;; esac)"; python3 -i` | deny | Unit |
+| TS-33 | The same form after the pattern's `)` (phase 7, rule 3): `echo "$(case x in x)#b\<newline># don't<newline>:;; esac)"; python3 -i` | deny | Unit |
+| TS-34 | The same form in the outermost entry of a word list: `echo "$(for x (a #b\<newline># don't<newline>) { :; })"; python3 -i` | deny | Unit |
+| TS-35 | The line after a backslash-ended comment is a comment that holds the `)` and the launch: `zsh -c 'echo "$(: a #b\<newline># )"; python3 -i; echo "<newline>)"'` | silent | Unit |
+| TS-36 | NFR1 scale test in `TestCaseStatementsInASubstitution`: DEPTH repetitions of a comment ending in a backslash, each followed by a line that begins with `#`, in one substitution followed by `; python3 -i`, denied within the class timeout on both copies | pass | Integration |
 
 ## Code Quality Verification
 - Format: none configured (`format_command` is empty)
@@ -64,7 +71,7 @@ Every hook scenario is a CASES row, or a test in the module, that runs against b
 | AC-1 | Reproduction 2 is denied | TS-1 |
 | AC-2 | Reproduction 3 is denied | TS-2 |
 | AC-3 | Reproduction 4 is denied | TS-3 |
-| AC-4 | `#` after a continuation pair is decided by the character before the pair. `#` after an escaped character is a word character, in patterns, item bodies and the outermost word-list entry too | TS-5, TS-6, TS-7, TS-8, TS-9, TS-10, plus task0001's boundary rows |
+| AC-4 | `#` after a continuation pair is decided by the character before the pair. `#` after an escaped character is a word character, in patterns, item bodies and the outermost word-list entry too | TS-5, TS-6, TS-7, TS-8, TS-9, TS-10, TS-30, TS-31, TS-32, TS-33, TS-34, TS-35, plus task0001's boundary rows |
 | AC-5 | The brace form closes at a pattern-position `}` or `esac`, or a depth-0 body `}`. Body groups, quoted braces, argument `}` and nested statements are not mistaken for the close | TS-4, TS-12, TS-13, TS-14, TS-15, TS-16, TS-17, TS-18, TS-23 |
 | AC-6 | A body `esac`, a terminator at depth 1 or more, an unclosed brace form and a heredoc in a brace form are undecidable (silent) | TS-19, TS-20, TS-21, TS-22 |
 | AC-7 | The arithmetic-command re-read keeps the brace form readable | TS-25 |
@@ -75,36 +82,36 @@ Every hook scenario is a CASES row, or a test in the module, that runs against b
 ### Functional Requirements Coverage
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1, TS-2, TS-5, TS-6, TS-7, TS-8, TS-9, TS-10 |
+| FR1 | task0001, task0003 | TS-1, TS-2, TS-5, TS-6, TS-7, TS-8, TS-9, TS-10, TS-30, TS-31, TS-32, TS-33, TS-34, TS-35 |
 | FR2 | task0002 | TS-3, TS-4, TS-12, TS-13, TS-14, TS-15, TS-16, TS-17, TS-18, TS-23 |
 | FR3 | task0002 | TS-3, TS-4, TS-12, TS-13, TS-14, TS-15, TS-16, TS-17, TS-18, TS-23 |
 | FR4 | task0002 | TS-4, TS-12, TS-13, TS-14, TS-15, TS-16, TS-17, TS-18, TS-19, TS-20, TS-21, TS-22, TS-23 |
 | FR5 | task0002 | TS-25 |
 | FR6 | task0002 | TS-4, TS-11, TS-19, TS-20, TS-21, TS-22, TS-24 |
-| FR7 | task0001, task0002 | TS-26 |
-| FR8 | task0001, task0002 | TS-4, TS-11, TS-24, TS-26, TS-27 |
-| FR9 | task0001, task0002 | TS-27 |
-| NFR1 | task0001, task0002 | TS-28 |
-| NFR2 | task0001, task0002 | TS-4, TS-11, TS-24, TS-27 |
-| NFR3 | task0001, task0002 | TS-6, TS-19, TS-20, TS-21, TS-22, TS-23, TS-24 |
-| NFR4 | task0001, task0002 | TS-29 |
+| FR7 | task0001, task0002, task0003 | TS-26 |
+| FR8 | task0001, task0002, task0003 | TS-4, TS-11, TS-24, TS-26, TS-27 |
+| FR9 | task0001, task0002, task0003 | TS-27 |
+| NFR1 | task0001, task0002, task0003 | TS-28, TS-36 |
+| NFR2 | task0001, task0002, task0003 | TS-4, TS-11, TS-24, TS-27 |
+| NFR3 | task0001, task0002, task0003 | TS-6, TS-19, TS-20, TS-21, TS-22, TS-23, TS-24, TS-35 |
+| NFR4 | task0001, task0002, task0003 | TS-29 |
 
 ## Manual Testing (E2E Not Possible)
 - [ ] SPEC.md A3, which is not measured: run zsh in parse-only mode (`zsh -n`) on a brace-form statement whose last item body ends with a depth-0 `}`, and record whether zsh accepts it. This check is for information only and does not change TS-13's expected verdict.
 
 ## Performance / Security Verification (if applicable)
-- NFR1: TS-28. Every scale input is denied within the deep-input class timeout on both copies.
-- TM-1: The comment-start decision looks past continuation pairs and treats an escaped previous character as a word character at every site. Checked by TS-1, TS-2, TS-5, TS-6, TS-7, TS-8, TS-9 and TS-10 on both copies.
+- NFR1: TS-28 and TS-36. Every scale input is denied within the deep-input class timeout on both copies.
+- TM-1: The comment-start decision looks past continuation pairs and treats an escaped previous character as a word character at every site. The newline that ends a comment is never a continuation pair. Checked by TS-1, TS-2, TS-5, TS-6, TS-7, TS-8, TS-9, TS-10 and TS-30 to TS-35 on both copies.
 - TM-2: The brace form is read to its close. Checked by TS-3, TS-4, TS-12 and TS-13 on both copies.
 - TM-3: Only command-position braces of the item body list are counted. Nested statements keep their own state, the re-read restores the brace state, and uncertain forms stay undecidable. Checked by TS-14 to TS-25 (deny for TS-14 to TS-18 and TS-25, silent for TS-19 to TS-24) on both copies.
-- TM-4: The reading stays linear. Checked by TS-28.
+- TM-4: The reading stays linear. Checked by TS-28 and TS-36.
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Unit (CASES rows and docstring markers, TS-1 to TS-26) | 26 | 26 | 0 | 0 |
-| Integration (TS-27 to TS-29) | 3 | 3 | 0 | 0 |
+| Unit (CASES rows and docstring markers, TS-1 to TS-26, TS-30 to TS-35) | 32 | 32 | 0 | 0 |
+| Integration (TS-27 to TS-29, TS-36) | 4 | 4 | 0 | 0 |
 | Security (TM-1 to TM-4) | 4 | 4 | 0 | 0 |
 | Manual (SPEC.md A3 check) | 1 | 0 | 0 | 1 |
-| Total | 34 | 33 | 0 | 1 |
+| Total | 41 | 40 | 0 | 1 |

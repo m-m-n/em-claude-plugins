@@ -24,8 +24,8 @@ No new layer, module or file.
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
 | `_Parser._skip_substitution` (both copies) | Return the index right after the close of the substitution that begins at `start`, or raise `_Undecidable` | Pre: `start` is at `$(`, `$((` or a backtick. Post: the contents are never judged (NFR3); the close is returned only when it is certain, otherwise `_Undecidable`; one forward pass with total work within a constant times the string length (NFR1); nothing it reaches calls the skip again, the shared quoted-unit reader, `parse` or `_remove_range_quotes` (existing structural tests); the rule-9 re-read restores every value the reader keeps to its value at the `((` | task0001, task0002 |
-| `#` comment-start decision (inside the skip) | Decide whether a `#` at a site where a comment can start begins a comment | Defined by task0001 (FR1). It is computed only from the characters directly in front of the `#` (a bounded look, no carried state), so the rule-9 re-read and the per-entry saved state need no change for it. task0002 adds no site where a `#` can start a comment: every `#` inside a brace-form statement goes through the existing sites (waiting phases, pattern, group, item body), so it gets the decision through them | task0001 (defines), task0002 (relies on it) |
-| Per-entry state of the skip (phase characters, per-entry saved state, the `((` record) | Hold what each stack entry and each command-position `((` needs | Neither task changes the meaning of the phase characters or the shape of the per-entry saved state. task0002 keeps its per-case-statement values (form and `{ }` depth) beside them, and only task0002 extends the `((` record and its restore. task0001 adds no state | task0001, task0002 |
+| `#` comment-start decision (inside the skip) | Decide whether a `#` at a site where a comment can start begins a comment | Defined by task0001 (FR1). It is computed from the characters directly in front of the `#` (a bounded look) and, since task0003, from the one comment-end position of D4: the newline that ended the last comment is an unescaped newline in the look. task0002 adds no site where a `#` can start a comment: every `#` inside a brace-form statement goes through the existing sites (waiting phases, pattern, group, item body), so it gets the decision through them | task0001 (defines), task0002 (relies on it), task0003 (adds the comment-end position, D4) |
+| Per-entry state of the skip (phase characters, per-entry saved state, the `((` record) | Hold what each stack entry and each command-position `((` needs | Neither task changes the meaning of the phase characters or the shape of the per-entry saved state. task0002 keeps its per-case-statement values (form and `{ }` depth) beside them and extends the `((` record and its restore. task0001 adds no state. task0003 adds the comment-end position (D4) to the `((` record and its restore, not to the per-entry saved state | task0001, task0002, task0003 |
 | CASES table (`tests/test_codex_hook_interactive_guard.py`) | One row per input: (expected verdict, label, command) | Verdict is `deny` or `silent`; labels and commands are unique across the whole table (`test_cases_are_unique`); every row runs against both copies; pre-existing rows keep their verdicts except the one brace-form row FR8 names | task0001, task0002 |
 | `TestSubstitutionSkipDocumentation` markers | Pin sentences of the `_skip_substitution` docstring | Every marker is a literal substring of the docstring of both copies; a stale sentence listed in a test stays absent | task0001, task0002 |
 | `TestCaseStatementsInASubstitution` scale helper | Assert that a long input is denied in time on both copies | Uses the class's DEPTH and TIMEOUT (those of the deep-input class); the answer must be one deny object | task0001, task0002 |
@@ -43,7 +43,7 @@ No new layer, module or file.
 
 ### D1: Split by reading, both inside `_skip_substitution`
 
-The `#` decision (task0001) and the brace-form case reading (task0002) are separate readings with separate tests: no SPEC scenario needs both. Both tasks modify the same three files, so the edit regions are fixed in D2 and the docstring ownership in D3. The `#` decision carries no state (Shared Components), which keeps the re-read and the saved state to task0002 alone.
+The `#` decision (task0001) and the brace-form case reading (task0002) are separate readings with separate tests: no SPEC scenario needs both. Both tasks modify the same three files, so the edit regions are fixed in D2 and the docstring ownership in D3. As planned for task0001, the `#` decision carried no state, which kept the re-read and the saved state to task0002 alone. task0003 adds one value to the `((` record (D4).
 
 Affected tasks: task0001, task0002.
 
@@ -87,6 +87,21 @@ Affected tasks: task0001, task0002.
 
 Affected tasks: task0001, task0002.
 
+### D4: The comment-end position (review round 1 rework)
+
+A backslash inside a comment is comment text, so the newline that ends a comment is never the second character of a continuation pair. The look of the comment-start decision cannot tell this from the characters alone, so the reader keeps one value:
+
+- **Value**: the absolute index of the newline that ended the last comment the reader read; "none" before the first comment.
+- **Written by**: every branch that reads a comment, in the same step, with the index of the newline that ends it. A comment that runs to the end of the input leaves the value unchanged.
+- **Read by**: the comment-start decision only. In its look, a newline at that index is an unescaped newline whatever backslashes are in front of it.
+- **Re-read**: the rule-9 re-read restores the value to its value at the `((`, beside task0002's values in the `((` record. The per-entry saved state does not hold it.
+- **Work**: one assignment per comment and one comparison per newline the look crosses (NFR1).
+- **Documentation**: the docstring sentences saying the decision keeps no state are replaced (D3's task0001 paragraph and the helper's own description).
+
+task0003 edits the regions of D2 owned by task0001 (every `#` clause and comment branch, the word-list branch, the comment-start helper), plus the state initialisation before the main loop and the recording and restore of a command-position `((`, and the matching test-file regions. No other task is open, so these regions conflict with none.
+
+Affected tasks: task0001 (its decision is extended), task0002 (its `((` record and restore gain one value), task0003.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
@@ -94,6 +109,7 @@ Affected tasks: task0001, task0002.
 | Merge conflicts in `_skip_substitution` or the CASES table between the two tasks | Medium | Low | D2 and D3 keep the regions disjoint; conflicts are resolved identically in both copies and checked byte for byte |
 | The two copies drift | Low | High | Byte comparison in each task's Acceptance Criteria and in VERIFICATION.md (TS-27) |
 | The `#` correction overshoots: a real comment after a blank followed by a continuation pair, or after an escaped backslash, is read as a word character | Medium | Medium | TS-6 and the backslash-parity rows of task0001 |
+| The newline that ends a backslash-ended comment is read as a continuation pair, so a `#` on the next line is a word character | High (found in review round 1) | High | D4 and task0003; TS-30 to TS-36 |
 | A3 (closing a brace-form statement at a depth-0 body `}`) does not match zsh | Medium | Low | Per A3, a wrong deny is limited to strings zsh does not accept; the manual check in VERIFICATION.md records zsh's answer |
 | A pre-existing CASES row changes verdict (NFR2) | Low | High | Each task runs the whole module on both copies; only the one brace-form row changes |
 
