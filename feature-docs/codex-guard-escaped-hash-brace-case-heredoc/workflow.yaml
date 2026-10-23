@@ -104,7 +104,7 @@ workflow:
   status: completed
   completed_at_commit: 34e4d2553755c3434849837681d12c43429fed0a
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 2ceea86e9eebccbd7dcae3a771c33b4407e499f0
   base_commit: 5c200f6281623d3948db1a3c6bdb7650ec8b18a3
 - id: review
@@ -166,6 +166,33 @@ tasks:
     - NFR4
     status: merged
     branch: em-workflow/codex-guard-escaped-hash-brace-case-heredoc/task0002
+  task0003:
+    title: 'Read the newline that ends a comment as an unescaped newline in the # comment-start decision'
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    provenance:
+      source: review
+      source_ids:
+      - '07510aa3f756ccef'
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -195,6 +222,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-1
     - TS-2
@@ -204,6 +232,12 @@ requirements:
     - TS-8
     - TS-9
     - TS-10
+    - TS-30
+    - TS-31
+    - TS-32
+    - TS-33
+    - TS-34
+    - TS-35
   FR2:
     title: 波括弧形式の case の開始
     status: ok
@@ -293,6 +327,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0003
     tests:
     - TS-26
   FR8:
@@ -303,6 +338,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0003
     tests:
     - TS-4
     - TS-11
@@ -317,6 +353,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0003
     tests:
     - TS-27
   NFR1:
@@ -327,8 +364,10 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0003
     tests:
     - TS-28
+    - TS-36
   NFR2:
     title: 既存の判定の維持
     status: ok
@@ -337,6 +376,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0003
     tests:
     - TS-4
     - TS-11
@@ -350,6 +390,7 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0003
     tests:
     - TS-6
     - TS-19
@@ -358,6 +399,7 @@ requirements:
     - TS-22
     - TS-23
     - TS-24
+    - TS-35
   NFR4:
     title: version を触らない
     status: ok
@@ -366,10 +408,11 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0003
     tests:
     - TS-29
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
