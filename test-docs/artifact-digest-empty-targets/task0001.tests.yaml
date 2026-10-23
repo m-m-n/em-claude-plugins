@@ -1,0 +1,62 @@
+task_id: task0001
+# Full suite (python3 -m unittest discover -s tests) run before any edit:
+# 10876 tests, OK, 1 skipped, no failure.
+baseline_failures: []
+# Full suite re-executed after the implementation and after this record was
+# written (the record is itself checked by tests.test_tests_yaml_id_resolution).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_zero_count_phrase_is_tied_to_the_expect_digest_requirement
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_states_that_calculation_is_not_run
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_states_that_the_verification_succeeds_and_is_not_a_mismatch
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_the_consequences_sit_with_the_zero_count_phrase
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_the_dispatch_proceeds_in_the_zero_case
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_the_zero_rule_comes_ahead_of_the_calculation_step
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_an_empty_list_and_an_all_create_list_both_count_as_zero
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_one_or_more_targets_keep_the_existing_procedure
+      - tests.test_artifact_digest_docs.TestPreDispatchZeroTargets.test_ac1_the_existing_mismatch_conditions_are_kept
+    red_confirmed: true
+    red_reason: "Against the unedited document the Pre-dispatch verification section began 'When: after the clean-worktree precondition and the pre-dispatch snapshot ...' and carried no zero-count rule: the zero-count phrase test failed with \"Regex didn't match: '\\bzero\\b.{0,60}\\brequires?\\s+`expect_digest`' not found\", and the tests for '`Calculation` is not run', 'verification succeeds', 'not a mismatch', 'dispatch proceeds', the empty-list / all-create wording, the one-or-more 'unchanged' wording and the ordering ahead of the Calculation step all failed the same way. test_ac1_the_existing_mismatch_conditions_are_kept was already green before the change (it pins the existing mismatch wording that the edit must keep) and is a guard."
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts.test_ac2_zero_count_phrase_is_tied_to_written_artifacts
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts.test_ac2_states_that_calculation_is_not_run
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts.test_ac2_states_that_nothing_is_recorded
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts.test_ac2_the_consequences_sit_with_the_zero_count_phrase
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts.test_ac2_an_empty_completed_result_is_left_to_another_layers_rules
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts.test_ac2_the_zero_rule_comes_ahead_of_the_calculation_step
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts.test_ac2_one_or_more_entries_keep_the_existing_procedure
+    red_confirmed: true
+    red_reason: "Against the unedited document the Layer 5 recording section read 'When: after layer 4 (scope verification) passes for the dispatch's `completed` result. How: one `Calculation` call over every `written_artifacts` path. ...' with no zero-count rule: the tests failed with \"Regex didn't match: '\\bnothing is recorded\\b' not found\", \"Regex didn't match: 'empty `completed` result is acceptable' not found\" and the same shape for the zero-entries phrase, '`Calculation` is not run', the 'one or more entries ... unchanged' wording and the ordering ahead of the one-Calculation step."
+  AC-3:
+    tests:
+      - tests.test_artifact_digest_docs.TestOwnerDocumentStructure.test_owner_document_has_exactly_the_six_level_2_sections
+      - tests.test_artifact_digest_docs.TestPreDispatchVerification
+      - tests.test_artifact_digest_docs.TestLayer5Recording
+      - tests.test_artifact_digest_docs.TestCalculation
+    red_confirmed: false
+    red_reason: "AC-3 is a no-edit constraint (no heading added, existing tests unchanged and passing), so nothing can fail before the change. A dedicated new module is out of scope, but the existing tests.test_artifact_digest_docs.TestOwnerDocumentStructure detects a change of the level-2 heading set, and TestPreDispatchVerification, TestLayer5Recording and TestCalculation detect a reworded pinned phrase; no red state occurred for this change. The owner document still has 7 headings (the level-1 title and the six level-2 headings, grep '^#'), and git diff --numstat shows 0 deleted lines in both changed files."
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_no_argument_exits_2_with_usage_on_stderr
+      - tests.test_artifact_digest_script.TestUsageAndIsolation.test_ac7_no_argument_leaves_stdout_empty
+      - tests.test_artifact_digest_docs.TestCalculationIntermediateSymlink.test_ac3_exit_code_2_item_keeps_the_existing_cases_and_no_array
+    red_confirmed: false
+    red_reason: "AC-4 is a no-edit constraint on em-workflow/scripts/artifact-digest.py, so nothing can fail before the change. A dedicated new module is out of scope, but the existing tests.test_artifact_digest_script.TestUsageAndIsolation runs the real script and detects a changed no-argument behaviour (exit code 2, usage on stderr, empty standard output), and tests.test_artifact_digest_docs.TestCalculationIntermediateSymlink pins 'no argument was given' and 'standard output carries no array' in the Calculation section; no red state occurred for this change. git diff --quiet HEAD on the script reported no diff, and one no-argument invocation exited with code 2 and wrote 0 bytes to standard output."
+  AC-5:
+    tests:
+      - tests.test_artifact_digest_docs.TestEmptyTargetsMatchersFireOnForgedText
+    red_confirmed: false
+    red_reason: "AC-5 constrains the shape of the new tests (standard library unittest only, phrase presence on heading-sliced whitespace-normalized text, paired forged-text cases). The forged-text cases in TestEmptyTargetsMatchersFireOnForgedText exercise the matchers on crafted text, not the document, so they were green from the moment they were written and no executable red state exists for them. The new tests add no absence matcher; the cases show that the zero-count matchers fire on crafted text, ignore wording about null values, and do not accept a phrase that sits in another section. The new tests add no import; they use only re and unittest, which the file already imported."
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_docs.TestEverySiteCitesTheOwner
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant
+    red_confirmed: false
+    red_reason: "AC-6 is a no-edit constraint (only the two Scope files change; the citing sites and the invariant wiring keep passing), so nothing can fail before the change. A dedicated new module is out of scope, but the existing tests.test_artifact_digest_docs.TestEverySiteCitesTheOwner detects a restatement or a lost citation at a dispatch site, and tests.test_check_plugin_invariants.TestRepositoryLevelInvariant runs check-plugin-invariants.py on the repository root (dispatch_digest_wiring included); no red state occurred for this change. git diff --stat shows only em-workflow/references/artifact-digest.md and tests/test_artifact_digest_docs.py, and the invariant script reported dispatch_digest_wiring as PASS."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "AC-7 is the outcome of running python3 -m unittest discover -s tests from the repository root, which no single test selects. Searched the tests directory by the repository-relative path em-workflow/references/artifact-digest.md and by the basename artifact-digest.md and artifact_digest: the readers are tests/test_artifact_digest_docs.py, tests/test_artifact_digest_script.py, tests/test_digest_contract_alignment.py and tests/test_check_plugin_invariants.py; the new tests for this task are listed under AC-1 and AC-2. The full suite was green before any edit (baseline) and green after."
