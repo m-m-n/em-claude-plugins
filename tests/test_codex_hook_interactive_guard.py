@@ -1305,6 +1305,56 @@ CASES = [
     ("silent", "算術コマンドでない空白を挟んだ ( ( の << は heredoc で、本文の改行は判定不能のまま", 'echo "$( ( (cat <<EOF\nbody\nEOF\n) ) )"; python3 -i'),
     ("deny", "語の括弧 二重引用符の中の *(#qN) の # は語の文字で、後ろの起動を拒否する", 'echo "$(echo *(#qN))"; python3 -i'),
     ("deny", "語の括弧 入れ子の括弧は同じ文脈の入れ子で、中の ; は語の文字", 'echo "$(echo foo(a(b;c)d))"; python3 -i'),
+    # codex-guard-escaped-hash-brace-case-heredoc (VERIFICATION.md TS-1, TS-2
+    # and TS-5 to TS-11, task0001): the comment-start decision of the
+    # substitution reader. A `#` starts a comment exactly when its effective
+    # previous character, the one right before it once the continuation pairs
+    # directly in front of it are left out, is a blank, a tab, a newline, `;`,
+    # `&`, `|` or `(` and is not escaped (the run of backslashes in front of
+    # it has even length). Every other `#` is a word character. A comment that
+    # runs to the end of the input, with no newline, makes the chunk
+    # undecidable, so a `silent` row holds a comment of that kind and a `deny`
+    # row holds a `#` that is a word character.
+    ("deny", "置換の # の判定 TS-1 語一覧のプロセス置換の中で、エスケープした空白の後の # は語の文字で、後ろの起動を拒否する", 'zsh -c \'echo "$(for x (<(: \\ #x)) { :; })"; python3 -i\''),
+    ("deny", "置換の # の判定 TS-2 コマンド列の中で、エスケープした空白の後の # は語の文字で、後ろの起動を拒否する", 'zsh -c \'echo "$(: \\ #x)"; python3 -i\''),
+    ("deny", "置換の # の判定 TS-5 語の文字の後の継続行の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(: a\\\n#x)"; python3 -i'),
+    ("silent", "置換の # の判定 TS-6 空白の後の継続行の後の # はコメントで、コメントの中の ) で閉じず、後ろの起動を拒否しない", 'zsh -c \'echo "$(printf x \\\n# )"; python3 -i; echo "\n)"\''),
+    ("deny", "置換の # の判定 TS-7 エスケープした ; の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(: a\\;#x)"; python3 -i'),
+    ("deny", "置換の # の判定 TS-8 項目本体で、エスケープした空白の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(case x in x) : \\ #y;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 TS-9 パターンで、エスケープした空白の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(case x in a\\ #b) :;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 TS-10 語一覧の最も外側の項目で、エスケープした空白の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(for x (a\\ #b) { :; })"; python3 -i'),
+    ("deny", "置換の # の判定 TS-11 > の直後の # は今のまま語の文字で、後ろの起動を拒否する", 'echo "$(: >#x)"; python3 -i'),
+    # The continuation pairs: several of them in front of the `#` count as one
+    # stretch that is left out, and the pair between an escaped blank and the
+    # `#` leaves the blank escaped.
+    ("deny", "置換の # の判定 語の文字の後に継続行が 2 つ続いても # は語の文字で、後ろの起動を拒否する", 'echo "$(: a\\\n\\\n#x)"; python3 -i'),
+    ("silent", "置換の # の判定 空白の後に継続行が 2 つ続いても # はコメントで、コメントの中の ) で閉じず、後ろの起動を拒否しない", 'zsh -c \'echo "$(printf x \\\n\\\n# )"; python3 -i; echo "\n)"\''),
+    ("deny", "置換の # の判定 エスケープした空白と # の間に継続行があっても # は語の文字で、後ろの起動を拒否する", 'echo "$(: \\ \\\n#x)"; python3 -i'),
+    ("silent", "置換の # の判定 空白の後の継続行の後の # は、改行が来るまでのコメントで、閉じが無いので後ろの起動を拒否しない", 'echo "$(: \\\n#x)"; python3 -i'),
+    ("silent", "置換の # の判定 エスケープしたバックスラッシュの後の改行は継続行でなく、その後ろの # はコメントで、後ろの起動を拒否しない", 'echo "$(: a\\\\\n#x)"; python3 -i'),
+    # The escaped characters in front of the `#`: a tab, `&`, `|` and `(`.
+    ("deny", "置換の # の判定 エスケープしたタブの後の # は語の文字で、後ろの起動を拒否する", 'echo "$(: \\\t#x)"; python3 -i'),
+    ("deny", "置換の # の判定 エスケープした & の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(: a\\&#x)"; python3 -i'),
+    ("deny", "置換の # の判定 エスケープした | の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(: a\\|#x)"; python3 -i'),
+    ("deny", "置換の # の判定 エスケープした ( の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(: a\\(#x)"; python3 -i'),
+    # The parity of the backslash run in front of the blank decides whether the
+    # blank is escaped.
+    ("silent", "置換の # の判定 エスケープしたバックスラッシュ (偶数個) の後の空白はエスケープされず、その後の # はコメントで、後ろの起動を拒否しない", 'echo "$(: \\\\ #x)"; python3 -i'),
+    ("deny", "置換の # の判定 バックスラッシュが 3 個 (奇数個) 続いた後の空白はエスケープされ、その後の # は語の文字で、後ろの起動を拒否する", 'echo "$(: \\\\\\ #x)"; python3 -i'),
+    # The other sites of the decision: a group of a pattern, a pattern and an
+    # item body with a continuation pair, the outermost entry of a word list
+    # with a continuation pair.
+    ("deny", "置換の # の判定 パターンの括弧の群の中で、エスケープした空白の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(case x in a(b\\ #c)) :;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 パターンで、語の文字の後の継続行の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(case x in a\\\n#b) :;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 項目本体で、語の文字の後の継続行の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(case x in x) : a\\\n#y;; esac)"; python3 -i'),
+    ("deny", "置換の # の判定 語一覧の最も外側の項目で、語の文字の後の継続行の後の # は語の文字で、後ろの起動を拒否する", 'echo "$(for x (a\\\n#b) { :; })"; python3 -i'),
+    ("silent", "置換の # の判定 項目本体で、空白の後の継続行の後の # はコメントで、後ろの起動を拒否しない", 'echo "$(case x in x) : \\\n#y;; esac)"; python3 -i'),
+    ("silent", "置換の # の判定 パターンで、空白の後の継続行の後の # はコメントで、後ろの起動を拒否しない", 'echo "$(case x in a \\\n#b) :;; esac)"; python3 -i'),
+    ("silent", "置換の # の判定 語一覧の最も外側の項目で、空白の後の継続行の後の # はコメントで、後ろの起動を拒否しない", 'echo "$(for x (a \\\n#b) { :; })"; python3 -i'),
+    # The readings that stay: a `#` right after `<`, and a `#` right after the
+    # `)` of a pattern with a continuation pair between them (rule 3).
+    ("deny", "置換の # の判定 < の直後の # は今のまま語の文字で、後ろの起動を拒否する", 'echo "$(cat <#x)"; python3 -i'),
+    ("deny", "置換の # の判定 パターンの ) と # の間に継続行があっても # はコメントで、コメントの中の ) で閉じず、後ろの起動を拒否する", 'echo "$(case x in x)\\\n# )\n:;; esac)"; python3 -i'),
     # codex-guard-delim-brace-quote-per-shell (SPEC.md Test Scenarios TS1 to
     # TS32), built from DELIMITER_PER_SHELL_ROWS by the construction rule of
     # SPEC.md. The shell that directly holds a nested `-c` string decides how
@@ -2098,6 +2148,44 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
             with self.subTest(lines=lines):
                 command = 'echo "$(for x (a' + ' # "\n' * lines + ') { :; })"; python3 -i'
                 self.assert_every_copy_denies(command)
+
+    # codex-guard-escaped-hash-brace-case-heredoc (VERIFICATION.md TS-28, NFR1,
+    # TM-4): the comment-start decision looks only at the characters directly
+    # in front of a `#`, so inputs that make that look long are read in time.
+    # Each input is built so that every `#` is a word character (or the one
+    # comment ends at a newline), and the launch after the substitution is
+    # denied.
+    def test_ts28_depth_escaped_blanks_before_a_hash_are_read_in_time(self):
+        command = 'echo "$(:' + " \\ #" * self.DEPTH + ')"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_ts28_depth_continuation_pairs_between_a_word_character_and_a_hash_are_read_in_time(self):
+        shapes = {
+            "one pair before each hash": 'echo "$(:' + " a" + (self.PAIR + "#a") * self.DEPTH + ')"; python3 -i',
+            "one run of pairs before one hash": 'echo "$(: a' + self.PAIR * self.DEPTH + '#x)"; python3 -i',
+            "one run of pairs after an escaped blank": 'echo "$(: \\ ' + self.PAIR * self.DEPTH + '#x)"; python3 -i',
+        }
+        for shape, command in shapes.items():
+            with self.subTest(shape=shape):
+                self.assert_every_copy_denies(command)
+
+    def test_ts28_a_backslash_run_of_depth_length_before_a_blank_and_a_hash_is_read_in_time(self):
+        # An even run leaves the blank unescaped, so the `#` starts a comment
+        # and the newline after it ends the comment; an odd run escapes the
+        # blank, so the `#` is a word character.
+        shapes = {
+            "even run": 'echo "$(: ' + "\\" * self.DEPTH + " #x\n)\"; python3 -i",
+            "odd run": 'echo "$(: ' + "\\" * (self.DEPTH + 1) + ' #x)"; python3 -i',
+        }
+        for shape, command in shapes.items():
+            with self.subTest(shape=shape):
+                self.assert_every_copy_denies(command)
+
+    def test_ts28_many_backslash_runs_each_before_a_blank_and_a_hash_are_read_in_time(self):
+        # Each run of three backslashes escapes its blank, so every `#` is a
+        # word character.
+        command = 'echo "$(:' + " \\\\\\ #" * self.DEPTH + ')"; python3 -i'
+        self.assert_every_copy_denies(command)
 
 
 class TestAnonymousFunctionHeadInASubstitution(HookCopiesMixin, unittest.TestCase):
@@ -4113,7 +4201,8 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
     WORD_LIST_PROCESS_SUBSTITUTION_MARKERS = (
         "an unquoted, unescaped `<(`, `>(` or `=(` there opens a command list p instead of a nested entry",
         "The `)` that closes that p is a closing inside a word",
-        "The start of a word is a state kept while reading and never looked up backward",
+        "The start of a word is a state kept while reading, moved on before each character is read",
+        "The only look at the characters behind is the comment-start decision above, and it leaves this state as it is",
         "An escaped character (an escaped space included) is a word character",
         "A continuation pair neither starts a word nor separates words, so it keeps the state",
         "in the middle of a word or inside a nested entry is read as any other `(` of w",
@@ -4126,6 +4215,54 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             for marker in self.WORD_LIST_PROCESS_SUBSTITUTION_MARKERS:
                 with self.subTest(copy=plugin, marker=marker):
                     self.assertIn(marker, doc)
+
+    # codex-guard-escaped-hash-brace-case-heredoc (FR7, task0001): the sentence
+    # of the earlier reading that said the start of a word is never looked up
+    # backward stays absent; the start of a word is still a state kept while
+    # reading, and the comment-start decision is the one look at the characters
+    # behind.
+    STALE_WORD_START_SENTENCE = "never looked up backward"
+
+    def test_the_docstring_no_longer_says_the_start_of_a_word_is_never_looked_up_backward(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                doc = parser_docstring(path, "_skip_substitution") or ""
+                self.assertNotEqual(doc, "")
+                self.assertNotIn(self.STALE_WORD_START_SENTENCE, doc)
+
+    # codex-guard-escaped-hash-brace-case-heredoc (FR1, FR7, task0001): the
+    # docstring describes the comment-start decision of the substitution
+    # reader: the effective previous character with the continuation pairs left
+    # out, escaped characters as word characters, the readings that stay after
+    # `)`, `<` and `>`, and the bounded look that is the only place where the
+    # characters in front of a `#` are looked at.
+    HASH_DECISION_MARKERS = (
+        "a `#` starts a comment exactly when its effective previous character is a space, a tab, a newline, `;`, `&`, `|` or `(`, and that character is not escaped",
+        "Otherwise the `#` is a word character",
+        "The effective previous character is the character right before the `#` once every continuation pair directly in front of the `#` is left out, a run of several pairs included",
+        "A character is escaped when it is the second character of a backslash pair, that is, when the run of backslashes directly in front of it has odd length",
+        "A `#` whose effective previous character is `)`, `<`, `>` or any other character stays a word character",
+        "in phase 7 a `)` that closes the pattern still lets the `#` start a comment",
+        "A `#` never starts a comment in a nested entry of w, a word parenthesis W, double quotes, backticks, `${ ... }` and the arithmetic contexts",
+        "This bounded look is the only place where the characters in front of a `#` are looked at",
+    )
+
+    def test_the_docstring_describes_the_comment_start_decision(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for marker in self.HASH_DECISION_MARKERS:
+                with self.subTest(copy=plugin, marker=marker):
+                    self.assertIn(marker, doc)
+
+    def test_the_comment_start_decision_sits_between_rule_3_and_rule_4(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                doc = parser_docstring(path, "_skip_substitution") or ""
+                rule_3 = doc.find("Comment after a pattern (rule 3)")
+                decision = doc.find(self.HASH_DECISION_MARKERS[0])
+                rule_4 = doc.find("Continuation pairs (rule 4)")
+                self.assertTrue(0 <= rule_3 < decision < rule_4, (rule_3, decision, rule_4))
 
     def test_the_keyword_decision_states_the_pair_stripped_rule(self):
         for plugin, path in HOOK_PATHS.items():
