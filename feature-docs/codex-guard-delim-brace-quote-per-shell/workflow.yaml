@@ -132,9 +132,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: in_progress
+    status: failed
     branch: em-workflow/codex-guard-delim-brace-quote-per-shell/task0001
-    notes: null
+    notes: 'batch retry consumed (implement.failed-task, 1/1). First attempt failed: cross-repo-write-guard denied writes to the task worktree because the orchestrator session cwd had moved into the integration worktree; cwd restored to the project root before retry.'
 review:
   status: pending
   rounds_completed: 0
