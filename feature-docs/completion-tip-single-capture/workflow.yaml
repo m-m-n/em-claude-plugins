@@ -111,7 +111,8 @@ workflow:
   base_commit: d8e6e403851563cfd9b632423bac76851780189b
   completed_at_commit: 49aab3d2e6d85f08b1be2d2acdf92dc3fc400b15
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: b3ff34a61b11efa0587eecf7095e18ea090bd12e
 - id: verify
   status: pending
   result: null
@@ -140,8 +141,11 @@ tasks:
     status: merged
     branch: em-workflow/completion-tip-single-capture/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
