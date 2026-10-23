@@ -94,7 +94,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 488d54d20e1d096d2a2c09364d7d9a1e96d92fda
 - id: implement
   status: pending
 - id: review
@@ -103,7 +104,35 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Per-shell reading of delimiter ${ ... } ranges in nested -c strings
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -116,92 +145,156 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS16
+    - TS17
+    - TS23
+    - TS24
+    - TS25
+    - TS26
+    - TS27
+    - TS28
+    - TS29
+    - TS30
+    - TS31
   FR2:
     title: bash の読み
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS8
+    - TS9
+    - TS10
+    - TS11
+    - TS12
+    - TS13
+    - TS14
+    - TS15
+    - TS32
   FR3:
     title: sh / ksh の 2 通りの読み
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS18
+    - TS19
+    - TS20
+    - TS21
+    - TS22
+    - TS23
+    - TS26
+    - TS27
+    - TS42
   FR4:
     title: 区切り語の位置にない読みは変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS33
+    - TS37
   FR5:
     title: NESTED_READ_LIMIT の数え方
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS36
   FR6:
     title: 回帰テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS33
+    - TS34
   NFR1:
     title: 2 つのコピーの同一性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS35
   NFR2:
     title: 線形時間
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS41
+    - TS33
   NFR3:
     title: 既存の構造テストの保持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS33
   NFR4:
     title: docstring の整合
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS40
   NFR5:
     title: 既存ケースの保持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS37
+    - TS33
   NFR6:
     title: 標準ライブラリのみ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS38
   NFR7:
     title: version
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS39
 batch:
   review_rework_count: 0
   verify_rework:
