@@ -1,14 +1,18 @@
 schema_version: 1
 feature: artifact-digest-empty-targets
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 13feabaa7c4df9f22f0987da11e40317e68b8c58
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:09eaa39b2ce615a2279a5c4b2996580d83eaa6f29b7255eeff1f1c530ee7d028
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:09eaa39b2ce615a2279a5c4b2996580d83eaa6f29b7255eeff1f1c530ee7d028
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
