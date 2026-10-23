@@ -30,3 +30,12 @@ records:
   freeform: 'A: implementation-planner の write_policy.targets は全て create（expect_digest null）で、照合対象が 0 件。Calculation を呼ばずに照合成功として dispatch する'
   normalized_answer: zero expect_digest targets -> skip Calculation, verification succeeds
   resolution_note: 'gate: create-plan planner pre-dispatch verification (artifact-digest.md Pre-dispatch verification, no gate_id). Same situation and same options as create-spec.zero-target-pre-dispatch-verification above; that record''s Codex-backed choice A is reused unchanged. codex_consulted: false (reuse of the earlier consultation for the identical case). Opus escalation: not run.'
+- question_id: create-plan.return-digest-self-inclusion
+  packet_id: null
+  answered_at: '2026-10-23T19:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'A: 返却時の input_digest 再計算で、dispatch 時に存在せず create で許可され written_artifacts に列挙された planner 自身の新規成果物 4 件だけを除外して比較し、stale ではないと判定する'
+  normalized_answer: exclude worker's own newly created written_artifacts from return-time recomputation -> not stale
+  resolution_note: 'gate: create-plan return-time staleness check (worker-envelope.md Rule R1, no gate_id). The recomputed digest differed only because IMPLEMENTATION.md / VERIFICATION.md / THREAT-MODEL.md / tasks/task0001.md (planner-contract.md digest_inputs "existing outputs") now exist; workflow_blob, value_inputs, answers_digest, write_policy_digest and all other digest_inputs were identical, and validate-worker-output.py --dry-run-apply passed. Options: A) exclude only the worker''s own newly created written_artifacts and proceed; B) treat as stale and re-dispatch (create would now block -> loop risk); C) other. Choice: A. codex_consulted: true (Codex chose A, limited to files absent at dispatch, permitted by create, and listed in written_artifacts; not to be generalized to pre-existing inputs or re-plans). Opus escalation: not run. Risk: Rule R1 does not state this exclusion explicitly; recorded here as a run-local interpretation.'
