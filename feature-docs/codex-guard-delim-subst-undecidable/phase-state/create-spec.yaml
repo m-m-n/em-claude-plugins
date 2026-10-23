@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-delim-subst-undecidable
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 8994a61cde570c7f041cc695d0412d39e88c3be3
 last_input_digest: sha256:2350f0dd802994f0de8af913fcc4ccd86a512910c1eb3b3bc40d603f1d1133ae
