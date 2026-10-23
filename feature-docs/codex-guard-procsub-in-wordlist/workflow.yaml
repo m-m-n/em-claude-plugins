@@ -105,7 +105,8 @@ workflow:
   base_commit: dff59f0b9a7657dfcd80ad89b3d288b9c7a609e7
   completed_at_commit: 96f9014b57e479a43956a269c2e1cf0871122cd2
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: d2d07729e1023de65b677fb68458681d8833d063
 - id: verify
   status: pending
 - id: retrospect
@@ -137,7 +138,7 @@ tasks:
     branch: em-workflow/codex-guard-procsub-in-wordlist/task0001
     notes: null
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -146,7 +147,8 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   residual_critical_high: 0
   needs_rework: false
 requirements:

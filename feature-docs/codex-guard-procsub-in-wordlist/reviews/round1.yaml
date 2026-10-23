@@ -1,0 +1,63 @@
+round: 1
+executed_at: "2026-10-23T22:17:55+09:00"
+scope:
+  review_mode: diff
+  base_commit: dff59f0b9a7657dfcd80ad89b3d288b9c7a609e7
+  head_commit: d2d07729e1023de65b677fb68458681d8833d063
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-procsub-in-wordlist/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+# The evaluator returned 3 findings, all severity low; R3b step 2 drops them
+# (severity not in critical/high/medium). Their content is kept in
+# evaluation.round_summary below and was filed as a follow-up task.
+evaluation:
+  round_summary: >-
+    4 観点すべて完了。security#0 の medium 2 件（語一覧のプロセス置換の中で、エスケープした空白の後の #
+    がコメントと読まれ判定不能になる / 波括弧形式の case とヒアドキュメントが判定不能になる）は読みで再現したが、
+    同じ判定不能は変更前でも素の $(...) で成り立つ既存の p の読みの制約なので low に下げた。
+    architecture#0 の high（procsub が積み下ろしをまたいで残る）は誤検知として除外（最も外側の w では
+    procsub を毎文字計算し直し、p を開く ( で False に戻る。報告の入力も deny になる。オーケストレーターも
+    フックに流して deny を確認）。architecture#0 の medium（語の先頭の決め方が 2 通り）は SPEC が保つと
+    決めた既存の # 規則と docstring / コメントの書き方のずれとして low に下げた。2 つのコピーはバイト単位で同一。
+    low 3 件は R3b step 2 で落ちるため findings には残らない。
+  recommended_action: complete
+  action_rationale: >-
+    critical/high は残っていない。残る 3 件はどれも low で、Known Limitations と説明の書き直しで足りる。
+dismissed_sites:
+  - file: em-workflow/scripts/codex-hook-interactive-guard.py
+    line: 2362
+    run_id: "architecture#0"
+    reason: "false positive"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-procsub-in-wordlist-20261023T131728Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
