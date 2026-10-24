@@ -1,0 +1,19 @@
+schema_version: 1
+feature: codex-guard-funcname-anon-always
+records:
+- question_id: requirement.anon-args-close-brace
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-24T18:25:00+09:00'
+  source: codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - close_brace
+  freeform: null
+  normalized_answer: close_brace
+  resolution_note: 'gate: create-spec.requirement-clarification (batch policy codex_consultation,
+    record_as_assumption). options: close_brace / keep_word. chosen: close_brace.
+    not chosen: keep_word (leaves fail-open). Codex consulted: yes (1 turn, converged).
+    Key points: zsh 5.9 default reads an unquoted standalone } in argument position
+    as a closing brace; `{ function { echo argc=$#; } } always { echo ALWAYS; }` prints
+    argc=0 and ALWAYS; all three anonymous forms behave the same. Opus escalation:
+    not run. Discussion recorded as a Notion comment on the task page.'

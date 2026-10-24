@@ -6,7 +6,13 @@ generation: 1
 base_revision: 2f7aa8e92fc51b6ecb0a09c9782fe31de3c58845
 last_input_digest: sha256:9b322aaf804047479d1ea4f420d4aa65e37721565439849aca25f2775516228d
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    path: null
+    status: answered
+    question_ids:
+    - requirement.anon-args-close-brace
+    - design-step.decision
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -18,9 +24,30 @@ answers:
     freeform: null
     normalized_answer: feature name codex-guard-funcname-anon-always derived from
       the task title
+  requirement.anon-args-close-brace:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T18:25:00+09:00'
+    source: codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - close_brace
+    freeform: null
+    normalized_answer: A standalone unquoted `}` in an anonymous function's argument
+      position closes the innermost open `{` group in every list (zsh default behavior
+      verified by Codex). Closing an ordinary group lets a following `always` be reserved;
+      closing an anonymous function body continues argument reading. Recorded as assumption.
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-24T18:25:00+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step skipped per analyst recommendation: no UI change'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:9b322aaf804047479d1ea4f420d4aa65e37721565439849aca25f2775516228d
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
