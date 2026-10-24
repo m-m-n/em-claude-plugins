@@ -529,19 +529,41 @@ COMMAND_POSITION_WORDS = (
 )
 
 # The head state a command list keeps (`_Parser._skip_substitution`), one value
-# out of this small fixed set: no head; the first word of a simple command was
-# read at a command position (a `name()` may follow); `function` was read (the
-# next word is the name, or an empty `()` follows); the function name was read
-# (an empty `()` may follow); `for` was read (the next word is the name, or a `((` follows); the
-# `for` name was read (a zsh word list may follow); `select` or `repeat` was
-# read (the next word is an ordinary word; `repeat` starts this state only under
-# the zsh repeat rule, `_Parser.zsh_repeat`); `coproc` was read (the next word is
-# at a command position and, under the coproc NAME rule, `_Parser.coproc_name`,
-# may be a NAME); a `}` that closed a group was read (a standalone `always` may
-# follow it, after only spaces, tabs and continuation pairs, and is then a
-# reserved word). After the function name, every further ordinary word is one
-# more name and keeps the function-name state; the `{` of zsh's anonymous
-# function is read as the name and starts no state.
+# out of this small fixed set, with the lifetime of each:
+# - no head;
+# - the first word of a simple command was read at a command position (a
+#   `name()` may follow);
+# - `function` was read (the next word is the name, or an empty `()` follows);
+# - the first function name was read (a word that is no keyword is the second
+#   name; an empty `()` or a `{` ends the head);
+# - the further-name state: the second name was read. Every further word is one
+#   more name and the state and the command position stay, except a standalone
+#   `{` or `}`, an empty `()` and a separator, which are read as they are
+#   anywhere else (`function a b case {`);
+# - `for` was read (the next word is the name, or a `((` follows);
+# - the `for` name was read (a zsh word list may follow);
+# - `select` or `repeat` was read (the next word is an ordinary word; `repeat`
+#   starts this state only under the zsh repeat rule, `_Parser.zsh_repeat`);
+# - `coproc` was read (the next word is at a command position and, under the
+#   coproc NAME rule, `_Parser.coproc_name`, may be a NAME);
+# - a `}` that closed an ordinary group was read (a standalone `always` may
+#   follow it, after only spaces, tabs and continuation pairs, and is then a
+#   reserved word);
+# - the anonymous-head state: the empty `()` of a zsh anonymous function was
+#   read, right after `function` or at a command position with no head state.
+#   Blanks, continuation pairs and newlines keep it, and the next standalone
+#   `{` is the body of the anonymous function; any other word, a comment, a
+#   separator other than a newline or a redirection ends it;
+# - the anonymous-arguments state: the `}` that closed the body of an anonymous
+#   function was read. Every word up to the next separator or the close of the
+#   list is an argument of the function and none is at a command position
+#   (`always`, `{` and `case` open nothing); only a standalone `}` acts, and
+#   closes the innermost open `{` group of its list. Words, redirections,
+#   heredoc operators, word parentheses and the closings inside a word keep the
+#   state.
+# The `{` of zsh's anonymous function right after `function` is read as the
+# name and starts no head state; the `{` groups open in a list are kept
+# beside the stack, each marked as an anonymous body or an ordinary group.
 HEAD_NONE = 0
 HEAD_FIRST = 1
 HEAD_FUNCTION = 2
@@ -551,6 +573,9 @@ HEAD_FOR_NAME = 5
 HEAD_NAME = 6
 HEAD_COPROC = 7
 HEAD_GROUP_CLOSED = 8
+HEAD_FURTHER_NAME = 9
+HEAD_ANON = 10
+HEAD_ANON_ARGS = 11
 
 # The head words, standalone and read at a command position, and the head state
 # each one starts. `function`, `for`, `select` and `coproc` are head words in
@@ -2357,10 +2382,15 @@ class _Parser:
         body of a `$(`, the body of a nested subshell `(` and every item body
         of a case statement) carries state of constant size: whether the next
         word is at a command position, whether a `[[` read at a command
-        position is still open in it, and one head state (rule 7). A list
+        position is still open in it, and one head state (rule 7). The
+        further-name, anonymous-head and anonymous-arguments states are values
+        of that head state, so the state stays of constant size. A list
         opened by `(` also records whether that `(` was read at a command
-        position and whether it is a zsh `for` word list. The next word is at
-        a command position when the list opens; after `;`, `&` or `|` (`&&`
+        position and whether it is a zsh `for` word list. The open `{` groups
+        are kept as records on one explicit list that runs beside the stack:
+        each record belongs to one command list and is marked whether its
+        group is the body of an anonymous function (rule 6). The next word is
+        at a command position when the list opens; after `;`, `&` or `|` (`&&`
         and `||` included); after a newline; after a subshell `(`; after a
         standalone `then`, `do`, `else`, `elif`, `if`, `while`, `until`,
         `time`, `!` or `{` that was itself read at a command position; after
@@ -2370,8 +2400,10 @@ class _Parser:
         any other word: an ordinary command word, an assignment, a
         redirection target, a `time` option, a word that holds a
         substitution, and a reserved word or `!` read at an argument
-        position. The characters of the previous word are never looked at
-        backward.
+        position. No word of the arguments of an anonymous function is at a
+        command position, and neither is the word after the `}` that closes
+        the body of an anonymous function (rules 5 and 6). The characters of
+        the previous word are never looked at backward.
 
         Opening and closing a case statement (rule 2). A `case` at a command
         position of a command list in the chunk opens a case statement, and a
@@ -2413,10 +2445,14 @@ class _Parser:
         body list itself a standalone `}` is a closing brace at an argument
         position as well as at a command position (a redirection target and a
         word inside `[[ ... ]]` are argument positions): after one that lowers
-        the depth the next word is at a command position, and at depth 0 the
+        the depth the next word is at a command position, except after one
+        that closes the body of an anonymous function, where the words after
+        it are anonymous arguments (rule 6); at depth 0 the
         statement closes as `esac` closes it and the list that holds the
         statement gets a command position. An argument-position `{` stays an
-        ordinary word. A quoted or escaped `}` or `esac` starts a pattern at a
+        ordinary word. The depth of a brace-form item body and the records of
+        its `{` groups (rule 1) rise and fall at the same `{` and `}`. A
+        quoted or escaped `}` or `esac` starts a pattern at a
         pattern position and is an ordinary word in a body, and so is a `}` in
         the middle of a word (`a}`) and a word that only starts with `}`
         (`}a`). Braces inside quotes, escaped braces and braces inside `${ }`,
@@ -2424,7 +2460,9 @@ class _Parser:
         statements are never counted: none of them is read in the body list
         itself, so a `}` at an argument position of any other list (an in-form
         body, a subshell, a substitution) is an ordinary word, and so is a `}`
-        in the name position of `function`, `for`, `select` or `repeat`; a
+        in the name position of `function`, `for`, `select` or `repeat`,
+        except that a standalone `}` among anonymous arguments is read as rule
+        6 says in every list; a
         nested case statement keeps a form and a depth of its own. In the `in`
         form a `}` at a pattern position starts a pattern and a `}` in a body
         closes no statement.
@@ -2515,10 +2553,15 @@ class _Parser:
         statement a command position; the `}` that closes a brace-form case
         statement, which gives the list that holds the statement a command
         position as `esac` does; and a standalone, unquoted `fi`, `done` or
-        `}` read at a command position. A `]]` with no open `[[`, and a
+        `}` read at a command position, except a `}` that closes the body of
+        an anonymous function: that `}` is no compound-command closing and
+        gives the next word no command position (rule 6). A `]]` with no open
+        `[[`, and a
         `fi`, `done` or `}` at an argument position, are ordinary words, except
         that in the item body list itself of a brace-form case statement a
-        standalone `}` at an argument position is a closing brace (rule 2). A
+        standalone `}` at an argument position is a closing brace (rule 2),
+        and that a standalone `}` among anonymous arguments is read as rule 6
+        says. A
         redirection after a closing and its target are read as before: the
         word after the target is not at a command position. The words inside
         `[[ ... ]]` are read as they were; the `[[` is tracked only to
@@ -2542,30 +2585,94 @@ class _Parser:
         empty `()` is a subshell read at a command position. An empty `()`
         right after `function`, with no name, ends the head of a zsh anonymous
         function as well (`function () {`). Function-name validity is not
-        considered. After the first name, a word for which the command-word
-        decision at a command position gives no kind is one more name
-        (`function a b {`; a quoted word and a word that holds a substitution
-        are such words, `function a "b" {`): the function-name state and the
-        command position are kept, so a later `{` or an empty `()` ends the
-        head as it does after the first name (`function a b () {`). A
-        standalone `{` or `}`, a reserved word, a head word, `case`, `[[`, an
-        empty `()` and a separator are read as they are everywhere else. The
-        standalone `{` right after `function` is zsh's anonymous function: it
-        is read in the name position, and the function-name state does not go
-        on after it, so the next ordinary word is the first word of a simple
-        command and no name (`function { echo`). This holds in every command
-        list. A group-closing `}` is a standalone `}` read at a command
-        position of any command list, or a `}` at an argument position that
-        lowered the depth of a brace-form item body (rule 2); the `}` that
-        closed a brace-form statement, at a pattern position or at depth 0 of
-        the body, is no group-closing `}`. A standalone, unquoted, unescaped
+        considered. Right after the first name the reading does not change: a
+        word for which the command-word decision at a command position gives
+        no kind is the second name (`function a b {`; a quoted word and a word
+        that holds a substitution are such words, `function a "b" {`), and a
+        word that has a kind (a standalone `{` or `}`, a reserved word, a head
+        word, `case`, `[[`) is read as it is at a command position anywhere
+        else, and so are an empty `()` and a separator. After the second name
+        the list is in the further-name state, not in the function-name state,
+        and the reading changes: every word other than a standalone `{` or
+        `}`, an empty `()` and a separator is one more name, the reserved
+        words, `!`, the head words (`function`, `for`, `select`, `coproc` and
+        `repeat`), `case`, `esac`, `[[` and `always` included; a quoted word
+        and a word that holds a substitution are names as well (`function a b
+        if {`, `function a b always {`, `function a b "c" {`). A standalone
+        `{` or `}` is read in the further-name state as it is at a command
+        position anywhere else. The further-name state and the command
+        position are kept until a standalone `{` or an empty `()` ends the
+        head as it does after the first name (`function a b () {`). In the
+        further-name state a non-empty `(`, `<`, `>` and a comment `#` keep
+        their current reading, and a separator or the close of the list ends
+        the state. The standalone `{` right after `function` is zsh's
+        anonymous function: it is read in the name position, and the
+        function-name state does not go on after it, so the next ordinary word
+        is the first word of a simple command and no name (`function { echo`).
+        This holds in every command list. A zsh anonymous function has three
+        forms: (a) the standalone `{` right after `function`, which opens the
+        body at once; (b) an empty `()` right after `function`, with no name
+        (`function () {`), where the head ends and the list is in the
+        anonymous-head state; (c) an empty `()` read at a command position
+        while the list has no head state, that is, before any word of a simple
+        command is read (`() {`), where the list is in the anonymous-head
+        state as well. In the anonymous-head state blanks, continuation pairs
+        and newlines keep the state, and the next standalone `{` is read at a
+        command position and opens the body of an anonymous function; anything
+        else ends the state, a comment included, and what follows is read as
+        it is after a function head. Every `{` that opens a group adds one
+        record to its list (rule 1): a standalone `{` read at a command
+        position, the body `{` of a named function, the `{` after `always`,
+        after `coproc` and after a reserved word included, and the
+        name-position `{` of form (a). The record is marked as an anonymous
+        body for the body of an anonymous function and as an ordinary group
+        otherwise. A standalone `}` that removes the record of an anonymous
+        body sets no group-closed state and gives the next word no command
+        position: the list is in the anonymous-arguments state. This holds for
+        a standalone `}` at a command position of any command list, for a `}`
+        at an argument position of a brace-form item body list itself (rule 2;
+        the `}` still lowers the depth there) and for a `}` in anonymous
+        arguments. In the anonymous-arguments state the words up to the next
+        separator or the close of the list are arguments, and none is at a
+        command position: `always`, `{`, `case`, `esac`, the reserved words,
+        `!`, the head words and `[[` open nothing and close nothing. A `(` is
+        a word parenthesis (rule 10), and a redirection and a heredoc
+        operator (rule 8) keep their reading; the state is kept across them,
+        across quoted words, across words that hold a substitution or `${ }`,
+        and across every closing inside a word. The state ends at `;`, `&`,
+        `|` (and at every operator or item terminator that starts with one of
+        them), at a newline, at the close of the list and at the `}` of an
+        ordinary group. A standalone `}` among the arguments is the one
+        exception, with three outcomes decided by the innermost record of its
+        own list. With an ordinary group it is a group-closing `}`: the
+        anonymous-arguments state ends and the list is in the group-closed
+        state. With an anonymous body it closes that body and the list stays
+        in the anonymous-arguments state, the arguments of the enclosing
+        anonymous function. With no record in the list it keeps its current
+        reading: in a list that is not a brace-form item body the `}` is an
+        ordinary argument, and in a brace-form item body list at depth 0 it
+        closes the statement as before. A quoted `"}"`, an escaped `\\}` and
+        a `}` that is part of a word (`a}`, `}a`) stay arguments. A
+        group-closing `}` is a `}` that removes the record of an ordinary
+        group (rule 1), at a command position, at an argument position of a
+        brace-form item body list itself (rule 2) or in anonymous arguments,
+        or a standalone `}` at a command position of a list that is not a
+        brace-form item body and has no record (the current reading); the `}`
+        that closed a brace-form statement, at a pattern position or at depth
+        0 of the body, is no group-closing `}`, and neither is the `}` that
+        closes an anonymous body. A standalone, unquoted, unescaped
         `always`, decided on the characters with the continuation pairs left
         out, that follows a group-closing `}` after only spaces, tabs and
         continuation pairs is a reserved word, and the word after it is at a
         command position (`{ :; } always {`), so in a brace-form item body the
         `{` after it raises the depth. In every other position `always` is an
         ordinary word: after a separator or a newline, after any other word,
-        quoted, escaped, or as part of a longer word (`alwaysx`). A loop or
+        quoted, escaped, or as part of a longer word (`alwaysx`). A standalone
+        `always` is a reserved word only after a `}` that closed an ordinary
+        group or a standalone `}` at a command position with no open group in
+        a list that is not a brace-form item body; after the `}` that closes
+        the body of an anonymous function it is one of the anonymous
+        arguments. A loop or
         coproc head starts only from a standalone word that is unquoted,
         unescaped, read at a command position and spells the head word once
         the pairs are removed; the same word at an argument position, quoted
@@ -2601,16 +2708,29 @@ class _Parser:
         fixed small set: none; after a first word read at a command position
         (a possible `name()`; the ordinary word after `coproc` is one when the
         coproc NAME rule is off, and `repeat` is one when the zsh repeat rule is
-        off); after `function`; after the function name (which goes on through
-        each further name, rule 6); after `for`; after the `for` name; after
-        `select`, or after `repeat` under the zsh repeat rule; after `coproc`;
-        after a `}` that closed a group (an `always` may follow, rule 6). A head
+        off); after `function`; after the first function name; after a further
+        name, the further-name state (rule 6); after `for`; after the `for`
+        name; after `select`, or after `repeat` under the zsh repeat rule;
+        after `coproc`; after a `}` that closed a group (an `always` may
+        follow, rule 6); after the empty `()` of an anonymous function head,
+        the anonymous-head state (rule 6); after the `}` that closed the body
+        of an anonymous function, the anonymous-arguments state (rule 6). A head
         state lasts only until its head completes or the next character rules
         it out (for `name()`, anything other than blanks followed by `(`; after
         a group-closing `}`, any word other than a standalone `always`, a
         separator or a redirection). Blanks and continuation pairs keep it. A
         separator (`;`, `&`, `|`, a newline) or the end of the list ends any
         head state still pending, and the position after it follows rule 1.
+        Three states have a lifetime of their own. The further-name state
+        lasts through every further name, until a standalone `{`, an empty
+        `()`, a separator or the end of the list. The anonymous-head state is
+        an exception to the separator that ends any head state still pending:
+        a newline keeps it, as blanks and continuation pairs do, and it ends
+        at the standalone `{` of the body or at anything else. The
+        anonymous-arguments state is an exception to the next character that
+        rules a head state out: a word, a redirection and a closing inside a
+        word do not rule it out, and it lasts until a separator, the end of
+        the list or the `}` of an ordinary group (rule 6).
 
         Heredoc operator (rule 8). Outside a case statement an unquoted `<<`
         that is not `<<<` does not make the chunk undecidable. The command
@@ -2650,7 +2770,12 @@ class _Parser:
         The comment-end position of the `#` decision goes back to its value at
         the `((` as well, and so does the head state of the list that holds the
         `((` (the state after a group-closing `}` and the function-name state
-        included). A `((` is read again at most once. The characters
+        included). The re-read also restores the further-name, anonymous-head
+        and anonymous-arguments states and the open `{` group records to their
+        values at the `((`: the records of the lists opened after the `((` go
+        with their stack entries, and the records of the lists open at the
+        `((` lie under the arithmetic command, where nothing changes them. A
+        `((` is read again at most once. The characters
         read again are summed over all the skips of one parser, and the sum may
         not exceed `ARITHMETIC_REREAD_FACTOR` (8) times the length of the
         string: the skip that would exceed it is undecidable. The arithmetic
@@ -2746,7 +2871,12 @@ class _Parser:
         unchanged.
         A second list `saved` runs beside the stack, one entry for
         each stack entry: the state the list under it had when the entry was
-        pushed and whether its close gives that list a command position.
+        pushed and whether its close gives that list a command position. A
+        third list runs beside the stack as well, the open `{` group records
+        (rule 1), innermost last. A `}` that closes a group removes the
+        innermost record of its own list and never closes a group of another
+        list, and the records of a list go with it when it closes. A record is
+        added or removed in constant work.
         """
         s, n = self.s, self.n
         if s[start] == "`":
@@ -2768,6 +2898,9 @@ class _Parser:
         # command position. A closing inside a word brings the three values
         # back and the list goes on inside its word; a compound-command
         # closing brings `dbl` back and puts the list at a command position.
+        # The head saved for a `(` is none, except that the anonymous-arguments
+        # state goes on after a word parenthesis or a process substitution among
+        # the arguments of an anonymous function.
         at_command, in_word = True, False
         dbl, head = False, HEAD_NONE
         # The state of the outermost entry of a word list w (the `(` branch and
@@ -2805,11 +2938,27 @@ class _Parser:
         # absolute index into the string, it is not part of the per-entry state in
         # `saved`, and the re-read of a `((` (rule 9) restores it.
         comment_end = -1
+        # The open `{` groups of the command lists on the stack: one record for
+        # each, innermost last, `(the index of its list on the stack, whether it is
+        # the body of a zsh anonymous function)`. A standalone `{` read at a
+        # command position, and the `{` right after `function`, add a record for
+        # their list; a standalone `}` that closes a group removes the innermost
+        # record of its own list, and only that one (a `}` never closes the group
+        # of another list). The records of a list that closes go with it: the
+        # top of the loop drops the records whose list is no longer on the stack (a
+        # `)`, the close of a case statement and the re-read of a `((`, which cuts
+        # the stack back to it, all end up there), and an item terminator drops
+        # those of the item body it ends. Adding or removing a record is constant
+        # work, and the re-read of a `((` needs nothing more: the lists open at
+        # the `((` lie under the arithmetic command, where no record changes.
+        groups = []
         while True:
             try:
                 while j < n:
                     top = stack[-1]
                     ch = s[j]
+                    while groups and groups[-1][0] >= len(stack):
+                        groups.pop()
                     # The outermost entry of w keeps, while it reads, whether the next
                     # character starts a word and whether it follows an unquoted,
                     # unescaped `<`, `>` or `=` read at the start of a word; the state
@@ -2875,10 +3024,13 @@ class _Parser:
                                     # the next ordinary word is the first word of a
                                     # simple command, not one more name.
                                     head = HEAD_NONE
+                                    # It opens a group all the same, the body of an
+                                    # anonymous function: its `}` gives the anonymous
+                                    # arguments state, not the group-closed state.
+                                    groups.append((len(stack) - 1, True))
                                     if top == "8" and braces[-1] is not None:
-                                        # It opens a group all the same: its `}` is
-                                        # read at a command position and must not
-                                        # close the statement.
+                                        # Its `}` is read at a command position and
+                                        # must not close the statement.
                                         braces[-1] += 1
                             elif named == HEAD_FOR:
                                 head = HEAD_FOR_NAME
@@ -2898,9 +3050,38 @@ class _Parser:
                                     at_command, in_word = True, False
                                     j = end
                                     continue
-                            kind, end = self._read_command_word(j, at_command, top == "8", dbl)
+                            if named == HEAD_ANON_ARGS:
+                                # An argument of an anonymous function: every word is
+                                # an ordinary word at an argument position, and the
+                                # one that acts is a standalone `}` that closes a
+                                # group, decided like the command-position one. It
+                                # closes the innermost open `{` group of this list;
+                                # with none open it keeps its current reading: the
+                                # `}` of a brace-form item body list closes the
+                                # statement, and in any other list it is an ordinary
+                                # word. `always`, `{`, `case`, `esac`, reserved words,
+                                # `!`, head words and `[[` open nothing.
+                                kind, end = None, j
+                                if ch == "}" and (
+                                    (groups and groups[-1][0] == len(stack) - 1)
+                                    or (top == "8" and braces[-1] is not None)
+                                ):
+                                    end = self._keyword_end(j, "}", " \t\n;&|()<>")
+                                    if end != -1:
+                                        kind = "reserved"
+                            else:
+                                kind, end = self._read_command_word(j, at_command, top == "8", dbl)
+                                if named == HEAD_FURTHER_NAME and not (
+                                    kind == "reserved" and ch in "{}"
+                                ):
+                                    # After the second function name every word but a
+                                    # standalone `{` or `}` is one more name: a
+                                    # reserved word, a head word, `case`, `esac`, `[[`
+                                    # and `always` included.
+                                    kind, end = None, j
                             if (
-                                not at_command
+                                named != HEAD_ANON_ARGS
+                                and not at_command
                                 and ch == "}"
                                 and top == "8"
                                 and braces[-1] is not None
@@ -2912,7 +3093,10 @@ class _Parser:
                                 # command-position one. A `}` in any other list, in a
                                 # name position (those words never get here), in the
                                 # middle of a word, at the start of a longer word, and a
-                                # quoted or escaped one stay ordinary words.
+                                # quoted or escaped one stay ordinary words; so does a
+                                # `}` among the arguments of an anonymous function in
+                                # a list that has no group open (the anonymous
+                                # arguments are decided above).
                                 end = self._keyword_end(j, "}", " \t\n;&|()<>")
                                 if end != -1:
                                     kind = "reserved"
@@ -2937,38 +3121,53 @@ class _Parser:
                                 j = end
                                 continue
                             if kind == "reserved":
-                                if top == "8" and braces[-1] is not None:
-                                    # A `{` read at a command position, or a `}` read
-                                    # at a command position or at an argument position,
-                                    # of the item body list itself, in a brace-form
-                                    # statement (a list nested in the body is another
-                                    # entry of the stack and never gets here): a `{`
-                                    # opens a group, a `}` closes the innermost open
-                                    # group and, with none open, closes the statement.
-                                    # The next word is at a command position after a
-                                    # `}` whichever position it was read at. The
-                                    # words are told apart by their first character:
-                                    # `{` and `}` are the only reserved words that
-                                    # start with one.
-                                    if ch == "{":
+                                # A standalone `{` or `}` (the other reserved words
+                                # only leave the next word at a command position). A
+                                # `{` adds a record of an open group to its list,
+                                # marked as an anonymous body when the empty `()` of
+                                # an anonymous function came right before it. A `}`
+                                # removes the innermost record of its own list, if
+                                # it has one.
+                                if ch == "{":
+                                    groups.append((len(stack) - 1, named == HEAD_ANON))
+                                    if top == "8" and braces[-1] is not None:
+                                        # In the item body list itself of a brace-form
+                                        # statement a `{` read at a command position
+                                        # opens a group (a list nested in the body is
+                                        # another entry of the stack and never gets
+                                        # here).
                                         braces[-1] += 1
-                                    elif ch == "}":
-                                        if braces[-1] > 0:
-                                            braces[-1] -= 1
-                                            # A `}` that closed a group: an `always`
-                                            # may follow.
-                                            head = HEAD_GROUP_CLOSED
-                                        else:
-                                            stack.pop()
-                                            dbl = saved.pop()[1]
-                                            cases -= 1
-                                            braces.pop()
-                                        at_command, in_word = True, False
                                 elif ch == "}":
-                                    # A `}` read at a command position of any other
-                                    # command list closes a group as well: an `always`
-                                    # may follow.
-                                    head = HEAD_GROUP_CLOSED
+                                    anonymous = False
+                                    if groups and groups[-1][0] == len(stack) - 1:
+                                        anonymous = groups.pop()[1]
+                                    if top == "8" and braces[-1] == 0:
+                                        # A `}` read at a command position or at an
+                                        # argument position of the item body list
+                                        # itself of a brace-form statement, with no
+                                        # group open, closes the statement. It is no
+                                        # group-closing `}`.
+                                        stack.pop()
+                                        dbl = saved.pop()[1]
+                                        cases -= 1
+                                        braces.pop()
+                                        at_command, in_word = True, False
+                                    else:
+                                        if top == "8" and braces[-1] is not None:
+                                            braces[-1] -= 1
+                                        if anonymous:
+                                            # The `}` that closed the body of an
+                                            # anonymous function: not a group-closing
+                                            # `}`, and the next word is not at a
+                                            # command position but an argument.
+                                            head, at_command = HEAD_ANON_ARGS, False
+                                        else:
+                                            # A `}` that closed an ordinary group, or
+                                            # one read at a command position of a list
+                                            # that has no group open: an `always` may
+                                            # follow, and the next word is at a
+                                            # command position.
+                                            head, at_command = HEAD_GROUP_CLOSED, True
                                 j = end
                                 continue
                             if kind == "dbl_open":
@@ -2988,14 +3187,19 @@ class _Parser:
                                 at_command, in_word = kind == "coproc", False
                                 j = end
                                 continue
-                            if named == HEAD_FUNCTION_NAME:
+                            if named in (HEAD_FUNCTION_NAME, HEAD_FURTHER_NAME):
                                 # A word that is no keyword at a command position
-                                # after the first name of `function` is one more name
-                                # (`function a b {`, a quoted or substituted word
-                                # included): the function-name state and the command
-                                # position are kept, so a later `{` or an empty `()`
-                                # ends the head as it does after the first name.
-                                at_command, in_word, head = True, True, HEAD_FUNCTION_NAME
+                                # after the first name of `function` is the second
+                                # name (`function a b {`, a quoted or substituted word
+                                # included), and a word after the second name is one
+                                # more name: the command position is kept, and so is
+                                # the further-name state, so a later `{` or an empty
+                                # `()` ends the head as it does after the first name.
+                                at_command, in_word, head = True, True, HEAD_FURTHER_NAME
+                            elif named == HEAD_ANON_ARGS:
+                                # An argument of an anonymous function: the state
+                                # goes on and no word is at a command position.
+                                at_command, in_word, head = False, True, HEAD_ANON_ARGS
                             else:
                                 at_command, in_word = False, True
                                 if was_command:
@@ -3189,13 +3393,23 @@ class _Parser:
                             # A parenthesis inside an arithmetic command is counted.
                             kind_char = "a"
                         elif top not in "awW":
-                            if head in (HEAD_FIRST, HEAD_FUNCTION, HEAD_FUNCTION_NAME):
+                            if head in (
+                                HEAD_FIRST, HEAD_FUNCTION, HEAD_FUNCTION_NAME, HEAD_FURTHER_NAME
+                            ) or (head == HEAD_NONE and at_command):
                                 end = self._empty_parens_end(j)
                                 if end != -1:
-                                    # A function head, `name()`, `function name()` or
-                                    # the anonymous `function ()`: the next word is at
-                                    # a command position.
-                                    at_command, in_word, head = True, False, HEAD_NONE
+                                    # An empty `()` ends a function head, `name()`,
+                                    # `function name()` or `function a b()`, and the
+                                    # next word is at a command position. Right after
+                                    # `function`, with no name, or at a command
+                                    # position with no head state, it is the head of a
+                                    # zsh anonymous function (`function () {`,
+                                    # `() {`): the next standalone `{` is its body.
+                                    at_command, in_word = True, False
+                                    if head in (HEAD_FUNCTION, HEAD_NONE):
+                                        head = HEAD_ANON
+                                    else:
+                                        head = HEAD_NONE
                                     j = end
                                     continue
                             # Whether this `(` is read at a command position decides
@@ -3238,7 +3452,16 @@ class _Parser:
                             # `>` or `=` included, opens a nested entry of w above.
                             kind_char = "p"
                         stack.append(kind_char)
-                        saved.append((at_command, dbl, HEAD_NONE, close_command))
+                        # The anonymous-arguments state outlives a word parenthesis
+                        # and a process substitution in the arguments; no other head
+                        # state does.
+                        saved.append(
+                            (
+                                at_command, dbl,
+                                head if head == HEAD_ANON_ARGS else HEAD_NONE,
+                                close_command,
+                            )
+                        )
                         at_command, in_word, dbl, head = True, False, False, HEAD_NONE
                         j += width
                     elif ch == ")":
@@ -3303,8 +3526,14 @@ class _Parser:
                         if j == -1:
                             raise _Undecidable("substitution")
                         comment_end = j
+                        if head == HEAD_ANON:
+                            # A comment ends the anonymous-head state, which the
+                            # newline that ends the comment would keep.
+                            head = HEAD_NONE
                     elif s.startswith("<<<", j):
-                        at_command, in_word, head = False, False, HEAD_NONE
+                        at_command, in_word = False, False
+                        if head != HEAD_ANON_ARGS:
+                            head = HEAD_NONE
                         j += 3
                     elif s.startswith("<<", j):
                         if cases:
@@ -3314,7 +3543,9 @@ class _Parser:
                         # operator is an ordinary word.
                         if not marks or marks[-1] != len(stack) - 1:
                             marks.append(len(stack) - 1)
-                        at_command, in_word, head = False, False, HEAD_NONE
+                        at_command, in_word = False, False
+                        if head != HEAD_ANON_ARGS:
+                            head = HEAD_NONE
                         j += 2
                     elif top == "8" and ch == ";" and s.startswith((";;", ";&", ";|"), j):
                         # An item terminator; `;;&` is the longest of them. In the
@@ -3324,15 +3555,26 @@ class _Parser:
                         if braces[-1]:
                             raise _Undecidable("item terminator in a brace group")
                         stack[-1] = "4"
+                        # The body list ends here with the records of the groups it
+                        # left open (the `in` form lets an unclosed `{` through).
+                        while groups and groups[-1][0] >= len(stack) - 1:
+                            groups.pop()
                         j += 3 if s.startswith(";;&", j) else 2
                     elif ch in " \t":
                         in_word = False
                         j += 1
                     elif ch in "\n;&|":
-                        at_command, in_word, head = True, False, HEAD_NONE
+                        if ch == "\n" and head == HEAD_ANON:
+                            # Newlines keep the anonymous-head state: the body `{`
+                            # may stand on a line of its own.
+                            in_word = False
+                        else:
+                            at_command, in_word, head = True, False, HEAD_NONE
                         j += 1
                     elif ch in "<>":
-                        at_command, in_word, head = False, False, HEAD_NONE
+                        at_command, in_word = False, False
+                        if head != HEAD_ANON_ARGS:
+                            head = HEAD_NONE
                         j += 1
                     else:
                         j += 1
@@ -3484,11 +3726,15 @@ class _Parser:
         reading. `end` is where reading goes on. Every word is decided
         by `_keyword_end`, on the characters with the continuation pairs left
         out, so a word at an argument position is never one of them, and
-        neither is a quoted or escaped one. The one word of an argument
-        position that closes anything, the standalone `}` in the item body list
-        itself of a brace-form case statement, is decided by the caller, which
-        asks `_keyword_end` for it. The caller calls it once at the start of
-        each word."""
+        neither is a quoted or escaped one. The words of an argument position
+        that close anything are decided by the caller, which asks
+        `_keyword_end` for them: the standalone `}` in the item body list itself
+        of a brace-form case statement, and the standalone `}` among the
+        arguments of a zsh anonymous function, where it closes the innermost
+        open `{` group of its list. The caller also reads every word after the
+        second name of a `function` head as one more name, whatever kind this
+        method gives it, except a standalone `{` or `}`. The caller calls it
+        once at the start of each word."""
         s = self.s
         ch = s[j]
         if in_dbl and ch == "]":

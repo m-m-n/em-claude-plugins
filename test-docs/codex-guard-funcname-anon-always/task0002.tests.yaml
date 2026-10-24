@@ -1,0 +1,43 @@
+task_id: task0002
+# Run before any edit, in the task worktree: python3 em-workflow/hooks/tests/run-destructive-guard.py
+# (943/943 passed) and python3 -m unittest discover -s tests (11495 tests, OK,
+# 1 skipped, no failure).
+baseline_failures: []
+# The project test command re-executed in full in the task worktree after the
+# docstring rewrite, the test changes and this record: run-destructive-guard.py
+# all cases ok and unittest discover with no failure. The record is itself
+# checked by tests.test_tests_yaml_id_resolution: no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_further_name_and_anonymous_argument_reading
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_reads_every_word_after_the_first_name_as_everywhere_else
+    red_confirmed: true
+    red_reason: "Run against the unmodified docstring (the tests were written first, the docstring edited afterwards), test_the_docstring_states_the_further_name_and_anonymous_argument_reading failed with 'AssertionError: ... not found in ...' for every marker of the 'rule 6 further names' group (the unchanged reading right after the first name, the further-name state, 'every word other than a standalone { or } ... is one more name', the reserved words / head words / case / esac / [[ / always list, the state and command position kept until a { or an empty () ends the head), on both copies. test_the_docstring_no_longer_reads_every_word_after_the_first_name_as_everywhere_else failed with 'AssertionError: ... unexpectedly found in ...' for the rule 6 sentence 'A standalone { or }, a reserved word, a head word, case, [[, an empty () and a separator are read as they are everywhere else' and for the two other superseded rule 6 sentences, on both copies."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_further_name_and_anonymous_argument_reading
+    red_confirmed: true
+    red_reason: "Against the unmodified docstring the same test failed with 'AssertionError: ... not found in ...' on both copies for the markers of the groups 'rule 6 anonymous forms' (the three forms, the blanks / continuation pairs / newlines before the {), 'rule 6 close of a body' (no group-closed state and no command position at a command position, at an argument position of a brace-form item body list itself and in anonymous arguments), 'rule 6 anonymous arguments' (the words up to the next separator or the close of the list, the three outcomes of a standalone }, the quoted / escaped / partial } that stay arguments) and 'rule 6 group-closing and always' (the group-closing } and the always sentence). Two further markers, added after the corrections of the rule 2 and rule 5 sentences on an argument-position } (each now says that a standalone } among anonymous arguments is read as rule 6 says), were checked absent from the base docstring with a one-off script rather than by a test run, then pass with the new docstring."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_further_name_and_anonymous_argument_reading
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_reads_every_word_after_the_first_name_as_everywhere_else
+    red_confirmed: true
+    red_reason: "Against the unmodified docstring the first test failed with 'AssertionError: ... not found in ...' on both copies for the markers of the groups 'rule 1 state and records' (the open { group records beside the stack, the three states as values of the head state), 'rule 2 brace form' and 'rule 5 closing' (the anonymous-body exception to the command position after a }), 'rule 7 head states' (the further-name, anonymous-head and anonymous-arguments states with their lifetimes and the two exceptions), 'rule 9 re-read' (the three states and the open { group records restored to their values at the ((), and 'records beside the stack'. The second test failed with 'AssertionError: ... unexpectedly found in ...' for the rule 7 phrase 'which goes on through each further name'."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_further_name_and_anonymous_argument_reading
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_reads_every_word_after_the_first_name_as_everywhere_else
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_four_rules_of_the_reading
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_describes_the_brace_form_of_a_case_statement
+    red_confirmed: true
+    red_reason: "The first two tests are the new class tests: against the unmodified docstring the first failed with 100 subtest failures (50 markers on each of the two copies) and the second with 8 (4 superseded sentences on each copy), 'not found' and 'unexpectedly found' respectively. The four markers of test_the_docstring_states_the_four_rules_of_the_reading whose sentences the new wording replaces (the rule 6 'one more name' sentence, the rule 6 'function-name state and the command position are kept' sentence, the rule 6 'read as they are everywhere else' sentence and the rule 7 'goes on through each further name' phrase) were removed from that test and are asserted absent by the second new test. test_the_docstring_states_the_four_rules_of_the_reading and test_the_docstring_describes_the_brace_form_of_a_case_statement pass before and after: they keep every other existing marker of the class, which the rewritten docstring still contains; no red state occurred for them."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_the_test_module_imports_only_the_standard_library
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints.test_each_copy_stays_within_the_constraints
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestCopies.test_the_two_copies_are_byte_identical detects a difference between the two copies, TestStaticConstraints.test_the_test_module_imports_only_the_standard_library detects a non-standard-library import in the test module, and TestStaticConstraints.test_each_copy_stays_within_the_constraints detects a new import or call in a copy; no red state occurred for this change (the copies were synchronised by copying the edited file before the first run of TestCopies). 'In the two copies only lines of the _skip_substitution docstring change' has no test: it was checked by comparing the ast of each copy with the docstring of _skip_substitution dropped, at HEAD and in the working tree (equal for both copies), and by reading the git diff hunks. 'The change set holds no file under .claude-plugin/' has no test: it was checked with git diff --name-only (three files, none under .claude-plugin/). The two commands python3 -m unittest tests.test_codex_hook_interactive_guard and python3 -m unittest discover -s tests pass; they are the project test command, not a check that can be made to fail first."

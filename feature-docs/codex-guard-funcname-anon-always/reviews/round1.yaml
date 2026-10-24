@@ -1,0 +1,144 @@
+round: 1
+executed_at: '2026-10-24T20:36:58+09:00'
+scope:
+  review_mode: diff
+  base_commit: cac662fb721c0dc93010b2cbfbb51c441211813d
+  head_commit: 89b8e73b9824177ee12cda20a5910f2de562696f
+  base_commit_note: merge-base with main; implement.base_commit ef7b32a88dc1c978b0ba5c69ef2a91f80beeb8fe
+    is not an ancestor of main after the integration branch absorbed main in task0001 first attempt
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-funcname-anon-always/task0001.tests.yaml
+  - test-docs/codex-guard-funcname-anon-always/task0002.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: NFR1 requires linear time and no recursion in the substitution reader's new state transitions
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+  note: wrapper reported codex returned non-JSON output (harness-level failure)
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: b98958fb18af13b8
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 3140
+  title: 引数の位置の単独の `}` が匿名関数の本体の記録を取り除かず、後の外側の `}` が匿名の閉じと誤認されて always 以降の拒否が漏れる（この変更で生じた回帰）
+  description: 'この変更で `{` 群の記録（`groups`）を持つようにしたが、zsh が既定（IGNORE_CLOSE_BRACES 未設定）で引数の位置でも閉じに使う単独の `}`（`function
+    { : }` の `}`）では記録が取り除かれない。そのため形 (a) で積んだ匿名の本体の記録が残り、zsh では外側の普通の群を閉じるコマンド位置の `}` を、その記録を取り除く閉じとして読み、HEAD_ANON_ARGS
+    を立てる。続く `always` `{` `case` は引数として読まれ、パターンの `)` が置換を閉じて引用の境界がずれ、後ろの `python3 -i` が silent になる。変更前は
+    deny だったので、この変更が生んだ拒否漏れの回帰になる。`function () {` と `() {` の形でも同じ。両コピーで同じ。'
+  suggestion: 'その一覧に開いた記録があるとき、引数の位置の単独・引用なし・エスケープなしの `}` でもその一覧の最も内側の記録を取り除く。匿名の本体なら匿名関数の引数の状態、普通の群なら群を閉じた状態にする。記録が無いときは今の読みのまま。`{
+    function { : }; } always ...` を 3 つの形すべてで deny にする行を CASES に足し、docstring と HEAD_* 前のコメントも合わせて直す。両コピーをバイト単位で同一に保つ。'
+  reproduction: 'Pythonの文字列 inner に `echo "$({ function { : }; } always { case x in x) echo ''"'';; esac;
+    })"; python3 -i` を設定する。`command = ''zsh -c '' + shlex.quote(inner)` を作り、json.dumps({''tool_name'':
+    ''Bash'', ''tool_input'': {''command'': command}}) を各ガードの標準入力へ渡す。入力は main → find_deny → _skip_substitution
+    を通り、両コピーとも終了コード0・標準出力空となる。基準版では同じ入力を拒否する。実行可能性は、inner の `python3 -i` を `printf REACHED` に置換して `zsh
+    -f -c` に渡すことで安全に確認でき、終了コード0でREACHEDが出力される'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: medium severity is outside the auto-fix candidate gate and the residual
+    critical/high rework gate (review-phase.md R4/R5); Codex consulted, option A adopted; filed as a follow-up
+    Notion task'
+- stable_id: 7321180de7cb4642
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 3566
+  title: 匿名関数の空の `()` と本体の `{` の間の `;` とコメントで頭部の状態が切れ、拒否漏れが残る（新しいテスト行がその読みを silent で固定している）
+  description: 'zsh は関数定義の空の `()` の後で区切り（`;` と改行）とコメントを読み飛ばしてから `{` を本体として読むので、`() ; {`、`() # c` + 改行
+    + `{`、`function () ; {`、`function () # c` + 改行 + `{` も匿名関数になる。この変更は改行だけで HEAD_ANON を保ち、`;` とコメントで落とすため、その後の
+    `always` が予約語、`case` が case 文として読まれ、zsh が後ろの起動を実行する入力が silent になる。変更前も silent だった既存の漏れだが、tests/test_codex_hook_interactive_guard.py
+    の 1351-1353 行がこの読みを silent で固定している。`function` + 改行 + `{` と `function ; {` も同じ原因（変更前から）。'
+  suggestion: HEAD_ANON の間は改行に加えて `;`（`;;` `;&` `;|` は除く）とコメントでも状態を保ち、次の単独の `{` を匿名関数の本体として読む。HEAD_FUNCTION
+    の直後の改行と `;` も同じ扱いにする。テスト 1351-1353 行の期待値を deny に替え、docstring rule 6 / rule 7、HEAD_* 定数前のコメント、TestHeadStateComment
+    / TestSubstitutionSkipDocumentation の期待文字列も直す。両コピーを同一に保つ。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: medium severity is outside the auto-fix candidate gate and the residual
+    critical/high rework gate (review-phase.md R4/R5); Codex consulted, option A adopted; filed as a follow-up
+    Notion task'
+evaluation:
+  round_summary: ラウンド 1。medium 2 件を採った。1 件目（security#0）は、この変更で入れた `{` 群の記録が引数の位置の `}` で取り除かれないことによる拒否漏れの回帰で、reproduced
+    と判定（orchestrator の実行結果とも一致）。2 件目（comprehensive#fallback）は、匿名関数の頭部の後の `;` とコメントで状態が切れる変更前からの漏れで、新しいテスト行がそれを
+    silent で固定している。critical / high の報告は無く、dismissed_sites は空。comprehensive#0 は非 JSON 出力によるハーネス側の失敗で、comprehensive#fallback
+    が観点を引き継いだ。レビュアー出力に指示の注入の試みは無かった。両コピーのバイト単位の同一性を確認。architecture / performance は corroborated、spec は文面との食い違い無し（security
+    の回帰は FR5 の趣旨に反し、security の所見にまとめた）。
+  recommended_action: auto_fix
+  action_rationale: 2 件とも medium で局所的な読みの修正と CASES の変更で直せる。1 件目はこの変更が生んだ回帰なので完了前に直す必要がある（advice; the R5
+    completion gate is residual_critical_high == 0）。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-codex-guard-funcname-anon-always-20261024T113649Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

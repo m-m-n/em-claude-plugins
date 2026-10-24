@@ -1,0 +1,43 @@
+feature: codex-guard-funcname-anon-always
+collected_at: "2026-10-24T20:51:00+09:00"
+session_ids:
+  - 01a16d28-e6dd-73e2-a7fe-1402ab3944ad
+  - 01a16d3d-fd0f-7793-aa91-2afd6597bb4a
+  - 01a16d96-f8cf-7740-95ec-d25ed142b474
+  - 01a16db6-9602-77db-b128-7e124edd0037
+  - 01a16dbe-8357-7056-9efa-beea71995b61
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: NFR1 requires linear time and no recursion in the substitution reader's new state transitions
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code read leaned to bucket 2 (new logic across both guard copies and tests; p=0.6), so no tier reduction was taken"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.11, confidence: 0.9}
+        observed_at: "2026-10-24T18:07:15+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.6, confidence: 0.6}
+        observed_at: "2026-10-24T18:10:08+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-interactive-guard.py
+        - em-review/scripts/codex-hook-interactive-guard.py
+        - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 180
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      added_test_cases_approx: 4
+follow_up_drafts: []
+lessons_candidates:
+  - "task0001 first attempt: the implementer ran merge-task.sh with cwd = main working tree (HEAD = main), so 'merge: task0001' (cc2f0fa6) merged main into the integration branch instead of the task branch. The batch retry recovered it, but review had to diff from the merge-base with main instead of implement.base_commit."
+  - "review round 1 left two medium findings deferred (b98958fb18af13b8: a fail-open regression introduced by this change; 7321180de7cb4642: a pre-existing gap now pinned as silent by new CASES rows). The R5 gate only looks at critical/high, so a reproduced medium regression can pass review; follow-up tasks were filed instead."
+  - "comprehensive#0 (codex) failed with non-JSON output; the claude fallback took over the perspective."
+  - "the SCA triage listing was unavailable (listing_exit_nonzero), so triage filing degraded to a local report."
+  - "workflow.yaml goal carried a Notion URL and reviews/round1.yaml carried an absolute home path; both were redacted at the retrospect phase start commit."

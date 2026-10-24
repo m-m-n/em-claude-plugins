@@ -1,0 +1,48 @@
+schema_version: 1
+feature: codex-guard-funcname-anon-always
+records:
+- question_id: requirement.anon-args-close-brace
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-24T18:25:00+09:00'
+  source: codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - close_brace
+  freeform: null
+  normalized_answer: close_brace
+  resolution_note: 'gate: create-spec.requirement-clarification (batch policy codex_consultation, record_as_assumption).
+    options: close_brace / keep_word. chosen: close_brace. not chosen: keep_word (leaves fail-open). Codex
+    consulted: yes (1 turn, converged). Key points: zsh 5.9 default reads an unquoted standalone } in
+    argument position as a closing brace; `{ function { echo argc=$#; } } always { echo ALWAYS; }` prints
+    argc=0 and ALWAYS; all three anonymous forms behave the same. Opus escalation: not run. Discussion
+    recorded as a Notion comment on the task page.'
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-10-24T18:42:00+09:00'
+  source: batch-decision-table
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: auto_record
+  normalized_answer: auto_record
+  resolution_note: 'gate: create-spec.command-approval (batch policy action auto_record). workflow.yaml
+    project.components のコマンドは ''python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m
+    unittest discover -s tests'' の 1 本。bash_guard.py --list で既に承認済みであることを確認したため、この走行で新たに自動承認したコマンドは 0
+    本。refusal パターンの検出なし。'
+- question_id: review.medium-regression-disposition
+  packet_id: null
+  answered_at: '2026-10-24T20:36:58+09:00'
+  source: codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - A
+  freeform: null
+  normalized_answer: A
+  resolution_note: 'gate: none (unlisted non-packet decision, batch-mode.md fallback). options: A complete
+    review per protocol, defer both medium findings, file follow-up Notion tasks, note them in the PR
+    / B deviate and run rework for the medium regression before PR / C complete and rely on verify. chosen:
+    A. not chosen: B (extends the rework gate beyond the protocol), C (VERIFICATION.md scenarios do not
+    cover F1/F2). Codex consulted: yes (1 turn). Key points: residual critical/high is 0 so the completion
+    gate holds; recommended_action cannot override it; a human reviews the PR, so disclose rather than
+    widen the gate. Risk accepted: F1 (b98958fb18af13b8) is a reproduced new fail-open regression left
+    open. Opus escalation: not run. Also recorded: review diff base is the merge-base with main (cac662fb)
+    because the integration branch absorbed main during task0001''s first attempt.'
