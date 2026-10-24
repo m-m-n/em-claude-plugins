@@ -2,7 +2,8 @@ schema_version: 1
 feature: worker-self-write-digest
 created: '2026-10-24'
 base_branch: main
-goal: '# worker が読み書き両方する target（tokens.yaml、planner の既存成果物）で、R1 の返却後 input_digest 再計算が worker 自身の正当な更新を stale と誤判定しうる
+goal: '# worker が読み書き両方する target（tokens.yaml、planner の既存成果物）で、R1 の返却後 input_digest
+  再計算が worker 自身の正当な更新を stale と誤判定しうる
 
 
   Notion: <notion-url>
@@ -11,16 +12,20 @@ goal: '# worker が読み書き両方する target（tokens.yaml、planner の�
   ## 現象 (必須)
 
 
-  `em-workflow/references/contracts/worker-envelope.md` の Rule R1 は、worker が戻った後に同じ入力から `input_digest` を計算し直し、dispatch 時の値と食い違えば stale として扱う。
+  `em-workflow/references/contracts/worker-envelope.md` の Rule R1 は、worker が戻った後に同じ入力から
+  `input_digest` を計算し直し、dispatch 時の値と食い違えば stale として扱う。
 
 
-  designer の `design-system/tokens.yaml`（`extend_only`）や、implementation-planner / rework-planner が更新する既存成果物（IMPLEMENTATION.md、VERIFICATION.md、TASK.md 等）は、`digest_inputs` と `write_policy.targets` の両方に入る。このため worker 自身が許された範囲で書いただけで `input_digest` が変わり、外部の変更と区別できない。
+  designer の `design-system/tokens.yaml`（`extend_only`）や、implementation-planner /
+  rework-planner が更新する既存成果物（IMPLEMENTATION.md、VERIFICATION.md、TASK.md 等）は、`digest_inputs`
+  と `write_policy.targets` の両方に入る。このため worker 自身が許された範囲で書いただけで `input_digest` が変わり、外部の変更と区別できない。
 
 
   ## 再現手順 (必須)
 
 
-  1. 既存の `design-system/tokens.yaml` がある feature で、designer を `extend_only` 付きで dispatch する
+  1. 既存の `design-system/tokens.yaml` がある feature で、designer を `extend_only` 付きで dispatch
+  する
 
   2. designer が tokens.yaml にキーを追加して戻る
 
@@ -44,7 +49,8 @@ goal: '# worker が読み書き両方する target（tokens.yaml、planner の�
   ## 該当箇所 (任意)
 
 
-  - `em-workflow/references/contracts/worker-envelope.md`（Rule R1 の Recomputation and comparison timing）
+  - `em-workflow/references/contracts/worker-envelope.md`（Rule R1 の Recomputation
+  and comparison timing）
 
   - `em-workflow/references/contracts/designer-contract.md`
 
@@ -56,7 +62,8 @@ goal: '# worker が読み書き両方する target（tokens.yaml、planner の�
   ## 実害・発生条件 (任意)
 
 
-  feature worker-digest-ownership の create-spec で Codex に相談した中で見つかった。その feature ではスコープ外とした。読み込み対象と書き込み対象を兼ねる成果物を持つ dispatch でだけ起きる。
+  feature worker-digest-ownership の create-spec で Codex に相談した中で見つかった。その feature ではスコープ外とした。読み込み対象と書き込み対象を兼ねる成果物を持つ
+  dispatch でだけ起きる。
 
   '
 parent_branch: em-workflow/worker-self-write-digest/integration
@@ -100,7 +107,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: No UI. The changes are limited to protocol Markdown, Python scripts and tests.
+  skipped_reason: No UI. The changes are limited to protocol Markdown, Python scripts
+    and tests.
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -114,7 +122,7 @@ workflow:
   completed_at_commit: 3d771133ca3173e44e2e76655db036127bddf9d4
   base_commit: b7cdbfac5dcc9418a5f8159cde371ed3626922ff
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -214,10 +222,19 @@ tasks:
     notes: null
     branch: em-workflow/worker-self-write-digest/task0003
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Substitute dispatch-time digests for self-writes
