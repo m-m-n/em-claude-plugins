@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-funcname-anon-always
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: d7bf9ef290b3aca20e6388a90554c865df5fafe3
 last_input_digest: sha256:96a8414a4457ede6ba35c5814f3eefa7b5f6719cf980dc855a321a46e307b0fb
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -49,7 +49,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: codex-guard-funcname-anon-always-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:96a8414a4457ede6ba35c5814f3eefa7b5f6719cf980dc855a321a46e307b0fb
   base_workflow_blob: e5b9eae21dd8e5e9c51852029a50aa551b0f3e8b
 progress_fingerprint: null
