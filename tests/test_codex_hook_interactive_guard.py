@@ -4378,9 +4378,6 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             "an ordinary word that is never read as a keyword or reserved word",
             "an empty `()` directly after the name or after blanks belongs to the head",
             "Function-name validity is not considered",
-            "After the first name, a word for which the command-word decision at a command position gives no kind is one more name",
-            "the function-name state and the command position are kept, so a later `{` or an empty `()` ends the head as it does after the first name",
-            "A standalone `{` or `}`, a reserved word, a head word, `case`, `[[`, an empty `()` and a separator are read as they are everywhere else",
             "The standalone `{` right after `function` is zsh's anonymous function: it is read in the name position, and the function-name state does not go on after it, so the next ordinary word is the first word of a simple command and no name",
             "This holds in every command list",
             "the `}` that closed a brace-form statement, at a pattern position or at depth 0 of the body, is no group-closing `}`",
@@ -4388,7 +4385,6 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             "In every other position `always` is an ordinary word: after a separator or a newline, after any other word, quoted, escaped, or as part of a longer word",
         ),
         "head state rule": (
-            "after the function name (which goes on through each further name, rule 6)",
             "after a `}` that closed a group (an `always` may follow, rule 6)",
         ),
         "loop and coproc head rule": (
@@ -4482,6 +4478,117 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
                 for marker in markers:
                     with self.subTest(copy=plugin, rule=rule, marker=marker):
                         self.assertIn(marker, doc)
+
+    # codex-guard-funcname-anon-always (FR7, task0002): the docstring states the
+    # further-name and anonymous-argument reading (IMPLEMENTATION.md M1 to M9),
+    # by the rule that carries each statement. Rules 1, 2 and 5 carry the
+    # state, the depth and the closing exceptions; rule 6 the further names,
+    # the three anonymous forms, the close of a body, the anonymous arguments,
+    # the group-closing `}` and `always`; rule 7 the head states and their
+    # lifetimes; rule 9 the re-read; the closing paragraph the records.
+    FUNCNAME_ANON_ALWAYS_MARKERS = {
+        "rule 1 state and records": (
+            "The further-name, anonymous-head and anonymous-arguments states are values of that head state, so the state stays of constant size",
+            "The open `{` groups are kept as records on one explicit list that runs beside the stack",
+            "each record belongs to one command list and is marked whether its group is the body of an anonymous function (rule 6)",
+            "No word of the arguments of an anonymous function is at a command position, and neither is the word after the `}` that closes the body of an anonymous function (rules 5 and 6)",
+        ),
+        "rule 2 brace form": (
+            "after one that lowers the depth the next word is at a command position, except after one that closes the body of an anonymous function, where the words after it are anonymous arguments (rule 6)",
+            "The depth of a brace-form item body and the records of its `{` groups (rule 1) rise and fall at the same `{` and `}`",
+            "except that a standalone `}` among anonymous arguments is read as rule 6 says in every list",
+        ),
+        "rule 5 closing": (
+            "except a `}` that closes the body of an anonymous function: that `}` is no compound-command closing and gives the next word no command position (rule 6)",
+            "and that a standalone `}` among anonymous arguments is read as rule 6 says",
+        ),
+        "rule 6 further names": (
+            "Right after the first name the reading does not change: a word for which the command-word decision at a command position gives no kind is the second name",
+            "a word that has a kind (a standalone `{` or `}`, a reserved word, a head word, `case`, `[[`) is read as it is at a command position anywhere else",
+            "After the second name the list is in the further-name state, not in the function-name state",
+            "every word other than a standalone `{` or `}`, an empty `()` and a separator is one more name",
+            "the reserved words, `!`, the head words (`function`, `for`, `select`, `coproc` and `repeat`), `case`, `esac`, `[[` and `always` included",
+            "a quoted word and a word that holds a substitution are names as well",
+            "The further-name state and the command position are kept until a standalone `{` or an empty `()` ends the head as it does after the first name (`function a b () {`)",
+            "In the further-name state a non-empty `(`, `<`, `>` and a comment `#` keep their current reading, and a separator or the close of the list ends the state",
+        ),
+        "rule 6 anonymous forms": (
+            "A zsh anonymous function has three forms",
+            "(a) the standalone `{` right after `function`, which opens the body at once",
+            "(b) an empty `()` right after `function`, with no name (`function () {`), where the head ends and the list is in the anonymous-head state",
+            "(c) an empty `()` read at a command position while the list has no head state, that is, before any word of a simple command is read (`() {`), where the list is in the anonymous-head state as well",
+            "In the anonymous-head state blanks, continuation pairs and newlines keep the state, and the next standalone `{` is read at a command position and opens the body of an anonymous function",
+            "anything else ends the state, a comment included, and what follows is read as it is after a function head",
+            "Every `{` that opens a group adds one record to its list (rule 1)",
+            "the body `{` of a named function, the `{` after `always`, after `coproc` and after a reserved word included",
+            "The record is marked as an anonymous body for the body of an anonymous function and as an ordinary group otherwise",
+        ),
+        "rule 6 close of a body": (
+            "A standalone `}` that removes the record of an anonymous body sets no group-closed state and gives the next word no command position: the list is in the anonymous-arguments state",
+            "This holds for a standalone `}` at a command position of any command list, for a `}` at an argument position of a brace-form item body list itself (rule 2; the `}` still lowers the depth there) and for a `}` in anonymous arguments",
+        ),
+        "rule 6 anonymous arguments": (
+            "In the anonymous-arguments state the words up to the next separator or the close of the list are arguments, and none is at a command position",
+            "`always`, `{`, `case`, `esac`, the reserved words, `!`, the head words and `[[` open nothing and close nothing",
+            "A `(` is a word parenthesis (rule 10), and a redirection and a heredoc operator (rule 8) keep their reading",
+            "the state is kept across them, across quoted words, across words that hold a substitution or `${ }`, and across every closing inside a word",
+            "A standalone `}` among the arguments is the one exception, with three outcomes decided by the innermost record of its own list",
+            "With an ordinary group it is a group-closing `}`: the anonymous-arguments state ends and the list is in the group-closed state",
+            "With an anonymous body it closes that body and the list stays in the anonymous-arguments state, the arguments of the enclosing anonymous function",
+            "With no record in the list it keeps its current reading",
+            'A quoted `"}"`, an escaped `\\}` and a `}` that is part of a word (`a}`, `}a`) stay arguments',
+        ),
+        "rule 6 group-closing and always": (
+            "A group-closing `}` is a `}` that removes the record of an ordinary group (rule 1), at a command position, at an argument position of a brace-form item body list itself (rule 2) or in anonymous arguments",
+            "or a standalone `}` at a command position of a list that is not a brace-form item body and has no record",
+            "and neither is the `}` that closes an anonymous body",
+            "A standalone `always` is a reserved word only after a `}` that closed an ordinary group or a standalone `}` at a command position with no open group",
+        ),
+        "rule 7 head states": (
+            "after the first function name; after a further name, the further-name state (rule 6)",
+            "after the empty `()` of an anonymous function head, the anonymous-head state (rule 6)",
+            "after the `}` that closed the body of an anonymous function, the anonymous-arguments state (rule 6)",
+            "The further-name state lasts through every further name, until a standalone `{`, an empty `()`, a separator or the end of the list",
+            "The anonymous-head state is an exception to the separator that ends any head state still pending: a newline keeps it",
+            "The anonymous-arguments state is an exception to the next character that rules a head state out: a word, a redirection and a closing inside a word do not rule it out",
+        ),
+        "rule 9 re-read": (
+            "The re-read also restores the further-name, anonymous-head and anonymous-arguments states and the open `{` group records to their values at the `((`",
+            "the records of the lists opened after the `((` go with their stack entries, and the records of the lists open at the `((` lie under the arithmetic command, where nothing changes them",
+        ),
+        "records beside the stack": (
+            "A third list runs beside the stack as well, the open `{` group records (rule 1), innermost last",
+            "A `}` that closes a group removes the innermost record of its own list and never closes a group of another list, and the records of a list go with it when it closes",
+            "A record is added or removed in constant work",
+        ),
+    }
+    # The sentences of the earlier reading that the further-name and anonymous
+    # reading replaces (FR7): the rule 6 sentence that read every word after
+    # the first name as it is everywhere else, and the rule 7 phrase that said
+    # the function-name state goes on through each further name.
+    STALE_FUNCNAME_ANON_ALWAYS_SENTENCES = (
+        "A standalone `{` or `}`, a reserved word, a head word, `case`, `[[`, an empty `()` and a separator are read as they are everywhere else",
+        "After the first name, a word for which the command-word decision at a command position gives no kind is one more name",
+        "the function-name state and the command position are kept, so a later `{` or an empty `()` ends the head as it does after the first name",
+        "which goes on through each further name",
+    )
+
+    def test_the_docstring_states_the_further_name_and_anonymous_argument_reading(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for statement, markers in self.FUNCNAME_ANON_ALWAYS_MARKERS.items():
+                for marker in markers:
+                    with self.subTest(copy=plugin, statement=statement, marker=marker):
+                        self.assertIn(marker, doc)
+
+    def test_the_docstring_no_longer_reads_every_word_after_the_first_name_as_everywhere_else(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for sentence in self.STALE_FUNCNAME_ANON_ALWAYS_SENTENCES:
+                with self.subTest(copy=plugin, stale=sentence):
+                    self.assertNotIn(sentence, doc)
 
     # codex-guard-brace-case-group-depth (FR5, SPEC.md TS-18): the two sentences
     # of the earlier reading stay out of both copies. One said a `}` at an
