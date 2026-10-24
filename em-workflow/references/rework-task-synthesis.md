@@ -230,6 +230,22 @@ the dispatch, and `Layer 5 recording` of `written_artifacts` into
 `phase-state/rework.yaml` once layer 4 passes. Rework's action choice is
 unchanged.
 
+**Return-time digest (steps 2 and 3, all four routes)**: the rework-planner
+run's entry in `phase-state/rework.yaml` carries `dispatch_digest_inputs`, the
+per-path `digest_inputs` map of the dispatch's digest_source
+(`references/phase-state.md` defines the field and when it is written). After
+the scope verification (layer 4) of rework-planner's result passes, the
+orchestrator recomputes the current digest_source and runs
+`scripts/self-write-digest.py` (operation `identify_and_substitute`), as
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing" states. Step 3 validates and applies the patch against the
+digest_source the script returned: application rule 1 of
+`references/workflow-patch.md` compares that substituted digest_source with the
+dispatch-time `input_digest`, and a mismatch, or a script exit other than `0`,
+makes the result stale. The orchestrator records `self_write_set` in the same
+phase-state write as the `Layer 5 recording` of `written_artifacts` into
+`phase-state/rework.yaml`.
+
 **When rework needs a SPEC.md change**: the synthesizing worker creates no
 task. Instead it returns `status: needs_user_input` with
 `gate_id: rework.spec-change`. Once the user (interactive) selects the SPEC
