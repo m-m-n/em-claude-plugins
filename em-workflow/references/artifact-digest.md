@@ -121,7 +121,11 @@ change made in that window.
 ## Layer 5 recording
 
 When: after layer 4 (scope verification) passes for the dispatch's
-`completed` result.
+`completed` result. The orchestrator runs `Calculation` only after the
+return-time comparison of `references/contracts/worker-envelope.md`, Rule R1,
+"Recomputation and comparison timing", has not made the result stale. Only
+after Rule R1's `return-time recheck` has not made the result stale does the
+orchestrator make the recording write, the `artifacts` entries below.
 
 Zero artifacts: when the result's `written_artifacts` has zero entries,
 `Calculation` is not run and nothing is recorded. Whether an empty
