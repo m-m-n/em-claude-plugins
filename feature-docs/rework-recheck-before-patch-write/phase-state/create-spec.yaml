@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 1ece7dfbdbd323e339cb793a6e16197c550f92a0
 last_input_digest: sha256:0e5a40066c9a9491ed9b576d43929abb45a39f84376c297dc94e9d9f0e303ddf
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,12 +14,17 @@ worker_runs:
   input_digest: sha256:0e5a40066c9a9491ed9b576d43929abb45a39f84376c297dc94e9d9f0e303ddf
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:3242bd905fd258ac025aa2b798a3c95a15a299be1d79c8c433396e6f70b16ff6
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/rework-recheck-before-patch-write/SPEC.md
+  sha256: sha256:dd5188d7f5e3d2e49bc9314ce29567ddd584aa280436c56e359850c728398be3
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+self_write_set:
+- feature-docs/rework-recheck-before-patch-write/SPEC.md
