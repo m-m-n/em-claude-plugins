@@ -1,0 +1,70 @@
+schema_version: 2
+feature: self-write-exclusivity-window
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.95
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-10-24T16:13:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.28
+    confidence: 0.72
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.72
+      '2': 0.28
+      '3': 0.0
+  observed_at: '2026-10-24T16:20:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - tests/test_self_write_digest_docs.py
+  - tests/test_worker_contract_docs.py
+  changed_lines_approx: 60
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  work_still_required: true
+  work_still_required_evidence: HEAD e34996f8191460772e85e9fc2b42b3a2fa61bb03 で問題は残っている。em-workflow/references/contracts/worker-envelope.md:252-263
+    は scope verification 後に再計算・置換・比較を行う一方、同ファイル:389-395 と em-workflow/references/phases/create-spec-phase.md:545-548
+    は排他区間を verification 終了までとしている。em-workflow/scripts/self-write-digest.py:333-349 は自己書き込み対象の現在値を無条件に
+    dispatch 時の値へ置換する。メモリ上の確認でも、extend_only 対象の外部変更後の digest は置換によって dispatch 時と一致した。Layer 5 記録は em-workflow/skills/develop/SKILL.md:770-786、em-workflow/references/phases/create-plan-phase.md:262-273、em-workflow/references/rework-task-synthesis.md:233-247
+    で比較後に行われる。tests/test_self_write_digest_docs.py:540-592 と tests/test_worker_contract_docs.py:781-789
+    の関連4テストは通過するが、排他区間が Layer 5 記録完了まで続くことを検証していない。排他前提の延長を採用する場合、両文書の適用区間と R1 の記述を整合させ、既存テストを拡張する必要がある。
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 3
+  changes_external_contract: true
+  changes_behavior: true
+decided_at: '2026-10-24T16:20:30+09:00'
