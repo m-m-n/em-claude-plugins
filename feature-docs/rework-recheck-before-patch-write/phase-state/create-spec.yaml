@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-recheck-before-patch-write
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 1ece7dfbdbd323e339cb793a6e16197c550f92a0
 last_input_digest: sha256:0e5a40066c9a9491ed9b576d43929abb45a39f84376c297dc94e9d9f0e303ddf
