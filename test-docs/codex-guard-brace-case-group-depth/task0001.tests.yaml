@@ -1,0 +1,62 @@
+task_id: task0001
+# Run before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py
+# (all cases ok) and python3 -m unittest discover -s tests (11238 tests, OK,
+# 1 skipped, no failure). The shell's working directory resets between Bash
+# calls, so this run took place in the main working tree (branch main), not in
+# the task worktree. The task branch's base commit differs from main only by
+# the feature-docs files of this feature, and the test count agrees: 11238
+# before, 11243 after (the 4 tests and the 1 record check this task adds).
+baseline_failures: []
+# The project test command re-executed in full in the task worktree after the
+# implementation and after this record was written (cd to the worktree
+# prefixed in the same Bash call, because the working directory resets between
+# calls): run-destructive-guard.py 943/943 passed and unittest discover ran
+# 11243 tests, OK, 1 skipped. The record is itself checked by
+# tests.test_tests_yaml_id_resolution: no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Run against copies of the unmodified guard (both copies as of HEAD, swapped into HOOK_PATHS of the loaded test module), test_cases_run_against_both_copies errored for the TS-1, TS-9 and TS-10 rows of codex-guard-brace-case-group-depth on both copies with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the guard printed nothing for a command it must deny, because the argument-position } left the depth unchanged and the ;; of the item was undecidable (TS-1, TS-10) or the ) of the substitution was an unmatched ) in the item body (TS-9). The TS-2 row (the zsh -c wrapped { :; } form) and the relabelled TS-14 row (echo };;, the old TS-16 row) already passed before the change: they pin the verdict deny that stays. The new label and the comment block of the TS-14 row say that an argument-position } closes the statement at depth 0; wording has no executable check that can be made to fail, it was checked by reading the diff."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies detects a changed verdict on the boundary rows of this criterion (TS-11, TS-12 and TS-13 silent; the single-quoted }, }a, subshell, substitution, in-form body and function / for / select / repeat name-position rows silent; the argument-position { row deny) and on every pre-existing row of the other forms; no red state occurred for this change, because these rows pin the reading the guard already had and the change must not widen into them (each is built so that the rejected wider reading would flip its verdict). git diff of the test module removes no CASES row."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies failed on both copies for the silent rows TS-3, the three continuation-pair rows (a pair after the }, a pair after the blank, a pair inside always), the tab row, the nested-group row and the in-substitution row ('AssertionError' comparing standard output, a deny object, with the empty string: the guard denied, because always was an ordinary word, the } of the second group closed the statement early and the quoted launch was read as code), and errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' for the deny rows TS-6, the always-after-an-argument-position-} separator row and the in-form body row. TS-5 and the rows where always is not reserved (after a separator, a newline or another word, quoted, escaped, alwaysx, after the } that closed the statement) already passed before the change: they pin that always stays an ordinary word there."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies failed on both copies for the silent rows TS-4, the three-name function row, the quoted extra name row (function a \"b\" {), the substituted extra name row, the in-substitution multi-name row and the row with an arithmetic re-read after the names ('AssertionError' comparing standard output, a deny object, with the empty string: the guard denied, because the { after the extra name was an argument, the } closed the statement early and the quoted launch was read as code). TS-7, TS-8 and TS-15 already passed before the change (deny), as did the anonymous-function rows and test classes already in the suite and the new rows that pin the anonymous { reading (function { echo { :; } and its in-substitution form): they keep passing."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts16_depth_groups_closed_by_argument_position_braces_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts17_a_function_head_with_depth_names_is_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_depth_always_groups_in_a_row_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipCallStructure
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_ts16_depth_groups_closed_by_argument_position_braces_are_read_in_time errored on both copies with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': DEPTH groups closed by an argument-position } left the depth at DEPTH and the ;; was undecidable. All three deep tests deny within the deep-input class timeout after the change. The rows with an arithmetic re-read while the group-closed state is set (the (( with a failing close, the (( ... )) that closes, and the plain subshell, each followed by always) errored the same way before the change. test_ts17 (a function head with DEPTH names) and the always-chain test already passed before the change (deny): they pin the linear reading. TestSubstitutionSkipCallStructure and TestNoRecursion are existing tests that pass before and after (guards for no recursion and no call back into the skip or a reader; no red state)."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_describes_the_brace_form_of_a_case_statement
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_states_the_four_rules_of_the_reading
+      - tests.test_codex_hook_interactive_guard.TestSubstitutionSkipDocumentation.test_the_docstring_no_longer_says_an_argument_position_brace_is_ordinary_or_multi_name_definitions_are_ignored
+    red_confirmed: true
+    red_reason: "Against the unmodified guard (before the docstring edit) the three tests failed on both copies with 'AssertionError: ... not found in ...' for each updated or new marker of BRACE_FORM_MARKERS and RULE_MARKERS (the new (c) closing, the argument-position closing sentences, the rule 5 exception, the FR3 / FR4 function-name sentences, the always sentences and the head-state sentences), and with 'AssertionError: ... unexpectedly found in ...' for the two old sentences ('and so is a `}` at an argument position' and 'Multi-name zsh definitions and function-name validity are not considered') that the third test asserts absent."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestCopies.test_the_two_copies_are_byte_identical detects a difference between the two copies, TestStaticConstraints detects a non-standard-library import or a process / network use in the guard, and TestCasesTable.test_cases_are_unique detects a duplicate command; no red state occurred for this change, because the copies were identical before and after (the em-review copy was written by a byte copy of the em-workflow copy), the guard imports only json and sys, and no duplicate command was added. git diff of the test module removes no CASES row, and the new rows and tests use only unittest and run the hook as a subprocess with JSON on standard input. The project test command (python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests) passes."

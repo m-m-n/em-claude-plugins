@@ -1,0 +1,83 @@
+feature: codex-guard-brace-case-group-depth
+collected_at: '2026-10-24T17:53:16+09:00'
+session_ids:
+- 01a16d1b-c07d-7784-9b6e-84c8cd454b1f
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: NFR1 requires linear-time scanning; the diff changes the brace-group depth tracking loop in
+      the parser
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: final description_plus_code reading put the most weight on bucket 2 (P(2)=0.58, score 1.58),
+      which the threshold rows map to full
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.12
+        confidence: 0.88
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.88
+          '2': 0.12
+          '3': 0.0
+      observed_at: '2026-10-24T16:12:06+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.58
+        confidence: 0.58
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.42
+          '2': 0.58
+          '3': 0.0
+      observed_at: '2026-10-24T16:16:46+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/codex-hook-interactive-guard.py
+      - em-review/scripts/codex-hook-interactive-guard.py
+      - tests/test_codex_hook_interactive_guard.py
+      changed_lines_approx: 100
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 3
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 5
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: 両スクリプトの:2408,2824,2860とem-workflow/scripts/codex-hook-interactive-guard.py:3396を確認した。両コピーで区切り省略例は無出力、always・複数名function例はdenyになった。両コピーはバイト単位で同一だった。tests/test_codex_hook_interactive_guard.py:1081,1085,1092,1576の関連44ケースを両コピーに流した88回は通過したが、対象3種の再現入力はCASESにない。:4144に説明文の照合、:4782に同一性の検査がある。_skip_substitutionの直接呼出元は1関数、呼び出す内部メソッドは4関数だった。行数は両コピーの分岐・説明と既存テストの変更を合算した概算になる
+follow_up_drafts: []
+lessons_candidates:
+- 'review round 1 found two medium security regressions (90ae5c1cbf88e0ee, c5da4b70ee651440) introduced
+  by FR2/FR3 itself: widening reserved-word / function-name reading changed earlier deny results to silent.
+  SPEC assumptions A-4/A-5 accepted readings that the reviewers showed to be fail-open; the medium severity
+  gate left them unresolved and a follow-up task was filed instead of fixing in-run.'
+- implementer Bash resets cwd per call, so the "single cd then run the approved string" rule could not
+  hold; the approved command was run as cd <worktree>; <command> and the hook did not deny it.

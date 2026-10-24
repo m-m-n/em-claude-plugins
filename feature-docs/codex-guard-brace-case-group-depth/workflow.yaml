@@ -1,0 +1,288 @@
+schema_version: 1
+feature: codex-guard-brace-case-group-depth
+created: '2026-10-24'
+base_branch: main
+goal: |
+  # codex-hook-interactive-guard: 波括弧形式の case の項目本体で、区切りを省略した { : } を深さに数えず python3 -i を見逃し、always 群・複数名の function の { を数えず誤って deny する
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+
+  feature `codex-guard-escaped-hash-brace-case-heredoc` の review round 2 で出た medium 2 件。
+
+  `codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）の置換の中の読みで、zsh の波括弧形式の case（`case x { ... }`）の項目本体の `{ }` 群の深さの数え方が zsh の文法と合わない。
+
+  1. 区切りを省略した閉じ波括弧 `{ : }` を深さに数えない（拒否漏れ）
+     - 深さはコマンド位置の単独の `}` でしか下がらない。zsh の既定では単独の `}` は引数の位置でも閉じ波括弧になるため、`{ : }` は有効な群になる
+     - この読みでは `}` が `:` の引数になって深さが 1 のまま残り、続く `;;` で判定不能になる。後ろの `python3 -i` を検査しない
+     - 基底（feature 着手前）も判定不能なので回帰ではない
+  2. `always` 群と複数名の関数定義 `function a b { ... }` の `{` を深さに数えない（誤拒否の回帰）
+     - `always` は予約語として扱われず、続く `{` が数えられない。その後の `}` で case を早く閉じ、後の項目のパターンの `)` で置換が閉じたと確定する
+     - 単引用符の中の文字列にすぎない `python3 -i` を deny する。基底は判定不能（無出力）だった
+     - round 1 の medium（stable\_id `2c1d28dc62936d1a`）と同じ欠陥
+
+  ## 再現手順 (必須)
+
+  1. `tool_input.command` に次を設定した PreToolUse(Bash) の JSON をフックの標準入力へ渡す（コマンド自体は実行しない）
+  2. `zsh -c 'echo "$(case x { x) { : };; })"; python3 -i'` → 無出力（期待は deny）。`{ : }` を `{ :; }` に変えると deny になる
+  3. `zsh -c` の本文を `echo "$(case x { x) { :; } always { :; };; y) echo '"; python3 -i; "';; })"` にする → deny（期待は無出力。`python3 -i` は文字列の中）
+  4. 3 と同じ形で `function a b { :; }` を項目本体に書く → 同じく誤って deny
+
+  ## 期待する挙動 (必須)
+
+  - 波括弧形式の case の項目本体で、引数の位置にある単独で引用もエスケープもされていない `}` をコマンド位置の `}` と同じに扱い、再現手順 2 を deny にする
+  - `always` 群と複数名の `function` の `{` を深さに数えるか、読めない形では判定不能にして、再現手順 3・4 で誤って deny しない
+  - docstring の「a `}` at an argument position」の文を zsh の文法に合わせる
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] `tests/test_codex_hook_interactive_guard.py` の `CASES` に再現入力を追加し、両コピーに流す
+  - [ ] 両コピーがバイト単位で同一のまま
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/codex-hook-interactive-guard.py:2860`〜`:2883`（項目本体の `{ }` 群の深さ）、`:2824`〜`:2834`（`function {` の特例）、`:2901`（最初の語の後の at\_command）
+  - `em-review/scripts/codex-hook-interactive-guard.py`（同一内容）
+  - 記録: `feature-docs/codex-guard-escaped-hash-brace-case-heredoc/reviews/round2.yaml`（ブランチ `em-workflow/codex-guard-escaped-hash-brace-case-heredoc/integration`）の findings `a20206a8e4ee3391` / `e7001c69deb02603`
+  - feature `codex-guard-escaped-hash-brace-case-heredoc` の SPEC の TS-16 / AC-5 は「引数の位置の `}` は本体の普通の語」としており、1 を直すときは扱いを見直す
+
+  ## 実害・発生条件 (任意)
+
+  `$( )` の中の波括弧形式の case の項目本体に、区切りを省略した `{ ... }`、`always` 群、複数名の関数定義を書いた場合だけ。1 は拒否漏れ（fail-open）で無人実行が入力待ちで止まりうる。2 は正当なコマンドの誤拒否。
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断された選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/codex-guard-brace-case-group-depth/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.88
+      '2': 0.12
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.42
+      '2': 0.58
+      '3': 0.0
+  at: '2026-10-24T16:17:05+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python / Markdown
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: b7fc6730f95e5167ffbf8c0721538ba717bafa40
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'hook parser bug fix with no UI, zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: dc99f5ca79dd37835a7a52f76056b52457a42579
+- id: implement
+  status: completed
+  completed_at_commit: 544986c0759be0890aa341ae8e0efbd3323db819
+  base_commit: 35fefef289a69958a9250dea07ca0a1abde338e3
+- id: review
+  status: completed
+  completed_at_commit: 588d34c1c43437af6446ffe4b43764f38b2dc893
+- id: verify
+  status: completed
+  completed_at_commit: de48101f97186efcb3286824bd579181061a36d1
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'test command passed (11243 tests, OK, skipped=1); TS-1..TS-18 rows present; copies byte-identical; no version files touched; NFR4 no new imports; NFR5 all guard hunks in the substitution reader, its helper docstring and the head-state constants'
+- id: retrospect
+  status: completed
+  completed_at_commit: 45a8779970693fc7ddec137acb859339deaec14d
+tasks:
+  task0001:
+    title: 'Brace-form case group depth: argument-position }, always groups, multi-name function'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-interactive-guard.py
+    - em-review/scripts/codex-hook-interactive-guard.py
+    - tests/test_codex_hook_interactive_guard.py
+    - test-docs/codex-guard-brace-case-group-depth/task0001.tests.yaml
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/codex-guard-brace-case-group-depth/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR1 requires linear-time scanning; the diff changes the brace-group depth tracking loop in the parser
+    cross_validation: true
+requirements:
+  FR1:
+    title: 引数の位置の単独の } をコマンド位置の } と同じに扱う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-6
+    - TS-9
+    - TS-10
+  FR2:
+    title: always 群の { を数える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-5
+    - TS-6
+  FR3:
+    title: 複数名の function 定義の { を数える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-7
+    - TS-8
+  FR4:
+    title: 匿名関数の { の後は名前を続けない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-15
+  FR5:
+    title: docstring とコメントを新しい読みに合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-18
+  FR6:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-14
+  NFR1:
+    title: 線形時間
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-16
+    - TS-17
+  NFR2:
+    title: 両コピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests: []
+  NFR3:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests: []
+  NFR4:
+    title: テストの書き方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests: []
+  NFR5:
+    title: 変更範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
