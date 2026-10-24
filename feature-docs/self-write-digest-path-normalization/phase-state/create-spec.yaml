@@ -1,0 +1,31 @@
+schema_version: 1
+feature: self-write-digest-path-normalization
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: a0f468edb98cac977a37591ad3685649f66678d8
+last_input_digest: sha256:83033e24f03fdedbf7c9032bab821abc1c189eb4c470e4b8424db63cb12e4ec0
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-10-24T11:12:00+09:00'
+    source: batch-policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: feature name self-write-digest-path-normalization derived from
+      the task title
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:83033e24f03fdedbf7c9032bab821abc1c189eb4c470e4b8424db63cb12e4ec0
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
