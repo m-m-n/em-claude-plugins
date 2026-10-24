@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-recheck-before-patch-write
 phase: create-plan
-status: in_progress
+status: completed
 generation: 1
 base_revision: 6b3f683edd2231c175a54e4acbd90f32ab422f95
 last_input_digest: sha256:70944310b8db7d2f6718339deabdda324d2562b53cc103755f15c9bf2fab9459
